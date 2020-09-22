@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--  (c) 2015 Microsoft Corporation  -->
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>Microsoft Windows Device Guard</displayName>
+  <description>Windows Device Guard-Sicherheit</description>
+  <resources>
+    <stringTable>
+      <string id="DeviceGuard">Device Guard</string>
+      <string id="VirtualizationBasedSecurity">Virtualisierungsbasierte Sicherheit aktivieren</string>
+      <string id="VirtualizationBasedSecurityHelp">Gibt an, ob die virtualisierungsbasierte Sicherheit aktiviert ist.
+
+Die virtualisierungsbasierte Sicherheit verwendet den Windows-Hypervisor, um Sicherheitsdienste zu unterstützen. Die virtualisierungsbasierte Sicherheit erfordert den sicheren Start und kann optional unter Verwendung von DMA-Schutzmechanismen aktiviert werden. DMA-Schutzmechanismen erfordern Hardwareunterstützung und werden nur auf ordnungsgemäß konfigurierten Geräten aktiviert. 
+
+Virtualisierungsbasierter Schutz der Codeintegrität
+
+Diese Einstellung aktiviert den virtualisierungsbasierten Schutz der Codeintegrität im Kernelmodus. Wenn diese Einstellung aktiviert ist, werden Speicherschutzmechanismen im Kernelmodus erzwungen. Außerdem wird der Überprüfungspfad der Codeintegrität durch das virtualisierungsbasierte Sicherheitsfeature geschützt. 
+
+Durch die Option "Deaktiviert" wird der virtualisierungsbasierte Schutz der Codeintegrität remote deaktiviert, wenn er zuvor mit der Option "Ohne Sperre aktiviert" aktiviert wurde. 
+
+Die Option "Mit UEFI-Sperre aktiviert" stellt sicher, dass der virtualisierungsbasierte Schutz der Codeintegrität nicht remote deaktiviert werden kann. Um das Feature zu deaktivieren, müssen Sie die Gruppenrichtlinie auf "Deaktiviert" festlegen und die Sicherheitsfunktionen von jedem Computer entfernen, um die in UEFI persistent gespeicherte Konfiguration zu löschen. Bei diesem Vorgang muss ein Benutzer physisch anwesend sein. 
+
+Durch die Option "Ohne Sperre aktiviert" kann der virtualisierungsbasierte Schutz der Codeintegrität mithilfe der Gruppenrichtlinie remote deaktiviert werden. 
+
+Durch die Option "Nicht konfiguriert" bleibt die Richtlinieneinstellung undefiniert. Die Richtlinieneinstellung wird durch die Gruppenrichtlinie nicht in die Registrierung geschrieben, sodass sie keine Auswirkungen auf Computer oder Benutzer hat. Wenn die Registrierung eine aktuelle Einstellung enthält, wird sie nicht geändert. 
+
+Durch die Option "UEFI-Speicherattributtabelle erforderlich" wird der virtualisierungsbasierte Schutz der Codeintegrität nur auf Geräten aktiviert, die UEFI-Firmwareunterstützung für die Speicherattributtabelle bieten. Geräte ohne UEFI-Speicherattributtabelle verfügen u. U. über Firmware, die mit dem virtualisierungsbasierten Schutz der Codeintegrität nicht kompatibel ist, was manchmal zu Abstürzen, Datenverlust oder Inkompatibilitäten mit bestimmten Steckkarten führen kann. Wenn diese Option nicht festgelegt wird, sollten die Zielgeräte auf Kompatibilität geprüft werden. 
+
+Warnung: Alle Treiber im System müssen mit diesem Feature kompatibel sein, da das System andernfalls abstürzen kann. Stellen Sie sicher, dass diese Richtlinieneinstellung nur für Computer bereitgestellt wird, die bekanntermaßen kompatibel sind. 
+
+Credential Guard
+
+Mit dieser Einstellung können Benutzer Credential Guard mit virtualisierungsbasierter Sicherheit aktivieren, um Anmeldeinformationen zu schützen. 
+
+Durch die Option "Deaktiviert" wird Credential Guard remote deaktiviert, wenn sie zuvor mit der Option "Ohne Sperre aktiviert" aktiviert wurde. 
+
+Die Option "Mit UEFI-Sperre aktiviert" stellt sicher, dass Credential Guard nicht remote deaktiviert werden kann. Um das Feature zu deaktivieren, müssen Sie die Gruppenrichtlinie auf "Deaktiviert" festlegen und die Sicherheitsfunktionen von jedem Computer entfernen, um die in UEFI persistent gespeicherte Konfiguration zu löschen. Bei diesem Vorgang muss ein Benutzer physisch anwesend sein. 
+
+Durch die Option "Ohne Sperre aktiviert" kann Credential Guard mithilfe der Gruppenrichtlinie remote deaktiviert werden. Auf Geräten, die diese Einstellung verwenden, muss mindestens Windows 10 (Version 1511) ausgeführt werden. 
+
+Durch die Option "Nicht konfiguriert" bleibt die Richtlinieneinstellung undefiniert. Die Richtlinieneinstellung wird durch die Gruppenrichtlinie nicht in die Registrierung geschrieben, sodass sie keine Auswirkungen auf Computer oder Benutzer hat. Wenn die Registrierung eine aktuelle Einstellung enthält, wird sie nicht geändert.
+
+Sicherer Start
+
+Diese Einstellung legt die Konfigurierung des sicheren Starts fest, um die Startzeichenfolgen zu sichern.
+
+Die Einstellung "Nicht konfiguriert" ist die Standardeinstellung, die die Konfiguration des Features durch Administratoren ermöglicht.
+
+Durch die Einstellung "Aktiviert" wird die Systemüberwachung auf unterstützter Hardware aktiviert.
+
+Durch die Einstellung "Deaktiviert" wird die Systemüberwachung auf unterstützter Hardware deaktiviert.
+      </string>
+      <string id="SecureBoot">Sicherer Start</string>
+      <string id="SecureBootAndDmaProtection">Sicherer Start und DMA-Schutz</string>
+      <string id="Disabled">Deaktiviert</string>
+      <string id="Enabled">Aktiviert</string>
+      <string id="EnabledWithoutLock">Ohne Sperre aktiviert</string>
+      <string id="EnabledWithUefiLock">Mit UEFI-Sperre aktiviert</string>
+      <string id="NotConfigured">Nicht konfiguriert</string>
+      <string id="ConfigCIPolicy">Windows Defender-Anwendungssteuerung bereitstellen</string>
+      <string id="ConfigCIPolicyHelp">Windows Defender-Anwendungssteuerung bereitstellen
+
+Mit dieser Richtlinieneinstellung können Sie eine Codeintegritätsrichtlinie auf einem Computer bereitstellen, um zu steuern, was auf diesem Computer ausgeführt werden darf.
+
+Wenn Sie eine Codeintegritätsrichtlinie bereitstellen, wird der im Kernelmodus und auf dem Windows-Desktop ausführbare Code auf Grundlage der Richtlinie durch Windows eingeschränkt. Zum Aktivieren dieser Richtlinie muss der Computer neu gestartet werden. 
+
+Der Dateipfad muss entweder ein UNC-Pfad (z. B. \\ServerName\ShareName\SIPolicy.p7b) oder ein gültiger lokaler Pfad (z. B. C:\FolderName\SIPolicy.p7b) sein. Das lokale Computerkonto (LOCAL SYSTEM) muss über eine Zugriffsberechtigung für die Richtliniendatei verfügen.
+ 
+Bei Verwendung einer signierten, geschützten Richtlinie wird die Funktion nicht vom Computer entfernt, wenn die Richtlinieneinstellung deaktiviert wird. Führen Sie stattdessen einen der folgenden Schritte aus:
+
+   1) Aktualisieren Sie zuerst die Richtlinie auf eine nicht geschützte Richtlinie, und deaktivieren Sie dann die Einstellung. Oder
+   2) Deaktivieren Sie die Einstellung, und entfernen Sie dann die Richtlinie von jedem Computer, während ein Benutzer physisch anwesend ist.
+      </string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="VirtualizationBasedSecurity">
+        <dropdownList refId="RequirePlatformSecurityFeaturesDrop" defaultItem="1">Plattform-Sicherheitsstufe auswählen:</dropdownList>
+        <dropdownList refId="HypervisorEnforcedCodeIntegrityDrop" defaultItem="3">Virtualisierungsbasierter Schutz der Codeintegrität:</dropdownList>        
+        <checkBox refId="CheckboxMAT">UEFI-Speicherattributtabelle erforderlich</checkBox>        
+        <dropdownList refId="CredentialIsolationDrop" defaultItem="3">Credential Guard-Konfiguration:</dropdownList>
+        <dropdownList refId="SystemGuardDrop" defaultItem="2">Sichere Startkonfiguration:</dropdownList>                
+      </presentation>
+      <presentation id="ConfigCIPolicy">
+        <textBox refId="ConfigCIPolicyFilePathText">
+          <label>Dateipfad für Codeintegritätsrichtlinie:</label>
+        </textBox>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

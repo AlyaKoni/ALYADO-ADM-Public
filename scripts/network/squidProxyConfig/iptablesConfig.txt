@@ -1,0 +1,115 @@
+NSG
+alyapinfvnet001snet04nsg - Inbound security rules
+Destination: 10.10.0.52/32
+Ports: 12300-12350
+
+RULES CLEAR
+sudo iptables -F
+sudo iptables -X
+sudo iptables -t nat -F
+sudo iptables -t nat -X
+sudo iptables -t mangle -F
+sudo iptables -t mangle -X
+
+RULES
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12300 -j DNAT --to-destination 10.10.0.20:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12300
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12300
+
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12330 -j DNAT --to-destination 10.10.200.52:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12330
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12330
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12340 -j DNAT --to-destination 10.10.200.53:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12340
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12340
+
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12310 -j DNAT --to-destination 10.10.0.100:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12310
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12310
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12311 -j DNAT --to-destination 10.10.0.101:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12311
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12311
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12312 -j DNAT --to-destination 10.10.0.102:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12312
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12312
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12313 -j DNAT --to-destination 10.10.0.103:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12313
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12313
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12314 -j DNAT --to-destination 10.10.0.104:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12314
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12314
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12315 -j DNAT --to-destination 10.10.0.105:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12315
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12315
+
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12320 -j DNAT --to-destination 10.10.0.110:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12320
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12320
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12321 -j DNAT --to-destination 10.10.0.111:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12321
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12321
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12322 -j DNAT --to-destination 10.10.0.112:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12322
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12322
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12323 -j DNAT --to-destination 10.10.0.113:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12323
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12323
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12324 -j DNAT --to-destination 10.10.0.114:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12324
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12324
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12325 -j DNAT --to-destination 10.10.0.115:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12325
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12325
+
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12350 -j DNAT --to-destination 10.10.0.90:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12350
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12350
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12351 -j DNAT --to-destination 10.10.0.91:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12351
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12351
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12352 -j DNAT --to-destination 10.10.0.92:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12352
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12352
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12353 -j DNAT --to-destination 10.10.0.93:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12353
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12353
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12354 -j DNAT --to-destination 10.10.0.94:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12354
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12354
+
+sudo iptables -t nat -A PREROUTING -i eth0 -p tcp --dport 12355 -j DNAT --to-destination 10.10.0.95:3389
+sudo iptables -t nat -A POSTROUTING -o eth0 -p tcp --dport 3389 -j SNAT --to-source 10.10.0.52:12355
+sudo iptables -t nat -A POSTROUTING -p tcp --sport 3389 -j SNAT --to-source 10.10.0.52:12355
+
+SHOW
+sudo iptables -L -t nat -v
+sudo tcpdump -i eth0 -n port 12300
+
+DELETE
+sudo iptables -t nat -D PREROUTING 1
+sudo iptables -t nat -D POSTROUTING 1
+
+SAVE
+sudo bash
+iptables-save  > /etc/iptables/rules.v4
+ip6tables-save > /etc/iptables/rules.v6
+reboot

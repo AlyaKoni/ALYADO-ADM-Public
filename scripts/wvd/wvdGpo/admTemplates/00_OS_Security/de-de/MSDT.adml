@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--  (c) 2006 Microsoft Corporation  -->
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>Anzeigenamen hier eingeben</displayName>
+  <description>Beschreibung hier eingeben</description>
+  <resources>
+    <stringTable>
+      <string id="WdiScenarioCategory">Microsoft Support-Diagnosetool</string>
+      <string id="WdiScenarioExecutionPolicy">Microsoft Support-Diagnosetool: Ausführungsebene konfigurieren</string>
+      <string id="WdiScenarioExecutionPolicyExplain">Diese Richtlinieneinstellung bestimmt die Ausführungsebene für das Microsoft Support-Diagnosetool.
+
+Das Microsoft Support-Diagnosetool (MSDT) sammelt Diagnosedaten für die Analyse durch Supportmitarbeiter.
+
+Wenn Sie diese Richtlinieneinstellung aktivieren, können Administratoren mit MSDT Diagnosedaten sammeln und sie an einen Supportmitarbeiter senden, um ein Problem zu beheben.
+
+Wenn Sie diese Richtlinieneinstellung deaktivieren, kann MSDT keine Diagnosedaten sammeln.
+
+Wenn Sie diese Richtlinieneinstellung nicht konfigurieren, ist MSDT standardmäßig aktiviert.
+
+Diese Richtlinieneinstellung wird nur wirksam, wenn die diagnoseweite Szenarioausführungsrichtlinie nicht konfiguriert ist.
+
+Es sind keine Neustarts oder Dienstneustarts erforderlich, damit diese Richtlinieneinstellung wirksam wird. Änderungen werden sofort wirksam.
+
+Diese Richtlinieneinstellung tritt nur dann in Kraft, wenn der Diagnoserichtliniendienst (DPS) ausgeführt wird. Wenn der Dienst angehalten oder deaktiviert wird, werden keine Diagnoseszenarios ausgeführt. Der DPS kann mit dem Snap-In für Dienste der Microsoft Management Console konfiguriert werden.</string>
+
+      <string id="MsdtToolDownloadPolicy">Microsoft Support-Diagnosetool: Tooldownload einschränken</string>
+      <string id="MsdtToolDownloadPolicyExplain">Diese Richtlinieneinstellung schränkt die Tooldownloadrichtlinie für das Microsoft Support-Diagnosetool ein.
+
+Das Microsoft Support-Diagnosetool (MSDT) sammelt Diagnosedaten für die Analyse durch Supportmitarbeiter.  Bei einigen Problemen fordert MSDT den Benutzer möglicherweise auf, weitere Tools zur Problembehandlung herunterzuladen.
+
+Diese Tools sind zum Abschluss der Problembehandlung erforderlich.  Wenn der Tooldownload eingeschränkt ist, ist es möglicherweise nicht möglich, die Ursache für das Problem zu finden.
+
+Wenn Sie diese Richtlinieneinstellung für die Remoteproblembehandlung aktivieren, fordert MSDT den Benutzer nur bei der Problemdiagnose auf Remotecomputern auf, weitere Tools herunterzuladen.  Wenn Sie diese Richtlinieneinstellung für die lokale Problembehandlung und die Remoteproblembehandlung aktivieren, fordert MSDT den Benutzer immer auf, weitere Tools herunterzuladen.
+
+Wenn Sie diese Richtlinieneinstellung deaktivieren, lädt MSDT niemals Tools herunter und deaktiviert die Fehlerdiagnose auf Remotecomputern.
+
+Wenn Sie diese Richtlinieneinstellung nicht konfigurieren, fordert MSDT den Benutzer vor dem Herunterladen weiterer Tools zur Bestätigung auf
+
+Es sind keine Neustarts oder Dienstneustarts erforderlich, damit diese Richtlinieneinstellung wirksam wird. Änderungen werden sofort wirksam.
+
+Diese Richtlinieneinstellung ist nur wirksam, wenn MSDT aktiviert ist.
+
+Diese Richtlinieneinstellung tritt nur dann in Kraft, wenn der Diagnoserichtliniendienst (DPS) ausgeführt wird.  Wenn der Dienst beendet oder deaktiviert wurde, werden Diagnoseszenarien nicht ausgeführt.  Der DPS kann mit dem Snap-In für Dienste der Microsoft Management Console konfiguriert werden.</string>
+      <string id="MsdtToolDownloadPolicyLevelRemoteOnly">Nur Remoteproblembehandlung</string>
+      <string id="MsdtToolDownloadPolicyLevelAllowAll">Lokale und Remoteproblembehandlung</string>
+      <string id="MsdtSupportProvider">Microsoft Support-Diagnosetool: interaktive MSDT-Kommunikation mit Unterstützungsanbieter aktivieren</string>
+      <string id="MsdtSupportProviderExplain">Diese Richtlinieneinstellung konfiguriert die interaktive Kommunikation des Microsoft Support-Diagnosetools mit dem Unterstützungsanbieter. MSDT sammelt Diagnosedaten für die Analyse durch Supportmitarbeiter.
+
+Wenn Sie diese Richtlinieneinstellung aktivieren, können Benutzer mit MSDT Diagnosedaten sammeln und sie an einen Supportmitarbeiter senden, um ein Problem zu beheben.
+
+Die Microsoft Corporation wird automatisch als Unterstützungsanbieter festgelegt.
+
+Wenn Sie diese Richtlinieneinstellung deaktivieren, kann MSDT nicht im Unterstützungsmodus ausgeführt werden, und es können keine Daten gesammelt oder an den Unterstützungsanbieter gesendet werden.
+
+Wenn Sie diese Richtlinieneinstellung nicht konfigurieren, wird der MSDT-Unterstützungsmodus standardmäßig aktiviert.
+
+Es sind keine Neustarts oder Dienstneustarts erforderlich, damit diese Richtlinieneinstellung wirksam wird. Änderungen werden sofort wirksam.
+
+
+
+</string>
+<string id="TroubleshootingAllowRecommendations">Problembehandlung: Benutzern den Zugriff auf die empfohlene Problembehandlung für bekannte Probleme erlauben</string>
+<string id="TroubleshootingAllowRecommendationsExplain">Durch diese Richtlinieneinstellung werden empfohlene Problembehandlungen für bekannte Probleme auf das Gerät angewendet. Außerdem können Administratoren konfigurieren, wie die Richtlinieneinstellung auf Ihre Domänen/IT-Umgebungen angewendet wird.
+Wenn die Richtlinieneinstellung nicht konfiguriert wird, kann der Benutzer festlegen, ob und wie empfohlene Problembehandlungen angewendet werden.
+
+Wenn Sie die Richtlinie aktivieren, können Sie konfigurieren, wie empfohlene Problembehandlungen auf Benutzergeräte angewendet werden. Sie können unter folgenden Werten wählen:
+0 = Dieses Feature deaktivieren
+1 = Dieses Feature deaktivieren, aber trotzdem wichtige Problembehandlungen anwenden
+2 = Benutzer benachrichtigen, wenn eine empfohlene Problembehandlung verfügbar ist, und dem Benutzer dann ermöglichen, sie auszuführen oder zu ignorieren
+3 = Empfohlene Problembehandlung automatisch ausführen und den Benutzer nach der erfolgreichen Ausführung benachrichtigen
+4 = Empfohlene Problembehandlung automatisch ausführen, ohne den Benutzer zu benachrichtigen
+5 = Dem Benutzer die Auswahl eigener Einstellungen für empfohlene Problembehandlungen ermöglichen
+
+Befolgen Sie die nachstehenden Anweisungen, um empfohlene Problembehandlungen für Geräte in Ihrer Domäne auszulösen, nachdem Sie diese neue Einstellung festgelegt haben:
+1. Erstellen Sie ein Batchskript mit folgendem Inhalt:
+Durch das folgende Batchskript werden empfohlene Problembehandlungen ausgelöst:
+C:\Windows\System32\mitigationscanner.exe
+
+2. Um eine neue sofortige Aufgabe zu erstellen, navigieren Sie zu "Gruppenrichtlinienverwaltungs-Editor &gt; Computerkonfiguration &gt; Einstellungen" und wählen "Systemsteuerungseinstellungen" aus. 
+3. Klicken Sie unter "Systemsteuerungseinstellungen" mit der rechten Maustaste auf "Geplante Aufgaben", und wählen Sie "Neu" aus. Wählen Sie "Sofortige Aufgabe (mindestens Windows 7)" aus.
+4. Geben Sie einen Namen und ggf. eine Beschreibung an, legen Sie dann unter "Sicherheitsoptionen" das Benutzerkonto auf "System" fest, und aktivieren Sie das Kontrollkästchen "Mit höchsten Berechtigungen ausführen".
+5. Erstellen Sie auf der Registerkarte "Aktionen" eine neue Aktion, wählen Sie als Typ "Programm starten" aus, und geben Sie dann die in Schritt 1 erstellte Datei ein.
+6. Konfigurieren Sie die Aufgabe für die Bereitstellung in Ihrer Domäne.</string>
+<string id="RecommendationsDropDown_DoNothing">Dieses Feature deaktivieren</string>
+<string id="RecommendationsDropDown_ApplyCoreSystemMitigationsOnly">Dieses Feature deaktivieren, aber trotzdem wichtige Problembehandlungen anwenden</string>
+<string id="RecommendationsDropDown_AskFirst">Benutzer benachrichtigen, wenn eine empfohlene Problembehandlung verfügbar ist, und dem Benutzer dann ermöglichen, sie auszuführen oder zu ignorieren</string>
+<string id="RecommendationsDropDown_ApplyThenNotify">Empfohlene Problembehandlung automatisch ausführen und den Benutzer nach der erfolgreichen Ausführung benachrichtigen</string>
+<string id="RecommendationsDropDown_ApplySilently">Empfohlene Problembehandlung automatisch ausführen, ohne den Benutzer zu benachrichtigen</string>
+<string id="RecommendationsDropDown_DeferToUser">Dem Benutzer die Auswahl eigener Einstellungen für empfohlene Problembehandlungen ermöglichen</string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="MsdtToolDownloadPolicy">
+        <dropdownList refId="MsdtToolDownloadPolicyLevel" noSort="true" defaultItem="1">Tooldownloads zulässig</dropdownList>
+      </presentation>
+      <presentation id="TroubleshootingAllowRecommendations">
+        <dropdownList refId="TroubleshootingAllowRecommendations_Dropdown" noSort="true" defaultItem="0">Empfohlene Problembehandlung von Microsoft für bekannte Probleme zulassen</dropdownList>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

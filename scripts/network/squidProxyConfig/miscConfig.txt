@@ -1,0 +1,12 @@
+SEARCH DOMAIN
+sudo vi /etc/systemd/resolved.conf
+  Domains=swissshooting.ch
+sudo service systemd-resolved restart
+
+IPFORWARD
+sysctl net.ipv4.ip_forward
+sudo sysctl -w net.ipv4.ip_forward=1
+sudo sed -i -e "s/^#net.ipv4.ip_forward.*/net.ipv4.ip_forward=1/" /etc/sysctl.conf
+cat /etc/sysctl.conf | grep ip_forward
+sudo sysctl -p /etc/sysctl.conf
+sysctl net.ipv4.ip_forward

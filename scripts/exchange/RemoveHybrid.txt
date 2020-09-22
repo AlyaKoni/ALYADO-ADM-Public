@@ -1,0 +1,12 @@
+Migrate all mailboxes to Exchange Online
+Ensure all mail flow is delegated to EXO
+Ensure all DNS is delegated to Office 365
+Transition public folders to EXO (if any)
+Ensure the “Set-OrganizationConfig -PublicFoldersEnabled local” is run from Office 365 / EXO powershell
+To stop clients from trying to contact Exchange Server on-premises for anything, disable the service connection point
+Achieved by running “Get-ClientAccessServer | Set-ClientAccessServer -AutoDiscoverServiceInternalUri $Null“
+The big one, remove the hybrid config “Remove-HybridConfiguration“
+Finally, review send and receive connectors on both Exchange Online and on-premises and remove those
+Since there won’t be any requirement for cross forest mail, deleting this connectors is recommended
+
+https://blog.kloud.com.au/2016/04/28/exchange-server-hybrid-edition-myths-and-misunderstandings/

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://www.microsoft.com/GroupPolicy/PolicyDefinitions">
+  <displayName>Verbinden</displayName>
+  <description>Markieren Sie ein Element, um dessen Beschreibung anzuzeigen.</description>
+  <resources>
+    <stringTable>
+      <!-- general -->
+      <string id="Connect">Verbinden</string>
+      
+      <!-- prevent file sync-->
+      <string id="AllowProjectionToPC">Projektion auf diesen PC nicht zulassen</string>
+      <string id="AllowProjectionToPC_help">Mit dieser Richtlinieneinstellung können Sie die Projektion auf einen PC deaktivieren.  
+
+ 
+
+Wenn Sie sie aktivieren, wird Ihr PC nicht erkannt und kann kein Projektionsziel sein, es sei denn, der Benutzer startet die App "Verbinden" manuell.  
+
+ 
+
+Wenn Sie sie deaktivieren oder nicht konfigurieren, wird Ihr PC erkannt und kann als Projektionsziel verwendet werden. Dies gilt jedoch nur oberhalb des Sperrbildschirms. Der Benutzer kann die Einstellung auch beliebig aktivieren oder deaktivieren, sofern die App nicht manuell gestartet wird.</string>
+
+      <string id="RequirePinForPairing">PIN für die Kopplung anfordern</string>
+      <string id="RequirePinForPairing_help">Mit dieser Richtlinieneinstellung können Sie festlegen, dass eine PIN für die Kopplung erforderlich ist.  
+
+Wenn Sie die Einstellung auf "Nie" festlegen, ist keine PIN für die Kopplung erforderlich.
+
+Wenn Sie die Einstellung auf "Beim ersten Mal" festlegen, ist bei der Kopplung neuer Geräte immer eine PIN erforderlich.
+
+Wenn Sie die Einstellung auf "Immer" festlegen, ist für alle Kopplungen eine PIN erforderlich.</string>
+      <string id="RequirePinForPairing_0">Nie</string>
+      <string id="RequirePinForPairing_1">Beim ersten Mal</string>
+      <string id="RequirePinForPairing_2">Immer</string>
+   </stringTable>
+   <presentationTable>
+      <presentation id="RequirePinForPairing">
+        <dropdownList refId="RequirePinForPairingDropdown" noSort="true" defaultItem="0">Wählen Sie eine der folgenden Aktionen aus.</dropdownList>
+      </presentation>
+   </presentationTable>
+  </resources>
+</policyDefinitionResources>

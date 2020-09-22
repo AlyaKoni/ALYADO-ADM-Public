@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RegistrySettings clsid="{A3CCFC41-DFDB-43a5-8D26-0FE8B954DA51}"><Collection clsid="{53B533F5-224C-47e3-B01B-CA3B3F3FF4BF}" name="Reader"><Registry clsid="{9CD4B2F4-923D-47f5-A062-E897DD1DAD50}" name="bRHPSticky" status="bRHPSticky" image="11" changed="2020-06-01 10:31:33" uid="{B2390242-5A6F-4921-A903-75F3C1C47F3D}"><Properties action="R" displayDecimal="0" default="0" hive="HKEY_LOCAL_MACHINE" key="Software\Adobe\Acrobat Reader\2020\AVGeneral" name="bRHPSticky" type="REG_DWORD" value="00000001"/></Registry>
+		<Registry clsid="{9CD4B2F4-923D-47f5-A062-E897DD1DAD50}" name="bExpandRHPInViewer" status="bExpandRHPInViewer" image="11" changed="2020-06-01 10:32:09" uid="{7D813754-5C61-4433-B2D5-B551D710784D}"><Properties action="R" displayDecimal="0" default="0" hive="HKEY_LOCAL_MACHINE" key="Software\Adobe\Acrobat Reader\2020\AVGeneral" name="bExpandRHPInViewer" type="REG_DWORD" value="00000000"/></Registry>
+	</Collection>
+</RegistrySettings>

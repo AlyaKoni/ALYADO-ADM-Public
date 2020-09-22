@@ -1,0 +1,9 @@
+Windows Store
+
+Install local experience packs for
+
+en-us
+de-de (Schweiz wählen)
+fr-fr (Schweiz wählen)
+it-it (Schweiz wählen)
+

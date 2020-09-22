@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RegistrySettings clsid="{A3CCFC41-DFDB-43a5-8D26-0FE8B954DA51}"><Registry clsid="{9CD4B2F4-923D-47f5-A062-E897DD1DAD50}" name="Adobe Creative Cloud" status="Adobe Creative Cloud" image="16" changed="2020-07-06 22:15:56" uid="{C481DD78-FE0A-4962-AFF5-7BDD6E4B9529}"><Properties action="R" displayDecimal="0" default="0" hive="HKEY_LOCAL_MACHINE" key="SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run32" name="Adobe Creative Cloud" type="REG_BINARY" value="030000009818FB164428D501"/></Registry>
+</RegistrySettings>

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RegistrySettings clsid="{A3CCFC41-DFDB-43a5-8D26-0FE8B954DA51}"><Collection clsid="{53B533F5-224C-47e3-B01B-CA3B3F3FF4BF}" name="Printers"><Registry clsid="{9CD4B2F4-923D-47f5-A062-E897DD1DAD50}" name="RemovePrintersAtLogoff" status="RemovePrintersAtLogoff" image="11" changed="2020-05-27 03:57:03" uid="{D8A7B2D3-B37B-44ED-BD9A-727103060A6A}"><Properties action="R" displayDecimal="0" default="0" hive="HKEY_LOCAL_MACHINE" key="SOFTWARE\Microsoft\Windows NT\CurrentVersion\Print\Providers\Client Side Rendering Print Provider" name="RemovePrintersAtLogoff" type="REG_DWORD" value="00000000"/></Registry>
+	</Collection>
+</RegistrySettings>

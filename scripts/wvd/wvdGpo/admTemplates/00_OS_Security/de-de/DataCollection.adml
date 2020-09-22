@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--  (c) 2015 Microsoft Corporation  -->
+<policyDefinitionResources xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" revision="1.0" schemaVersion="1.0" xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions">
+  <displayName>Anzeigenamen hier eingeben</displayName>
+  <description>Beschreibung hier eingeben</description>
+  <resources>
+    <stringTable>
+      <string id="AllowTelemetry">Telemetrie zulassen</string>
+      <string id="AllowTelemetry_0">0 – Sicherheit [Nur Enterprise]</string>
+      <string id="AllowTelemetry_1">1 – Einfach</string>
+      <string id="AllowTelemetry_2">2 – Erweitert</string>
+      <string id="AllowTelemetry_3">3 – Vollständig</string>
+      <string id="AllowTelemetry_Explain">Diese Richtlinieneinstellung bestimmt die höchste Ebene der Windows-Diagnosedaten, die an Microsoft gesendet werden. Wenn Sie diese Einstellung konfigurieren, verhindern Sie, dass Benutzer Ihre Telemetrie-Einstellungen ändern. Sie verhindern jedoch auch, dass sie eine höhere Ebene auswählen, als Sie für die Organisation festgelegt haben. Die Einstellungen  für die Windows 10-Diagnosedaten gelten nur für das Windows-Betriebssystem und die in Windows enthaltenen Apps. Diese Einstellungen gelten nicht für Apps von Drittanbietern, die unter Windows 10 ausgeführt werden.
+
+Wenn Sie diese Einstellung aktivieren, können Sie entscheiden, welche Ebene von Diagnosedaten an Microsoft gesendet werden soll, darunter:
+
+  - 0 (Sicherheit). Sendet nur eine minimale Datenmenge an Microsoft, die erforderlich ist, um die Sicherheit von Windows zu gewährleisten. Windows-Sicherheitskomponenten, z.B. das Tool zum Entfernen bösartiger Software (MSRT) und Windows Defender, senden möglicherweise Daten an Microsoft auf dieser Ebene, sofern aktiviert. Das Festlegen eines Werts von 0 gilt nur für Geräte, die die Editionen Enterprise, Education, IoT oder Windows Server ausführen. Das Festlegen eines Werts von 0 für andere Editionen entspricht dem Festlegen eines Werts von 1.
+  - 1 (Basis). Sendet dieselben Daten wie ein Wert von 0, zuzüglich einer sehr begrenzten Anzahl von Diagnosedaten, z.B. grundlegende Geräteinformationen, qualitätsbezogene Daten und App-Kompatibilitätsinformationen. Beachten Sie, dass Einstellungswerte von 0 oder 1 bestimmte Erfahrungen auf dem Gerät beeinträchtigen können.
+  - 2 (Erweitert). Sendet dieselben Daten wie ein Wert von 1 sowie zusätzliche Daten, wie z. b. wie Windows, Windows Server, System Center und Apps verwendet werden, sowie deren Leistung und erweiterte Zuverlässigkeitsdaten.
+  - 3 (Voll). Sendet die gleichen Daten wie ein Wert von 2, sowie zusätzlich erweiterte Diagnosedaten, die verwendet werden, um Probleme mit Geräten zu diagnostizieren und zu beheben, einschließlich der Dateien und Inhalte, die möglicherweise ein Problem mit dem Gerät verursacht haben.
+
+Wenn Sie diese Richtlinieneinstellung deaktivieren oder nicht konfigurieren, können die Telemetrie-Einstellungen in den Einstellungen einzeln konfiguriert werden.
+      </string>
+
+      <string id="TelemetryProxy">Benutzererfahrung und Telemetrie im verbundenen Modus konfigurieren</string>
+      <string id="TelemetryProxy_Explain">Mit dieser Richtlinieneinstellung können Sie Anfragen des Diensts "Benutzererfahrung und Telemetrie im verbundenen Modus" an einen Proxyserver weiterleiten.
+
+Wenn Sie die Richtlinieneinstellung aktivieren, können Sie den FQDN oder die IP-Adresse des Zielgeräts in Ihrem Unternehmensnetzwerk (und optional eine Portnummer) angeben. Die Verbindung erfolgt über SSL (Secure Sockets Layer). Bei einem Fehler mit dem benannten Proxy oder bei deaktivierter oder nicht konfigurierter Richtlinieneinstellung werden die Daten zu "Benutzererfahrung und Telemetrie im verbundenen Modus" über die Standardproxykonfiguration an Microsoft gesendet.
+
+Das Format für diese Einstellung ist &lt;Server&gt;:&lt;Port&gt;. 
+      </string>
+
+      <string id="CommercialId">Organisations-ID konfigurieren</string>
+      <string id="CommercialId_Explain">Mit dieser Richtlinieneinstellung wird der Bezeichner definiert, durch den die Telemetriedaten des Geräts eindeutig einer bestimmten Organisation zugeordnet werden. Wenn Ihre Organisation an einem Programm teilnimmt, das die Identifizierung des Geräts als zur Organisation gehörig erfordert, erfolgt die Identifizierung über diese Einstellung. Der Wert der Einstellung wird von Microsoft im Rahmen des Onboardingprozesses für das Programm bereitgestellt. 
+
+Wenn Sie die Richtlinieneinstellung deaktivieren oder nicht konfigurieren, kann Microsoft den Bezeichner nicht verwenden, um den Computer einschließlich seiner Telemetriedaten Ihrer Organisation zuzuordnen.
+      </string>
+
+      <string id="DisableEnterpriseAuthProxy">Verwendung des authentifizierten Proxys für den Dienst "Benutzererfahrung und Telemetrie im verbundenen Modus" konfigurieren</string>
+      <string id="DisableEnterpriseAuthProxy_1">Verwendung des authentifizierten Proxys aktivieren</string>
+      <string id="DisableEnterpriseAuthProxy_2">Verwendung des authentifizierten Proxys deaktivieren</string>
+      <string id="DisableEnterpriseAuthProxy_Explain">Diese Richtlinieneinstellung verhindert, dass der Dienst "Benutzererfahrung und Telemetrie im verbundenen Modus" automatisch einen authentifizierten Proxy verwendet, um Daten unter Windows 10 zurück an Microsoft zu senden. Wenn Sie diese Richtlinieneinstellung deaktivieren oder nicht konfigurieren, verwendet der Dienst "Benutzererfahrung und Telemetrie im verbundenen Modus" automatisch einen authentifizierten Proxy, um Daten zurück an Microsoft zu senden. Wenn Sie diese Richtlinie aktivieren, wird der Dienst "Benutzererfahrung und Telemetrie im verbundenen Modus" daran gehindert, automatisch einen authentifizierten Proxy zu verwenden.</string>
+
+      <string id="LimitEnhancedDiagnosticDataWindowsAnalytics">Erweiterte Diagnosedaten auf die von Windows Analytics erforderlichen minimalen Daten beschränken</string>
+      <string id="LimitEnhancedDiagnosticDataWindowsAnalytics_1">Windows Analytics-Sammlung aktivieren</string>
+      <string id="LimitEnhancedDiagnosticDataWindowsAnalytics_2">Windows Analytics-Sammlung deaktivieren</string>
+      <string id="LimitEnhancedDiagnosticDataWindowsAnalytics_Explain">Diese Richtlinieneinstellung, in Kombination mit der Einstellung "Telemetrie-Richtlinie zulassen", ermöglicht es Organisationen, Microsoft einen bestimmten Satz von Diagnosedaten für IT-Einblicke über Windows Analytics-Dienste zu senden. Wenn Sie diese Einstellung konfigurieren, verhindern Sie, dass Benutzer ihre Telemetrie-Einstellungen ändern. Sie verhindern jedoch auch, dass sie eine höhere Ebene auswählen, als Sie für die Organisation festgelegt haben.
+
+Um dieses Verhalten zu aktivieren, müssen Sie zwei Schritte ausführen:
+
+    1. Aktivieren Sie diese Richtlinieneinstellung
+    2. Legen Sie die Telemetrie auf Stufe 2 (Erweitert) fest
+
+Wenn Sie diese Richtlinieneinstellungen zusammen konfigurieren, senden Sie die grundlegende Ebene der Diagnosedaten sowie alle zusätzlichen Ereignisse, die für Windows Analytics erforderlich sind, an Microsoft. Die zusätzlichen Ereignisse sind hier dokumentiert: https://go.Microsoft.com/fwlink/?linked=847594.
+
+Wenn Sie in der Einstellung "Telemetrie-Richtlinie zulassen" die Option "Erweiterte Diagnosedaten" aktivieren, diese Richtlinieneinstellung jedoch nicht konfigurieren, senden Sie die erforderlichen Ereignisse für Windows Analytics sowie alle zusätzlichen Telemetrie-Daten für erweiterte Ebenen an Microsoft. Diese Einstellung hat keine Auswirkungen auf Computer, die zum Senden von vollständigen, grundlegenden oder Sicherheitsstufen-Diagnosedaten an Microsoft konfiguriert sind.
+
+Wenn Sie diese Richtlinieneinstellung deaktivieren oder nicht konfigurieren, wird die Ebene der an Microsoft gesendeten Diagnosedaten durch die Einstellung "Telemetrie-Richtlinie zulassen" bestimmt.
+      </string>
+
+      <string id="AllowDeviceNameInDiagnosticData">Übermitteln des Gerätenamens in Windows-Diagnosedaten zulassen</string>
+      <string id="AllowDeviceNameInDiagnosticData_Explain">Mit dieser Richtlinie kann der Gerätename als Teil der Windows-Diagnosedaten an Microsoft übermittelt werden.
+
+Wenn Sie die Richtlinieneinstellung deaktivieren oder nicht konfigurieren, wird in den Windows-Diagnosedaten kein Gerätename übermittelt.
+      </string>
+
+      <string id="ConfigureTelemetryOptInSettingsUx">Konfigurieren der Benutzeroberfläche der Telemetrie-Opt-in-Einstellung.</string>
+      <string id="ConfigureTelemetryOptInSettingsUx_1">Deaktivieren der Telemetrie-Opt-in-Einstellungen</string>
+      <string id="ConfigureTelemetryOptInSettingsUx_2">Aktivieren von Telemetrie-Opt-in-Einstellungen</string>
+      <string id="ConfigureTelemetryOptInSettingsUx_Explain">Diese Richtlinieneinstellung bestimmt, ob Benutzer in den Einstellungen ihre eigenen Telemetrie-Ebenen ändern können. Diese Einstellung sollte in Verbindung mit den Einstellungen für "Telemetrie zulassen" verwendet werden.
+
+Wenn Sie diese Richtlinieneinstellung auf "Telemetrie-Opt-in-Einstellungen deaktivieren" festlegen, werden die Telemetrie-Ebenen in den Einstellungen deaktiviert und verhindern, dass Benutzer Sie ändern.
+
+Wenn Sie diese Richtlinieneinstellung auf "Telemetrie-Opt-in-Einstellungen aktivieren" festlegen oder diese Richtlinieneinstellung nicht konfigurieren, können Benutzer in den Einstellungen ihre eigenen Telemetrie-Ebenen ändern.
+
+Hinweis:
+Legen Sie die Einstellung "Telemetrie-Richtlinie zulassen" fest, um zu verhindern, dass Benutzer über das Organisationslimit hinaus Diagnosedaten an Microsoft senden.
+      </string>
+
+      <string id="ConfigureTelemetryOptInChangeNotification">Konfigurieren von Telemetrie-Opt-in-Änderungsbenachrichtigungen.</string>
+      <string id="ConfigureTelemetryOptInChangeNotification_1">Telemetrie-Änderungsbenachrichtigungen deaktivieren</string>
+      <string id="ConfigureTelemetryOptInChangeNotification_2">Telemetrie-Änderungsbenachrichtigungen aktivieren</string>
+      <string id="ConfigureTelemetryOptInChangeNotification_Explain">
+          Diese Richtlinieneinstellung bestimmt, ob ein Gerät Benutzern Benachrichtigungen über Telemetrie-Ebenen bei der ersten Anmeldung anzeigt oder wenn Änderungen in den Einstellungen auftreten. 
+          Wenn Sie diese Richtlinieneinstellung auf "Telemetrie-Änderungsbenachrichtigungen deaktivieren" festlegen, werden die Benachrichtigungen auf Telemetrie-Ebene nicht mehr angezeigt.
+          Wenn Sie diese Richtlinieneinstellung auf "Telemetrie-Änderungsbenachrichtigungen aktivieren" festlegen oder diese Richtlinieneinstellung nicht konfigurieren, werden Telemetrie-Benachrichtigungen bei der ersten Anmeldung angezeigt, und wenn Änderungen in den Einstellungen auftreten.
+      </string>
+
+      <string id="DisableDeviceDelete">Deaktivieren Sie das Löschen der Diagnosedaten </string>
+      <string id="DisableDeviceDelete_Explain">
+          Diese Richtlinieneinstellung bestimmt, ob die Schaltfläche „Diagnosedaten löschen” auf der Einstellungsseite Diagnose &amp; Feedback aktiviert ist.
+          Wenn Sie diese Richtlinieneinstellung aktivieren, wird die Schaltfläche „Diagnosedaten löschen” auf der Einstellungsseite deaktiviert, was das Löschen der von Microsoft auf diesem Gerät gesammelten Diagnosedaten verhindert. 
+          Wenn Sie diese Richtlinieneinstellung deaktivieren oder nicht konfigurieren, wird die Schaltfläche „Diagnosedaten löschen” auf der Einstellungsseite aktiviert, was das Löschen der von Microsoft auf diesem Gerät gesammelten Diagnosedaten zulässt.
+      </string>
+
+      <string id="DisableDiagnosticDataViewer">Diagnosedatenanzeige deaktivieren. </string>
+      <string id="DisableDiagnosticDataViewer_Explain">
+          Diese Richtlinieneinstellung bestimmt, ob der Anwender die Diagnosedatenanzeige auf der Einstellungsseite Diagnose &amp; Feedback aktivieren und starten kann.
+          Wenn Sie diese Richtlinieneinstellung aktivieren, wird die Diagnosedatenanzeige auf der Einstellungsseite deaktiviert, wodurch die von Microsoft auf diesem Gerät gesammelten Diagnosedaten nicht vom Anwender eingesehen werden können. 
+          Wenn Sie diese Richtlinieneinstellung deaktivieren oder nicht konfigurieren, wird die Diagnosedatenanzeige auf der Einstellungsseite aktiviert.
+      </string>
+
+      <string id="ConfigureMicrosoft365UploadEndpoint">Diagnosedaten-Uploadendpunkt für Desktop Analytics konfigurieren</string>
+      <string id="ConfigureMicrosoft365UploadEndpoint_Explain">
+          Diese Richtlinie legt als Teil des Desktop Analytics-Programms den Uploadendpunkt für die Diagnosedaten dieses Geräts fest.
+          Wenn Ihre Organisation an dem Programm teilnimmt und angewiesen wurde, einen benutzerdefinierten Uploadendpunkt zu konfigurieren, verwenden Sie diese Einstellung, um den Endpunkt zu definieren.
+          Der Wert für diese Einstellung wird von Microsoft als Teil des Onboardingprozesses für das Programm bereitgestellt. 
+      </string>
+
+      <string id="AllowCommercialDataPipeline">Kommerzielle Datenpipeline zulassen</string>
+      <string id="AllowCommercialDataPipeline_Explain">
+          Durch "AllowCommercialDataPipeline" wird die kommerzielle Windows-Datenpipeline für das Gerät abonniert.
+          Wenn Sie die Einstellung aktivieren, wird für die vom Gerät erfassten Daten die kommerzielle Windows-Datenpipeline aktiviert.
+          Wenn Sie die Einstellung deaktivieren oder nicht konfigurieren, werden alle Daten gemäß unseren Richtlinien für die standardmäßige Windows-Datenpipeline vom Gerät erfasst und verarbeitet.
+          Wenn Sie die Einstellung konfigurieren, ändert sich weder die Ebene der Telemetriedatensammlung, noch die Fähigkeit des Benutzers, die Ebene zu ändern. Diese Einstellung gilt nur für das Windows-Betriebssystem und für Apps im Lieferumfang von Windows, nicht aber für Drittanbieter-Apps oder -Dienste, die unter Windows 10 ausgeführt werden.
+      </string>
+    </stringTable>
+    <presentationTable>
+      <presentation id="AllowTelemetry">
+        <dropdownList refId="AllowTelemetry" noSort="true" defaultItem="1"></dropdownList>
+      </presentation>
+      <presentation id="TelemetryProxy">
+        <textBox refId="TelemetryProxyName">
+          <label>Proxyservername:</label>
+        </textBox>
+      </presentation>
+      <presentation id="CommercialID">
+        <textBox refId="CommercialIdValue">
+          <label>Organisations-ID:</label>
+        </textBox>
+      </presentation>
+      <presentation id="DisableEnterpriseAuthProxy">
+        <dropdownList refId="DisableEnterpriseAuthProxy" noSort="true" defaultItem="1"></dropdownList>
+      </presentation>
+      <presentation id="LimitEnhancedDiagnosticDataWindowsAnalytics">
+        <dropdownList refId="LimitEnhancedDiagnosticDataWindowsAnalytics" noSort="true" defaultItem="0"></dropdownList>
+      </presentation>
+      <presentation id="ConfigureTelemetryOptInSettingsUx">
+        <dropdownList refId="ConfigureTelemetryOptInSettingsUx" noSort="true" defaultItem="0"></dropdownList>
+      </presentation>
+      <presentation id="ConfigureTelemetryOptInChangeNotification">
+        <dropdownList refId="ConfigureTelemetryOptInChangeNotification" noSort="true" defaultItem="0"></dropdownList>
+      </presentation>
+      <presentation id="ConfigureMicrosoft365UploadEndpoint">
+        <textBox refId="ConfigureMicrosoft365UploadEndpointValue">
+          <label>Benutzerdefinierter Uploadendpunkt für Desktop Analytics:</label>
+        </textBox>
+      </presentation>
+    </presentationTable>
+  </resources>
+</policyDefinitionResources>

@@ -1,0 +1,1 @@
+ssh alyapinfserv00Xadmin@alyapinfserv00X.westeurope.cloudapp.azure.com

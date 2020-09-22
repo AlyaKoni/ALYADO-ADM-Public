@@ -1,0 +1,10 @@
+/silent /install "[ProductTag]" /installsource enterprisemsi[OptOmahaArgs] /appargs "appguid={56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}&installerdata=%7B%22distribution%22%3A%7B%22msi%22%3Atrue%2C%22system_level%22%3Atrue%2C%22verbose_logging%22%3Atrue%2C%22msi_product_id%22%3A%2258F6736B-52C9-3045-8109-DD14CF9E278B%22%2C%22allow_downgrade%22%3Afalse%7D%7D"
+
+https://www.urlencoder.org/
+
+%7B%22distribution%22%3A%7B%22msi%22%3Atrue%2C%22system_level%22%3Atrue%2C%22verbose_logging%22%3Atrue%2C%22msi_product_id%22%3A%2258F6736B-52C9-3045-8109-DD14CF9E278B%22%2C%22allow_downgrade%22%3Afalse%7D%7D
+{"distribution":{"msi":true,"system_level":true,"verbose_logging":true,"msi_product_id":"58F6736B-52C9-3045-8109-DD14CF9E278B","allow_downgrade":false}}
+{"distribution":{"msi":true,"system_level":true,"verbose_logging":true,"msi_product_id":"58F6736B-52C9-3045-8109-DD14CF9E278B","allow_downgrade":false,"do_not_create_desktop_shortcut":true}}
+
+/silent /install "[ProductTag]" /installsource enterprisemsi[OptOmahaArgs] /appargs "appguid={56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}&installerdata=[MASTER_PREFERENCES]"
+

@@ -1,0 +1,79 @@
+Enable or disable mailbox
+	Disable-Mailbox -Identity cloud.test@alyaconsulting.ch
+	Enable-Mailbox -Identity cloud.test@alyaconsulting.ch
+
+Get role assignments
+	Get-ManagementRoleAssignment –User $Usr
+
+
+Exchange Online
+=================
+
+Get session
+	Get-PSSession | Remove-PSSession
+	$ExchUserPasswordForRunAsAccount = "`$dfc95cb9-99d6-4633-b10e-33aae6b67fdb!"
+	$SecExchUserPasswordForRunAsAccount = ConvertTo-SecureString $ExchUserPasswordForRunAsAccount -AsPlainText -Force
+	$ExchangeCredential = New-Object System.Management.Automation.PSCredential ("LmagExchangeServiceUser@alyaconsulting031.onmicrosoft.com", $SecExchUserPasswordForRunAsAccount)
+	$Session = New-PSSession –ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $ExchangeCredential -Authentication Basic -AllowRedirection
+	Import-PSSession -Session $Session -DisableNameChecking:$true -AllowClobber:$true
+	...
+	Get-PSSession | Remove-PSSession
+
+Hide Office Group
+	Set-UnifiedGroup -Identity ALYAOG-ADM-GroupName -HiddenFromAddressListsEnabled:$true -CalendarMemberReadOnly:$true -RejectMessagesFromSendersOrMembers:$true -UnifiedGroupWelcomeMessageEnabled:$false -SubscriptionEnabled:$false -ModerationEnabled:$false -HiddenFromExchangeClientsEnabled:$true
+	$grp = Get-UnifiedGroup -Identity ALYAOG-ADM-GroupName 
+	$grp.HiddenFromAddressListsEnabled
+
+Get Mailbox statistics
+	Get-Mailbox -ResultSize Unlimited | Get-MailboxStatistics | Select DisplayName,TotalItemSize
+	Get-Mailbox -ResultSize Unlimited | Get-MailboxFolderStatistics
+
+Recoverable Items
+	Get-MailboxFolderStatistics -FolderScope RecoverableItems | Format-Table Name,FolderAndSubfolderSize,ItemsInFolderAndSubfolders -Auto
+	$users = Get-Mailbox -ResultSize Unlimited | select Alias
+	foreach($user in $users)
+	{
+    		Write-Output "$user"
+    		Get-MailboxFolderStatistics -Identity $user.Alias -FolderScope RecoverableItems | where { $_.Name -eq "Recoverable Items"} | select FolderAndSubfolderSize,ItemsInFolderAndSubfolders
+	}
+
+
+Local Exchange Server
+=====================
+
+Get Mailbox statistics
+	$Db = Get-MailboxDatabase
+	$stats = Get-MailboxStatistics -Database $Db.Name | where {$_.disconnectdate -ne $null}
+	$stats | select displayname,MailboxGUID
+
+Assign rights to all mailboxes
+	Get-Mailbox -ResultSize Unlimited | Add-MailboxPermission -AccessRights FullAccess -User konrad.brunner
+
+List all disabled users
+	$users = Get-User
+	foreach($user in $users)
+	{
+		if ($user.UserAccountControl -like "*Disable*")
+		{
+			Write-Host $user.UserPrincipalName
+		}
+	}
+
+List all mailboxes
+	$boxes = Get-Mailbox -ResultSize Unlimited
+	foreach($box in $boxes)
+	{
+		$Name = $box.Name
+		$EmailAddress = $($box.EmailAddresses | where { $_.IsPrimaryAddress -eq $true }).SmtpAddress.ToLower()
+		$Company = $EmailAddress.Split("@")[1].Split(".")[0]
+		$UserPrincipalName = $box.UserPrincipalName
+		$ForwardingSmtpAddress = $box.ForwardingSmtpAddress
+		$Identity = $box.Identity
+		$IsMailboxEnabled = $box.IsMailboxEnabled
+		$IsResource = $box.IsResource
+		$IsShared = $box.IsShared
+		$IsValid = $box.IsValid
+		$SamAccountName = $box.SamAccountName
+		Write-Host "Company,Name,EmailAddress,UserPrincipalName,ForwardingSmtpAddress,Identity,IsMailboxEnabled,IsResource,IsShared,IsValid,SamAccountName"
+		Write-Host "$($Company),$($Name),$($EmailAddress),$($UserPrincipalName),$($ForwardingSmtpAddress),$($Identity),$($IsMailboxEnabled),$($IsResource),$($IsShared),$($IsValid),$($SamAccountName)"
+	}

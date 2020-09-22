@@ -1,0 +1,84 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "rdshImageSource": {
+            "value": "CustomImage"
+        },
+        "rdshGalleryImageSKU": {
+            "value": "Windows-10-Enterprise-multi-session"
+        },
+        "rdshCustomImageSourceName": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "rdshCustomImageSourceResourceGroup": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "rdshNamePrefix": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "rdshNumberOfInstances": {
+            "value": 5
+        },
+        "rdshVmSize": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "enableAcceleratedNetworking": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "domainToJoin": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "existingDomainUPN": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "existingDomainPassword": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "ouPath": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "existingVnetName": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "existingSubnetName": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "virtualNetworkResourceGroupName": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "rdBrokerURL": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "existingTenantGroupName": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "existingTenantName": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "hostPoolName": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "enablePersistentDesktop": {
+            "value": false
+        },
+        "defaultDesktopUsers": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "tenantAdminUpnOrApplicationId": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "tenantAdminPassword": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "isServicePrincipal": {
+            "value": true
+        },
+        "aadTenantId": {
+            "value": "#FROM#SCRIPT#"
+        },
+        "location": {
+            "value": "#FROM#SCRIPT#"
+        }
+    }
+}

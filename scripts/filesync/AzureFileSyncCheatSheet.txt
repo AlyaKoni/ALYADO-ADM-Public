@@ -1,0 +1,50 @@
+﻿CHECK
+===================================
+
+Sicherstellen, dass PowerShell 5.1 oder höher installiert ist. Falls nicht, installieren.
+> $PSVersionTable.PSVersion
+
+Az PowerShell Modul installieren
+> Install-Module -Name Az -AllowClobber -Scope AllUsers
+> Import-Module -Name Az
+
+Den vorhandenen Share überprüfen
+> $errors = Invoke-AzStorageSyncCompatibilityCheck -Path X:\Pfad\Share
+> $errors | Select-Object -Property Type, Path, Level, Description | Export-Csv -Path SendToKoni.csv
+
+Links:
+https://docs.microsoft.com/de-de/powershell/azure/install-Az-ps?view=azps-2.5.0
+https://docs.microsoft.com/en-us/azure/storage/files/storage-sync-files-planning
+
+
+SERVER REGISTRATION
+===================================
+
+Auf dem Server, auf dem der Share Lokal vorliegt!
+
+Sicherstellen, dass PowerShell 5.1 oder höher installiert ist. Falls nicht, installieren.
+> $PSVersionTable.PSVersion
+
+Az PowerShell Modul installieren
+> Install-Module -Name Az -AllowClobber -Scope AllUsers
+> Import-Module -Name Az
+
+Auf dem Server "IE Enhanced Security Configuration" ausschalten
+
+Installieren des Azure-Dateisynchronisierungs-Agents (Richtiges OS wählen!)
+https://go.microsoft.com/fwlink/?linkid=858257
+- Use Microsoft Update wählen
+- Auto Update Freitag 12:00
+- Collect Data ausschalten
+
+Registrieren des Servers mit der Benutzeroberfläche für die Serverregistrierung
+C:\Program Files\Azure\StorageSyncAgent\ServerRegistration.exe ausführen, falls Sie nicht automatisch startet
+- Anmelden als Global Admin
+- Subscription: alyapinf
+- ResourceGroup: alyapinfresg002
+- Sync Service: alyapinfsync001
+
+Festlegen von Netzwerklimits für die Azure-Dateisynchronisierung
+> Import-Module "C:\Program Files\Azure\StorageSyncAgent\StorageSync.Management.ServerCmdlets.dll"
+> New-StorageSyncNetworkLimit -Day Monday, Tuesday, Wednesday, Thursday, Friday -StartHour 9 -EndHour 17 -LimitKbps 1000
+

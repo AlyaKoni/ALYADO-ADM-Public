@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RegistrySettings clsid="{A3CCFC41-DFDB-43a5-8D26-0FE8B954DA51}"><Registry clsid="{9CD4B2F4-923D-47f5-A062-E897DD1DAD50}" name="Default_Page_URL" status="Default_Page_URL" image="6" changed="2020-03-15 13:56:13" uid="{FED68EDC-50CF-44C0-8C64-96675712B1F3}"><Properties action="R" displayDecimal="0" default="0" hive="HKEY_CURRENT_USER" key="Software\Microsoft\Internet Explorer\Main" name="Default_Page_URL" type="REG_SZ" value="https://ledermann.com"/></Registry>
+	<Registry clsid="{9CD4B2F4-923D-47f5-A062-E897DD1DAD50}" name="Start Page" status="Start Page" image="6" changed="2020-03-15 13:57:10" uid="{2261D022-C6F2-48C9-BBAC-05B2B1CFCF51}"><Properties action="R" displayDecimal="0" default="0" hive="HKEY_CURRENT_USER" key="Software\Microsoft\Internet Explorer\Main" name="Start Page" type="REG_SZ" value="https://ledermann.com"/></Registry>
+</RegistrySettings>

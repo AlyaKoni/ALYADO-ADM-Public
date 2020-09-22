@@ -1,0 +1,24 @@
+<Configuration ID="37f6d3a7-083e-4735-a1a7-9a6ee39678f5">
+ <Remove>
+    <Product ID="O365ProPlusRetail" > 
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+    </Product> 
+    <Product ID="VisioProRetail" > 
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+    </Product> 
+    <Product ID="ProjectProRetail" > 
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+    </Product> 
+    <Product ID="LanguagePack" > 
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+    </Product> 
+ </Remove>
+</Configuration> 
