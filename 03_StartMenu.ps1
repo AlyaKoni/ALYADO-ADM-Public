@@ -94,7 +94,10 @@ $menuDef = @(
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
     @("ad", "Azure Active Directory", "", @(
+        @("cg", "Configure-Admins", "Configure-Admins"),
         @("cg", "Configure-Groups", "Configure-Groups"),
+        @("cg", "Configure-Licenses", "Configure-Licenses"),
+        @("cg", "Configure-Roles", "Configure-Roles"),
         @("cv", "Create-AdVms", "Create-AdVms"),
         @("pg", "Prepare-GuestUsers", "Prepare-GuestUsers"),
         @("sa", "Sync-Aad", "Sync-Aad"),
@@ -103,8 +106,11 @@ $menuDef = @(
             @("cu", "Compair-Users", "OnPremCompair-Users"),
             @("cl", "Configure-Licenses", "OnPremConfigure-Licenses"),
             @("eg", "Export-Groups", "OnPremExport-Groups"),
+            @("eg", "Export-UsersAndContacts", "OnPremExport-UsersAndContacts"),
+            @("eg", "Import-ProfilePictures", "OnPremImport-ProfilePictures"),
             @("iu", "Import-AndSyncAadUser", "OnPremImport-AndSyncAadUser"),
             @("rs", "Remove-LoginScripts", "OnPremRemove-LoginScripts"),
+            @("eg", "Set-AdfsScpSetting", "OnPremSet-AdfsScpSetting"),
             @("b", "Back", "back"),
             @("q", "Quit", "return")
         )),
@@ -151,10 +157,22 @@ $menuDef = @(
         @("er", "Extract-Runbooks", "Extract-Runbooks"),
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
+    @("ad", "Azure Information Protection", "", @(
+        @("cg", "Configure-AIPService", "Configure-AIPService"),
+        @("cg", "Configure-LabelsAndPolicies", "Configure-LabelsAndPolicies"),
+        @("cg", "Get-AIPConfiguration", "Get-AIPConfiguration"),
+        @("cg", "Get-AIPDocumentLogs", "Get-AIPDocumentLogs"),
+        @("cg", "Get-AIPServiceLocation", "Get-AIPServiceLocation"),
+        @("cg", "Get-AIPTrackingLogs", "Get-AIPTrackingLogs"),
+        @("cg", "Set-AIPOnboardingPolicy", "Set-AIPOnboardingPolicy"),
+        @("b", "Back", "back"),
+        @("q", "Quit", "return"))),
     @("cl", "Client", "", @(
         @("w", "OS", "", @(
             @("gs", "Get-DeviceRegStatus", "Get-DeviceRegStatus"),
             @("sr", "Set-ClientRegionalSettings", "Set-ClientRegionalSettings"),
+            @("sr", "Set-ExecutionPolicyUnrestricted", "Set-ExecutionPolicyUnrestricted"),
+            @("sr", "Set-O365AndAzureTrustedSites", "Set-O365AndAzureTrustedSites"),
             @("b", "Back", "back"),
             @("q", "Quit", "return")
         )),
@@ -176,6 +194,7 @@ $menuDef = @(
     @("sp", "SharePoint", "", @(
         @("at", "Add-SharePointDefaultTheme", "Add-SharePointDefaultTheme"),
         @("ad", "Add-SharePointDefaultDesign", "Add-SharePointDefaultDesign"),
+        @("cd", "Backup-AllSites", "Backup-AllSites"),
         @("cd", "Clean-DeletedSites", "Clean-DeletedSites"),
         @("ca", "Configure-AzureB2BIntegration", "Configure-AzureB2BIntegration"),
         @("ch", "Configure-HubSites", "Configure-HubSites"),
@@ -467,6 +486,34 @@ function Extract-Runbooks
 {
     & "$($AlyaScripts)\automation\Extract-Runbooks.ps1"
 }
+function Configure-AIPService
+{
+    & "$($AlyaScripts)\aip\Configure-AIPService.ps1"
+}
+function Configure-LabelsAndPolicies
+{
+    & "$($AlyaScripts)\aip\Configure-LabelsAndPolicies.ps1"
+}
+function Get-AIPConfiguration
+{
+    & "$($AlyaScripts)\aip\Get-AIPConfiguration.ps1"
+}
+function Get-AIPDocumentLogs
+{
+    & "$($AlyaScripts)\aip\Get-AIPDocumentLogs.ps1"
+}
+function Get-AIPServiceLocation
+{
+    & "$($AlyaScripts)\aip\Get-AIPServiceLocation.ps1"
+}
+function Get-AIPTrackingLogs
+{
+    & "$($AlyaScripts)\aip\Get-AIPTrackingLogs.ps1"
+}
+function Set-AIPOnboardingPolicy
+{
+    & "$($AlyaScripts)\aip\Set-AIPOnboardingPolicy.ps1"
+}
 function CreateAndUpdate-PublicStorageAccount
 {
     & "$($AlyaScripts)\azure\CreateAndUpdate-PublicStorageAccount.ps1"
@@ -579,6 +626,10 @@ function Clean-DeletedSites
 {
     & "$($AlyaScripts)\sharepoint\Clean-DeletedSites"
 }
+function Backup-AllSites
+{
+    & "$($AlyaScripts)\sharepoint\Backup-AllSites"
+}
 function Set-SiteLogo
 {
     & "$($AlyaScripts)\sharepoint\Set-SiteLogo"
@@ -609,19 +660,31 @@ function OnPremReInstall-Solution
 }
 function OnPremAllow-ConsitencyGuidInAd
 {
-    & "$($AlyaScripts)\aad\Allow-ConsitencyGuidInAd.ps1"
+    & "$($AlyaScripts)\aad\OnPremises\Allow-ConsitencyGuidInAd.ps1"
 }
 function OnPremCompair-Users
 {
-    & "$($AlyaScripts)\aad\Compair-Users.ps1"
+    & "$($AlyaScripts)\aad\OnPremises\Compair-Users.ps1"
 }
 function Configure-Groups
 {
     & "$($AlyaScripts)\aad\Configure-Groups.ps1"
 }
-function OnPremConfigure-Licenses
+function Configure-Admins
+{
+    & "$($AlyaScripts)\aad\Configure-Admins.ps1"
+}
+function Configure-Licenses
 {
     & "$($AlyaScripts)\aad\Configure-Licenses.ps1"
+}
+function Configure-Roles
+{
+    & "$($AlyaScripts)\aad\Configure-Roles.ps1"
+}
+function OnPremConfigure-Licenses
+{
+    & "$($AlyaScripts)\aad\OnPremises\Configure-Licenses.ps1"
 }
 function Create-AdVms
 {
@@ -629,15 +692,27 @@ function Create-AdVms
 }
 function OnPremExport-Groups
 {
-    & "$($AlyaScripts)\aad\Export-Groups.ps1"
+    & "$($AlyaScripts)\aad\OnPremises\Export-Groups.ps1"
+}
+function OnPremExport-UsersAndContacts
+{
+    & "$($AlyaScripts)\aad\OnPremises\Export-UsersAndContacts.ps1"
+}
+function OnPremImport-ProfilePictures
+{
+    & "$($AlyaScripts)\aad\OnPremises\Import-ProfilePictures.ps1"
+}
+function OnPremSet-AdfsScpSetting
+{
+    & "$($AlyaScripts)\aad\OnPremises\Set-AdfsScpSetting.ps1"
 }
 function OnPremImport-AndSyncAadUser
 {
-    & "$($AlyaScripts)\aad\Import-AndSyncAadUser.ps1"
+    & "$($AlyaScripts)\aad\OnPremises\Import-AndSyncAadUser.ps1"
 }
 function OnPremRemove-LoginScripts
 {
-    & "$($AlyaScripts)\aad\Remove-LoginScripts.ps1"
+    & "$($AlyaScripts)\aad\OnPremises\Remove-LoginScripts.ps1"
 }
 function Prepare-GuestUsers
 {
@@ -674,6 +749,14 @@ function Start-ClientConfigService
 function Set-ClientRegionalSettings
 {
     & "$($AlyaScripts)\client\os\Set-ClientRegionalSettings.ps1"
+}
+function Set-ExecutionPolicyUnrestricted
+{
+    & "$($AlyaScripts)\client\os\Set-ExecutionPolicyUnrestricted.ps1"
+}
+function Set-O365AndAzureTrustedSites
+{
+    & "$($AlyaScripts)\client\os\Set-O365AndAzureTrustedSites.ps1"
 }
 function Get-DeviceRegStatus
 {
@@ -763,10 +846,6 @@ function Enable-PINReset
 {
     start "$($AlyaScripts)\intune\Enable-PINReset.txt"
 }
-function intune
-{
-    & "$($AlyaScripts)\intune\intune.ps1"
-}
 function Export-IntuneConfiguration
 {
     & "$($AlyaScripts)\intune\Export-IntuneConfiguration.ps1"
@@ -824,6 +903,14 @@ function Git-Cmd
 {
     Set-Location "$($AlyaRoot)"
     & "$($GitRoot)\git-cmd.exe"
+}
+function Git-CheckIn
+{
+    & "$($AlyaScripts)\source\Git-CheckIn.ps1"
+}
+function Git-Sync
+{
+    & "$($AlyaScripts)\source\Git-Sync.ps1"
 }
 function Fall2019Prod_00_prepareWvd
 {
@@ -1121,8 +1208,6 @@ function ScaleHostPool_MS
 {
     & "$($AlyaScripts)\wvd\autoscale\ScaleHostPool_MS.ps1"
 }
-
-
 function Get-RegistrationToken-Prod
 {
     & "$($AlyaScripts)\wvd\client\Get-RegistrationToken-Prod.ps1"
@@ -1135,7 +1220,6 @@ function Reinstall-Agent
 {
     & "$($AlyaScripts)\wvd\client\Reinstall-Agent.ps1"
 }
-
 function Create-ImageHostClient
 {
     & "$($AlyaScripts)\wvd\image\Create-ImageHostClient.ps1"
@@ -1179,98 +1263,6 @@ function wvdTheme
 function Clean-Image
 {
     & "$($AlyaScripts)\wvd\image\Clean-Image.ps1"
-}
-function Git-CheckIn
-{
-    & "$($AlyaScripts)\source\Git-CheckIn.ps1"
-}
-function Git-Sync
-{
-    & "$($AlyaScripts)\source\Git-Sync.ps1"
-}
-function Export-SpProfilePicturesOnPremises
-{
-    & "$($AlyaScripts)\data\Export-SpProfilePictures.ps1"
-}
-function Import-SpProfilePicturesOnPremises
-{
-    & "$($AlyaScripts)\data\Import-SpProfilePictures.ps1"
-}
-function Export-SpTermGroupOnPremises
-{
-    & "$($AlyaScripts)\data\Export-SpTermGroup.ps1"
-}
-function Sync-ToStorage
-{
-    & "$($AlyaScripts)\Network\Calculate-GatewaySubnet.ps1" -syncDirection ToStorage 
-}
-function Sync-ToStorage
-{
-    & "$($AlyaScripts)\Solution\Sync-AzureFiles.ps1" -syncDirection ToStorage 
-}
-function Sync-FromStorage
-{
-    & "$($AlyaScripts)\Solution\Sync-AzureFiles.ps1" -syncDirection FromStorage
-}
-function Sync-BothDirections
-{
-    & "$($AlyaScripts)\Solution\Sync-AzureFiles.ps1" -syncDirection BothDirections
-}
-function Create-ExampleDirStructure
-{
-    & "$($AlyaScripts)\Configuration\Create-ExampleDirStructure.ps1"
-}
-function Sync-MasterPageOnPremises
-{
-    & "$($AlyaScripts)\Solution\Sync-SpFiles.ps1" -syncType OnPremises -catalogName "Masterpage"
-}
-function Sync-StyleLibraryOnPremises
-{
-    & "$($AlyaScripts)\Solution\Sync-SpFiles.ps1" -syncType OnPremises -docLibName "Style Library"
-}
-function Sync-MasterPageOnline
-{
-    & "$($AlyaScripts)\Solution\Sync-SpFiles.ps1" -syncType Online -catalogName "Masterpage"
-}
-function Sync-StyleLibraryOnline
-{
-    & "$($AlyaScripts)\Solution\Sync-SpFiles.ps1" -syncType Online -docLibName "Style Library"
-}
-function ReInstall-Solution
-{
-    & "$($AlyaScripts)\Solution\ReInstall-Solution.ps1"
-}
-function Run-OnlinePerformanceTest
-{
-    & "$($AlyaScripts)\Reporting\Run-OnlinePerformanceTest.ps1"
-}
-function Record-SharePointLogs
-{
-    & "$($AlyaScripts)\Reporting\Record-SharePointLogs.ps1"
-}
-function Get-O365AndAzureIpRangesAndUrls
-{
-    & "$($AlyaScripts)\Network\Get-O365AndAzureIpRangesAndUrls.ps1"
-}
-function Set-O365AndAzureTrustedSitesCurrentUser
-{
-    & "$PSScriptRoot\scripts\OS\Set-O365AndAzureTrustedSites.ps1" -HKCU
-}
-function Set-O365AndAzureTrustedSitesLocalMachine
-{
-    & "$($AlyaScripts)\OS\Set-O365AndAzureTrustedSites.ps1" -HKLM
-}
-function Update-ModulesInstalled
-{
-    & "$($AlyaScripts)\OS\Update-ModulesInstalled.ps1"
-}
-function Update-PackagesDownloaded
-{
-    & "$($AlyaScripts)\OS\Update-PackagesDownloaded.ps1"
-}
-function Set-ExecutionPolicyUnrestricted
-{
-    & "$($AlyaScripts)\OS\Set-ExecutionPolicyUnrestricted.ps1"
 }
 function Edit-Configuration
 {
