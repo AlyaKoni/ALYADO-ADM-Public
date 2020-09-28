@@ -27,7 +27,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.03.2020 Konrad Brunner       Initial Version
+    07.04.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -36,43 +36,69 @@ Param(
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Export-Groups-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Configure-AIPService-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module ActiveDirectory
-#Import-Module "ActiveDirectory" -ErrorAction Stop
+Install-ModuleIfNotInstalled "AIPService"
+    
+# Logins
+LoginTo-AIP
 
 # =============================================================
-# AD stuff
+# AADRM stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AD | Export-Groups | ONPREMISES" -ForegroundColor $CommandInfo
+Write-Host "AIP | Configure-AIPService | AIP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Main
-$groups = Get-AdGroup -Filter "samAccountName -like '*'" -Properties *
-$secgroups = $groups | where { $_.GroupCategory -eq "Security" }
-
-$exp = @()
-$exp += "Gruppe;User"
-foreach($group in $secgroups.SamAccountName)
+$enabled = Get-AipService
+if ($enabled -ne "Enabled")
 {
-    Write-Host "+ $($group)"
-    $members = Get-ADGroupMember -Identity $group
-    foreach($member in ($members | where { $_.objectClass -eq "user" }))
-    {
-        $user = Get-AdUser -Identity $member.SamAccountName -Properties *
-        Write-Host " - $($user.UserPrincipalName)"
-        $exp += "$($group);$($user.UserPrincipalName)"
-    }
+    Write-Host "Enabling AipService"
+    $tmp = Configure-AIPService
+}
+else
+{
+    Write-Host "AipService was already enabled"
+}
+$enabled = Get-AipServiceIPCv3
+if ($enabled -ne "Enabled")
+{
+    Write-Host "Enabling AipServiceIPCv3"
+    $tmp = Configure-AIPServiceIPCv3
+}
+else
+{
+    Write-Host "AipServiceIPCv3 was already enabled"
+}
+$enabled = Get-AipServiceDevicePlatform -All
+$enabled = $enabled.Value | where { $_ -eq $false }
+if ($enabled)
+{
+    Write-Host "Enabling AipServiceDevicePlatform All"
+    $tmp = Configure-AIPServiceDevicePlatform -All
+}
+else
+{
+    Write-Host "AipServiceDevicePlatform All was already enabled"
+}
+$enabled = Get-AipServiceDocumentTrackingFeature
+if ($enabled -ne "Enabled")
+{
+    Write-Host "Enabling AipServiceDocumentTrackingFeature"
+    $tmp = Configure-AIPServiceDocumentTrackingFeature -Force
+}
+else
+{
+    Write-Host "AipServiceDocumentTrackingFeature was already enabled"
 }
 
-$exp
+Get-AipServiceConfiguration | fl
 
 #Stopping Transscript
 Stop-Transcript

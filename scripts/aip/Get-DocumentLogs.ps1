@@ -27,21 +27,21 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    07.04.2020 Konrad Brunner       Initial Version
+    28.09.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$userEmail = "konrad.brunner@alyaconsulting.ch"
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Enable-AIPService-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-DocumentLogs-$($AlyaTimeString).log" | Out-Null
 
-# Constants
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "AIPService"
@@ -54,14 +54,10 @@ LoginTo-AIP
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Enable-AIPService | AIP" -ForegroundColor $CommandInfo
+Write-Host "AIP | Get-DocumentLogs | AIP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$enabled = Get-AipService
-if (-Not $enabled)
-{
-    Enable-AipService
-}
+Get-AipServiceDocumentLog -UserEmail $userEmail
 
 #Stopping Transscript
 Stop-Transcript

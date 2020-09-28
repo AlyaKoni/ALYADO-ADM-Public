@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting: 2020
@@ -27,7 +27,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.03.2020 Konrad Brunner       Initial Version
+    24.09.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -39,40 +39,39 @@ Param(
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Export-Groups-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module ActiveDirectory
-#Import-Module "ActiveDirectory" -ErrorAction Stop
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Set-AdfsScpSetting-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
 # AD stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AD | Export-Groups | ONPREMISES" -ForegroundColor $CommandInfo
+Write-Host "AD | Set-AdfsScpSetting | ONPREMISES" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main
-$groups = Get-AdGroup -Filter "samAccountName -like '*'" -Properties *
-$secgroups = $groups | where { $_.GroupCategory -eq "Security" }
+$regData = @"
+Windows Registry Editor Version 5.00
 
-$exp = @()
-$exp += "Gruppe;User"
-foreach($group in $secgroups.SamAccountName)
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\CDJ]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\CDJ\AAD]
+"TenantId"="$AlyaTenantId"
+"TenantName"="$AlyaTenantName"
+"@
+
+if (-Not (Test-Path "$($AlyaData)\aad\OnPremises"))
 {
-    Write-Host "+ $($group)"
-    $members = Get-ADGroupMember -Identity $group
-    foreach($member in ($members | where { $_.objectClass -eq "user" }))
-    {
-        $user = Get-AdUser -Identity $member.SamAccountName -Properties *
-        Write-Host " - $($user.UserPrincipalName)"
-        $exp += "$($group);$($user.UserPrincipalName)"
-    }
+    $tmp = New-Item -Path "$($AlyaData)\aad\OnPremises" -ItemType Directory -Force
 }
 
-$exp
+$regData | Set-Content -Path "$($AlyaData)\aad\OnPremises\AdfsScpSetting.reg" -Encoding UTF8 -Force
+
+Write-Host "Registry file generated in $($AlyaData)\aad\OnPremises\AdfsScpSetting.reg"
+Write-Host "Press return to import it"
+pause
+
+start "Scp Import" "$($AlyaData)\aad\OnPremises\AdfsScpSetting.reg"
 
 #Stopping Transscript
 Stop-Transcript

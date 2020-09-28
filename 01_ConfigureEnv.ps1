@@ -36,6 +36,8 @@
     09.09.2020 Konrad Brunner       Changed context naming
     14.09.2020 Konrad Brunner       Moved Alya global variables to data\ConfigureEnv.ps1
     17.09.2020 Konrad Brunner       Added custom property checks
+    24.09.2020 Konrad Brunner       LoginTo-EXO and LoginTo-IPPS
+
 #>
 
 [CmdletBinding()]
@@ -514,6 +516,49 @@ function LoginTo-Wvd(
         Write-Error "Not logged in to WVD!"
         Exit 1
     }
+}
+
+function LoginTo-EXO([String[]]$commandsToLoad = $null)
+{
+    Write-Host "Login to EXO" -ForegroundColor $CommandInfo
+
+    if ($commandsToLoad)
+    {
+        Connect-ExchangeOnline -ShowProgress $true -CommandName $commandsToLoad
+    }
+    else
+    {
+        Connect-ExchangeOnline -ShowProgress $true
+    }
+}
+
+function LoginTo-IPPS()
+{
+    Write-Host "Login to IPPS" -ForegroundColor $CommandInfo
+    $extRunspaces = Get-Runspace | where { $_.ConnectionInfo.ComputerName -like "*compliance.protection.outlook.com" }
+    $actConnection = $extRunspaces | where { $_.RunspaceStateInfo.State -eq "Opened" }
+    if (-Not $actConnection)
+    {
+        foreach($extRunspace in $extRunspaces)
+        {
+            $extRunspace.Dispose()
+        }
+        Connect-IPPSSession
+    }
+}
+
+function DisconnectFrom-EXOandIPPS()
+{
+    Write-Host "Disconnecting from EXO and IPPS" -ForegroundColor $CommandInfo
+    Disconnect-ExchangeOnline -Confirm:$false
+    <#
+    $extRunspaces = Get-Runspace | where { $_.ConnectionInfo.ComputerName -like "*compliance.protection.outlook.com" }
+    foreach($extRunspace in $extRunspaces)
+    {
+        $extRunspace.Dispose()
+    }
+    Connect-IPPSSession
+    #>
 }
 
 function LoginTo-Msol()

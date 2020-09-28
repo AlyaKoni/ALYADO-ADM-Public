@@ -27,52 +27,37 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.03.2020 Konrad Brunner       Initial Version
+    28.09.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$userEmail = "konrad.brunner@alyaconsulting.ch"
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Export-Groups-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-TrackingLogs-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module ActiveDirectory
-#Import-Module "ActiveDirectory" -ErrorAction Stop
+Install-ModuleIfNotInstalled "AIPService"
+    
+# Logins
+LoginTo-AIP
 
 # =============================================================
-# AD stuff
+# AADRM stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AD | Export-Groups | ONPREMISES" -ForegroundColor $CommandInfo
+Write-Host "AIP | Get-TrackingLogs | AIP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Main
-$groups = Get-AdGroup -Filter "samAccountName -like '*'" -Properties *
-$secgroups = $groups | where { $_.GroupCategory -eq "Security" }
-
-$exp = @()
-$exp += "Gruppe;User"
-foreach($group in $secgroups.SamAccountName)
-{
-    Write-Host "+ $($group)"
-    $members = Get-ADGroupMember -Identity $group
-    foreach($member in ($members | where { $_.objectClass -eq "user" }))
-    {
-        $user = Get-AdUser -Identity $member.SamAccountName -Properties *
-        Write-Host " - $($user.UserPrincipalName)"
-        $exp += "$($group);$($user.UserPrincipalName)"
-    }
-}
-
-$exp
+Get-AipServiceTrackingLog -UserEmail $userEmail
 
 #Stopping Transscript
 Stop-Transcript

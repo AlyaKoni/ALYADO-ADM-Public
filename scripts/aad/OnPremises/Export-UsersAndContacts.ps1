@@ -27,7 +27,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.03.2020 Konrad Brunner       Initial Version
+    24.09.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -39,7 +39,7 @@ Param(
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Export-Groups-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Export-UsersAndContacts-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -51,28 +51,17 @@ Check-Module ActiveDirectory
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AD | Export-Groups | ONPREMISES" -ForegroundColor $CommandInfo
+Write-Host "AD | Export-UsersAndContacts | ONPREMISES" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main
-$groups = Get-AdGroup -Filter "samAccountName -like '*'" -Properties *
-$secgroups = $groups | where { $_.GroupCategory -eq "Security" }
+Get-ADobject -Filter {(ObjectClass -eq "Contact")} -Property * | `
+    Select-Object samAccountName,sn,givenname,userPrincipalName,DistinguishedName,objectguid,CN,DisplayName,Name,Mail,Mailnickname,telephonenumber,Description | `
+    Export-Csv "$($AlyaData)\aad\OnPremises\Contacts.csv" -NoTypeInformation -Encoding UTF8 -Force
 
-$exp = @()
-$exp += "Gruppe;User"
-foreach($group in $secgroups.SamAccountName)
-{
-    Write-Host "+ $($group)"
-    $members = Get-ADGroupMember -Identity $group
-    foreach($member in ($members | where { $_.objectClass -eq "user" }))
-    {
-        $user = Get-AdUser -Identity $member.SamAccountName -Properties *
-        Write-Host " - $($user.UserPrincipalName)"
-        $exp += "$($group);$($user.UserPrincipalName)"
-    }
-}
-
-$exp
+Get-ADobject -Filter {(ObjectClass -eq "User")} -Property * | `
+    Select-Object samAccountName,sn,givenname,userPrincipalName,DistinguishedName,objectguid,CN,DisplayName,Name,Mail,Mailnickname,telephonenumber,Description | `
+    Export-Csv "$($AlyaData)\aad\OnPremises\Users.csv" -NoTypeInformation -Encoding UTF8 -Force
 
 #Stopping Transscript
 Stop-Transcript

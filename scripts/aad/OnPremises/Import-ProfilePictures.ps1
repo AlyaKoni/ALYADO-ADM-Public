@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
     The Alya Base Configuration is free software: you can redistribute it
@@ -25,54 +25,66 @@
 	https://www.gnu.org/licenses/gpl-3.0.txt
 
     History:
-    Date       Author               Description
+    Date       Author     Description
     ---------- -------------------- ----------------------------
-    03.03.2020 Konrad Brunner       Initial Version
+    24.09.2020 Konrad Brunner       Initial Version
+
+
+IMPORTANT!!
+The script expects, images in $picDir are named like $upn.$ext
 
 #>
 
+# Parameters
 [CmdletBinding()]
 Param(
+    $picDir = $null #Defaults to "$($AlyaData)\aad\ProfilePictures"
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Export-Groups-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module ActiveDirectory
-#Import-Module "ActiveDirectory" -ErrorAction Stop
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Import-ProfilePictures-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
-# AD stuff
+# aad OnPrem stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AD | Export-Groups | ONPREMISES" -ForegroundColor $CommandInfo
+Write-Host "AD | Import-ProfilePictures | ONPREMISES" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main
-$groups = Get-AdGroup -Filter "samAccountName -like '*'" -Properties *
-$secgroups = $groups | where { $_.GroupCategory -eq "Security" }
-
-$exp = @()
-$exp += "Gruppe;User"
-foreach($group in $secgroups.SamAccountName)
+if (-Not $picDir)
 {
-    Write-Host "+ $($group)"
-    $members = Get-ADGroupMember -Identity $group
-    foreach($member in ($members | where { $_.objectClass -eq "user" }))
-    {
-        $user = Get-AdUser -Identity $member.SamAccountName -Properties *
-        Write-Host " - $($user.UserPrincipalName)"
-        $exp += "$($group);$($user.UserPrincipalName)"
-    }
+    $picDir = "$($AlyaData)\aad\ProfilePictures"
 }
 
-$exp
+$addomain = [System.DirectoryServices.ActiveDirectory.Domain]::GetDomain((New-Object System.DirectoryServices.ActiveDirectory.DirectoryContext('Domain', $AlyaLocalDomainName)))
+$root = $addomain.GetDirectoryEntry()
+$search = [System.DirectoryServices.DirectorySearcher]$root
+
+$pics = Get-ChildItem -Path $picDir -File
+foreach($pic in $pics)
+{
+    $upn = $pic.Name -replace $pic.Extension, ""
+    Write-Host "User $upn"
+    $search.Filter = "(&(objectclass=user)(objectcategory=person)(userPrincipalName=$upn))"
+    $result = $search.FindOne()
+    if ($result -ne $null)
+    {
+        $user = $result.GetDirectoryEntry()
+        $binary = [System.IO.File]::ReadAllBytes($pic.FullName)
+        $user.put("thumbnailPhoto", $binary)
+        $user.setinfo()
+        Write-Host "  - updated"
+    }
+    else
+    {
+        Write-Host "  - does not exist in domain " $domainname
+    }
+}
 
 #Stopping Transscript
 Stop-Transcript

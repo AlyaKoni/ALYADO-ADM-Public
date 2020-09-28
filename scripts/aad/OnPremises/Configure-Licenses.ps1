@@ -33,7 +33,7 @@
 
 [CmdletBinding()]
 Param(
-    [string]$inputFile = $null #Defaults to "$AlyaData\aad\Lizenzen.csv"
+    [string]$inputFile = $null #Defaults to "$AlyaData\aad\Lizenzen.xlsx"
 )
 
 #Reading configuration
@@ -45,13 +45,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Configure-Licenses-$($Al
 #Members
 if (-Not $inputFile)
 {
-    $inputFile = "$AlyaData\aad\Lizenzen.csv"
+    $inputFile = "$AlyaData\aad\Lizenzen.xlsx"
 }
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Check-Module ActiveDirectory
 #Import-Module "ActiveDirectory" -ErrorAction Stop
+Install-ModuleIfNotInstalled "ImportExcel"
 
 # =============================================================
 # AD stuff
@@ -67,16 +68,7 @@ if (-Not (Test-Path $inputFile))
 {
     throw "Input file not found!"
 }
-
-$licDefs = Import-Csv -Delimiter "," -encoding UTF8 $inputFile -ErrorAction Stop
-if (-Not $licDefs[0].Lic1 -or [string]::IsNullOrEmpty($licDefs[0].Lic1))
-{
-	$licDefs = Import-Csv -Delimiter ";" -encoding UTF8 $inputFile -ErrorAction Stop
-}
-if (-Not $licDefs[0].Lic1 -or [string]::IsNullOrEmpty($licDefs[0].Lic1))
-{
-	throw "Wrong delimiter found. Right format:\nCol1,Col2,..."
-}
+$licDefs = Import-Excel $inputFile -ErrorAction Stop
 
 # Configured licenses
 Write-Host "Configured licenses:" -ForegroundColor $CommandInfo

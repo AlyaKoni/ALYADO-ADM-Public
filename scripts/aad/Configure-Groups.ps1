@@ -33,7 +33,7 @@
 
 [CmdletBinding()]
 Param(
-    [string]$inputFile = $null #Defaults to "$AlyaData\aad\Gruppen.csv"
+    [string]$inputFile = $null #Defaults to "$AlyaData\aad\Gruppen.xlsx"
 )
 
 #Reading configuration
@@ -45,12 +45,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-Groups-$($AlyaTimeStr
 #Members
 if (-Not $inputFile)
 {
-    $inputFile = "$AlyaData\aad\Gruppen.csv"
+    $inputFile = "$AlyaData\aad\Gruppen.xlsx"
 }
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled AzureAdPreview
+Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -70,17 +71,7 @@ if (-Not (Test-Path $inputFile))
 {
     throw "Input file '$inputFile' not found!"
 }
-
-$groupDefs = Import-Csv -Delimiter "," -encoding UTF8 $inputFile
-if ([string]::IsNullOrEmpty($groupDefs[0].Name))
-{
-    $groupDefs = Import-Csv -Delimiter ";" -encoding UTF8 $inputFile
-}
-if ([string]::IsNullOrEmpty($groupDefs[0].Name))
-{
-    Write-Error "Wrong delimiter found. Right format:\Type,Name,DisplayName,..."
-    exit
-}
+$groupDefs = Import-Excel $inputFile -ErrorAction Stop
 
 Write-Host "Configured groups" -ForegroundColor $CommandInfo
 $groupDefs | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
