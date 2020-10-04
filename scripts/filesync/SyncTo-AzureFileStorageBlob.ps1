@@ -43,7 +43,7 @@ Param(
 #Checking parameters
 if (-Not (Test-Path $FromLocalDir))
 {
-    Write-Error "FromLocalDir '$($FromLocalDir)' does not exist"
+    Write-Error "FromLocalDir '$($FromLocalDir)' does not exist" -ErrorAction Continue
     exit
 }
 
@@ -82,7 +82,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -112,7 +112,7 @@ if (-Not $DestinationContainer)
     $DestinationContainer = New-AzStorageContainer -Context $StrgContext -Name $ToStorageBlobContainer -Permission Blob
     if (-Not $DestinationContainer)
     {
-        Write-Error -Message "Storage account container '$ToStorageBlobContainer' creation failed. Please fix and start over again"
+        Write-Error "Storage account container '$ToStorageBlobContainer' creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }
@@ -140,33 +140,33 @@ foreach($SourceFile in $UploadItems)
         if ($SourceFile.Length -gt (2*1024*1024*1024))
         {
             #TODO hash only works for up to 2GB, switch to change date if bigger
-            Write-Error "File is too big for md5 hash. Please update this script!"
+            Write-Error "File is too big for md5 hash. Please update this script!" -ErrorAction Continue
             continue
         }
         $hash = [System.Convert]::ToBase64String($md5.ComputeHash([System.IO.File]::ReadAllBytes($SourceFile.FullName)))
         $DestinationBlob.ICloudBlob.FetchAttributes()
         if ($DestinationBlob.ICloudBlob.Properties.ContentMD5 -ne $hash)
         {
-			Write-Output "    + Creating Snapshot"
+			Write-Host "    + Creating Snapshot"
 			$Tmp = $DestinationBlob.ICloudBlob.CreateSnapshot()
-		    Write-Output "    + Copying blob"
+		    Write-Host "    + Copying blob"
             $DestinationBlob = Set-AzStorageBlobContent -File $SourceFile.FullName -Context $StrgContext -Container $ToStorageBlobContainer -Blob $BlobName -Force
         }
         $DestinationBlob.ICloudBlob.FetchAttributes()
         if ($DestinationBlob.ICloudBlob.Properties.ContentType -ne $mime)
         {
-			Write-Output "    + Changing mime to $($mime)"
+			Write-Host "    + Changing mime to $($mime)"
             $DestinationBlob.ICloudBlob.Properties.ContentType = $mime
 			$DestinationBlob.ICloudBlob.SetProperties()
         }
     }
     else
     {
-		Write-Output "    + Copying blob"
+		Write-Host "    + Copying blob"
         $DestinationBlob = Set-AzStorageBlobContent -File $SourceFile.FullName -Context $StrgContext -Container $ToStorageBlobContainer -Blob $BlobName -Force
         if ($DestinationBlob.ICloudBlob.Properties.ContentType -ne $mime)
         {
-			Write-Output "    + Changing mime to $($mime)"
+			Write-Host "    + Changing mime to $($mime)"
             $DestinationBlob.ICloudBlob.Properties.ContentType = $mime
 			$DestinationBlob.ICloudBlob.SetProperties()
         }

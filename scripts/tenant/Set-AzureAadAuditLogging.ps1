@@ -66,7 +66,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -88,7 +88,7 @@ if (-Not $StrgAccount)
     $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Cool -Tag @{displayName="Audit Log Storage"}
     if (-Not $StrgAccount)
     {
-        Write-Error -Message "Storage account $StorageAccountName creation failed. Please fix and start over again"
+        Write-Error "Storage account $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }
@@ -102,7 +102,7 @@ if (-Not $LogAnaWrkspc)
     $LogAnaWrkspc = New-AzOperationalInsightsWorkspace -Name $LogAnaWrkspcName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Audit Log Workspace"}
     if (-Not $LogAnaWrkspc)
     {
-        Write-Error -Message "Log analytics workspace $StorageAccountName creation failed. Please fix and start over again"
+        Write-Error "Log analytics workspace $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }

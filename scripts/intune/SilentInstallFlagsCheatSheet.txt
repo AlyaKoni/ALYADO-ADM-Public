@@ -1,0 +1,1405 @@
+7-Zip {{major}}.{{minor}} (x64 edition)
+http://d.7-zip.org/a/7z{{major}}{{minor}}-x64.msi
+7-Zip {{major}}.{{minor}}
+http://d.7-zip.org/a/7z{{major}}{{minor}}.msi
+/qn /norestart
+ActivePerl {{ version }} Build {{ build }} (64-bit)
+http://downloads.activestate.com/ActivePerl/releases/{{ version }}.{{ build}}/ActivePerl-{{ version }}.{{ build}}-MSWin32-x64-{{ number }}.exe
+/exenoui /qn /norestart
+ActivePerl {{ version }} Build {{ build }}
+http://downloads.activestate.com/ActivePerl/releases/{{ version }}.{{ build }}/ActivePerl-{{ version }}.{{ build }}-MSWin32-x86-64int-{{ release_x64 }}.exe
+http://downloads.activestate.com/ActivePerl/releases/{{ version }}.{{ build }}/ActivePerl-{{ version }}.{{ build }}-MSWin32-x86-64int-{{ release_x86 }}.exe
+/exenoui /qn /norestart
+Adobe AIR
+http://airdownload.adobe.com/air/win/download/28.0/AdobeAIRInstaller.exe
+-silent -eulaAccepted
+Adobe AIR
+http://airdownload.adobe.com/air/win/download/28.0/AdobeAIRInstaller.exe
+-silent -eulaAccepted
+Adobe Acrobat Reader DC
+https://ardownload2.adobe.com/pub/adobe/reader/win/AcrobatDC/{{ versionNoDots }}/AcroRdrDC{{ versionNoDots }}_en_US.exe
+/msi EULA_ACCEPT=YES ALLUSERS=1 REMOVE_PREVIOUS=YES /qn
+Adobe Reader X (10.1.4)
+http://ardownload.adobe.com/pub/adobe/reader/win/10.x/10.1.4/en_US/AdbeRdr1014_en_US.exe
+/msi EULA_ACCEPT=YES REMOVE_PREVIOUS=YES ALLUSERS=1 /qn /norestart
+Adobe Reader 9.5.0
+http://ardownload.adobe.com/pub/adobe/reader/win/9.x/9.5.0/en_US/AdbeRdr950_en_US.exe
+/msi EULA_ACCEPT=YES REMOVE_PREVIOUS=YES ALLUSERS=1 /qn /norestart
+Adobe Reader XI (11.0.10)
+http://ardownload.adobe.com/pub/adobe/reader/win/11.x/11.0.10/en_US/AdbeRdr11010_en_US.exe
+/msi EULA_ACCEPT=YES REMOVE_PREVIOUS=YES ALLUSERS=1 /qn /norestart
+Adobe Reader XI (11.0.06)
+http://ardownload.adobe.com/pub/adobe/reader/win/11.x/11.0.06/en_US/AdbeRdr11006_en_US.exe
+/msi EULA_ACCEPT=YES REMOVE_PREVIOUS=YES ALLUSERS=1 /qn /norestart
+Adobe Shockwave Player 12.2
+https://fpdownload.macromedia.com/get/shockwave/default/english/win95nt/latest/sw_lic_full_installer.msi
+/qn /norestart
+IIS Advanced Logging 1.0
+http://download.microsoft.com/download/9/6/5/96594C39-9918-466C-AFE0-920737351987/AdvancedLogging64.msi
+http://download.microsoft.com/download/D/8/B/D8B7664B-3F60-4A26-8307-B35FB926EF49/AdvancedLogging32.msi
+/qn /norestart
+Advanced IP Scanner 2.4
+salt://win/repo-ng/adv-ip-scanner/ipscan24.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- & taskkill /F /T /IM advanced_ip_scanner.exe & exit 0
+Advanced Port Scanner 2.4
+salt://win/repo-ng/adv-port-scanner/pscan24.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- & taskkill /F /T /IM advanced_port_scanner.exe & exit 0
+Microsoft Application Request Routing 3.0
+http://download.microsoft.com/download/E/9/8/E9849D6A-020E-47E4-9FD0-A023E99B54EB/requestRouter_amd64.msi
+http://download.microsoft.com/download/5/3/2/532630BE-7DCA-4352-984B-8D4EADBE5BEF/requestRouter_x86.msi
+/quiet /norestart
+Microsoft ASP.NET MVC 1.0
+https://download.microsoft.com/download/A/6/8/A68968AE-DE1D-4FA4-A98A-B74042C6090D/AspNetMVC1.msi
+/qn /norestart
+Atom Machine-Wide Installer
+https://github.com/atom/atom/releases/download/v{{ version }}/AtomSetup.msi
+/qn /norestart
+Atom
+https://github.com/atom/atom/releases/download/v{{ version }}/AtomSetup.exe
+--machine
+Audacity {{ version }}
+http://heanet.dl.sourceforge.net/project/audacity/audacity/{{ version }}/audacity-win-{{ version }}.exe
+/SP- /verysilent /norestart
+AutoHotkey 1.1.27.06
+http://ahkscript.org/download/1.1/AutoHotkey112706_Install.exe
+/S /U32 /D="{{ PROGRAM_FILES }}\AutoHotkey"
+AutoHotkey 1.1.24.00
+http://ahkscript.org/download/1.1/AutoHotkey112400_Install.exe
+/S /U32 /D="{{ PROGRAM_FILES }}\AutoHotkey"
+AutoHotkey 1.1.22.09
+http://ahkscript.org/download/1.1/AutoHotkey112209_Install.exe
+/S /U32 /D="{{ PROGRAM_FILES }}\AutoHotkey"
+AutoIt v{{ version }}
+https://www.autoitscript.com/files/autoit{{ release }}/autoit-v{{ release }}-setup.exe
+/S
+Autopsy
+http://heanet.dl.sourceforge.net/project/autopsy/autopsy/4.0.0/autopsy-4.0.0-64bit.msi
+http://heanet.dl.sourceforge.net/project/autopsy/autopsy/4.0.0/autopsy-4.0.0-32bit.msi
+/qn /norestart
+Autopsy
+http://heanet.dl.sourceforge.net/project/autopsy/autopsy/3.1.3/autopsy-3.1.3-64bit.msi
+http://heanet.dl.sourceforge.net/project/autopsy/autopsy/3.1.3/autopsy-3.1.3-32bit.msi
+/qn /norestart
+Autopsy
+http://heanet.dl.sourceforge.net/project/autopsy/autopsy/3.1.2/autopsy-3.1.2-64bit.msi
+http://heanet.dl.sourceforge.net/project/autopsy/autopsy/3.1.2/autopsy-3.1.2-32bit.msi
+/qn /norestart
+Autopsy
+http://heanet.dl.sourceforge.net/project/autopsy/autopsy/3.1.1/autopsy-3.1.1-64bit.msi
+http://heanet.dl.sourceforge.net/project/autopsy/autopsy/3.1.1/autopsy-3.1.1-32bit.msi
+/qn /norestart
+AWS Command Line Interface
+ https://s3.amazonaws.com/aws-cli/AWSCLI64.msi
+AWS Command Line Interface
+ https://s3.amazonaws.com/aws-cli/AWSCLI32.msi
+/qn /norestart
+Bandizip
+http://ca-dl.bandisoft.com/bandizip/BANDIZIP-SETUP.EXE
+/S
+Belarc Advisor
+http://downloads.belarc.com/advisor/advisorinstaller.exe
+/s
+BGINFO4X for Windows 3.3.6
+http://heanet.dl.sourceforge.net/project/bginfo4x/BGINFO4X3.3.6.msi
+/qn /norestart
+Bitnami Nginx Stack
+https://downloads.bitnami.com/files/stacks/nginxstack/1.8.0-0/bitnami-nginxstack-1.8.0-0-windows-installer.exe
+--unattendedmodeui none --mode unattended --base_password "ChangeMeNow"
+Blender
+http://ftp.nluug.nl/pub/graphics/blender/release/Blender2.78/blender-2.78-windows64.msi
+http://ftp.nluug.nl/pub/graphics/blender/release/Blender2.78/blender-2.78-windows32.msi
+/qn /norestart
+BootRacer
+salt://win/repo-ng/bootracer/bootracer-650.msi
+/qn /norestart
+Bulk Extractor {{ version }}
+http://digitalcorpora.org/downloads/bulk_extractor/bulk_extractor-{{ version }}-windowsinstaller.exe
+ /S /norestart
+Bulk Rename Utility {{ version }} (64-bit)
+Bulk Rename Utility {{ version }} (32-bit)
+http://www.s3.tgrmn.com/bru/BRU_setup_{{ version }}.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+CCleaner
+http://download.piriform.com/ccsetup{{ dl_version }}.exe
+/S
+CDBurnerXP
+https://download.cdburnerxp.se/cdbxp_setup_4.5.6.5931.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+CDRoller version 10.0
+http://cdroller.fileburst.com/CDRoller10_en.exe
+/VERYSILENT /MERGETASKS="set_edr_mode,cdroller_desktopicon,manual_desktopicon,quickref_desktopicon"
+Check_MK Agent {{ version }}
+salt://win/repo-ng/check_mk/check_mk_agent-{{ version }}.msi
+/qn /norestart
+Check_MK Agent 1.2.8b4
+salt://win/repo-ng/check_mk/install_agent-64-1.2.8b4.exe
+salt://win/repo-ng/check_mk/install_agent-1.2.8b4.exe
+/S
+Google Chrome
+https://dl.google.com/edgedl/chrome/install/GoogleChromeStandaloneEnterprise.msi
+/qn /norestart
+ClamAV-x64
+salt://win/repo-ng/clamav/clamav-0.99.1-x64.msi
+ClamAV
+salt://win/repo-ng/clamav/clamav-0.99.1-win32.msi
+/qr
+ClamAV-x64
+salt://win/repo-ng/clamav/clamav-0.98.7-x64.msi
+ClamAV
+salt://win/repo-ng/clamav/clamav-0.98.7-win32.msi
+/qr
+ClamWin
+http://downloads.sourceforge.net/clamwin/clamwin-0.98.7-setup.exe
+/sp- /verysilent /norestart
+ClamWin
+http://downloads.sourceforge.net/clamwin/clamwin-0.98.6-setup.exe
+/sp- /verysilent /norestart
+ClamWin
+http://downloads.sourceforge.net/clamwin/clamwin-0.98.5-setup.exe
+/sp- /verysilent /norestart
+Classic Shell
+http://www.mediafire.com/download/wl5nbjaki7zbssn/ClassicShellSetup_4_2_4.exe
+/passive
+Clink v0.4.8
+https://github.com/mridgers/clink/releases/download/0.4.8/clink_0.4.8_setup.exe
+/S
+Clink v0.4.7
+https://github.com/mridgers/clink/releases/download/0.4.7/clink_0.4.7_setup.exe
+/S
+Clink v0.4.6
+https://github.com/mridgers/clink/releases/download/0.4.6/clink_0.4.6_setup.exe
+/S
+Clink v0.4.4
+https://github.com/mridgers/clink/releases/download/0.4.4/clink_0.4.4_setup.exe
+/S
+ConEmu 160529.x64
+/p:x64,adm /quiet /norestart
+ConEmu 160529.x86
+/p:x86,adm /quiet /norestart
+https://github.com/Maximus5/ConEmu/releases/download/v16.05.29/ConEmuSetup.160529.exe
+CPUID CPU-Z 1.74.0
+salt://win/repo-ng/cpu-z/cpu-z_1.74-setup-en.exe
+/SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+CPUID CPU-Z 1.71.1
+salt://win/repo-ng/cpu-z/cpu-z_1.71.1-setup-en.exe
+/SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+cURL
+salt://win/repo-ng/curl/curl-7.46.0-win64.msi
+salt://win/repo-ng/curl/curl-7.46.0-win32.msi
+/qn /norestart
+cURL
+salt://win/repo-ng/curl/curl-7.45.0-win64.msi
+salt://win/repo-ng/curl/curl-7.45.0-win32.msi
+/qn /norestart
+cURL
+salt://win/repo-ng/curl/curl-7.44.0-win64.msi
+salt://win/repo-ng/curl/curl-7.44.0-win32.msi
+/qn /norestart
+cURL
+salt://win/repo-ng/curl/curl-7.43.0-win64.msi
+salt://win/repo-ng/curl/curl-7.43.0-win32.msi
+/qn /norestart
+cURL
+salt://win/repo-ng/curl/curl-7.40.0-win64.msi
+salt://win/repo-ng/curl/curl-7.40.0-win32.msi
+Cyberduck CLI
+http://dist.duck.sh/duck-5.0.3.20504.exe
+/quiet /norestart
+Cyberduck 4.7.3
+http://update.cyberduck.io/windows/Cyberduck-Installer-4.7.3.exe
+/S
+Defraggler
+http://download.piriform.com/dfsetup220.exe
+/S
+Defraggler 2.18
+http://download.piriform.com/dfsetup218.exe
+/S
+Microsoft .NET Framework 4.6.2
+https://download.microsoft.com/download/D/5/C/D5C98AB0-35CC-45D9-9BA5-B18256BA2AE6/NDP462-KB3151802-Web.exe
+/q /norestart
+Microsoft .NET Framework 4.6.1
+https://download.microsoft.com/download/3/5/9/35980F81-60F4-4DE3-88FC-8F962B97253B/NDP461-KB3102438-Web.exe
+/q /norestart
+Microsoft .NET Framework 4.6
+https://download.microsoft.com/download/1/4/A/14A6C422-0D3C-4811-A31F-5EF91A83C368/NDP46-KB3045560-Web.exe
+/q /norestart
+Microsoft .NET Framework 4.5.2
+http://download.microsoft.com/download/B/4/1/B4119C11-0423-477B-80EE-7A474314B347/NDP452-KB2901954-Web.exe
+/q /norestart
+Dropbox
+https://clientupdates.dropboxstatic.com/dbx-releng/client/Dropbox%2041.4.80%20Offline%20Installer.exe
+/s
+Duplicati (x64)
+https://duplicati.googlecode.com/files/Duplicati%201.3.4.x64.msi
+Duplicati
+https://duplicati.googlecode.com/files/Duplicati%201.3.4.msi
+/qn ALLUSERS=1 /norestart
+DVDStyler v2.9.6
+http://vorboss.dl.sourceforge.net/project/dvdstyler/dvdstyler/2.9.6/DVDStyler-2.9.6-win64.exe
+http://netcologne.dl.sourceforge.net/project/dvdstyler/dvdstyler/2.9.6/DVDStyler-2.9.6-win32.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+ESET Endpoint Antivirus
+ESET Endpoint Antivirus
+salt://win/repo-ng/eea/v6/eea_nt64_enu.msi
+salt://win/repo-ng/eea/v6/eea_nt32_enu.msi
+/qn ALLUSERS=1 /norestart
+EMET 5.5
+https://download.microsoft.com/download/8/E/E/8EEFD9FC-46B1-4A8B-9B5D-13B4365F8CA0/EMET%20Setup.msi
+ALLUSERS=1 /quiet /qn /norestart
+Emsisoft Anti-Malware
+http://dl.emsisoft.com/EmsisoftAntiMalwareSetup.exe
+/SP- /VERYSILENT /NORESTART
+Erlang OTP (8.3)
+http://erlang.org/download/otp_win64_19.3.exe
+http://erlang.org/download/otp_win32_19.3.exe
+/S
+Evernote v. 6.9.7
+https://cdn1.evernote.com/win6/public/Evernote_6.9.7.6770.exe
+/quiet
+Evernote v. 6.9.6
+https://cdn1.evernote.com/win6/public/Evernote_6.9.6.6729.exe
+/quiet
+Evernote v. 6.5.4
+https://cdn1.evernote.com/win6/public/Evernote_6.5.4.4720.exe
+/quiet
+Fiddler
+http://fiddler2.com/dl/fiddler4setup.exe
+/S /D={{ PROGRAM_FILES }}\Fiddler
+Fiddler
+http://fiddler2.com/dl/fiddler2setup.exe
+/S /D={{ PROGRAM_FILES }}\Fiddler
+FileHippo App Manager
+salt://win/repo-ng/filehippo-app-manager/AppManagerSetup_2.0.exe
+/S
+FileZilla Client {{ version }}
+http://netcologne.dl.sourceforge.net/project/filezilla/FileZilla_Client/{{ version }}/FileZilla_{{ version }}_win64-setup.exe
+http://vorboss.dl.sourceforge.net/project/filezilla/FileZilla_Client/{{ version }}/FileZilla_{{ version }}_win32-setup.exe
+/S
+Mozilla Firefox {{ version }} ESR (x86 en-US)
+https://download-installer.cdn.mozilla.net/pub/firefox/releases/{{ version }}esr/win32/en-US/Firefox%20Setup%20{{ version }}esr.exe
+/s
+Mozilla Firefox {{ version }} (x86 en-US)
+https://download-installer.cdn.mozilla.net/pub/firefox/releases/{{ version }}/win32/en-US/Firefox%20Setup%20{{ version }}.exe
+/s
+ Gedit 2.30.1
+ http://ftp.gnome.org/pub/GNOME/binaries/win32/gedit/2.30/gedit-setup-2.30.1-1.exe
+/sp- /verysilent /norestart
+GIMP {{ version }}
+http://download.gimp.org/mirror/pub/gimp/{{ major_version }}/windows/gimp-{{ version }}-setup{{ minor_version }}.exe
+/SP- /SILENT /NORESTART
+Git Extensions 2.48.05
+http://kent.dl.sourceforge.net/project/gitextensions/Git%20Extensions/Version%202.48.05/GitExtensions-2.48.05-Setup.msi
+/qn ALLUSERS=1 /norestart
+Git Extensions 2.48.03
+http://kent.dl.sourceforge.net/project/gitextensions/Git%20Extensions/Version%202.48.03/GitExtensions-2.48.03-Setup.msi
+/qn /norestart
+Git version {{ version }}
+https://github.com/git-for-windows/git/releases/download/v{{ short_version }}.windows.{{ win_ver }}/Git-{{ version }}-64-bit.exe
+https://github.com/git-for-windows/git/releases/download/v{{ short_version }}.windows.{{ win_ver }}/Git-{{ version }}-32-bit.exe
+/VERYSILENT /NORESTART /SP- /NOCANCEL
+Git version 1.9.5-preview20150319
+https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20150319/Git-1.9.5-preview20150319.exe
+/VERYSILENT /NORESTART /SP- /NOCANCEL
+Git version 1.9.5-preview20141217
+https://github.com/msysgit/msysgit/releases/download/Git-1.9.5-preview20141217/Git-1.9.5-preview20141217.exe
+/VERYSILENT /NORESTART /SP- /NOCANCEL
+Git version 1.9.4-preview20140815
+https://github.com/msysgit/msysgit/releases/download/Git-1.9.4-preview20140815/Git-1.9.4-preview20140815.exe
+/VERYSILENT /NOREBOOT
+Absolute Uninstaller 5.3.1.23
+http://download.glarysoft.com/ausetup.exe
+/S
+Absolute Uninstaller 5.3.1.21
+http://download.glarysoft.com/ausetup.exe
+/S
+GnuCash 2.6.5
+http://kent.dl.sourceforge.net/project/gnucash/gnucash%20%28stable%29/2.6.5/gnucash-2.6.5-setup.exe
+/SILENT
+Go Programming Language amd64 go1.6.2
+https://storage.googleapis.com/golang/go1.6.2.windows-amd64.msi
+Go Programming Language 386 go1.6.2
+https://storage.googleapis.com/golang/go1.6.2.windows-386.msi
+/qn /norestart
+Go Programming Language amd64 go1.5.2
+https://storage.googleapis.com/golang/go1.5.2.windows-amd64.msi
+Go Programming Language 386 go1.5.2
+https://storage.googleapis.com/golang/go1.5.2.windows-386.msi
+/qn /norestart
+Go Programming Language amd64 go1.5
+https://storage.googleapis.com/golang/go1.5.windows-amd64.msi
+Go Programming Language 386 go1.5
+https://storage.googleapis.com/golang/go1.5.windows-386.msi
+/qn /norestart
+Go Programming Language amd64 go1.4.2
+https://storage.googleapis.com/golang/go1.4.2.windows-amd64.msi
+Go Programming Language 386 go1.4.2
+https://storage.googleapis.com/golang/go1.4.2.windows-386.msi
+/qn /norestart
+GoodSync
+https://www.goodsync.com/download/GoodSync-Setup.msi
+/qn /norestart
+Gow
+https://github.com/bmatzelle/gow/releases/download/v0.8.0/Gow-0.8.0.exe
+/S
+Gpg4Win (3.0.3)
+http://files.gpg4win.org/gpg4win-light-3.0.3.exe
+/S
+Gpg4Win (3.0.0)
+http://files.gpg4win.org/gpg4win-light-3.0.0.exe
+/S
+Gpg4Win (2.3.4)
+http://files.gpg4win.org/gpg4win-light-2.3.4.exe
+/S
+Gpg4Win (2.3.3)
+http://files.gpg4win.org/gpg4win-light-2.3.3.exe
+/S
+Gpg4Win (2.3.2)
+http://files.gpg4win.org/gpg4win-light-2.3.2.exe
+/S
+Gpg4Win (2.3.1)
+http://files.gpg4win.org/gpg4win-light-2.3.1.exe
+/S
+Gpg4Win (2.3.0)
+http://files.gpg4win.org/gpg4win-light-2.3.0.exe
+/S
+Gpg4Win (2.2.4)
+http://files.gpg4win.org/gpg4win-light-2.2.4.exe
+/S
+Gpg4Win (3.0.3)
+http://files.gpg4win.org/gpg4win-3.0.3.exe
+/S
+Gpg4Win (3.0.0)
+http://files.gpg4win.org/gpg4win-3.0.0.exe
+/S
+Gpg4Win (2.3.4)
+http://files.gpg4win.org/gpg4win-2.3.4.exe
+/S
+Gpg4Win (2.3.3)
+http://files.gpg4win.org/gpg4win-2.3.3.exe
+/S
+Gpg4Win (2.3.2)
+http://files.gpg4win.org/gpg4win-2.3.2.exe
+/S
+Gpg4Win (2.3.1)
+http://files.gpg4win.org/gpg4win-2.3.1.exe
+/S
+Gpg4Win (2.3.0)
+http://files.gpg4win.org/gpg4win-2.3.0.exe
+/S
+Gpg4Win (2.2.4)
+http://files.gpg4win.org/gpg4win-2.2.4.exe
+/S
+Gpg4Win (3.0.3)
+http://files.gpg4win.org/gpg4win-vanilla-3.0.3.exe
+/S
+Gpg4Win (3.0.0)
+http://files.gpg4win.org/gpg4win-vanilla-3.0.0.exe
+/S
+Gpg4Win (2.3.4)
+http://files.gpg4win.org/gpg4win-vanilla-2.3.4.exe
+/S
+Gpg4Win (2.3.3)
+http://files.gpg4win.org/gpg4win-vanilla-2.3.3.exe
+/S
+Gpg4Win (2.3.2)
+http://files.gpg4win.org/gpg4win-vanilla-2.3.2.exe
+/S
+Gpg4Win (2.3.1)
+http://files.gpg4win.org/gpg4win-vanilla-2.3.1.exe
+/S
+Gpg4Win (2.3.0)
+http://files.gpg4win.org/gpg4win-vanilla-2.3.0.exe
+/S
+Gpg4Win (2.2.4)
+http://files.gpg4win.org/gpg4win-vanilla-2.2.4.exe
+/S
+GPU-Z 0.8.6
+http://us1-dl.techpowerup.com/SysInfo/GPU-Z/GPU-Z.0.8.6.exe
+/S
+grepWin x64
+http://netassist.dl.sourceforge.net/project/grepwin/1.6.15/grepWin-1.6.15-x64.msi
+grepWin
+http://netassist.dl.sourceforge.net/project/grepwin/1.6.15/grepWin-1.6.15.msi
+/qn ALLUSERS=1 /norestart
+grepWin x64
+http://netassist.dl.sourceforge.net/project/grepwin/1.6.14/grepWin-1.6.14-x64.msi
+grepWin
+http://netassist.dl.sourceforge.net/project/grepwin/1.6.14/grepWin-1.6.14.msi
+/qn ALLUSERS=1 /norestart
+grepWin x64
+http://netassist.dl.sourceforge.net/project/grepwin/1.6.13/grepWin-1.6.13-x64.msi
+grepWin
+http://netassist.dl.sourceforge.net/project/grepwin/1.6.13/grepWin-1.6.13.msi
+/qn ALLUSERS=1 /norestart
+grepWin x64
+http://netassist.dl.sourceforge.net/project/grepwin/1.6.12/grepWin-1.6.12-x64.msi
+grepWin
+http://netassist.dl.sourceforge.net/project/grepwin/1.6.12/grepWin-1.6.12.msi
+/qn ALLUSERS=1 /norestart
+Vim 8.0.3
+http://netcologne.dl.sourceforge.net/project/cream/Vim/8.0.3/gvim-8-0-3.exe
+/S
+Handbrake 0.10.5
+http://download.handbrake.fr/handbrake/releases/0.10.5/HandBrake-0.10.5-x86_64-Win_GUI-1.exe
+https://handbrake.fr/mirror/HandBrake-0.10.5-i686-Win_GUI-1.exe
+/S
+https://hipchat-ops.s3.amazonaws.com/hipchat4/windows/HipChat_4.0.1650.exe
+HipChat
+/sp /verysilent /norestart
+HWiNFO64 Version 5.70
+https://www.fosshub.com/HWiNFO.html/hw64_570.exe
+HWiNFO32 Version 5.70
+https://www.fosshub.com/HWiNFO.html/hw32_570.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+Icecast
+http://downloads.xiph.org/releases/icecast/icecast_win32_2.4.2.exe
+/S
+Ice 3.6.1.2
+https://zeroc.com/download/Ice/3.6/Ice-3.6.1-2.msi
+/qn /norestart
+ iCloud
+http://appldnld.apple.com/windows/091-43200-20180123-7D30C4B2-FFEC-11E7-A82F-B9BB7CCC33A9/iCloudSetup.exe
+/qn /norestart
+IIS Media Services 4.1
+http://download.microsoft.com/download/1/7/5/175931F3-DCF8-4E8F-A62D-884C5ACF6D46/IISMedia64.msi
+http://download.microsoft.com/download/9/E/A/9EA89305-2B2E-4379-8C1B-69FFFFD4D4FD/IISMedia32.msi
+/quiet /norestart
+IIS Media Services 4.0
+http://download.microsoft.com/download/5/D/2/5D2EE743-3F52-4838-BE8E-02611F0FCFEE/IISMedia64.msi
+http://download.microsoft.com/download/D/C/4/DC417D7E-20C2-42F9-8F1B-28F734AC8AFD/IISMedia32.msi
+/quiet /norestart
+IIS Media Services 2.0
+http://download.microsoft.com/download/7/C/1/7C1C6ADA-88B5-4559-83E0-178811ADC5B7/IISMedia64.msi
+http://download.microsoft.com/download/2/E/A/2EA2D1B4-71F8-48F4-BAD8-9D27323E1776/IISMedia32.msi
+/quiet /norestart
+Influx Capacitor
+http://influx-capacitor.com/Resources/Production/Influx-Capacitor.1.0.15.msi
+/q
+InfraRecorder
+http://heanet.dl.sourceforge.net/project/infrarecorder/InfraRecorder/0.53/ir053_x64.msi
+/qn /norestart
+http://heanet.dl.sourceforge.net/project/infrarecorder/InfraRecorder/0.53/ir053.exe
+/S
+Inkscape 0.91
+https://inkscape.global.ssl.fastly.net/media/resources/file/inkscape-0.91-x64.msi
+https://inkscape.global.ssl.fastly.net/media/resources/file/inkscape-0.91.msi
+/qn /norestart
+IntelliJ IDEAS Community Edition {{ version }}
+https://download.jetbrains.com/idea/ideaIC-{{ version }}.exe
+/S
+IntelliJ IDEAS Ultimate {{ version }}
+https://download.jetbrains.com/idea/ideaIU-{{ version }}.exe
+/S
+Internet Evidence Finder
+salt://win/repo-ng/ief/IEFv623.0001setup.exe
+/sp- /verysilent /norestart
+Irfanview Plugins 4.40
+salt://win/repo-ng/irfanview/irfanview_plugins_x64_442_setup.exe
+Irfanview Plugins 4.40
+salt://win/repo-ng/irfanview/irfanview_plugins_442_setup.exe
+/silent
+IrfanView 64 (remove only)
+salt://win/repo-ng/irfanview/iview451_x64_setup.exe
+IrfanView (remove only)
+salt://win/repo-ng/irfanview/iview451_setup.exe
+/silent /desktop=0 /thumbs=0 /group=1 /allusers=0 /assoc=0
+Helicon ISAPI_Rewrite 3 Lite
+http://www.helicontech.com/download/isapi_rewrite/ISAPI_Rewrite3_0112_Lite_x64.msi
+http://www.helicontech.com/download/isapi_rewrite/ISAPI_Rewrite3_0112_Lite.msi
+ALLUSERS=1 /quiet /norestart
+iTunes
+https://secure-appldnld.apple.com/itunes12/091-45357-20180123-72201840-FFEA-11E7-92F9-85B67CCC33A9/iTunes64Setup.exe
+https://secure-appldnld.apple.com/itunes12/091-56357-20171213-EDF21CDC-E039-11E7-9C46-D31A1E4B8CED/iTunesSetup.exe
+/quiet /qn ALLUSERS=1 /norestart
+Java SE Development Kit 8 Update 144 (64-bit)
+ salt://win/repo-ng/jre8/jdk-8u144-windows-x64.exe
+Java SE Development Kit 8 Update 144
+ salt://win/repo-ng/jre8_x86/jdk-8u144-windows-i586.exe
+/s ADDLOCAL="ToolsFeature,SourceFeature,PublicjreFeature"
+Java 8 Update 161 (64-bit)
+salt://win/repo-ng/jre8/jre-8u161-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 161
+salt://win/repo-ng/jre8_x86/jre-8u161-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 151 (64-bit)
+salt://win/repo-ng/jre8/jre-8u151-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 151
+salt://win/repo-ng/jre8_x86/jre-8u151-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 144 (64-bit)
+salt://win/repo-ng/jre8/jre-8u144-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 144
+salt://win/repo-ng/jre8_x86/jre-8u144-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 131 (64-bit)
+salt://win/repo-ng/jre8/jre-8u131-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 131
+salt://win/repo-ng/jre8_x86/jre-8u131-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 121 (64-bit)
+salt://win/repo-ng/jre8/jre-8u121-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 121
+salt://win/repo-ng/jre8_x86/jre-8u121-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 101 (64-bit)
+salt://win/repo-ng/jre8/jre-8u101-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 101
+salt://win/repo-ng/jre8_x86/jre-8u101-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 91 (64-bit)
+salt://win/repo-ng/jre8/jre-8u91-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 91
+salt://win/repo-ng/jre8_x86/jre-8u91-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 77 (64-bit)
+salt://win/repo-ng/jre8/jre-8u77-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 77
+salt://win/repo-ng/jre8_x86/jre-8u77-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 73 (64-bit)
+salt://win/repo-ng/jre8/jre-8u73-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 73
+salt://win/repo-ng/jre8_x86/jre-8u73-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 71 (64-bit)
+salt://win/repo-ng/jre8/jre-8u71-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 71
+salt://win/repo-ng/jre8_x86/jre-8u71-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 66 (64-bit)
+salt://win/repo-ng/jre8/jre-8u66-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 66
+salt://win/repo-ng/jre8_x86/jre-8u66-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 60 (64-bit)
+salt://win/repo-ng/jre8/jre-8u60-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 60
+salt://win/repo-ng/jre8_x86/jre-8u60-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 8 Update 51 (64-bit)
+salt://win/repo-ng/jre8/jre-8u51-windows-x64.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+Java 8 Update 51
+salt://win/repo-ng/jre8_x86/jre-8u51-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+Java 7 Update 79 (64-bit)
+salt://win/repo-ng/jre/jre-7u79-windows-x64.exe
+Java 7 Update 79
+salt://win/repo-ng/jre_x86/jre-7u79-windows-i586.exe
+ # due to winrepo installer limitations you need to manually download the exe from
+/s REBOOT=Suppress SPONSORS=0
+ # due to winrepo installer limitations you need to manually download the exe from
+KDiff3 (remove only)
+http://downloads.sourceforge.net/project/kdiff3/kdiff3/0.9.98/KDiff3-64bit-Setup_0.9.98-2.exe
+http://downloads.sourceforge.net/project/kdiff3/kdiff3/0.9.98/KDiff3-32bit-Setup_0.9.98-3.exe
+/S
+KeePass 2.38
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.38/KeePass-2.38.msi
+/qn /norestart
+KeePass 2.37
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.37/KeePass-2.37.msi
+/qn /norestart
+KeePass 2.36
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.36/KeePass-2.36.msi
+/qn /norestart
+KeePass 2.35
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.35/KeePass-2.35.msi
+/qn /norestart
+KeePass 2.34
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.34/KeePass-2.34.msi
+/qn /norestart
+KeePass 2.33
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.33/KeePass-2.33.msi
+/qn /norestart
+KeePass 2.32
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.32/KeePass-2.32.msi
+/qn /norestart
+KeePass 2.31
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.31/KeePass-2.31.msi
+/qn /norestart
+KeePass 2.30
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.30/KeePass-2.30.msi
+/qn /norestart
+KeePass 2.29
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%202.x/2.29/KeePass-2.29.msi
+/qn /norestart
+KeePass 1.35
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%201.x/1.35/KeePass-1.35.msi
+/qn /norestart
+KeePass 1.34
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%201.x/1.34/KeePass-1.34.msi
+/qn /norestart
+KeePass 1.33
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%201.x/1.33/KeePass-1.33.msi
+/qn /norestart
+KeePass 1.32
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%201.x/1.32/KeePass-1.32.msi
+/qn /norestart
+KeePass 1.31
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%201.x/1.31/KeePass-1.31.msi
+/qn /norestart
+KeePass 1.30
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%201.x/1.30/KeePass-1.30.msi
+/qn /norestart
+KeePass 1.29
+http://vorboss.dl.sourceforge.net/project/keepass/KeePass%201.x/1.29/KeePass-1.29.msi
+/qn /norestart
+LastPass (uninstall only)
+https://lastpass.eu/sync/lastpass_x64.exe
+https://lastpass.eu/sync/lastpass.exe
+-si --userinstallie --userinstallff --userinstallchrome
+ Lazarus {{ version }}
+ https://downloads.sourceforge.net/project/lazarus/Lazarus%20Windows%2064%20bits/Lazarus%20{{ version }}/lazarus-{{ version }}-fpc-{{ fpc_version }}-win64.exe
+ https://downloads.sourceforge.net/project/lazarus/Lazarus%20Windows%2032%20bits/Lazarus%20{{ version }}/lazarus-{{ version }}-fpc-{{ fpc_version }}-win32.exe
+ /SP- /VERYSILENT /NORESTART /SUPPRESSMSGBOXES
+LibreOffice {{ version }}
+https://downloadarchive.documentfoundation.org/libreoffice/old/{{ version }}/win/x86_64/LibreOffice_{{ version }}_Win_x64.msi
+https://downloadarchive.documentfoundation.org/libreoffice/old/{{ version }}/win/x86/LibreOffice_{{ version }}_Win_x86.msi
+/qn /norestart
+Log Parser 2.2
+http://download.microsoft.com/download/f/f/1/ff1819f9-f702-48a5-bbc7-c9656bc74de8/LogParser.msi
+/quiet /norestart
+MaaS360 Boot Analyzer v 1.0.0
+salt://win/repo-ng/maas360bootanalyzer/bootanalyzerinstaller.exe
+ |
+ |
+Malwarebytes Anti-Malware version 2.0.4.1028
+http://data-cdn.mbamupdates.com/v2/mbam/consumer/data/mbam-setup-2.0.4.1028.exe
+/SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+Mercurial 3.1.1 (x64)
+http://mercurial.selenic.com/release/windows/mercurial-3.1.1-x64.msi
+Mercurial 3.1.1 (x86)
+http://mercurial.selenic.com/release/windows/mercurial-3.1.1-x86.msi
+/qn /norestart
+Microsoft Message Analyzer
+ # both 32-bit (x86) AND a 64-bit (AMD64) installer available
+https://download.microsoft.com/download/2/8/3/283DE38A-5164-49DB-9883-9D1CC432174D/MessageAnalyzer64.msi
+https://download.microsoft.com/download/2/8/3/283DE38A-5164-49DB-9883-9D1CC432174D/MessageAnalyzer.msi
+/quiet /norestart
+Microsoft Build Tools 14.0 (amd64)
+Microsoft Build Tools 14.0 (x86)
+https://download.microsoft.com/download/E/E/D/EEDF18A8-4AED-4CE0-BEBE-70A83094FC5A/BuildTools_Full.exe
+/Q /NoRestart
+Mikogo
+http://download.mikogo4.com/mikogo-starter.exe
+/S & taskkill /F /T /IM Mikogo-Screen-Service.exe & exit 0
+MiKTeX 2.9
+http://mirrors.ctan.org/systems/win32/miktex/setup/basic-miktex-2.9.6069-x64.exe
+http://mirrors.ctan.org/systems/win32/miktex/setup/basic-miktex-2.9.6069.exe
+--auto-install=yes --paper-size=A4 --shared --unattended --package-set=basic --program-folder="%ProgramFiles%\MiKTeX 2.9\"
+MongoDB 3.3.5 2008R2Plus (64 bit)
+http://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2008plus-3.3.5-signed.msi
+/quiet /norestart
+MongoDB 3.2.6 2008R2Plus (64 bit)
+http://fastdl.mongodb.org/win32/mongodb-win32-x86_64-2008plus-3.2.6-signed.msi
+/quiet /norestart
+https://download.microsoft.com/download/8/E/1/8E16A4C7-DD28-4368-A83A-282C82FC212A/MBSASetup-x64-EN.msi
+https://download.microsoft.com/download/8/E/1/8E16A4C7-DD28-4368-A83A-282C82FC212A/MBSASetup-x86-EN.msi
+Microsoft Baseline Security Analyzer 2.3
+/qn /norestart
+Microsoft Visual C++ 2005 Redistributable (x64)
+http://download.microsoft.com/download/9/1/4/914851c6-9141-443b-bdb4-8bad3a57bea9/vcredist_x64.exe
+/q
+Microsoft Visual C++ 2005 Redistributable
+http://download.microsoft.com/download/d/3/4/d342efa6-3266-4157-a2ec-5174867be706/vcredist_x86.exe
+/q
+Microsoft Visual C++ 2005 Redistributable (x64)
+http://download.microsoft.com/download/d/4/1/d41aca8a-faa5-49a7-a5f2-ea0aa4587da0/vcredist_x64.exe
+/q
+Microsoft Visual C++ 2005 Redistributable
+http://download.microsoft.com/download/e/1/c/e1c773de-73ba-494a-a5ba-f24906ecf088/vcredist_x86.exe
+/q
+Microsoft Visual C++ 2005 Redistributable (x64)
+http://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.EXE
+/q
+Microsoft Visual C++ 2005 Redistributable
+http://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.EXE
+/q
+Microsoft Visual C++ 2005 Redistributable (x64)
+http://download.microsoft.com/download/6/B/B/6BB661D6-A8AE-4819-B79F-236472F6070C/vcredist_x64.exe
+/q
+Microsoft Visual C++ 2005 Redistributable
+http://download.microsoft.com/download/6/B/B/6BB661D6-A8AE-4819-B79F-236472F6070C/vcredist_x86.exe
+/q
+Microsoft Visual C++ 2008 Redistributable - x64 9.0.21022
+http://download.microsoft.com/download/d/2/4/d242c3fb-da5a-4542-ad66-f9661d0a8d19/vcredist_x64.exe
+/qn /norestart
+Microsoft Visual C++ 2008 Redistributable - x86 9.0.21022
+http://download.microsoft.com/download/1/1/1/1116b75a-9ec3-481a-a3c8-1777b5381140/vcredist_x86.exe
+/qn /norestart
+Microsoft Visual C++ 2008 Redistributable - x64 9.0.30729.4148
+http://download.microsoft.com/download/9/7/7/977B481A-7BA6-4E30-AC40-ED51EB2028F2/vcredist_x64.exe
+/qn /norestart
+Microsoft Visual C++ 2008 Redistributable - x86 9.0.30729.4148
+http://download.microsoft.com/download/9/7/7/977B481A-7BA6-4E30-AC40-ED51EB2028F2/vcredist_x86.exe
+/qn /norestart
+Microsoft Visual C++ 2008 Redistributable - x64 9.0.30729.6161
+http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe
+/qn /norestart
+Microsoft Visual C++ 2008 Redistributable - x86 9.0.30729.6161
+http://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe
+/qn /norestart
+Microsoft Visual C++ 2010 Redistributable -  x64 10.0.40219
+http://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe
+/q /norestart
+Microsoft Visual C++ 2010 Redistributable -  x86 10.0.40219
+http://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe
+/q /norestart
+Microsoft Visual C++ 2012 Redistributable (x64) - 11.0.61030
+http://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe
+/quiet /norestart
+Microsoft Visual C++ 2012 Redistributable (x86) - 11.0.61030
+http://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe
+/quiet /norestart
+Microsoft Visual C++ 2013 Redistributable (x64) - 12.0.30501
+http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe
+/quiet /norestart
+Microsoft Visual C++ 2013 Redistributable (x86) - 12.0.30501
+http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe
+/quiet /norestart
+Microsoft Visual C++ Build Tools
+http://download.microsoft.com/download/5/F/7/5F7ACAEB-8363-451F-9425-68A90F98B238/visualcppbuildtools_full.exe
+/Q /Silent /NoRestart
+Microsoft Visual C++ 2015 Redistributable (x64) - 14.0.24215
+https://download.microsoft.com/download/6/A/A/6AA4EDFF-645B-48C5-81CC-ED5963AEAD48/vc_redist.x64.exe
+/quiet /norestart
+Microsoft Visual C++ 2015 Redistributable (x64) - 14.0.23026
+http://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x64.exe
+/quiet /norestart
+Microsoft Visual C++ 2015 Redistributable (x86) - 14.0.24215
+https://download.microsoft.com/download/6/A/A/6AA4EDFF-645B-48C5-81CC-ED5963AEAD48/vc_redist.x86.exe
+/quiet /norestart
+Microsoft Visual C++ 2015 Redistributable (x86) - 14.0.23026
+http://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x86.exe
+/quiet /norestart
+Microsoft Visual C++ 2017 Redistributable (x86) - 14.11.25325.0
+https://download.visualstudio.microsoft.com/download/pr/11100229/78c1e864d806e36f6035d80a0e80399e/VC_redist.x86.exe
+/quiet /norestart
+muCommander (remove only)
+https://github.com/mucommander/mucommander/releases/download/{{ version }}/mucommander-{{ version }}.exe
+/S
+MySQL Server 5.1
+http://cdn.mysql.com/Downloads/MySQL-5.1/mysql-essential-5.1.73-winx64.msi
+http://cdn.mysql.com/Downloads/MySQL-5.1/mysql-essential-5.1.73-win32.msi
+/qn /norestart
+MySQL Installer - Community
+http://cdn.mysql.com/Downloads/MySQLInstaller/mysql-installer-community-5.6.23.0.msi
+/quiet /norestart
+Never 10 (GRC)
+https://www.grc.com/files/never10.exe
+update delete disable
+New Relic Infrastructure Agent
+https://download.newrelic.com/infrastructure_agent/windows/newrelic-infra.{{ version }}.msi
+/qn /norestart
+Nmap 7.60
+https://nmap.org/dist/nmap-7.60-setup.exe
+/S
+Node.js
+https://nodejs.org/dist/v{{ version }}/node-v{{ version }}-x64.msi
+https://nodejs.org/dist/v{{ version }}/node-v{{ version }}-x86.msi
+/qn /norestart
+Node.js
+https://nodejs.org/dist/v{{ version }}/node-v{{ version }}-x64.msi
+https://nodejs.org/dist/v{{ version }}/node-v{{ version }}-x86.msi
+/qn /norestart
+Notepad++ (32-bit x86)
+https://notepad-plus-plus.org/repository/{{ maj_version }}/{{ f_version }}/npp.{{ s_version }}.Installer.exe
+/S
+NSClient++ (x64)
+https://github.com/mickem/nscp/releases/download/{{ file_version }}/NSCP-{{ file_version }}-x64.msi
+NSClient++ (x86)
+https://github.com/mickem/nscp/releases/download/{{ file_version }}/NSCP-{{ file_version }}-Win32.msi
+/quiet
+Nullsoft Install System
+http://netcologne.dl.sourceforge.net/project/nsis/NSIS%203%20Pre-release/3.0b2/nsis-3.0b2-setup.exe
+/S
+Nullsoft Install System
+http://vorboss.dl.sourceforge.net/project/nsis/NSIS%203%20Pre-release/3.0b1/nsis-3.0b1-setup.exe
+/S
+Nullsoft Install System
+http://netix.dl.sourceforge.net/project/nsis/NSIS%202/2.46/nsis-2.46-setup.exe
+/S
+Network Time Protocol
+https://www.meinberg.de/download/ntp/windows/ntp-{{ version }}-win32-setup.exe
+/USE_FILE=C:\\ProgramData\\NTP\\setup.ini
+NUnit Console 3.6.1
+https://github.com/nunit/nunit-console/releases/download/3.6.1/NUnit.Console-3.6.1.msi
+/qn /norestart
+NXLog-CE
+https://nxlog.co/system/files/products/files/348/nxlog-ce-2.9.1716.msi
+/quiet /norestart
+NXLOG-CE
+http://heanet.dl.sourceforge.net/project/nxlog-ce/nxlog-ce-2.8.1248.msi
+/quiet /norestart
+Octopus Deploy Tentacle
+https://octopus.com/downloads/latest/OctopusTentacle{{ PLATFORM_LATEST }}
+/qn ALLUSERS=1 /norestart
+Octopus Deploy Tentacle
+https://download.octopusdeploy.com/octopus/Octopus.Tentacle.{{ version }}{{ PLATFORM }}.msi
+/qn ALLUSERS=1 /norestart
+OpenLP {{ version }}
+https://get.openlp.org/{{ version }}/OpenLP-{{ version }}-setup.exe
+/SP- /VERYSILENT /NORESTART
+OpenOffice 4.1.2
+http://netix.dl.sourceforge.net/project/openofficeorg.mirror/4.1.2/binaries/en-US/Apache_OpenOffice_4.1.2_Win_x86_install_en-US.exe
+/S
+OpenOffice 4.1.1
+http://downloads.sourceforge.net/project/openofficeorg.mirror/4.1.1/binaries/en-US/Apache_OpenOffice_4.1.1_Win_x86_install_en-US.exe
+/S
+ {% set arch = "" %} # Combined installer since v2.4+
+OpenVPN {{ version }} ' # Note: the OpenVPN installer adds a space at the end of its install string
+https://swupdate.openvpn.org/community/releases/openvpn-install-{{ version }}{{ arch }}.exe
+/S /SELECT_OPENSSL_UTILITIES=1 /SELECT_EASYRSA=1 /SELECTSHORTCUTS=1 /SELECTOPENVPN=1 /SELECTASSOCIATIONS=1 /SELECTOPENVPNGUI=1 /SELECTPATH=1
+OSSEC HIDS 2.8
+salt://win/repo/ossec/ossec-agent-win32-2.8.exe
+/S
+ownCloud
+https://download.owncloud.com/desktop/stable/ownCloud-{{ version }}-setup.exe
+/S
+Pandoc 1.17.0.2
+https://github.com/jgm/pandoc/releases/download/1.17.0.2/pandoc-1.17.0.2-windows.msi
+/qn ALLUSERS=1 /norestart
+Parallels Client-64 bit'
+http://download.parallels.com/ras/v15/15.0.5.3869/RASClient-x64-15.0.3869.msi
+Parallels Client'
+http://download.parallels.com/ras/v15/15.0.5.3869/RASClient-15.0.3869.msi
+/qn /norestart
+Pass4Win - Windows version of Pass (http://www.passwordstore.org/) in the sense that the store (password structure) is and should be exactly the same between the two programs.
+ # both 32-bit (x86) AND a 64-bit (AMD64) installer available
+https://github.com/mbos/Pass4Win/releases/download/version-1.2.1/Pass4Win-Setup-v1.2.1.9-x64.exe
+https://github.com/mbos/Pass4Win/releases/download/version-1.2.1/Pass4Win-Setup-v1.2.1.9-x86.exe
+/S
+Passware Kit Agent (64-bit)
+http://www.lostpassword.com/downloads/passware-kit-agent-64bit.msi
+/qn /norestart
+Passware Kit Forensic (64-bit)
+salt://win/repo-ng/passware-kit-forensic-13.1.7657/passware-kit-forensic-64bit.msi
+/qn /norestart
+PatchMyPC
+http://patchmypc.net/freeupdater/PatchMyPC.exe
+ |
+PDF24 Creator
+http://en.pdf24.org/products/pdf-creator/download/pdf24-creator-{{ version }}.msi
+DESKTOPICONS=No FAXPRINTER=No /norestart /qn
+PDFCreator
+http://white.download.pdfforge.org/pdfcreator/2.5.0/PDFCreator-2_5_0-Setup.exe
+/VERYSILENT /NORESTART /DontUseYahooSearch /SP-
+PeaZip 6.0.0 (WIN64)
+http://sourceforge.net/projects/peazip/files/6.0.0/peazip-6.0.0.WIN64.exe
+PeaZip 6.0.0
+http://sourceforge.net/projects/peazip/files/6.0.0/peazip-6.0.0.WINDOWS.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+pgAdmin 4 version {{ version }}
+https://ftp.postgresql.org/pub/pgadmin/pgadmin4/v{{ version }}/windows/pgadmin4-{{ version }}-x86.exe
+/SP- /verysilent /norestart
+pGina v3.1.8.0
+https://github.com/pgina/pgina/releases/download/v3.1.8.0/pGinaSetup-3.1.8.0.exe
+/silent
+Pidgin
+http://heanet.dl.sourceforge.net/project/pidgin/Pidgin/{{ version }}/pidgin-{{ version }}-offline.exe
+/S
+PostgreSQL 9.6
+http://get.enterprisedb.com/postgresql/postgresql-9.6.0-1-windows{{ ARCH }}.exe
+ --unattendedmodeui minimal --mode unattended --superpassword postgres
+PostgreSQL 9.5
+http://get.enterprisedb.com/postgresql/postgresql-9.5.0-1-windows{{ ARCH }}.exe
+ --unattendedmodeui minimal --mode unattended --superpassword postgres
+PostgreSQL 9.4
+http://get.enterprisedb.com/postgresql/postgresql-9.4.5-3-windows{{ ARCH }}.exe
+ --unattendedmodeui minimal --mode unattended --superpassword postgres
+PostgreSQL 9.3
+http://get.enterprisedb.com/postgresql/postgresql-9.3.10-3-windows{{ ARCH }}.exe
+ --unattendedmodeui minimal --mode unattended --superpassword postgres
+https://the.earth.li/~sgtatham/putty/{{ version }}/w64/putty-64bit-{{ version }}-installer.msi
+https://the.earth.li/~sgtatham/putty/{{ version }}/w32/putty-{{ version }}-installer.msi
+PuTTY release {{ version }}{{ ver_arch | default('') }}
+ /qn
+PuTTY release {{ version }}
+http://the.earth.li/~sgtatham/putty/{{ version }}/x86/putty-{{ version }}-installer.exe
+/SP- /verysilent /norestart
+Python 2.7.12 (64-bit)
+http://www.python.org/ftp/python/2.7.12/python-2.7.12.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 2.7.11 (64-bit)
+http://www.python.org/ftp/python/2.7.11/python-2.7.11.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 2.7.10 (64-bit)
+http://www.python.org/ftp/python/2.7.10/python-2.7.10.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 2.7.9 (64-bit)
+http://www.python.org/ftp/python/2.7.9/python-2.7.9.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 2.7.8 (64-bit)
+http://www.python.org/ftp/python/2.7.8/python-2.7.8.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 2.7.7 (64-bit)
+http://www.python.org/ftp/python/2.7.7/python-2.7.7.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 2.7.6 (64-bit)
+http://www.python.org/ftp/python/2.7.6/python-2.7.6.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 2.7.12
+http://www.python.org/ftp/python/2.7.12/python-2.7.12.msi
+/qn /norestart ALLUSERS=1
+Python 2.7.11
+http://www.python.org/ftp/python/2.7.11/python-2.7.11.msi
+/qn /norestart ALLUSERS=1
+Python 2.7.10
+http://www.python.org/ftp/python/2.7.10/python-2.7.10.msi
+/qn /norestart ALLUSERS=1
+Python 2.7.9
+http://www.python.org/ftp/python/2.7.9/python-2.7.9.msi
+/qn /norestart ALLUSERS=1
+Python 2.7.8
+http://www.python.org/ftp/python/2.7.8/python-2.7.8.msi
+/qn /norestart ALLUSERS=1
+Python 2.7.7
+http://www.python.org/ftp/python/2.7.7/python-2.7.7.msi
+/qn /norestart ALLUSERS=1
+Python 2.7.6
+http://www.python.org/ftp/python/2.7.6/python-2.7.6.msi
+/qn /norestart ALLUSERS=1
+Python 3.5.2 (64-bit)
+https://www.python.org/ftp/python/3.5.2/python-3.5.2-amd64.exe
+/quiet InstallAllUsers=1
+Python 3.5.1 (64-bit)
+https://www.python.org/ftp/python/3.5.1/python-3.5.1-amd64.exe
+/quiet InstallAllUsers=1
+Python 3.4.3 (64-bit)
+https://www.python.org/ftp/python/3.4.3/python-3.4.3.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 3.4.2 (64-bit)
+https://www.python.org/ftp/python/3.4.2/python-3.4.2.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 3.4.1 (64-bit)
+https://www.python.org/ftp/python/3.4.1/python-3.4.1.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 3.3.3 (64-bit)
+http://www.python.org/ftp/python/3.3.3/python-3.3.3.amd64.msi
+/qn ALLUSERS=1 /norestart
+Python 3.5.2 (32-bit)
+https://www.python.org/ftp/python/3.5.2/python-3.5.2.exe
+/quiet InstallAllUsers=1
+Python 3.5.1 (32-bit)
+https://www.python.org/ftp/python/3.5.1/python-3.5.1.exe
+/quiet InstallAllUsers=1
+Python 3.4.3 (32-bit)
+https://www.python.org/ftp/python/3.4.3/python-3.4.3.msi
+/qn ALLUSERS=1 /norestart
+Python 3.4.2 (32-bit)
+https://www.python.org/ftp/python/3.4.2/python-3.4.2.msi
+/qn ALLUSERS=1 /norestart
+Python 3.4.1 (32-bit)
+https://www.python.org/ftp/python/3.4.1/python-3.4.1.msi
+/qn ALLUSERS=1 /norestart
+Python 3.3.3 (32-bit)
+http://www.python.org/ftp/python/3.3.3/python-3.3.3.msi
+/qn ALLUSERS=1 /norestart
+QEMU
+http://qemu.weilnetz.de/w{{ BITS }}/qemu-w{{ BITS }}-setup-20160303.exe
+/S
+QueueExplorer Professional 4.1.5
+https://www.cogin.com/download/mq/download.php?file=QueueExplorerPro4.1.5.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+QuickTime 7
+salt://win/repo-ng/quicktime/QuickTimeInstaller.exe
+/quiet /qn /norestart
+RabbitMQ Server 3.6.9
+https://github.com/rabbitmq/rabbitmq-server/releases/download/rabbitmq_v3_6_9/rabbitmq-server-3.6.9.exe
+/S
+Rakudo Star 2016.01
+http://rakudo.org/downloads/star/rakudo-star-2016.01-x86%20(no%20JIT).msi
+/qn /norestart
+Rakudo Star 2016.04
+http://rakudo.org/downloads/star/rakudo-star-2016.04-x86_64%20(JIT).msi
+/qn /norestart
+Remote Desktop Connection Manager
+http://download.microsoft.com/download/A/F/0/AF0071F3-B198-4A35-AA90-C68D103BDCCF/rdcman.msi
+ALLUSERS=1 /quiet /norestart
+Rocket.Chat+ {{ version }}
+https://github.com/RocketChat/Rocket.Chat.Electron/releases/download/{{ version }}/rocketchat-setup-{{ version }}.exe
+/S /allusers
+Ruby {{ version }}-x64
+http://dl.bintray.com/oneclick/rubyinstaller/rubyinstaller-{{ dl_version }}-x64.exe
+/verysilent
+Ruby {{ version }}
+http://dl.bintray.com/oneclick/rubyinstaller/rubyinstaller-{{ dl_version }}.exe
+/verysilent
+Salt Minion {{ version }}
+https://repo.saltstack.com/windows/Salt-Minion-{{ version }}-Py2-AMD64-Setup.exe
+https://repo.saltstack.com/windows/Salt-Minion-{{ version }}-Py2-x86-Setup.exe
+ # "/S /master={{ salt[pillar.get']('salt:master', 'salt.domain.tld') }} /minion-id={{ salt['pillar.get']('salt:minion:ids:' ~ grains['host'] }}"
+/S
+Salt Minion {{ version }}
+https://repo.saltstack.com/windows/Salt-Minion-{{ version }}-AMD64-Setup.exe
+https://repo.saltstack.com/windows/Salt-Minion-{{ version }}-x86-Setup.exe
+/S
+Salt Minion {{ version }} (Python 3)
+https://repo.saltstack.com/windows/Salt-Minion-{{ version }}-Py3-AMD64-Setup.exe
+https://repo.saltstack.com/windows/Salt-Minion-{{ version }}-Py3-x86-Setup.exe
+ # "/S /master={{ salt[pillar.get']('salt:master', 'salt.domain.tld') }} /minion-id={{ salt['pillar.get']('salt:minion:ids:' ~ grains['host'] }}"
+/S
+Sandboxie 4.20 (64-bit)
+http://www.sandboxie.com/attic/SandboxieInstall64-420.exe
+Sandboxie 4.20 (32-bit)
+http://www.sandboxie.com/attic/SandboxieInstall32-420.exe
+/S
+ScaleOut StateServer x64 Edition
+https://www.scaleoutsoftware.com/pkg/soss_setup64.msi
+ScaleOut StateServer
+https://www.scaleoutsoftware.com/pkg/soss_setup32.msi
+/quiet
+Secunia PSI
+http://secunia.com/PSISetup.exe
+/S
+Sensu
+https://sensu.global.ssl.fastly.net/msi/sensu-0.26.3-1.msi
+/qn /norestart
+SharpDevelop 5.1 RC
+http://netassist.dl.sourceforge.net/project/sharpdevelop/SharpDevelop%205.x/5.1%20RC/SharpDevelop_5.1.0.5134_RC_Setup.msi
+/qn ALLUSERS=1 /norestart
+SharpDevelop 4.4
+http://freefr.dl.sourceforge.net/project/sharpdevelop/SharpDevelop%204.x/4.4/SharpDevelop_4.4.2.9749_Setup.msi
+/qn ALLUSERS=1 /norestart
+SharpDevelop 3.2.1
+http://skylink.dl.sourceforge.net/project/sharpdevelop/SharpDevelop%203.x/3.2/SharpDevelop_3.2.1.6466_Setup.msi
+/qn ALLUSERS=1 /norestart
+SharpDevelop 2.2
+http://freefr.dl.sourceforge.net/project/sharpdevelop/SharpDevelop%202.x/2.2.1/SharpDevelop_2.2.1.2648_Setup.msi
+/qn ALLUSERS=1 /norestart
+Skitch
+https://evernote.s3.amazonaws.com/Skitch/win32/skitchsetup_2.3.2.176.exe
+--mode unattended
+Skype™ 7.40
+http://download.skype.com/msi/SkypeSetup_7.40.0.151.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.40
+http://download.skype.com/msi/SkypeSetup_7.40.0.103.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.38
+http://download.skype.com/msi/SkypeSetup_7.38.0.101.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.37
+http://download.skype.com/msi/SkypeSetup_7.37.0.102.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.36
+http://download.skype.com/msi/SkypeSetup_7.36.0.101.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.35
+http://download.skype.com/msi/SkypeSetup_7.35.0.101.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.34
+http://download.skype.com/msi/SkypeSetup_7.34.0.103.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.29
+http://download.skype.com/msi/SkypeSetup_7.29.0.101.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.28
+http://download.skype.com/msi/SkypeSetup_7.28.0.101.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.27
+http://download.skype.com/msi/SkypeSetup_7.27.0.101.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Skype™ 7.25
+http://download.skype.com/msi/SkypeSetup_7.25.0.106.msi
+/qn /norestart STARTSKYPE=FALSE TRANSFORMS=:RemoveDesktopShortcut.mst TRANSFORMS=:RemoveStartup.mst
+Slack Machine-Wide Installer
+https://slack-ssb-updates.global.ssl.fastly.net/releases_x64/SlackSetup.msi
+https://slack-ssb-updates.global.ssl.fastly.net/releases/SlackSetup.msi
+/qn /norestart
+ Slack
+https://slack-ssb-updates.global.ssl.fastly.net/releases/SlackSetup.exe
+-s
+smartmontools
+http://netix.dl.sourceforge.net/project/smartmontools/smartmontools/6.4/smartmontools-6.4-1.win32-setup.exe
+/S
+SnmpTools 2
+http://erwan.labalec.fr/snmptools/snmptools32.exe
+/SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+SoapUI {{ version }} {{ version }}
+https://s3.amazonaws.com/downloads.eviware/soapuios/{{ version }}/SoapUI-x64-{{ version }}.exe
+https://s3.amazonaws.com/downloads.eviware/soapuios/{{ version }}/SoapUI-x32-{{ version }}.exe
+-q
+Software Informer
+http://files.informer.com/siinst.exe
+/SP- /VERYSILENT /NORESTART /SUPPRESSMSGBOXES
+SourceTree
+https://downloads.atlassian.com/software/sourcetree/windows/ga/SourceTreeSetup-{{ version }}.exe
+/exenoui /qn /norestart
+SourceTree
+https://downloads.atlassian.com/software/sourcetree/windows/SourceTreeSetup_{{ version }}.exe
+/exenoui /qn /norestart
+Spybot Anti-Beacon
+https://download.spybot.info/AntiBeacon/SpybotAntiBeacon-1.6-setup.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+Spybot - Search & Destroy
+http://spybotupdates.com/files/spybot-2.4.exe
+/VERYSILENT /SuppressMsgGBoxes /NoRestart /SP-
+SSC Serv {{ version }} Free Edition
+http://ssc-serv.com/files/SSC%20Serv%20Setup%20{{ version }}%20{{ PLATFORM }}%20Free%20Edition.exe
+/SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+Steam
+https://steamcdn-a.akamaihd.net/client/installer/SteamSetup.exe
+/S
+Stellarium 0.13.3
+http://heanet.dl.sourceforge.net/project/stellarium/Stellarium-win64/0.13.3/stellarium-0.13.3-win64.exe
+http://heanet.dl.sourceforge.net/project/stellarium/Stellarium-win32/0.13.3/stellarium-0.13.3-win32.exe
+/silent
+Stellarium 0.13.2
+http://heanet.dl.sourceforge.net/project/stellarium/Stellarium-win64/0.13.2/stellarium-0.13.2-win64.exe
+http://heanet.dl.sourceforge.net/project/stellarium/Stellarium-win32/0.13.2/stellarium-0.13.2-win32.exe
+/silent
+Strawberry Perl (64-bit)
+http://strawberryperl.com/download/{{ dl_version }}/strawberry-perl-{{ dl_version }}-64bit.msi
+/qn /norestart
+Strawberry Perl
+http://strawberryperl.com/download/{{ dl_version }}/strawberry-perl-{{ dl_version }}-32bit.msi
+/qn /norestart
+stunnel installed for AllUsers
+https://www.stunnel.org/downloads/archive/5.x/stunnel-5.30-installer.exe
+/S
+Windows Resource Kit Tools - SubInAcl.exe
+http://download.microsoft.com/download/1/7/d/17d82b72-bc6a-4dc8-bfaa-98b37b22b367/subinacl.msi
+/qn ALLUSERS=1 /norestart
+Sumatra PDF 3.1.2
+https://www.sumatrapdfreader.org/dl/{{ INSTALLER }}
+/s /opt
+Subversion
+http://sourceforge.net/projects/win32svn/files/1.8.13/Setup-Subversion-1.8.13.msi
+/quiet
+Subversion
+http://sourceforge.net/projects/win32svn/files/1.8.11/Setup-Subversion-1.8.11.msi
+/quiet
+TeamViewer 11
+https://downloadeu1.teamviewer.com/download/TeamViewer_Setup_en.exe
+/S
+TeraCopy 2.3
+http://storage.googleapis.com/codesector/teracopy.exe
+ |
+Texmaker
+http://www.xm1math.net/texmaker/texmakerwin32_install.exe
+/S
+TeXnicCenter Version 2.02 Stable
+http://heanet.dl.sourceforge.net/project/texniccenter/TeXnicCenter/2.02%20Stable/TXCSetup_2.02Stable_x64.exe
+http://netassist.dl.sourceforge.net/project/texniccenter/TeXnicCenter/2.02%20Stable/TXCSetup_2.02Stable_Win32.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+TeXstudio 2.10.8
+http://kent.dl.sourceforge.net/project/texstudio/texstudio/TeXstudio%202.10.8/texstudio-2.10.8-win-qt5.5.1.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+TeXworks 0.6.1
+https://github.com/TeXworks/texworks/releases/download/release-0.6.1/TeXworks-win-setup-0.6.1-201605010903-git_3614278.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+Mozilla Thunderbird {{ version }} (x86 en-GB)
+https://download-installer.cdn.mozilla.net/pub/thunderbird/releases/{{ version }}/win32/en-GB/Thunderbird%20Setup%20{{ version }}.exe
+-ms
+TightVNC
+http://www.tightvnc.com/download/2.7.10/tightvnc-2.7.10-setup-64bit.msi
+http://www.tightvnc.com/download/2.7.10/tightvnc-2.7.10-setup-32bit.msi
+/quiet /norestart
+ # both 32-bit (x86) AND a 64-bit (AMD64) installer available
+todotxt.net v3.2.0.0
+salt://win/repo-ng/todotxt.net/todotxt-setup-3.2.0.0.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+Todour version 2.03
+http://nerdur.com/Todour-2.03.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+Bazaar 2.5.1
+https://launchpadlibrarian.net/107526036/bzr-2.5.1-1-setup.exe
+/SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+TortoiseGit 1.8.13.0 (64 bit)
+http://download.tortoisegit.org/tgit/1.8.13.0/TortoiseGit-1.8.13.0-64bit.msi
+TortoiseGit 1.8.13.0 (32 bit)
+http://download.tortoisegit.org/tgit/1.8.13.0/TortoiseGit-1.8.13.0-32bit.msi
+/qn /norestart
+TortoiseHg 3.6.2 (x64)
+salt://win/repo-ng/tortoise-hg/tortoisehg-3.6.2-x64.msi
+TortoiseHg 3.6.2 (x86)
+salt://win/repo-ng/tortoise-hg/tortoisehg-3.6.2-x86.msi
+/qn /norestart
+TortoiseHg 3.3.0 (x64)
+salt://win/repo-ng/tortoise-hg/tortoisehg-3.3.0-x64.msi
+TortoiseHg 3.3.0 (x86)
+salt://win/repo-ng/tortoise-hg/tortoisehg-3.3.0-x86.msi
+/qn /norestart
+TortoiseSVN 1.9.4.27285 (64 bit)
+http://netcologne.dl.sourceforge.net/project/tortoisesvn/1.9.4/Application/TortoiseSVN-1.9.4.27285-x64-svn-1.9.4.msi
+TortoiseSVN 1.9.4.27285 (32 bit)
+http://netcologne.dl.sourceforge.net/project/tortoisesvn/1.9.4/Application/TortoiseSVN-1.9.4.27285-win32-svn-1.9.4.msi
+/qn /norestart
+TrueCrypt 7.1a
+https://download.truecrypt.ch/current/TrueCrypt%20Setup%207.1a.exe
+/S
+Ultra Defragmenter
+http://netcologne.dl.sourceforge.net/project/ultradefrag/stable-release/7.0.2/ultradefrag-7.0.2.bin.amd64.exe
+http://netcologne.dl.sourceforge.net/project/ultradefrag/stable-release/7.0.2/ultradefrag-7.0.2.bin.i386.exe
+/S /FULL=1
+Ultra Defragmenter
+http://netcologne.dl.sourceforge.net/project/ultradefrag/stable-release/7.0.1/ultradefrag-7.0.1.bin.amd64.exe
+http://netcologne.dl.sourceforge.net/project/ultradefrag/stable-release/7.0.1/ultradefrag-7.0.1.bin.i386.exe
+/S /FULL=1
+Ultra Defragmenter 6.0.2
+http://heanet.dl.sourceforge.net/project/ultradefrag/stable-release/6.0.2/ultradefrag-6.0.2.bin.amd64.exe
+http://heanet.dl.sourceforge.net/project/ultradefrag/stable-release/6.0.2/ultradefrag-6.0.2.bin.i386.exe
+/S /FULL=1
+IIS URL Rewrite Module 2
+http://download.microsoft.com/download/C/9/E/C9E8180D-4E51-40A6-A9BF-776990D8BCA9/rewrite_amd64.msi
+http://download.microsoft.com/download/5/4/9/54980B19-9C64-4E8E-A69C-615A88DFF8B7/rewrite_x86.msi
+/qn /norestart
+IIS URL Rewrite Module 2
+http://download.microsoft.com/download/D/D/E/DDE57C26-C62C-4C59-A1BB-31D58B36ADA2/rewrite_amd64_en-US.msi
+http://download.microsoft.com/download/6/8/F/68F82751-0644-49CD-934C-B52DF91765D1/rewrite_x86_en-US.msi
+/qn /norestart
+USB Drive Letter Manager (x64)
+ http://www.uwe-sieber.de/files/usbdlm_x64.msi
+USB Drive Letter Manager (Win32)
+ http://www.uwe-sieber.de/files/usbdlm.msi
+/qn /norestart
+Vagrant
+https://releases.hashicorp.com/vagrant/{{ version }}/vagrant_{{ version }}.msi
+/qn /norestart
+Microsoft Visual C++ Compiler Package for Python 2.7
+http://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi
+/qn ALLUSERS=1 /norestart
+Microsoft Visual C++ 2010  x64 Redistributable - 10.0.40219
+http://download.microsoft.com/download/A/8/0/A80747C3-41BD-45DF-B505-E9710D2744E0/vcredist_x64.exe
+/norestart /q
+Microsoft Visual C++ 2010  x86 Redistributable - 10.0.40219
+http://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe
+/norestart /q
+Oracle VM VirtualBox 5.2.2
+http://download.virtualbox.org/virtualbox/5.2.2/VirtualBox-5.2.2-119230-Win.exe
+--silent
+Oracle VM VirtualBox 5.1.28
+http://download.virtualbox.org/virtualbox/5.1.28/VirtualBox-5.1.28-117968-Win.exe
+--silent
+Oracle VM VirtualBox 5.1.16
+http://download.virtualbox.org/virtualbox/5.1.16/VirtualBox-5.1.16-113841-Win.exe
+--silent
+Oracle VM VirtualBox 5.1.14
+http://download.virtualbox.org/virtualbox/5.1.14/VirtualBox-5.1.14-112924-Win.exe
+--silent
+Oracle VM VirtualBox 5.1.4
+http://download.virtualbox.org/virtualbox/5.1.4/VirtualBox-5.1.4-110228-Win.exe
+--silent
+Oracle VM VirtualBox 5.1.2
+http://download.virtualbox.org/virtualbox/5.1.2/VirtualBox-5.1.2-108956-Win.exe
+--silent
+Oracle VM VirtualBox 5.1.0
+http://download.virtualbox.org/virtualbox/5.1.0/VirtualBox-5.1.0-108711-Win.exe
+--silent
+Oracle VM VirtualBox 5.0.26
+http://download.virtualbox.org/virtualbox/5.0.26/VirtualBox-5.0.26-108824-Win.exe
+--silent
+Oracle VM VirtualBox 5.0.24
+http://download.virtualbox.org/virtualbox/5.0.24/VirtualBox-5.0.24-108355-Win.exe
+--silent
+Oracle VM VirtualBox 5.0.22
+http://download.virtualbox.org/virtualbox/5.0.22/VirtualBox-5.0.22-108108-Win.exe
+--silent
+Oracle VM VirtualBox 5.0.20
+http://download.virtualbox.org/virtualbox/5.0.20/VirtualBox-5.0.20-106931-Win.exe
+--silent
+Virtualbox 4.3.28
+http://download.virtualbox.org/virtualbox/4.3.28/VirtualBox-4.3.28-100309-Win.exe
+--silent
+VLC media player
+http://get.videolan.org/vlc/{{ version }}/win64/vlc-{{ version }}-win64.exe
+http://get.videolan.org/vlc/{{ version }}/win32/vlc-{{ version }}-win32.exe
+/S
+VSee
+http://d2q5hugz2rti4w.cloudfront.net/builds/2015/vsee707_0030-r34_final_build.exe
+-no_autorun
+Wampserver64 3.0.4
+http://tenet.dl.sourceforge.net/project/wampserver/WampServer%203/WampServer%203.0.0/wampserver3_x64_apache2.4.18_mysql5.7.11_php5.6.19-7.0.4.exe
+Wampserver 3.0.4
+http://tenet.dl.sourceforge.net/project/wampserver/WampServer%203/WampServer%203.0.0/wampserver3.0.4_x86_apache2.4.18_mysql5.7.11_php5.6.19-7.0.4.exe
+/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-
+WAMP Server 2.5
+http://heanet.dl.sourceforge.net/project/wampserver/WampServer%202/Wampserver%202.5/wampserver2.5-Apache-2.4.9-Mysql-5.6.17-php5.5.12-64b.exe
+http://heanet.dl.sourceforge.net/project/wampserver/WampServer%202/Wampserver%202.5/wampserver2.5-Apache-2.4.9-Mysql-5.6.17-php5.5.12-32b.exe
+/S /VERYSILENT
+Bitnami WAMP Stack 5.5.30
+https://downloads.bitnami.com/files/stacks/wampstack/5.5.30-0/bitnami-wampstack-5.5.30-0-windows-installer.exe
+--mode unattended --base_password salt-installer-secret --apache_server_port 8080
+Bitnami WAMP Stack 5.4.36
+https://downloads.bitnami.com/files/stacks/wampstack/5.4.36-0/bitnami-wampstack-5.4.36-0-windows-installer.exe
+--mode unattended --base_password salt-installer-secret --apache_server_port 8080
+Microsoft Web Deploy 3.5
+http://download.microsoft.com/download/D/4/4/D446D154-2232-49A1-9D64-F5A9429913A4/WebDeploy_amd64_en-US.msi
+http://download.microsoft.com/download/D/4/4/D446D154-2232-49A1-9D64-F5A9429913A4/WebDeploy_x86_en-US.msi
+/qn /norestart
+Microsoft Web Platform Installer 5.0
+http://download.microsoft.com/download/C/F/F/CFF3A0B8-99D4-41A2-AE1A-496C08BEB904/WebPlatformInstaller_amd64_en-US.msi
+http://download.microsoft.com/download/C/F/F/CFF3A0B8-99D4-41A2-AE1A-496C08BEB904/WebPlatformInstaller_x86_en-US.msi
+/qn /norestart
+WinAppManager
+http://heanet.dl.sourceforge.net/project/appdriverupdate/WinApp_Manager/WinAppManagerSetup_15.01.11.exe
+/SP- /verysilent /norestart
+WinDirStat 1.1.2
+http://download01.windirstat.info/windirstat1_1_2_setup.exe
+/S
+Windows Resource Kit Tools - WinHttpCertCfg.exe
+http://download.microsoft.com/download/4/5/b/45bab62d-cdd8-42c7-85d0-0275b96db2c5/winhttpcertcfg.msi
+/qn /norestart
+WinMerge 2.14.0
+http://downloads.sourceforge.net/project/winmerge/stable/2.14.0/WinMerge-2.14.0-Setup.exe
+/SP- /verysilent /norestart
+WinMTR_x64 {{ version }}
+salt://win/repo-ng/winmtr/winmtr_x64-{{ sversion }}.exe
+WinMTR {{ version }}
+salt://win/repo-ng/winmtr/winmtr-{{ sversion }}.exe
+/D="c:\utl" /SILENT /NORESTART
+WinPcap 4.1.3
+https://www.winpcap.org/install/bin/WinPcap_4_1_3.exe
+/S
+WinSCP {{ version }}
+http://freefr.dl.sourceforge.net/project/winscp/WinSCP/{{ version }}/WinSCP-{{ file_version }}-Setup.exe
+/SP- /verysilent /norestart
+Wireshark {{ version }} (64-bit)
+https://1.na.dl.wireshark.org/win64/Wireshark-win64-{{ version }}.exe
+Wireshark {{ version }}
+https://2.na.dl.wireshark.org/win32/Wireshark-win32-{{ version }}.exe
+/S /desktopicon=yes /quicklaunchicon=yes
+WSCC 2.5.0.4
+http://www.kls-soft.com/downloads/wscc_setup.exe
+/SP- /SILENT /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
+XAMPP 7.0.1
+http://heanet.dl.sourceforge.net/project/xampp/XAMPP%20Windows/7.0.1/xampp-win32-7.0.1-0-VC14-installer.exe
+--mode unattended
+XAMPP 5.6.15
+http://heanet.dl.sourceforge.net/project/xampp/XAMPP%20Windows/5.6.15/xampp-win32-5.6.15-1-VC11-installer.exe
+--mode unattended
+XAMPP 5.6.3
+http://heanet.dl.sourceforge.net/project/xampp/XAMPP%20Windows/5.6.3/xampp-win32-5.6.3-0-VC11-installer.exe
+--mode unattended
+Xming 6.9.0.31
+http://downloads.sourceforge.net/project/xming/Xming/6.9.0.31/Xming-6-9-0-31-setup.exe
+/SP- /verysilent /suppressmsgboxes /norestart
+YubiKey Personalization Tool
+https://developers.yubico.com/yubikey-personalization-gui/Releases/yubikey-personalization-gui-3.1.24.exe
+/S

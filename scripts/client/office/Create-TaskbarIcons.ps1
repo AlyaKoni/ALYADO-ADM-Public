@@ -74,7 +74,7 @@ foreach($OfficeTool in $OfficeToolsOnTaskbar)
     $destin = $ToPath + $OfficeTool + ".lnk"
     if (-Not $source.Exists)
     {
-        Write-Error "$($OfficeTool) not found in $($FromPath)"
+        Write-Error "$($OfficeTool) not found in $($FromPath)" -ErrorAction Continue
     }
     Copy-Item -Path $source -Destination $destin -Force
 

@@ -128,7 +128,7 @@ $licDefs | foreach {
 
 if ($fndMissingGroup)
 {
-    Write-Error "Found missing groups. Please add them to data\ad\Groups.xlsx and run Configure-Groups.ps1"
+    Write-Error "Found missing groups. Please add them to data\ad\Groups.xlsx and run Configure-Groups.ps1" -ErrorAction Continue
     exit
 }
 

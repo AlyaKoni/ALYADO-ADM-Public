@@ -57,7 +57,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-O365AuditLogging | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Output "Setting auditing in exchange"
+Write-Host "Setting auditing in exchange"
 Get-PSSession | Remove-PSSession
 try
 {
@@ -84,13 +84,13 @@ try
         Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
         if ($error.Count -gt 0)
         {
-            Write-Error "We were not able to set audit logging. Possibly it needs some time until customization gets enabled. Please rerun in an hour or so."
+            Write-Error "We were not able to set audit logging. Possibly it needs some time until customization gets enabled. Please rerun in an hour or so." -ErrorAction Continue
         }
     }
 }
 catch
 {
-    Write-Error $_.Exception.Message
+    Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue
 }
 finally
 {

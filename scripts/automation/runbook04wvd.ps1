@@ -61,11 +61,10 @@ try {
 } catch {
     if (!$RunAsConnection) {
         Write-Output $RunAsConnectionName
-        Write-Output $_.Exception
-        $ErrorMessage = "Connection $RunAsConnectionName not found."
-        throw $ErrorMessage
+        Write-Output $_.Exception | ConvertTo-Json
+        Write-Output "Connection $RunAsConnectionName not found."
     }
-    throw $_.Exception
+    throw
 }
 
 # RDS stuff

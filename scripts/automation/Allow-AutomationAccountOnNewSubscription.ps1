@@ -64,7 +64,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -73,7 +73,7 @@ Write-Host "Checking ressource group for automation account" -ForegroundColor $C
 $ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Error -Message "Ressource Group not found. Please create the Ressource Group $RessourceGroupName"
+    Write-Error "Ressource Group not found. Please create the Ressource Group $RessourceGroupName" -ErrorAction Continue
     Exit
 }
 
@@ -110,7 +110,7 @@ Get-AzSubscription | foreach {
 	    }
 	    Catch {
 		    $ErrorMessage = $_.Exception.Message
-		    Write-Output "Error message: $($ErrorMessage)"
+		    Write-Host "Error message: $($ErrorMessage)"
 		    Write-Verbose "Service Principal not yet active, delay before adding the role assignment."
             Sleep 5
 	    }

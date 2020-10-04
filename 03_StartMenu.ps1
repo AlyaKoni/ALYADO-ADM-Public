@@ -94,10 +94,10 @@ $menuDef = @(
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
     @("ad", "Azure Active Directory", "", @(
-        @("cg", "Configure-Admins", "Configure-Admins"),
+        @("ca", "Configure-Admins", "Configure-Admins"),
         @("cg", "Configure-Groups", "Configure-Groups"),
-        @("cg", "Configure-Licenses", "Configure-Licenses"),
-        @("cg", "Configure-Roles", "Configure-Roles"),
+        @("cl", "Configure-Licenses", "Configure-Licenses"),
+        @("cr", "Configure-Roles", "Configure-Roles"),
         @("cv", "Create-AdVms", "Create-AdVms"),
         @("pg", "Prepare-GuestUsers", "Prepare-GuestUsers"),
         @("sa", "Sync-Aad", "Sync-Aad"),
@@ -158,21 +158,22 @@ $menuDef = @(
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
     @("ad", "Azure Information Protection", "", @(
-        @("cg", "Configure-AIPService", "Configure-AIPService"),
-        @("cg", "Configure-LabelsAndPolicies", "Configure-LabelsAndPolicies"),
-        @("cg", "Get-AIPConfiguration", "Get-AIPConfiguration"),
-        @("cg", "Get-AIPDocumentLogs", "Get-AIPDocumentLogs"),
-        @("cg", "Get-AIPServiceLocation", "Get-AIPServiceLocation"),
-        @("cg", "Get-AIPTrackingLogs", "Get-AIPTrackingLogs"),
-        @("cg", "Set-AIPOnboardingPolicy", "Set-AIPOnboardingPolicy"),
+        @("cs", "Configure-AIPService", "Configure-AIPService"),
+        @("cl", "Configure-LabelsAndPolicies", "Configure-LabelsAndPolicies"),
+        @("gc", "Get-AIPConfiguration", "Get-AIPConfiguration"),
+        @("gd", "Get-AIPDocumentLogs", "Get-AIPDocumentLogs"),
+        @("gl", "Get-AIPServiceLocation", "Get-AIPServiceLocation"),
+        @("gt", "Get-AIPTrackingLogs", "Get-AIPTrackingLogs"),
+        @("ic", "Install-AIPClient", "Install-AIPClient"),
+        @("sp", "Set-AIPOnboardingPolicy", "Set-AIPOnboardingPolicy"),
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
     @("cl", "Client", "", @(
         @("w", "OS", "", @(
             @("gs", "Get-DeviceRegStatus", "Get-DeviceRegStatus"),
             @("sr", "Set-ClientRegionalSettings", "Set-ClientRegionalSettings"),
-            @("sr", "Set-ExecutionPolicyUnrestricted", "Set-ExecutionPolicyUnrestricted"),
-            @("sr", "Set-O365AndAzureTrustedSites", "Set-O365AndAzureTrustedSites"),
+            @("se", "Set-ExecutionPolicyUnrestricted", "Set-ExecutionPolicyUnrestricted"),
+            @("st", "Set-O365AndAzureTrustedSites", "Set-O365AndAzureTrustedSites"),
             @("b", "Back", "back"),
             @("q", "Quit", "return")
         )),
@@ -194,7 +195,7 @@ $menuDef = @(
     @("sp", "SharePoint", "", @(
         @("at", "Add-SharePointDefaultTheme", "Add-SharePointDefaultTheme"),
         @("ad", "Add-SharePointDefaultDesign", "Add-SharePointDefaultDesign"),
-        @("cd", "Backup-AllSites", "Backup-AllSites"),
+        @("bs", "Backup-AllSites", "Backup-AllSites"),
         @("cd", "Clean-DeletedSites", "Clean-DeletedSites"),
         @("ca", "Configure-AzureB2BIntegration", "Configure-AzureB2BIntegration"),
         @("ch", "Configure-HubSites", "Configure-HubSites"),
@@ -207,7 +208,7 @@ $menuDef = @(
         @("ep", "Enable-PeoplePickerForGuests", "Enable-PeoplePickerForGuests"),
         @("ew", "Enable-PublicCdn", "Enable-PublicCdn"),
         @("hd", "Hide-DefaultThemes", "Hide-DefaultThemes"),
-        @("hd", "Run-OnlinePerformanceTest", "Run-OnlinePerformanceTest"),
+        @("rp", "Run-OnlinePerformanceTest", "Run-OnlinePerformanceTest"),
         @("ss", "Set-SharingCapability", "Set-SharingCapability"),
         @("sl", "Set-SiteLogo", "Set-SiteLogo"),
         @("st", "Set-SiteTheme", "Set-SiteTheme"),
@@ -226,9 +227,9 @@ $menuDef = @(
         @("cs", "Configure-ServiceUser", "Configure-ServiceUser"),
         @("sr", "Set-AllMailboxes30DayRetention", "Set-AllMailboxes30DayRetention"),
         @("us", "Update-Signature", "Update-Signature"),
-        @("us", "RemoveHybrid", "RemoveHybrid"),
-        @("us", "UsefullExchangeCommands", "UsefullExchangeCommands"),
-        @("us", "pstexport", "pstexport"),
+        @("rh", "RemoveHybrid", "RemoveHybrid"),
+        @("uc", "UsefullExchangeCommands", "UsefullExchangeCommands"),
+        @("pe", "pstexport", "pstexport"),
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
     @("fs", "File Sync", "", @(
@@ -241,6 +242,13 @@ $menuDef = @(
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
     @("it", "Intune", "", @(
+        @("cr", "Create-IntuneWin32Packages", "Create-IntuneWin32Packages"),
+        @("up", "Upload-IntuneWin32Packages", "Upload-IntuneWin32Packages"),
+        @("co", "Configure-IntuneWin32Packages", "Configure-IntuneWin32Packages"),
+        @("ea", "Export-ApplicationConfiguration", "Export-ApplicationConfiguration"),
+        @("rs", "Restart-IntuneWin32PackagesInstallation", "Restart-IntuneWin32PackagesInstallation"),
+        @("dt", "Download-Win32AppPrepTool", "Download-Win32AppPrepTool"),
+        @("gc", "Get-ProductCodeFromMsi", "Get-ProductCodeFromMsi"),
         @("er", "Enable-PINReset", "Enable-PINReset"),
         @("ec", "Export-IntuneConfiguration", "Export-IntuneConfiguration"),
         @("gs", "Get-IntunePowershellSamples", "Get-IntunePowershellSamples"),
@@ -509,6 +517,10 @@ function Get-AIPServiceLocation
 function Get-AIPTrackingLogs
 {
     & "$($AlyaScripts)\aip\Get-AIPTrackingLogs.ps1"
+}
+function Install-AIPClient
+{
+    & "$($AlyaScripts)\aip\Install-AIPClient.ps1"
 }
 function Set-AIPOnboardingPolicy
 {
@@ -845,6 +857,34 @@ function SyncTo-SharePoint
 function Enable-PINReset
 {
     start "$($AlyaScripts)\intune\Enable-PINReset.txt"
+}
+function Create-IntuneWin32Packages
+{
+    & "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1"
+}
+function Upload-IntuneWin32Packages
+{
+    & "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1"
+}
+function Configure-IntuneWin32Packages
+{
+    & "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1"
+}
+function Export-ApplicationConfiguration
+{
+    & "$($AlyaScripts)\intune\Export-ApplicationConfiguration.ps1"
+}
+function Restart-IntuneWin32PackagesInstallation
+{
+    & "$($AlyaScripts)\intune\Restart-IntuneWin32PackagesInstallation.ps1"
+}
+function Download-Win32AppPrepTool
+{
+    & "$($AlyaScripts)\intune\Download-Win32AppPrepTool.ps1"
+}
+function Get-ProductCodeFromMsi
+{
+    & "$($AlyaScripts)\intune\Get-ProductCodeFromMsi.ps1"
 }
 function Export-IntuneConfiguration
 {

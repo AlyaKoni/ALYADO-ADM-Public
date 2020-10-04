@@ -386,7 +386,7 @@ New-Module -Script {
             try
             {
                 $global:fsw.EnableRaisingEvents = $true
-                Write-Error "FileSystemWatcher reactivated"
+                Write-Error "FileSystemWatcher reactivated" -ErrorAction Continue
                 break
             }
             catch
@@ -402,7 +402,7 @@ New-Module -Script {
 
     function Handle-Error($eventArgs)
     {
-        Write-Error "FileSystemWatcher Error"
+        Write-Error "FileSystemWatcher Error" -ErrorAction Continue
         #TODO error message
         Reset-Watcher
     }
@@ -473,7 +473,7 @@ New-Module -Script {
                 }
                 catch
                 {
-                    Write-Error "Exception in FileSystemWatcher event: FileCreated"
+                    Write-Error "Exception in FileSystemWatcher event: FileCreated" -ErrorAction Continue
                     Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
                 }
             }
@@ -486,7 +486,7 @@ New-Module -Script {
                 }
                 catch
                 {
-                    Write-Error "Exception in FileSystemWatcher event: DirectoryCreated"
+                    Write-Error "Exception in FileSystemWatcher event: DirectoryCreated" -ErrorAction Continue
                     Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
                 }
             }
@@ -499,7 +499,7 @@ New-Module -Script {
                 }
                 catch
                 {
-                    Write-Error "Exception in FileSystemWatcher event: FileDeleted"
+                    Write-Error "Exception in FileSystemWatcher event: FileDeleted" -ErrorAction Continue
                     Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
                 }
             }
@@ -512,7 +512,7 @@ New-Module -Script {
                 }
                 catch
                 {
-                    Write-Error "Exception in FileSystemWatcher event: DirectoryDelete"
+                    Write-Error "Exception in FileSystemWatcher event: DirectoryDelete" -ErrorAction Continue
                     Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
                 }
             }
@@ -525,7 +525,7 @@ New-Module -Script {
                 }
                 catch
                 {
-                    Write-Error "Exception in FileSystemWatcher event: FileRenamed"
+                    Write-Error "Exception in FileSystemWatcher event: FileRenamed" -ErrorAction Continue
                     Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
                 }
             }
@@ -538,7 +538,7 @@ New-Module -Script {
                 }
                 catch
                 {
-                    Write-Error "Exception in FileSystemWatcher event: DirectoryRenamed"
+                    Write-Error "Exception in FileSystemWatcher event: DirectoryRenamed" -ErrorAction Continue
                     Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
                 }
             }
@@ -551,7 +551,7 @@ New-Module -Script {
                 }
                 catch
                 {
-                    Write-Error "Exception in FileSystemWatcher event: FileChanged"
+                    Write-Error "Exception in FileSystemWatcher event: FileChanged" -ErrorAction Continue
                     Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
                 }
             }
@@ -564,14 +564,14 @@ New-Module -Script {
                 }
                 catch
                 {
-                    Write-Error "Exception in FileSystemWatcher event: FileError"
+                    Write-Error "Exception in FileSystemWatcher event: FileError" -ErrorAction Continue
                     Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
                 }
             }
         }
         catch
         {
-            Write-Error "Exception in registering FileSystemWatcher"
+            Write-Error "Exception in registering FileSystemWatcher" -ErrorAction Continue
             Write-Host "ItemName: $($_.Exception.ItemName), Message: $($_.Exception.Message), InnerException: $($_.Exception.InnerException), ErrorRecord: $($_.Exception.ErrorRecord), StackTrace: $($_.Exception.StackTrace)"
         }
     }

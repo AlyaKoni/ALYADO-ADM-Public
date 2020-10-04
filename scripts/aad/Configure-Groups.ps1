@@ -372,8 +372,9 @@ if ($O365GroupToFinish.Count -gt 0)
     }
     catch
     {
-        Write-Error $_.Exception.Message
-        Write-Error "Please delete created groups by hand. Clean them from recycle bin. Start over again after fixing the issue."
+        Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue
+		Write-Error $_.Exception.Message -ErrorAction Continue
+        Write-Error "Please delete created groups by hand. Clean them from recycle bin. Start over again after fixing the issue." -ErrorAction Continue
     }
     finally
     {

@@ -58,7 +58,8 @@ Write-Host "AIP | Get-ServiceLocation | AADRM" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 $conf = Get-AipServiceConfiguration
-$conf.LicensingIntranetDistributionPointUrl -replace "/_wmcs/licensing", ""
+$serviceLocation = $conf.LicensingIntranetDistributionPointUrl -replace "/_wmcs/licensing", ""
+$serviceLocation
 
 #Stopping Transscript
 Stop-Transcript

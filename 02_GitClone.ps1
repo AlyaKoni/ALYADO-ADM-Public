@@ -100,7 +100,7 @@ if ([string]::IsNullOrEmpty($AlyaLocalConfig.user.ssh))
         & "$GitRoot\usr\bin\ssh-keygen.exe" "-q -t rsa -b 1024 -f `"$($AlyaRoot)\_local\ssh\id_rsa`" -N `"`" -C `"$($AlyaLocalConfig.user.email)`"".Split(" ")
         if (-Not (Test-Path "$($AlyaRoot)\_local\ssh\id_rsa"))
         {
-            Write-Error "Error generating id_rsa"
+            Write-Error "Error generating id_rsa" -ErrorAction Continue
             exit 1
         }
     }

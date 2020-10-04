@@ -89,13 +89,17 @@ $proc.StartInfo.CreateNoWindow = $true
 $proc.Start()
 
 #Getting repository
+Write-Host "Cloning" -ForegroundColor $CommandInfo
 $RepRoot = Join-Path ( Join-Path (Join-Path $AlyaRoot "tools") "powershell") "IntunePowershellSamples"
-if (-Not (Test-Path $RepRoot))
+if ((Test-Path $RepRoot))
 {
-    $tmp = New-Item -Path $RepRoot -ItemType Directory -Force
+    $tmp = Remove-Item -Path $RepRoot -Recurse -Force
 }
-& "$GitRoot\cmd\git.exe" clone "$CloneUrl" "$RepRoot"
+$tmp = New-Item -Path $RepRoot -ItemType Directory -Force
+& "$GitRoot\cmd\git.exe" clone "$CloneUrl" "$RepRoot" -q
 Wait-UntilProcessEnds -processName "git"
+
+Write-Host "IntunePowershellSamples installed to $RepRoot" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript

@@ -1,0 +1,102 @@
+﻿{
+    "@odata.type":  "#microsoft.graph.win32LobApp",
+    "displayName":  "Win10 Pdf24",
+    "description":  "Installs PDF24 Creator",
+    "publisher":  "pdf24.org",
+    "largeIcon":  null,
+    "isFeatured":  true,
+    "privacyInformationUrl":  "https://de.pdf24.org/datenschutz.html",
+    "informationUrl":  "https://www.pdf24.org/",
+    "owner":  "",
+    "developer":  "geek software GmbH",
+    "notes":  "",
+    "roleScopeTagIds":  [
+
+                        ],
+    "fileName":  "pdf24-creator-9.2.2.intunewin",
+    "installCommandLine":  "Install.cmd",
+    "uninstallCommandLine":  "Uninstall.cmd",
+    "applicableArchitectures":  "x64",
+    "minimumFreeDiskSpaceInMB":  160,
+    "minimumMemoryInMB":  100,
+    "minimumNumberOfProcessors":  1,
+    "minimumCpuSpeedInMHz":  1,
+    "msiInformation":  {
+                           "requiresReboot":  "false",
+                           "productVersion":  "9.2.2",
+                           "publisher":  "geek software GmbH",
+                           "productCode":  "{69A0060B-60B5-4C5A-8A23-4C80CA9AEE35}",
+                           "upgradeCode":  "{8D2DF301-CE53-4939-81C2-D659E7B857BE}",
+                           "productName":  "PDF24 Creator",
+                           "packageType":  "PerMachine"
+                       },
+    "setupFilePath":  "pdf24-creator-9.2.2.msi",
+    "minimumSupportedWindowsRelease":  "1607",
+    "minimumSupportedOperatingSystem":  {
+                                            "v8_0":  false,
+                                            "v8_1":  false,
+                                            "v10_0":  false,
+                                            "v10_1607":  true,
+                                            "v10_1703":  false,
+                                            "v10_1709":  false,
+                                            "v10_1803":  false,
+                                            "v10_1809":  false,
+                                            "v10_1903":  false
+                                        },
+    "detectionRules":  [
+                           {
+                               "@odata.type":  "#microsoft.graph.win32LobAppFileSystemDetection",
+                               "path":  "%ProgramFiles(x86)%\\PDF24",
+                               "fileOrFolderName":  "pdf24.exe",
+                               "check32BitOn64System":  true,
+                               "detectionType":  "version",
+                               "operator":  "greaterThanOrEqual",
+                               "detectionValue":  "9.2.2"
+                           }
+                       ],
+    "requirementRules":  [
+
+                         ],
+    "rules":  [
+                  {
+                      "@odata.type":  "#microsoft.graph.win32LobAppFileSystemRule",
+                      "ruleType":  "detection",
+                      "path":  "%ProgramFiles(x86)%\\PDF24",
+                      "fileOrFolderName":  "pdf24.exe",
+                      "check32BitOn64System":  true,
+                      "operationType":  "version",
+                      "operator":  "greaterThanOrEqual",
+                      "comparisonValue":  "9.2.2"
+                  }
+              ],
+    "installExperience":  {
+                              "runAsAccount":  "system",
+                              "deviceRestartBehavior":  "suppress"
+                          },
+    "returnCodes":  [
+                        {
+                            "returnCode":  -1,
+                            "type":  "failed"
+                        },
+                        {
+                            "returnCode":  0,
+                            "type":  "success"
+                        },
+                        {
+                            "returnCode":  1707,
+                            "type":  "success"
+                        },
+                        {
+                            "returnCode":  3010,
+                            "type":  "softReboot"
+                        },
+                        {
+                            "returnCode":  1641,
+                            "type":  "hardReboot"
+                        },
+                        {
+                            "returnCode":  1618,
+                            "type":  "retry"
+                        }
+                    ]
+}

@@ -76,6 +76,8 @@ $OfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.E
 <# URLS #>
 $GitDownload = "https://git-scm.com/download/win"
 $DeployToolDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49117"
+$AipClientDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=53018"
+$IntuneWinAppUtilDownload = "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool.git"
 
 <# LOCAL CONFIGURATION #>
 $Global:AlyaLocalConfig = [ordered]@{
@@ -204,8 +206,8 @@ function Check-Module (
     }
     if (-Not $module)
     {
-        Write-Error "Can't find module $moduleName"
-        Write-Error "Please install the module and restart"
+        Write-Error "Can't find module $moduleName" -ErrorAction Continue
+        Write-Error "Please install the module and restart" -ErrorAction Continue
         exit
     }
 }
@@ -216,7 +218,7 @@ function DownloadAndInstall-Package($packageName, $nuvrs, $nusrc)
 	Invoke-WebRequest -Uri $nusrc.href -OutFile $fileName
 	if (-not (Test-Path $fileName))
 	{
-		Write-Error "    Was not able to download $packageName which is a prerequisite for this script"
+		Write-Error "    Was not able to download $packageName which is a prerequisite for this script" -ErrorAction Continue
 		break
 	}
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -341,7 +343,7 @@ function Install-ModuleIfNotInstalled (
                 Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
             if (-Not $module)
             {
-                Write-Error "Not able to install the module!"
+                Write-Error "Not able to install the module!" -ErrorAction Continue
                 exit
             }
         }
@@ -385,7 +387,7 @@ function LoginTo-Az(
     }
     if (-Not $AlyaContext)
     {
-        Write-Error "Not logged in to Az!"
+        Write-Error "Not logged in to Az!" -ErrorAction Continue
         Exit 1
     }
     Set-AzContext -Context $AlyaContext
@@ -460,7 +462,7 @@ function LoginTo-Ad()
     try { $TenantDetail = Get-AzureADTenantDetail -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
     if (-Not $TenantDetail)
     {
-        Write-Error "Not logged in to AzureAd!"
+        Write-Error "Not logged in to AzureAd!" -ErrorAction Continue
         Exit 1
     }
 }
@@ -513,7 +515,7 @@ function LoginTo-Wvd(
     $Context = Get-RdsContext -ErrorAction SilentlyContinue
     if (-Not $Context)
     {
-        Write-Error "Not logged in to WVD!"
+        Write-Error "Not logged in to WVD!" -ErrorAction Continue
         Exit 1
     }
 }
@@ -580,7 +582,7 @@ function LoginTo-Msol()
     try { $TenantDetail = Get-MsolDomain -ErrorAction SilentlyContinue } catch [Microsoft.Online.Administration.Automation.MicrosoftOnlineException] {}
     if (-Not $TenantDetail)
     {
-        Write-Error "Not logged in to Msol!"
+        Write-Error "Not logged in to Msol!" -ErrorAction Continue
         Exit 1
     }
 }
@@ -597,7 +599,7 @@ function LoginTo-SPO()
     try { $Site = Get-SPOSite -Identity $AlyaSharePointAdminUrl -ErrorAction SilentlyContinue } catch {}
     if (-Not $Site)
     {
-        Write-Error "Not logged in to SPO!"
+        Write-Error "Not logged in to SPO!" -ErrorAction Continue
         Exit 1
     }
 }
@@ -611,7 +613,7 @@ function ReloginTo-PnP(
     try { $AlyaContext = Get-PnPContext -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
     if (-Not $AlyaContext)
     {
-        Write-Error "Not logged in to SharePointPnPPowerShellOnline!"
+        Write-Error "Not logged in to SharePointPnPPowerShellOnline!" -ErrorAction Continue
         Exit 1
     }
     #TODO return $AlyaConnection
@@ -636,7 +638,7 @@ function LoginTo-PnP(
     try { $AlyaContext = Get-PnPContext -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
     if (-Not $AlyaContext)
     {
-        Write-Error "Not logged in to SharePointPnPPowerShellOnline!"
+        Write-Error "Not logged in to SharePointPnPPowerShellOnline!" -ErrorAction Continue
         Exit 1
     }
     #TODO return $AlyaConnection
@@ -654,7 +656,7 @@ function LoginTo-PowerApps()
     try { $AlyaConnection = Get-PowerAppConnection -ErrorAction SilentlyContinue } catch [System.Management.Automation.MethodInvocationException] {}
     if (-Not $AlyaConnection)
     {
-        Write-Error "Not logged in to PowerApps!"
+        Write-Error "Not logged in to PowerApps!" -ErrorAction Continue
         Exit 1
     }
 }
@@ -671,7 +673,7 @@ function LoginTo-AADRM()
     try { $ServiceDetail = Get-Aadrm -ErrorAction SilentlyContinue } catch [Microsoft.RightsManagementServices.Online.Admin.PowerShell.AdminClientException] {}
     if (-Not $ServiceDetail)
     {
-        Write-Error "Not logged in to AADRM!"
+        Write-Error "Not logged in to AADRM!" -ErrorAction Continue
         Exit 1
     }
 }
@@ -688,7 +690,7 @@ function LoginTo-AIP()
     try { $ServiceDetail = Get-AipService -ErrorAction SilentlyContinue } catch [Microsoft.RightsManagementServices.Online.Admin.PowerShell.AdminClientException] {}
     if (-Not $ServiceDetail)
     {
-        Write-Error "Not logged in to AIP!"
+        Write-Error "Not logged in to AIP!" -ErrorAction Continue
         Exit 1
     }
 }
@@ -764,114 +766,29 @@ function Get-MsGraphCollection
 {
     param (
         [parameter(Mandatory = $true)]
-        $AccessToken,
-        [parameter(Mandatory = $true)]
-        $Uri
-    )
-    if ($AccessToken) {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-            'Authorization' = "Bearer $AccessToken"
-        }
-        $QueryResults = @()
-        $NextLink = $Uri
-        do {
-            $Results = ""
-            $StatusCode = ""
-            do {
-                try {
-                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $NextLink -UseBasicParsing -Method "GET" -ContentType "application/json"
-                    $StatusCode = $Results.StatusCode
-                } catch {
-                    $StatusCode = $_.Exception.Response.StatusCode.value__
-                    if ($StatusCode -eq 429) {
-                        Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                        Start-Sleep -Seconds 45
-                    }
-                    else {
-                        throw $_.Exception
-                    }
-                }
-            } while ($StatusCode -eq 429)
-            if ($Results.value) {
-                $QueryResults += $Results.value
-            }
-            #Makes problem for empty lists
-            #else {
-            #    $QueryResults += $Results
-            #}
-            if ($Results.'@odata.nextLink' -ne $NextLink)
-            {
-                $NextLink = $Results.'@odata.nextLink'
-            }
-        } while ($NextLink -ne $null)
-        return $QueryResults
-    }
-    else {
-        throw "No Access Token"
-    }
-}
-
-function Get-MsGraphObject
-{
-    param (
-        [parameter(Mandatory = $true)]
-        $AccessToken,
-        [parameter(Mandatory = $true)]
-        $Uri
-    )
-    if ($AccessToken) {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-            'Authorization' = "Bearer $AccessToken"
-        }
-        $Result = ""
-        $StatusCode = ""
-        do {
-            try {
-                $Result = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "GET" -ContentType "application/json"
-                $StatusCode = $Results.StatusCode
-            } catch {
-                $StatusCode = $_.Exception.Response.StatusCode.value__
-                if ($StatusCode -eq 429) {
-                    Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                    Start-Sleep -Seconds 45
-                }
-                else {
-                    throw $_.Exception
-                }
-            }
-        } while ($StatusCode -eq 429)
-        return $Result
-    }
-    else {
-        throw "No Access Token"
-    }
-}
-
-function Post-MsGraph
-{
-    param (
-        [parameter(Mandatory = $true)]
-        $AccessToken,
-        [parameter(Mandatory = $true)]
         $Uri,
-        [parameter(Mandatory = $true)]
-        $Body
+        [parameter(Mandatory = $false)]
+        $AccessToken = $null
     )
     if ($AccessToken) {
         $HeaderParams = @{
             'Content-Type'  = "application/json"
-            'Authorization' = "$($OAuth.token_type) $($AccessToken)"
+            'Authorization' = "Bearer $AccessToken"
         }
-        $QueryResults = @()
+    }
+    else {
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+        }
+    }
+    $QueryResults = @()
+    $NextLink = $Uri
+    do {
         $Results = ""
         $StatusCode = ""
         do {
             try {
-                $Uri
-                $Body
-                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json" -Body $Body
+                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $NextLink -UseBasicParsing -Method "GET" -ContentType "application/json"
                 $StatusCode = $Results.StatusCode
             } catch {
                 $StatusCode = $_.Exception.Response.StatusCode.value__
@@ -880,20 +797,146 @@ function Post-MsGraph
                     Start-Sleep -Seconds 45
                 }
                 else {
-                    throw $_.Exception
+                    Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                    throw
                 }
             }
         } while ($StatusCode -eq 429)
         if ($Results.value) {
             $QueryResults += $Results.value
         }
-        else {
-            $QueryResults += $Results
+        if ($Results.'@odata.nextLink' -ne $NextLink)
+        {
+            $NextLink = $Results.'@odata.nextLink'
         }
-        $QueryResults
+    } while ($NextLink -ne $null)
+    return $QueryResults
+}
+
+function Get-MsGraphObject
+{
+    param (
+        [parameter(Mandatory = $true)]
+        $Uri,
+        [parameter(Mandatory = $false)]
+        $AccessToken = $null
+    )
+    if ($AccessToken) {
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+            'Authorization' = "Bearer $AccessToken"
+        }
     }
     else {
-        throw "No Access Token"
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+        }
+    }
+    $Result = ""
+    $StatusCode = ""
+    do {
+        try {
+            $Result = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "GET" -ContentType "application/json"
+            $StatusCode = $Results.StatusCode
+        } catch {
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            if ($StatusCode -eq 429) {
+                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                Start-Sleep -Seconds 45
+            }
+            else {
+                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                throw
+            }
+        }
+    } while ($StatusCode -eq 429)
+    return $Result
+}
+
+function Delete-MsGraphObject
+{
+    param (
+        [parameter(Mandatory = $true)]
+        $Uri,
+        [parameter(Mandatory = $false)]
+        $AccessToken = $null
+    )
+    if ($AccessToken) {
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+            'Authorization' = "Bearer $AccessToken"
+        }
+    }
+    else {
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+        }
+    }
+    $Result = ""
+    $StatusCode = ""
+    do {
+        try {
+            $Result = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -Method "DELETE"
+            $StatusCode = $Results.StatusCode
+        } catch {
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            if ($StatusCode -eq 429) {
+                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                Start-Sleep -Seconds 45
+            }
+            else {
+                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                throw
+            }
+        }
+    } while ($StatusCode -eq 429)
+    return $Result
+}
+
+function Post-MsGraph
+{
+    param (
+        [parameter(Mandatory = $true)]
+        $Uri,
+        [parameter(Mandatory = $false)]
+        $AccessToken = $null,
+        [parameter(Mandatory = $true)]
+        $Body
+    )
+    if ($AccessToken) {
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+            'Authorization' = "Bearer $AccessToken"
+        }
+    }
+    else {
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+        }
+    }
+    $Results = ""
+    $StatusCode = ""
+    do {
+        try {
+            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json" -Body $Body
+            $StatusCode = $Results.StatusCode
+        } catch {
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            if ($StatusCode -eq 429) {
+                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                Start-Sleep -Seconds 45
+            }
+            else {
+                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                throw
+            }
+        }
+    } while ($StatusCode -eq 429)
+    if ($Results.value) {
+        $Results.value
+    }
+    else {
+        $Results
     }
 }
 
@@ -901,47 +944,46 @@ function Patch-MsGraph
 {
     param (
         [parameter(Mandatory = $true)]
-        $AccessToken,
-        [parameter(Mandatory = $true)]
         $Uri,
+        [parameter(Mandatory = $false)]
+        $AccessToken = $null,
         [parameter(Mandatory = $true)]
         $Body
     )
     if ($AccessToken) {
         $HeaderParams = @{
             'Content-Type'  = "application/json"
-            'Authorization' = "$($OAuth.token_type) $($AccessToken)"
+            'Authorization' = "Bearer $AccessToken"
         }
-        $QueryResults = @()
-        $Results = ""
-        $StatusCode = ""
-        do {
-            try {
-                $Uri
-                $Body
-                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "PATCH" -ContentType "application/json" -Body $Body
-                $StatusCode = $Results.StatusCode
-            } catch {
-                $StatusCode = $_.Exception.Response.StatusCode.value__
-                if ($StatusCode -eq 429) {
-                    Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                    Start-Sleep -Seconds 45
-                }
-                else {
-                    throw $_.Exception
-                }
-            }
-        } while ($StatusCode -eq 429)
-        if ($Results.value) {
-            $QueryResults += $Results.value
-        }
-        else {
-            $QueryResults += $Results
-        }
-        $QueryResults
     }
     else {
-        throw "No Access Token"
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+        }
+    }
+    $Results = ""
+    $StatusCode = ""
+    do {
+        try {
+            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "PATCH" -ContentType "application/json" -Body $Body
+            $StatusCode = $Results.StatusCode
+        } catch {
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            if ($StatusCode -eq 429) {
+                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                Start-Sleep -Seconds 45
+            }
+            else {
+                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                throw
+            }
+        }
+    } while ($StatusCode -eq 429)
+    if ($Results.value) {
+        $Results.value
+    }
+    else {
+        $Results
     }
 }
 
@@ -1201,19 +1243,19 @@ function CheckNetworkToNetwork ([int64]$un1, [int64]$un2)
 # Checking custom properties
 if ($AlyaNamingPrefix.Length -gt 8)
 {
-    Write-Error "Max 8 chars allowed for AlyaNamingPrefix '$($AlyaNamingPrefix)' which is $($AlyaNamingPrefix.Length) long"
+    Write-Error "Max 8 chars allowed for AlyaNamingPrefix '$($AlyaNamingPrefix)' which is $($AlyaNamingPrefix.Length) long" -ErrorAction Continue
     exit
 }
 if ($AlyaNamingPrefixTest.Length -gt 8)
 {
-    Write-Error "Max 8 chars allowed for AlyaNamingPrefixTest '$($AlyaNamingPrefixTest)' which is $($AlyaNamingPrefixTest.Length) long"
+    Write-Error "Max 8 chars allowed for AlyaNamingPrefixTest '$($AlyaNamingPrefixTest)' which is $($AlyaNamingPrefixTest.Length) long" -ErrorAction Continue
     exit
 }
 if ($AlyaAzureNetwork -and $AlyaProdNetwork)
 {
     if (-Not (CheckSubnetInSubnet $AlyaProdNetwork $AlyaAzureNetwork))
     {
-        Write-Error "AlyaProdNetwork '$($AlyaProdNetwork)' is not within AlyaAzureNetwork '$($AlyaAzureNetwork)'"
+        Write-Error "AlyaProdNetwork '$($AlyaProdNetwork)' is not within AlyaAzureNetwork '$($AlyaAzureNetwork)'" -ErrorAction Continue
         exit
     }
 }
@@ -1221,7 +1263,7 @@ if ($AlyaAzureNetwork -and $AlyaTestNetwork)
 {
     if (-Not (CheckSubnetInSubnet $AlyaTestNetwork $AlyaAzureNetwork))
     {
-        Write-Error "AlyaTestNetwork '$($AlyaTestNetwork)' is not within AlyaAzureNetwork '$($AlyaAzureNetwork)'"
+        Write-Error "AlyaTestNetwork '$($AlyaTestNetwork)' is not within AlyaAzureNetwork '$($AlyaAzureNetwork)'" -ErrorAction Continue
         exit
     }
 }

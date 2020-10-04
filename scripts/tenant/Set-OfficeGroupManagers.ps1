@@ -63,7 +63,7 @@ Write-Host "=====================================================`n" -Foreground
 # Check group name
 if ([string]::IsNullOrEmpty($AlyaGroupManagerGroupName))
 {
-    Write-Error "AlyaGroupManagerGroupName variable is not defined in 01_ConfigureEnv.ps1. Nothing to do!"
+    Write-Error "AlyaGroupManagerGroupName variable is not defined in 01_ConfigureEnv.ps1. Nothing to do!" -ErrorAction Continue
     exit
 }
 

@@ -121,7 +121,7 @@ param(
 
     if($AutomationModule.ProvisioningState -eq "Failed") {
 
-        Write-Error "     Importing $ModuleName module to Automation failed."
+        Write-Error "     Importing $ModuleName module to Automation failed." -ErrorAction Continue
 
     } else {
         $ActualUrl
@@ -143,11 +143,10 @@ try {
 } catch {
     if (!$RunAsConnection) {
         Write-Output $RunAsConnectionName
-        Write-Output $_.Exception
-        $ErrorMessage = "Connection $RunAsConnectionName not found."
-        throw $ErrorMessage
+        Write-Output $_.Exception | ConvertTo-Json
+        Write-Output "Connection $RunAsConnectionName not found."
     }
-    throw $_.Exception
+    throw
 }
 
 # Import modules if they are not in the Automation account
@@ -165,7 +164,7 @@ foreach($ModuleToInstall in $ModulesToInstall)
                             -ModuleName $ModuleName -ModuleVersion $ModuleVersion
         if (-Not $AzureADGalleryURL)
         {
-            Write-Error "Can't find module $ModuleName"
+            Write-Error "Can't find module $ModuleName" -ErrorAction Continue
         }
         else
         {

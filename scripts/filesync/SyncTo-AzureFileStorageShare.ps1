@@ -71,7 +71,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -79,7 +79,7 @@ if (-Not $Context)
 Write-Host "Checking temp drive letter" -ForegroundColor $CommandInfo
 if ((Test-Path "$($UseLocalTempDriveLetter):\"))
 {
-    Write-Error "Local drive $($UseLocalTempDriveLetter) already exists. Please unattach drive or use drive letter parameter."
+    Write-Error "Local drive $($UseLocalTempDriveLetter) already exists. Please unattach drive or use drive letter parameter." -ErrorAction Continue
     exit
 }
 

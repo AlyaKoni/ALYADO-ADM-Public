@@ -169,14 +169,12 @@ function Login-AzureAutomation([bool] $AzModuleOnly) {
             Select-AzureRmSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
         }
     } catch {
-        if (!$RunAsConnection) {
-            Write-Output $servicePrincipalConnection
-            Write-Output $_.Exception
-            $ErrorMessage = "Connection $connectionName not found."
-            throw $ErrorMessage
-        }
-
-        throw $_.Exception
+		if (!$RunAsConnection) {
+			Write-Output $RunAsConnectionName
+			Write-Output $_.Exception | ConvertTo-Json
+			Write-Output "Connection $RunAsConnectionName not found."
+		}
+		throw
     }
 }
 
@@ -530,7 +528,7 @@ if ($AzureModuleClass -eq "Az") {
     $UseAzModule = $false
     $AutomationModuleName = $script:AzureRMAutomationModuleName
 } else {
-     Write-Error "Invalid AzureModuleClass: '$AzureModuleClass'. Must be either Az or AzureRM" -ErrorAction Stop
+     Write-Error "Invalid AzureModuleClass: '$AzureModuleClass'. Must be either Az or AzureRM" -ErrorAction Continue -ErrorAction Stop
 }
 
 # Import the latest version of the Az automation and accounts version to the local sandbox

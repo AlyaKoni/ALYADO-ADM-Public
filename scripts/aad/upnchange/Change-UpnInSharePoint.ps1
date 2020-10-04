@@ -58,16 +58,16 @@ Write-Host "=====================================================`n" -Foreground
 #Main
 $webApplications | foreach {
     $webApplication = $_
-    Write-Output "WebApplication: $($webApplication)"
+    Write-Host "WebApplication: $($webApplication)"
     $sites = Get-SPSite -WebApplication $webApplication -Limit all
     $sites | foreach {
         $site = $_
-        Write-Output " Site: $($site.Url)"
+        Write-Host " Site: $($site.Url)"
         $someFound = $false
         $webs = Get-SPWeb -Site $site -Limit all
         $webs | foreach {
             $web = $_
-            Write-Output "  Web: $($web.Url)"
+            Write-Host "  Web: $($web.Url)"
             $users = Get-SPUser -Web $web -Limit ALL
             $oldUser = $null
             $newUser = $null
@@ -84,19 +84,19 @@ $webApplications | foreach {
             }
             if ($oldUser -and $newUser)
             {
-                Write-Output "    Both UPNs exist, removing new user"
+                Write-Host "    Both UPNs exist, removing new user"
             }
             if ($oldUser)
             {
                 $newAlias = $oldUser.UserLogin.Replace($oldUPN,$newUPN)
-                Write-Output "    Moving old to new UPN"
-                Write-Output "     from: $($oldUser.UserLogin)"
-                Write-Output "       to: $($newAlias)"
+                Write-Host "    Moving old to new UPN"
+                Write-Host "     from: $($oldUser.UserLogin)"
+                Write-Host "       to: $($newAlias)"
                 Move-SPUser –Identity $user –NewAlias $newAlias -IgnoreSID -Confirm:$false
             }
             if ($newUser)
             {
-                Write-Output "    New UPN exists"
+                Write-Host "    New UPN exists"
             }
         }
     }

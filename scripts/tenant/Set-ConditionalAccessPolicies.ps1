@@ -69,7 +69,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -91,7 +91,7 @@ if (-Not $KeyVault)
     $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
     if (-Not $KeyVault)
     {
-        Write-Error -Message "Key Vault $KeyVaultName creation failed. Please fix and start over again"
+        Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }

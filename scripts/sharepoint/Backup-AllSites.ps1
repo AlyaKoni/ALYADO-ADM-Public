@@ -48,11 +48,6 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Backup-AllSites-$($AlyaT
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.23.2007.1" #TODO Upgrade after bug is fixed https://github.com/pnp/PnP-PowerShell/issues/2849
-#Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
-#Install-ModuleIfNotInstalled "SharePointPnP.PowerShell.Commands.Files.Recurse"
-
-# Logging in
-#LoginTo-SPO
 
 # Constants
 if (-Not $backupLocation)
@@ -234,7 +229,7 @@ function Download-FolderRecursive($folderObj, $parentDir)
                 }
             } catch
             { 
-                Write-Error "Download failed: $($_.Exception)"
+                Write-Error "Download failed: $($_.Exception)" -ErrorAction Continue
             }
         }
     }
@@ -335,7 +330,7 @@ foreach($site in $sites)
                     $expList | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $listDir "listDefinition.metadata") -Force
                 } catch
                 {
-                    Write-Error "Error exporting list: $($_.Exception)"
+                    Write-Error "Error exporting list: $($_.Exception)" -ErrorAction Continue
                 }
             }
 

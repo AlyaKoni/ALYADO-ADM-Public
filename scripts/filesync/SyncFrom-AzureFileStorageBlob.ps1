@@ -74,7 +74,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -104,7 +104,7 @@ if (-Not $SourceContainer)
     $SourceContainer = New-AzStorageContainer -Context $StrgContext -Name $FromStorageBlobContainer -Permission Blob
     if (-Not $SourceContainer)
     {
-        Write-Error -Message "Storage account container '$FromStorageBlobContainer' creation failed. Please fix and start over again"
+        Write-Error "Storage account container '$FromStorageBlobContainer' creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }
@@ -155,7 +155,7 @@ foreach($SourceBlob in $SourceBlobs)
         }
         if ($copyFile)
         {
-		    Write-Output "    + Copying file"
+		    Write-Host "    + Copying file"
             Get-AzStorageBlobContent -CloudBlob $SourceBlob.ICloudBlob -Destination $absPath -Force
         }
     }

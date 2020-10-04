@@ -65,7 +65,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -83,7 +83,7 @@ Write-Host "Checking automation account" -ForegroundColor $CommandInfo
 $AutomationAccount = Get-AzAutomationAccount -ResourceGroupName $RessourceGroupName -Name $AutomationAccountName -ErrorAction SilentlyContinue
 if (-Not $AutomationAccount)
 {
-    Write-Error -Message "Automation Account not found. Please create the Automation Account first"
+    Write-Error "Automation Account not found. Please create the Automation Account first" -ErrorAction Continue
     exit
 }
 

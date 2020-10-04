@@ -64,7 +64,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -86,7 +86,7 @@ if (-Not $StrgAccount)
     $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Hot -Tag @{displayName="Public Storage"}
     if (-Not $StrgAccount)
     {
-        Write-Error -Message "Storage account $StorageAccountName creation failed. Please fix and start over again"
+        Write-Error "Storage account $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }
@@ -107,7 +107,7 @@ if (-Not $StrgCorsRules)
     $StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob
     if (-Not $StrgCorsRules)
     {
-        Write-Error -Message "CORS rules creation failed. Please fix and start over again"
+        Write-Error "CORS rules creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }
@@ -132,7 +132,7 @@ else
         $StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob
         if (-Not $StrgCorsRules)
         {
-            Write-Error -Message "CORS rules creation failed. Please fix and start over again"
+            Write-Error "CORS rules creation failed. Please fix and start over again" -ErrorAction Continue
             Exit 1
         }
     }
@@ -157,7 +157,7 @@ foreach($container in $containers)
         $StrgContainer = New-AzStorageContainer -Context $StrgContext -Name $StorageContainerName -Permission Blob
         if (-Not $StrgContainer)
         {
-            Write-Error -Message "Storage account container '$StorageContainerName' creation failed. Please fix and start over again"
+            Write-Error "Storage account container '$StorageContainerName' creation failed. Please fix and start over again" -ErrorAction Continue
             Exit 1
         }
     }
@@ -185,33 +185,33 @@ foreach($container in $containers)
             if ($SourceFile.Length -gt (2*1024*1024*1024))
             {
                 #TODO hash only works for up to 2GB, switch to change date if bigger
-                Write-Error "File is too big for md5 hash. Please update this script!"
+                Write-Error "File is too big for md5 hash. Please update this script!" -ErrorAction Continue
                 continue
             }
             $hash = [System.Convert]::ToBase64String($md5.ComputeHash([System.IO.File]::ReadAllBytes($SourceFile.FullName)))
             $DestinationBlob.ICloudBlob.FetchAttributes()
             if ($DestinationBlob.ICloudBlob.Properties.ContentMD5 -ne $hash)
             {
-			    Write-Output "    + Creating Snapshot"
+			    Write-Host "    + Creating Snapshot"
 			    $Tmp = $DestinationBlob.ICloudBlob.CreateSnapshot()
-		        Write-Output "    + Copying blob"
+		        Write-Host "    + Copying blob"
                 $DestinationBlob = Set-AzStorageBlobContent -File $SourceFile.FullName -Context $StrgContext -Container $StorageContainerName -Blob $BlobName -Force
             }
             $DestinationBlob.ICloudBlob.FetchAttributes()
             if ($DestinationBlob.ICloudBlob.Properties.ContentType -ne $mime)
             {
-			    Write-Output "    + Changing mime to $($mime)"
+			    Write-Host "    + Changing mime to $($mime)"
                 $DestinationBlob.ICloudBlob.Properties.ContentType = $mime
 			    $DestinationBlob.ICloudBlob.SetProperties()
             }
         }
         else
         {
-		    Write-Output "    + Copying blob"
+		    Write-Host "    + Copying blob"
             $DestinationBlob = Set-AzStorageBlobContent -File $SourceFile.FullName -Context $StrgContext -Container $StorageContainerName -Blob $BlobName -Force
             if ($DestinationBlob.ICloudBlob.Properties.ContentType -ne $mime)
             {
-			    Write-Output "    + Changing mime to $($mime)"
+			    Write-Host "    + Changing mime to $($mime)"
                 $DestinationBlob.ICloudBlob.Properties.ContentType = $mime
 			    $DestinationBlob.ICloudBlob.SetProperties()
             }

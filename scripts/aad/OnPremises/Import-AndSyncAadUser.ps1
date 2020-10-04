@@ -64,13 +64,13 @@ Write-Host "=====================================================`n" -Foreground
 $aadUser = Get-MsolUser -UserPrincipalName $userToImport -ErrorAction SilentlyContinue
 if (-Not $aadUser)
 {
-    Write-Error "Can't find user with UPN '$($userToImport)' in online AAD"
+    Write-Error "Can't find user with UPN '$($userToImport)' in online AAD" -ErrorAction Continue
     return
 }
 $adUser = Get-ADUser -Filter "UserPrincipalName -eq '$($userToImport)'" -ErrorAction SilentlyContinue
 if ($adUser)
 {
-    Write-Error "User with UPN '$($userToImport)' already exists in local AD"
+    Write-Error "User with UPN '$($userToImport)' already exists in local AD" -ErrorAction Continue
     return
 }
 

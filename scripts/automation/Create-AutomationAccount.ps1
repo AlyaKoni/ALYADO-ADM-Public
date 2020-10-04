@@ -72,7 +72,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -113,7 +113,7 @@ if (-Not $KeyVault)
     $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $KeyVaultRessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
     if (-Not $KeyVault)
     {
-        Write-Error -Message "Key Vault $KeyVaultName creation failed. Please fix and start over again"
+        Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }
@@ -137,7 +137,7 @@ if (-Not $AzureKeyVaultCertificate)
     }
     if ($AzureKeyVaultCertificateProgress.Status -ne "completed")
     {
-        Write-Error -Message "Key vault cert creation is not sucessfull and its status is: $(KeyVaultCertificateProgress.Status)" 
+        Write-Error "Key vault cert creation is not sucessfull and its status is: $(KeyVaultCertificateProgress.Status)" -ErrorAction Continue 
         Exit 2
     }
 }
@@ -292,7 +292,7 @@ if (-Not $Runnbook)
     Write-Warning "Automation Runbook 01 not found. Creating the Automation Runbook $($AutomationAccountName+"rb01")"
     if (-Not (Test-Path $runbookPath))
     {
-        Write-Error -Message "Can't find runbook $($runbookPath)" 
+        Write-Error "Can't find runbook $($runbookPath)" -ErrorAction Continue 
         Exit 2
     }
     $tmp = Import-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb01") -Type PowerShell -Description "Updates the Azure modules in the automation account" -Tags @{displayName="Module Updater"} -Path $runbookPath -Force
@@ -326,7 +326,7 @@ if (-Not $Runnbook)
     Write-Warning "Automation Runbook 02 not found. Creating the Automation Runbook $($AutomationAccountName+"rb02")"
     if (-Not (Test-Path $runbookPath))
     {
-        Write-Error -Message "Can't find runbook $($runbookPath)" 
+        Write-Error "Can't find runbook $($runbookPath)" -ErrorAction Continue 
         Exit 3
     }
     $tmp = Import-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02") -Type PowerShell -Description "Installs required modules in the automation account" -Tags @{displayName="Module Installer"} -Path $runbookPath -Force
@@ -353,7 +353,7 @@ if (-Not $Runnbook)
     Write-Warning "Automation Runbook 03 not found. Creating the Automation Runbook $($AutomationAccountName+"rb03")"
     if (-Not (Test-Path $runbookPath))
     {
-        Write-Error -Message "Can't find runbook $($runbookPath)" 
+        Write-Error "Can't find runbook $($runbookPath)" -ErrorAction Continue 
         Exit 4
     }
     $tmp = Import-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb03") -Type PowerShell -Description "Updates the run as certificate" -Tags @{displayName="Certificate Updater"} -Path $runbookPath -Force
@@ -406,7 +406,7 @@ if (-Not $Runnbook)
     Write-Warning "Automation Runbook 04 not found. Creating the Automation Runbook $($AutomationAccountName+"rb04")"
     if (-Not (Test-Path $runbookPath))
     {
-        Write-Error -Message "Can't find runbook $($runbookPath)" 
+        Write-Error "Can't find runbook $($runbookPath)" -ErrorAction Continue 
         Exit 5
     }
     $tmp = Import-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -Type PowerShell -Description "Starts and stops VMs based on specified times in Vm tags" -Tags @{displayName="Start/Stop VM"} -Path $runbookPath -Force

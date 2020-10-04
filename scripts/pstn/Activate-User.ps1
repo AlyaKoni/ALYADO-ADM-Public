@@ -46,7 +46,7 @@ if ($type -eq "User")
 {
     if (-Not $number.StartsWith("tel:"))
     {
-        Write-Error "If type 'User', the number has to start with 'tel:'"
+        Write-Error "If type 'User', the number has to start with 'tel:'" -ErrorAction Continue
         exit
     }
 }
@@ -54,7 +54,7 @@ if ($type -eq "AutoAttendant" -or $type -eq "CallQueue")
 {
     if ($number.StartsWith("tel:"))
     {
-        Write-Error "If type is not 'User', the number must to start with 'tel:'"
+        Write-Error "If type is not 'User', the number must to start with 'tel:'" -ErrorAction Continue
         exit
     }
 }

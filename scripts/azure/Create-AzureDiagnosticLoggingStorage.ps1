@@ -64,7 +64,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -86,7 +86,7 @@ if (-Not $StrgAccount)
     $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind Storage -Tag @{displayName="Diagnostic Log Storage"}
     if (-Not $StrgAccount)
     {
-        Write-Error -Message "Storage account $StorageAccountName creation failed. Please fix and start over again"
+        Write-Error "Storage account $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }

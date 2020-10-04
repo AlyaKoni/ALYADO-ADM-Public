@@ -56,7 +56,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "EXCHANGE | Set-AllMailboxes30DayRetention | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Output "Setting auditing in exchange"
+Write-Host "Setting retention in exchange"
 Get-PSSession | Remove-PSSession
 try
 {
@@ -70,7 +70,7 @@ try
 }
 catch
 {
-    Write-Error $_.Exception.Message
+    Write-Error $_.Exception.Message -ErrorAction Continue
 }
 finally
 {
