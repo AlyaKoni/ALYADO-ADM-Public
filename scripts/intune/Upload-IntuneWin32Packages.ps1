@@ -127,30 +127,30 @@ foreach($packageDir in $packages)
     $appConfig.fileName = $package.Name
 
     $version = $null
-    if ($packageInfo.ApplicationInfo.MsiInfo)
+    $versionFile = Get-Item -Path (Join-Path $packageDir.FullName "version.json") -ErrorAction SilentlyContinue
+    if ($versionFile)
     {
-        $version = $packageInfo.ApplicationInfo.MsiInfo.MsiProductVersion
-        $msiPackageType = "DualPurpose";
-        $msiExecutionContext = $packageInfo.ApplicationInfo.MsiInfo.MsiExecutionContext
-        if($msiExecutionContext -eq "System") { $msiPackageType = "PerMachine" }
-        elseif($msiExecutionContext -eq "User") { $msiPackageType = "PerUser" }
-        $appConfig.msiInformation = @{
-            "packageType" = $msiPackageType
-            "productName" = $packageInfo.ApplicationInfo.Name
-            "productCode" = $packageInfo.ApplicationInfo.MsiInfo.MsiProductCode
-            "productVersion" = $packageInfo.ApplicationInfo.MsiInfo.MsiProductVersion
-            "publisher" = $packageInfo.ApplicationInfo.MsiInfo.MsiPublisher
-            "requiresReboot" = $packageInfo.ApplicationInfo.MsiInfo.MsiRequiresReboot
-            "upgradeCode" = $packageInfo.ApplicationInfo.MsiInfo.MsiUpgradeCode
-        }
+        $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        $version = [Version]$versionObj.version
     }
     else
     {
-        $versionFile = Get-Item -Path (Join-Path $packageDir.FullName "version.json") -ErrorAction SilentlyContinue
-        if ($versionFile)
+        if ($packageInfo.ApplicationInfo.MsiInfo)
         {
-            $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
-            $version = [Version]$versionObj.version
+            $version = $packageInfo.ApplicationInfo.MsiInfo.MsiProductVersion
+            $msiPackageType = "DualPurpose";
+            $msiExecutionContext = $packageInfo.ApplicationInfo.MsiInfo.MsiExecutionContext
+            if($msiExecutionContext -eq "System") { $msiPackageType = "PerMachine" }
+            elseif($msiExecutionContext -eq "User") { $msiPackageType = "PerUser" }
+            $appConfig.msiInformation = @{
+                "packageType" = $msiPackageType
+                "productName" = $packageInfo.ApplicationInfo.Name
+                "productCode" = $packageInfo.ApplicationInfo.MsiInfo.MsiProductCode
+                "productVersion" = $packageInfo.ApplicationInfo.MsiInfo.MsiProductVersion
+                "publisher" = $packageInfo.ApplicationInfo.MsiInfo.MsiPublisher
+                "requiresReboot" = $packageInfo.ApplicationInfo.MsiInfo.MsiRequiresReboot
+                "upgradeCode" = $packageInfo.ApplicationInfo.MsiInfo.MsiUpgradeCode
+            }
         }
         else
         {

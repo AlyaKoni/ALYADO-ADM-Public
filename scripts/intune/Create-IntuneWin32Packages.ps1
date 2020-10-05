@@ -92,16 +92,6 @@ foreach($packageDir in $packageDirs)
         Get-ChildItem -Path $scriptPath | Copy-Item -Destination $contentPath
     }
 
-    Write-Host "  Preparing version if required"
-    $incrementScript = Get-Item -Path (Join-Path $packageDir.FullName "PrepareVersion.ps1") -ErrorAction SilentlyContinue
-    if ($incrementScript)
-    {
-        & "$($incrementScript.FullName)"
-        Start-Sleep -Seconds 2
-        $versionFile = Get-Item -Path (Join-Path $packageDir.FullName "version.json") -ErrorAction SilentlyContinue
-        Copy-Item -Path $versionFile -Destination $contentPath -Force
-    }
-
     Write-Host "  Downloading installer"
     $downloadShortcut = Get-Item -Path (Join-Path $packageDir.FullName "Download.url") -ErrorAction SilentlyContinue
     if (-Not $downloadShortcut)
@@ -151,6 +141,16 @@ foreach($packageDir in $packageDirs)
         $zipPath = Join-Path $contentPath "Content.zip"
         Compress-Archive -Path $contentZipPath -DestinationPath $zipPath
         $zipFile = Get-Item -Path $zipPath
+    }
+
+    Write-Host "  Preparing version if required"
+    $incrementScript = Get-Item -Path (Join-Path $packageDir.FullName "PrepareVersion.ps1") -ErrorAction SilentlyContinue
+    if ($incrementScript)
+    {
+        & "$($incrementScript.FullName)"
+        Start-Sleep -Seconds 2
+        $versionFile = Get-Item -Path (Join-Path $packageDir.FullName "version.json") -ErrorAction SilentlyContinue
+        Copy-Item -Path $versionFile -Destination $contentPath -Force
     }
 
     Write-Host "  Packaging"
