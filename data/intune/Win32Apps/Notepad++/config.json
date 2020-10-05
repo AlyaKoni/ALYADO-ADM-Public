@@ -47,7 +47,7 @@
                                "check32BitOn64System":  false,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "7.9.0.0"
+                               "detectionValue":  "7.9"
                            }
                        ],
     "requirementRules":  [
@@ -62,7 +62,7 @@
                       "check32BitOn64System":  false,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "7.9.0.0"
+                      "comparisonValue":  "7.9"
                   }
               ],
     "installExperience":  {

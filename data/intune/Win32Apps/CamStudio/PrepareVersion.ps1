@@ -1,8 +1,17 @@
 Write-Host "    Preparing version"
 $packageRoot = "$PSScriptRoot"
 $versionFile = Join-Path $packageRoot "version.json"
-$versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$version = [Version]$versionObj.version
+if ((Test-Path $versionFile))
+{
+    $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    $version = [Version]$versionObj.version
+}
+else
+{
+    $versionObj = @{}
+    $versionObj.version = "1.0"
+    $version = [Version]$versionObj.version
+}
 Write-Host "      actual: $version"
 
 $camStudioRoot = "C:\Program Files\CamStudio 2.7"

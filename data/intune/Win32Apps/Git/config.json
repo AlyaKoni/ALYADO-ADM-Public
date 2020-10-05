@@ -47,7 +47,7 @@
                                "check32BitOn64System":  false,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "2.28.0.1"
+                               "detectionValue":  "2.28.0"
                            }
                        ],
     "requirementRules":  [
@@ -62,7 +62,7 @@
                       "check32BitOn64System":  false,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "2.28.0.1"
+                      "comparisonValue":  "2.28.0"
                   }
               ],
     "installExperience":  {

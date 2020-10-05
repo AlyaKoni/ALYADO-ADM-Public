@@ -1,0 +1,5 @@
+﻿{
+    "@odata.type": "#microsoft.graph.mobileAppCategory",
+    "id": "0720a99e-562b-4a77-83f0-9a7523fcf13e",
+    "displayName":  "Other Apps"
+}

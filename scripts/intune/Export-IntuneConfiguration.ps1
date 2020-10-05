@@ -4,6 +4,7 @@
     Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
 	and/or modify it under the terms of the GNU General Public License as
 	published by the Free Software Foundation, either version 3 of the
@@ -14,6 +15,7 @@
 	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
 	Bedingungen der GNU General Public License, wie von der Free Software
 	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -822,7 +824,10 @@ foreach ($user in $users.value)
                     $deviceData.hardwareInformation = $deviceWithHardwareInfo
 
                     $deviceData | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\managedDevice_$($device.deviceName).json")) -Force
-                } catch { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError }
+                } catch { 
+					try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+					try { Write-Host $_.Exception -ForegroundColor $CommandError } catch {}
+				}
             }
             foreach($config in $configs)
             {
@@ -838,7 +843,10 @@ foreach ($user in $users.value)
             $intuneApplicationsForUser | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\intuneApplications.json")) -Force
             $deviceManagementScriptsForUser | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\deviceManagementScripts.json")) -Force
         }
-    } catch { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError }
+	} catch { 
+		try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+		try { Write-Host $_.Exception -ForegroundColor $CommandError } catch {}
+	}
 }
 
 #Stopping Transscript

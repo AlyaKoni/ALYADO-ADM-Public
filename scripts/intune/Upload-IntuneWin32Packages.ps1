@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-IntuneWin32Packages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = "Win10"
+$AppPrefix = "Win10 "
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "Win32Apps"
 if (-Not (Test-Path $DataRoot))
 {
@@ -84,7 +84,7 @@ foreach($packageDir in $packages)
     $contentPath = Join-Path $packageDir.FullName "Content"
 
     # Checking intunewin package
-    Write-Host "  Checking intunewin package" -ForegroundColor $CommandInfo
+    Write-Host "  Checking intunewin package"
     $package = Get-ChildItem -Path $packagePath -Filter "*.intunewin"
     if (-Not $package)
     {
@@ -99,7 +99,7 @@ foreach($packageDir in $packages)
     }
 
     # Extracting package information
-    Write-Host "  Extracting package information" -ForegroundColor $CommandInfo
+    Write-Host "  Extracting package information"
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
     $entry = $zip.Entries | Where-Object { $_.Name -eq "Detection.xml" }
@@ -109,13 +109,13 @@ foreach($packageDir in $packages)
     Remove-Item -Path "$($package.FullName).Detection.xml" -Force
 
     # Reading and preparing app configuration
-    Write-Host "  Reading and preparing app configuration" -ForegroundColor $CommandInfo
+    Write-Host "  Reading and preparing app configuration"
     $appConfig = Get-Content -Path $configPath -Raw -Encoding UTF8
     $appConfig = $appConfig | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty isAssigned,dependentAppCount,supersedingAppCount,supersededAppCount,committedContentVersion,size,id,createdDateTime,lastModifiedDateTime,version,'@odata.context',uploadState,packageId,appIdentifier,publishingState,usedLicenseCount,totalLicenseCount,productKey,licenseType,packageIdentityName
 
-    $appConfig.displayName = "$AppPrefix " + $packageDir.Name
+    $appConfig.displayName = "$AppPrefix" + $packageDir.Name
     Write-Host "    displayName: $($appConfig.displayName)"
-    if ($packageInfo.ApplicationInfo.Name -ne "Install.ps1")
+    if ($packageInfo.ApplicationInfo.Name -ne "Install.ps1" -and $packageInfo.ApplicationInfo.Name -ne "Install.cmd")
     {
         $appConfig.description = "Installs " + $packageInfo.ApplicationInfo.Name
     }
@@ -165,7 +165,14 @@ foreach($packageDir in $packages)
                 {
                     $toInstall = $toInstall[0]
                 }
-                $version = $toInstall.VersionInfo.FileVersion
+                if ($toInstall.VersionInfo.FileVersion)
+                {
+                    $version = $toInstall.VersionInfo.FileVersion
+                }
+                if ($toInstall.VersionInfo.ProductVersion)
+                {
+                    $version = $toInstall.VersionInfo.ProductVersion
+                }
             }
             else
             {
@@ -197,20 +204,20 @@ foreach($packageDir in $packages)
     $appConfigJson | Set-Content -Path $configPath -Encoding UTF8
 
     # Checking if app exists
-    Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
+    Write-Host "  Checking if app exists"
     $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
     $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
     $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
     if (-Not $app.id)
     {
         # Creating app
-        Write-Host "  Creating app" -ForegroundColor $CommandInfo
+        Write-Host "  Creating app"
         $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps"
         $app = Post-MsGraph -AccessToken $token -Uri $uri -Body $appConfigJson
     }
 
     # Extracting intunewin file
-    Write-Host "  Extracting intunewin file" -ForegroundColor $CommandInfo
+    Write-Host "  Extracting intunewin file"
     $zip = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
     $entry = $zip.Entries | Where-Object { $_.Name -eq "IntunePackage.intunewin" }
     [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, "$($package.FullName).Extracted", $true)
@@ -219,7 +226,7 @@ foreach($packageDir in $packages)
     Remove-Item -Path "$($package.FullName).Extracted" -Force
 
     # Creating Content Version
-    Write-Host "  Creating Content Version" -ForegroundColor $CommandInfo
+    Write-Host "  Creating Content Version"
 	$appId = $app.id
     Write-Host "    appId: $($app.id)"
 	$uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions"
@@ -227,7 +234,7 @@ foreach($packageDir in $packages)
     Write-Host "    contentVersion: $($contentVersion.id)"
 
     # Creating Content Version file
-    Write-Host "  Creating Content Version file" -ForegroundColor $CommandInfo
+    Write-Host "  Creating Content Version file"
 	$fileBody = @{ "@odata.type" = "#microsoft.graph.mobileAppContentFile" }
 	$fileBody.name = $package.Name
 	$fileBody.size = [long]$packageInfo.ApplicationInfo.UnencryptedContentSize
@@ -238,7 +245,7 @@ foreach($packageDir in $packages)
 	$file = Post-MsGraph -AccessToken $token -Uri $uri -Body ($fileBody | ConvertTo-Json)
 
     # Waiting for file uri
-    Write-Host "  Waiting for file uri" -ForegroundColor $CommandInfo
+    Write-Host "  Waiting for file uri"
     $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
     $stage = "AzureStorageUriRequest"
 	$successState = "$($stage)Success"
@@ -266,7 +273,8 @@ foreach($packageDir in $packages)
 	}
 
     # Uploading intunewin content
-    Write-Host "  Uploading intunewin content" -ForegroundColor $CommandInfo
+    Write-Host "  Uploading intunewin content"
+    Start-Sleep -Seconds 3 # first chunk has often 403
     $chunkSizeInBytes = 1024 * 1024 * 6
 	$sasRenewalTimer = [System.Diagnostics.Stopwatch]::StartNew()
 	$chunks = [Math]::Ceiling($bytes.Length / $chunkSizeInBytes)
@@ -284,7 +292,7 @@ foreach($packageDir in $packages)
 	        "x-ms-blob-type" = "BlockBlob"
         }
 		$currentChunk = $chunk + 1
-        Write-Progress -Activity "    Uploading intunewin" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
+        Write-Progress -Activity "    Uploading intunewin from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
         $curi = "$($file.azureStorageUri)&comp=block&blockid=$id"
         $attempts = 10
         while ($attempts -ge 0)
@@ -301,7 +309,7 @@ foreach($packageDir in $packages)
                             Start-Sleep -Seconds 45
                         }
                         else {
-                            Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                            try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
                             throw
                         }
                     }
@@ -367,14 +375,14 @@ foreach($packageDir in $packages)
                 Start-Sleep -Seconds 45
             }
             else {
-                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
     } while ($StatusCode -eq 429)
 
     # Committing the file
-    Write-Host "  Committing the file" -ForegroundColor $CommandInfo
+    Write-Host "  Committing the file"
     $fileEncryptionInfo = @{}
     $fileEncryptionInfo.fileEncryptionInfo = @{
         encryptionKey        = $packageInfo.ApplicationInfo.EncryptionInfo.EncryptionKey
@@ -389,7 +397,7 @@ foreach($packageDir in $packages)
 	$file = Post-MsGraph -AccessToken $token -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json)
 
     # Waiting for file commit
-    Write-Host "  Waiting for file commit" -ForegroundColor $CommandInfo
+    Write-Host "  Waiting for file commit"
     $stage = "CommitFile"
 	$successState = "$($stage)Success"
 	$pendingState = "$($stage)Pending"
@@ -416,7 +424,7 @@ foreach($packageDir in $packages)
 	}
 
     # Committing the app
-    Write-Host "  Committing the app" -ForegroundColor $CommandInfo
+    Write-Host "  Committing the app"
     Add-Member -InputObject $appConfig -MemberType NoteProperty -Name "committedContentVersion" -Value $contentVersion.id
     $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId"
     $appP = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($appConfig | ConvertTo-Json)

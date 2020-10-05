@@ -4,6 +4,7 @@
     Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
 	and/or modify it under the terms of the GNU General Public License as
 	published by the Free Software Foundation, either version 3 of the
@@ -14,6 +15,7 @@
 	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
 	Bedingungen der GNU General Public License, wie von der Free Software
 	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -73,7 +75,7 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
 
     try
     {
@@ -86,11 +88,18 @@ else
             Write-Host "Installing $($toInst.FullName)"
             Write-Host "MSI Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
             #https://support.mozilla.org/de/kb/firefox-uber-msi-installationspakete-bereitstellen
-            cmd /c "msiexec.exe /i `"$($toInst.FullName)`" /qn /norestart /L* `"C:\AlyaConsulting\Logs\PDF24-Install-$AlyaTimeString.log`" ALLUSERS=1 AUTOUPDATE=No DESKTOPICONS=No FAXPRINTER=No REGISTERREADER=No"
+            $installString = "msiexec.exe /i `"$($toInst.FullName)`" /qn /norestart /L* `"C:\ProgramData\AlyaConsulting\Logs\PDF24-Install-$AlyaTimeString.log`" ALLUSERS=1 AUTOUPDATE=No DESKTOPICONS=No FAXPRINTER=No REGISTERREADER=No"
+            Write-Host "command: $installString"
+            cmd /c "$installString"
+			Write-Host "CMD returned: $LASTEXITCODE at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
             do
             {
                 Start-Sleep -Seconds 5
-                $process = Get-Process -Name "msiexec.exe" -ErrorAction SilentlyContinue
+                $process = Get-Process -Name "msiexec" -ErrorAction SilentlyContinue
+                if (-Not $process)
+                {
+                    $process = Get-Process -Name "msiexec.exe" -ErrorAction SilentlyContinue
+                }
             } while ($process)
             Write-Host "MSI End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
         }
@@ -98,8 +107,8 @@ else
     }
     catch
     {   
-        Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue
-        Write-Error "Exception occured" -ErrorAction Continue -Category OperationStopped
+        try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+        Write-Error ($_.Exception) -ErrorAction Continue
         $exitCode = -1
     }
 

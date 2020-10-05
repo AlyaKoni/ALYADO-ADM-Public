@@ -4,6 +4,7 @@
     Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
 	and/or modify it under the terms of the GNU General Public License as
 	published by the Free Software Foundation, either version 3 of the
@@ -14,6 +15,7 @@
 	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
 	Bedingungen der GNU General Public License, wie von der Free Software
 	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -245,6 +247,8 @@ $menuDef = @(
         @("cr", "Create-IntuneWin32Packages", "Create-IntuneWin32Packages"),
         @("up", "Upload-IntuneWin32Packages", "Upload-IntuneWin32Packages"),
         @("co", "Configure-IntuneWin32Packages", "Configure-IntuneWin32Packages"),
+        @("uw", "Upload-IntuneWebApps", "Upload-IntuneWebApps"),
+        @("cw", "Configure-IntuneWebApps", "Configure-IntuneWebApps"),
         @("ea", "Export-ApplicationConfiguration", "Export-ApplicationConfiguration"),
         @("rs", "Restart-IntuneWin32PackagesInstallation", "Restart-IntuneWin32PackagesInstallation"),
         @("dt", "Download-Win32AppPrepTool", "Download-Win32AppPrepTool"),
@@ -869,6 +873,14 @@ function Upload-IntuneWin32Packages
 function Configure-IntuneWin32Packages
 {
     & "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1"
+}
+function Upload-IntuneWebApps
+{
+    & "$($AlyaScripts)\intune\Upload-IntuneWebApps.ps1"
+}
+function Configure-IntuneWebApps
+{
+    & "$($AlyaScripts)\intune\Configure-IntuneWebApps.ps1"
 }
 function Export-ApplicationConfiguration
 {

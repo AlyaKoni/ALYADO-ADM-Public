@@ -12,6 +12,10 @@ foreach ($dir in $dirs)
     {
         $tmp = Remove-Item -Path (Join-Path $dir.FullName "Package") -Recurse -Force
     }
+    if ((Test-Path (Join-Path $dir.FullName "version.json")))
+    {
+        $tmp = Remove-Item -Path (Join-Path $dir.FullName "version.json") -Force
+    }
     if ($dir.Name -eq "LocalPrinters")
     {
         $zipDir = Join-Path $dir.FullName "ContentZip"

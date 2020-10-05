@@ -1,9 +1,19 @@
-Write-Host "    Incremented version"
+Write-Host "    Preparing version"
 $packageRoot = "$PSScriptRoot"
 $versionFile = Join-Path $packageRoot "version.json"
-$versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$version = [Version]$versionObj.version
-Write-Host "      from: $version"
+if ((Test-Path $versionFile))
+{
+    $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    $version = [Version]$versionObj.version
+}
+else
+{
+    $versionObj = @{}
+    $versionObj.version = "1.0"
+    $version = [Version]$versionObj.version
+}
+Write-Host "      actual: $version"
+
 if ($version.Revision -gt -1)
 {
     $version = [version]::New($version.Major,$version.Minor+1,$version.Build,$version.Revision)

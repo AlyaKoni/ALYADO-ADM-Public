@@ -4,6 +4,7 @@
     Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
 	and/or modify it under the terms of the GNU General Public License as
 	published by the Free Software Foundation, either version 3 of the
@@ -14,6 +15,7 @@
 	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
 	Bedingungen der GNU General Public License, wie von der Free Software
 	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -119,15 +121,27 @@ foreach($packageDir in $packageDirs)
         $content = $downloadShortcut | Get-Content -Raw -Encoding UTF8
         [regex]$regex = "URL=.*"
         $downloadUrl = [regex]::Match($content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Substring(4)
-        Write-Host "    from $downloadUrl"
-        #TODO Better download!
-        start $downloadUrl
-        do
+        while ($attempts -ge 0)
         {
-            Start-Sleep -Seconds 10
-            $filename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
-            if ($filename.Contains("crdownload")) { $filename = $lastfilename }
-        } while ($lastfilename -eq $filename)
+            Write-Host "    from $downloadUrl"
+            try {
+                #TODO Better download!
+                start $downloadUrl
+                do
+                {
+                    Start-Sleep -Seconds 10
+                    $filename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
+                    if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                } while ($lastfilename -eq $filename)
+                $attempts = -1
+            } catch {
+                Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
+                Write-Host "Retrying $attempts times" -ForegroundColor $CommandError
+                $attempts--
+                if ($attempts -lt 0) { throw }
+                Start-Sleep -Seconds 10
+            }
+        }
         Start-Sleep -Seconds 3
         $sourcePath = $downloads+"\"+$filename
         $filename = $filename -replace "\s\(.*\)", ""

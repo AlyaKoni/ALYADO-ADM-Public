@@ -5,6 +5,7 @@
     Copyright (c) Alya Consulting: 2020
 
     This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
 	and/or modify it under the terms of the GNU General Public License as
 	published by the Free Software Foundation, either version 3 of the
@@ -15,6 +16,7 @@
 	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
 	Bedingungen der GNU General Public License, wie von der Free Software
 	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -229,7 +231,9 @@ function Download-FolderRecursive($folderObj, $parentDir)
                 }
             } catch
             { 
-                Write-Error "Download failed: $($_.Exception)" -ErrorAction Continue
+				try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+				Write-Error ($_.Exception) -ErrorAction Continue
+                Write-Error "Download failed" -ErrorAction Continue
             }
         }
     }
@@ -330,7 +334,9 @@ foreach($site in $sites)
                     $expList | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $listDir "listDefinition.metadata") -Force
                 } catch
                 {
-                    Write-Error "Error exporting list: $($_.Exception)" -ErrorAction Continue
+					try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+					Write-Error ($_.Exception) -ErrorAction Continue
+                    Write-Error "Error exporting list" -ErrorAction Continue
                 }
             }
 

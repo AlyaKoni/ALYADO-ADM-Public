@@ -4,6 +4,7 @@
     Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
 	and/or modify it under the terms of the GNU General Public License as
 	published by the Free Software Foundation, either version 3 of the
@@ -14,6 +15,7 @@
 	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
 	Bedingungen der GNU General Public License, wie von der Free Software
 	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -73,7 +75,7 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
 
     try
     {
@@ -104,10 +106,29 @@ else
                     {
                         $uninstallString = (Get-ItemPropertyValue -Path $reg.PSPath -Name "UninstallString") + " /SILENT"
                     }
-                    $uninstallString += " /L* `"C:\AlyaConsulting\Logs\KeePass-Uninstall-$AlyaTimeString.log`""
+                    if (-Not $uninstallString.Contains("msiexec"))
+                    {
+                        $uninstallStringNew = ""
+                        $uninstallParts = $uninstallString.Split()
+                        foreach($uninstallPart in $uninstallParts)
+                        {
+                            if (($uninstallStringNew -eq "") -and (-Not $uninstallPart.StartsWith("`"")))
+                            {
+                                $uninstallStringNew += "`""
+                            }
+                            if ($uninstallPart.Contains(".exe") -and -not $uninstallPart.Contains("`""))
+                            {
+                                $uninstallPart = $uninstallPart + "`""
+                            }
+                            $uninstallStringNew += $uninstallPart + " "
+                        }
+                        $uninstallString = $uninstallStringNew
+                    }
+                    $uninstallString += " /L* `"C:\ProgramData\AlyaConsulting\Logs\KeePass-Uninstall-$AlyaTimeString.log`""
                     Write-Host "command: $uninstallString"
                     Write-Host "EXE Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
                     cmd /c "$uninstallString"
+					Write-Host "CMD returned: $LASTEXITCODE at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
                     do
                     {
                         Start-Sleep -Seconds 5
@@ -120,8 +141,8 @@ else
     }
     catch
     {   
-        Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue
-        Write-Error "Exception occured" -ErrorAction Continue -Category OperationStopped
+        try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+        Write-Error ($_.Exception) -ErrorAction Continue
         $exitCode = -1
     }
 

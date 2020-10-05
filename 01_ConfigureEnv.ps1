@@ -4,6 +4,7 @@
     Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
 	and/or modify it under the terms of the GNU General Public License as
 	published by the Free Software Foundation, either version 3 of the
@@ -14,6 +15,7 @@
 	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
 	Bedingungen der GNU General Public License, wie von der Free Software
 	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -797,7 +799,7 @@ function Get-MsGraphCollection
                     Start-Sleep -Seconds 45
                 }
                 else {
-                    Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                    try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
                     throw
                 }
             }
@@ -845,7 +847,7 @@ function Get-MsGraphObject
                 Start-Sleep -Seconds 45
             }
             else {
-                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
@@ -885,7 +887,7 @@ function Delete-MsGraphObject
                 Start-Sleep -Seconds 45
             }
             else {
-                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
@@ -927,7 +929,7 @@ function Post-MsGraph
                 Start-Sleep -Seconds 45
             }
             else {
-                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
@@ -974,7 +976,7 @@ function Patch-MsGraph
                 Start-Sleep -Seconds 45
             }
             else {
-                Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError
+                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }

@@ -4,6 +4,7 @@
     Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
 	and/or modify it under the terms of the GNU General Public License as
 	published by the Free Software Foundation, either version 3 of the
@@ -14,6 +15,7 @@
 	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
 	Bedingungen der GNU General Public License, wie von der Free Software
 	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -73,7 +75,7 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
 
     try
     {
@@ -103,7 +105,7 @@ else
         if (-Not $driverSharp)
         {
             Write-Host "  Installing Sharp driver"
-            Invoke-Command { pnputil.exe -a "$driverSharpDir\su2emdeu.inf" }
+            Invoke-Command { pnputil.exe -a "$driverSharpDir\app\German\PCL6\64bit\su2emdeu.inf" }
             Start-Sleep -Seconds 10
             Add-PrinterDriver -Name $driverSharpName
             Start-Sleep -Seconds 10
@@ -221,8 +223,8 @@ else
     }
     catch
     {   
-        Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue
-        Write-Error "Exception occured" -ErrorAction Continue -Category OperationStopped
+        try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+        Write-Error ($_.Exception) -ErrorAction Continue
         $exitCode = -1
     }
 
