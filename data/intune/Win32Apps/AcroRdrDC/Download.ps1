@@ -61,7 +61,7 @@ foreach ($CurDir in $parentDirs)
                         Start-Sleep -Seconds 45
                     }
                     else {
-                        try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 3) -ForegroundColor $CommandError } catch {}
 						Write-Host ($_.Exception) -ForegroundColor $CommandError
                         throw
                     }
@@ -117,7 +117,7 @@ if (-Not (Test-Path (Join-Path $contentRoot $lastExeFile)))
                         Start-Sleep -Seconds 45
                     }
                     else {
-                        try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 3) -ForegroundColor $CommandError } catch {}
 						Write-Host ($_.Exception) -ForegroundColor $CommandError
                         throw
                     }
@@ -151,7 +151,7 @@ if (-Not (Test-Path (Join-Path $contentRoot $lastPatchFile)))
                         Start-Sleep -Seconds 45
                     }
                     else {
-                        try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 3) -ForegroundColor $CommandError } catch {}
 						Write-Host ($_.Exception) -ForegroundColor $CommandError
                         throw
                     }

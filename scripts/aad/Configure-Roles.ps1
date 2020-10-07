@@ -176,7 +176,7 @@ if (-Not $missFound)
 
 # Configuring roles
 Write-Host "Configuring roles:" -ForegroundColor $CommandInfo
-foreach($roleName in $builtinRoles.Keys)
+foreach($roleName in ($builtinRoles.Keys | Sort-Object))
 {
     Write-Host "  role '$($roleName)'"
     $newUsers = $builtinRoles[$roleName] | where { $_ -notlike "##*"}
@@ -187,7 +187,7 @@ foreach($roleName in $builtinRoles.Keys)
     #Removing inactivated members
     $actMembs | foreach {
         $actMemb = $_
-        if ($actMemb.EmailAddress -And -Not ($newUsers.Contains($actMemb.EmailAddress)))
+        if ($actMemb.EmailAddress -And ((-Not $newUsers) -or (-Not $newUsers.Contains($actMemb.EmailAddress))))
         {
             Write-Host "    removing user $($actMemb.EmailAddress)" -ForegroundColor $CommandError
             Remove-MsolRoleMember -RoleObjectId $role.ObjectId -RoleMemberObjectId $actMemb.ObjectId

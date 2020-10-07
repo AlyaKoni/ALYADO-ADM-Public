@@ -200,7 +200,7 @@ function Do-Request ($URL, $fromURL)
     }
     catch
     {
-		try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+		try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
 		Write-Error ($_.Exception) -ErrorAction Continue
         Write-Host "    Error in request" -ForegroundColor $CommandError
         Write-Host "    $_.Exception.Message" -ForegroundColor $CommandError

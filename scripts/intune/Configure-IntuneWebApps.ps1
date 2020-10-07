@@ -167,7 +167,7 @@ foreach($packageDir in $packages)
             # Adding assignment
             Write-Host "        Adding assignment $($assignment.target."@odata.type")"
 	        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/assignments"
-            $body = $assignment | ConvertTo-Json
+            $body = $assignment | ConvertTo-Json -Depth 50
 	        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
         }
         else

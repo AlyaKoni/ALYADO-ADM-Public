@@ -311,7 +311,7 @@ try
 }
 catch
 {
-    try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 finally

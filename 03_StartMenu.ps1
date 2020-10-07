@@ -244,18 +244,21 @@ $menuDef = @(
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
     @("it", "Intune", "", @(
+        @("sa", "Set-IntuneAsMdmAuthority", "Set-IntuneAsMdmAuthority"),
+        @("sb", "Set-IntuneBranding", "Set-IntuneBranding"),
         @("cr", "Create-IntuneWin32Packages", "Create-IntuneWin32Packages"),
         @("up", "Upload-IntuneWin32Packages", "Upload-IntuneWin32Packages"),
         @("co", "Configure-IntuneWin32Packages", "Configure-IntuneWin32Packages"),
         @("uw", "Upload-IntuneWebApps", "Upload-IntuneWebApps"),
         @("cw", "Configure-IntuneWebApps", "Configure-IntuneWebApps"),
-        @("ea", "Export-ApplicationConfiguration", "Export-ApplicationConfiguration"),
-        @("rs", "Restart-IntuneWin32PackagesInstallation", "Restart-IntuneWin32PackagesInstallation"),
+        @("cp", "Configure-IntuneDeviceCompliancePolicies", "Configure-IntuneDeviceCompliancePolicies"),
         @("dt", "Download-Win32AppPrepTool", "Download-Win32AppPrepTool"),
-        @("gc", "Get-ProductCodeFromMsi", "Get-ProductCodeFromMsi"),
         @("er", "Enable-PINReset", "Enable-PINReset"),
         @("ec", "Export-IntuneConfiguration", "Export-IntuneConfiguration"),
+        @("ea", "Export-ApplicationConfiguration", "Export-ApplicationConfiguration"),
+        @("gc", "Get-ProductCodeFromMsi", "Get-ProductCodeFromMsi"),
         @("gs", "Get-IntunePowershellSamples", "Get-IntunePowershellSamples"),
+        @("rs", "Restart-IntuneWin32PackagesInstallation", "Restart-IntuneWin32PackagesInstallation"),
         @("ep", "extractPackages", "extractPackages"),
         @("b", "Back", "back"),
         @("q", "Quit", "return"))),
@@ -865,6 +868,19 @@ function Enable-PINReset
 function Create-IntuneWin32Packages
 {
     & "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1"
+}
+
+function Set-IntuneAsMdmAuthority
+{
+    & "$($AlyaScripts)\intune\Set-IntuneAsMdmAuthority.ps1"
+}
+function Set-IntuneBranding
+{
+    & "$($AlyaScripts)\intune\Set-IntuneBranding.ps1"
+}
+function Configure-IntuneDeviceCompliancePolicies
+{
+    & "$($AlyaScripts)\intune\Configure-IntuneDeviceCompliancePolicies.ps1"
 }
 function Upload-IntuneWin32Packages
 {

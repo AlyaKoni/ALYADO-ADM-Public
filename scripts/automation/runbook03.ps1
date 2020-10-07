@@ -85,7 +85,7 @@ try {
 } catch {
     if (!$RunAsConnection) {
         Write-Output $RunAsConnectionName
-        try { Write-Output ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+        try { Write-Output ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
         Write-Output "Connection $RunAsConnectionName not found."
     }
     throw

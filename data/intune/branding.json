@@ -1,0 +1,31 @@
+{
+    "intuneBrand": {
+        "displayName": "Alya Consulting",
+        "showLogo": true,
+        "showNameNextToLogo": true,
+        "landingPageCustomizedImage": null,
+        "showDisplayNameNextToLogo": true,
+        "contactITName": "Alya Consulting Support",
+        "contactITPhoneNumber": "0041625620463",
+        "contactITEmailAddress": "support@alyaconsulting.ch",
+        "contactITNotes": null,
+        "onlineSupportSiteUrl": "https://alyaconsulting.ch/Home/Support",
+        "onlineSupportSiteName": "Support",
+        "privacyUrl": "https://alyaconsulting.ch/Home/Privacy",
+        "customPrivacyMessage": null,
+        "isRemoveDeviceDisabled": false,
+        "isFactoryResetDisabled": false,
+        "showAzureADEnterpriseApps": false,
+        "showOfficeWebApps": false,
+        "sendDeviceOwnershipChangePushNotification": false,
+        "enrollmentAvailability": "availableWithPrompts",
+        "lightBackgroundLogo": null,
+        "darkBackgroundLogo": null,
+        "themeColor": {
+            "@odata.type": "#microsoft.graph.rgbColor",
+			"r": 255,
+            "g": 255,
+            "b": 255
+        }
+    }
+}

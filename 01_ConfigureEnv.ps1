@@ -46,6 +46,16 @@
 Param(
 )
 
+<# COLORS will be overwritten by custom configuration #>
+$CommandInfo = "Cyan"
+$CommandSuccess = "Green"
+$CommandError = "Red"
+$CommandWarning = "Yellow"
+$AlyaColor = "White"
+$TitleColor = "Green"
+$MenuColor = "Magenta"
+$QuestionColor = "Magenta"
+
 # Loading custom configuration
 Write-Host "Loading configuration" -ForegroundColor Cyan
 if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
@@ -770,7 +780,9 @@ function Get-MsGraphCollection
         [parameter(Mandatory = $true)]
         $Uri,
         [parameter(Mandatory = $false)]
-        $AccessToken = $null
+        $AccessToken = $null,
+        [parameter(Mandatory = $false)]
+        $DontThrowIfStatusEquals = $null
     )
     if ($AccessToken) {
         $HeaderParams = @{
@@ -799,8 +811,11 @@ function Get-MsGraphCollection
                     Start-Sleep -Seconds 45
                 }
                 else {
-                    try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
-                    throw
+                    if (-Not $DontThrowIfStatusEquals -or $StatusCode -ne $DontThrowIfStatusEquals)
+                    {
+                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                        throw
+                    }
                 }
             }
         } while ($StatusCode -eq 429)
@@ -821,7 +836,9 @@ function Get-MsGraphObject
         [parameter(Mandatory = $true)]
         $Uri,
         [parameter(Mandatory = $false)]
-        $AccessToken = $null
+        $AccessToken = $null,
+        [parameter(Mandatory = $false)]
+        $DontThrowIfStatusEquals = $null
     )
     if ($AccessToken) {
         $HeaderParams = @{
@@ -847,8 +864,11 @@ function Get-MsGraphObject
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
-                throw
+                if (-Not $DontThrowIfStatusEquals -or $StatusCode -ne $DontThrowIfStatusEquals)
+                {
+                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                    throw
+                }
             }
         }
     } while ($StatusCode -eq 429)
@@ -887,7 +907,7 @@ function Delete-MsGraphObject
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
@@ -929,7 +949,7 @@ function Post-MsGraph
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
@@ -976,7 +996,7 @@ function Patch-MsGraph
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }

@@ -242,7 +242,7 @@ foreach($packageDir in $packages)
 	$fileBody.manifest = $null
     $fileBody.isDependency = $false
 	$uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files"
-	$file = Post-MsGraph -AccessToken $token -Uri $uri -Body ($fileBody | ConvertTo-Json)
+	$file = Post-MsGraph -AccessToken $token -Uri $uri -Body ($fileBody | ConvertTo-Json -Depth 50)
 
     # Waiting for file uri
     Write-Host "  Waiting for file uri"
@@ -309,7 +309,7 @@ foreach($packageDir in $packages)
                             Start-Sleep -Seconds 45
                         }
                         else {
-                            try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+                            try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
                             throw
                         }
                     }
@@ -375,7 +375,7 @@ foreach($packageDir in $packages)
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json) -ForegroundColor $CommandError } catch {}
+                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
@@ -394,7 +394,7 @@ foreach($packageDir in $packages)
         fileDigestAlgorithm  = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigestAlgorithm
     }
     $curi = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
-	$file = Post-MsGraph -AccessToken $token -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json)
+	$file = Post-MsGraph -AccessToken $token -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json -Depth 50)
 
     # Waiting for file commit
     Write-Host "  Waiting for file commit"
@@ -427,7 +427,7 @@ foreach($packageDir in $packages)
     Write-Host "  Committing the app"
     Add-Member -InputObject $appConfig -MemberType NoteProperty -Name "committedContentVersion" -Value $contentVersion.id
     $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId"
-    $appP = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($appConfig | ConvertTo-Json)
+    $appP = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($appConfig | ConvertTo-Json -Depth 50)
 }
 
 #Stopping Transscript

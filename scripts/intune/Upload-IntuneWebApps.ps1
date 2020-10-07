@@ -103,7 +103,7 @@ foreach($packageDir in $packages)
         $appConfig.largeIcon.value = "$base64icon"
     }
 
-    $appConfigJson = $appConfig | ConvertTo-Json
+    $appConfigJson = $appConfig | ConvertTo-Json -Depth 50
     $appConfigJson | Set-Content -Path $configPath -Encoding UTF8
 
     # Checking if app exists

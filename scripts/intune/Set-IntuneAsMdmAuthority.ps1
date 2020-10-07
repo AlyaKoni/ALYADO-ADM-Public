@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,13 +29,59 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    06.05.2020 Konrad Brunner       Initial Version
+    06.10.2020 Konrad Brunner       Initial Version
 
 #>
 
-$rdpRegPath = "HKLM:\SOFTWARE\Microsoft\MSRDC\Policies"
-if (!(Test-Path $rdpRegPath))
+[CmdletBinding()]
+Param(
+)
+
+# Loading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-IntuneAsMdmAuthority-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Az"
+
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+
+# Getting context and token
+$Context = Get-AzContext
+if (-Not $Context)
 {
-    New-Item -Path $rdpRegPath -Force
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
 }
-New-ItemProperty -Path $rdpRegPath -Name "AutomaticUpdates" -Value "0" -PropertyType DWORD -Force
+$token = Get-AdalAccessToken
+
+# Main
+
+
+
+
+#TODO
+throw "Issue still open?"
+
+
+
+# Getting actual authority
+Write-Host "Getting actual authority" -ForegroundColor $CommandInfo
+$uri = "https://graph.microsoft.com/beta/organization('$AlyaTenantId')?`$select=mobiledevicemanagementauthority"
+$MDMAuthority = (Get-MsGraphObject -AccessToken $token -Uri $uri).value.mobileDeviceManagementAuthority
+Write-Host "  Actual authority: $MDMAuthority"
+
+if($MDMAuthority -notlike "intune")
+{
+    # Setting intune as authority
+    Write-Host "Setting intune as authority" -ForegroundColor $CommandInfo
+    $uri = "https://graph.microsoft.com/beta/organization/$AlyaTenantId/setMobileDeviceManagementAuthority"
+    $ret = Post-MsGraph -AccessToken $token -Uri $uri -Body "{}"
+}
+
+#Stopping Transscript
+Stop-Transcript

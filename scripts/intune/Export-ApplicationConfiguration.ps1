@@ -158,19 +158,19 @@ foreach($application in $applications)
 {
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)?`$expand=categories"
     $application = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $application | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_application.json")) -Force
+    $application | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_application.json")) -Force
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)/assignments"
     $applicationAssignments = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $applicationAssignments | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_applicationAssignments.json")) -Force
+    $applicationAssignments | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_applicationAssignments.json")) -Force
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)/installSummary"
     $installSummary = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $installSummary | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_installSummary.json")) -Force
+    $installSummary | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_installSummary.json")) -Force
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)/deviceStatuses"
     $deviceStatuses = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $deviceStatuses | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_deviceStatuses.json")) -Force
+    $deviceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_deviceStatuses.json")) -Force
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)/userStatuses"
     $userStatuses = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $userStatuses | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_userStatuses.json")) -Force
+    $userStatuses | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_userStatuses.json")) -Force
 }
 $intuneApplications.value | where { ($_.'@odata.type').Contains("managed") } | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMAM.json")) -Force
 $intuneApplications.value | where { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#microsoft.graph.iosVppApp")) } | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDMfull.json")) -Force
@@ -193,7 +193,7 @@ foreach($configuration in $configurations)
 {
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/targetedManagedAppConfigurations('$($configuration.id)')?`$expand=apps,assignments"
     $configuration = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $configuration | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\targetedManagedAppConfiguration_$($configuration.id).json")) -Force
+    $configuration | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\targetedManagedAppConfiguration_$($configuration.id).json")) -Force
 }
 
 #appregistrationSummary
@@ -220,16 +220,16 @@ foreach($policy in $policies)
 {
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/androidManagedAppProtections('$($policy.id)')?`$expand=apps"
     $policy = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $policy | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_android.json")) -Force
+    $policy | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_android.json")) -Force
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/iosManagedAppProtections('$($policy.id)')?`$expand=apps"
     $policy = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $policy | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_ios.json")) -Force
+    $policy | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_ios.json")) -Force
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/windowsInformationProtectionPolicies('$($policy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
     $policy = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $policy | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_windows.json")) -Force
+    $policy | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_windows.json")) -Force
     $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mdmWindowsInformationProtectionPolicies('$($policy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
     $policy = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $policy | ConvertTo-Json | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_mdm.json")) -Force
+    $policy | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_mdm.json")) -Force
 }
 
 #Stopping Transscript

@@ -231,7 +231,7 @@ function Download-FolderRecursive($folderObj, $parentDir)
                 }
             } catch
             { 
-				try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+				try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
 				Write-Error ($_.Exception) -ErrorAction Continue
                 Write-Error "Download failed" -ErrorAction Continue
             }
@@ -334,7 +334,7 @@ foreach($site in $sites)
                     $expList | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $listDir "listDefinition.metadata") -Force
                 } catch
                 {
-					try { Write-Error ($_.Exception | ConvertTo-Json) -ErrorAction Continue } catch {}
+					try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
 					Write-Error ($_.Exception) -ErrorAction Continue
                     Write-Error "Error exporting list" -ErrorAction Continue
                 }
