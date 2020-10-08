@@ -67,7 +67,8 @@ Foreach ($iprange in $Azureipranges.AzurePublicIpAddresses.region)
     }
 }
 
-$azureUrls = @( `    "*.azure.com", `
+$azureUrls = @( `
+    "*.azure.com", `
     "*.azure.net", `
     "*.azurecomcdn.net", `
     "*.azureedge.net", `

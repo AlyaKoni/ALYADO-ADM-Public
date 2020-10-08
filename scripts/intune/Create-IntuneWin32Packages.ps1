@@ -121,6 +121,7 @@ foreach($packageDir in $packageDirs)
         $content = $downloadShortcut | Get-Content -Raw -Encoding UTF8
         [regex]$regex = "URL=.*"
         $downloadUrl = [regex]::Match($content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Substring(4)
+        $attempts = 10
         while ($attempts -ge 0)
         {
             Write-Host "    from $downloadUrl"
@@ -143,10 +144,17 @@ foreach($packageDir in $packageDirs)
             }
         }
         Start-Sleep -Seconds 3
-        $sourcePath = $downloads+"\"+$filename
-        $filename = $filename -replace "\s\(.*\)", ""
-        $destPath = $contentPath+"\"+$filename
-        Move-Item -Path $sourcePath -Destination $destPath -Force
+        if ($filename)
+        {
+            $sourcePath = $downloads+"\"+$filename
+            $filename = $filename -replace "\s\(.*\)", ""
+            $destPath = $contentPath+"\"+$filename
+            Move-Item -Path $sourcePath -Destination $destPath -Force
+        }
+        else
+        {
+            Write-Error "Was not able to download installer" -ErrorAction Continue
+        }
     }
 
     Write-Host "  Preparing content zip"
