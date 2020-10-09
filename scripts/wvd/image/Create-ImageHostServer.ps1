@@ -3,11 +3,28 @@
 <#
     Copyright (c) Alya Consulting: 2020
 
-    This unpublished material is proprietary to Alya Consulting.
-    All rights reserved. The methods and techniques described
-    herein are considered trade secrets and/or confidential. 
-    Reproduction or distribution, in whole or in part, is 
-    forbidden except by express written permission of Alya Consulting.
+    This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    The Alya Base Configuration is free software: you can redistribute it
+	and/or modify it under the terms of the GNU General Public License as
+	published by the Free Software Foundation, either version 3 of the
+	License, or (at your option) any later version.
+    Alya Base Configuration is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+
+    Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
+	Bedingungen der GNU General Public License, wie von der Free Software
+	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veroeffentlichten Version, weiter verteilen und/oder modifizieren.
+    Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
+	aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    Siehe die GNU General Public License fuer weitere Details:
+	https://www.gnu.org/licenses/gpl-3.0.txt
 
     History:
     Date       Author               Description
@@ -24,18 +41,18 @@ Param(
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Create-ImageHostServer-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\image\Create-ImageHostServer-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg040"
-$VMName = "$($AlyaNamingPrefix)serv041"
-$VMNicName = "$($AlyaNamingPrefix)serv041nic1"
-$VMDiskName = "$($AlyaNamingPrefix)serv041osdisk"
+$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
+$VMName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)"
+$VMNicName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)nic1"
+$VMDiskName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)osdisk"
 $DiagnosticRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)"
 $NetworkRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
 $VirtualNetworkName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
-$VMSubnetName = "$($VirtualNetworkName)snet05"
+$VMSubnetName = "$($VirtualNetworkName)snet$($AlyaResIdWvdImageSNet)"
 $KeyVaultRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
@@ -58,7 +75,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -67,7 +84,7 @@ Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
 $ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning -Message "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
     $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Image Host";ownerEmail=$Context.Account.Id}
 }
 
@@ -101,7 +118,7 @@ Write-Host "Checking vm nic" -ForegroundColor $CommandInfo
 $VMNic = Get-AzNetworkInterface -ResourceGroupName $RessourceGroupName -Name $VMNicName -ErrorAction SilentlyContinue
 if (-Not $VMNic)
 {
-    Write-Warning -Message "VM nic not found. Creating the vm nic $VMNicName"
+    Write-Warning "VM nic not found. Creating the vm nic $VMNicName"
     $VMNic = New-AzNetworkInterface -ResourceGroupName $RessourceGroupName -Name $VMNicName -Location $AlyaLocation -SubnetId $Subnet.Id -EnableAcceleratedNetworking:$false 
     Set-AzNetworkInterface -NetworkInterface $VMNic
 }
@@ -113,11 +130,11 @@ Write-Host "Checking key vault" -ForegroundColor $CommandInfo
 $KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultRessourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
 if (-Not $KeyVault)
 {
-    Write-Warning -Message "Key Vault not found. Creating the Key Vault $KeyVaultName"
+    Write-Warning "Key Vault not found. Creating the Key Vault $KeyVaultName"
     $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
     if (-Not $KeyVault)
     {
-        Write-Error -Message "Key Vault $KeyVaultName creation failed. Please fix and start over again"
+        Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }
@@ -129,7 +146,7 @@ $ImageHostCredentialAssetName = "$($CompName)ImageHostAdminCredential"
 $AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $ImageHostCredentialAssetName -ErrorAction SilentlyContinue
 if (-Not $AzureKeyVaultSecret)
 {
-    Write-Warning -Message "Key Vault secret not found. Creating the secret $ImageHostCredentialAssetName"
+    Write-Warning "Key Vault secret not found. Creating the secret $ImageHostCredentialAssetName"
     $VMPassword = "$" + [Guid]::NewGuid().ToString() + "!"
     $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
     $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $ImageHostCredentialAssetName -SecretValue $VMPasswordSec
@@ -145,7 +162,7 @@ Write-Host "Checking image host vm" -ForegroundColor $CommandInfo
 $ImageHostVm = Get-AzVM -ResourceGroupName $RessourceGroupName -Name $VMName -ErrorAction SilentlyContinue
 if (-Not $ImageHostVm)
 {
-    Write-Warning -Message "Image host vm not found. Creating the image host vm $VMName"
+    Write-Warning "Image host vm not found. Creating the image host vm $VMName"
     #Get-AzVMSize -Location $AlyaLocation | where { $_.Name -like "Standard_D4s*" }
     #Get-AzVMImagePublisher -Location $AlyaLocation
     #Get-AzVMImageOffer -Location $AlyaLocation -PublisherName "MicrosoftWindowsServer"
@@ -169,7 +186,7 @@ $VmExtName = "$($VMName)AntiMalware"
 $VmExt = Get-AzVMExtension -ResourceGroupName $RessourceGroupName -VMName $VMName -Name $VmExtName -ErrorAction SilentlyContinue
 if (-Not $VmExt)
 {
-    Write-Warning -Message "AntiMalware extension on vm not found. Installing AntiMalware on Image host vm $VMName"
+    Write-Warning "AntiMalware extension on vm not found. Installing AntiMalware on Image host vm $VMName"
     #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
     #Get-Command Set-Az*Extension* -Module Az.Compute     
     #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1

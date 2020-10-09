@@ -1,4 +1,6 @@
-xcopy %~dp0*.* \\lmagpinfvd51-4\C$\Ledermann\WvdIcons /y
-rem xcopy %~dp0*.* \\lmagtinfvd51-1\C$\Ledermann\WvdIcons /y
-rem xcopy %~dp0*.* \\lmagtinfvd51-2\C$\Ledermann\WvdIcons /y
+xcopy %~dp0*.* \\SessionHost0\C$\AlyaConsulting\WvdIcons /y
+xcopy %~dp0*.* \\SessionHost1\C$\AlyaConsulting\WvdIcons /y
+xcopy %~dp0*.* \\SessionHost2\C$\AlyaConsulting\WvdIcons /y
+xcopy %~dp0*.* \\SessionHost3\C$\AlyaConsulting\WvdIcons /y
+xcopy %~dp0*.* \\SessionHost4\C$\AlyaConsulting\WvdIcons /y
 pause

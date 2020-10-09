@@ -1,4 +1,4 @@
 cd /d %~dp0
 
-.\Setup.exe /configure "configuration-ledermann-wvd-remove.xml"
+.\Setup.exe /configure "office_wvd_deploy_config.xml"
 pause

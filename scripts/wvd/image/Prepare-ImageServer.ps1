@@ -3,11 +3,28 @@
 <#
     Copyright (c) Alya Consulting: 2020
 
-    This unpublished material is proprietary to Alya Consulting.
-    All rights reserved. The methods and techniques described
-    herein are considered trade secrets and/or confidential. 
-    Reproduction or distribution, in whole or in part, is 
-    forbidden except by express written permission of Alya Consulting.
+    This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    The Alya Base Configuration is free software: you can redistribute it
+	and/or modify it under the terms of the GNU General Public License as
+	published by the Free Software Foundation, either version 3 of the
+	License, or (at your option) any later version.
+    Alya Base Configuration is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+
+    Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
+	Bedingungen der GNU General Public License, wie von der Free Software
+	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veroeffentlichten Version, weiter verteilen und/oder modifizieren.
+    Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
+	aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    Siehe die GNU General Public License fuer weitere Details:
+	https://www.gnu.org/licenses/gpl-3.0.txt
 
     History:
     Date       Author               Description
@@ -27,16 +44,16 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\image\Prepare-ImageServer-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$VmToImage = ($AlyaNamingPrefix + "serv041")
-$VmResourceGroupName = ($AlyaNamingPrefix + "resg040")
-$ImageName = ($VmToImage + "_ImageServer")
-$ImageResourceGroupName = ($AlyaNamingPrefix + "resg040")
+$VmToImage = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)"
+$VmResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
+$ImageName = "$($VmToImage)_ImageServer"
+$ImageResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
 $DiagnosticRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)"
 $KeyVaultRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 $DateString = (Get-Date -Format "_yyyyMMdd_HHmmss")
-$VMDiskName = "$($AlyaNamingPrefix)serv041osdisk"
+$VMDiskName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)osdisk"
 
 Write-Host "Please prepare first the source host ($VmToImage) like described in PrepareVmImage.pdf"
 Write-Host '  - Start a PowerShell as Administrator'
@@ -68,7 +85,7 @@ Write-Host "=====================================================`n" -Foreground
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error -Message "Can't get Az context! Not logged in?"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
 }
 
@@ -77,7 +94,7 @@ Write-Host "Checking vm ressource group" -ForegroundColor $CommandInfo
 $ResGrpVm = Get-AzResourceGroup -Name $VmResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrpVm)
 {
-    Write-Warning -Message "Ressource Group not found. Creating the Ressource Group $VmResourceGroupName"
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $VmResourceGroupName"
     $ResGrpVm = New-AzResourceGroup -Name $VmResourceGroupName -Location $AlyaLocation -Tag @{displayName="Image Host";ownerEmail=$Context.Account.Id}
 }
 
@@ -86,7 +103,7 @@ Write-Host "Checking image ressource group" -ForegroundColor $CommandInfo
 $ResGrpImage = Get-AzResourceGroup -Name $ImageResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrpImage)
 {
-    Write-Warning -Message "Ressource Group not found. Creating the Ressource Group $ImageResourceGroupName"
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ImageResourceGroupName"
     $ResGrpImage = New-AzResourceGroup -Name $ImageResourceGroupName -Location $AlyaLocation -Tag @{displayName="Image";ownerEmail=$Context.Account.Id}
 }
 
@@ -133,7 +150,7 @@ Write-Host "Deleting existing image if present" -ForegroundColor $CommandInfo
 $image = Get-AzImage -ResourceGroupName $VmResourceGroupName -ImageName $ImageName -ErrorAction SilentlyContinue
 if ($image)
 {
-    Write-Warning -Message "Deleting existing image $ImageName"
+    Write-Warning "Deleting existing image $ImageName"
     Remove-AzImage -ResourceGroupName $VmResourceGroupName -ImageName $ImageName -Force
 }
 
@@ -150,11 +167,11 @@ Write-Host "Checking key vault" -ForegroundColor $CommandInfo
 $KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultRessourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
 if (-Not $KeyVault)
 {
-    Write-Warning -Message "Key Vault not found. Creating the Key Vault $KeyVaultName"
+    Write-Warning "Key Vault not found. Creating the Key Vault $KeyVaultName"
     $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
     if (-Not $KeyVault)
     {
-        Write-Error -Message "Key Vault $KeyVaultName creation failed. Please fix and start over again"
+        Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
 }
@@ -166,7 +183,7 @@ $ImageHostCredentialAssetName = "$($CompName)ImageHostAdminCredential"
 $AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $ImageHostCredentialAssetName -ErrorAction SilentlyContinue
 if (-Not $AzureKeyVaultSecret)
 {
-    Write-Warning -Message "Key Vault secret not found. Creating the secret $ImageHostCredentialAssetName"
+    Write-Warning "Key Vault secret not found. Creating the secret $ImageHostCredentialAssetName"
     $VMPassword = "$" + [Guid]::NewGuid().ToString() + "!"
     $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
     $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $ImageHostCredentialAssetName -SecretValue $VMPasswordSec

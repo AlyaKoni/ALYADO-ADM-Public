@@ -1,3 +1,3 @@
-AzInfoProtection_UL.exe  ServiceLocation=https://68607b1d-984c-4c8d-8db0-7ec1843a478a.rms.eu.aadrm.com
+AzInfoProtection_UL.exe  ServiceLocation=https://PleaseSpecify
 msiexec /i AIPPlugin2000620034_Acr_DC.msi
 msiexec /i AIPPlugin2000620034_Rdr_DC.msi
