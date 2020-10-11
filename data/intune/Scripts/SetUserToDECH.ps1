@@ -59,6 +59,7 @@ start "SetUserToDECH" /min powershell.exe -NoLogo -WindowStyle Hidden -Execution
 else
 {
     # Run the script
+    #TODO Set-WinUILanguageOverride
     $UserLanguageList = Get-WinUserLanguageList
     if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "de-CH" })) {
         $UserLanguageList.Add("de-CH")

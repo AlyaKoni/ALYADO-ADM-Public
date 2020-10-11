@@ -1,0 +1,101 @@
+<html>
+<head>
+<style>
+boddy {
+  width: 100%;
+}
+div {
+  text-align: center;
+  width: 100%;
+}
+.RedirectLink {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  font-size: 1.2em;
+}
+.RedirectTo {
+  white-space: nowrap;
+  overflow: visible;
+  margin-left: 20px;
+}
+.big {
+  font-size: 1.5em;
+}
+.starter {
+  padding-top: 30px;
+}
+.spacer {
+  padding-bottom: 30px;
+  border-bottom: 2px solid;
+}
+</style>
+</head>
+<body>
+
+<div class="big starter">
+Die aufgerufene Website wurde verschoben.<br /><span style="color:red; font-weight: bold;">Bitte aktualisieren Sie Ihren Link.</span><br />Die neue URL lautet:
+</div>
+<div class="RedirectLink">
+  <a href="" id="RedirectToDe" class="RedirectTo"></a>
+</div>
+<div class="big spacer">
+In&nbsp;<span id="RedirectSecondsDe" style="color:red;"></span>&nbsp;Sekunden werden Sie automatisch weitergeleitet.
+</div>
+<div class="big starter">
+Your requested location has been moved.<br /><span style="color:red; font-weight: bold;">Please update your bookmarks.</span><br />The new location is:
+</div>
+<div class="RedirectLink">
+  <a href="" id="RedirectToEn" class="RedirectTo"></a>
+</div>
+<div class="big">
+You will be redirected automatically in&nbsp;<span id="RedirectSecondsEn" style="color:red;"></span>&nbsp;seconds!
+</div>
+<script>
+  function spEncode(loc)
+  {
+    return encodeURIComponent(loc).replace(/-/g,"%2D").replace(/\./g,"%2E");
+  }
+  function doRedirect()
+  {
+    document.getElementById("RedirectSecondsDe").innerHTML = seconds;
+    document.getElementById("RedirectSecondsEn").innerHTML = seconds;
+    seconds -= 1;
+    if (seconds < 0)
+    {
+      window.location.href = loc;
+    }
+    else
+    {
+      setTimeout(doRedirect, 1000);
+    }
+  }
+  var loc = window.location.href;
+  if (loc.indexOf("?to=") > -1)
+  {
+    loc = loc.substring(loc.indexOf("?to=")+4);
+    var qloc = loc.indexOf("?");
+    var aloc = loc.indexOf("&");
+    if (qloc == -1 && aloc != -1)
+    {
+      loc = loc.substring(0, aloc) + "?" + loc.substring(aloc + 1);
+    }
+  }
+  loc = loc.replace("https://OnPremFqdn/sites/","https://OnlineTenantName.sharepoint.com/sites/ALYASP-INT-");
+  loc = loc.replace(spEncode("https://OnPremFqdn/sites/"),spEncode("https://OnlineTenantName.sharepoint.com/sites/ALYASP-INT-"));
+  if (loc == "https://OnPremFqdn" || loc == "https://OnPremFqdn/")
+  {
+    loc = "https://OnlineTenantName.sharepoint.com/sites/ALYASP-INT";
+  }
+  loc = loc.replace("https://OnPremFqdn/","https://OnlineTenantName.sharepoint.com/sites/ALYASP-INT/");
+  loc = loc.replace("/sites/ToRename1","/sites/ALYASP-INT-Renamed1");
+  loc = loc.replace("/sites/ToRename2","/sites/ALYASP-INT-Renamed2");
+
+  document.getElementById("RedirectToDe").innerHTML = loc;
+  document.getElementById("RedirectToDe").href = loc;
+  document.getElementById("RedirectToEn").innerHTML = loc;
+  document.getElementById("RedirectToEn").href = loc;
+  var seconds = 10;
+  doRedirect();
+</script>
+</body>
+</html>

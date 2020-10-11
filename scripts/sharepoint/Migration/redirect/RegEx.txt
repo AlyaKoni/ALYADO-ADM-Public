@@ -1,0 +1,6 @@
+Rule1KeepOnPrem
+^(?:_layouts/.*|_catalogs/.*|ScriptResource.axd.*|WebResource.axd.*|_trust.*|operations.*|sites/sharing.*|sites/SiteToKeepOnPrem.*)$
+
+Rule2RedirectToOnline
+^.*$
+/redirect.html?to={UrlEncode:{R:0}}

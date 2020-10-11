@@ -29,46 +29,48 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    28.02.2020 Konrad Brunner       Initial Version
+    15.10.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$inputLabelFile = $null, #Defaults to "$AlyaData\aip\Labels.xlsx"
+    [string]$defaultLabel = $null #Defaults to Internal.External
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-OfficeGroupManagers-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Configure-SharePointClassification-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdPublicStorage)"
+if (-Not $inputLabelFile)
+{
+    $inputLabelFile = "$AlyaData\aip\Labels.xlsx"
+}
+if (-Not $defaultLabel)
+{
+    $defaultLabel = "Internal.External"
+}
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "MSOnline"
-    
+Install-ModuleIfNotInstalled "ImportExcel"
+
 # Logins
 LoginTo-Ad
-LoginTo-Msol
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-OfficeGroupManagers | O365" -ForegroundColor $CommandInfo
+Write-Host "AIP | Configure-SharePointClassification | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Check group name
-if ([string]::IsNullOrEmpty($AlyaGroupManagerGroupName))
-{
-    Write-Error "AlyaGroupManagerGroupName variable is not defined in 01_ConfigureEnv.ps1. Nothing to do!" -ErrorAction Continue
-    exit
-}
 
 # Preparing usage guidelines
 Write-Host "Preparing usage guidelines" -ForegroundColor $CommandInfo
@@ -81,36 +83,21 @@ if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExte
     throw "Please prepare Office Groups usage guidelines for externals"
 }
 
-# Configuring group setting
-Write-Host "Configuring group setting" -ForegroundColor $CommandInfo
-$MsolCompanySettings = Get-MsolCompanyInformation
-if ($MsolCompanySettings.UsersPermissionToCreateGroupsEnabled)
+# Reading inputLabelFile file
+Write-Host "Reading label file from '$inputLabelFile'" -ForegroundColor $CommandInfo
+if (-Not (Test-Path $inputLabelFile))
 {
-    Write-Warning "UsersPermissionToCreateGroupsEnabled was enabled. Disabling it now."
-    Set-MsolCompanySettings -UsersPermissionToCreateGroupsEnabled $False
+    throw "'$inputLabelFile' not found!"
 }
-else
-{
-    Write-Host "UsersPermissionToCreateGroupsEnabled was already disabled." -ForegroundColor $CommandSuccess
-}
-
-#TODO $AlyaGroupManagerMembers
-
-# Preparing security group
-Write-Host "Preparing security group" -ForegroundColor $CommandInfo
-$GrpManGrp = Get-MsolGroup -SearchString $AlyaGroupManagerGroupName
-if (-Not $GrpManGrp)
-{
-    Write-Warning "GroupManager group not found. Creating the GroupManager group $AlyaGroupManagerGroupName"
-    $GrpManGrp = New-MsolGroup -DisplayName $AlyaGroupManagerGroupName -Description "Members of this group can manage O365 groups"
-}
+$labelDefs = Import-Excel $inputLabelFile -ErrorAction Stop
+$labelList = $labelDefs.NameEn -join ", "
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-OfficeGroupManagers | Azure" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Configure-SharePointClassification | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Configuring settings template
@@ -123,24 +110,16 @@ if (-Not $Setting)
     $Setting = $SettingTemplate.CreateDirectorySetting()
     $Setting["UsageGuidelinesUrl"] = "https://alyainfpstrg001.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
     $Setting["GuestUsageGuidelinesUrl"] = "https://alyainfpstrg001.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
-    $Setting["EnableGroupCreation"] = $false
-    $Setting["GroupCreationAllowedGroupId"] = $GrpManGrp.ObjectId
-    $Setting["EnableMIPLabels"] = $true
-    $Setting["AllowToAddGuests"] = $true
-    $Setting["AllowGuestsToAccessGroups"] = $true
-    $Setting["AllowGuestsToBeGroupOwner"] = $true
+    $setting["ClassificationList"] = $labelList
+    $setting["DefaultClassification"] = $defaultLabel
     New-AzureADDirectorySetting -DirectorySetting $Setting
 }
 else
 {
     $Setting["UsageGuidelinesUrl"] = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
     $Setting["GuestUsageGuidelinesUrl"] = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
-    $Setting["EnableGroupCreation"] = $false
-    $Setting["GroupCreationAllowedGroupId"] = $GrpManGrp.ObjectId
-    $Setting["EnableMIPLabels"] = $true
-    $Setting["AllowToAddGuests"] = $true
-    $Setting["AllowGuestsToAccessGroups"] = $true
-    $Setting["AllowGuestsToBeGroupOwner"] = $true
+    $setting["ClassificationList"] = $labelList
+    $setting["DefaultClassification"] = $defaultLabel
     Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
 }
 
