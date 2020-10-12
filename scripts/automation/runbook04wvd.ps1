@@ -69,177 +69,181 @@ try {
     throw
 }
 
-# RDS stuff
-$AlyaTenantId = "##AlyaTenantId##"
-$AlyaLocalDomainName = "##AlyaLocalDomainName##"
-$AlyaWvdRDBroker = "##AlyaWvdRDBroker##"
-$AlyaWvdTenantNameProd = "##AlyaWvdTenantNameProd##"
-$AlyaWvdTenantNameTest = "##AlyaWvdTenantNameTest##"
-$AlyaWvdServicePrincipalNameProd = "##AlyaWvdServicePrincipalNameProd##"
-$AlyaWvdServicePrincipalNameTest = "##AlyaWvdServicePrincipalNameTest##"
-$AlyaWvdTenantGroupName = "##AlyaWvdTenantGroupName##"
+try {
+	# RDS stuff
+	$AlyaTenantId = "##AlyaTenantId##"
+	$AlyaLocalDomainName = "##AlyaLocalDomainName##"
+	$AlyaWvdRDBroker = "##AlyaWvdRDBroker##"
+	$AlyaWvdTenantNameProd = "##AlyaWvdTenantNameProd##"
+	$AlyaWvdTenantNameTest = "##AlyaWvdTenantNameTest##"
+	$AlyaWvdServicePrincipalNameProd = "##AlyaWvdServicePrincipalNameProd##"
+	$AlyaWvdServicePrincipalNameTest = "##AlyaWvdServicePrincipalNameTest##"
+	$AlyaWvdTenantGroupName = "##AlyaWvdTenantGroupName##"
 
-$MessageTitle = "Warnung"
-$MessageBody = "Windows Virtual Desktop wird um {0} automatisch heruntergefahren"
+	$MessageTitle = "Warnung"
+	$MessageBody = "Windows Virtual Desktop wird um {0} automatisch heruntergefahren"
 
-$LmagWvdProdAppCred = Get-AutomationPSCredential -Name $AlyaWvdServicePrincipalNameProd
-$LmagWvdTestAppCred = Get-AutomationPSCredential -Name $AlyaWvdServicePrincipalNameTest
+	$LmagWvdProdAppCred = Get-AutomationPSCredential -Name $AlyaWvdServicePrincipalNameProd
+	$LmagWvdTestAppCred = Get-AutomationPSCredential -Name $AlyaWvdServicePrincipalNameTest
 
-# Members
-$subs = $Subscriptions.Split(",")
-$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, 'W. Europe Standard Time')
-"Run time $($runTime)"
+	# Members
+	$subs = $Subscriptions.Split(",")
+	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, 'W. Europe Standard Time')
+	"Run time $($runTime)"
 
-# Processing subscriptions
-foreach($sub in $subs)
-{
-    "Processing subscription: $($sub)"
-    Select-AzureRmSubscription -SubscriptionId $sub | Out-Null
+	# Processing subscriptions
+	foreach($sub in $subs)
+	{
+		"Processing subscription: $($sub)"
+		Select-AzureRmSubscription -SubscriptionId $sub | Out-Null
 
-    Get-AzureRmResourceGroup | foreach {
-        $ResGName = $_.ResourceGroupName
-        "  Checking ressource group $($ResGName)"
-        foreach($vm in (Get-AzureRmVM -ResourceGroupName $ResGName))
-        {
-            "    Checking VM $($vm.Name)"
-            $tags = $vm.Tags
-            $tKeys = $tags | select -ExpandProperty keys
-            $startTime = $null
-            $stopTime = $null
-            foreach ($tkey in $tkeys)
-            {
-                if ($tkey.ToUpper() -eq "STARTTIME")
-                {
-                    $startTimeTag = $tags[$tkey]
-                    "- startTimeTag: $($startTimeTag)"
-                    try { $startTime = [DateTime]::parseexact($startTimeTag,"HH:mm",$null) }
-                    catch { $startTime = $null }
-                    "- startTime parsed: $($startTime)"
-                }
-                if ($tkey.ToUpper() -eq "STOPTIME")
-                {
-                    $stopTimeTag = $tags[$tkey]
-                    "- stopTimeTag: $($stopTimeTag)"
-                    try { $stopTime = [DateTime]::parseexact($stopTimeTag,"HH:mm",$null) }
-                    catch { $stopTime = $null }
-                    "- stopTime parsed: $($stopTime)"
-                }
-            }
-            if ($startTime)
-            {
-                if ($runTime -gt $startTime -and -not ($stopTime -and $startTime -lt $stopTime -and $runTime -gt $stopTime))
-                {
-                    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-                    foreach ($VMStatus in $VMDetail.Statuses)
-                    {
-                        "- VM Status: $($VMStatus.Code)"
-                        if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0)
-                        {
-                            "- Starting VM"
-                            Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
-                        }
-                    }
-                }
-            }
-            if ($stopTime)
-            {
-                if ($runTime -gt $stopTime -and -not ($startTime -and $startTime -gt $stopTime -and $runTime -gt $startTime))
-                {
-                    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-                    foreach ($VMStatus in $VMDetail.Statuses)
-                    { 
-                        "- VM Status: $($VMStatus.Code)"
-                        if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
-                        {
-                            $hostName = $vm.Name + "." + $AlyaLocalDomainName
-                            $tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
-                            $hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
-                            foreach ($hpool in $hpools)
-                            {
-                                $hosti = Get-RdsSessionHost -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -Name $hostName -ErrorAction SilentlyContinue
-                                if ($hosti)
-                                {
-                                    $sessns = Get-RdsUserSession -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -ErrorAction SilentlyContinue
-                                    foreach ($sessn in $sessns)
-                                    {
-                                        Invoke-RdsUserSessionLogoff -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -SessionHostName $sessn.SessionHostName -SessionId $sessn.SessionId -NoUserPrompt -ErrorAction SilentlyContinue
-                                    }
-                                    if ($sessns.Count -gt 0)
-                                    {
-                                        Start-Sleep -Seconds 30
-                                    }
-                                }
-                            }
-                            $tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
-                            $hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
-                            foreach ($hpool in $hpools)
-                            {
-                                $hosti = Get-RdsSessionHost -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -Name $hostName -ErrorAction SilentlyContinue
-                                if ($hosti)
-                                {
-                                    $sessns = Get-RdsUserSession -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -ErrorAction SilentlyContinue
-                                    foreach ($sessn in $sessns)
-                                    {
-                                        if ($sessn.SessionHostName -eq $hostName)
-                                        {
-                                            Invoke-RdsUserSessionLogoff -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -SessionHostName $sessn.SessionHostName -SessionId $sessn.SessionId -NoUserPrompt -ErrorAction SilentlyContinue
-                                        }
-                                    }
-                                    if ($sessns.Count -gt 0)
-                                    {
-                                        Start-Sleep -Seconds 30
-                                    }
-                                }
-                            }
-                            "- Stopping VM"
-                            Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
-                        }
-                    }
-                }
-                else
-                {
-                    $warnTime = $stopTime.AddHours(-2)
-                    if ($runTime -gt $warnTime -and -not ($startTime -and $startTime -gt $warnTime -and $runTime -gt $startTime))
-                    {
-                        $hostName = $vm.Name + "." + $AlyaLocalDomainName
-                        $tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
-                        $hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
-                        foreach ($hpool in $hpools)
-                        {
-                            $hosti = Get-RdsSessionHost -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -Name $hostName -ErrorAction SilentlyContinue
-                            if ($hosti)
-                            {
-                                $sessns = Get-RdsUserSession -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -ErrorAction SilentlyContinue
-                                foreach ($sessn in $sessns)
-                                {
-                                    if ($sessn.SessionHostName -eq $hostName)
-                                    {
-                                        Send-RdsUserSessionMessage -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -SessionHostName $sessn.SessionHostName -SessionId $sessn.SessionId -MessageTitle $MessageTitle -MessageBody ($MessageBody -f $stopTimeTag) -ErrorAction SilentlyContinue
-                                    }
-                                }
-                            }
-                        }
-                        $tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
-                        $hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
-                        foreach ($hpool in $hpools)
-                        {
-                            $hosti = Get-RdsSessionHost -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -Name $hostName -ErrorAction SilentlyContinue
-                            if ($hosti)
-                            {
-                                $sessns = Get-RdsUserSession -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -ErrorAction SilentlyContinue
-                                foreach ($sessn in $sessns)
-                                {
-                                    if ($sessn.SessionHostName -eq $hostName)
-                                    {
-                                        Send-RdsUserSessionMessage -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -SessionHostName $sessn.SessionHostName -SessionId $sessn.SessionId -MessageTitle $MessageTitle -MessageBody ($MessageBody -f $stopTimeTag) -ErrorAction SilentlyContinue
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+		Get-AzureRmResourceGroup | foreach {
+			$ResGName = $_.ResourceGroupName
+			"  Checking ressource group $($ResGName)"
+			foreach($vm in (Get-AzureRmVM -ResourceGroupName $ResGName))
+			{
+				"    Checking VM $($vm.Name)"
+				$tags = $vm.Tags
+				$tKeys = $tags | select -ExpandProperty keys
+				$startTime = $null
+				$stopTime = $null
+				foreach ($tkey in $tkeys)
+				{
+					if ($tkey.ToUpper() -eq "STARTTIME")
+					{
+						$startTimeTag = $tags[$tkey]
+						"- startTimeTag: $($startTimeTag)"
+						try { $startTime = [DateTime]::parseexact($startTimeTag,"HH:mm",$null) }
+						catch { $startTime = $null }
+						"- startTime parsed: $($startTime)"
+					}
+					if ($tkey.ToUpper() -eq "STOPTIME")
+					{
+						$stopTimeTag = $tags[$tkey]
+						"- stopTimeTag: $($stopTimeTag)"
+						try { $stopTime = [DateTime]::parseexact($stopTimeTag,"HH:mm",$null) }
+						catch { $stopTime = $null }
+						"- stopTime parsed: $($stopTime)"
+					}
+				}
+				if ($startTime)
+				{
+					if ($runTime -gt $startTime -and -not ($stopTime -and $startTime -lt $stopTime -and $runTime -gt $stopTime))
+					{
+						$VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						foreach ($VMStatus in $VMDetail.Statuses)
+						{
+							"- VM Status: $($VMStatus.Code)"
+							if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0)
+							{
+								"- Starting VM"
+								Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
+							}
+						}
+					}
+				}
+				if ($stopTime)
+				{
+					if ($runTime -gt $stopTime -and -not ($startTime -and $startTime -gt $stopTime -and $runTime -gt $startTime))
+					{
+						$VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						foreach ($VMStatus in $VMDetail.Statuses)
+						{ 
+							"- VM Status: $($VMStatus.Code)"
+							if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+							{
+								$hostName = $vm.Name + "." + $AlyaLocalDomainName
+								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+								$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
+								foreach ($hpool in $hpools)
+								{
+									$hosti = Get-RdsSessionHost -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -Name $hostName -ErrorAction SilentlyContinue
+									if ($hosti)
+									{
+										$sessns = Get-RdsUserSession -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -ErrorAction SilentlyContinue
+										foreach ($sessn in $sessns)
+										{
+											Invoke-RdsUserSessionLogoff -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -SessionHostName $sessn.SessionHostName -SessionId $sessn.SessionId -NoUserPrompt -ErrorAction SilentlyContinue
+										}
+										if ($sessns.Count -gt 0)
+										{
+											Start-Sleep -Seconds 30
+										}
+									}
+								}
+								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+								$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
+								foreach ($hpool in $hpools)
+								{
+									$hosti = Get-RdsSessionHost -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -Name $hostName -ErrorAction SilentlyContinue
+									if ($hosti)
+									{
+										$sessns = Get-RdsUserSession -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -ErrorAction SilentlyContinue
+										foreach ($sessn in $sessns)
+										{
+											if ($sessn.SessionHostName -eq $hostName)
+											{
+												Invoke-RdsUserSessionLogoff -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -SessionHostName $sessn.SessionHostName -SessionId $sessn.SessionId -NoUserPrompt -ErrorAction SilentlyContinue
+											}
+										}
+										if ($sessns.Count -gt 0)
+										{
+											Start-Sleep -Seconds 30
+										}
+									}
+								}
+								"- Stopping VM"
+								Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+							}
+						}
+					}
+					else
+					{
+						$warnTime = $stopTime.AddHours(-2)
+						if ($runTime -gt $warnTime -and -not ($startTime -and $startTime -gt $warnTime -and $runTime -gt $startTime))
+						{
+							$hostName = $vm.Name + "." + $AlyaLocalDomainName
+							$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+							$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
+							foreach ($hpool in $hpools)
+							{
+								$hosti = Get-RdsSessionHost -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -Name $hostName -ErrorAction SilentlyContinue
+								if ($hosti)
+								{
+									$sessns = Get-RdsUserSession -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -ErrorAction SilentlyContinue
+									foreach ($sessn in $sessns)
+									{
+										if ($sessn.SessionHostName -eq $hostName)
+										{
+											Send-RdsUserSessionMessage -TenantName $AlyaWvdTenantNameTest -HostPoolName $hpool.HostPoolName -SessionHostName $sessn.SessionHostName -SessionId $sessn.SessionId -MessageTitle $MessageTitle -MessageBody ($MessageBody -f $stopTimeTag) -ErrorAction SilentlyContinue
+										}
+									}
+								}
+							}
+							$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+							$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
+							foreach ($hpool in $hpools)
+							{
+								$hosti = Get-RdsSessionHost -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -Name $hostName -ErrorAction SilentlyContinue
+								if ($hosti)
+								{
+									$sessns = Get-RdsUserSession -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -ErrorAction SilentlyContinue
+									foreach ($sessn in $sessns)
+									{
+										if ($sessn.SessionHostName -eq $hostName)
+										{
+											Send-RdsUserSessionMessage -TenantName $AlyaWvdTenantNameProd -HostPoolName $hpool.HostPoolName -SessionHostName $sessn.SessionHostName -SessionId $sessn.SessionId -MessageTitle $MessageTitle -MessageBody ($MessageBody -f $stopTimeTag) -ErrorAction SilentlyContinue
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+} catch {
+    Write-Error $_.Exception -ErrorAction Continue
+    throw
 }
-

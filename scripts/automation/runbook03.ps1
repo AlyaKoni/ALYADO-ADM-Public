@@ -91,69 +91,73 @@ try {
     throw
 }
 
-# Check AzureAutomationCertificate
-$RunAsCert = Get-AutomationCertificate -Name $RunAsCertificateName
-if ($RunAsCert.NotAfter -gt (Get-Date).AddMonths(2))
-{
-    Write-Output ("Certificate will expire at " + $RunAsCert.NotAfter)
-    Write-Output ("Nothing to do!")
-    Exit(0)
+try {
+	# Check AzureAutomationCertificate
+	$RunAsCert = Get-AutomationCertificate -Name $RunAsCertificateName
+	if ($RunAsCert.NotAfter -gt (Get-Date).AddMonths(2))
+	{
+		Write-Output ("Certificate will expire at " + $RunAsCert.NotAfter)
+		Write-Output ("Nothing to do!")
+		Exit(0)
+	}
+
+	# Check AzureAD module if it is not in the Automation account.
+	$ADModule = Get-AzureRMAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
+							 -Name "AzureAD" -AzureRmContext $Context -ErrorAction SilentlyContinue
+	if ([string]::IsNullOrEmpty($ADModule))
+	{
+		$ADModule = Get-AzureRMAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
+								-Name "AzureADPreview" -AzureRmContext $Context -ErrorAction SilentlyContinue
+		if ([string]::IsNullOrEmpty($ADModule))
+		{
+			$ErrorMessage = "Missing AzureAd module."
+			throw $ErrorMessage
+		}
+	}
+
+	# Connect to Azure AD to manage the application
+	Write-Output "Logging in to AzureAd..."
+	Connect-AzureAD `
+		-TenantId $RunAsConnection.TenantId `
+		-ApplicationId $RunAsConnection.ApplicationId `
+		-CertificateThumbprint $RunAsConnection.CertificateThumbprint
+
+	# Find the application
+	$Filter = "AppId eq '" + $RunasConnection.ApplicationId + "'"
+	$Application = Get-AzureADApplication -Filter $Filter 
+
+	# Create RunAs certificate
+	Write-Output ("Creating new certificate")
+	$SelfSignedCertNoOfMonthsUntilExpired = 12
+	$SelfSignedCertPlainPassword = (New-Guid).Guid
+	$CertificateName = $AutomationAccountName + $RunAsCertificateName
+	$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($CertificateName + ".pfx")
+	$CerCertPathForRunAsAccount = Join-Path $env:TEMP ($CertificateName + ".cer")
+	$Cert = New-SelfSignedCertificate -DnsName $CertificateName -CertStoreLocation Cert:\LocalMachine\My `
+						-KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
+						-NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired) -HashAlgorithm SHA256
+	$CertPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
+	Export-PfxCertificate -Cert ("Cert:\LocalMachine\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CertPassword -Force | Write-Verbose
+	Export-Certificate -Cert ("Cert:\LocalMachine\My\" + $Cert.Thumbprint) -FilePath $CerCertPathForRunAsAccount -Type CERT | Write-Verbose
+
+	# Add new certificate to application
+	New-AzureADApplicationKeyCredential -ObjectId $Application.ObjectId -CustomKeyIdentifier ([System.Convert]::ToBase64String($Cert.GetCertHash())) `
+			 -Type AsymmetricX509Cert -Usage Verify -Value ([System.Convert]::ToBase64String($Cert.GetRawCertData())) -StartDate $Cert.NotBefore -EndDate $Cert.NotAfter | Write-Verbose
+
+	# Update the certificate with the new one in the Automation account
+	Set-AzureRmAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Path $PfxCertPathForRunAsAccount -Name $RunAsCertificateName `
+				 -Password $CertPassword -Exportable:$true -AzureRmContext $Context | Write-Verbose
+
+	# Update the RunAs connection with the new certificate information
+	$ConnectionFieldValues = @{"ApplicationId" = $RunasConnection.ApplicationId ; "TenantId" = $RunAsConnection.TenantId; "CertificateThumbprint" = $Cert.Thumbprint; "SubscriptionId" = $RunAsConnection.SubscriptionId }
+
+	# Can't just update the thumbprint value due to bug https://github.com/Azure/azure-powershell/issues/5862 so deleting / creating connection 
+	Remove-AzureRmAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName -Force
+	New-AzureRMAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName `
+				  -ConnectionFieldValues $ConnectionFieldValues -ConnectionTypeName $ConnectionTypeName -AzureRmContext $Context | Write-Verbose
+
+	Write-Output ("RunAs certificate credentials have been updated")
+} catch {
+    Write-Error $_.Exception -ErrorAction Continue
+    throw
 }
-
-# Check AzureAD module if it is not in the Automation account.
-$ADModule = Get-AzureRMAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
-                         -Name "AzureAD" -AzureRmContext $Context -ErrorAction SilentlyContinue
-if ([string]::IsNullOrEmpty($ADModule))
-{
-    $ADModule = Get-AzureRMAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
-                            -Name "AzureADPreview" -AzureRmContext $Context -ErrorAction SilentlyContinue
-    if ([string]::IsNullOrEmpty($ADModule))
-    {
-        $ErrorMessage = "Missing AzureAd module."
-        throw $ErrorMessage
-    }
-}
-
-# Connect to Azure AD to manage the application
-Write-Output "Logging in to AzureAd..."
-Connect-AzureAD `
-    -TenantId $RunAsConnection.TenantId `
-    -ApplicationId $RunAsConnection.ApplicationId `
-    -CertificateThumbprint $RunAsConnection.CertificateThumbprint
-
-# Find the application
-$Filter = "AppId eq '" + $RunasConnection.ApplicationId + "'"
-$Application = Get-AzureADApplication -Filter $Filter 
-
-# Create RunAs certificate
-Write-Output ("Creating new certificate")
-$SelfSignedCertNoOfMonthsUntilExpired = 12
-$SelfSignedCertPlainPassword = (New-Guid).Guid
-$CertificateName = $AutomationAccountName + $RunAsCertificateName
-$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($CertificateName + ".pfx")
-$CerCertPathForRunAsAccount = Join-Path $env:TEMP ($CertificateName + ".cer")
-$Cert = New-SelfSignedCertificate -DnsName $CertificateName -CertStoreLocation Cert:\LocalMachine\My `
-                    -KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
-                    -NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired) -HashAlgorithm SHA256
-$CertPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
-Export-PfxCertificate -Cert ("Cert:\LocalMachine\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CertPassword -Force | Write-Verbose
-Export-Certificate -Cert ("Cert:\LocalMachine\My\" + $Cert.Thumbprint) -FilePath $CerCertPathForRunAsAccount -Type CERT | Write-Verbose
-
-# Add new certificate to application
-New-AzureADApplicationKeyCredential -ObjectId $Application.ObjectId -CustomKeyIdentifier ([System.Convert]::ToBase64String($Cert.GetCertHash())) `
-         -Type AsymmetricX509Cert -Usage Verify -Value ([System.Convert]::ToBase64String($Cert.GetRawCertData())) -StartDate $Cert.NotBefore -EndDate $Cert.NotAfter | Write-Verbose
-
-# Update the certificate with the new one in the Automation account
-Set-AzureRmAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Path $PfxCertPathForRunAsAccount -Name $RunAsCertificateName `
-             -Password $CertPassword -Exportable:$true -AzureRmContext $Context | Write-Verbose
-
-# Update the RunAs connection with the new certificate information
-$ConnectionFieldValues = @{"ApplicationId" = $RunasConnection.ApplicationId ; "TenantId" = $RunAsConnection.TenantId; "CertificateThumbprint" = $Cert.Thumbprint; "SubscriptionId" = $RunAsConnection.SubscriptionId }
-
-# Can't just update the thumbprint value due to bug https://github.com/Azure/azure-powershell/issues/5862 so deleting / creating connection 
-Remove-AzureRmAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName -Force
-New-AzureRMAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName `
-              -ConnectionFieldValues $ConnectionFieldValues -ConnectionTypeName $ConnectionTypeName -AzureRmContext $Context | Write-Verbose
-
-Write-Output ("RunAs certificate credentials have been updated")
-

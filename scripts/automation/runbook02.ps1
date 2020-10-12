@@ -151,30 +151,35 @@ try {
     throw
 }
 
-# Import modules if they are not in the Automation account
-foreach($ModuleToInstall in $ModulesToInstall)
-{
-    $ModuleName = $ModuleToInstall.Name
-    $ModuleVersion = $ModuleToInstall.Version
-    Write-Output "Checking module $ModuleName..."
-    $ADModule = Get-AzureRMAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
-                            -Name $ModuleName -AzureRmContext $Context -ErrorAction SilentlyContinue
-    if ([string]::IsNullOrEmpty($ADModule))
-    {
-        Write-Output "  Installing..."
-        $AzureADGalleryURL = ImportAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
-                            -ModuleName $ModuleName -ModuleVersion $ModuleVersion
-        if (-Not $AzureADGalleryURL)
-        {
-            Write-Error "Can't find module $ModuleName" -ErrorAction Continue
-        }
-        else
-        {
-            New-AzureRMAutomationModule `
-                -ResourceGroupName $ResourceGroupName `
-                -AutomationAccountName $AutomationAccountName `
-                -Name $ModuleName `
-                -ContentLink $AzureADGalleryURL
-        }
-    }
+try {
+	# Import modules if they are not in the Automation account
+	foreach($ModuleToInstall in $ModulesToInstall)
+	{
+		$ModuleName = $ModuleToInstall.Name
+		$ModuleVersion = $ModuleToInstall.Version
+		Write-Output "Checking module $ModuleName..."
+		$ADModule = Get-AzureRMAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
+								-Name $ModuleName -AzureRmContext $Context -ErrorAction SilentlyContinue
+		if ([string]::IsNullOrEmpty($ADModule))
+		{
+			Write-Output "  Installing..."
+			$AzureADGalleryURL = ImportAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
+								-ModuleName $ModuleName -ModuleVersion $ModuleVersion
+			if (-Not $AzureADGalleryURL)
+			{
+				Write-Error "Can't find module $ModuleName" -ErrorAction Continue
+			}
+			else
+			{
+				New-AzureRMAutomationModule `
+					-ResourceGroupName $ResourceGroupName `
+					-AutomationAccountName $AutomationAccountName `
+					-Name $ModuleName `
+					-ContentLink $AzureADGalleryURL
+			}
+		}
+	}
+} catch {
+    Write-Error $_.Exception -ErrorAction Continue
+    throw
 }

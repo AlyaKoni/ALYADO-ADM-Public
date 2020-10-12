@@ -68,79 +68,83 @@ try {
     throw
 }
 
-# Members
-$subs = $Subscriptions.Split(",")
-$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, 'W. Europe Standard Time')
-"Run time $($runTime)"
+try {
+	# Members
+	$subs = $Subscriptions.Split(",")
+	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, 'W. Europe Standard Time')
+	"Run time $($runTime)"
 
-# Processing subscriptions
-foreach($sub in $subs)
-{
-    "Processing subscription: $($sub)"
-    Select-AzureRmSubscription -SubscriptionId $sub | Out-Null
+	# Processing subscriptions
+	foreach($sub in $subs)
+	{
+		"Processing subscription: $($sub)"
+		Select-AzureRmSubscription -SubscriptionId $sub | Out-Null
 
-    Get-AzureRmResourceGroup | foreach {
-        $ResGName = $_.ResourceGroupName
-        "  Checking ressource group $($ResGName)"
-        foreach($vm in (Get-AzureRmVM -ResourceGroupName $ResGName))
-        {
-            "    Checking VM $($vm.Name)"
-            $tags = $vm.Tags
-            $tKeys = $tags | select -ExpandProperty keys
-            $startTime = $null
-            $stopTime = $null
-            foreach ($tkey in $tkeys)
-            {
-                if ($tkey.ToUpper() -eq "STARTTIME")
-                {
-                    $startTimeTag = $tags[$tkey]
-                    "- startTimeTag: $($startTimeTag)"
-                    try { $startTime = [DateTime]::parseexact($startTimeTag,"HH:mm",$null) }
-                    catch { $startTime = $null }
-                    "- startTime parsed: $($startTime)"
-                }
-                if ($tkey.ToUpper() -eq "STOPTIME")
-                {
-                    $stopTimeTag = $tags[$tkey]
-                    "- stopTimeTag: $($stopTimeTag)"
-                    try { $stopTime = [DateTime]::parseexact($stopTimeTag,"HH:mm",$null) }
-                    catch { $stopTime = $null }
-                    "- stopTime parsed: $($stopTime)"
-                }
-            }
-            if ($startTime)
-            {
-                if ($runTime -gt $startTime -and -not ($stopTime -and $startTime -lt $stopTime -and $runTime -gt $stopTime))
-                {
-                    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-                    foreach ($VMStatus in $VMDetail.Statuses)
-                    {
-                        "- VM Status: $($VMStatus.Code)"
-                        if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0)
-                        {
-                            "- Starting VM"
-                            Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
-                        }
-                    }
-                }
-            }
-            if ($stopTime)
-            {
-                if ($runTime -gt $stopTime -and -not ($startTime -and $startTime -gt $stopTime -and $runTime -gt $startTime))
-                {
-                    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-                    foreach ($VMStatus in $VMDetail.Statuses)
-                    { 
-                        "- VM Status: $($VMStatus.Code)"
-                        if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
-                        {
-                            "- Stopping VM"
-                            Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
-                        }
-                    }
-                }
-            }
-        }
-    }
+		Get-AzureRmResourceGroup | foreach {
+			$ResGName = $_.ResourceGroupName
+			"  Checking ressource group $($ResGName)"
+			foreach($vm in (Get-AzureRmVM -ResourceGroupName $ResGName))
+			{
+				"    Checking VM $($vm.Name)"
+				$tags = $vm.Tags
+				$tKeys = $tags | select -ExpandProperty keys
+				$startTime = $null
+				$stopTime = $null
+				foreach ($tkey in $tkeys)
+				{
+					if ($tkey.ToUpper() -eq "STARTTIME")
+					{
+						$startTimeTag = $tags[$tkey]
+						"- startTimeTag: $($startTimeTag)"
+						try { $startTime = [DateTime]::parseexact($startTimeTag,"HH:mm",$null) }
+						catch { $startTime = $null }
+						"- startTime parsed: $($startTime)"
+					}
+					if ($tkey.ToUpper() -eq "STOPTIME")
+					{
+						$stopTimeTag = $tags[$tkey]
+						"- stopTimeTag: $($stopTimeTag)"
+						try { $stopTime = [DateTime]::parseexact($stopTimeTag,"HH:mm",$null) }
+						catch { $stopTime = $null }
+						"- stopTime parsed: $($stopTime)"
+					}
+				}
+				if ($startTime)
+				{
+					if ($runTime -gt $startTime -and -not ($stopTime -and $startTime -lt $stopTime -and $runTime -gt $stopTime))
+					{
+						$VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						foreach ($VMStatus in $VMDetail.Statuses)
+						{
+							"- VM Status: $($VMStatus.Code)"
+							if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0)
+							{
+								"- Starting VM"
+								Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
+							}
+						}
+					}
+				}
+				if ($stopTime)
+				{
+					if ($runTime -gt $stopTime -and -not ($startTime -and $startTime -gt $stopTime -and $runTime -gt $startTime))
+					{
+						$VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						foreach ($VMStatus in $VMDetail.Statuses)
+						{ 
+							"- VM Status: $($VMStatus.Code)"
+							if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+							{
+								"- Stopping VM"
+								Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+} catch {
+    Write-Error $_.Exception -ErrorAction Continue
+    throw
 }
-

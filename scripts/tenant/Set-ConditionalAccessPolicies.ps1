@@ -178,7 +178,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $ConditionalAccessAppPassword = $AzureKeyVaultSecret.SecretValueText
+    $ConditionalAccessAppPassword = ($AzureKeyVaultSecret.SecretValue | ConvertFrom-SecureString -AsPlainText)
     $ConditionalAccessAppPasswordSave = ConvertTo-SecureString $ConditionalAccessAppPassword -AsPlainText -Force
 }
 

@@ -153,7 +153,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $VMPassword = $AzureKeyVaultSecret.SecretValueText
+    $VMPassword = ($AzureKeyVaultSecret.SecretValue | ConvertFrom-SecureString -AsPlainText)
     $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
 }
 

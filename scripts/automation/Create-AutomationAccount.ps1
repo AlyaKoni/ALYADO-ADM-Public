@@ -151,7 +151,7 @@ $PfxCertPlainPasswordForRunAsAccount = [Guid]::NewGuid().ToString().Substring(0,
 $CerCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".cer")
 #Getting the certificate 
 $CertificateRetrieved = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AzureCertificateName
-$CertificateBytes = [System.Convert]::FromBase64String($CertificateRetrieved.SecretValueText)
+$CertificateBytes = [System.Convert]::FromBase64String(($CertificateRetrieved.SecretValue | ConvertFrom-SecureString -AsPlainText))
 $CertCollection = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
 $CertCollection.Import($CertificateBytes, $null, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
 #Export the .pfx file 
@@ -302,7 +302,7 @@ if (-Not $Runnbook)
     $Schedule = Get-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly" -ErrorAction SilentlyContinue
     if (-Not $Schedule)
     {
-        $Schedule = New-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly" -StartTime ((Get-Date).AddMinutes(10)) -MonthInterval 1 -DaysOfMonth One
+        $Schedule = New-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly" -StartTime ((Get-Date "02:00:00").AddDays(1)) -MonthInterval 1 -DaysOfMonth One -TimeZone ([System.TimeZoneInfo]::Local).Id
     }
     $JobParams = @{"ResourceGroupName"=$RessourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureModuleClass"="AzureRm";"AzureEnvironment"="AzureCloud"}
     $tmp = Register-AzAutomationScheduledRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb01") -ScheduleName "Monthly" -Parameters $JobParams
@@ -311,7 +311,7 @@ else
 {
     if ($UpdateRunbooks)
     {
-        Write-Host -Message "Automation Runbook 01 found. Updating the Automation Runbook $($AutomationAccountName+"rb01")"
+        Write-Host "Automation Runbook 01 found. Updating the Automation Runbook $($AutomationAccountName+"rb01")"
         $tmp = Import-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb01") -Type PowerShell -Description "Updates the Azure modules in the automation account" -Tags @{displayName="Module Updater"} -Path $runbookPath -Force
         $tmp = Publish-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb01")
     }
@@ -338,7 +338,7 @@ else
 {
     if ($UpdateRunbooks)
     {
-        Write-Host -Message "Automation Runbook 02 found. Updating the Automation Runbook $($AutomationAccountName+"rb02")"
+        Write-Host "Automation Runbook 02 found. Updating the Automation Runbook $($AutomationAccountName+"rb02")"
         $tmp = Import-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02") -Type PowerShell -Description "Installs required modules in the automation account" -Tags @{displayName="Module Installer"} -Path $runbookPath -Force
         $tmp = Publish-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02")
     }
@@ -363,7 +363,7 @@ if (-Not $Runnbook)
     $Schedule = Get-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly" -ErrorAction SilentlyContinue
     if (-Not $Schedule)
     {
-        $Schedule = New-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly" -StartTime ((Get-Date).AddMinutes(10)) -MonthInterval 1 -DaysOfMonth One
+        $Schedule = New-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly" -StartTime ((Get-Date "02:00:00").AddDays(1)) -MonthInterval 1 -DaysOfMonth One -TimeZone ([System.TimeZoneInfo]::Local).Id
     }
     $JobParams = @{"ResourceGroupName"=$RessourceGroupName;"AutomationAccountName"=$AutomationAccountName;"SubscriptionName"=$AlyaSubscriptionName;"AzureEnvironment"="AzureCloud"}
     $tmp = Register-AzAutomationScheduledRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb03") -ScheduleName "Monthly" -Parameters $JobParams
@@ -372,7 +372,7 @@ else
 {
     if ($UpdateRunbooks)
     {
-        Write-Host -Message "Automation Runbook 03 found. Updating the Automation Runbook $($AutomationAccountName+"rb03")"
+        Write-Host "Automation Runbook 03 found. Updating the Automation Runbook $($AutomationAccountName+"rb03")"
         $tmp = Import-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb03") -Type PowerShell -Description "Updates the run as certificate" -Tags @{displayName="Certificate Updater"} -Path $runbookPath -Force
         $tmp = Publish-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb03")
     }
@@ -416,7 +416,7 @@ if (-Not $Runnbook)
     $Schedule = Get-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Hourly" -ErrorAction SilentlyContinue
     if (-Not $Schedule)
     {
-        $Schedule = New-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Hourly" -StartTime ((Get-Date).AddMinutes(10)) -HourInterval 1
+        $Schedule = New-AzAutomationSchedule -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName –Name "Hourly" -StartTime ((Get-Date "00:10:00").AddDays(1)) -HourInterval 1 -TimeZone ([System.TimeZoneInfo]::Local).Id
     }
     $JobParams = @{"Subscriptions"=$Subscriptions;"TimeZone"=$AlyaTimeZone;"AzureEnvironment"="AzureCloud"}
     $tmp = Register-AzAutomationScheduledRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb04") -ScheduleName "Hourly" -Parameters $JobParams
@@ -425,7 +425,7 @@ else
 {
     if ($UpdateRunbooks)
     {
-        Write-Host -Message "Automation Runbook 04 found. Updating the Automation Runbook $($AutomationAccountName+"rb04")"
+        Write-Host "Automation Runbook 04 found. Updating the Automation Runbook $($AutomationAccountName+"rb04")"
         $tmp = Import-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -Type PowerShell -Description "Will be called, when a new item in sharepoint is created" -Tags @{displayName="New Item Received"} -Path $runbookPath -Force
         $tmp = Publish-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04")
     }

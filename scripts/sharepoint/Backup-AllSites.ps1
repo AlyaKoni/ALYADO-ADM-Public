@@ -69,7 +69,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Backup-AllSites | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Backup all SharePoint sites to $($backupLocation)" -ForegroundColor Cyan
+Write-Host "Backup all SharePoint sites to $($backupLocation)" -ForegroundColor $CommandInfo
 
 function Get-ExportObject(
     $obj,
@@ -239,11 +239,11 @@ function Download-FolderRecursive($folderObj, $parentDir)
     }
 }
 
-Write-Host "Connecting to SharePoint Online administration" -ForegroundColor Cyan
+Write-Host "Connecting to SharePoint Online administration" -ForegroundColor $CommandInfo
 LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 #Traverse site collections
-Write-Host "Getting all site collections" -ForegroundColor Cyan
+Write-Host "Getting all site collections" -ForegroundColor $CommandInfo
 $sites = Get-PnPTenantSite -Detailed
 foreach($site in $sites)
 {
@@ -251,7 +251,7 @@ foreach($site in $sites)
     $siteUrl = $site.Url
     if (-Not $siteUrl.Contains("-my") -and -Not $siteUrl.Contains("/portals") -and -Not $siteUrl.Contains("/search"))
     {
-        Write-Host "Working on site collection $($siteUrl)" -ForegroundColor Cyan
+        Write-Host "Working on site collection $($siteUrl)" -ForegroundColor $CommandInfo
 
         ReloginTo-PnP -Url $siteUrl
         if ($exportMode -eq "Detailed")

@@ -66,6 +66,9 @@ if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
 <# POWERSHELL #>
 $ErrorActionPreference = "Stop"
 
+<# TLS Connections #>
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 <# PATHS #>
 $AlyaRoot = "$PSScriptRoot"
 $AlyaLogs = "$AlyaRoot\_logs"
@@ -723,7 +726,6 @@ function Connect-MsGraphAsDelegated
     )
     $Resource = "https://graph.microsoft.com"
     $RedirectUri = "https://login.microsoftonline.com/common/oauth2/nativeclient"
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     Add-Type -AssemblyName System.Web
     $ClientIDEncoded = [System.Web.HttpUtility]::UrlEncode($ClientID)
     $ClientSecretEncoded = [System.Web.HttpUtility]::UrlEncode($ClientSecret)

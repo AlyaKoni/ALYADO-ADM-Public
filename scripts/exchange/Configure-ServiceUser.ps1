@@ -170,7 +170,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $ExchUserPasswordForRunAsAccount = $AzureKeyVaultSecret.SecretValueText
+    $ExchUserPasswordForRunAsAccount = ($AzureKeyVaultSecret.SecretValue | ConvertFrom-SecureString -AsPlainText)
 }
 
 #Stopping Transscript

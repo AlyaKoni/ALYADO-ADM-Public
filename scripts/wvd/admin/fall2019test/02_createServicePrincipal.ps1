@@ -119,7 +119,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $AlyaWvdServicePrincipalPassword = $AzureKeyVaultSecret.SecretValueText
+    $AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | ConvertFrom-SecureString -AsPlainText)
     $AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
 }
 
