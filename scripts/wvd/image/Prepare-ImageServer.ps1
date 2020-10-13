@@ -190,7 +190,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $VMPassword = ($AzureKeyVaultSecret.SecretValue | ConvertFrom-SecureString -AsPlainText)
+    $VMPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
     $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
 }
 
