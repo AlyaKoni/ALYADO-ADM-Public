@@ -83,6 +83,12 @@ if (-Not $ResProv)
     Write-Warning "Resource provider not found. Registering the resource provider Microsoft.RecoveryServices"
     Register-AzResourceProvider -ProviderNamespace "Microsoft.RecoveryServices"
 }
+$ResProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation -ErrorAction SilentlyContinue
+if (-Not $ResProv)
+{
+    Write-Warning "Resource provider not found. Registering the resource provider Microsoft.Insights"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.Insights"
+}
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo

@@ -150,6 +150,22 @@ foreach($packageDir in $packageDirs)
             $filename = $filename -replace "\s\(.*\)", ""
             $destPath = $contentPath+"\"+$filename
             Move-Item -Path $sourcePath -Destination $destPath -Force
+            if ($filename.EndsWith(".zip"))
+            {
+                Add-Type -AssemblyName System.IO.Compression.FileSystem
+                $zip = [System.IO.Compression.ZipFile]::OpenRead($destPath)
+                $entries = $zip.Entries | Where-Object { $_.Name -like "*.msi" }
+                if ($entries.Count -gt 0)
+                {
+                    foreach($entry in $entries)
+                    {
+                        $entryPath = $contentPath+"\"+$entry.Name
+                        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $entryPath, $true)
+                    }
+                    $zip.Dispose()
+                    Remove-Item -Path $destPath -Force
+                }
+            }
         }
         else
         {

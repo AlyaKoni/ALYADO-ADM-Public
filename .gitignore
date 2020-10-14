@@ -335,3 +335,4 @@ ASALocalRun/
 /scripts/wvd/autoscale/Creds
 /scripts/wvd/autoscale/Logs
 
+/data/intune/Configuration/IntuneDataExport

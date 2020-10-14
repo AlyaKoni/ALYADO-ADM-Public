@@ -81,28 +81,63 @@ else
     {
         $ErrorActionPreference = "Stop"
 
-        # Install msi
-        $toInstall = Get-ChildItem -Path $AlyaScriptDir -Filter "*.msi"
-        foreach($toInst in $toInstall)
+        $regPlats = @("","\WOW6432Node")
+        foreach($regPlat in $regPlats)
         {
-            Write-Host "Installing $($toInst.FullName)"
-            Write-Host "MSI Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-            $installString = "msiexec.exe /i `"$($toInst.FullName)`" /qn /norestart /L* `"C:\ProgramData\AlyaConsulting\Logs\7Zip-Install-$AlyaTimeString.log`" ALLUSERS=1"
-            Write-Host "command: $installString"
-            cmd /c "$installString"
-			Write-Host "CMD returned: $LASTEXITCODE at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-            do
+            foreach($reg in (Get-ChildItem -Path "HKLM:\SOFTWARE$regPlat\Microsoft\Windows\CurrentVersion\Uninstall"))
             {
-                Start-Sleep -Seconds 5
-                $process = Get-Process -Name "msiexec" -IncludeUserName -ErrorAction SilentlyContinue | where { $_.UserName -notlike "*\SYSTEM" }
-                if (-Not $process)
+                $displayName = $null
+                $publisher = $null
+                $uninstallString = $null
+                try {
+                    $displayName = Get-ItemPropertyValue -Path $reg.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
+                } catch {}
+                try {
+                    $publisher = Get-ItemPropertyValue -Path $reg.PSPath -Name "Publisher" -ErrorAction SilentlyContinue
+                } catch {}
+                if ($displayName -eq "Agent Ransack" -and $publisher -eq "Mythicsoft Ltd")
                 {
-                    $process = Get-Process -Name "msiexec.exe" -IncludeUserName -ErrorAction SilentlyContinue | where { $_.UserName -notlike "*\SYSTEM" }
+                    Write-Host "Uninstalling $displayName"
+                    Write-Host "with infos from $($reg.Name)"
+					try {
+						$uninstallString = Get-ItemPropertyValue -Path $reg.PSPath -Name "QuietUninstallString" -ErrorAction SilentlyContinue
+					} catch {}
+                    if (-Not $uninstallString)
+                    {
+                        $uninstallString = (Get-ItemPropertyValue -Path $reg.PSPath -Name "UninstallString") + " /qn /norestart" -replace "/I", "/X"
+                    }
+                    if (-Not $uninstallString.Contains("msiexec"))
+                    {
+                        $uninstallStringNew = ""
+                        $uninstallParts = $uninstallString.Split()
+                        foreach($uninstallPart in $uninstallParts)
+                        {
+                            if (($uninstallStringNew -eq "") -and (-Not $uninstallPart.StartsWith("`"")))
+                            {
+                                $uninstallStringNew += "`""
+                            }
+                            if ($uninstallPart.Contains(".exe") -and -not $uninstallPart.Contains("`""))
+                            {
+                                $uninstallPart = $uninstallPart + "`""
+                            }
+                            $uninstallStringNew += $uninstallPart + " "
+                        }
+                        $uninstallString = $uninstallStringNew
+                    }
+                    $uninstallString += " /L* `"C:\ProgramData\AlyaConsulting\Logs\TortoiseGit-Uninstall-$AlyaTimeString.log`""
+                    Write-Host "command: $uninstallString"
+                    Write-Host "MSI Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+                    cmd /c "$uninstallString"
+					Write-Host "CMD returned: $LASTEXITCODE at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+                    do
+                    {
+                        Start-Sleep -Seconds 5
+                        $process = Get-Process -Name "msiexec.exe" -IncludeUserName -ErrorAction SilentlyContinue | where { $_.UserName -notlike "*\SYSTEM" }
+                    } while ($process)
+                    Write-Host "MSI End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
                 }
-            } while ($process)
-            Write-Host "MSI End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+            }
         }
-
     }
     catch
     {   

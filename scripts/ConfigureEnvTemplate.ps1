@@ -77,6 +77,9 @@ $AlyaResIdAuditing = "PleaseSpecify" #Example:"002"
 $AlyaResIdAutomation = "PleaseSpecify" #Example:"003"
 $AlyaResIdAdResGrp = "PleaseSpecify" #Example:"005"
 $AlyaResIdJumpHostResGrp = "PleaseSpecify" #Example:"010"
+$AlyaResIdWebSiteResGrp = "PleaseSpecify" #Example:"011"
+$AlyaResIdLetsEncryptResGrp = "PleaseSpecify" #Example:"012"
+$AlyaResIdWormResGrp = "PleaseSpecify" #Example:"015"
 $AlyaResIdWvdImageResGrp = "PleaseSpecify" #Example:"040"
 
 $AlyaResIdLogAnalytics = "PleaseSpecify" #Example:"002"
@@ -86,8 +89,10 @@ $AlyaResIdDiagnosticStorage = "PleaseSpecify" #Example:"003"
 $AlyaResIdAuditStorage = "PleaseSpecify" #Example:"002"
 $AlyaResIdPublicStorage = "PleaseSpecify" #Example:"001"
 $AlyaResIdPrivateStorage = "PleaseSpecify" #Example:"004"
+$AlyaResIdWormStorage = "PleaseSpecify" #Example:"015"
 $AlyaResIdRecoveryVault = "PleaseSpecify" #Example:"001"
 $AlyaResIdAutomationAccount = "PleaseSpecify" #Example:"001"
+$AlyaResIdWormAutomationAccount = "PleaseSpecify" #Example:"015"
 $AlyaResIdAdSrv1 = "PleaseSpecify" #Example:"001"
 $AlyaResIdAdSrv2 = "PleaseSpecify" #Example:"002"
 $AlyaResIdAdSNet = "PleaseSpecify" #Example:"04"
@@ -181,6 +186,14 @@ $AlyaSpThemeDef = @{
 
 <# AIP SETTINGS #>
 $AlyaAipApiServiceLocation = "PleaseSpecify" #Example:
+
+<# WORM BACKUP SETTINGS #>
+$AlyaWormStorageAccountName = "PleaseSpecify"
+$AlyaWormCreateBackupWebHookUrl = "PleaseSpecify"
+$AlyaWormDoneBackupWebHookUrl = "PleaseSpecify"
+$AlyaWormSasTokenContainer = "PleaseSpecify"
+$AlyaWormSasTokenBlob = "PleaseSpecify"
+
 <# PSTN SETTINGS #>
 $AlyaPstnGateway = "PleaseSpecify" #Example:"pstn.provider.ch"
 $AlyaPstnPort = "PleaseSpecify" #Example:"5080"
