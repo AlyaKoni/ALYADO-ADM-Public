@@ -1,0 +1,17 @@
+<Configuration ID="00000000-1111-2222-3333-444444444444">
+  <Info Description="Office ProPlus Client Uninstallation" />
+ <Remove>
+    <Product ID="O365ProPlusRetail" > 
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+      <Language ID="it-it" />
+    </Product> 
+    <Product ID="LanguagePack" > 
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+      <Language ID="it-it" />
+    </Product> 
+ </Remove>
+</Configuration> 

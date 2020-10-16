@@ -44,15 +44,15 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\GitClone-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 Write-Host "Checking git installation" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$GitRoot"))
+if (-Not (Test-Path "$AlyaGitRoot"))
 {
     Write-Host "Downloading git"
-    $req = Invoke-WebRequest -Uri $GitDownload -UseBasicParsing -Method Get
+    $req = Invoke-WebRequest -Uri $AlyaGitDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*windows[^`"]*portable[^`"]*64[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\PortableGit64bit.exe"
     Write-Host "Installing git"
-    & ".\PortableGit64bit.exe" "-o`"$GitRoot`"".Split(" ") -y
+    & ".\PortableGit64bit.exe" "-o`"$AlyaGitRoot`"".Split(" ") -y
     do
     {
         Start-Sleep -Seconds 5
@@ -99,7 +99,7 @@ if ([string]::IsNullOrEmpty($AlyaLocalConfig.user.ssh))
     }
     if (-Not (Test-Path "$($AlyaRoot)\_local\ssh\id_rsa"))
     {
-        & "$GitRoot\usr\bin\ssh-keygen.exe" "-q -t rsa -b 1024 -f `"$($AlyaRoot)\_local\ssh\id_rsa`" -N `"`" -C `"$($AlyaLocalConfig.user.email)`"".Split(" ")
+        & "$AlyaGitRoot\usr\bin\ssh-keygen.exe" "-q -t rsa -b 1024 -f `"$($AlyaRoot)\_local\ssh\id_rsa`" -N `"`" -C `"$($AlyaLocalConfig.user.email)`"".Split(" ")
         if (-Not (Test-Path "$($AlyaRoot)\_local\ssh\id_rsa"))
         {
             Write-Error "Error generating id_rsa" -ErrorAction Continue
@@ -184,7 +184,7 @@ if (-Not $devopsHost)
     $devopsHost = $AlyaGlobalConfig.source.devops.Substring($AlyaGlobalConfig.source.devops.IndexOf("@")+1,$AlyaGlobalConfig.source.devops.IndexOf(":")-$AlyaGlobalConfig.source.devops.IndexOf("@")-1)
 }
 $proc = New-Object System.Diagnostics.Process
-$proc.StartInfo.FileName = "$GitRoot\usr\bin\ssh.exe"
+$proc.StartInfo.FileName = "$AlyaGitRoot\usr\bin\ssh.exe"
 $proc.StartInfo.Arguments = "-T $devopsHost -o `"StrictHostKeyChecking no`"".Split(" ")
 $proc.StartInfo.UseShellExecute = $false
 $proc.StartInfo.CreateNoWindow = $true
@@ -197,28 +197,28 @@ $ErrorActionPreference = 'SilentlyContinue'
 try {
     Set-Location "$($AlyaRoot)"
     Write-Host "connecting actual directory to git repository"
-    $check = (& "$GitRoot\cmd\git.exe" status)
+    $check = (& "$AlyaGitRoot\cmd\git.exe" status)
     if ($check -like "*On branch *") {
-        & "$GitRoot\cmd\git.exe" status
+        & "$AlyaGitRoot\cmd\git.exe" status
         Write-Host "Repository is already connected!" -ForegroundColor $CommandSuccess
         Write-Host "Fetching changes"
-        & "$GitRoot\cmd\git.exe" fetch
+        & "$AlyaGitRoot\cmd\git.exe" fetch
         Wait-UntilProcessEnds -processName "git"
     }
     else {
         Write-Host "Repository is not yet connected. Connecting..."
-        & "$GitRoot\cmd\git.exe" init
+        & "$AlyaGitRoot\cmd\git.exe" init
         Wait-UntilProcessEnds -processName "git"
         Write-Host "To: $($AlyaGlobalConfig.source.devops)"
-        & "$GitRoot\cmd\git.exe" "remote add origin $($AlyaGlobalConfig.source.devops)".Split(" ")
+        & "$AlyaGitRoot\cmd\git.exe" "remote add origin $($AlyaGlobalConfig.source.devops)".Split(" ")
         Wait-UntilProcessEnds -processName "git"
         Write-Host "Fetching changes"
-        & "$GitRoot\cmd\git.exe" fetch
+        & "$AlyaGitRoot\cmd\git.exe" fetch
         Wait-UntilProcessEnds -processName "git"
         Write-Host "Checking out"
-        & "$GitRoot\cmd\git.exe" "checkout -t origin/master --force".Split(" ")
+        & "$AlyaGitRoot\cmd\git.exe" "checkout -t origin/master --force".Split(" ")
         Wait-UntilProcessEnds -processName "git"
-        & "$GitRoot\cmd\git.exe" status
+        & "$AlyaGitRoot\cmd\git.exe" status
         Write-Host "Repository now connected!" -ForegroundColor $CommandSuccess
     }
 }

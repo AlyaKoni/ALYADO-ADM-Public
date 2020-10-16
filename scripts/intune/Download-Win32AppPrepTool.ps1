@@ -54,15 +54,15 @@ if (Test-Path $RepRoot)
 $RepRoot = Join-Path $AlyaTools "IntuneWinAppUtil"
 
 Write-Host "Checking git installation" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$GitRoot"))
+if (-Not (Test-Path "$AlyaGitRoot"))
 {
     Write-Host "Downloading git"
-    $req = Invoke-WebRequest -Uri $GitDownload -UseBasicParsing -Method Get
+    $req = Invoke-WebRequest -Uri $AlyaGitDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*windows[^`"]*portable[^`"]*64[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\PortableGit64bit.exe"
     Write-Host "Installing git"
-    & ".\PortableGit64bit.exe" "-o`"$GitRoot`"".Split(" ") -y
+    & ".\PortableGit64bit.exe" "-o`"$AlyaGitRoot`"".Split(" ") -y
     do
     {
         Start-Sleep -Seconds 5
@@ -85,13 +85,13 @@ if ([string]::IsNullOrEmpty($AlyaLocalConfig.user.email))
 }
 
 Write-Host "Checking connection" -ForegroundColor $CommandInfo #Adding host to known_hosts
-$devopsHost = ([System.Uri]$IntuneWinAppUtilDownload).Authority
+$devopsHost = ([System.Uri]$AlyaIntuneWinAppUtilDownload).Authority
 if (-Not $devopsHost)
 {
-    $devopsHost = $IntuneWinAppUtilDownload.Substring($IntuneWinAppUtilDownload.IndexOf("@")+1,$IntuneWinAppUtilDownload.IndexOf(":")-$IntuneWinAppUtilDownload.IndexOf("@")-1)
+    $devopsHost = $AlyaIntuneWinAppUtilDownload.Substring($AlyaIntuneWinAppUtilDownload.IndexOf("@")+1,$AlyaIntuneWinAppUtilDownload.IndexOf(":")-$AlyaIntuneWinAppUtilDownload.IndexOf("@")-1)
 }
 $proc = New-Object System.Diagnostics.Process
-$proc.StartInfo.FileName = "$GitRoot\usr\bin\ssh.exe"
+$proc.StartInfo.FileName = "$AlyaGitRoot\usr\bin\ssh.exe"
 $proc.StartInfo.Arguments = "-T $devopsHost -o `"StrictHostKeyChecking no`"".Split(" ")
 $proc.StartInfo.UseShellExecute = $false
 $proc.StartInfo.CreateNoWindow = $true
@@ -102,7 +102,7 @@ $RepRoot = Join-Path $AlyaTools "IntuneWinAppUtil"
 if (-Not (Test-Path $RepRoot))
 {
     $tmp = New-Item -Path $RepRoot -ItemType Directory -Force
-    & "$GitRoot\cmd\git.exe" clone "$IntuneWinAppUtilDownload" "$RepRoot" -q
+    & "$AlyaGitRoot\cmd\git.exe" clone "$AlyaIntuneWinAppUtilDownload" "$RepRoot" -q
     Wait-UntilProcessEnds -processName "git"
 }
 

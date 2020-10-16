@@ -70,7 +70,7 @@ $Shell = New-Object -ComObject "Shell.Application"
 $Folder = $Shell.Namespace($FromPath)
 
 #Pinning
-foreach($OfficeTool in $OfficeToolsOnTaskbar)
+foreach($OfficeTool in $AlyaOfficeToolsOnTaskbar)
 {
     $source = Get-Item -Path ($FromPath + $OfficeTool + ".lnk") -ErrorAction SilentlyContinue
     $destin = $ToPath + $OfficeTool + ".lnk"

@@ -47,15 +47,15 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Get-IntunePowershellSamples-
 $CloneUrl = "https://github.com/microsoftgraph/powershell-intune-samples.git"
 
 Write-Host "Checking git installation" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$GitRoot"))
+if (-Not (Test-Path "$AlyaGitRoot"))
 {
     Write-Host "Downloading git"
-    $req = Invoke-WebRequest -Uri $GitDownload -UseBasicParsing -Method Get
+    $req = Invoke-WebRequest -Uri $AlyaGitDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*windows[^`"]*portable[^`"]*64[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\PortableGit64bit.exe"
     Write-Host "Installing git"
-    & ".\PortableGit64bit.exe" "-o`"$GitRoot`"".Split(" ") -y
+    & ".\PortableGit64bit.exe" "-o`"$AlyaGitRoot`"".Split(" ") -y
     do
     {
         Start-Sleep -Seconds 5
@@ -84,7 +84,7 @@ if (-Not $devopsHost)
     $devopsHost = $CloneUrl.Substring($CloneUrl.IndexOf("@")+1,$CloneUrl.IndexOf(":")-$CloneUrl.IndexOf("@")-1)
 }
 $proc = New-Object System.Diagnostics.Process
-$proc.StartInfo.FileName = "$GitRoot\usr\bin\ssh.exe"
+$proc.StartInfo.FileName = "$AlyaGitRoot\usr\bin\ssh.exe"
 $proc.StartInfo.Arguments = "-T $devopsHost -o `"StrictHostKeyChecking no`"".Split(" ")
 $proc.StartInfo.UseShellExecute = $false
 $proc.StartInfo.CreateNoWindow = $true
@@ -98,7 +98,7 @@ if ((Test-Path $RepRoot))
     $tmp = Remove-Item -Path $RepRoot -Recurse -Force
 }
 $tmp = New-Item -Path $RepRoot -ItemType Directory -Force
-& "$GitRoot\cmd\git.exe" clone "$CloneUrl" "$RepRoot" -q
+& "$AlyaGitRoot\cmd\git.exe" clone "$CloneUrl" "$RepRoot" -q
 Wait-UntilProcessEnds -processName "git"
 
 Write-Host "IntunePowershellSamples installed to $RepRoot" -ForegroundColor $CommandSuccess

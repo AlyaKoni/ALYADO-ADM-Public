@@ -109,64 +109,74 @@ if (-Not $LogAnaWrkspc)
     }
 }
 
-# Setting auditing on subscription
-Write-Host "Setting auditing on subscription" -ForegroundColor $CommandInfo
-$subscriptionId = (Get-AzSubscription -SubscriptionName $($AlyaSubscriptionName)).Id
-$token = Get-AzAccessToken("https://management.azure.com/")
-$uri = "https://management.azure.com/subscriptions/{0}/providers/microsoft.insights/diagnosticSettings/{1}?api-version=2017-05-01-preview" -f $subscriptionId, $DiagnosticRuleName
-$body = @"
+function Set-SubscriptionRule($subName)
 {
-  "name": "$($DiagnosticRuleName)",
-  "properties": {
+    $subscriptionId = (Get-AzSubscription -SubscriptionName $($subName)).Id
+    $token = Get-AzAccessToken("https://management.azure.com/")
+    $uri = "https://management.azure.com/subscriptions/{0}/providers/microsoft.insights/diagnosticSettings/{1}?api-version=2017-05-01-preview" -f $subscriptionId, $DiagnosticRuleName
+    $body = @"
+{
+    "name": "$($DiagnosticRuleName)",
+    "properties": {
     "logs": [
-      {
+        {
         "category": "Administrative",
         "enabled": true
-      },
-      {
+        },
+        {
         "category": "Security",
         "enabled": true
-      },
-      {
+        },
+        {
         "category": "ServiceHealth",
         "enabled": true
-      },
-      {
+        },
+        {
         "category": "Alert",
         "enabled": true
-      },
-      {
+        },
+        {
         "category": "Recommendation",
         "enabled": true
-      },
-      {
+        },
+        {
         "category": "Policy",
         "enabled": true
-      },
-      {
+        },
+        {
         "category": "Autoscale",
         "enabled": true
-      },
-      {
+        },
+        {
         "category": "ResourceHealth",
         "enabled": true
-      }
+        }
     ],
     "metrics": [],
     "storageAccountId": "$($StrgAccount.Id)",
     "workspaceId": "$($LogAnaWrkspc.ResourceId)"
-  }
+    }
 }
 "@
-$headers = @{
-    "Authorization" = "Bearer $($token)"
-    "Content-Type"  = "application/json"
+    $headers = @{
+        "Authorization" = "Bearer $($token)"
+        "Content-Type"  = "application/json"
+    }
+    $response = Invoke-WebRequest -Method Put -Uri $uri -Body $body -Headers $headers
+
+    if ($response.StatusCode -ne 200) {
+        throw "An error occured setting diagnostic settings on subscription: $($response | out-string)"
+
+    }
 }
-$response = Invoke-WebRequest -Method Put -Uri $uri -Body $body -Headers $headers
 
-if ($response.StatusCode -ne 200) {
-    throw "An error occured setting diagnostic settings on subscription: $($response | out-string)"
-
+# Setting auditing on subscription
+Write-Host "Setting auditing on subscription $AlyaSubscriptionName" -ForegroundColor $CommandInfo
+Set-SubscriptionRule -subName $AlyaSubscriptionName
+if ($AlyaSubscriptionNameTest -and $AlyaSubscriptionName -ne $AlyaSubscriptionNameTest)
+{
+    Write-Host "Setting auditing on subscription $AlyaSubscriptionNameTest" -ForegroundColor $CommandInfo
+    Set-SubscriptionRule -subName $AlyaSubscriptionNameTest
 }
 
 #Stopping Transscript

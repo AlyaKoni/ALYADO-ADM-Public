@@ -60,7 +60,7 @@ if (-Not (Test-Path "$($AlyaTools)\Setups"))
 }
 if (-Not (Test-Path "$($AlyaTools)\Setups\AzInfoProtection_UL.exe"))
 {
-    $req = Invoke-WebRequest -Uri $AipClientDownload -UseBasicParsing -Method Get
+    $req = Invoke-WebRequest -Uri $AlyaAipClientDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*AzInfoProtection_UL[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile "$($AlyaTools)\Setups\AzInfoProtection_UL.exe"

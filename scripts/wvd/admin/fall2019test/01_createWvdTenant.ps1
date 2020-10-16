@@ -51,7 +51,7 @@ Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 #LoginTo-Wvd
 if (-Not $Global:RdsContext)
 {

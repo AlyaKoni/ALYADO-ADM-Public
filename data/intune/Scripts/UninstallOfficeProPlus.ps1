@@ -44,8 +44,8 @@ if (-Not (Test-Path ".\setup.exe"))
 {
 
     # Prepare deploy tool
-    $DeployToolDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49117"
-    $req = Invoke-WebRequest -Uri $DeployToolDownload -UseBasicParsing -Method Get
+    $AlyaDeployToolDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49117"
+    $req = Invoke-WebRequest -Uri $AlyaDeployToolDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*officedeploymenttool_[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\officedeploymenttool.exe"

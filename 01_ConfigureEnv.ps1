@@ -77,22 +77,23 @@ $AlyaLocal = "$AlyaRoot\_local"
 $AlyaData = "$AlyaRoot\data"
 $AlyaScripts = "$AlyaRoot\scripts"
 $AlyaTools = "$AlyaRoot\tools"
-$OfficeRoot = "C:\Program Files\Microsoft Office\root\Office16"
-$GitRoot = Join-Path (Join-Path $AlyaRoot "tools") "git"
-$DeployToolRoot = Join-Path (Join-Path $AlyaRoot "tools") "officedeploy"
+$AlyaOfficeRoot = "C:\Program Files\Microsoft Office\root\Office16"
+$AlyaGitRoot = Join-Path (Join-Path $AlyaRoot "tools") "git"
+$AlyaDeployToolRoot = Join-Path (Join-Path $AlyaRoot "tools") "officedeploy"
 if (-Not (Test-Path "$AlyaLogs"))
 {
     $tmp = New-Item -Path "$AlyaLogs" -ItemType Directory -Force
 }
 
 <# CLIENT SETTINGS #>
-$OfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE") #WINPROJ.EXE, VISIO.EXE, ONENOTE.EXE, MSPUB.EXE, MSACCESS.EXE
+$AlyaOfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE") #WINPROJ.EXE, VISIO.EXE, ONENOTE.EXE, MSPUB.EXE, MSACCESS.EXE
 
 <# URLS #>
-$GitDownload = "https://git-scm.com/download/win"
-$DeployToolDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49117"
-$AipClientDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=53018"
-$IntuneWinAppUtilDownload = "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool.git"
+$AlyaGitDownload = "https://git-scm.com/download/win"
+$AlyaDeployToolDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49117"
+$AlyaAipClientDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=53018"
+$AlyaIntuneWinAppUtilDownload = "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool.git"
+$AlyaAzCopyDownload = "https://aka.ms/downloadazcopy-v10-windows"
 
 <# LOCAL CONFIGURATION #>
 $Global:AlyaLocalConfig = [ordered]@{

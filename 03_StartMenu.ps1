@@ -965,12 +965,12 @@ function Connect-GitRepository
 function Git-Bash
 {
     Set-Location "$($AlyaRoot)"
-    & "$($GitRoot)\git-bash.exe"
+    & "$($AlyaGitRoot)\git-bash.exe"
 }
 function Git-Cmd
 {
     Set-Location "$($AlyaRoot)"
-    & "$($GitRoot)\git-cmd.exe"
+    & "$($AlyaGitRoot)\git-cmd.exe"
 }
 function Git-CheckIn
 {

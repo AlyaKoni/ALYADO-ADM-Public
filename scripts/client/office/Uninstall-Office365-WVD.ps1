@@ -44,11 +44,11 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\UninstallOffice365-$($AlyaTimeString).log" | Out-Null
 
 #Checking prepare tool
-& "$PSScriptRoot\PrepareDeployTool.ps1"
+& "$PSScriptRoot\Prepare-DeployTool.ps1"
 
 #Uninstalling office
 Write-Host "Uninstalling office" -ForegroundColor $CommandInfo
-&("$DeployToolRoot\setup.exe") /configure "$AlyaRoot\data\client\office\office_remove_config.xml"
+&("$AlyaDeployToolRoot\setup.exe") /configure "$AlyaRoot\data\client\office\office_remove_config.xml"
 
 #Stopping Transscript
 Stop-Transcript

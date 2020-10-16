@@ -72,7 +72,7 @@ Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 
 # Domain credentials
 Write-Host "Domain credentials" -ForegroundColor $CommandInfo
@@ -130,7 +130,7 @@ if (-Not $Global:RdsContext)
 # Getting members
 Write-Host "Getting members" -ForegroundColor $CommandInfo
 $RootDir = "$AlyaScripts\wvd\admin\fall2019test"
-$subscription = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName
+$subscription = Get-AzSubscription -SubscriptionName $AlyaSubscriptionNameTest
 $ApplicationCred = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.ApplicationId, $AlyaWvdServicePrincipalPasswordSave)
 
 # Preparing parameters
@@ -194,7 +194,7 @@ if (-Not (Test-Path $hostpoolSharePath))
 }
 
 Write-Host "Configuring hostpool" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
 {
     #$hi=0

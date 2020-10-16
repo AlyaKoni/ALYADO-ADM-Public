@@ -52,6 +52,10 @@ $KeyVaultRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $SubscriptionNames = @($AlyaSubscriptionName)
 $SolutionScriptsRoot = "$($AlyaScripts)\automation"
 $SolutionDataRoot = "$($AlyaData)\automation"
+if (-Not (Test-Path $SolutionDataRoot))
+{
+    $tmp = New-Item -Path $SolutionDataRoot -ItemType Directory -Force
+}
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo

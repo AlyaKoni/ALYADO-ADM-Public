@@ -75,6 +75,7 @@ if (-Not $ExchUser)
     $ExchUserPasswordForRunAsAccount = "$" + [Guid]::NewGuid().ToString() + "!"
     $ExchUser = New-MsolUser -UserPrincipalName $ExchUserName -DisplayName "$($CompName) Exchange Service User" -FirstName "$($CompName) Exchange" -LastName "Service User" -UsageLocation "CH" -PasswordNeverExpires $true -Password $ExchUserPasswordForRunAsAccount -ForceChangePassword $False
 }
+Set-MsolUser -UserPrincipalName $ExchUserName -PasswordNeverExpires $true
 
 Write-Host "Checking Exchange service account role membership" -ForegroundColor $CommandInfo
 $ExchangeRole = Get-MsolRole | where { $_.Name -like "Exchange*" }

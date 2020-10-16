@@ -51,12 +51,12 @@ try {
     Set-Location "$($almRootDir)"
     $ErrorActionPreference = 'SilentlyContinue'
     Write-Host "git add" -ForegroundColor $CommandInfo
-    & "$($GitRoot)\cmd\git.exe" "add .".Split(" ")
+    & "$($AlyaGitRoot)\cmd\git.exe" "add .".Split(" ")
     Wait-UntilProcessEnds -processName "git"
     Write-Host "Please provide your checkin message and hit enter:" -ForegroundColor $CommandInfo
     $comMsg = Read-Host
     Write-Host "git commit" -ForegroundColor $CommandInfo
-    & "$($GitRoot)\cmd\git.exe" "commit -a -m `"$comMsg`"".Split(" ")
+    & "$($AlyaGitRoot)\cmd\git.exe" "commit -a -m `"$comMsg`"".Split(" ")
     Wait-UntilProcessEnds -processName "git"
 }
 finally {

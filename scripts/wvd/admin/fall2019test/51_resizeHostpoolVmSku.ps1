@@ -55,7 +55,7 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 
 # =============================================================
 # Azure stuff

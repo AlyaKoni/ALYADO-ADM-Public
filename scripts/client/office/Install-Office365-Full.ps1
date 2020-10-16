@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Install-Office365-Full-$($AlyaTimeString).log" | Out-Null
 
 #Checking prepare tool
-& "$PSScriptRoot\PrepareDeployTool.ps1"
+& "$PSScriptRoot\Prepare-DeployTool.ps1"
 
 #Installing office
 Write-Host "Downloading office to $($AlyaTemp)\Office" -ForegroundColor $CommandInfo
@@ -53,10 +53,10 @@ if (-Not (Test-Path "$AlyaTemp\Office"))
     $tmp = New-Item -Path "$AlyaTemp\Office" -ItemType Directory -Force
 }
 Push-Location "$AlyaTemp\Office"
-&("$DeployToolRoot\setup.exe") /download "$AlyaData\client\office\office_full_deploy_config.xml"
+&("$AlyaDeployToolRoot\setup.exe") /download "$AlyaData\client\office\office_full_deploy_config.xml"
 
 Write-Host "Installing office" -ForegroundColor $CommandInfo
-&("$DeployToolRoot\setup.exe") /configure "$AlyaData\client\office\office_full_deploy_config.xml"
+&("$AlyaDeployToolRoot\setup.exe") /configure "$AlyaData\client\office\office_full_deploy_config.xml"
 Pop-Location
 
 Write-Host "Cleaning downloads" -ForegroundColor $CommandInfo

@@ -41,16 +41,16 @@ Param(
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\PrepareDeployTool-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Prepare-DeployTool-$($AlyaTimeString).log" | Out-Null
 
 Write-Host "Checking office deploy tool installation" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DeployToolRoot"))
+if (-Not (Test-Path "$AlyaDeployToolRoot"))
 {
-    $req = Invoke-WebRequest -Uri $DeployToolDownload -UseBasicParsing -Method Get
+    $req = Invoke-WebRequest -Uri $AlyaDeployToolDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*officedeploymenttool_[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\officedeploymenttool.exe"
-    &(".\officedeploymenttool.exe") /extract:"$DeployToolRoot" /quiet
+    &(".\officedeploymenttool.exe") /extract:"$AlyaDeployToolRoot" /quiet
     do
     {
         Start-Sleep -Seconds 5

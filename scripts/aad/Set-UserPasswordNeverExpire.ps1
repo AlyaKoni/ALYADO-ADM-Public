@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019, 2020
+    Copyright (c) Alya Consulting: 2020
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,26 +29,53 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    06.11.2019 Konrad Brunner       Initial Version
+    15.10.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [ValidateNotNull()]
+    [string]$userUpn
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\UninstallOffice365-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserPasswordNeverExpire-$($AlyaTimeString).log" | Out-Null
 
-#Checking prepare tool
-& "$PSScriptRoot\Prepare-DeployTool.ps1"
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "MSOnline"
 
-#Uninstalling office
-Write-Host "Uninstalling office" -ForegroundColor $CommandInfo
-&("$AlyaDeployToolRoot\setup.exe") /configure "$AlyaRoot\data\client\office\office_remove_config.xml"
+# Logins
+LoginTo-Msol
+
+# =============================================================
+# O365 stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "AAD | Set-UserPasswordNeverExpire | O365" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+Write-Host "Getting user" -ForegroundColor $CommandInfo
+$user = Get-MsolUser -UserPrincipalName $userUpn
+
+if ($user)
+{
+    Write-Host "Password never expires is set to $($user.PasswordNeverExpires)"
+    if (-Not $user.PasswordNeverExpires)
+    {
+        Write-Host "Setting to $true"
+        $user | Set-MsolUser -PasswordNeverExpires $true
+    }
+}
+else
+{
+    Write-Error "User does not exist"
+}
 
 #Stopping Transscript
 Stop-Transcript
