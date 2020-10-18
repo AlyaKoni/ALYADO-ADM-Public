@@ -84,6 +84,15 @@ if (-Not (Test-Path "$AlyaLogs"))
 {
     $tmp = New-Item -Path "$AlyaLogs" -ItemType Directory -Force
 }
+#Env required for WinPE
+if (-Not $env:PSModulePath.Contains("$($AlyaTools)\WindowsPowerShell\Modules"))
+{
+    $env:PSModulePath = "$($AlyaTools)\WindowsPowerShell\Modules;"+$env:PSModulePath
+}
+if (-Not $env:Path.Contains("$($AlyaTools)\WindowsPowerShell\Scripts"))
+{
+    $env:Path = "$($AlyaTools)\WindowsPowerShell\Scripts;"+$env:Path
+}
 
 <# CLIENT SETTINGS #>
 $AlyaOfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE") #WINPROJ.EXE, VISIO.EXE, ONENOTE.EXE, MSPUB.EXE, MSACCESS.EXE
@@ -94,6 +103,8 @@ $AlyaDeployToolDownload = "https://www.microsoft.com/en-us/download/confirmation
 $AlyaAipClientDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=53018"
 $AlyaIntuneWinAppUtilDownload = "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool.git"
 $AlyaAzCopyDownload = "https://aka.ms/downloadazcopy-v10-windows"
+$AlyaAdkDownload = "https://go.microsoft.com/fwlink/?linkid=2120254"
+$AlyaAdkPeDownload = "https://go.microsoft.com/fwlink/?linkid=2120253"
 
 <# LOCAL CONFIGURATION #>
 $Global:AlyaLocalConfig = [ordered]@{
@@ -154,6 +165,69 @@ else
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmss")
 
 <# FUNCTIONS #>
+function Is-InternetConnected()
+{
+    if ((test-connection 8.8.8.8 -Count 1 -Quiet -ErrorAction SilentlyContinue))
+    {
+        return $true
+    }
+    else
+    {
+        return $false
+    }
+}
+
+function Reset-ConsoleWidth()
+{
+    $pshost = Get-Host
+    $pswindow = $pshost.UI.RawUI
+    if ($Global:AlyaConsoleBufferSize)
+    {
+        $newsize = $pswindow.BufferSize
+        if ($newsize)
+        {
+            $newsize.width = $Global:AlyaConsoleBufferSize
+            $pswindow.buffersize = $newsize
+        }
+    }
+    if ($Global:AlyaConsoleWindowsSize)
+    {
+        $newsize = $pswindow.windowsize
+        if ($newsize)
+        {
+            $newsize.width = $Global:AlyaConsoleWindowsSize
+            $pswindow.windowsize = $newsize
+        }
+    }
+}
+
+function Increase-ConsoleWidth(
+    [int] [Parameter(Mandatory = $false)] $newWidth = 8192)
+{
+    $pshost = Get-Host
+    $pswindow = $pshost.UI.RawUI
+    $newsize = $pswindow.BufferSize
+    if ($newsize)
+    {
+        if (-Not $Global:AlyaConsoleBufferSize -or $Global:AlyaConsoleBufferSize -ne $newWidth)
+        {
+            $Global:AlyaConsoleBufferSize = $newsize.width
+        }
+        $newsize.width = $newWidth
+        $pswindow.buffersize = $newsize
+    }
+    $newsize = $pswindow.windowsize
+    if ($newsize)
+    {
+        if (-Not $Global:AlyaConsoleWindowsSize -or $Global:AlyaConsoleWindowsSize -ne $newWidth)
+        {
+            $Global:AlyaConsoleWindowsSize = $newsize.width
+        }
+        $newsize.width = $newWidth
+        $pswindow.windowsize = $newsize
+    }
+}
+
 function Wait-UntilProcessEnds(
     [string] [Parameter(Mandatory = $true)] $processName)
 {
@@ -247,6 +321,11 @@ function Install-PackageIfNotInstalled (
     [bool] $autoUpdate = $true
 )
 {
+    if (-Not (Is-InternetConnected))
+    {
+        Write-Warning "No internet connection. Not able to check any package!"
+        return
+    }
     if (-Not (Test-Path "$($AlyaTools)\Packages"))
     {
         $tmp = New-Item -Path "$($AlyaTools)\Packages" -ItemType Directory -Force
@@ -281,6 +360,11 @@ function Install-ModuleIfNotInstalled (
     [bool] $autoUpdate = $true
 )
 {
+    if (-Not (Is-InternetConnected))
+    {
+        Write-Warning "No internet connection. Not able to check any module!"
+        return
+    }
     $requestedVersion = $minimalVersion
     [Version] $newestVersion = Get-PublishedModuleVersion $moduleName
     if (-Not $newestVersion)
@@ -341,10 +425,17 @@ function Install-ModuleIfNotInstalled (
             Write-Warning "Installing nuget"
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
         }
-        $regRep = Get-PSRepository -Name "PSGallery"
+        $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
         if (-Not $regRep)
         {
-	        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+            Register-PSRepository -Name "PSGallery" -SourceLocation "https://www.powershellgallery.com/api/v2/" -PublishLocation "https://www.powershellgallery.com/api/v2/package/" -ScriptSourceLocation "https://www.powershellgallery.com/api/v2/items/psscript/" -ScriptPublishLocation "https://www.powershellgallery.com/api/v2/package/" -InstallationPolicy Trusted -PackageManagementProvider NuGet
+        }
+        else
+        {
+            if ($regRep.InstallationPolicy -ne "Trusted")
+            {
+	            Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+            }
         }
         $optionalArgs = New-Object -TypeName Hashtable
         $optionalArgs['RequiredVersion'] = $requestedVersion
@@ -369,6 +460,89 @@ function Install-ModuleIfNotInstalled (
 #Install-ModuleIfNotInstalled -moduleName "Az" -exactVersion "4.6.0"
 #Get-Module -Name Az
 #Get-InstalledModule -Name Az
+
+function Install-ScriptIfNotInstalled (
+    [string] [Parameter(Mandatory = $true)] $scriptName,
+    [Version] $minimalVersion = "0.0.0.0",
+    [Version] $exactVersion = "0.0.0.0",
+    [bool] $autoUpdate = $true
+)
+{
+    if (-Not (Is-InternetConnected))
+    {
+        Write-Warning "No internet connection. Not able to check any script!"
+        return
+    }
+    $requestedVersion = $minimalVersion
+    [Version] $newestVersion = Get-PublishedModuleVersion $scriptName
+    if (-Not $newestVersion)
+    {
+        Write-Warning "This does not looks like a script from Powershell Gallery"
+        return
+    }
+    if ($exactVersion -ne "0.0.0.0")
+    {
+        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
+            Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        $autoUpdate = $false
+        $requestedVersion = $exactVersion
+    }
+    else
+    {
+        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
+            Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        $requestedVersion = $newestVersion
+    }
+    if ($script)
+    {
+        Write-Host ('Module {0} is installed. Used:v{1} Requested:v{2}' -f $scriptName, $script.Version, $requestedVersion)
+        if ((-Not $autoUpdate) -and ($newestVersion -gt $script.Version))
+        {
+            Write-Warning ("A newer version (v{0}) is available. Consider upgrading!" -f $script.Version)
+        }
+        if ($newestVersion -eq $script.Version)
+        {
+            $autoUpdate = $false
+        }
+    }
+    else
+    {
+        Write-Host ('Module {0} not found with requested version v{1}. Installing now...' -f $scriptName, $requestedVersion)
+        $autoUpdate = $true
+    }
+    if ($autoUpdate)
+    {
+        $instCmd = Get-Command Install-Script
+        if (-Not $instCmd)
+        {
+            throw "Please install the powershell package management"
+        }
+        Import-Module -Name 'PowershellGet'
+        if ((Get-PackageProvider -Name NuGet -Force).Version -lt '2.8.5.201')
+        {
+            Write-Warning "Installing nuget"
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
+        }
+        $regRep = Get-PSRepository -Name "PSGallery"
+        if (-Not $regRep)
+        {
+	        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+        }
+        $optionalArgs = New-Object -TypeName Hashtable
+        $optionalArgs['RequiredVersion'] = $requestedVersion
+        Write-Warning ('Installing/Updating script {0} to version [{1}] within scope of the current user.' -f $scriptName, $requestedVersion)
+        #TODO Unload script
+        Install-Script -Name $scriptName @optionalArgs -Scope CurrentUser -AcceptLicense -Force -Verbose
+        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
+        Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        if (-Not $script)
+        {
+            Write-Error "Not able to install the script!" -ErrorAction Continue
+            exit
+        }
+    }
+}
+#Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
 
 <# LOGIN FUNCTIONS #>
 function LoginTo-Az(

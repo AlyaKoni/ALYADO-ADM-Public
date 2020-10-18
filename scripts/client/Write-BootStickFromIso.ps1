@@ -1,7 +1,8 @@
 #Requires -Version 2.0
+#Requires -RunAsAdministrator
 
 <#
-    Copyright (c) Alya Consulting, 2019, 2020
+    Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,44 +30,36 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.03.2020 Konrad Brunner       Initial Version
+    16.10.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$isoImagePath = $null
 )
 
-#Reading configuration
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
-
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Install-Office365-Only-$($AlyaTimeString).log" | Out-Null
-
-#Checking prepare tool
-& "$PSScriptRoot\Prepare-DeployTool.ps1"
-
-#Installing office
-Write-Host "Downloading office to $($AlyaTemp)\Office" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$AlyaTemp\Office"))
+if (-Not $isoImagePath)
 {
-    $tmp = New-Item -Path "$AlyaTemp\Office" -ItemType Directory -Force
+    $isoImagePath = "$PSScriptRoot\Autopilot.iso"
 }
-Push-Location "$AlyaTemp\Office"
-&("$AlyaDeployToolRoot\setup.exe") /download "$AlyaData\client\office\office_Only_deploy_config.xml"
-
-Write-Host "Installing office" -ForegroundColor $CommandInfo
-&("$AlyaDeployToolRoot\setup.exe") /configure "$AlyaData\client\office\office_Only_deploy_config.xml"
-Pop-Location
-
-if (-Not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Word.lnk"))
+if (-Not (Test-Path $isoImagePath))
 {
-    Write-Error "Something went wrong. Please install office by hand with the following command: '$AlyaDeployToolRoot\setup.exe' /configure '$AlyaData\client\office\office_Only_deploy_config.xml'" -ErrorAction Continue
-    exit 99
+    throw "No iso file found!"
 }
 
-Write-Host "Cleaning downloads" -ForegroundColor $CommandInfo
-Remove-Item -Path "$AlyaTemp\Office" -Recurse -Force
-
-#Stopping Transscript
-Stop-Transcript
+Write-Host "Writing iso image to usb stick"
+$disk = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to use' -OutputMode Single
+if ($disk)
+{
+    $res = $disk | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false -PassThru | New-Partition -UseMaximumSize -IsActive -AssignDriveLetter | Format-Volume -FileSystem NTFS
+    cmd /c bootsect.exe /nt60 "$($res.DriveLetter):" /force /mbr
+    $vol = Mount-DiskImage -ImagePath $isoImagePath -StorageType ISO -PassThru | Get-DiskImage | Get-Volume
+    cmd /c xcopy /herky "$($vol.DriveLetter):\*.*" "$($res.DriveLetter):\"
+    Dismount-DiskImage -ImagePath $isoImagePath
+}
+else
+{
+    Write-Warning "No disk selected!"
+    Write-Warning "If there was no selection dialog, we were not able to recognise your usb stick"
+}

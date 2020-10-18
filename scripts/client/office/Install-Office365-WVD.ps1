@@ -59,6 +59,12 @@ Write-Host "Installing office" -ForegroundColor $CommandInfo
 &("$AlyaDeployToolRoot\setup.exe") /configure "$AlyaData\client\office\office_WVD_deploy_config.xml"
 Pop-Location
 
+if (-Not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Word.lnk"))
+{
+    Write-Error "Something went wrong. Please install office by hand with the following command: '$AlyaDeployToolRoot\setup.exe' /configure '$AlyaData\client\office\office_Only_deploy_config.xml'" -ErrorAction Continue
+    exit 99
+}
+
 Write-Host "Cleaning downloads" -ForegroundColor $CommandInfo
 Remove-Item -Path "$AlyaTemp\Office" -Recurse -Force
 

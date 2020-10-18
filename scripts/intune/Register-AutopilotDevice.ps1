@@ -1,7 +1,8 @@
 #Requires -Version 2.0
+#Requires -RunAsAdministrator
 
 <#
-    Copyright (c) Alya Consulting, 2019, 2020
+    Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,7 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.03.2020 Konrad Brunner       Initial Version
+    16.10.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -37,36 +38,19 @@
 Param(
 )
 
-#Reading configuration
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+# Loading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Install-Office365-Only-$($AlyaTimeString).log" | Out-Null
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Register-AutopilotDevice-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
-#Checking prepare tool
-& "$PSScriptRoot\Prepare-DeployTool.ps1"
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
 
-#Installing office
-Write-Host "Downloading office to $($AlyaTemp)\Office" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$AlyaTemp\Office"))
-{
-    $tmp = New-Item -Path "$AlyaTemp\Office" -ItemType Directory -Force
-}
-Push-Location "$AlyaTemp\Office"
-&("$AlyaDeployToolRoot\setup.exe") /download "$AlyaData\client\office\office_Only_deploy_config.xml"
-
-Write-Host "Installing office" -ForegroundColor $CommandInfo
-&("$AlyaDeployToolRoot\setup.exe") /configure "$AlyaData\client\office\office_Only_deploy_config.xml"
-Pop-Location
-
-if (-Not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Word.lnk"))
-{
-    Write-Error "Something went wrong. Please install office by hand with the following command: '$AlyaDeployToolRoot\setup.exe' /configure '$AlyaData\client\office\office_Only_deploy_config.xml'" -ErrorAction Continue
-    exit 99
-}
-
-Write-Host "Cleaning downloads" -ForegroundColor $CommandInfo
-Remove-Item -Path "$AlyaTemp\Office" -Recurse -Force
+# Main
+Write-Host "Intune Autopilot registration" -ForegroundColor $CommandInfo
+Get-WindowsAutoPilotInfo -OutputFile "$($AlyaData)\intune\WindowsAutoPilotInfo.csv" -Append -GroupTag "Standard" -Online -Assign -AssignedComputerName "$($AlyaCompanyNameShort.ToUpper())-%SERIAL%"
 
 #Stopping Transscript
 Stop-Transcript

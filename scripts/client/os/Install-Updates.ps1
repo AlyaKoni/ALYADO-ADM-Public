@@ -1,7 +1,8 @@
 #Requires -Version 2.0
+#Requires -RunAsAdministrator
 
 <#
-    Copyright (c) Alya Consulting, 2019, 2020
+    Copyright (c) Alya Consulting, 2020
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,44 +30,58 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.03.2020 Konrad Brunner       Initial Version
+    16.10.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [int]$retryCount = 0
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Install-Office365-Only-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Install-Updates-$($AlyaTimeString).log" | Out-Null
 
-#Checking prepare tool
-& "$PSScriptRoot\Prepare-DeployTool.ps1"
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "PSWindowsUpdate"
 
-#Installing office
-Write-Host "Downloading office to $($AlyaTemp)\Office" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$AlyaTemp\Office"))
+#Main
+Write-Host "Last result" -ForegroundColor $CommandInfo
+$result = Get-WULastResults
+$result | fl
+
+if ($retryCount -gt 5)
 {
-    $tmp = New-Item -Path "$AlyaTemp\Office" -ItemType Directory -Force
-}
-Push-Location "$AlyaTemp\Office"
-&("$AlyaDeployToolRoot\setup.exe") /download "$AlyaData\client\office\office_Only_deploy_config.xml"
-
-Write-Host "Installing office" -ForegroundColor $CommandInfo
-&("$AlyaDeployToolRoot\setup.exe") /configure "$AlyaData\client\office\office_Only_deploy_config.xml"
-Pop-Location
-
-if (-Not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Word.lnk"))
-{
-    Write-Error "Something went wrong. Please install office by hand with the following command: '$AlyaDeployToolRoot\setup.exe' /configure '$AlyaData\client\office\office_Only_deploy_config.xml'" -ErrorAction Continue
-    exit 99
+    Write-Error "Too much tetries, stopping" -ErrorAction Continue
+    Exit 99
 }
 
-Write-Host "Cleaning downloads" -ForegroundColor $CommandInfo
-Remove-Item -Path "$AlyaTemp\Office" -Recurse -Force
+$restartScript = [io.path]::GetFullPath($env:AllUsersProfile) + "\Start Menu\Programs\Startup\AlyaUpdateRestart.cmd"
+
+Write-Host "Checking for updates" -ForegroundColor $CommandInfo
+$availableUpdates = Get-WUlist -MicrosoftUpdate
+$availableUpdates
+if ($availableUpdates.Count -gt 0)
+{
+    Write-Host "We have $($availableUpdates.Count) updates to install"
+    Write-Host "Preparing restart after reboot"
+    "powershell.exe -NoLogo -ExecutionPolicy Bypass -Command `"Start-Process powershell.exe -ArgumentList '-NoLogo -ExecutionPolicy Bypass -File \`"$PSCommandPath\`" -retryCount $($retryCount+1)' -Verb RunAs`"" | Set-Content -Path $restartScript -Force
+    Write-Host "Installing updates"
+    Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot
+    cmd /c shutdown /r /t 0
+}
+else
+{
+    if ((Test-Path $restartScript))
+    {
+        $tmp = Remove-Item -Path $restartScript -Force
+    }
+    Write-Host "Device has all actual updates installed!" -ForegroundColor $CommandSuccess
+}
 
 #Stopping Transscript
 Stop-Transcript
