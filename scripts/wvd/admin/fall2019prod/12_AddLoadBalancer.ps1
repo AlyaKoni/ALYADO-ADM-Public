@@ -30,15 +30,14 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     20.04.2020 Konrad Brunner       Initial Version
+    10.10.2020 Konrad Brunner       Added parameters and generalized
 
 #>
 
 [CmdletBinding()]
 Param(
-    [Parameter(Mandatory=$false)]
-    [string]$ResourceGroupNumber = "051",
-    [Parameter(Mandatory=$false)]
-    [int]$NumberOfInstances = 5
+    [string]$ResourceGroupNumber,
+    [int]$NumberOfInstances
 )
 
 #Reading configuration

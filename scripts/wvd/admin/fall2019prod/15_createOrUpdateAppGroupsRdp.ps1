@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting: 2020
@@ -29,25 +29,26 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    27.07.2020 Konrad Brunner       Initial Version
+    12.03.2020 Konrad Brunner       Initial Version
+    10.10.2020 Konrad Brunner       Added parameters and generalized
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$HostPoolName,
+    [string]$AppGroupName,
+    [string]$AdGroupName
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\09_updateRdpHostPool_hpol002-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\15_createOrUpdateAppGroupsRdp-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$ErrorActionPreference = "Stop"
-$HostPoolName = "$($AlyaNamingPrefixTest)hpol002"
-$KeyVaultName = "$($AlyaNamingPrefixTest)keyv$($AlyaResIdMainKeyVault)"
-$ResourceGroupName = "$($AlyaNamingPrefixTest)resg053"
+$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -55,14 +56,14 @@ Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "WVD | 09_updateRdpHostPool_hpol002 | AZURE" -ForegroundColor $CommandInfo
+Write-Host "WVD | 15_createOrUpdateAppGroupsRdp | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context
@@ -75,16 +76,16 @@ if (-Not $Context)
 
 # Checking application
 Write-Host "Checking application" -ForegroundColor $CommandInfo
-$AzureAdApplication = Get-AzADApplication -DisplayName $AlyaWvdServicePrincipalNameTest -ErrorAction SilentlyContinue
+$AzureAdApplication = Get-AzADApplication -DisplayName $AlyaWvdServicePrincipalNameProd -ErrorAction SilentlyContinue
 if (-Not $AzureAdApplication)
 {
-    throw "Azure AD Application not found. Please create the Azure AD Application $AlyaWvdServicePrincipalNameTest"
+    throw "Azure AD Application not found. Please create the Azure AD Application $AlyaWvdServicePrincipalNameProd"
 }
-$AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameTest
+$AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameProd
 
 # Checking azure key vault secret
 Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo
-$AlyaWvdServicePrincipalAssetName = "$($AlyaWvdServicePrincipalNameTest)Key"
+$AlyaWvdServicePrincipalAssetName = "$($AlyaWvdServicePrincipalNameProd)Key"
 $AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AlyaWvdServicePrincipalAssetName -ErrorAction SilentlyContinue
 if (-Not $AzureKeyVaultSecret)
 {
@@ -102,80 +103,48 @@ if (-Not $Global:RdsContext)
 	#LoginTo-Wvd -AppId $AzureAdServicePrincipal.ApplicationId -SecPwd $AlyaWvdServicePrincipalPasswordSave
 }
 
-# Getting members
-Write-Host "Getting members" -ForegroundColor $CommandInfo
-$RootDir = "$AlyaScripts\wvd\admin\fall2019prod"
-
-# Removing hostpool
-try
+# Main
+Write-Host "Updating App group $($AppGroupName)" -ForegroundColor $CommandInfo
+$appGrp = Get-RdsAppGroup -TenantName $AlyaWvdTenantNameProd -HostPoolName $HostPoolName -Name $AppGroupName -ErrorAction SilentlyContinue
+$grpUsers = Get-RdsAppGroupUser $AlyaWvdTenantNameProd $HostPoolName $AppGroupName
+$allMembs = @()
+foreach ($admin in $AlyaWvdAdmins)
 {
-    & "$RootDir\33_removeAllSessions.ps1" -HostPoolName $HostPoolName
-} catch {}
-try
-{
-    & "$RootDir\30_removeAppGroups.ps1" -HostPoolName $HostPoolName
-} catch {}
-try
-{
-    & "$RootDir\31_removeSessionHosts.ps1" -HostPoolName $HostPoolName
-} catch {}
-try
-{
-    Remove-RdsHostPool -TenantName $AlyaWvdTenantNameTest -Name $HostPoolName
-} catch {}
-
-$pool = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName
-if ($pool)
-{
-    Write-Error "Not able to remove the host pool" -ErrorAction Continue
-    exit
-}
-
-# Checking locks on resource group
-Write-Host "Checking locks on resource group '$($ResourceGroupName)'" -ForegroundColor $CommandInfo
-$actLocks = Get-AzResourceLock -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
-foreach($actLock in $actLocks)
-{
-    if ($actLock.Properties.level -eq "CanNotDelete")
+    if (-Not $allMembs.Contains($admin))
     {
-        Write-Host "Removing lock $($actLock.Name)"
-        $tmp = $actLock | Remove-AzResourceLock -Force
+        $allMembs += $admin
+    }
+    $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $admin }
+    if (-Not $grpUser)
+    {
+        Write-Host "   - Adding user $($admin)"
+        Add-RdsAppGroupUser $AlyaWvdTenantNameProd $HostPoolName $AppGroupName -UserPrincipalName $admin
     }
 }
-
-# Cleaning ressource group
-Write-Host "Cleaning ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
-if ($ResGrp)
+Write-Host " - Access for $($AdGroupName)"
+$grp = Get-AzADGroup -SearchString $AdGroupName | Select-Object -First 1
+$membs = Get-AzADGroupMember -GroupObject $grp
+foreach ($memb in $membs)
 {
-    $vms = Get-AzResource -ResourceGroupName $ResourceGroupName -ResourceType "Microsoft.Compute/virtualMachines"
-    foreach($vm in $vms)
+    if (-Not $allMembs.Contains($memb.UserPrincipalName))
     {
-        Remove-AzResource -ResourceId $vm.ResourceId -Force
+        $allMembs += $memb.UserPrincipalName
     }
-    $lbs = Get-AzResource -ResourceGroupName $ResourceGroupName -ResourceType "Microsoft.Network/loadBalancers"
-    foreach($lb in $lbs)
+    $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $memb.UserPrincipalName }
+    if (-Not $grpUser)
     {
-        Remove-AzResource -ResourceId $lb.ResourceId -Force
+        Write-Host "   - Adding user $($memb.UserPrincipalName)"
+        Add-RdsAppGroupUser $AlyaWvdTenantNameProd $HostPoolName $AppGroupName -UserPrincipalName $memb.UserPrincipalName
     }
-    $others = Get-AzResource -ResourceGroupName $ResourceGroupName
-    foreach($other in $others)
+}
+foreach ($grpUser in $grpUsers)
+{
+    $memb = $allMembs | where { $_ -eq $grpUser.UserPrincipalName }
+    if (-Not $memb)
     {
-        if ($other.ResourceType -ne "Microsoft.Network/publicIPAddresses")
-        {
-            Remove-AzResource -ResourceId $other.ResourceId -Force
-        }
+        Write-Host " - Removing user $($grpUser.UserPrincipalName)"
+        Remove-RdsAppGroupUser $AlyaWvdTenantNameProd $HostPoolName $AppGroupName -UserPrincipalName $grpUser.UserPrincipalName
     }
-    <#
-    Write-Warning "Deleting ressource group $ResourceGroupName"
-    Remove-AzResourceGroup -Name $ResourceGroupName -Force
-    while ($ResGrp)
-    {
-        $ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
-        Start-Sleep -Seconds 60
-    }
-    Write-Warning "Ressource group successfully deleted"
-    #>
 }
 
 #Stopping Transscript

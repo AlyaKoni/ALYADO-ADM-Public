@@ -752,14 +752,28 @@
     }, {
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "displayName": "Win10 PIN Reset",
-        "description": "Allows the PIN Reset service on our devices",
+        "description": "Allows the PIN Reset service on win10 devices",
         "roleScopeTagIds": ["0"],
         "omaSettings": [{
                 "@odata.type": "#microsoft.graph.omaSettingBoolean",
                 "displayName": "PIN Reset",
-                "description": "Allows the PIN reset service on our devices",
+                "description": "Allows the PIN reset service on win10 devices",
                 "omaUri": "./Device/Vendor/MSFT/PassportForWork/##AlyaTenantId##/Policies/EnablePinRecovery",
                 "value": true
+            }
+        ]
+    }, {
+        "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
+        "displayName": "Win10 Local Group Configuration",
+        "description": "Configures local groups on win10 devices",
+        "roleScopeTagIds": ["0"],
+        "omaSettings": [{
+				"@odata.type":  "#microsoft.graph.omaSettingStringXml",
+				"displayName":  "Win10 Local Group Configuration",
+                "description": "Configures local groups on win10 devices",
+				"omaUri":  "./Device/Vendor/MSFT/Policy/Config/RestrictedGroups/ConfigureGroupMembership",
+				"fileName":  "LocalGroupConfiguration.xml",
+				"value":  "##<accessgroup desc=\"Administrators\"><member name=\"Administrator\" /><member name=\"$AlyaDeviceAdminsGroupSid\" /></accessgroup>##"
             }
         ]
     }, {

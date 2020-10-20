@@ -1,4 +1,5 @@
 #Requires -Version 2.0
+#Requires -RunAsAdministrator
 
 <#
     Copyright (c) Alya Consulting: 2020
@@ -29,41 +30,38 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    11.03.2020 Konrad Brunner       Initial Version
+    27.07.2020 Konrad Brunner       Initial Version
+    10.10.2020 Konrad Brunner       Added parameters and generalized
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$HostPoolName,
+    [string]$ResourceGroupName,
+    [string]$NamePrefix,
+    [int]$NumberOfInstances,
+    [string]$VmSize,
+    [bool]$EnableAcceleratedNetworking
 )
-
-Write-Error "Update does not work yet. Please remove and recreate the hostpool" -ErrorAction Continue
-exit
 
 #Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\08_updateAppHostPool_hpol001-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\06_createRdpHostPool-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$ErrorActionPreference = "Stop"
-$HostPoolName = "$($AlyaNamingPrefix)hpol001"
-$ResourceGroupName = "$($AlyaNamingPrefix)resg051"
-$NamePrefix = "$($AlyaNamingPrefix)vd51"
 $ImageSourceName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)_ImageClient"
 $ImageSourceResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
-$NumberOfInstances = 5
-$VmSize = "Standard_D8s_v3"
-$EnableAcceleratedNetworking = $false
-$AdminDomainUPN = "konrad.brunner@alyaconsulting.ch"
+$AdminDomainUPN = $AlyaWvdDomainAdminUPN
 $WvdHostName = "$($NamePrefix)-"
 $DiagnosticStorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)"
-$OuPath = "OU=PROD,OU=WVD,OU=COMPUTERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
-$ExistingVnetName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
-$ExistingSubnetName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)snet01"
-$virtualNetworkResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
-$ShareServer = $env:COMPUTERNAME.ToLower()
+$OuPath = $AlyaWvdOuTest
+$ExistingVnetName = "$($AlyaNamingPrefixTest)vnet$($AlyaResIdVirtualNetwork)"
+$ExistingSubnetName = "$($AlyaNamingPrefixTest)vnet$($AlyaResIdVirtualNetwork)snet$($AlyaResIdWvdHostSNet)"
+$virtualNetworkResourceGroupName = "$($AlyaNamingPrefixTest)resg$($AlyaResIdMainNetwork)"
+$ShareServer = $AlyaWvdShareServer
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
@@ -72,7 +70,7 @@ Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 
 # Domain credentials
 Write-Host "Domain credentials" -ForegroundColor $CommandInfo
@@ -87,7 +85,7 @@ if (-Not $Global:AdminDomainCred)
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "WVD | 08_updateAppHostPool_hpol001 | AZURE" -ForegroundColor $CommandInfo
+Write-Host "WVD | 06_createHostPool | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context
@@ -100,16 +98,16 @@ if (-Not $Context)
 
 # Checking application
 Write-Host "Checking application" -ForegroundColor $CommandInfo
-$AzureAdApplication = Get-AzADApplication -DisplayName $AlyaWvdServicePrincipalNameProd -ErrorAction SilentlyContinue
+$AzureAdApplication = Get-AzADApplication -DisplayName $AlyaWvdServicePrincipalNameTest -ErrorAction SilentlyContinue
 if (-Not $AzureAdApplication)
 {
-    throw "Azure AD Application not found. Please create the Azure AD Application $AlyaWvdServicePrincipalNameProd"
+    throw "Azure AD Application not found. Please create the Azure AD Application $AlyaWvdServicePrincipalNameTest"
 }
-$AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameProd
+$AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameTest
 
 # Checking azure key vault secret
 Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo
-$AlyaWvdServicePrincipalAssetName = "$($AlyaWvdServicePrincipalNameProd)Key"
+$AlyaWvdServicePrincipalAssetName = "$($AlyaWvdServicePrincipalNameTest)Key"
 $AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AlyaWvdServicePrincipalAssetName -ErrorAction SilentlyContinue
 if (-Not $AzureKeyVaultSecret)
 {
@@ -117,6 +115,8 @@ if (-Not $AzureKeyVaultSecret)
 }
 $AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
 $AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
+Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force
 
 # Login to WVD
 if (-Not $Global:RdsContext)
@@ -129,14 +129,13 @@ if (-Not $Global:RdsContext)
 
 # Getting members
 Write-Host "Getting members" -ForegroundColor $CommandInfo
-$RootDir = "$AlyaScripts\wvd\admin\fall2019prod"
-$subscription = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName
-$ApplicationCred = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.ApplicationId, $AlyaWvdServicePrincipalPasswordSave)
+$RootDir = "$AlyaScripts\wvd\admin\fall2019test"
+$subscription = Get-AzSubscription -SubscriptionName $AlyaSubscriptionNameTest
 
 # Preparing parameters
 Write-Host "Configuring deployment parameters" -ForegroundColor $CommandInfo
-$TemplateFilePath = "$($RootDir)\template\templateUpdate.json"
-$ParametersFilePath = "$($RootDir)\template\parametersUpdate.json"
+$TemplateFilePath = "$($RootDir)\template\templateCreate.json"
+$ParametersFilePath = "$($RootDir)\template\parametersCreate.json"
 $params = Get-Content -Path $ParametersFilePath -Raw -Encoding UTF8 | ConvertFrom-Json
 $ParametersObject = @{}
 $params.parameters.psobject.properties | Foreach { $ParametersObject[$_.Name] = $_.Value.value }
@@ -154,23 +153,14 @@ $ParametersObject["aadTenantId"] = $AlyaTenantId
 $ParametersObject["rdshNumberOfInstances"] = $NumberOfInstances
 $ParametersObject["rdshVmSize"] = $VmSize
 $ParametersObject["existingDomainUPN"] = $AdminDomainUPN
-$ParametersObject["existingHostpoolName"] = $HostPoolName
-#$ParametersObject["defaultDesktopUsers"] = ($AlyaWvdAdmins -join ",")
+$ParametersObject["hostPoolName"] = $HostPoolName
+$ParametersObject["defaultDesktopUsers"] = ($AlyaWvdAdmins -join ",")
 $ParametersObject["tenantAdminUpnOrApplicationId"] = $AzureAdServicePrincipal.ApplicationId.Guid.ToString()
 $ParametersObject["location"] = $AlyaLocation
 $ParametersObject["rdshNamePrefix"] = $NamePrefix
-$ParametersObject["existingTenantName"] = $AlyaWvdTenantNameProd
-$ParametersObject["existingDomainPassword"] = $Global:AdminDomainCred.Password
-$ParametersObject["tenantAdminPassword"] = $ApplicationCred.Password
-
-# Starting all vms
-Write-Host "Starting all vms" -ForegroundColor $CommandInfo
-for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
-{
-    #$hi=0
-    $actHostName = "$($WvdHostName)$($hi)"
-    Start-AzVM -ResourceGroupName $ResourceGroupName -Name $actHostName
-}
+$ParametersObject["existingTenantName"] = $AlyaWvdTenantNameTest
+$ParametersObject["existingDomainPassword"] = [SecureString]$Global:AdminDomainCred.Password
+$ParametersObject["tenantAdminPassword"] = [SecureString]$AlyaWvdServicePrincipalPasswordSave
 
 # Deploying hostpool
 Write-Host "Deploying hostpool" -ForegroundColor $CommandInfo
@@ -185,16 +175,26 @@ Write-Host "Deploying hostpool" -ForegroundColor $CommandInfo
 
 # Checking share for hostpool
 Write-Host "Checking share for hostpool" -ForegroundColor $CommandInfo
-$hostpoolShareDir = "E:\sharesWvd\$($HostPoolName)"
+$hostpoolShareDir = "$($AlyaWvdShareRoot)\$($HostPoolName)"
 $hostpoolShareName = "$($HostPoolName)$"
 $hostpoolSharePath = "\\$($ShareServer)\$hostpoolShareName"
 if (-Not (Test-Path $hostpoolSharePath))
 {
-    throw "Share does not exist. Should be created with the create script!"
+    Write-Warning "Share does not exist. Creating share $($hostpoolSharePath)"
+    if ($ShareServer -ne $env:COMPUTERNAME.ToLower())
+    {
+        Write-Host "Please login to $ShareServer and run there the script" -ForegroundColor $QuestionColor
+        Write-Host ".\05_prepareShare.ps1 -hostpoolShareDir $hostpoolShareDir -hostpoolShareName $hostpoolShareName" -ForegroundColor $QuestionColor
+        pause
+    }
+    else
+    {
+        & "$($RootDir)\05_prepareShare.ps1" -hostpoolShareDir $hostpoolShareDir -hostpoolShareName $hostpoolShareName
+    }
 }
 
 Write-Host "Configuring hostpool" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
 {
     #$hi=0
@@ -205,10 +205,17 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     {
         $tmp = New-Item -Path "\\$($actHostName)\C$" -Name $AlyaCompanyName -ItemType Directory
     }
+	if ((Test-Path "$($AlyaData)\wvd\WvdAtp\WindowsDefenderATPLocalOnboardingScript.cmd"))
+	{
+		$tmp = Copy-Item "$($AlyaData)\wvd\WvdAtp\WindowsDefenderATPLocalOnboardingScript.cmd" "\\$($actHostName)\C$\$($AlyaCompanyName)\WindowsDefenderATPLocalOnboardingScript.cmd" -Force
+	}
+	else
+	{
+		Write-Warning "No ATP onboarding script found in $($AlyaData)\wvd\WvdAtp"
+	}
     robocopy /mir "$($RootDir)\..\..\WvdIcons" "\\$($actHostName)\C$\$($AlyaCompanyName)\WvdIcons"
     robocopy /mir "$($RootDir)\..\..\WvdStartApps\$($AlyaCompanyName)" "\\$($actHostName)\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\$($AlyaCompanyName)"
-    #TODO $tmp = Copy-Item "$($RootDir)\..\..\..\..\o365\defenderatp\WindowsDefenderATPLocalOnboardingScript.cmd" "\\$($actHostName)\C$\$($AlyaCompanyName)\WindowsDefenderATPLocalOnboardingScript.cmd" -Force
-    $tmp = Copy-Item "$($RootDir)\..\..\WvdTheme\$($AlyaCompanyName)Prod.theme" "\\$($actHostName)\C$\Windows\resources\Themes\$($AlyaCompanyName).theme" -Force
+    $tmp = Copy-Item "$($RootDir)\..\..\WvdTheme\$($AlyaCompanyName)Test.theme" "\\$($actHostName)\C$\Windows\resources\Themes\$($AlyaCompanyName).theme" -Force
 
     Write-Host "    Adding diagnostics"
     $diagConfig = Get-Content -Path "$($RootDir)\diagnosticConfig.xml" -Encoding UTF8 -Raw
@@ -228,6 +235,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
         $AlyaTimeZone = $args[3]
         $AlyaGeoId = $args[4]
         $ShareServer = $args[5]
+        $AlyaCompanyName = $args[6]
         Set-Timezone -Id $AlyaTimeZone
         Set-WinHomeLocation -GeoId $AlyaGeoId
         $fslogixAppsRegPath = "HKLM:\SOFTWARE\FSLogix\Apps"
@@ -300,11 +308,20 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
         New-ItemProperty -Path $themePersonalizeRegPath -Name "ColorPrevalence" -Value "1" -PropertyType DWORD -Force
         New-ItemProperty -Path $themeDWMRegPath -Name "ColorPrevalence" -Value "1" -PropertyType DWORD -Force
 		#>
-        #Get-Service -Name "WSearch" | Set-Service -StartupType Automatic
-        Add-LocalGroupMember -Group "FSLogix ODFC Exclude List" -Member $AdminDomainUPN -ErrorAction SilentlyContinue
-        Add-LocalGroupMember -Group "FSLogix Profile Exclude List" -Member $AdminDomainUPN -ErrorAction SilentlyContinue
-        # TODO C:\$($AlyaCompanyName)\WindowsDefenderATPLocalOnboardingScript.cmd
-    } -Args $HostPoolName, $AdminDomainUPN, $AlyaTenantId, $AlyaTimeZone, $AlyaGeoId, $ShareServer
+        Get-Service -Name "WSearch" | Set-Service -StartupType Automatic
+        Add-LocalGroupMember -Group "FSLogix ODFC Exclude List" -Member $AdminDomainUPN
+        Add-LocalGroupMember -Group "FSLogix Profile Exclude List" -Member $AdminDomainUPN
+        $drv = Get-WmiObject win32_volume -filter 'DriveLetter = "E:"'
+        if ($drv)
+        {
+            $drv.DriveLetter = "G:"
+            $drv.Put()
+        }
+        if ((Test-Path "C:\$($AlyaCompanyName)\WindowsDefenderATPLocalOnboardingScript.cmd"))
+        {
+        	& "C:\$($AlyaCompanyName)\WindowsDefenderATPLocalOnboardingScript.cmd"
+    	}
+    } -Args $HostPoolName, $AdminDomainUPN, $AlyaTenantId, $AlyaTimeZone, $AlyaGeoId, $ShareServer, $AlyaCompanyName
     Remove-PSSession -Session $session
 }
 
@@ -354,12 +371,17 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     Remove-PSSession -Session $session
 }
 
-#Write-Host "Setting hostpool to validation (test)" -ForegroundColor $CommandInfo
+# Login to WVD
+Write-Host "Logging in to wvd" -ForegroundColor $CommandInfo
+$rdsCreds = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.ApplicationId, $AlyaWvdServicePrincipalPasswordSave)
+$Global:RdsContext = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $rdsCreds -ServicePrincipal -AadTenantId $AlyaTenantId
+
+Write-Host "Setting hostpool to validation (test)" -ForegroundColor $CommandInfo
 #TODO Comment for prod env
-#Set-RdsHostPool -TenantName $AlyaWvdTenantNameProd -Name $HostPoolName -ValidationEnv $true
+Set-RdsHostPool -TenantName $AlyaWvdTenantNameTest -Name $HostPoolName -ValidationEnv $true
 
 Write-Host "Setting hostpool to depth first" -ForegroundColor $CommandInfo
-Set-RdsHostPool -TenantName $AlyaWvdTenantNameProd -Name $HostPoolName -DepthFirstLoadBalancer -MaxSessionLimit 6
+Set-RdsHostPool -TenantName $AlyaWvdTenantNameTest -Name $HostPoolName -DepthFirstLoadBalancer -MaxSessionLimit 6
 
 Write-Host "Setting tags on resource group" -ForegroundColor $CommandInfo
 $resourceGroup = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
@@ -378,7 +400,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     Write-Host "  $($actHostName)"
     $vm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $actHostName
     $tags = @{}
-    if ($hi -eq 0) { $tags += @{startTime=$AlyaWvdStartTime} }
+    #TODO enable for prod if ($hi -eq 0) { $tags += @{startTime=$AlyaWvdStartTime} }
     $tags += @{displayName="WVD Host $($HostPoolName)"}
     $tags += @{stopTime=$AlyaWvdStopTime}
     $tags += @{ownerEmail=$Context.Account.Id}

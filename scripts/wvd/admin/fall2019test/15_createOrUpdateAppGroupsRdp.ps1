@@ -30,23 +30,24 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     12.03.2020 Konrad Brunner       Initial Version
+    10.10.2020 Konrad Brunner       Added parameters and generalized
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$HostPoolName,
+    [string]$AppGroupName,
+    [string]$AdGroupName
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\16_createOrUpdateAppGroups_hpol002-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\15_createOrUpdateAppGroupsRdp-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$HostPoolName = "$($AlyaNamingPrefixTest)hpol002"
-$AppGroupName = "Desktop Application Group"
-$AdGroupName = "ALYASG-ADM-APPTDSKTP"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
@@ -62,7 +63,7 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "WVD | 11_createOrUpdateAppGroups_hpol001 | AZURE" -ForegroundColor $CommandInfo
+Write-Host "WVD | 15_createOrUpdateAppGroupsRdp | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context
@@ -121,8 +122,8 @@ foreach ($admin in $AlyaWvdAdmins)
     }
 }
 Write-Host " - Access for $($AdGroupName)"
-$grp = Get-AzureADGroup -SearchString $AdGroupName | Select-Object -First 1
-$membs = Get-AzureADGroupMember -ObjectId $grp.ObjectId -All:$true
+$grp = Get-AzADGroup -SearchString $AdGroupName | Select-Object -First 1
+$membs = Get-AzADGroupMember -GroupObject $grp
 foreach ($memb in $membs)
 {
     if (-Not $allMembs.Contains($memb.UserPrincipalName))

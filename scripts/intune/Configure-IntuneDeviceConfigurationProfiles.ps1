@@ -57,6 +57,7 @@ Install-ModuleIfNotInstalled "Az"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+$token = Get-AdalAccessToken
 
 # Getting context and token
 $Context = Get-AzContext
@@ -230,6 +231,33 @@ foreach($profile in $profiles)
             Write-Warning "Rerun this script after consent done!"
             Exit 80
         }
+    }
+    if ($profile.displayName.Contains("Local Group Configuration"))
+    {
+        #https://docs.microsoft.com/en-us/azure/active-directory/devices/assign-local-admin
+        $AlyaDeviceAdminsGroupSid = $null
+        if ($AlyaDeviceAdminsGroupName -and -Not [string]::IsNullOrEmpty($AlyaDeviceAdminsGroupName))
+        {
+            $Uri = "https://graph.microsoft.com/beta/groups?`$filter=displayName eq '$AlyaDeviceAdminsGroupName'"
+            $GrpRslt = Get-MsGraph -AccessToken $token -Uri $Uri
+            $AlyaDeviceAdminsGroupSid = $GrpRslt.securityIdentifier
+        }
+        $accessgroup = [xml]$profile.omaSettings[0].value.Trim("#")
+        foreach ($elem in $accessgroup.SelectNodes("//member"))
+        {
+            if ($elem.name -eq "`$AlyaDeviceAdminsGroupSid")
+            {
+                if (-Not $AlyaDeviceAdminsGroupSid)
+                {
+                    $elem.ParentNode.RemoveChild($elem)
+                }
+                else
+                {
+                    $elem.SetAttribute("name", $AlyaDeviceAdminsGroupSid)
+                }
+            }
+        }
+        $profile.omaSettings[0].value = [System.Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($accessgroup.OuterXml.ToString()))
     }
     
     # Checking if profile exists

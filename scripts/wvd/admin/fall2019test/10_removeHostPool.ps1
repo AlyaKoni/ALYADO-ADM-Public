@@ -30,24 +30,24 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     13.03.2020 Konrad Brunner       Initial Version
+    10.10.2020 Konrad Brunner       Added parameters and generalized
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$HostPoolName,
+    [string]$ResourceGroupName
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\10_removeAppHostPool_hpol001-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\10_removeHostPool-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$ErrorActionPreference = "Stop"
-$HostPoolName = "$($AlyaNamingPrefixTest)hpol001"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
-$ResourceGroupName = "$($AlyaNamingPrefixTest)resg051"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -62,7 +62,7 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "WVD | 10_removeAppHostPool_hpol001 | AZURE" -ForegroundColor $CommandInfo
+Write-Host "WVD | 10_removeHostPool | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context

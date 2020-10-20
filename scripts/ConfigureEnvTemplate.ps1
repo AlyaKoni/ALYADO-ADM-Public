@@ -144,6 +144,9 @@ $AlyaWvdAzureServicePrincipalName = "PleaseSpecify" #Example:"AlyaWvdAzureApp"
 $AlyaWvdServicePrincipalNameProd = "PleaseSpecify" #Example:"AlyaWvdProdApp"
 $AlyaWvdServicePrincipalNameTest = "PleaseSpecify" #Example:"AlyaWvdTestApp"
 $AlyaWvdTenantGroupName = "PleaseSpecify" #Example:"Default Tenant Group"
+$AlyaWvdDomainAdminUPN = "PleaseSpecify" #Example:@("konrad.brunner@$($AlyaDomainName)")
+$AlyaWvdOuProd = "PleaseSpecify" #Example:"OU=PROD,OU=WVD,OU=COMPUTERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
+$AlyaWvdOuTest = "PleaseSpecify" #Example:"OU=TEST,OU=WVD,OU=COMPUTERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
 $AlyaWvdAdmins = "PleaseSpecify" #Example:@("konrad.brunner@$($AlyaDomainName)")
 $AlyaWvdStartTime = "PleaseSpecify" #Example:"06:00"
 $AlyaWvdStopTime = "PleaseSpecify" #Example:"23:00"
@@ -189,6 +192,8 @@ $AlyaAipApiServiceLocation = "PleaseSpecify" #Example:
 $AlyaAipOnboardingPolicy = 0 # 0=norestriction 1=onlyLicenseUser else group name to use
 
 <# INTUNE SETTINGS #>
+$AlyaDeviceAdminsGroupName = "PleaseSpecify" # Only members can manage devices
+$AlyaAllowDeviceRegistration = "PleaseSpecify" # All, None or a group name
 $AlyaWinPEBackgroundJpgImage = "PleaseSpecify"
 $AlyaDesktopBackgroundUrl = "PleaseSpecify"
 $AlyaLockScreenBackgroundUrl = "PleaseSpecify"

@@ -29,7 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    23.04.2020 Konrad Brunner       Initial Version
+    20.10.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -41,38 +41,14 @@ Param(
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\13_updateLocalFiles_hpol001-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\data\wvd\admin\fall2019test\10_removeRdpHostPool_hpol001-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$ErrorActionPreference = "Stop"
-$WvdHostName = "$($AlyaNamingPrefix)vd51-"
-$NumberOfInstances = 5
-$RootDir = "$AlyaScripts\wvd\admin\fall2019prod"
+$HostPoolName = "$($AlyaNamingPrefix)hpol001"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg051"
 
-# =============================================================
-# OS stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "WVD | 13_updateLocalFiles_hpol001 | OS" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Main
-Write-Host "Updating files" -ForegroundColor $CommandInfo
-for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
-{
-    #$hi=0
-    $actHostName = "$($WvdHostName)$($hi)"
-    Write-Host "  $($actHostName)" -ForegroundColor $CommandInfo
-    Write-Host "    Copying files"
-    if (-Not (Test-Path "\\$($actHostName)\C$\$($AlyaCompanyName)"))
-    {
-        $tmp = New-Item -Path "\\$($actHostName)\C$" -Name $AlyaCompanyName -ItemType Directory
-    }
-    robocopy /mir "$($RootDir)\..\..\WvdIcons" "\\$($actHostName)\C$\$($AlyaCompanyName)\WvdIcons"
-    robocopy /mir "$($RootDir)\..\..\WvdStartApps\$($AlyaCompanyName)" "\\$($actHostName)\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\$($AlyaCompanyName)"
-    $tmp = Copy-Item "$($RootDir)\..\..\WvdTheme\$($AlyaCompanyName)Prod.theme" "\\$($actHostName)\C$\Windows\resources\Themes\$($AlyaCompanyName).theme" -Force
-}
+Write-Host "Launching hostpool script" -ForegroundColor $CommandInfo
+& "$($AlyaScripts)\wvd\admin\fall2019test\10_removeHostPool.ps1" -HostPoolName $HostPoolName -ResourceGroupName $ResourceGroupName
 
 #Stopping Transscript
 Stop-Transcript
