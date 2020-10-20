@@ -82,7 +82,6 @@ $AlyaResIdWebSiteResGrp = "PleaseSpecify" #Example:"011"
 $AlyaResIdLetsEncryptResGrp = "PleaseSpecify" #Example:"012"
 $AlyaResIdWormResGrp = "PleaseSpecify" #Example:"015"
 $AlyaResIdWvdImageResGrp = "PleaseSpecify" #Example:"040"
-
 $AlyaResIdLogAnalytics = "PleaseSpecify" #Example:"002"
 $AlyaResIdVirtualNetwork = "PleaseSpecify" #Example:"000"
 $AlyaResIdMainKeyVault = "PleaseSpecify" #Example:"001"
@@ -187,6 +186,13 @@ $AlyaSpThemeDef = @{
 
 <# AIP SETTINGS #>
 $AlyaAipApiServiceLocation = "PleaseSpecify" #Example:
+$AlyaAipOnboardingPolicy = 0 # 0=norestriction 1=onlyLicenseUser else group name to use
+
+<# INTUNE SETTINGS #>
+$AlyaWinPEBackgroundJpgImage = "PleaseSpecify"
+$AlyaDesktopBackgroundUrl = "PleaseSpecify"
+$AlyaLockScreenBackgroundUrl = "PleaseSpecify"
+$AlyaWelcomeScreenBackgroundUrl = "PleaseSpecify"
 
 <# WORM BACKUP SETTINGS #>
 $AlyaWormStorageAccountName = "PleaseSpecify"

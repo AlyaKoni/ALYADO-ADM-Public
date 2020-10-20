@@ -2,7 +2,7 @@
         "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
         "displayName": "Win10 Compliance Policy",
         "description": "Checks the compliance of windows 10 devices",
-		"roleScopeTagIds": ["0"],
+        "roleScopeTagIds": ["0"],
         "passwordRequired": true,
         "passwordBlockSimple": true,
         "passwordRequiredToUnlockFromIdle": false,
@@ -35,7 +35,7 @@
         "tpmRequired": true,
         "deviceCompliancePolicyScript": null,
         "validOperatingSystemBuildRanges": [],
-		"localActions": [],
+        "localActions": [],
         "scheduledActionsForRule": [{
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
@@ -44,16 +44,55 @@
                         "actionType": "block",
                         "gracePeriodHours": 8760,
                         "notificationTemplateId": "",
-						"notificationMessageCCList": []
+                        "notificationMessageCCList": []
                     }
                 ]
             }
         ]
     }, {
+        "@odata.type": "#microsoft.graph.macOSCompliancePolicy",
+        "displayName": "Mac Compliance Policy",
+        "description": "Checks the compliance from MAC devices",
+        "roleScopeTagIds": ["0"],
+        "passwordRequired": true,
+        "passwordBlockSimple": true,
+        "passwordExpirationDays": 365,
+        "passwordMinimumLength": 8,
+        "passwordMinutesOfInactivityBeforeLock": null,
+        "passwordPreviousPasswordBlockCount": 1,
+        "passwordMinimumCharacterSetCount": null,
+        "passwordRequiredType": "deviceDefault",
+        "osMinimumVersion": null,
+        "osMaximumVersion": null,
+        "osMinimumBuildVersion": null,
+        "osMaximumBuildVersion": null,
+        "systemIntegrityProtectionEnabled": true,
+        "deviceThreatProtectionEnabled": false,
+        "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+        "storageRequireEncryption": true,
+        "gatekeeperAllowedAppSource": "notConfigured",
+        "firewallEnabled": true,
+        "firewallBlockAllIncoming": true,
+        "firewallEnableStealthMode": false,
+        "localActions": [],
+        "scheduledActionsForRule": [{
+                "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
+                "ruleName": "DefaultPolicy",
+                "scheduledActionConfigurations": [{
+                        "@odata.type": "#microsoft.graph.deviceComplianceActionItem",
+                        "actionType": "block",
+                        "gracePeriodHours": 8760,
+                        "notificationTemplateId": "",
+                        "notificationMessageCCList": []
+                    }
+                ]
+            }
+        ]
+    },{
         "@odata.type": "#microsoft.graph.androidDeviceOwnerCompliancePolicy",
         "displayName": "Android Compliance Policy",
         "description": "Checks the compliance of android devices",
-		"roleScopeTagIds": ["0"],
+        "roleScopeTagIds": ["0"],
         "deviceThreatProtectionEnabled": false,
         "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
         "advancedThreatProtectionRequiredSecurityLevel": "unavailable",
@@ -75,7 +114,7 @@
         "passwordExpirationDays": 365,
         "passwordPreviousPasswordCountToBlock": 1,
         "storageRequireEncryption": null,
-		"localActions": [],
+        "localActions": [],
         "scheduledActionsForRule": [{
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
@@ -84,7 +123,7 @@
                         "actionType": "block",
                         "gracePeriodHours": 8760,
                         "notificationTemplateId": "",
-						"notificationMessageCCList": []
+                        "notificationMessageCCList": []
                     }
                 ]
             }
@@ -93,7 +132,7 @@
         "@odata.type": "#microsoft.graph.iosCompliancePolicy",
         "displayName": "iOS Compliance Policy",
         "description": "Checks the compliance of iOS devices",
-		"roleScopeTagIds": ["0"],
+        "roleScopeTagIds": ["0"],
         "passcodeBlockSimple": true,
         "passcodeExpirationDays": 365,
         "passcodeMinimumLength": 8,
@@ -112,7 +151,7 @@
         "deviceThreatProtectionRequiredSecurityLevel": "secured",
         "managedEmailProfileRequired": true,
         "restrictedApps": [],
-		"localActions": [],
+        "localActions": [],
         "scheduledActionsForRule": [{
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
@@ -121,7 +160,7 @@
                         "actionType": "block",
                         "gracePeriodHours": 8760,
                         "notificationTemplateId": "",
-						"notificationMessageCCList": []
+                        "notificationMessageCCList": []
                     }
                 ]
             }

@@ -58,6 +58,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AIP | Configure-AIPService | AIP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+Write-Host "Checking AipService" -ForegroundColor $CommandInfo
 $enabled = Get-AipService
 if ($enabled -ne "Enabled")
 {
@@ -68,6 +69,8 @@ else
 {
     Write-Host "AipService was already enabled"
 }
+
+Write-Host "Checking AipServiceIPCv3" -ForegroundColor $CommandInfo
 $enabled = Get-AipServiceIPCv3
 if ($enabled -ne "Enabled")
 {
@@ -78,22 +81,26 @@ else
 {
     Write-Host "AipServiceIPCv3 was already enabled"
 }
+
+Write-Host "Checking AipServiceDevicePlatform" -ForegroundColor $CommandInfo
 $enabled = Get-AipServiceDevicePlatform -All
-$enabled = $enabled.Value | where { $_ -eq $false }
+$enabled = $enabled | where { $_.Value -eq $false }
 if ($enabled)
 {
     Write-Host "Enabling AipServiceDevicePlatform All"
-    $tmp = Configure-AIPServiceDevicePlatform -All
+    $tmp = Enable-AIPServiceDevicePlatform -All
 }
 else
 {
     Write-Host "AipServiceDevicePlatform All was already enabled"
 }
+
+Write-Host "Checking AipServiceDocumentTrackingFeature" -ForegroundColor $CommandInfo
 $enabled = Get-AipServiceDocumentTrackingFeature
 if ($enabled -ne "Enabled")
 {
     Write-Host "Enabling AipServiceDocumentTrackingFeature"
-    $tmp = Configure-AIPServiceDocumentTrackingFeature -Force
+    $tmp = Enable-AIPServiceDocumentTrackingFeature -Force
 }
 else
 {

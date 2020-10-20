@@ -61,14 +61,6 @@ $token = Get-AdalAccessToken
 
 # Main
 
-
-
-
-#TODO
-throw "Issue still open?"
-
-
-
 # Getting actual authority
 Write-Host "Getting actual authority" -ForegroundColor $CommandInfo
 $uri = "https://graph.microsoft.com/beta/organization('$AlyaTenantId')?`$select=mobiledevicemanagementauthority"
@@ -77,6 +69,18 @@ Write-Host "  Actual authority: $MDMAuthority"
 
 if($MDMAuthority -notlike "intune")
 {
+
+    Write-Host "We have actually an issue, configuring the MDM authority by script."
+    Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
+    Write-Host " - Select 'Microsoft Intune'"
+    Write-Host " - Set for MDM and MAM 'All'"
+    Write-Host " - Save"
+    start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility
+    pause
+
+    #TODO
+    throw "TODO Issue still open?"
+
     # Setting intune as authority
     Write-Host "Setting intune as authority" -ForegroundColor $CommandInfo
     $uri = "https://graph.microsoft.com/beta/organization/$AlyaTenantId/setMobileDeviceManagementAuthority"

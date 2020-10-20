@@ -179,6 +179,7 @@ else
     Write-Warning "  Logo not found"
 }
 
+Write-Host "Configuring branding" -ForegroundColor $CommandInfo
 $uri = "https://graph.microsoft.com/beta/deviceManagement"
 $intuneBrand = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($brandingConfig | ConvertTo-Json -Depth 50)
 

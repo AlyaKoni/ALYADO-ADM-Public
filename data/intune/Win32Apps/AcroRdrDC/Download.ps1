@@ -38,8 +38,8 @@ $lastPatchFile = $null
 foreach ($CurDir in $parentDirs)
 {
     Write-Host "    Searching dir $CurDir"
-    $attempts = 10
-    while ($attempts -ge 0)
+    $Global:attempts = 10
+    while ($Global:attempts -ge 0)
     {
         try {
             do {
@@ -67,12 +67,12 @@ foreach ($CurDir in $parentDirs)
                     }
                 }
             } while ($StatusCode -eq 429)
-            $attempts = -1
+            $Global:attempts = -1
         } catch {
             Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-            Write-Host "Retrying $attempts times" -ForegroundColor $CommandError
-            $attempts--
-            if ($attempts -lt 0) { throw }
+            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
+            $Global:attempts--
+            if ($Global:attempts -lt 0) { throw }
             Start-Sleep -Seconds 10
         }
     }
@@ -101,10 +101,48 @@ foreach ($CurDir in $parentDirs)
 if (-Not (Test-Path (Join-Path $contentRoot $lastExeFile)))
 {
     Write-Host "    Downloading $ftpUrl/$lastExeDir/$lastExeFile"
-    $attempts = 10
-    while ($attempts -ge 0)
+    $profile = [Environment]::GetFolderPath("UserProfile")
+    $downloads = $profile+"\downloads"
+    $lastfilename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
+    $filename = $null
+    $Global:attempts = 10
+    while ($Global:attempts -ge 0)
     {
-        $attempts = 10
+        Write-Host "    from $downloadUrl"
+        try {
+            #TODO Better download!
+            start "$ftpUrl/$lastExeDir/$lastExeFile"
+            do
+            {
+                Start-Sleep -Seconds 10
+                $filename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
+                if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+            } while ($lastfilename -eq $filename)
+            $Global:attempts = -1
+        } catch {
+            Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
+            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
+            $Global:attempts--
+            if ($Global:attempts -lt 0) { throw }
+            Start-Sleep -Seconds 10
+        }
+    }
+    if (-Not $filename)
+    {
+        throw "Not able to download file"
+    }
+    else
+    {
+        $sourcePath = $downloads+"\"+$filename
+        $destPath = (Join-Path $contentRoot $lastExeFile)
+        Move-Item -Path $sourcePath -Destination $destPath -Force
+    }
+
+    <#
+    $Global:attempts = 10
+    while ($Global:attempts -ge 0)
+    {
+        $Global:attempts = 10
         try {
             do {
                 try {
@@ -123,21 +161,60 @@ if (-Not (Test-Path (Join-Path $contentRoot $lastExeFile)))
                     }
                 }
             } while ($StatusCode -eq 429)
-            $attempts = -1
+            $Global:attempts = -1
         } catch {
             Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-            Write-Host "Retrying $attempts times" -ForegroundColor $CommandError
-            $attempts--
-            if ($attempts -lt 0) { throw }
+            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
+            $Global:attempts--
+            if ($Global:attempts -lt 0) { throw }
             Start-Sleep -Seconds 10
         }
     }
+    #>
 }
 if (-Not (Test-Path (Join-Path $contentRoot $lastPatchFile)))
 {
     Write-Host "    Downloading $ftpUrl/$lastPatchDir/$lastPatchFile"
-    $attempts = 10
-    while ($attempts -ge 0)
+    $profile = [Environment]::GetFolderPath("UserProfile")
+    $downloads = $profile+"\downloads"
+    $lastfilename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
+    $filename = $null
+    $Global:attempts = 10
+    while ($Global:attempts -ge 0)
+    {
+        Write-Host "    from $downloadUrl"
+        try {
+            #TODO Better download!
+            start "$ftpUrl/$lastPatchDir/$lastPatchFile"
+            do
+            {
+                Start-Sleep -Seconds 10
+                $filename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
+                if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+            } while ($lastfilename -eq $filename)
+            $Global:attempts = -1
+        } catch {
+            Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
+            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
+            $Global:attempts--
+            if ($Global:attempts -lt 0) { throw }
+            Start-Sleep -Seconds 10
+        }
+    }
+    if (-Not $filename)
+    {
+        throw "Not able to download file"
+    }
+    else
+    {
+        $sourcePath = $downloads+"\"+$filename
+        $destPath = (Join-Path $contentRoot $lastPatchFile)
+        Move-Item -Path $sourcePath -Destination $destPath -Force
+    }
+
+    <#
+    $Global:attempts = 10
+    while ($Global:attempts -ge 0)
     {
         try {
             do {
@@ -157,15 +234,16 @@ if (-Not (Test-Path (Join-Path $contentRoot $lastPatchFile)))
                     }
                 }
             } while ($StatusCode -eq 429)
-            $attempts = -1
+            $Global:attempts = -1
         } catch {
             Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-            Write-Host "Retrying $attempts times" -ForegroundColor $CommandError
-            $attempts--
-            if ($attempts -lt 0) { throw }
+            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
+            $Global:attempts--
+            if ($Global:attempts -lt 0) { throw }
             Start-Sleep -Seconds 10
         }
     }
+    #>
 }
 
 $tmpPath = (Join-Path $contentRoot "Tmp")

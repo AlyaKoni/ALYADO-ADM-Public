@@ -78,20 +78,38 @@ $policies = Get-Content -Path $PolicyFile -Raw -Encoding UTF8 | ConvertFrom-Json
 Write-Host "Getting iOS configuration" -ForegroundColor $CommandInfo
 $appleConfigured = $false
 $uri = "https://graph.microsoft.com/beta/devicemanagement/applePushNotificationCertificate"
-$appleConfiguration = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+$appleConfiguration = Get-MsGraphObject -AccessToken $token -Uri $uri
+$appleConfigured = $false
 if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
 {
     $appleConfigured = $true
+}
+else
+{
+    $appleConfiguration = $appleConfiguration.value
+    if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
+    {
+        $appleConfigured = $true
+    }
 }
 
 # Getting Android configuration
 Write-Host "Getting Android configuration" -ForegroundColor $CommandInfo
 $androidConfigured = $false
 $uri = "https://graph.microsoft.com/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
-$androidConfiguration = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+$androidConfiguration = Get-MsGraphObject -AccessToken $token -Uri $uri
+$androidConfigured = $false
 if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
 {
     $androidConfigured = $true
+}
+else
+{
+    $androidConfigured = $androidConfigured.Value
+    if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
+    {
+        $androidConfigured = $true
+    }
 }
 
 # Processing defined policies
@@ -100,7 +118,7 @@ foreach($policy in $policies)
     Write-Host "Configuring policy $($policy.displayName)" -ForegroundColor $CommandInfo
 
     # Checking if poliy is applicable
-    Write-Host "  Checking if poliy is applicable"
+    Write-Host "  Checking if policy is applicable"
     if ($policy."@odata.type" -eq "#microsoft.graph.iosCompliancePolicy" -and -not $appleConfigured)
     {
         Write-Warning "iosCompliancePolicy is not applicable"

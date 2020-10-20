@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,7 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    07.04.2020 Konrad Brunner       Initial Version
+    19.10.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -38,48 +38,43 @@ Param(
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Set-OnboardingPolicy-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Get-MyIspIp-$($AlyaTimeString).log" | Out-Null
 
-# Constants
-$mode = $AlyaAipOnboardingPolicy # 0=norestriction 1=onlyLicenseUser else group name to use
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "AIPService"
-    
-# Logins
-LoginTo-AIP
-
-# =============================================================
-# AADRM stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Set-OnboardingPolicy | AIP" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-Write-Host "Checking AipServiceOnboardingControlPolicy" -ForegroundColor $CommandInfo
-if ($mode -eq 0)
+#Main
+$guid = [Guid]::NewGuid()
+$myIpTest = (Invoke-WebRequest "myexternalip.com/raw?$($guid)=1" -ErrorAction SilentlyContinue).content
+$myIp = $null
+if (-not $myIpTest -or $myIp -ne $myIpTest)
 {
-    Write-Host "Setting AipServiceOnboardingControlPolicy to all users"
-    Set-AipServiceOnboardingControlPolicy -UseRmsUserLicense $False -Force
-}
-else
-{
-    if ($mode -eq 1)
+    $myIp = $myIpTest
+    $myIpTest = (Invoke-WebRequest "bot.whatismyipaddress.com?$($guid)=1" -ErrorAction SilentlyContinue).content
+    if (-not $myIpTest -or $myIp -ne $myIpTest)
     {
-        Write-Host "Setting AipServiceOnboardingControlPolicy to licensed users only"
-        Set-AipServiceOnboardingControlPolicy -UseRmsUserLicense $True -Force
-    }
-    else
-    {
-        Write-Host "Setting AipServiceOnboardingControlPolicy to specific group"
-        throw "TODO"
+        $myIp = $myIpTest
+        $myIpTest = (Invoke-WebRequest "ident.me?$($guid)=1" -ErrorAction SilentlyContinue).content
+        if (-not $myIpTest -or $myIp -ne $myIpTest)
+        {
+            $myIp = $myIpTest
+            $myIpTest = (Invoke-WebRequest "api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
+            if (-not $myIpTest -or $myIp -ne $myIpTest)
+            {
+                $myIp = $myIpTest
+                $myIpTest = (Invoke-WebRequest "ipconfig.me?$($guid)=1" -ErrorAction SilentlyContinue).content
+                if (-not $myIpTest -or $myIp -ne $myIpTest)
+                {
+                    $myIp = (Invoke-WebRequest "ifconfig.me/ip?$($guid)=1" -ErrorAction SilentlyContinue).content
+                }
+            }
+        }
     }
 }
+$myIp = $myIp + "/32"
+Write-Host "Your public ip: "
+Write-Host "$myIp" -ForegroundColor $CommandSuccess
+pause
 
 #Stopping Transscript
 Stop-Transcript

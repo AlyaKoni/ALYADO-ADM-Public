@@ -127,7 +127,7 @@ foreach ($roleDef in $roleDefs)
             {
                 foreach($user in $ownRoles[$roleDef.UserOrOwnRole])
                 {
-                    if (-Not $builtinRoles.$roleName.Contains($user))
+                    if (-Not $builtinRoles.$roleName -contains $user)
                     {
                         $builtinRoles.$roleName += $user
                     }
@@ -187,7 +187,7 @@ foreach($roleName in ($builtinRoles.Keys | Sort-Object))
     #Removing inactivated members
     $actMembs | foreach {
         $actMemb = $_
-        if ($actMemb.EmailAddress -And ((-Not $newUsers) -or (-Not $newUsers.Contains($actMemb.EmailAddress))))
+        if ($actMemb.EmailAddress -And ((-Not $newUsers) -or ($newUsers -notcontains $actMemb.EmailAddress)))
         {
             Write-Host "    removing user $($actMemb.EmailAddress)" -ForegroundColor $CommandError
             Remove-MsolRoleMember -RoleObjectId $role.ObjectId -RoleMemberObjectId $actMemb.ObjectId

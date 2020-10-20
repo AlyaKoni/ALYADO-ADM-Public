@@ -1,0 +1,58 @@
+[{
+        "Comment1": "=================================================",
+        "Comment2": "WIN10 Update Profiles",
+        "Comment3": "================================================="
+    }, {
+        "@odata.type": "#microsoft.graph.windowsUpdateForBusinessConfiguration",
+        "displayName": "Win10 Upgrade Configuration",
+        "description": "Configures upgrades on win10 devices",
+        "roleScopeTagIds": ["0"],
+        "deliveryOptimizationMode": "userDefined",
+        "prereleaseFeatures": "userDefined",
+        "automaticUpdateMode": "autoInstallAtMaintenanceTime",
+        "microsoftUpdateServiceAllowed": true,
+        "driversExcluded": false,
+        "qualityUpdatesDeferralPeriodInDays": 7,
+        "featureUpdatesDeferralPeriodInDays": 7,
+        "qualityUpdatesPaused": false,
+        "featureUpdatesPaused": false,
+        "qualityUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
+        "featureUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
+        "businessReadyUpdatesOnly": "businessReadyOnly",
+        "skipChecksBeforeRestart": false,
+        "updateWeeks": null,
+        "featureUpdatesRollbackWindowInDays": 60,
+        "qualityUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
+        "featureUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
+        "engagedRestartDeadlineInDays": null,
+        "engagedRestartSnoozeScheduleInDays": null,
+        "engagedRestartTransitionScheduleInDays": null,
+        "deadlineForFeatureUpdatesInDays": null,
+        "deadlineForQualityUpdatesInDays": null,
+        "deadlineGracePeriodInDays": null,
+        "postponeRebootUntilAfterDeadline": null,
+        "autoRestartNotificationDismissal": "notConfigured",
+        "scheduleRestartWarningInHours": null,
+        "scheduleImminentRestartWarningInMinutes": null,
+        "userPauseAccess": "enabled",
+        "userWindowsUpdateScanAccess": "enabled",
+        "updateNotificationLevel": "defaultNotifications",
+        "installationSchedule": {
+            "@odata.type": "#microsoft.graph.windowsUpdateActiveHoursInstall",
+            "activeHoursStart": "07:00:00.0000000",
+            "activeHoursEnd": "22:00:00.0000000"
+        }
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "MAC Profiles",
+        "Comment3": "================================================="
+    },{
+        "Comment1": "=================================================",
+        "Comment2": "ANDROID Profiles",
+        "Comment3": "================================================="
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "IOS Profiles",
+        "Comment3": "================================================="
+    }
+]

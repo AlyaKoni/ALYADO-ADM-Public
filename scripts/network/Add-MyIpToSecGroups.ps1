@@ -92,21 +92,25 @@ if (-Not $VNet)
 
 # Getting my ip
 Write-Host "Getting my ip" -ForegroundColor $CommandInfo
-$guid = [Guid]::NewGuid()
-$myIp = (Invoke-WebRequest "myexternalip.com/raw?$($guid)=1" -ErrorAction SilentlyContinue).content
-if (-Not $myIp)
+$myIpTest = (Invoke-WebRequest "myexternalip.com/raw?$($guid)=1" -ErrorAction SilentlyContinue).content
+$myIp = $null
+if (-not $myIpTest -or $myIp -ne $myIpTest)
 {
-    $myIp = (Invoke-WebRequest "bot.whatismyipaddress.com?$($guid)=1" -ErrorAction SilentlyContinue).content
-    if (-Not $myIp)
+    $myIp = $myIpTest
+    $myIpTest = (Invoke-WebRequest "bot.whatismyipaddress.com?$($guid)=1" -ErrorAction SilentlyContinue).content
+    if (-not $myIpTest -or $myIp -ne $myIpTest)
     {
-        $myIp = (Invoke-WebRequest "ident.me?$($guid)=1" -ErrorAction SilentlyContinue).content
-        if (-Not $myIp)
+        $myIp = $myIpTest
+        $myIpTest = (Invoke-WebRequest "ident.me?$($guid)=1" -ErrorAction SilentlyContinue).content
+        if (-not $myIpTest -or $myIp -ne $myIpTest)
         {
-            $myIp = (Invoke-WebRequest "api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
-            if (-Not $myIp)
+            $myIp = $myIpTest
+            $myIpTest = (Invoke-WebRequest "api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
+            if (-not $myIpTest -or $myIp -ne $myIpTest)
             {
-                $myIp = (Invoke-WebRequest "ipconfig.me?$($guid)=1" -ErrorAction SilentlyContinue).content
-                if (-Not $myIp)
+                $myIp = $myIpTest
+                $myIpTest = (Invoke-WebRequest "ipconfig.me?$($guid)=1" -ErrorAction SilentlyContinue).content
+                if (-not $myIpTest -or $myIp -ne $myIpTest)
                 {
                     $myIp = (Invoke-WebRequest "ifconfig.me/ip?$($guid)=1" -ErrorAction SilentlyContinue).content
                 }

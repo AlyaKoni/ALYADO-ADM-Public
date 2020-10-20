@@ -252,8 +252,8 @@ foreach($packageDir in $packages)
 	$pendingState = "$($stage)Pending"
 	$failedState = "$($stage)Failed"
 	$timedOutState = "$($stage)TimedOut"
-	$attempts = 100
-	while ($attempts -gt 0)
+	$Global:attempts = 100
+	while ($Global:attempts -gt 0)
 	{
 		Start-Sleep -Seconds 3
 		$file = Get-MsGraphObject -AccessToken $token -Uri $uri
@@ -265,11 +265,11 @@ foreach($packageDir in $packages)
 		{
             throw "File upload state has not succeeded: $($file.uploadState)"
 		}
-		$attempts--
+		$Global:attempts--
 	}
 	if ($file -eq $null -or $file.uploadState -ne $successState)
 	{
-		throw "File request did not complete within $attempts attempts"
+		throw "File request did not complete within $Global:attempts attempts"
 	}
 
     # Uploading intunewin content
@@ -294,8 +294,8 @@ foreach($packageDir in $packages)
 		$currentChunk = $chunk + 1
         Write-Progress -Activity "    Uploading intunewin from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
         $curi = "$($file.azureStorageUri)&comp=block&blockid=$id"
-        $attempts = 10
-        while ($attempts -ge 0)
+        $Global:attempts = 10
+        while ($Global:attempts -ge 0)
         {
             try {
                 do {
@@ -314,12 +314,12 @@ foreach($packageDir in $packages)
                         }
                     }
                 } while ($StatusCode -eq 429)
-                $attempts = -1
+                $Global:attempts = -1
             } catch {
                 Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-                Write-Host "Retrying $attempts times" -ForegroundColor $CommandError
-                $attempts--
-                if ($attempts -lt 0) { throw }
+                Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
+                $Global:attempts--
+                if ($Global:attempts -lt 0) { throw }
                 Start-Sleep -Seconds 10
             }
         }
@@ -332,8 +332,8 @@ foreach($packageDir in $packages)
 	        $pendingState = "$($stage)Pending"
 	        $failedState = "$($stage)Failed"
 	        $timedOutState = "$($stage)TimedOut"
-	        $attempts = 100
-	        while ($attempts -gt 0)
+	        $Global:attempts = 100
+	        while ($Global:attempts -gt 0)
 	        {
 		        Start-Sleep -Seconds 3
 		        $file = Get-MsGraphObject -Uri $uri
@@ -345,11 +345,11 @@ foreach($packageDir in $packages)
 		        {
                     throw "File upload state has not succeeded: $($file.uploadState)"
 		        }
-		        $attempts--
+		        $Global:attempts--
 	        }
 	        if ($file -eq $null -or $file.uploadState -ne $successState)
 	        {
-		        throw "File request renewel did not complete within $attempts attempts"
+		        throw "File request renewel did not complete within $Global:attempts attempts"
 	        }
 			$sasRenewalTimer.Restart()
         }
@@ -403,8 +403,8 @@ foreach($packageDir in $packages)
 	$pendingState = "$($stage)Pending"
 	$failedState = "$($stage)Failed"
 	$timedOutState = "$($stage)TimedOut"
-	$attempts = 100
-	while ($attempts -gt 0)
+	$Global:attempts = 100
+	while ($Global:attempts -gt 0)
 	{
 		Start-Sleep -Seconds 3
 		$file = Get-MsGraphObject -AccessToken $token -Uri $uri
@@ -416,11 +416,11 @@ foreach($packageDir in $packages)
 		{
             throw "File upload state has not succeeded: $($file.uploadState)"
 		}
-		$attempts--
+		$Global:attempts--
 	}
 	if ($file -eq $null -or $file.uploadState -ne $successState)
 	{
-		throw "File request commit did not complete within $attempts attempts"
+		throw "File request commit did not complete within $Global:attempts attempts"
 	}
 
     # Committing the app

@@ -90,7 +90,10 @@ if (-Not (Test-Path $inputLabelFile))
     throw "'$inputLabelFile' not found!"
 }
 $labelDefs = Import-Excel $inputLabelFile -ErrorAction Stop
-$labelList = $labelDefs.NameEn -join ", "
+$labelList = $labelDefs.NameEn -join ", " -replace ", ,", ","
+
+Write-Host "Configuring following labels" -ForegroundColor $CommandInfo
+$labelList
 
 # =============================================================
 # Azure stuff

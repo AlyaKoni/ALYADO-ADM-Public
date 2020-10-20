@@ -73,32 +73,47 @@ foreach($User in $Users)
     $newUser = @{disp=$User.DisplayName;first=$User.FirstName;last=$User.LastName}
     Write-Host "OLD"
     $newUser | ConvertTo-Json
-    $email = $user.UserPrincipalName.Split("#")[0]
-    $domain = $email.Split("_")[1]
-    $domainParts = $domain.Split(".")
-    $comp = Make-PascalCase($domainParts[$domainParts.Length-2])
-    if ($comp -eq "Outlook") {
-        $comp = "Extern"
+
+    if ($user.UserPrincipalName.Contains("#"))
+    {
+        $email = $user.UserPrincipalName.Split("#")[0]
+        $name = $email.Substring(0, $email.LastIndexOf("_"))
+        $domain = $email.Substring($email.LastIndexOf("_")+1)
+        $domainParts = $domain.Split(".")
+        $comp = Make-PascalCase($domainParts[$domainParts.Length-2])
+        if ($domainParts.Length -gt 2)
+        {
+            $comp += " " + (Make-PascalCase($domainParts[$domainParts.Length-3]))
+        }
     }
-    if ($comp -eq "Hotmail") {
-        $comp = "Extern"
+    else
+    {
+        $name = $user.UserPrincipalName.Split("@")[0]
+        $domain = $user.UserPrincipalName.Split("@")[1]
+        $domainParts = $domain.Split(".")
+        $comp = Make-PascalCase($domainParts[$domainParts.Length-2])
+        if ($domainParts.Length -gt 2)
+        {
+            $comp += " " + (Make-PascalCase($domainParts[$domainParts.Length-3]))
+        }
     }
-    if ($comp -eq "Gmail") {
-        $comp = "Extern"
+    if ($comp -eq "Outlook" -or `        $comp -eq "Gmx" -or `        $comp -eq "Hotmail" -or `        $comp -eq "Hispeed" -or `        $comp -eq "Gmail" -or `        $comp -eq "Bluewin" -or `        $comp -eq "Bluemail")
+    {
+        #$comp = "Extern"
+        $comp = $domain.ToLower()
     }
-    $name = $email.Split("_")[0]
     $first = $newUser.first
     $last = $newUser.last
     $skipFirstLast = $false
-    if (((-Not $first) -or (-Not $last)) -and $name.IndexOf(".") -gt -1)
+    if (((-Not $first) -or (-Not $last)) -and $name.IndexOfAny(".-_") -gt -1)
     {
-        $first = Make-PascalCase($name.Split(".")[0])
+        $first = Make-PascalCase($name.Split(".-_")[0])
         $uml = $first.Replace("ae", "ä").Replace("oe", "ö").Replace("ue", "ü")
         if ($newUser.disp -like "*$($uml)*")
         {
             $first = $uml
         }
-        $last = Make-PascalCase($name.Split(".")[1])
+        $last = Make-PascalCase($name.Split(".-_")[1])
         $uml = $last.Replace("ae", "ä").Replace("oe", "ö").Replace("ue", "ü")
         if ($newUser.disp -like "*$($uml)*")
         {
@@ -130,12 +145,18 @@ foreach($User in $Users)
         if ($decision -eq 0)
         {
             $first = $newUser.disp.Split(" ")[0]
-            $last = $newUser.disp.Split(" ")[1]
+            $last = $newUser.disp.Replace($first, "").Trim()
         }
         if ($decision -eq 1)
         {
-            $first = $newUser.disp.Split(" ")[1]
             $last = $newUser.disp.Split(" ")[0]
+            $first = $newUser.disp.Replace($last, "").Trim()
+        }
+        if ($decision -eq 2)
+        {
+            $response  = $Host.UI.Prompt("Question", "Display name: '$($newUser.disp)'?", @("First", "Last"))
+            $first = $response["First"]
+            $last = $response["Last"]
         }
         $skipFirstLast = $true
     }
@@ -162,10 +183,10 @@ foreach($User in $Users)
         {
             $tmp = $newUser.first
             $newUser.first = $newUser.last
-            $newUser.last = $newUser.tmp
+            $newUser.last = $tmp
         }
     }
-    $disp = $newUser.last + " " + $newUser.first + " " + $CompStart + $comp + $CompEnd
+    $disp = $newUser.first + " " + $newUser.last + " " + $CompStart + $comp + $CompEnd
     if ($disp -and $newUser.disp -ne $disp)
     {
         $newUser.disp = $disp
