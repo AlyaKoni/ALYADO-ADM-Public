@@ -210,7 +210,7 @@ foreach ($secGroup in $SecurityGroup)
                 }
                 $requestBody = $licenceAssignmentConfig | ConvertTo-Json -Depth 5
                 $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/assign"
-                $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json" -ErrorAction Stop
+                $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
             }
         }
     }
@@ -319,7 +319,7 @@ foreach ($secGroup in $O365Group)
                 }
                 $requestBody = $licenceAssignmentConfig | ConvertTo-Json -Depth 5
                 $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/assign"
-                $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json" -ErrorAction Stop
+                $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
             }
         }
     }

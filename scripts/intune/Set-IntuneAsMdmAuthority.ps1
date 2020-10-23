@@ -50,6 +50,14 @@ Install-ModuleIfNotInstalled "Az"
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Set-IntuneAsMdmAuthority | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Getting context and token
 $Context = Get-AzContext
 if (-Not $Context)

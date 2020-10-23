@@ -58,6 +58,7 @@ $AlyaPrivacyUrl = "PleaseSpecify" #Example:"https://alyaconsulting.ch/Home/Priva
 $AlyaPrivacyEmail = "PleaseSpecify" #Example:"datenschutz@$($AlyaDomainName)"
 $AlyaSecurityEmail = "PleaseSpecify" #Example:"security@$($AlyaDomainName)"
 $AlyaGeneralInformEmail = "PleaseSpecify" #Example:"cloud@$($AlyaDomainName)"
+$AlyaSupportEmail = "PleaseSpecify" #Example:"support@$($AlyaDomainName)"
 $AlyaTimeZone = "PleaseSpecify" #Example:"W. Europe Standard Time"
 $AlyaGeoId = "PleaseSpecify" #Example:223
 $AlyaDefaultUsageLocation = "PleaseSpecify" #Example:"CH"
@@ -102,6 +103,7 @@ $AlyaResIdVpnGateway = "PleaseSpecify" #Example:"001"
 $AlyaResIdWvdImageClient = "PleaseSpecify" #Example:"041"
 $AlyaResIdWvdImageServer = "PleaseSpecify" #Example:"042"
 $AlyaResIdWvdImageSNet = "PleaseSpecify" #Example:"05"
+$AlyaResIdWvdHostSNet = "PleaseSpecify" #Example:"01"
 
 <# SHARING SETTINGS #>
 $AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" # AdminOnly, KnownAccountsOnly, ByLink
@@ -138,6 +140,8 @@ $AlyaDeployGateway = "PleaseSpecify" #Example:$false
 <# WVD SETTINGS #>
 <#
 $AlyaWvdRDBroker = "PleaseSpecify" #Example:"https://rdbroker.wvd.microsoft.com"
+$AlyaWvdShareServer = "PleaseSpecify" # TODO from vars
+$AlyaWvdShareRoot = "PleaseSpecify"
 $AlyaWvdTenantNameProd = "PleaseSpecify" #Example:"ALYA Prod"
 $AlyaWvdTenantNameTest = "PleaseSpecify" #Example:"ALYA Test"
 $AlyaWvdAzureServicePrincipalName = "PleaseSpecify" #Example:"AlyaWvdAzureApp"
@@ -161,6 +165,7 @@ $AlyaSharePointOnPremVersion = "PleaseSpecify" #Example:"2019"
 $AlyaSharePointUrl = "https://$($AlyaTenantNameId).sharepoint.com"
 $AlyaSharePointAdminUrl = "https://$($AlyaTenantNameId)-admin.sharepoint.com"
 $AlyaSharePointNewSiteOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
+$AlyaSharePointNewSiteAdditionalOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
 #https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
 $AlyaSpThemeDef = @{ 
     "themePrimary" = "#000000";
@@ -192,6 +197,7 @@ $AlyaAipApiServiceLocation = "PleaseSpecify" #Example:
 $AlyaAipOnboardingPolicy = 0 # 0=norestriction 1=onlyLicenseUser else group name to use
 
 <# INTUNE SETTINGS #>
+$AlyaDeviceCategories = @("Standard")
 $AlyaDeviceAdminsGroupName = "PleaseSpecify" # Only members can manage devices
 $AlyaAllowDeviceRegistration = "PleaseSpecify" # All, None or a group name
 $AlyaWinPEBackgroundJpgImage = "PleaseSpecify"

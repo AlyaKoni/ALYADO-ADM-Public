@@ -95,7 +95,7 @@ function Invoke-Request(
         else 
         {
             $jsonBody = ConvertTo-Json $Body -Depth 20
-            $response = Invoke-WebRequest -Uri $Uri -Headers $Headers -Method $Method -ContentType "application/json" -Body $jsonBody -UseBasicParsing
+            $response = Invoke-WebRequest -Uri $Uri -Headers $Headers -Method $Method -ContentType "application/json; charset=UTF-8" -Body $jsonBody -UseBasicParsing
         }
         if ($ParseContent)
         {
@@ -292,7 +292,7 @@ function Upload-FileToBlogStorage(
     try {
         $uploadFiletoBLog = Invoke-WebRequest -Uri $uploadBlobUri -Method Put -ContentType "application/json" -Body $file -UseBasicParsing
         $commitBody = "<?xml version=`"1.0`" encoding=`"utf-8`"?><BlockList><Latest>$EncodedBlockId</Latest></BlockList>"
-        $commitFiletoBLog = Invoke-WebRequest -Uri $commitBlobUri -Method Put -ContentType "application/json" -Body $commitBody -UseBasicParsing
+        $commitFiletoBLog = Invoke-WebRequest -Uri $commitBlobUri -Method Put -ContentType "application/json; charset=UTF-8" -Body $commitBody -UseBasicParsing
     } catch {
         Write-Host "Failed to upload the file to blob storage"
         throw

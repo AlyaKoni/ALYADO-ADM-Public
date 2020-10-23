@@ -58,6 +58,14 @@ Install-ModuleIfNotInstalled "Az"
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Upload-IntuneWin32Packages | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Getting context and token
 $Context = Get-AzContext
 if (-Not $Context)
@@ -127,11 +135,22 @@ foreach($packageDir in $packages)
     $appConfig.fileName = $package.Name
 
     $version = $null
+    $regPath = $null
+    $regValue = $null
     $versionFile = Get-Item -Path (Join-Path $packageDir.FullName "version.json") -ErrorAction SilentlyContinue
     if ($versionFile)
     {
         $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
-        $version = [Version]$versionObj.version
+        if (-Not $versionObj.regPath)
+        {
+            $version = [Version]$versionObj.version
+        }
+        else
+        {
+            $regPath = $versionObj.regPath
+            $regValue = $versionObj.regValue
+            $version = $versionObj.version
+        }
     }
     else
     {
@@ -184,8 +203,20 @@ foreach($packageDir in $packages)
     if ($version)
     {
         Write-Host "    version: $($version)"
-        $appConfig.detectionRules[0].detectionValue = ([Version]$version).ToString()
-        $appConfig.rules[0].comparisonValue = ([Version]$version).ToString()
+        if ($regPath)
+        {
+            $appConfig.detectionRules[0].detectionValue = $version
+            $appConfig.detectionRules[0].keyPath = $regPath
+            $appConfig.detectionRules[0].valueName = $regValue
+            $appConfig.rules[0].comparisonValue = $version
+            $appConfig.rules[0].keyPath = $regPath
+            $appConfig.rules[0].valueName = $regValue
+        }
+        else
+        {
+            $appConfig.detectionRules[0].detectionValue = ([Version]$version).ToString()
+            $appConfig.rules[0].comparisonValue = ([Version]$version).ToString()
+        }
     }
 
     $logo = Get-ChildItem -Path $packageDir.FullName -Filter "Logo.*"
@@ -274,7 +305,7 @@ foreach($packageDir in $packages)
 
     # Uploading intunewin content
     Write-Host "  Uploading intunewin content"
-    Start-Sleep -Seconds 3 # first chunk has often 403
+    Start-Sleep -Seconds 10 # first chunk has often 403
     $chunkSizeInBytes = 1024 * 1024 * 6
 	$sasRenewalTimer = [System.Diagnostics.Stopwatch]::StartNew()
 	$chunks = [Math]::Ceiling($bytes.Length / $chunkSizeInBytes)

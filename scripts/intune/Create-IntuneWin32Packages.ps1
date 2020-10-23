@@ -54,6 +54,14 @@ if (-Not (Test-Path $DataRoot))
 
 & "$PSScriptRoot\Download-Win32AppPrepTool.ps1"
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Create-IntuneWin32Packages | Local" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 $packageDirs = Get-ChildItem -Path $DataRoot -Directory
 $continue = $true
 foreach($packageDir in $packageDirs)
@@ -99,11 +107,7 @@ foreach($packageDir in $packageDirs)
     if (-Not $downloadShortcut)
     {
         $downloadScript = Get-Item -Path (Join-Path $packageDir.FullName "Download.ps1") -ErrorAction SilentlyContinue
-        if (-Not $downloadScript)
-        {
-            throw "NOT YET IMPLEMENTED"
-        }
-        else
+        if ($downloadScript)
         {
             & "$($downloadScript.FullName)"
         }
@@ -221,15 +225,22 @@ foreach($packageDir in $packageDirs)
     $EncodedCommand =[Convert]::ToBase64String($Bytes)
     Start-Process PowerShell.exe -ArgumentList "-EncodedCommand $EncodedCommand" -Wait -NoNewWindow
     
-    $packageDir = Get-ChildItem -Path $packagePath -Filter "*.intunewin"
-    if (-Not $packageDir)
+    $intunewinFile = Get-ChildItem -Path $packagePath -Filter "*.intunewin"
+    if (-Not $intunewinFile)
     {
         Write-Error "Intune package not created!" -ErrorAction Continue
     }
-    if ($packageDir.Count -gt 1)
+    if ($intunewinFile.Count -gt 1)
     {
         Write-Warning "Found more than 1 Intune packages!"
         Write-Warning "Please delete older once"
+    }
+
+    Write-Host "  Running post package task if required"
+    $incrementScript = Get-Item -Path (Join-Path $packageDir.FullName "PostPackageTask.ps1") -ErrorAction SilentlyContinue
+    if ($incrementScript)
+    {
+        & "$($incrementScript.FullName)"
     }
 
 }

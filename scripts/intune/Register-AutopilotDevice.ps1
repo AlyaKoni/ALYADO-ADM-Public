@@ -48,6 +48,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Register-AutopilotDevice-$($
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Register-AutopilotDevice | Local" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Main
 Write-Host "Intune Autopilot registration" -ForegroundColor $CommandInfo
 Get-WindowsAutoPilotInfo -OutputFile "$($AlyaData)\intune\WindowsAutoPilotInfo.csv" -Append -GroupTag "Standard" -Online -Assign -AssignedComputerName "$($AlyaCompanyNameShort.ToUpper())-%SERIAL%"

@@ -36,7 +36,10 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-    [string]$ConfigFile = "Autoscaling_Config.json"
+    [string]$ConfigFile = "Autoscaling_Config.json", <#"Autoscaling_Config.json"#>
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("Prod","Test")]
+    [string]$ConfigEnv = "Prod"
 )
 
 #Reading configuration
@@ -61,7 +64,7 @@ Function Store-Credentials {
         [Parameter(Mandatory=$true)]
         [SecureString]$Password
         )
-    $Password | ConvertFrom-SecureString | Out-File "$($PSScriptRoot)\Creds\$($UserName).cred" -Force
+    $Password | ConvertFrom-SecureString | Out-File "$($AlyaData)\wvd\autoscale\Creds\$($UserName).cred" -Force
 }
 
 Function Get-StoredCredential {
@@ -74,7 +77,7 @@ Function Get-StoredCredential {
 
     if ($List) {
         try {
-            $CredentialList = @(Get-ChildItem -Path "$($PSScriptRoot)\Creds" -Filter *.cred -ErrorAction STOP)
+            $CredentialList = @(Get-ChildItem -Path "$($AlyaData)\wvd\autoscale\Creds" -Filter *.cred -ErrorAction STOP)
             foreach ($Cred in $CredentialList) {
                 Write-Host $Cred.BaseName
             }
@@ -84,8 +87,8 @@ Function Get-StoredCredential {
         }
     }
     if ($UserName) {
-        if (Test-Path "$($PSScriptRoot)\Creds\$($Username).cred") {
-            $PwdSecureString = Get-Content "$($PSScriptRoot)\Creds\$($Username).cred" | ConvertTo-SecureString
+        if (Test-Path "$($AlyaData)\wvd\autoscale\Creds\$($Username).cred") {
+            $PwdSecureString = Get-Content "$($AlyaData)\wvd\autoscale\Creds\$($Username).cred" | ConvertTo-SecureString
             $Credential = New-Object System.Management.Automation.PSCredential -ArgumentList $UserName, $PwdSecureString
         }
         else {
@@ -104,37 +107,74 @@ function Set-ScriptVariable ($Name,$Value) {
 # Main
 # =============================================================
 
+New-Item -Path "$($AlyaData)\wvd\autoscale\Creds" -ItemType Directory -Force | Out-Null
+
+if ($ConfigFile -eq "Autoscaling_Config.json")
+{
+    Write-Warning "$ConfigFile is just a template. We have to create a new config file in data directory"
+    $Variable = Get-Content "$PSScriptRoot\$ConfigFile" -Raw -Encoding UTF8 | ConvertFrom-Json
+
+    Install-ModuleIfNotInstalled Az
+    LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+    $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdAzureServicePrincipalName
+    ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "AADTenantId" }).Value = $AlyaTenantId
+    ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "AADApplicationId" }).Value = $AzureAdServicePrincipal.ApplicationId.Guid
+    ($Variable.WVDScale.Deployment.Variables | where { $_.Name -eq "rdBroker" }).Value = $AlyaWvdRDBroker
+    $ConfigValue = Read-Host -Prompt "Host pool name"
+    ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "hostPoolName" }).Value = $ConfigValue
+    $ConfigFile = "Autoscaling_$ConfigValue.json"
+    $ConfigValue = Read-Host -Prompt "Resource group name"
+    ($Variable.WVDScale.Deployment.Variables | where { $_.Name -eq "ResourceGroupName" }).Value = $ConfigValue
+
+    if ($ConfigEnv -eq "Prod")
+    {
+        $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameProd
+        ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "tenantName" }).Value = $AlyaWvdTenantNameProd
+        $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName
+        ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "currentAzureSubscriptionId" }).Value = $sub.Id
+        ($Variable.WVDScale.Deployment.Variables | where { $_.Name -eq "userName" }).Value = $AzureAdServicePrincipal.ApplicationId.Guid
+    }
+    else
+    {
+        $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameTest
+        ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "tenantName" }).Value = $AlyaWvdTenantNameTest
+        $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionNameTest
+        ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "currentAzureSubscriptionId" }).Value = $sub.Id
+        ($Variable.WVDScale.Deployment.Variables | where { $_.Name -eq "userName" }).Value = $AzureAdServicePrincipal.ApplicationId.Guid
+    }
+
+    $Variable | ConvertTo-Json -Depth 50 | Set-Content -Path "$($AlyaData)\wvd\autoscale\$ConfigFile" -Encoding UTF8 -Force
+}
+
+
+
 ##### Json path #####
-$JsonPath = "$PSScriptRoot\$ConfigFile"
+$JsonPath = "$($AlyaData)\wvd\autoscale\$ConfigFile"
 
 ###### Verify Json file ######
 if (Test-Path $JsonPath) {
   Write-Verbose "Found $JsonPath"
   Write-Verbose "Validating file..."
   try {
-    $Variable = Get-Content $JsonPath | Out-String | ConvertFrom-Json
+    $Variable = Get-Content $JsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
   }
   catch {
     #$Validate = $false
     Write-Error "$JsonPath is invalid. Check Json syntax - Unable to proceed" -ErrorAction Continue
-    Write-Log 3 "$JsonPath is invalid. Check Json syntax - Unable to proceed" "Error"
     exit 1
   }
 }
 else {
   #$Validate = $false
   Write-Error "Missing $JsonPath - Unable to proceed" -ErrorAction Continue
-  Write-Log 3 "Missing $JsonPath - Unable to proceed" "Error"
   exit 1
 }
 ##### Load Json Configuration values as variables #########
 Write-Verbose "Loading values from Config.Json"
-$Variable = Get-Content $JsonPath | Out-String | ConvertFrom-Json
+$Variable = Get-Content $JsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $Variable.WVDScale.Azure | ForEach-Object { $_.Variables } | Where-Object { $_.Name -ne $null } | ForEach-Object { Set-ScriptVariable -Name $_.Name -Value $_.Value }
 $Variable.WVDScale.WVDScaleSettings | ForEach-Object { $_.Variables } | Where-Object { $_.Name -ne $null } | ForEach-Object { Set-ScriptVariable -Name $_.Name -Value $_.Value }
 $Variable.WVDScale.Deployment | ForEach-Object { $_.Variables } | Where-Object { $_.Name -ne $null } | ForEach-Object { Set-ScriptVariable -Name $_.Name -Value $_.Value }
-
-New-Item -Path "$($PSScriptRoot)\Creds" -ItemType Directory -Force | Out-Null
 
 ##### Getting secrets #####
 $sCreds = Get-StoredCredential -List
@@ -150,8 +190,8 @@ else
 }
 if ($sCreds -notcontains $UserName)
 {
-    Write-Host "Missing credentials for UserName"
-    $creds = Get-Credential -Message "Please provide credentials for UserName" -UserName "UserName"
+    Write-Host "Missing credentials for WVDApplicationId"
+    $creds = Get-Credential -Message "Please provide credentials for WVDApplicationId" -UserName "WVDApplicationId"
     Store-Credentials -UserName $UserName -Password $creds.Password
 }
 else

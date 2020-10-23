@@ -48,6 +48,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Get-AutopilotDeviceInfos-$($
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Get-AutopilotDeviceInfos | Local" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Main
 Write-Host "Intune Autopilot hardware information:" -ForegroundColor $CommandInfo
 Get-WindowsAutoPilotInfo -OutputFile "$($AlyaData)\intune\WindowsAutoPilotInfo.csv" -Append

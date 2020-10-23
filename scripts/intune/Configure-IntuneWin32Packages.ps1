@@ -60,6 +60,14 @@ Install-ModuleIfNotInstalled "Az"
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Configure-IntuneWin32Packages | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Getting context and token
 $Context = Get-AzContext
 if (-Not $Context)
@@ -70,6 +78,113 @@ if (-Not $Context)
 $token = Get-AdalAccessToken
 
 # Main
+
+# Checking dependencies
+Write-Host "Checking dependencies" -ForegroundColor $MenuColor
+$packages = Get-ChildItem -Path $DataRoot -Directory
+$continue = $true
+foreach($packageDir in $packages)
+{
+    if ($ContinueAtAppWithName -and $packageDir.Name -eq $ContinueAtAppWithName) { $continue = $false }
+    if ($ContinueAtAppWithName -and $continue) { continue }
+    if ($ConfigureOnlyAppWithName -and $packageDir.Name -ne $ConfigureOnlyAppWithName) { continue }
+    if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
+
+    $packagePath = Join-Path $packageDir.FullName "Package"
+    $dependenciesPath = Join-Path $packageDir.FullName "dependencies.json"
+
+    if ((Test-Path $dependenciesPath))
+    {
+
+        Write-Host "Dependencies for package $($packageDir.Name)" -ForegroundColor $CommandInfo
+
+        $configPath = Join-Path $packageDir.FullName "config.json"
+        $config = Get-Content -Path $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+
+        # Checking if app exists
+        Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($config.displayName)
+        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+        if (-Not $app.id)
+        {
+            throw "The app with name $($config.displayName) does not exist. Please create it first."
+        }
+        $appId = $app.id
+        Write-Host "    appId: $appId"
+
+        $dependencies = $null
+        $dependencies = Get-Content -Path $dependenciesPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json
+
+        Write-Host "  Checking dependencies"
+        foreach ($dependency in $dependencies)
+        {
+            $depPath = Join-Path $DataRoot $dependency.app
+            $configPath = Join-Path $depPath "config.json"
+            $config = Get-Content -Path $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+
+            # Checking if app exists
+            Write-Host "  Checking if app $($config.displayName) exists"
+            Add-Member -InputObject $dependency -MemberType NoteProperty -Name "appName" -Value $config.displayName
+            $searchValue = [System.Web.HttpUtility]::UrlEncode($config.displayName)
+            $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+            $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+            if (-Not $app.id)
+            {
+                throw "The app with name $($dependency.appName) does not exist. Dependency to $($packageDir.Name) can't be built. Please create it first."
+            }
+            Add-Member -InputObject $dependency -MemberType NoteProperty -Name "appId" -Value $app.id
+        }
+
+        Write-Host "  Getting existing dependencies"
+	    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/relationships"
+	    $actDependencies = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+        $newDependencies = @()
+        if ($actDependencies -and $actDependencies.Count -gt 0)
+        {
+            foreach ($actDependency in $actDependencies)
+            {
+                $newDependency = @{ "@odata.type" = "#microsoft.graph.mobileAppDependency" }
+                $newDependency.targetId = $actDependency.targetId
+                $newDependency.dependencyType = $actDependency.dependencyType
+                $newDependencies += $newDependency
+            }
+        }
+        foreach ($dependency in $dependencies)
+        {
+            $fnd = $false
+            foreach ($actDependency in $actDependencies)
+            {
+                if ($actDependency.targetId -eq $dependency.appId)
+                {
+                    $fnd = $true
+                    break
+                }
+            }
+            if (-Not $fnd)
+            {
+                $newDependency = @{ "@odata.type" = "#microsoft.graph.mobileAppDependency" }
+                $newDependency.targetId = $dependency.appId
+                if ($dependency.autoInstall)
+                {
+                    $newDependency.dependencyType = "autoInstall"
+                }
+                else
+                {
+                    $newDependency.dependencyType = "detect"
+                }
+                $newDependencies += $newDependency
+            }
+        }
+        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/updateRelationships"
+        $body = @{}
+        $body.relationships = $newDependencies
+        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body ($body | ConvertTo-Json -Depth 50)
+    }
+}
+
+# Configuring other stuff
+Write-Host "Configuring other stuff" -ForegroundColor $MenuColor
 $packages = Get-ChildItem -Path $DataRoot -Directory
 $continue = $true
 foreach($packageDir in $packages)

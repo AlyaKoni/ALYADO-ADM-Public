@@ -887,8 +887,9 @@ function LoginTo-AIP()
 
 <# STRING FUNCTIONS #>
 function Make-PascalCase(
-    [string] [Parameter(Mandatory = $true)] $string)
+    [string]$string)
 {
+    if ([string]::IsNullOrEmpty($string)) {return $string}
     return (Get-Culture).TextInfo.ToTitleCase($string)
 }
 
@@ -1117,7 +1118,7 @@ function Post-MsGraph
     $StatusCode = ""
     do {
         try {
-            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json" -Body $Body
+            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json; charset=UTF-8" -Body $Body
             $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
@@ -1164,7 +1165,7 @@ function Patch-MsGraph
     $StatusCode = ""
     do {
         try {
-            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "PATCH" -ContentType "application/json" -Body $Body
+            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "PATCH" -ContentType "application/json; charset=UTF-8" -Body $Body
             $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__

@@ -39,6 +39,11 @@ Param(
     [string]$ConfigFile = "Autoscaling_Config.json"
 )
 
+if ($ConfigFile -eq "Autoscaling_Config.json")
+{
+    throw "Autoscaling_Config.json is only a template. Please provide correct config file"
+}
+
 $RootDir = Split-Path $script:MyInvocation.MyCommand.Path
 
 #Reading configuration
@@ -49,7 +54,6 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\autoscale\ScaleHostPool_MS-$($A
 
 # Constants
 $ActualDate = Get-Date
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -77,9 +81,9 @@ Function Get-StoredCredential {
 
     if ($List) {
         try {
-            $CredentialList = @(Get-ChildItem -Path "$($RootDir)\Creds" -Filter *.cred -ErrorAction STOP)
+            $CredentialList = @(Get-ChildItem -Path "$($AlyaData)\wvd\autoscale\Creds" -Filter *.cred -ErrorAction STOP)
             foreach ($Cred in $CredentialList) {
-                Write-Host $Cred.BaseName
+                Write-Output $Cred.BaseName
             }
         }
         catch {
@@ -87,8 +91,8 @@ Function Get-StoredCredential {
         }
     }
     if ($UserName) {
-        if (Test-Path "$($RootDir)\Creds\$($Username).cred") {
-            $PwdSecureString = Get-Content "$($RootDir)\Creds\$($Username).cred" | ConvertTo-SecureString
+        if (Test-Path "$($AlyaData)\wvd\autoscale\Creds\$($Username).cred") {
+            $PwdSecureString = Get-Content "$($AlyaData)\wvd\autoscale\Creds\$($Username).cred" | ConvertTo-SecureString
             $Credential = New-Object System.Management.Automation.PSCredential -ArgumentList $UserName, $PwdSecureString
         }
         else {
@@ -143,11 +147,10 @@ function DoExit($exitCode) {
 # =============================================================
 
 # Json path
-$JsonPath = "$RootDir\$ConfigFile"
+$JsonPath = "$($AlyaData)\wvd\autoscale\$ConfigFile"
 
 # Log path
-$WVDTenantUsagelog = "$RootDir\Logs\WVDTenantUsage_$($ConfigFile).log"
-New-Item -Path "$($RootDir)\Logs" -ItemType Directory -Force | Out-Null
+$WVDTenantUsagelog = "$($AlyaData)\wvd\autoscale\WVDTenantUsage_$($ConfigFile).log"
 
 # Verify Json file
 Write-Host "Verifying config file" -ForegroundColor $CommandInfo
@@ -213,7 +216,7 @@ if ($sCreds -contains $UserName)
 
 if ($aadAuthentication -eq $null -or $wvdAuthentication -eq $null)
 {
-    Write-Error "Missing credentials! Please run 02_SaveCredentials.ps1" -ErrorAction Continue
+    Write-Error "Missing credentials! Please run Save-AutoscalingCredentials.ps1" -ErrorAction Continue
     DoExit -exitCode 3
 }
 
@@ -291,8 +294,8 @@ if ($HostpoolInfo.LoadBalancerType -eq "DepthFirst") {
     Write-Host "Peak hours: starting session hosts as needed based on current workloads."
 
     # Check dynamically created OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName) text file and will remove in peak hours.
-    if (Test-Path -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
-      Remove-Item -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+    if (Test-Path -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
+      Remove-Item -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
     }
 
     # Get all session hosts in the host pool
@@ -456,8 +459,8 @@ if ($HostpoolInfo.LoadBalancerType -eq "DepthFirst") {
     [int]$DefinedMinimumNumberOfRDSH = $MinimumNumberOfRDSH
 
     # Check and Collecting dynamically stored MinimumNoOfRDSH Value																 
-    if (Test-Path -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
-      [int]$MinimumNumberOfRDSH = Get-Content $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+    if (Test-Path -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
+      [int]$MinimumNumberOfRDSH = Get-Content $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
     }
 
     if ($NumberOfRunningHost -gt $MinimumNumberOfRDSH) {
@@ -587,8 +590,8 @@ if ($HostpoolInfo.LoadBalancerType -eq "DepthFirst") {
     }
 
     # Check whether minimumNoofRDSH Value stored dynamically
-    if (Test-Path -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
-      [int]$MinimumNumberOfRDSH = Get-Content $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+    if (Test-Path -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
+      [int]$MinimumNumberOfRDSH = Get-Content $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
       $NoConnectionsofhost = 0
       if ($NumberOfRunningHost -le $MinimumNumberOfRDSH) {
         foreach ($SessionHost in $AllSessionHosts) {
@@ -599,8 +602,8 @@ if ($HostpoolInfo.LoadBalancerType -eq "DepthFirst") {
         }
         if ($NoConnectionsofhost -gt $DefinedMinimumNumberOfRDSH) {
           [int]$MinimumNumberOfRDSH = [int]$MinimumNumberOfRDSH - $NoConnectionsofhost
-          Clear-Content -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
-          Set-Content -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
+          Clear-Content -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+          Set-Content -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
         }
       }
     }
@@ -672,13 +675,13 @@ if ($HostpoolInfo.LoadBalancerType -eq "DepthFirst") {
                 }
                 $NumberOfRunningHost = $NumberOfRunningHost + 1
                 [int]$MinimumNumberOfRDSH = $MinimumNumberOfRDSH + 1
-                if (!(Test-Path -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt)) {
-                  New-Item -ItemType File -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
-                  Add-Content $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
+                if (!(Test-Path -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt)) {
+                  New-Item -ItemType File -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+                  Add-Content $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
                 }
                 else {
-                  Clear-Content -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
-                  Set-Content -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
+                  Clear-Content -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+                  Set-Content -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
                 }
                 break
               }
@@ -719,8 +722,8 @@ if ($HostpoolInfo.LoadBalancerType -eq "BreadthFirst") {
     }
 
     # Check and Remove the MinimumnoofRDSH value dynamically stored file												   
-    if (Test-Path -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
-      Remove-Item -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+    if (Test-Path -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
+      Remove-Item -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
     }
 
     # Check the number of running session hosts
@@ -942,8 +945,8 @@ if ($HostpoolInfo.LoadBalancerType -eq "BreadthFirst") {
     [int]$DefinedMinimumNumberOfRDSH = $MinimumNumberOfRDSH
 
     # Check and Collecting dynamically stored MinimumNoOfRDSH Value																 
-    if (Test-Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
-      [int]$MinimumNumberOfRDSH = Get-Content $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+    if (Test-Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
+      [int]$MinimumNumberOfRDSH = Get-Content $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
     }
 
     if ($NumberOfRunningHost -gt $MinimumNumberOfRDSH) {
@@ -1116,8 +1119,8 @@ if ($HostpoolInfo.LoadBalancerType -eq "BreadthFirst") {
     }
 
     # Check whether minimumNoofRDSH Value stored dynamically and calculate minimumNoOfRDSh value
-    if (Test-Path -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
-      [int]$MinimumNumberOfRDSH = Get-Content $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+    if (Test-Path -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt) {
+      [int]$MinimumNumberOfRDSH = Get-Content $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
       $NoConnectionsofhost = 0
       if ($NumberOfRunningHost -le $MinimumNumberOfRDSH) {
         $MinimumNumberOfRDSH = $NumberOfRunningHost
@@ -1131,8 +1134,8 @@ if ($HostpoolInfo.LoadBalancerType -eq "BreadthFirst") {
         }
         if ($NoConnectionsofhost -gt $DefinedMinimumNumberOfRDSH) {
           [int]$MinimumNumberOfRDSH = [int]$MinimumNumberOfRDSH - $NoConnectionsofhost
-          Clear-Content -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
-          Set-Content -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
+          Clear-Content -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+          Set-Content -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
         }
       }
     }
@@ -1214,13 +1217,13 @@ if ($HostpoolInfo.LoadBalancerType -eq "BreadthFirst") {
               Write-Host "New available session capacity is: $AvailableSessionCapacity"
 
               [int]$MinimumNumberOfRDSH = [int]$MinimumNumberOfRDSH + 1
-              if (!(Test-Path -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt)) {
-                New-Item -ItemType File -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
-                Add-Content $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
+              if (!(Test-Path -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt)) {
+                New-Item -ItemType File -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+                Add-Content $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
               }
               else {
-                Clear-Content -Path $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
-                Set-Content $RootDir\Logs\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
+                Clear-Content -Path $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt
+                Set-Content $($AlyaLogs)\scripts\wvd\autoscale\OffPeakUsage-MinimumNoOfRDSH-$($HostpoolName).txt $MinimumNumberOfRDSH
               }
               break
             }

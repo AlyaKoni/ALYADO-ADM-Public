@@ -30,112 +30,186 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     01.04.2020 Konrad Brunner       Initial Version
+    21.10.2020 Konrad Brunner       64bit and better logging
 
 #>
 
+[CmdletBinding()]
 param (
     [String]$StartFrom = $null
 )
 
-if (-Not $StartFrom -or $StartFrom -ne "ScheduledJob")
-{
-    $ProgramsPath = "$($env:systemRoot)\System32\GroupPolicy\Machine\Scripts\Startup"
-    $ActPath = $PSCommandPath
-    $ScriptName = "ConfigureFirewallForTeamsInProfiles.ps1"
-    $ScriptPath = Join-Path -Path $ProgramsPath -ChildPath $ScriptName
-    if (-Not (Test-Path $ProgramsPath -PathType Container))
-    {
-        New-Item -Path $ProgramsPath -Force -ItemType Directory
-    }
-    Copy-Item -Path $ActPath -Destination $ScriptPath -Force -Confirm:$false
+$exitCode = 0
+$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+$AlyaScriptName = Split-Path $PSCommandPath -Leaf
+$AlyaScriptDir = Split-Path $PSCommandPath -Parent
 
-    $path = "$($env:systemRoot)\System32\GroupPolicy\Machine\Scripts\Startup"
-    if (-not (Test-Path $path -PathType Container)) {
-        New-Item -path $path -itemType Directory -Force
-    }
-    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
-    "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
-      ForEach-Object { 
-        if (-not (Test-Path $_)) {
-            New-Item -path $_ -force
+if (![System.Environment]::Is64BitProcess)
+{
+    Write-Host "Launching 64bit PowerShell"
+    $arguments = ""
+    foreach($key in $MyInvocation.BoundParameters.keys)
+    {
+        switch($MyInvocation.BoundParameters[$key].GetType().Name)
+        {
+            "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $arguments += "-$key " } }
+            "String"          { $arguments += "-$key `"$($MyInvocation.BoundParameters[$key])`" " }
+            "Int32"           { $arguments += "-$key $($MyInvocation.BoundParameters[$key]) " }
+            "Boolean"         { $arguments += "-$key `$$($MyInvocation.BoundParameters[$key]) " }
         }
-      }
-    #TODO support already existing script!!
-    $prop = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0" -Name Script1 -ErrorAction SilentlyContinue
-    if ($prop)
-    {
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0",
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0" |
-          ForEach-Object {
-            New-ItemProperty -path "$_" -name DisplayName -propertyType String -value "Local Group Policy" 
-            New-ItemProperty -path "$_" -name FileSysPath -propertyType String -value "$($env:systemRoot)\System32\GroupPolicy\Machine" 
-            New-ItemProperty -path "$_" -name GPO-ID -propertyType String -value "LocalGPO"
-            New-ItemProperty -path "$_" -name GPOName -propertyType String -value "Local Group Policy"
-            New-ItemProperty -path "$_" -name PSScriptOrder -propertyType DWord -value 2 
-            New-ItemProperty -path "$_" -name SOM-ID -propertyType String -value "Local"
-          }
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
-          ForEach-Object {
-            New-ItemProperty -path "$_" -name Script -propertyType String -value $ScriptPath
-            New-ItemProperty -path "$_" -name Parameters -propertyType String -value "-StartFrom ScheduledJob"
-            New-ItemProperty -path "$_" -name IsPowershell -propertyType DWord -value 1
-            New-ItemProperty -path "$_" -name ExecTime -propertyType QWord -value 0
-          }
     }
-    else
+    $sysNativePowerShell = "$($PSHOME.ToLower().Replace("syswow64", "sysnative"))\powershell.exe"
+    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+    $pinfo.FileName = $sysNativePowerShell
+    $pinfo.Arguments = "-ex bypass -file `"$PSCommandPath`" $arguments"
+    $pinfo.RedirectStandardError = $true
+    $pinfo.RedirectStandardOutput = $true
+    $pinfo.CreateNoWindow = $true
+    $pinfo.UseShellExecute = $false
+    $p = New-Object System.Diagnostics.Process
+    $p.StartInfo = $pinfo
+    $p.Start() | Out-Null
+    $stdout = $p.StandardOutput.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout }
+    $stderr = $p.StandardError.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stderr)) { Write-Error $stderr }
+    $exitCode = $p.ExitCode
+}
+else
+{
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+
+    try
     {
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0",
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0" |
-          ForEach-Object {
-            Set-ItemProperty -path "$_" -name DisplayName -value "Local Group Policy" 
-            Set-ItemProperty -path "$_" -name FileSysPath -value "$($env:systemRoot)\System32\GroupPolicy\Machine" 
-            Set-ItemProperty -path "$_" -name GPO-ID -value "LocalGPO"
-            Set-ItemProperty -path "$_" -name GPOName -value "Local Group Policy"
-            Set-ItemProperty -path "$_" -name PSScriptOrder -value 2 
-            Set-ItemProperty -path "$_" -name SOM-ID -value "Local"
-          }
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
-        "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
-          ForEach-Object {
-            Set-ItemProperty -path "$_" -name Script -value $ScriptName
-            Set-ItemProperty -path "$_" -name Parameters -value "-StartFrom ScheduledJob"
-            Set-ItemProperty -path "$_" -name IsPowershell -value 1
-            Set-ItemProperty -path "$_" -name ExecTime -value 0
-          }
-    }
-    $path = "$($env:systemRoot)\System32\GroupPolicy\Machine\Scripts\psscripts.ini"
-    $iniContent = @"
+        $ErrorActionPreference = "Stop"
+
+        if (-Not $StartFrom -or $StartFrom -ne "ScheduledJob")
+        {
+            Write-Host "No start parameter provided, implementing script autostart"
+            $StartupPath = "$($env:systemRoot)\System32\GroupPolicy\Machine\Scripts\Startup"
+            $ActPath = $PSCommandPath
+            $ScriptName = "ConfigureFirewallForTeamsInProfiles.ps1"
+            $ScriptPath = Join-Path $StartupPath $ScriptName
+            if (-Not (Test-Path $StartupPath -PathType Container))
+            {
+                New-Item -Path $StartupPath -Force -ItemType Directory
+            }
+            Write-Host "Copy script"
+            Write-Host "  from $ActPath"
+            Write-Host "  to $ScriptPath"
+            Copy-Item -Path $ActPath -Destination $ScriptPath -Force -Confirm:$false
+
+            Write-Host "Preparing registry paths"
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
+            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
+                ForEach-Object { 
+                    if (-not (Test-Path $_)) {
+                        New-Item -path $_ -force
+                    }
+                }
+
+            Write-Host "Preparing registry values"
+            #TODO support already existing other script!!
+            $prop = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0" -Name Script -ErrorAction SilentlyContinue
+            if (-Not $prop)
+            {
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0",
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0" |
+                    ForEach-Object {
+                        New-ItemProperty -path "$_" -name DisplayName -propertyType String -value "Local Group Policy" 
+                        New-ItemProperty -path "$_" -name FileSysPath -propertyType String -value "$($env:systemRoot)\System32\GroupPolicy\Machine" 
+                        New-ItemProperty -path "$_" -name GPO-ID -propertyType String -value "LocalGPO"
+                        New-ItemProperty -path "$_" -name GPOName -propertyType String -value "Local Group Policy"
+                        New-ItemProperty -path "$_" -name PSScriptOrder -propertyType DWord -value 2 
+                        New-ItemProperty -path "$_" -name SOM-ID -propertyType String -value "Local"
+                    }
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
+                    ForEach-Object {
+                        New-ItemProperty -path "$_" -name Script -propertyType String -value $ScriptName
+                        New-ItemProperty -path "$_" -name Parameters -propertyType String -value "-StartFrom ScheduledJob"
+                        New-ItemProperty -path "$_" -name IsPowershell -propertyType DWord -value 1
+                        New-ItemProperty -path "$_" -name ExecTime -propertyType QWord -value ([Int64]0)
+                    }
+            }
+            else
+            {
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0",
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0" |
+                    ForEach-Object {
+                        Set-ItemProperty -path "$_" -name DisplayName -value "Local Group Policy" 
+                        Set-ItemProperty -path "$_" -name FileSysPath -value "$($env:systemRoot)\System32\GroupPolicy\Machine" 
+                        Set-ItemProperty -path "$_" -name GPO-ID -value "LocalGPO"
+                        Set-ItemProperty -path "$_" -name GPOName -value "Local Group Policy"
+                        Set-ItemProperty -path "$_" -name PSScriptOrder -value 2 
+                        Set-ItemProperty -path "$_" -name SOM-ID -value "Local"
+                    }
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
+                    ForEach-Object {
+                        Set-ItemProperty -path "$_" -name Script -value $ScriptName
+                        Set-ItemProperty -path "$_" -name Parameters -value "-StartFrom ScheduledJob"
+                        Set-ItemProperty -path "$_" -name IsPowershell -value 1
+                        Set-ItemProperty -path "$_" -name ExecTime -value ([Int64]0)
+                    }
+            }
+            $StartupIniPath = "$($env:systemRoot)\System32\GroupPolicy\Machine\Scripts\psscripts.ini"
+            $iniContent = @"
 
 [Startup]
 0CmdLine=$($ScriptName)
 0Parameters=-StartFrom ScheduledJob
 "@
-    $iniContent | Set-Content -Path $path -Force -Encoding Unicode
-    (Get-ChildItem $path -Force).Attributes += "Hidden"
-}
+            $iniContent | Set-Content -Path $StartupIniPath -Force -Encoding Unicode
+            (Get-Item -Path $StartupIniPath -Force).Attributes += "Hidden"
+        }
 
-# Run the script
-$protcols = "UDP", "TCP"
-$users = Get-ChildItem (Join-Path -Path $env:SystemDrive -ChildPath 'Users') -Exclude 'Public'
-if ($null -ne $users)
-{
-    foreach ($user in $users)
-    {
-        $progPath = Join-Path -Path $user.FullName -ChildPath "AppData\Local\Microsoft\Teams\Current\Teams.exe"
-        if (Test-Path $progPath)
+        # Run the script
+        Write-Host "Checking firewall rules"
+        $protcols = "UDP", "TCP"
+        $users = Get-ChildItem (Join-Path $env:SystemDrive 'Users') -Exclude 'Public'
+        if ($users)
         {
-            foreach ($prot in $protcols)
+            foreach ($user in $users)
             {
-                $ruleName = "Teams.exe-$($prot)-$($user.Name)"
-                $rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
-                if (-not $rule)
+                Write-Host "User $($user.Name)"
+                $progPath = Join-Path $user.FullName "AppData\Local\Microsoft\Teams\Current\Teams.exe"
+                $err = $false
+                $fnd = $false
+                try {
+                    $fnd = (Test-Path $progPath)
+                } catch { $err = $true }
+                if ($fnd -or $err)
                 {
-                    $tmp = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Domain -Program $progPath -Action Allow -Protocol $prot
-                    Clear-Variable ruleName
+                    if ($fnd) { Write-Host "Found teams in $($teamsExe.FullName)" }
+                    if ($err) { Write-Host "Guessed teams in $($teamsExe.FullName)" }
+                    foreach ($prot in $protcols)
+                    {
+                        $ruleName = "Teams.exe-$($prot)-$($user.Name)"
+                        $rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
+                        if (-not $rule)
+                        {
+                            $tmp = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Domain -Program $progPath -Action Allow -Protocol $prot
+                            Clear-Variable ruleName
+                        }
+                    }
+                }
+                else
+                {
+                    Write-Host "No teams installation for this user"
                 }
             }
         }
-        Clear-Variable progPath
+
     }
+    catch
+    {   
+        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+        Write-Error ($_.Exception) -ErrorAction Continue
+        $exitCode = -1
+    }
+
+    Stop-Transcript
 }
+
+exit $exitCode

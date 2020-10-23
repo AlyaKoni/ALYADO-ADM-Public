@@ -43,6 +43,14 @@ Param(
 # Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-EnterpriseStateRoaming-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Set-EnterpriseStateRoaming | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Main
 #TODO
 Write-Warning "We do not have yet a scripted solution for this task!"

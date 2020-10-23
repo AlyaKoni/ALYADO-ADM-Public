@@ -48,6 +48,14 @@ Install-ModuleIfNotInstalled "Pscx"
 # Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Create-AutopilotWinPEStick-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Create-AutopilotWinPEStick | Local" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 Write-Host "Checking ADK dir" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$($AlyaTools)\ADK"))
 {

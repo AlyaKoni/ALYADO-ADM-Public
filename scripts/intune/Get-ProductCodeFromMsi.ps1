@@ -44,6 +44,14 @@ Param(
 # Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Get-ProductCodeFromMsi-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Get-ProductCodeFromMsi | Local" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Main
 if (-Not $msiPath)
 {

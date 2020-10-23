@@ -45,7 +45,6 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneDeviceUpdateProfiles-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$DataRoot = Join-Path $AlyaData "intune"
 if (-Not $ProfileFile)
 {
     $ProfileFile = "$($AlyaData)\intune\deviceUpdateProfiles.json"
@@ -57,6 +56,14 @@ Install-ModuleIfNotInstalled "Az"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Configure-IntuneDeviceUpdateProfiles | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context and token
 $Context = Get-AzContext

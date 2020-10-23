@@ -43,6 +43,14 @@ Param(
 # Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Download-Win32AppPrepTool-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Download-Win32AppPrepTool | Local" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Main
 $RepRoot = Join-Path (Join-Path $AlyaTools "IntuneWinAppUtil") "IntuneWinAppUtil.exe"
 if (Test-Path $RepRoot)

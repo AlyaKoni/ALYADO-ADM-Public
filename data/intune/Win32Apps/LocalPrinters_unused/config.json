@@ -9,8 +9,8 @@
                       "@odata.type":  "#microsoft.graph.mimeContent"
                   },
     "isFeatured":  false,
-    "privacyInformationUrl":  null,
-    "informationUrl":  null,
+    "privacyInformationUrl":  "https://alyaconsulting.ch/Home/Privacy",
+    "informationUrl":  "https://alyaconsulting.ch",
     "owner":  "",
     "developer":  "Konrad Brunner",
     "notes":  "",

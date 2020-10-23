@@ -45,6 +45,14 @@ Param(
 # Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Restart-IntuneWin32PackagesInstallation-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Restart-IntuneWin32PackagesInstallation | Local" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Main
 $regsitryRoot = "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps"
 foreach($regp in (Get-ChildItem -Path $regsitryRoot))

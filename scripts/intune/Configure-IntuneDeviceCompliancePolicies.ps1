@@ -45,7 +45,6 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneDeviceCompliancePolicies-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$DataRoot = Join-Path $AlyaData "intune"
 if (-Not $PolicyFile)
 {
     $PolicyFile = "$($AlyaData)\intune\deviceCompliancePolicies.json"
@@ -57,6 +56,14 @@ Install-ModuleIfNotInstalled "Az"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Configure-IntuneDeviceCompliancePolicies | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context and token
 $Context = Get-AzContext

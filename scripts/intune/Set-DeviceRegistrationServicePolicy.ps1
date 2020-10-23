@@ -50,6 +50,14 @@ Install-ModuleIfNotInstalled "MsOnline"
 # Logins
 LoginTo-MSOL
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Set-DeviceRegistrationServicePolicy | MsOnline" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Main
 Write-Host "Getting actual DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
 Get-MsolDeviceRegistrationServicePolicy

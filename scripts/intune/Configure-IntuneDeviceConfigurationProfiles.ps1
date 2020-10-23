@@ -45,7 +45,6 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntunedeviceConfigurations-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$DataRoot = Join-Path $AlyaData "intune"
 if (-Not $ProfileFile)
 {
     $ProfileFile = "$($AlyaData)\intune\deviceConfigurationProfiles.json"
@@ -58,6 +57,14 @@ Install-ModuleIfNotInstalled "Az"
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 $token = Get-AdalAccessToken
+
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Configure-IntunedeviceConfigurations | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context and token
 $Context = Get-AzContext

@@ -46,6 +46,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Get-IntunePowershellSamples-
 # Constants
 $CloneUrl = "https://github.com/microsoftgraph/powershell-intune-samples.git"
 
+# =============================================================
+# Intune stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Intune | Get-IntunePowershellSamples | Local" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 Write-Host "Checking git installation" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$AlyaGitRoot"))
 {

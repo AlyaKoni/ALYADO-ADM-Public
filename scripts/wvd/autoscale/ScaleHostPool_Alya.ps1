@@ -36,8 +36,13 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-    [string]$ConfigFile = "Autoscaling_Config.json"
+    [string]$ConfigFile = "Autoscaling_ssvpinfhpol010.json" <#"Autoscaling_Config.json"#>
 )
+
+if ($ConfigFile -eq "Autoscaling_Config.json")
+{
+    throw "Autoscaling_Config.json is only a template. Please provide correct config file"
+}
 
 $RootDir = Split-Path $script:MyInvocation.MyCommand.Path
 
@@ -49,7 +54,6 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\autoscale\ScaleHostPool_Alya-$(
 
 # Constants
 $ActualDate = Get-Date
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -77,9 +81,9 @@ Function Get-StoredCredential {
 
     if ($List) {
         try {
-            $CredentialList = @(Get-ChildItem -Path "$($RootDir)\Creds" -Filter *.cred -ErrorAction STOP)
+            $CredentialList = @(Get-ChildItem -Path "$($AlyaData)\wvd\autoscale\Creds" -Filter *.cred -ErrorAction STOP)
             foreach ($Cred in $CredentialList) {
-                Write-Host $Cred.BaseName
+                Write-Output $Cred.BaseName
             }
         }
         catch {
@@ -87,8 +91,8 @@ Function Get-StoredCredential {
         }
     }
     if ($UserName) {
-        if (Test-Path "$($RootDir)\Creds\$($Username).cred") {
-            $PwdSecureString = Get-Content "$($RootDir)\Creds\$($Username).cred" | ConvertTo-SecureString
+        if (Test-Path "$($AlyaData)\wvd\autoscale\Creds\$($Username).cred") {
+            $PwdSecureString = Get-Content "$($AlyaData)\wvd\autoscale\Creds\$($Username).cred" | ConvertTo-SecureString
             $Credential = New-Object System.Management.Automation.PSCredential -ArgumentList $UserName, $PwdSecureString
         }
         else {
@@ -143,11 +147,10 @@ function DoExit($exitCode) {
 # =============================================================
 
 # Json path
-$JsonPath = "$RootDir\$ConfigFile"
+$JsonPath = "$($AlyaData)\wvd\autoscale\$ConfigFile"
 
 # Log path
-$WVDTenantUsagelog = "$RootDir\Logs\WVDTenantUsage_$($ConfigFile).log"
-New-Item -Path "$($RootDir)\Logs" -ItemType Directory -Force | Out-Null
+$WVDTenantUsagelog = "$($AlyaData)\wvd\autoscale\WVDTenantUsage_$($ConfigFile).log"
 
 # Verify Json file
 Write-Host "Verifying config file" -ForegroundColor $CommandInfo
@@ -213,7 +216,7 @@ if ($sCreds -contains $UserName)
 
 if ($aadAuthentication -eq $null -or $wvdAuthentication -eq $null)
 {
-    Write-Error "Missing credentials! Please run 02_SaveCredentials.ps1" -ErrorAction Continue
+    Write-Error "Missing credentials! Please run Save-AutoscalingCredentials.ps1" -ErrorAction Continue
     DoExit -exitCode 3
 }
 
