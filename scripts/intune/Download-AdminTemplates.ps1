@@ -29,9 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.12.2019 Konrad Brunner       Initial Version
-    25.02.2020 Konrad Brunner       Changes for a project
-    25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
+    26.10.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -39,60 +37,46 @@
 Param(
 )
 
-#Reading configuration
+# Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-O365AuditLogging-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Download-AdminTemplates-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # =============================================================
-# Exchange stuff
+# Intune stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-O365AuditLogging | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "Intune | Download-AdminTemplates | Local" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Setting auditing in exchange"
-try
+# Main
+$dataRoot = Join-Path (Join-Path $AlyaData "intune") "Policies"
+if (-Not (Test-Path $dataRoot))
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
+    New-Item -Path $dataRoot -ItemType Directory -Force | Out-Null
+}
 
-    $cfg = Get-OrganizationConfig
-    if ($cfg.IsDehydrated)
-    {
-        Enable-OrganizationCustomization -ErrorAction Stop
-    }
-    while ((Get-OrganizationConfig).IsDehydrated)
-    {
-        Write-Host "Waiting 1 minute..."
-        Start-Sleep -Seconds 60
-    }
+# Office apps admx templates
+Write-Host "Office apps" -ForegroundColor $CommandInfo
+$url = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49030"
+$req = Invoke-WebRequest -Uri $url -UseBasicParsing -Method Get
+[regex]$regex = "[^`"]*admintemplates_x64[^`"]*.exe"
+$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+$fileName = Split-Path $newUrl -Leaf
+Invoke-WebRequest -Uri $newUrl -OutFile "$dataRoot\$fileName"
+if (-Not (Test-Path "$dataRoot\OfficeApps"))
+{
+    New-Item -Path "$dataRoot\OfficeApps" -ItemType Directory -Force | Out-Null
+}
+pushd "$dataRoot"
+Write-Host "  Please accept the UAC prompt"
+cmd /c ".\$fileName" /quiet /extract:.\OfficeApps
+popd
+Remove-Item -Path "$dataRoot\$fileName" -Force
 
-    $error.Clear()
-    if (-Not (Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
-    {
-        Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
-        if ($error.Count -gt 0)
-        {
-            Write-Error "We were not able to set audit logging. Possibly it needs some time until customization gets enabled. Please rerun in an hour or so." -ErrorAction Continue
-        }
-    }
-}
-catch
-{
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
-}
-finally
-{
-    DisconnectFrom-EXOandIPPS
-}
+Write-Host "Policies downloaded to $dataRoot" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript

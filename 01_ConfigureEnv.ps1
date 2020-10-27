@@ -84,13 +84,17 @@ if (-Not (Test-Path "$AlyaLogs"))
 {
     $tmp = New-Item -Path "$AlyaLogs" -ItemType Directory -Force
 }
-#Env required for WinPE
-if (-Not $env:PSModulePath.Contains("$($AlyaTools)\WindowsPowerShell\Modules"))
+#Env required for WinPE and sticks
+if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Modules") -and `
+     -Not $env:PSModulePath.Contains("$($AlyaTools)\WindowsPowerShell\Modules"))
 {
+    Write-Host "Adding tools\WindowsPowerShell\Modules to PSModulePath"
     $env:PSModulePath = "$($AlyaTools)\WindowsPowerShell\Modules;"+$env:PSModulePath
 }
-if (-Not $env:Path.Contains("$($AlyaTools)\WindowsPowerShell\Scripts"))
+if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
+     -Not $env:Path.Contains("$($AlyaTools)\WindowsPowerShell\Scripts"))
 {
+    Write-Host "Adding tools\WindowsPowerShell\Scripts to Path"
     $env:Path = "$($AlyaTools)\WindowsPowerShell\Scripts;"+$env:Path
 }
 
@@ -179,52 +183,62 @@ function Is-InternetConnected()
 
 function Reset-ConsoleWidth()
 {
-    $pshost = Get-Host
-    $pswindow = $pshost.UI.RawUI
-    if ($Global:AlyaConsoleBufferSize)
+    try
     {
-        $newsize = $pswindow.BufferSize
-        if ($newsize)
+        $pshost = Get-Host
+        $pswindow = $pshost.UI.RawUI
+        if ($Global:AlyaConsoleBufferSize)
         {
-            $newsize.width = $Global:AlyaConsoleBufferSize
-            $pswindow.buffersize = $newsize
+            $newsize = $pswindow.BufferSize
+            if ($newsize)
+            {
+                $newsize.width = $Global:AlyaConsoleBufferSize
+                $pswindow.buffersize = $newsize
+            }
         }
-    }
-    if ($Global:AlyaConsoleWindowsSize)
-    {
-        $newsize = $pswindow.windowsize
-        if ($newsize)
+        if ($Global:AlyaConsoleWindowsSize)
         {
-            $newsize.width = $Global:AlyaConsoleWindowsSize
-            $pswindow.windowsize = $newsize
+            $newsize = $pswindow.windowsize
+            if ($newsize)
+            {
+                $newsize.width = $Global:AlyaConsoleWindowsSize
+                $pswindow.windowsize = $newsize
+            }
         }
+    } catch {
+        Write-Error $_.Exception -ErrorAction Continue
     }
 }
 
 function Increase-ConsoleWidth(
     [int] [Parameter(Mandatory = $false)] $newWidth = 8192)
 {
-    $pshost = Get-Host
-    $pswindow = $pshost.UI.RawUI
-    $newsize = $pswindow.BufferSize
-    if ($newsize)
+    try
     {
-        if (-Not $Global:AlyaConsoleBufferSize -or $Global:AlyaConsoleBufferSize -ne $newWidth)
+        $pshost = Get-Host
+        $pswindow = $pshost.UI.RawUI
+        $newsize = $pswindow.BufferSize
+        if ($newsize)
         {
-            $Global:AlyaConsoleBufferSize = $newsize.width
+            if (-Not $Global:AlyaConsoleBufferSize -or $Global:AlyaConsoleBufferSize -ne $newWidth)
+            {
+                $Global:AlyaConsoleBufferSize = $newsize.width
+            }
+            $newsize.width = $newWidth
+            $pswindow.buffersize = $newsize
         }
-        $newsize.width = $newWidth
-        $pswindow.buffersize = $newsize
-    }
-    $newsize = $pswindow.windowsize
-    if ($newsize)
-    {
-        if (-Not $Global:AlyaConsoleWindowsSize -or $Global:AlyaConsoleWindowsSize -ne $newWidth)
+        $newsize = $pswindow.windowsize
+        if ($newsize)
         {
-            $Global:AlyaConsoleWindowsSize = $newsize.width
+            if (-Not $Global:AlyaConsoleWindowsSize -or $Global:AlyaConsoleWindowsSize -ne $newWidth)
+            {
+                $Global:AlyaConsoleWindowsSize = $newsize.width
+            }
+            $newsize.width = $newWidth
+            $pswindow.windowsize = $newsize
         }
-        $newsize.width = $newWidth
-        $pswindow.windowsize = $newsize
+    } catch {
+        Write-Error $_.Exception -ErrorAction Continue
     }
 }
 
@@ -244,6 +258,7 @@ function Wait-UntilProcessEnds(
     } while (-Not $prc)
     do
     {
+        Start-Sleep -Seconds 5
         $prc = Get-Process -Name $processName -ErrorAction SilentlyContinue
     } while ($prc)
 }
@@ -353,6 +368,45 @@ function Install-PackageIfNotInstalled (
     }
 }
 
+function Uninstall-ModuleIfInstalled (
+    [string] [Parameter(Mandatory = $true)] $moduleName,
+    [Version] $exactVersion = "0.0.0.0"
+)
+{
+    if ($exactVersion -ne "0.0.0.0")
+    {
+        $module = Get-Module -Name $moduleName -ListAvailable |`
+            Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        if (-Not $module)
+        {
+            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        }
+    }
+    else
+    {
+        $module = Get-Module -Name $moduleName -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
+        if (-Not $module)
+        {
+            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
+        }
+    }
+    if ($module)
+    {
+        Remove-Module -Name $moduleName -Force -ErrorAction SilentlyContinue
+        if ($exactVersion -ne "0.0.0.0")
+        {
+            Write-Host ('Uninstalling requested version v{1} from module {0}.' -f $moduleName, $exactVersion)
+            Uninstall-Module -Name $moduleName -RequiredVersion $exactVersion -Force
+        }
+        else
+        {
+            Write-Host ('Uninstalling all versions from module {0}.' -f $moduleName)
+            Uninstall-Module -Name $moduleName -AllVersions -Force
+        }
+    }
+}
+
 function Install-ModuleIfNotInstalled (
     [string] [Parameter(Mandatory = $true)] $moduleName,
     [Version] $minimalVersion = "0.0.0.0",
@@ -400,7 +454,7 @@ function Install-ModuleIfNotInstalled (
         Write-Host ('Module {0} is installed. Used:v{1} Requested:v{2}' -f $moduleName, $module.Version, $requestedVersion)
         if ((-Not $autoUpdate) -and ($newestVersion -gt $module.Version))
         {
-            Write-Warning ("A newer version (v{0}) is available. Consider upgrading!" -f $module.Version)
+            Write-Warning ("A newer version (v{0}) is available. Consider upgrading!" -f $newestVersion)
         }
         if ($newestVersion -eq $module.Version)
         {
@@ -454,6 +508,15 @@ function Install-ModuleIfNotInstalled (
                 exit
             }
         }
+    }
+    if ($exactVersion -ne "0.0.0.0")
+    {
+        $module = Get-Module -Name $moduleName
+        if ($module -and $module.Version -ne $exactVersion)
+        {
+            Remove-Module -Name $moduleName
+        }
+        Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking
     }
 }
 #Install-ModuleIfNotInstalled "Az"

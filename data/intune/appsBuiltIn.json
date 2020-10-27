@@ -1,9 +1,13 @@
 [{
+        "Comment1": "=================================================",
+        "Comment2": "WIN10 Apps",
+        "Comment3": "================================================="
+    }, {
         "@odata.type": "#microsoft.graph.officeSuiteApp",
         "displayName": "Win10 MS365Apps Full",
         "description": "Microsoft 365-Apps für Windows 10",
         "publisher": "Microsoft",
-        "isFeatured": true,
+        "isFeatured": false,
         "privacyInformationUrl": "https://privacy.microsoft.com/de-de/privacystatement",
         "informationUrl": "https://products.office.com/de-de/explore-office-for-home",
         "owner": "Microsoft",
@@ -84,5 +88,49 @@
         "roleScopeTagIds": [],
         "channel": "stable",
         "displayLanguageLocale": null
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "MAC Apps",
+        "Comment3": "================================================="
+    }, {
+        "@odata.type": "#microsoft.graph.macOSOfficeSuiteApp",
+        "displayName": "Mac Ms365Apps",
+        "description": "Microsoft 365-Apps für macOS",
+        "publisher": "Microsoft",
+        "largeIcon": null,
+        "isFeatured": true,
+        "privacyInformationUrl": "https://privacy.microsoft.com/de-de/privacystatement",
+        "informationUrl": "https://products.office.com/de-de/explore-office-for-home",
+        "owner": "Microsoft",
+        "developer": "Microsoft",
+        "notes": "",
+        "roleScopeTagIds": []
+    }, {
+        "@odata.type": "#microsoft.graph.macOSMdatpApp",
+        "displayName": "Mac Microsoft Defender ATP für macOS",
+        "description": "Microsoft Defender Advanced Threat Protection (Microsoft Defender ATP) ist eine einheitliche Plattform für den präventiven Schutz, die Erkennung von Bedrohungen nach einem Angriff, die automatische Untersuchung und die Reaktion darauf. Microsoft Defender ATP schützt Endgeräte vor Cyberbedrohungen, erkennt komplexe Angriffe und Datenverletzungen, automatisiert Sicherheitsvorfälle und verbessert den Sicherheitsstatus.",
+        "publisher": "Microsoft",
+        "largeIcon": null,
+        "isFeatured": true,
+        "privacyInformationUrl": "https://docs.microsoft.com/de-de/windows/security/threat-protection/microsoft-defender-atp/mac-privacy​",
+        "informationUrl": "https://docs.microsoft.com/de-de/windows/security/threat-protection/microsoft-defender-atp/microsoft-defender-advanced-threat-protection​",
+        "owner": "Microsoft",
+        "developer": "Microsoft",
+        "notes": "",
+        "roleScopeTagIds": []
+    }, {
+        "@odata.type": "#microsoft.graph.macOSMicrosoftEdgeApp",
+        "displayName": "Mac MsEdge",
+        "description": "Microsoft Edge ist der Browser für Unternehmen mit moderner und Legacy-Webkompatibilität, neuen Datenschutzfeatures wie z. B. Nachverfolgungsschutz sowie integrierten Produktivitätstools wie PDF-Unterstützung auf Unternehmensniveau und Zugriff auf Office und die Unternehmenssuche direkt über eine neue Registerkarte.",
+        "publisher": "Microsoft",
+        "largeIcon": null,
+        "isFeatured": true,
+        "privacyInformationUrl": "https://privacy.microsoft.com/de-de/privacystatement",
+        "informationUrl": "https://www.microsoft.com/de-de/windows/microsoft-edge",
+        "owner": "",
+        "developer": "Microsoft",
+        "notes": "",
+        "roleScopeTagIds": [],
+        "channel": "stable"
     }
 ]

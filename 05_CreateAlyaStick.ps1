@@ -29,9 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    07.07.2020 Konrad Brunner       Initial Creation
-    25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
-
+    24.10.2020 Konrad Brunner       Initial version
 #>
 
 [CmdletBinding()]
@@ -39,39 +37,57 @@ Param(
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-AllMailboxes30DayRetention-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\05_CreateAlyaStick-$($AlyaTimeString).log" | Out-Null
 
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+#Main
+. $PSScriptRoot\04_PrepareModulesAndPackages
 
-# =============================================================
-# Exchange stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Set-AllMailboxes30DayRetention | EXCHANGE" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-Write-Host "Setting retention in exchange"
-try
+Write-Host "Select stick to be used" -ForegroundColor $CommandInfo
+$disk = $null
+$usbDisk = Get-Disk | Where-Object BusType -eq USB
+switch (($usbDisk | Measure-Object | Select-Object Count).Count)
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
-
-    Get-Mailbox -ResultSize unlimited -Filter "RecipientTypeDetails -eq 'UserMailbox'" | Set-Mailbox -RetainDeletedItemsFor 30
+    1 {
+        $disk = $usbDisk[0]
+    }
+    {$_ -gt 1} {
+        $disk = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to use' -OutputMode Single
+    }
 }
-catch
+if ($disk)
 {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
+    $vol = $disk | Get-Partition | Get-Volume
+    $alyaDir = "$($vol.DriveLetter):\Alya"
+    if (-Not (Test-Path $alyaDir))
+    {
+        New-Item -Path $alyaDir -ItemType Directory -Force | Out-Null
+    }
+    if (-Not (Test-Path "$alyaDir\tools"))
+    {
+        New-Item -Path "$alyaDir\tools" -ItemType Directory -Force | Out-Null
+    }
+
+    cmd /c robocopy "$($AlyaRoot)" "$($alyaDir)" /MIR
+
+    $to = "$alyaDir\tools\WindowsPowerShell"
+
+    $prop = Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "{F42EE2D3-909F-4907-8871-4C22FC0BF756}" -ErrorAction SilentlyContinue
+    if ($prop -and $prop.'{F42EE2D3-909F-4907-8871-4C22FC0BF756}')
+    {
+        $from = "$($prop.'{F42EE2D3-909F-4907-8871-4C22FC0BF756}')\WindowsPowerShell"
+    }
+    else
+    {
+        $from = "$($env:USERPROFILE)\Documents\WindowsPowerShell"
+    }
+    cmd /c robocopy "$($from)" "$($to)" /MIR
 }
-finally
+else
 {
-    DisconnectFrom-EXOandIPPS
+    Write-Warning "No stick selected or detected!"
 }
 
 #Stopping Transscript

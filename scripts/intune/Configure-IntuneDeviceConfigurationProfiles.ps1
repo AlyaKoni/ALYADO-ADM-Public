@@ -49,6 +49,7 @@ if (-Not $ProfileFile)
 {
     $ProfileFile = "$($AlyaData)\intune\deviceConfigurationProfiles.json"
 }
+$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -89,9 +90,10 @@ function Replace-AlyaString($str)
     $str =  $str.Replace("##AlyaCompanyNameShort##", $AlyaCompanyNameShort)
     $str =  $str.Replace("##AlyaCompanyName##", $AlyaCompanyName)
     $str =  $str.Replace("##AlyaTenantId##", $AlyaTenantId)
+    $str =  $str.Replace("##AlyaKeyVaultName##", $KeyVaultName)
     $domPrts = $AlyaWebPage.Split("./")
-    $AlyaLocalDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
-    $str =  $str.Replace("##AlyaLocalDomains##", $AlyaLocalDomains)
+    $AlyaWebDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
+    $str =  $str.Replace("##AlyaWebDomains##", $AlyaWebDomains)
     return $str
 }
 
@@ -151,7 +153,21 @@ function Replace-AlyaStrings($obj, $depth)
                     }
                     else
                     {
-                        Replace-AlyaStrings -obj $prop.Value -depth ($depth+1)
+                        $sobj = $prop.Value | select -First 1
+                        if ($sobj.GetType().Name -eq "String")
+                        {
+                            if ($sobj.Contains("##Alya"))
+                            {
+                                $prop.Value[0] = Replace-AlyaString -str $sobj
+                            }
+                        }
+                        else
+                        {
+                            if (-Not ($sobj.GetType().IsValueType))
+                            {   
+                                Replace-AlyaStrings -obj $sobj -depth ($depth+1)
+                            }
+                        }
                     }
                 }
             }
@@ -265,6 +281,11 @@ foreach($profile in $profiles)
             }
         }
         $profile.omaSettings[0].value = [System.Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($accessgroup.OuterXml.ToString()))
+    }
+    if (($profile | ConvertTo-Json -Depth 50).IndexOf("##Alya") -gt -1)
+    {
+        ($profile | ConvertTo-Json -Depth 50)
+        throw "Some replacement did not work!"
     }
     
     # Checking if profile exists

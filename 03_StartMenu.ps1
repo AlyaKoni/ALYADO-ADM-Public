@@ -62,7 +62,7 @@ Param(
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\StartMenu-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\03_StartMenu-$($AlyaTimeString).log" | Out-Null
 
 #Menu definition
 $menuDef = @(

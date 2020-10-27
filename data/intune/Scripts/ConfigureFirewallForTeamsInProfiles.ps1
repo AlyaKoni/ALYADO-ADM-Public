@@ -77,7 +77,7 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-ConfigureFirewall-$($AlyaTimeString).log" -Force
 
     try
     {
@@ -185,12 +185,11 @@ else
                     if ($err) { Write-Host "Guessed teams in $($teamsExe.FullName)" }
                     foreach ($prot in $protcols)
                     {
-                        $ruleName = "Teams.exe-$($prot)-$($user.Name)"
+                        $ruleName = "Teams.exe-Inbound-$($prot)-$($user.Name)"
                         $rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
                         if (-not $rule)
                         {
-                            $tmp = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Domain -Program $progPath -Action Allow -Protocol $prot
-                            Clear-Variable ruleName
+                            $tmp = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Any -Program $progPath -Action Allow -Protocol $prot
                         }
                     }
                 }

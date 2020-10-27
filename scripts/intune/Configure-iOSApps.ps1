@@ -29,25 +29,25 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    21.10.2020 Konrad Brunner       Initial Version
+    27.10.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$BuiltInAppsFile = $null #defaults to $($AlyaData)\intune\appsBuiltIn.json
+    [string]$IOSAppsFile = $null #defaults to $($AlyaData)\intune\appsIOS.json
 )
 
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-BuiltInApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-iOSApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-if (-Not $BuiltInAppsFile)
+if (-Not $IOSAppsFile)
 {
-    $BuiltInAppsFile = "$($AlyaData)\intune\appsBuiltIn.json"
+    $IOSAppsFile = "$($AlyaData)\intune\appsIOS.json"
 }
 
 # Checking modules
@@ -63,7 +63,7 @@ $token = Get-AdalAccessToken
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Configure-BuiltInApps | Graph" -ForegroundColor $CommandInfo
+Write-Host "Intune | Configure-iOSApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context and token
@@ -76,7 +76,7 @@ if (-Not $Context)
 $token = Get-AdalAccessToken
 
 # Main
-$builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$iosApps = Get-Content -Path $IOSAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
 
 # Defining bodies
 $assBody = @"
@@ -93,67 +93,25 @@ $assBody = @"
 }
 "@
 $assignments = $assBody | ConvertFrom-Json
-$catBody = @"
-{
-    "@odata.type": "#microsoft.graph.mobileAppCategory",
-    "id": "ed899483-3019-425e-a470-28e901b9790e",
-    "displayName": "Productivity"
-}
-"@
-$category = $catBody | ConvertFrom-Json
 
-# Processing defined builtInApps
-foreach($builtInApp in $builtInApps)
+# Processing defined iosApps
+foreach($iosApp in $iosApps)
 {
-    if ($builtInApp.Comment1 -and $builtInApp.Comment2 -and $builtInApp.Comment3) { continue }
-    if ($builtInApp.displayName.EndsWith("_unused")) { continue }
-    Write-Host "Configuring builtInApp $($builtInApp.displayName)" -ForegroundColor $CommandInfo
+    if ($iosApp.displayName.EndsWith("_unused")) { continue }
+    Write-Host "Configuring iosApp $($iosApp.displayName)" -ForegroundColor $CommandInfo
     
     # Checking if app exists
     Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
+    $searchValue = [System.Web.HttpUtility]::UrlEncode($iosApp.displayName)
     $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
     $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
     if (-Not $app.id)
     {
-        Write-Error "The app with name $($builtInApp.displayName) does not exist. Please create it first." -ErrorAction Continue
+        Write-Error "The app with name $($iosApp.displayName) does not exist. Please create it first." -ErrorAction Continue
         continue
     }
     $appId = $app.id
     Write-Host "    appId: $appId"
-
-    # Configuring category
-    Write-Host "  Configuring category" -ForegroundColor $CommandInfo
-    if ($category)
-    {
-        # Checking if category exists
-        Write-Host "    Checking if category exists"
-	    $caturi = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileAppCategories/$($category.id)"
-	    $defCategory = Get-MsGraphObject -AccessToken $token -Uri $caturi
-        if (-Not $defCategory)
-        {
-            Write-Error "Can't find the category $($category.displayName)." -ErrorAction Continue
-            continue
-        }
-
-        # Getting existing categories
-        Write-Host "    Getting existing categories"
-	    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/categories"
-	    $actCategories = Get-MsGraphCollection -AccessToken $token -Uri $uri
-        $isPresent = $actCategories | where { $_.id -eq $category.id }
-        if (-Not $isPresent)
-        {
-            # Adding category
-            Write-Host "    Adding category $($defCategory.displayName)"
-	        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
-            $body = "{ `"@odata.id`": `"$caturi`" }"
-	        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
-        }
-        else
-        {
-            Write-Host "    Category $($defCategory.displayName) already exists"
-        }
-    }
 
     # Configuring assignments
     Write-Host "  Configuring assignments" -ForegroundColor $CommandInfo

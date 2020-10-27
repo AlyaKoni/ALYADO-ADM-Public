@@ -58,7 +58,7 @@ Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 LoginTo-SPO
 
 # Constants
-$ThemeName = $AlyaCompanyName
+$ThemeName = "$($AlyaCompanyName) Default Theme"
 $ThemeDef = $AlyaSpThemeDef
 
 # =============================================================

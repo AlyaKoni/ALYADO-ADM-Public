@@ -52,15 +52,17 @@ Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.23
 LoginTo-SPO
 
 # Constants
-if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration.ps1"))
+if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-deCH.ps1"))
 {
     Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration.ps1"
-    . $AlyaData\sharepoint\HubSitesConfiguration.ps1
+    . $AlyaData\sharepoint\HubSitesConfiguration-deCH.ps1
 }
 else
 {
     Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate.ps1"
-    . $PSScriptRoot\HubSitesConfigurationTemplate.ps1
+    Write-Warning "We suggest to copy the HubSitesConfigurationTemplate.ps1 to your data\sharepoint directory"
+    pause
+    . $PSScriptRoot\HubSitesConfigurationTemplate-deCH.ps1
 }
 
 # =============================================================
@@ -76,9 +78,9 @@ foreach($hubSite in $hubSites)
     ###Processing designs
     Write-Host "Processing designs for Hub Site $($hubSite.title)" -ForegroundColor $TitleColor
 
-    $SiteScriptName = "$($AlyaCompanyName) $($hubSite.short) SiteScript"
-    $SiteDesignNameTeam = "$($AlyaCompanyName) $($hubSite.short) Team Site"
-    $SiteDesignNameComm = "$($AlyaCompanyName) $($hubSite.short) Communication Site"
+    $SiteScriptName = "$($AlyaCompanyNameShort.ToUpper()) Hub-$($hubSite.short) SiteScript "+$siteLocale
+    $SiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper()) Hub-$($hubSite.short) Team Site "+$siteLocale
+    $SiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper()) Hub-$($hubSite.short) Communication Site "+$siteLocale
 
     # Getting theme
     Write-Host "Getting theme" -ForegroundColor $CommandInfo
@@ -136,9 +138,9 @@ foreach($hubSite in $hubSites)
     # Checking site script for sub sites
     if ($hubSite.subSiteScript)
     {
-        $SubSiteScriptName = "$($AlyaCompanyName) $($hubSite.short) Sub SiteScript"
-        $SubSiteDesignNameTeam = "$($AlyaCompanyName) $($hubSite.short) Sub Team Site"
-        $SubSiteDesignNameComm = "$($AlyaCompanyName) $($hubSite.short) Sub Communication Site"
+        $SubSiteScriptName = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) SiteScript "+$siteLocale
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) Team Site "+$siteLocale
+        $SubSiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) Communication Site "+$siteLocale
 
         # Checking site script
         Write-Host "Checking site script" -ForegroundColor $CommandInfo
@@ -201,11 +203,12 @@ foreach($hubSite in $hubSites)
             $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed
         } while (-Not $site)
     }
-    else
+    foreach ($usrEmail in $AlyaSharePointNewSiteCollectionAdmins)
     {
-        #Write-Host "Updating hub site $($hubSite.title)"
-        #$tmp = Set-SPOSite -Identity $site -Owner $AlyaSharePointNewSiteOwner
+        $tmp = Set-SPOUser -Site $Site -LoginName $usrEmail -IsSiteCollectionAdmin $True
     }
+    $tmp = Set-SPOUser -Site $Site -LoginName $AlyaSharePointNewSiteOwner -IsSiteCollectionAdmin $True
+    $tmp = Set-SPOSite -Identity $Site -Owner $AlyaSharePointNewSiteOwner
     if (-Not $site.IsHubSite)
     {
         Write-Host "Registering site as hub site"
@@ -232,8 +235,14 @@ foreach($hubSite in $hubSites)
     if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
     {
         Set-PnpWeb -Web $web -SiteLogoUrl $hubSite.siteLogoUrl
+        $fname = Split-Path -Path $hubSite.siteLogoUrl -Leaf
+        $tempFile = [System.IO.Path]::GetTempFileName()+$fname
+        Invoke-RestMethod -Method GET -UseBasicParsing -Uri $hubSite.siteLogoUrl -OutFile $tempFile
+        Connect-PnPOnline -Scopes "Group.ReadWrite.All","User.Read.All"
+        $group = Get-PnPUnifiedGroup -Identity $hubSite.title
+        Set-PnPUnifiedGroup -Identity $group -GroupLogoPath $tempFile
+        Remove-Item -Path $tempFile
     }
-
 }
 
 ###Processing navigation
@@ -268,8 +277,8 @@ foreach($hubSite in $hubSites)
     if ($hubSite.subSiteScript)
     {
         Write-Host "Hub Site $($hubSite.title)"
-        $SubSiteDesignNameTeam = "$($AlyaCompanyName) $($hubSite.short) Sub Team Site"
-        $SubSiteDesignNameComm = "$($AlyaCompanyName) $($hubSite.short) Sub Communication Site"
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) Team Site "+$siteLocale
+        $SubSiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) Communication Site "+$siteLocale
         $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
         $SubSiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameComm"}
 
@@ -327,10 +336,52 @@ foreach($hubSite in $hubSites)
     }
 }
 
-###SharePoint Start Pages
-Write-Host "Processing SharePoint Start Pages" -ForegroundColor $TitleColor
-#TODO
-#TODO Get-PnPClientSidePage -Identity " NewPage"
+Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.26.2010.0" #TODO Remove after bug is fixed https://github.com/pnp/PnP-PowerShell/issues/2849
+
+###Processing Hub Site Start Pages
+#Set-PnPTraceLog -On -WriteToConsole -Level Debug
+Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
+foreach($hubSite in $hubSites)
+{
+    #$hubSite = $hubSites[0]
+    LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+    $tempFile = [System.IO.Path]::GetTempFileName()
+    $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
+    $tmp = Apply-PnPProvisioningTemplate -Path $tempFile
+    Remove-Item -Path $tempFile
+}
+#Set-PnPTraceLog -Off
+
+###Processing Root Site Start Page
+if ($homePageTemplateRoot)
+{
+    Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
+    LoginTo-PnP -Url "$($AlyaSharePointUrl)"
+    $tempFile = [System.IO.Path]::GetTempFileName()
+    $homePageTemplateRoot | Set-Content -Path $tempFile -Encoding UTF8
+    $tmp = Apply-PnPProvisioningTemplate -Path $tempFile
+    Remove-Item -Path $tempFile
+}
+
+###Configuring access to hub and root sites
+Write-Host "Configuring access to hub and root sites" -ForegroundColor $TitleColor
+foreach($hubSite in $hubSites)
+{
+    #$hubSite = $hubSites[0]
+    LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+    $group = Get-PnPGroup -AssociatedVisitorGroup
+    $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+    Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
+    if ($hubSite.short -eq "COL")
+    {
+        Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllExternals@$AlyaDomainName"
+    }
+}
+LoginTo-PnP -Url "$($AlyaSharePointUrl)"
+$group = Get-PnPGroup -AssociatedVisitorGroup
+$site = Get-SPOSite -Identity "$($AlyaSharePointUrl)"
+Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
+Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllExternals@$AlyaDomainName"
 
 #Stopping Transscript
 Stop-Transcript

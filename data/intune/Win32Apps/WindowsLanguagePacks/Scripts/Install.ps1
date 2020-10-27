@@ -75,12 +75,17 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-LanguagePacks-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-WindowsLanguagePacks-$($AlyaTimeString).log" -Force
 
     try
     {
         # with help from https://github.com/okieselbach/Intune/blob/master/Win32/SetLanguage-de-DE/Install-LanguageExperiencePack.ps1#L157
         $ErrorActionPreference = "Stop"
+
+        # Running version
+        Write-Host "Running version:"
+        $versionFile = Join-Path $AlyaScriptDir "version.json"
+        Get-Content -Path $versionFile -Raw -Encoding UTF8
 
         # Prevent language packs to be cleaned
         Write-Host "Prevent language packs to be cleaned"
@@ -109,10 +114,11 @@ else
         $namespaceName = "root\cimv2\mdm\dmmap"
         $session = New-CimSession
         $omaUri = "./Vendor/MSFT/EnterpriseModernAppManagement/AppInstallation"
+        $packages = Get-AppxPackage -AllUsers
         foreach($languageToInstall in $languagesToInstall)
         {
             $packageFamilyName = $languageToInstall.PackageFamilyName
-            $pkg = Get-AppxPackage -AllUsers -Name $packageFamilyName -ErrorAction SilentlyContinue
+            $pkg = $packages | where { $_.PackageFamilyName -eq $packageFamilyName }
             if (-Not $pkg)
             {
                 $applicationId = $languageToInstall.ProductId.ToLower()
@@ -154,10 +160,12 @@ else
             {
                 throw "Was not able to install packages within 1 hour. Please retry."
             }
+            $packages = Get-AppxPackage -AllUsers
             foreach($languageToInstall in $languagesToInstall)
             {
                 $packageFamilyName = $languageToInstall.PackageFamilyName
-                $pkg = Get-AppxPackage -AllUsers -Name $packageFamilyName -ErrorAction SilentlyContinue
+                $pkg = $packages | where { $_.PackageFamilyName -eq $packageFamilyName }
+                $pkg
                 if (-Not $pkg -or $pkg.Status -ne "Ok")
                 {
                     $allFound = $false
@@ -168,10 +176,11 @@ else
 
         # Listing installed packages
         Write-Host "Listing installed packages"
+        $packages = Get-AppxPackage -AllUsers
         foreach($languageToInstall in $languagesToInstall)
         {
             $packageFamilyName = $languageToInstall.PackageFamilyName
-            Get-AppxPackage -AllUsers -Name $packageFamilyName
+            $packages | where { $_.PackageFamilyName -eq $packageFamilyName }
         }
 
         # Trigger install for language FOD packages"
@@ -204,7 +213,7 @@ else
         $prop = Get-ItemProperty -Path $regPath -Name $valueName -ErrorAction SilentlyContinue
         if (-Not $prop)
         {
-            New-ItemProperty -Path $regPath -Name $valueName -Value $version -PropertyType DWORD -Force
+            New-ItemProperty -Path $regPath -Name $valueName -Value $version -PropertyType String -Force
         }
         else
         {

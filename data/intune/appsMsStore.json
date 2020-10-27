@@ -1,0 +1,577 @@
+﻿[
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Company Portal",
+        "description":  "Microsoft Intune helps organizations manage access to corporate apps, data, and resources. Company Portal is the app that lets you, as an employee of your company, securely access those resources.\r\n\r\nBefore you can use this app, make sure your IT admin has set up your work account. Your company must also have a subscription to Microsoft Intune.\r\n\r\nCompany Portal helps simplify the tasks you need to do for work:\r\n\r\n- Enroll your device to access corporate resources, including Office, email, and OneDrive for Business\r\n- Sign in to corporate resources with company-issued certificates\r\n- Reduce the number of times you need to sign in to corporate resources with single sign-on\r\n- Browse and install approved business apps from your IT department or the Microsoft Store for Business\r\n- View and manage your enrolled devices – and wipe them if they get lost or stolen\r\n- Get help directly from your IT department through available contact information\r\n \r\nA note about Intune: every organization has different access requirements, and will use Intune in ways that they determine will best manage their information. Some functionality might be unavailable in certain countries. If you have questions about how this app is being used within your organization, your company’s IT administrator should have those answers for you. Microsoft, your network provider, and your device’s manufacturer do not know how Intune will be used by your organization.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRFJ3PZ/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Cortana Device Setup",
+        "description":  "This app lets you set up and control your Cortana-enabled devices, including the Surface Headphones and Harman Kardon Invoke. The Cortana Device Setup app will also help you connect your music, calendar, and email accounts, stay up to date with the latest software, and give you helpful tips to get started.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NBFJPF436H3/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "HP Smart",
+        "description":  "Print, scan, and share files by using HP Smart with your HP Printer. HP Smart makes it easy to get started and keeps you going with features like Print Anywhere or Mobile Fax!\r\n \r\n\r\n· Start with a hassle-free set up, then print, scan, copy, and share files directly from your computer to your friends, co-workers, or a linked cloud account \r\n· Manage or print to your printer using any network connection\r\n· Order supplies, get support, and manage your HP account straight from the app\r\n· Create high-quality scans by importing existing files or scanning from your printer, and improve them by cropping the file, adding filters and text, or adjusting saturation, contrast, and brightness\r\n· It’s easy to send secure faxes from the app with Mobile Fax\r\n· Be more productive with Smart Tasks—customizable one-click shortcuts\r\n· Access hundreds of printable crafts, cards, and learning activities for free with Printables! Get involved and get your family creating together!\r\n \r\nSome HP Smart features require a network connection and an HP account for full functionality. Certain features/software are available in English language only. For a full list of supported printers, visit: http://support.hp.com/us-en/document/c03722645?openCLC=true",
+        "publisher":  "HP Inc.",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRFHWLH/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "iCloud",
+        "description":  "With iCloud for Windows, you’ll have your photos, videos, mail, calendar, files, and other important information stored in iCloud and on your Windows PC. \n\niCloud Drive \n• Safely store and access all your files in iCloud Drive \n• Share any folder or file with friends, family, and colleagues right from File Explorer\n• Save space on your PC by keeping your files in iCloud Drive only \n• Choose files and folders to keep locally on your PC to ensure you can access them even when offline\n\niCloud Photos \n• Keeps your photo library up to date across your devices  \n• Automatically download lightweight versions of photos and videos from iCloud Photos to your PC, and only download the full size versions as needed \n• Create Shared Albums and invite people to post their own photos, videos, and comments \n\nMail, Contacts, Calendars, Tasks, and Bookmarks \n• Keep mail, contacts, calendars, and tasks up to date on all your devices \n• Share calendars and task lists with other iCloud users \n• Internet Explorer, Firefox, or Google Chrome Bookmarks automatically stay up to date with Safari \n\niCloud for Windows requires: \n• Outlook 2016 or later (for Mail, Contacts, Calendars) \n• Internet Explorer 11 or later, Firefox 57 or later, or Google Chrome 73 or later (for Bookmarks)",
+        "publisher":  "Apple Inc.",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9PKTQ5699M62/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Intel® Graphics Command Center",
+        "description":  "Requirements:\r\nWindows 10 version 1709 or higher,\r\n6th Gen Intel Core Platforms or newer \r\nFor more details, check out our FAQ under the support link in the additional information section below. \r\n\r\nWe asked, you answered. You\u0027re tired of our \u0027old, boring, corporate-looking\u0027 Graphics Control Panel. We were too and we designed a completely new one from the ground up! We’re incorporating the changes you – the gamers, home theater enthusiasts, professionals, and everyday tinkerers requested. Using a phased approach, we\u0027re rolling out something we\u0027re proud to share with you: introducing the Intel® Graphics Command Center.\r\n\r\nYou told us how confusing ‘tongue twister’ features like tessellation and anisotropic filtering can be to understand, so we created a robust help option tailored to simplifying it all. Take all the guess work out of game and media tuning with visual guidance on what each feature does, and how it impacts your experience.\r\n\r\nWe’re really just getting started. We\u0027ll be introducing many more features and functions in later phases and will keep the improvements coming, to give you the best possible experience we can. Please check it out and remember to let us know what you think. We recommend updating your Intel graphics driver to the latest version, which you can get Intel\u0027s website.  You can message us on Twitter at @intelgraphics.",
+        "publisher":  "INTEL CORP",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9PLFNLNT3G5G/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "iTunes",
+        "description":  "iTunes is the easiest way to enjoy everything you need to be entertained - music, movies, and TV shows - and keep it all easily organized. Rent or buy movies, download your favorite TV shows, and more.\n\niTunes is also home to Apple Music, where you can listen to millions of songs and your entire music library - ad-free with zero commercials. Plus, download your favorite music to listen without Wi-Fi. Try it free with no commitment, and cancel anytime.",
+        "publisher":  "Apple Inc.",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9PB2MZ1ZMB1S/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Microsoft Flow",
+        "description":  "Carry the full power of Microsoft Flow in your pocket. With Flow, you can create automated workflows between your favorite apps and services to streamline your business, save time, and work more efficiently. \r\n \r\nUse Flow to:\r\n \r\n•\tGet a notification when you receive an email from your boss\r\n•\tRecord your work hours to a spreadsheet with the tap of a button\r\n•\tAutomatically download email attachments to cloud storage\r\n•\tCapture, track, and follow up on sales leads and connect to your CRM platform\r\n•\tGet notified when a work item is updated\r\n•\tSo much more!\r\n \r\n \r\nHundreds of apps and services connect with Flow, including OneDrive, Dynamics 365, Slack, Office 365, Outlook, Salesforce, Facebook, Twitter, JIRA, Google Drive, Azure, Dropbox, and more!\r\n \r\nBest of all, Microsoft Flow integrates seamlessly with SharePoint and Office 365, so you can create custom, end-to-end solutions, in a familiar environment, for your whole team to enjoy.\r\n\r\n",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NKN0P5L9N84/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Microsoft Remote Desktop",
+        "description":  "Use the Microsoft Remote Desktop app to connect to a remote PC or virtual apps and desktops made available by your admin. The app helps you be productive no matter where you are.\n\n    Getting Started\n    Configure your PC for remote access first. Download the Remote Desktop assistant to your PC and let it do the work for you: https://aka.ms/RDSetup\n\n    Learn more about the different remote desktop apps at: https://aka.ms/rdapps",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRFJ3PS/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Microsoft Sticky Notes",
+        "description":  "Need to remember something for later? Use Microsoft Sticky Notes. They\u0027re the simple way to quickly save something for later, so you can stay in the flow. With Sticky Notes, you can create notes, type, ink or add a picture, add text formatting, stick them to the desktop, move them around there freely, close them to the Notes list, and sync them across devices and apps like OneNote Mobile, Microsoft Launcher for Android, and Outlook for Windows.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NBLGGH4QGHW/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Microsoft Tips",
+        "description":  "Master surprising and lesser-known things you can do in Windows with the official Microsoft Tips app. If you\u0027re new to Windows, you\u0027ll be using apps and settings like a pro in no time. And even if you\u0027ve been using Windows forever, you\u0027ll discover new and updated features (and maybe some tricks you never knew). We\u0027ll update the app frequently, so check back to see what\u0027s new.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRDTBJJ/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Microsoft To Do: Lists, Tasks \u0026 Reminders",
+        "description":  "Got something on your mind? Get Microsoft To Do. Whether you want to increase your productivity, decrease your stress levels, or just free up some mental space, Microsoft To Do makes it easy to plan your day and manage your life.\r\n\r\nWith Microsoft To Do, you can:\r\n• Stay focused with My Day, a personalized daily planner with suggested tasks\r\n• Get your lists anywhere, on any device\r\n• Share lists and assign tasks with your friends, family, colleagues, and classmates\r\n• Personalize your lists with bold and colorful backgrounds\r\n• Set one-time or recurring due dates and reminders\r\n• Break your tasks into manageable steps\r\n• Add notes to any task\r\n• Attach files up to 25 MB to any task\r\n• Sync your tasks between Outlook and To Do\r\n• Group your lists together by topic or project\r\nWhether it\u0027s for work, school, or home, To Do helps you organize and simplify your plans. To Do is free and available on all your devices.\r\n\r\nLearn more: https://to-do.microsoft.com\r\nFollow us on Twitter: @MicrosoftToDo\r\nHave an idea or feature suggestion? https://todo.uservoice.com/\r\nNeed support? https://todosupport.helpshift.com/\r\nBy installing Microsoft To Do, you agree to the Microsoft Terms of Use: https://go.microsoft.com/fwlink/?linkid=842575",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NBLGGH5R558/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Microsoft Whiteboard",
+        "description":  "Meet the freeform digital canvas where ideas, content, and people come together.\n\nCreate freely, work naturally\nGive your ideas room to grow with Whiteboard. Transform your work into professional-looking charts and shapes on an infinite canvas with an interface designed for pen, touch, and keyboard.\n\nCollaborate in real time, wherever you are\nBring your team together on the same virtual canvas, around the world and across devices. Brainstorm simultaneously in the Whiteboard app or from your browser window.\n\nSave automatically, resume seamlessly\nYour whiteboards stay safe in the cloud until you’re ready to return to them, from the same or another device. No need to take photos of your whiteboards or mark them with “Do Not Erase.”",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9MSPC6MP8FM4/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Office Lens",
+        "description":  "Office Lens trims, enhances, and makes pictures of whiteboards and docs readable. You can use Office Lens to convert images to PDF, Word and PowerPoint files, and you can even save images to OneNote or OneDrive. \r\n \r\nOffice Lens is like having a scanner in your pocket. Like magic, it will digitize notes from whiteboards or blackboards. Always find important documents or business cards. Sketch your ideas and snap a picture for later. Don\u0027t lose receipts or stray sticky notes again!\r\n \r\nBy installing the app, you agree to these terms and conditions: http://aka.ms/olenswindowsterms.\r\n\r\nScenarios:\r\n- Capture and crop a picture of a whiteboard or blackboard and share your meeting notes with co-workers.\r\n- Make digital copies of your printed documents, business cards, or posters and trim them precisely.\r\n- Printed and handwritten text will be automatically recognized (using OCR), so you can search for words in images and then copy and edit them. ",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRFJ3T8/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Power Apps",
+        "description":  "Get Power Apps to create, use, and share custom business apps with your team and organization.\r\n\r\nInstall Power Apps for Windows to:\r\n•\tUse apps that were shared with you",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NBLGGH5Z8F3/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Power BI Desktop",
+        "description":  "Power BI Desktop puts visual analytics at your fingertips. With this powerful authoring tool, you can create interactive data visualizations and reports.\r\n \r\nConnect, mash up and model, and visualize your data. Place visuals exactly where you want them, analyze and explore your data, and share content with your team by publishing to the Power BI web service.\r\n \r\nPower BI Desktop is part of the Power BI product suite. Use Power BI Desktop to create and distribute BI content. To monitor key data and share dashboards and reports, use the Power BI web service. To view and interact with your data on any Windows 10 device, get the Power BI Mobile app. \r\n  \r\nWith Power BI Desktop, you can:\r\n \r\n•\tConnect securely to hundreds of data sources —in the cloud and on-premises \r\n•\tTransform and mash up data from multiple sources—in just a few clicks\r\n•\tExtend your data models with DAX formulas\r\n•\tChoose from more than 100 cutting-edge data visuals—or create your own\r\n•\tDig deep into data to find patterns and discover insights\r\n•\tBuild out your design with intuitive formatting tools and themes\r\n•\tCreate mobile reports for on-the-go users\r\n•\tShare visual analytics with everyone in your organization \r\n•\tPublish securely to the web or an on-premises report server, or embed visuals in your website or app\r\n \r\nGet the full Power BI suite and never miss a beat with Power BI Desktop, the Power BI web service, and the Power BI app.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NTXR16HNW1T/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Samsung Flow",
+        "description":  "Samsung Flow is a software product that enables a seamless, secure, connected experience across your devices. You can authenticate your Tablet/PC with your smartphone, share content between devices, and sync notifications or view contents from your smartphone on your Tablet/PC. You can turn on the smartphone\u0027s Mobile Hotspot to keep your Tablet/PC connected.\r\nYou can also log in to your Tablet/PC with your biometric data (Iris, Fingerprints) if you register with Samsung Pass.\r\n\r\nThe following devices support Samsung Flow:\r\n1. Windows Tablet/PC : Windows 10 OS Creators update (V1703) and June patch build (15063.413)\r\n(Galaxy TabPro S, Galaxy Book,  Galaxy Book2.  Galaxy Book S, PC)\r\n2. Android Tablet: Android Marshmallow OS or newer (Galaxy Tab S6, Galaxy Tab S5e, Galaxy Tab S4, Tab S3, Tab S2, Tab A (2018, 10.5), Tab A2, Tab Active 2, Tab A 10.1, Tab A (2017))\r\n3. Android Phone : Android Marshmallow OS or Newer\r\nIt may not be supported by some models, depending on the smartphone specifications.\r\n\r\n* Samsung Flow will operate only on official software released by Samsung Electronics.\r\n* Windows: Bluetooth (Bluetooth LE optional) or Wi-Fi/LAN, Wi-Fi direct\r\n\r\nWindows 10 users can find the Samsung Flow app on the Windows App Store.\r\nGo to the Samsung Flow webpage where you can find the setup guide: \r\nwww.samsung.com/samsungflow\r\nIf you have not updated the Samsung Flow app to the latest version, please go to Windows Store \u003e Menu \u003e Downloads and Updates to update the app.\r\n\r\n* The PC unlock function is no longer provided because the Windows policy has changed.",
+        "publisher":  "Samsung Electronics Co, Ltd.",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NBLGGH5GB0M/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Surface",
+        "description":  "Get the most out of your Surface. The Surface app provides you with customization options and opportunity to learn more about your Surface device. Give feedback on your experience so we can keep making it better. Safety, warranty, and regulatory info is there whenever you need it.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRFJB8P/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Surface Audio",
+        "description":  "The Surface Audio app is the companion to Surface Earbuds and Surface Headphones. Update your earbuds and headphones, and customize settings to get the most out of them.\r\n\r\nHere are the things you can do:\r\n- Update your earbuds and headphones\r\n- View and change device info\r\n- View battery info and volume level\r\n- Personalize settings\r\n- Change equalizer settings to get the sound you want\r\n- Set up Cortana\r\n- Control which devices are connected\r\n- Change language settings\r\n- Reset your earbuds and headphones to the factory settings\r\n- Watch tutorial videos\r\n- Send us feedback\r\n",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NXJNFWNVM8D/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Surface Trackpad Settings",
+        "description":  "Touch and Type Covers for Surface have a trackpad built-in that functions like a mouse. Trackpad Settings lets you control functions such as tap and touch gestures on your Surface.\r\nIf this app doesn’t detect the keyboard, do the following: \r\n\r\n1. Make sure you have the latest updates: From the Start screen, type Update, tap Settings, then tap Check for updates. \r\n2. From the Start screen, type Devices, tap Settings, then tap Devices and Printers. Then tap Refresh three times (circular arrow next to Search box). Try using the app again.",
+        "publisher":  "Microsoft Corp.",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRFHZT8/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Translator",
+        "description":  "Microsoft Translator enables you to translate text and speech, have translated conversations, and even download AI-powered language packs to use offline. \r\n\r\n- Speak, type, or write by hand with Windows Ink, to translate into over 60 languages \r\n- Have real-time translated conversations with up to 100 people, each on their own device (Windows, iOS, Android, Kindle)       \r\n- Start or join a conversation directly through Cortana\r\n- Translate images such as menus and signs\r\n- Download languages to translate offline using state-of-the-art neural machine translation \r\n- Hear your translated phrase to help you with pronunciation\r\n- Share your translation with other apps \r\n- Pin your most frequent translations to save for later\r\n- Learn a new word or phrase everyday by pinning Translator to Start\r\n\r\nTranslator supports the following languages:  Afrikaans, Arabic, Bangla, Bosnian (Latin), Bulgarian, Cantonese (Traditional), Catalan, Chinese (Simplified), Chinese (Traditional), Croatian, Czech, Danish, Dutch, English, Estonian, Fijian, Filipino, Finnish, French, German, Greek, Haitian Creole, Hebrew, Hindi, Hmong Daw, Hungarian, Icelandic, Indonesian, Italian, Japanese, Kiswahili, Klingon, Korean, Latvian, Lithuanian, Malagasy, Malay, Maltese, Norwegian, Persian, Polish, Portuguese, Querétaro Otomi, Romanian, Russian, Samoan, Serbian (Cyrillic), Serbian (Latin), Slovak, Slovenian, Spanish, Swedish, Tahitian, Tamil, Telugu, Thai, Tongan, Turkish, Ukrainian, Urdu, Vietnamese, Welsh, and Yucatec Maya. \r\n\r\nMicrosoft Translator is powered by cutting-edge technology that is used by Office, Bing, Skype, Edge as well as by countless partners. \r\n\r\nPlease note that some features are not available in all languages.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRFJ3PG/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "VLC",
+        "description":  "VLC is the ultimate media player, ported to the Windows Universal Platform.\n\n⚠ ⚠ Beware! This VLC does not feature all the features of the classic VLC! It does not support DVD or Blurays! Use the desktop version instead! ⚠⚠\n\nVLC media player is a portable, free and open-source, cross-platform media player and streaming media server written by the VideoLAN project. VLC is available for all operating system, desktop, mobiles or TVs.\n\nVLC media player supports virtually all video and audio formats, including subtitles, rare file formats and streaming protocols.\n",
+        "publisher":  "VideoLAN",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NBLGGH4VVNH/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Windows Maps",
+        "description":  "Maps is your guide to everywhere. Find your way with voice navigation and turn-by-turn driving, transit, and walking directions. Search for places to get directions, business info, and reviews. Download maps to use when you’re offline. Tour the world virtually with breathtaking aerial imagery and 360 degree street-level views. Plus, you get the same experience across all your Windows 10 PCs and phones.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9WZDNCRDTBVB/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    },
+    {
+        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
+        "displayName":  "Your Phone",
+        "description":  "You love your phone. So does your PC. Get instant access to everything you love on your phone, right on your PC.  \n\nLink your Android phone and PC to view and reply to your text messages with ease, access your favorite mobile apps*, and receive and manage your phone’s notifications right on your PC. Make and receive calls** on your PC and transfer them between your devices effortlessly. Make emailing yourself photos a thing of the past as you share your favorite images between your phone and PC. And, when you need to add a recent image to your email, paper, or presentation, just drag and drop it from the Your Phone app to your PC. You can also wirelessly drag and drop files from your phone to your PC and vice versa with supported Samsung phones***.   \n\nYou have to link your Android phone to your PC through the Your Phone app, and your phone must be running Android 7.0 or later. \n\nTell us what features you’d like to see next by selecting “Send feedback” in settings in the Your Phone app. \n\n*Requires a Windows 10 PC running the Windows 10 May 2019 Update and is available only on select Android phones. Android phone must be turned on and connected to the same WiFi network as your PC.   \n**Requires a Windows 10 PC running the Windows 10 May Update and with a Bluetooth radio.\n***Requires a Windows 10 PC running the October 2018 Update. You must also be using a phone that supports phone screen.",
+        "publisher":  "Microsoft Corporation",
+        "largeIcon":  null,
+        "isFeatured":  false,
+        "privacyInformationUrl":  null,
+        "informationUrl":  null,
+        "owner":  null,
+        "developer":  null,
+        "notes":  null,
+        "roleScopeTagIds":  [
+
+                            ],
+        "productKey":  "9NMPJ99VJBWV/0016",
+        "licenseType":  "online",
+        "packageIdentityName":  "Application_enterprise",
+        "licensingType":  {
+                              "supportUserLicensing":  true,
+                              "supportDeviceLicensing":  true,
+                              "supportsUserLicensing":  true,
+                              "supportsDeviceLicensing":  true
+                          }
+    }
+]

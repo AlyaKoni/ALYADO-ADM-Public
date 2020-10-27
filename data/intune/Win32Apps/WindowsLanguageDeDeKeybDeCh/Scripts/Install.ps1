@@ -82,6 +82,11 @@ else
         # with help from https://github.com/okieselbach/Intune/blob/master/Win32/SetLanguage-de-DE/Install-LanguageExperiencePack.ps1#L157
         $ErrorActionPreference = "Stop"
 
+        # Running version
+        Write-Host "Running version:"
+        $versionFile = Join-Path $AlyaScriptDir "version.json"
+        Get-Content -Path $versionFile -Raw -Encoding UTF8
+
         # Reading language definitions
         Write-Host "Reading language definitions"
         $languagesToInstall = Get-Content -Path "$AlyaScriptDir\localesToInstall.json" -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -142,7 +147,7 @@ else
 `$languageTag = "$languageTag"
 `$packageFamilyName = "$packageFamilyName"
 `$geoId = $geoId
-`$appxLxpPath = (Get-AppxPackage | Where-Object Name -eq `$packageFamilyName).InstallLocation
+`$appxLxpPath = (Get-AppxPackage | where { `$_.PackageFamilyName -eq `$packageFamilyName }).InstallLocation
 Add-AppxPackage -Register -Path "`$appxLxpPath\AppxManifest.xml" -DisableDevelopmentMode
 #Set-WinUserLanguageList `$languageTag -Force
 $languagListString
@@ -182,6 +187,7 @@ powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -File "$userConfi
 
         # Trigger store updates, there might be new app versions due to the language change
         Write-Host "Trigger store updates"
+        $namespaceName = "root\cimv2\mdm\dmmap"
         Get-CimInstance -Namespace $namespaceName -ClassName "MDM_EnterpriseModernAppManagement_AppManagement01" | Invoke-CimMethod -MethodName "UpdateScanMethod"
         Start-Sleep -Seconds 30
 
@@ -199,7 +205,7 @@ powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -File "$userConfi
         $prop = Get-ItemProperty -Path $regPath -Name $valueName -ErrorAction SilentlyContinue
         if (-Not $prop)
         {
-            New-ItemProperty -Path $regPath -Name $valueName -Value $version -PropertyType DWORD -Force
+            New-ItemProperty -Path $regPath -Name $valueName -Value $version -PropertyType String -Force
         }
         else
         {

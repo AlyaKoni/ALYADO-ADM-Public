@@ -49,7 +49,17 @@ if (-Not (Test-Path $isoImagePath))
 }
 
 Write-Host "Writing iso image to usb stick"
-$disk = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to use' -OutputMode Single
+$disk = $null
+$usbDisk = Get-Disk | Where-Object BusType -eq USB
+switch (($usbDisk | Measure-Object | Select-Object Count).Count)
+{
+    1 {
+        $disk = $usbDisk[0]
+    }
+    {$_ -gt 1} {
+        $disk = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to use' -OutputMode Single
+    }
+}
 if ($disk)
 {
     $res = $disk | Clear-Disk -RemoveData -RemoveOEM -Confirm:$false -PassThru | New-Partition -UseMaximumSize -IsActive -AssignDriveLetter | Format-Volume -FileSystem NTFS
@@ -60,6 +70,5 @@ if ($disk)
 }
 else
 {
-    Write-Warning "No disk selected!"
-    Write-Warning "If there was no selection dialog, we were not able to recognise your usb stick"
+    Write-Warning "No stick selected or detected!"
 }

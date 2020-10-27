@@ -42,6 +42,27 @@ $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 $AlyaScriptName = Split-Path $PSCommandPath -Leaf
 $AlyaScriptDir = Split-Path $PSCommandPath -Parent
 
+function Wait-UntilProcessEnds(
+    [string] [Parameter(Mandatory = $true)] $processName)
+{
+    $maxStartTries = 10
+    $startTried = 0
+    do
+    {
+        $prc = Get-Process -Name $processName -ErrorAction SilentlyContinue
+        $startTried = $startTried + 1
+        if ($startTried -gt $maxStartTries)
+        {
+            $prc = "Continue"
+        }
+    } while (-Not $prc)
+    do
+    {
+        Start-Sleep -Seconds 5
+        $prc = Get-Process -Name $processName -ErrorAction SilentlyContinue
+    } while ($prc)
+}
+
 if (![System.Environment]::Is64BitProcess)
 {
     Write-Host "Launching 64bit PowerShell"
@@ -75,11 +96,16 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-LocalPrinters-$($AlyaTimeString).log" -Force
 
     try
     {
         $ErrorActionPreference = "Stop"
+
+        # Running version
+        Write-Host "Running version:"
+        $versionFile = Join-Path $AlyaScriptDir "version.json"
+        Get-Content -Path $versionFile -Raw -Encoding UTF8
 
         # Unpacking content
         Expand-Archive -Path "$AlyaScriptDir\Content.zip" -DestinationPath "$AlyaScriptDir" -Force
@@ -98,6 +124,10 @@ else
         $driverSharpDir = "$driverRoot\SharpPcl6"
         $driverHpPclDir = "$driverRoot\HpPcl6"
         $driverHpPsDir = "$driverRoot\HpPs"
+        
+        # Installing driver certificates
+        #Write-Host "Installing driver certificates"
+        #Import-Certificate -FilePath "$driverRoot\MinoltaTrustedPublisher.cer" -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
 
         # Installing drivers
         Write-Host "Checking Sharp driver"
@@ -105,8 +135,12 @@ else
         if (-Not $driverSharp)
         {
             Write-Host "  Installing Sharp driver"
-            Invoke-Command { pnputil.exe -a "$driverSharpDir\app\German\PCL6\64bit\su2emdeu.inf" }
-            Start-Sleep -Seconds 10
+            pushd $driverSharpDir
+            Invoke-Command { pnputil.exe -i -a *.inf }
+            Wait-UntilProcessEnds "pnputil"
+            popd
+            Start-Sleep -Seconds 30
+            Restart-Service -Name Spooler -Force
             Add-PrinterDriver -Name $driverSharpName
             Start-Sleep -Seconds 10
             $driverSharp = Get-PrinterDriver | where { $_.Name -eq $driverSharpName } -ErrorAction SilentlyContinue
@@ -123,7 +157,10 @@ else
             Write-Host "  Installing Hp Universal PCL driver"
             pushd $driverHpPclDir
             .\Install.exe /infstage /h /q
+			Wait-UntilProcessEnds "Install"
             popd
+            Start-Sleep -Seconds 30
+            Restart-Service -Name Spooler -Force
             Start-Sleep -Seconds 10
             Add-PrinterDriver -Name $driverHpPclUniversalName
             Start-Sleep -Seconds 10
@@ -141,8 +178,10 @@ else
             Write-Host "  Installing Hp Universal Ps driver"
             pushd $driverHpPsDir
             .\Install.exe /infstage /h /q
+			Wait-UntilProcessEnds "Install"
             popd
-            Start-Sleep -Seconds 10
+            Start-Sleep -Seconds 30
+            Restart-Service -Name Spooler -Force
             Add-PrinterDriver -Name $driverHpPsUniversalName
             Start-Sleep -Seconds 10
             $driverHpPs = Get-PrinterDriver | where { $_.Name -eq $driverHpPsUniversalName } -ErrorAction SilentlyContinue
@@ -179,7 +218,7 @@ else
             if (-Not $printer)
             {
                 Write-Host "  Installing printer"
-                Add-Printer -Name $printerName -PortName "IP_$portIp" -DriverName $driverSharpName
+                Add-Printer -Name $printerName -PortName "IP_$portIp" -DriverName $driverName
                 Start-Sleep 10
                 $printer = Get-Printer -Name $printerName -ErrorAction SilentlyContinue
                 if (-Not $printer)
@@ -214,7 +253,7 @@ else
         $prop = Get-ItemProperty -Path $regPath -Name $valueName -ErrorAction SilentlyContinue
         if (-Not $prop)
         {
-            New-ItemProperty -Path $regPath -Name $valueName -Value $version -PropertyType DWORD -Force
+            New-ItemProperty -Path $regPath -Name $valueName -Value $version -PropertyType String -Force
         }
         else
         {

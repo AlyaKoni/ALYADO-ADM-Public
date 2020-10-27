@@ -29,9 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    07.07.2020 Konrad Brunner       Initial Creation
-    25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
-
+    24.10.2020 Konrad Brunner       Initial version
 #>
 
 [CmdletBinding()]
@@ -39,40 +37,33 @@ Param(
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-AllMailboxes30DayRetention-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\04_PrepareModulesAndPackages-$($AlyaTimeString).log" | Out-Null
 
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
+#Main
+Install-ModuleIfNotInstalled "PackageManagement"
+Install-ModuleIfNotInstalled "PowershellGet"
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
+Install-ModuleIfNotInstalled "ImportExcel"
+Install-ModuleIfNotInstalled "AIPService"
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
-
-# =============================================================
-# Exchange stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Set-AllMailboxes30DayRetention | EXCHANGE" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-Write-Host "Setting retention in exchange"
-try
-{
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
-
-    Get-Mailbox -ResultSize unlimited -Filter "RecipientTypeDetails -eq 'UserMailbox'" | Set-Mailbox -RetainDeletedItemsFor 30
-}
-catch
-{
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
-}
-finally
-{
-    DisconnectFrom-EXOandIPPS
-}
+Install-ModuleIfNotInstalled "PSWindowsUpdate"
+Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.23.2007.1" #TODO Upgrade after bug is fixed https://github.com/pnp/PnP-PowerShell/issues/2849
+Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Intune"
+Install-ModuleIfNotInstalled "WindowsAutopilotIntune"
+Install-ModuleIfNotInstalled "MSStore"
+Install-ModuleIfNotInstalled "Pscx"
+Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
+Install-PackageIfNotInstalled "log4net"
+Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
+Uninstall-ModuleIfInstalled "AzureAd"
 
 #Stopping Transscript
 Stop-Transcript

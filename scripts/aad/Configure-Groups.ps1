@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     04.03.2020 Konrad Brunner       Initial Version
+    25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
 
 #>
 
@@ -52,11 +53,14 @@ if (-Not $inputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled AzureAdPreview
+Uninstall-ModuleIfInstalled "AzureAd"
+Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
+#LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 
 # =============================================================
@@ -79,7 +83,6 @@ Write-Host "Configured groups" -ForegroundColor $CommandInfo
 $groupDefs | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
 $SecurityGroup = @()
 $O365Group = @()
-$O365GroupToFinish = @()
 $GroupToDisable = @()
 foreach ($groupDef in $groupDefs)
 {
@@ -157,13 +160,28 @@ foreach ($secGroup in $SecurityGroup)
             Write-Warning "Can't aquire an access token."
             exit
         }
-        $header = @{'Authorization'='Bearer '+$apiToken;'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
-        $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-        $availableLics = $response | ConvertFrom-Json
-        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)"
-        $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-        $actualLics = $response | ConvertFrom-Json
+        $Global:retryCount = 10
+        do
+        {
+            try
+            {
+                $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
+                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
+                $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
+                $availableLics = $response | ConvertFrom-Json
+                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)"
+                #following call shows from time to time 404. Don't know why
+                $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
+                $actualLics = $response | ConvertFrom-Json
+                $Global:retryCount = -1
+            } catch {
+                Write-Host "Exception catched: $($_.Exception.Message)"
+                Write-Host "Retrying $Global:retryCount times"
+                $Global:retryCount--
+                Write-Host "Sleeping 60 seconds"
+                Start-Sleep -Seconds 60
+            }
+        } while ($Global:retryCount -gt 0)
         foreach($license in $secGroup.Licenses.Split(","))
         {
             $licPresent = $false
@@ -213,6 +231,8 @@ foreach ($secGroup in $SecurityGroup)
                 $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
             }
         }
+        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)/Reprocess"
+        $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $null -ErrorAction Stop
     }
 }
 
@@ -247,7 +267,6 @@ foreach ($secGroup in $O365Group)
     else
     {
         Write-Host "   - Group doesn't exists! Creating."
-        $O365GroupToFinish += $secGroup
         if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
         {
             $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "Unified" -Visibility $secGroup.Visibility
@@ -266,13 +285,27 @@ foreach ($secGroup in $O365Group)
             Write-Warning "Can't aquire an access token."
             exit
         }
-        $header = @{'Authorization'='Bearer '+$apiToken;'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
-        $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-        $availableLics = $response | ConvertFrom-Json
-        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)"
-        $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-        $actualLics = $response | ConvertFrom-Json
+        $Global:retryCount = 10
+        do
+        {
+            try
+            {
+                $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
+                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
+                $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
+                $availableLics = $response | ConvertFrom-Json
+                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)"
+                $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
+                $actualLics = $response | ConvertFrom-Json
+                $Global:retryCount = -1
+            } catch {
+                Write-Host "Exception catched: $($_.Exception.Message)"
+                Write-Host "Retrying $Global:retryCount times"
+                $Global:retryCount--
+                if ($Global:retryCount -lt 0) { throw }
+                Start-Sleep -Seconds 10
+            }
+        } while ($Global:retryCount -gt 0)
         foreach($license in $secGroup.Licenses.Split(","))
         {
             $licPresent = $false
@@ -322,93 +355,98 @@ foreach ($secGroup in $O365Group)
                 $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
             }
         }
+        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)/Reprocess"
+        $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $null -ErrorAction Stop
     }
 }
 
-if ($O365GroupToFinish.Count -gt 0)
+# =============================================================
+# Exchange stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "AAD | Configure-Groups | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+Write-Host "Configuring O365 group settings in exchange online" -ForegroundColor $CommandInfo
+try
 {
-    Write-Host "Configuring O365 group settings in exchange online" -ForegroundColor $CommandInfo
-    #Write-Host "Sleeping now 5 Minutes to let sync aad the groups to exchange"
-    #Start-Sleep -Seconds 300
+    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
+    LoginTo-EXO
 
-    # =============================================================
-    # Checking exchange service user
-    # =============================================================
-
-    . "$($AlyaScripts)\exchange\Configure-ServiceUser.ps1"
-
-    # =============================================================
-    # Exchange stuff
-    # =============================================================
-
-    Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-    Write-Host "AAD | Configure-Groups | EXCHANGE" -ForegroundColor $CommandInfo
-    Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-    Get-PSSession | Remove-PSSession
-    try
+    Write-Host "Checking O365 groups" -ForegroundColor $CommandInfo
+    foreach ($grp in $O365Group)
     {
-        Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-        $SecExchUserPasswordForRunAsAccount = ConvertTo-SecureString $ExchUserPasswordForRunAsAccount -AsPlainText -Force
-        $ExchangeCredential = New-Object System.Management.Automation.PSCredential ($ExchUser.UserPrincipalName, $SecExchUserPasswordForRunAsAccount)
-        $Commands = @("Get-Command","Get-UnifiedGroup","Set-UnifiedGroup")
-        $Session = New-PSSession –ConfigurationName Microsoft.Exchange -ConnectionUri https://outlook.office365.com/powershell-liveid/ -Credential $ExchangeCredential -Authentication Basic -AllowRedirection
-        Import-PSSession -Session $Session -DisableNameChecking:$true -AllowClobber:$true -CommandName $Commands | Out-Null
-
-        Write-Host "Checking O365 groups" -ForegroundColor $CommandInfo
-        foreach ($o365Group in $O365GroupToFinish)
+        Write-Host "  Group '$($grp.DisplayName)'"
+        $Global:retryCount = 5
+        do
         {
-            Write-Host "  Group '$($o365Group.DisplayName)'"
-            $uGrp = Get-UnifiedGroup -Identity $o365Group.DisplayName -ErrorAction SilentlyContinue
+            $uGrp = Get-UnifiedGroup -Identity $grp.DisplayName -ErrorAction SilentlyContinue
             if ($uGrp)
             {
-                Write-Host "   - Group already exists! Updating."
-                Set-UnifiedGroup -Identity $o365Group.DisplayName -Alias $o365Group.Alias -HiddenFromAddressListsEnabled:$true -CalendarMemberReadOnly:$true -RejectMessagesFromSendersOrMembers:$true -UnifiedGroupWelcomeMessageEnabled:$false -SubscriptionEnabled:$false -ModerationEnabled:$false -HiddenFromExchangeClientsEnabled:$true
+                Write-Host "   - Group found! Updating."
+                $HiddenFromAddressListsEnabled = $true
+                $CalendarMemberReadOnly = $true
+                $RejectMessagesFromSendersOrMembers = $true
+                $UnifiedGroupWelcomeMessageEnabled = $false
+                $SubscriptionEnabled = $false
+                $ModerationEnabled = $false
+                $HiddenFromExchangeClientsEnabled = $true
+                if ($grp.O365HiddenFromAddressListsEnabled -ne $null) { $HiddenFromAddressListsEnabled = $grp.O365HiddenFromAddressListsEnabled }
+                if ($grp.O365CalendarMemberReadOnly -ne $null) { $CalendarMemberReadOnly = $grp.O365CalendarMemberReadOnly }
+                if ($grp.O365RejectMessagesFromSendersOrMembers -ne $null) { $RejectMessagesFromSendersOrMembers = $grp.O365RejectMessagesFromSendersOrMembers }
+                if ($grp.O365UnifiedGroupWelcomeMessageEnabled -ne $null) { $UnifiedGroupWelcomeMessageEnabled = $grp.O365UnifiedGroupWelcomeMessageEnabled }
+                if ($grp.O365SubscriptionEnabled -ne $null) { $SubscriptionEnabled = $grp.O365SubscriptionEnabled }
+                if ($grp.O365ModerationEnabled -ne $null) { $ModerationEnabled = $grp.O365ModerationEnabled }
+                if ($grp.O365HiddenFromExchangeClientsEnabled -ne $null) { $HiddenFromExchangeClientsEnabled = $grp.O365HiddenFromExchangeClientsEnabled }
+                Set-UnifiedGroup -Identity $grp.DisplayName -Alias $grp.Alias -HiddenFromAddressListsEnabled:$true -CalendarMemberReadOnly:$true -RejectMessagesFromSendersOrMembers:$true -UnifiedGroupWelcomeMessageEnabled:$false -SubscriptionEnabled:$false -ModerationEnabled:$false -HiddenFromExchangeClientsEnabled:$true
+                $Global:retryCount = -1
             }
             else
             {
-                throw "Group $($o365Group.DisplayName) not found!"
+                Write-Host "Group $($grp.DisplayName) not found! Waiting 30 seconds and retrying"
+                Start-Sleep -Seconds 30
+                $Global:retryCount--
             }
-        }
+        } while ($Global:retryCount -ge 0)
+    }
+}
+catch
+{
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+    Write-Error ($_.Exception) -ErrorAction Continue
+    Write-Error "Please delete created groups by hand. Clean them from recycle bin. Start over again after fixing the issue." -ErrorAction Continue
+}
+finally
+{
+    DisconnectFrom-EXOandIPPS
+}
 
-    }
-    catch
+Write-Host "Setting ProcessingState" -ForegroundColor $CommandInfo
+foreach ($secGroup in $o365Group)
+{
+    $exGrp = Get-AzureADMSGroup -SearchString $secGroup.DisplayName
+    if ($exGrp.Count -gt 1)
     {
-                try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
-        Write-Error ($_.Exception) -ErrorAction Continue
-        Write-Error "Please delete created groups by hand. Clean them from recycle bin. Start over again after fixing the issue." -ErrorAction Continue
-    }
-    finally
-    {
-        Get-PSSession | Remove-PSSession
-    }
-
-    Write-Host "Setting ProcessingState" -ForegroundColor $CommandInfo
-    foreach ($secGroup in $O365GroupToFinish)
-    {
-        $exGrp = Get-AzureADMSGroup -SearchString $secGroup.DisplayName
-        if ($exGrp.Count -gt 1)
+        foreach($grp in $exGrp)
         {
-            foreach($grp in $exGrp)
+            if ($grp.DisplayName -eq $secGroup.DisplayName)
             {
-                if ($grp.DisplayName -eq $secGroup.DisplayName)
-                {
-                    $exGrp = $grp
-                    break
-                }
+                $exGrp = $grp
+                break
             }
         }
-        if ($exGrp)
-        {
-            if (-Not [string]::IsNullOrEmpty($secGroup.DanymicRule))
-            {
-                Write-Host "  Group '$($secGroup.DisplayName)'"
-                Write-Host "   - Setting processing state to On"
-                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -MembershipRuleProcessingState "On"
-            }
-        }
-
     }
+    if ($exGrp)
+    {
+        if (-Not [string]::IsNullOrEmpty($secGroup.DanymicRule))
+        {
+            Write-Host "  Group '$($secGroup.DisplayName)'"
+            Write-Host "   - Setting processing state to On"
+            $tmp = Set-AzureADMSGroup -Id $exGrp.Id -MembershipRuleProcessingState "On"
+        }
+    }
+
 }
 
 Write-Host "Checking disabled groups" -ForegroundColor $CommandInfo

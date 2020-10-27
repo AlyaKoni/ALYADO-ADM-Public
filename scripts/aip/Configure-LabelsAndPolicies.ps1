@@ -58,6 +58,7 @@ if (-Not $inputPublishFile)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "AIPService"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Reading inputLabelFile file
@@ -121,11 +122,21 @@ try
             $DisplayNameLocaleSettings = [PSCustomObject]@{LocaleKey='DisplayName';
                 Settings=@(
                 @{key="en-en";Value=$labelDef.NameEN;}
-                @{key="de-de";Value=$labelDef.NameDE;})}
+                @{key="it-it";Value=$labelDef.NameEN;}
+                @{key="it-ch";Value=$labelDef.NameEN;}
+                @{key="fr-fr";Value=$labelDef.NameEN;}
+                @{key="fr-ch";Value=$labelDef.NameEN;}
+                @{key="de-de";Value=$labelDef.NameDE;}
+                @{key="de-ch";Value=$labelDef.NameDE;})}
             $TooltipLocaleSettings = [PSCustomObject]@{LocaleKey='Tooltip';
                 Settings=@(
                 @{key="en-en";Value=$labelDef.CommentEN;}
-                @{key="de-de";Value=$labelDef.CommentDE;})}
+                @{key="it-it";Value=$labelDef.CommentEN;}
+                @{key="it-ch";Value=$labelDef.CommentEN;}
+                @{key="fr-fr";Value=$labelDef.CommentEN;}
+                @{key="fr-ch";Value=$labelDef.CommentEN;}
+                @{key="de-de";Value=$labelDef.CommentDE;}
+                @{key="de-ch";Value=$labelDef.CommentDE;})}
             Set-Label -Identity $labelName -Priority $priority -LocaleSettings (ConvertTo-Json $DisplayNameLocaleSettings -Depth 3 -Compress),(ConvertTo-Json $TooltipLocaleSettings -Depth 3 -Compress)
 
             if ($labelDef.Encryption -eq "On")
@@ -273,23 +284,55 @@ try
             {
                 Write-Host "    - exists, updating"
             }
-
-            Set-LabelPolicy -Identity $publishDef.ProfileName -Comment $publishDef.Description -AddExchangeLocation $publishDef.ExchangeLoc -AddSharePointLocation $publishDef.SharePointLoc
+            $labelsToAdd = $null
+            $labelsToRemove = $null
+            foreach($lbl in $policy.Labels)
+            {
+                if ($configuredLables -notcontains $lbl)
+                {
+                    if (-Not $labelsToRemove) { $labelsToRemove = @() }
+                    $labelsToRemove += $lbl
+                }
+            }
+            foreach($lbl in $configuredLables)
+            {
+                if ($policy.Labels -notcontains $lbl)
+                {
+                    if (-Not $labelsToAdd) { $labelsToAdd = @() }
+                    $labelsToAdd = $lbl
+                }
+            }
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AddLabels $labelsToAdd -RemoveLabels $labelsToRemove -Comment $publishDef.Description -AddExchangeLocation $publishDef.ExchangeLoc -AddSharePointLocation $publishDef.SharePointLoc
             
             #Advanced settings
             #https://docs.microsoft.com/en-us/azure/information-protection/rms-client/clientv2-admin-guide-customizations
             #Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{HideBarByDefault="False"}
-            #Set-LabelPolicy -Identity Global -AdvancedSettings @{PostponeMandatoryBeforeSave="False"}
+            #Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{PostponeMandatoryBeforeSave="False"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{DisableMandatoryInOutlook="True"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookRecommendationEnabled="False"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableContainerSupport="True"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookDefaultLabel="None"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{PFileSupportedExtensions="*"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissions="True"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissionsForCustomProtectedFiles="True"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{AttachmentAction="Automatic"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{ReportAnIssueLink="mailto:$AlyaSupportEmail"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookUnlabeledCollaborationAction="Off"}
+            if ($publishDef.DefaultLabel -and -Not [string]::IsNullOrEmpty($publishDef.DefaultLabel.Trim()))
+            {
+                $deflabel = Get-Label -Identity $publishDef.DefaultLabel -ErrorAction SilentlyContinue
+                if ($deflabel)
+                {
+                    Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{DefaultLabelId=$deflabel.ImmutableId}
+                }
+                else
+                {
+                    Write-Warning "Can't find default label named '$($publishDef.DefaultLabel)'"
+                }
+            }
+            if ($AlyaAipCustomPageUrl -and $AlyaAipCustomPageUrl -ne "PleaseSpecify" -and -Not [string]::IsNullOrEmpty($AlyaAipCustomPageUrl))
+            {
+                Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{CustomUrl=$AlyaAipCustomPageUrl}
+            }
             #TODO Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableAudit="False"}
             #Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{LogMatchedContent="True"}
             #Set-Label -Identity $publishDef.ProfileName -AdvancedSettings @{SMimeSign="True"}
@@ -298,6 +341,7 @@ try
             #Set-Label -Identity $publishDef.ProfileName -AdvancedSettings @{color="#40e0d0"}
             #Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{ UseCopyAndPreserveNTFSOwner ="true"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{RequireDowngradeJustification="False"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookDefaultLabel="None"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -RetryDistribution
             #Set-LabelPolicy -AdvancedSettings @{ AdditionalPPrefixExtensions ="*"}
         }
@@ -316,7 +360,28 @@ catch
 }
 finally
 {
-    #DisconnectFrom-EXOandIPPS
+    DisconnectFrom-EXOandIPPS
+}
+
+# Logins
+LoginTo-AIP
+
+# =============================================================
+# AIP stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "UnifiedLabels | Configure-Labels | AIPSERVICE" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+$actTemplates = Get-AipServiceTemplate
+foreach ($actTemplate in $actTemplates)
+{
+    #$actTemplate = $actTemplates[1]
+    if (($actTemplate.Names | where { $_.Key -eq 1033 }).Value.StartsWith("Highly Confidential") -or `        ($actTemplate.Names | where { $_.Key -eq 1033 }).Value.StartsWith("Confidential"))
+    {
+        Remove-AipServiceTemplate -TemplateId $actTemplate.TemplateId
+    }
 }
 
 #Stopping Transscript
