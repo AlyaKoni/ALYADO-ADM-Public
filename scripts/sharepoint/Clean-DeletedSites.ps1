@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Clean-DeletedSites-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules

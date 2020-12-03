@@ -671,7 +671,7 @@ function LoginTo-Az(
 
 function Get-AzAccessToken($audience = "74658136-14ec-4630-ad9b-26e160ff0fc6")
 {
-    $Context = Get-AzContext
+    $Context = Get-AzContext -ListAvailable | where { $_.Name -eq $AlyaTenantName }
     $token = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($Context.Account, $Context.Environment, $Context.Tenant.Id, $null, "Never", $null, $audience)
     if (-Not $token -or -Not $token.AccessToken)
     {
@@ -689,7 +689,7 @@ function Get-AdalAccessToken(
     $authority = "https://login.microsoftonline.com/$AlyaTenantName"
     $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
     $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
-    $userUpn = (Get-AzContext).Account.Id
+    $userUpn = (Get-AzContext -ListAvailable | where { $_.Name -eq $AlyaTenantName }).Account.Id
     $userId = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier" -ArgumentList ($userUpn, "OptionalDisplayableId")
     $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$redirectUri,$platformParameters,$userId).Result
     return $authResult.AccessToken
@@ -698,20 +698,15 @@ function Get-AdalAccessToken(
 function LoginTo-Ad()
 {
     Write-Host "Login to AzureAd" -ForegroundColor $CommandInfo
-    $TenantDetail = $null
-    try { $TenantDetail = Get-AzureADTenantDetail -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
-    if (-Not $TenantDetail)
+    try { Disconnect-AzureAD -ErrorAction SilentlyContinue } catch {}
+    $Context = Get-AzContext -ListAvailable | where { $_.Name -eq $AlyaTenantName }
+    if (-Not $Context)
     {
-        Connect-AzureAD
+        throw "Please login first to Az to minimize number of logins"
     }
-    else
-    {
-        if ($TenantDetail.ObjectId -ne $AlyaTenantId)
-        {
-            Disconnect-AzureAD
-            Connect-AzureAD
-        }
-    }
+    $graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($Context.Account, $Context.Environment, $Context.Tenant.Id, $null, "Never", $null, "https://graph.microsoft.com").AccessToken
+    $aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($Context.Account, $Context.Environment, $Context.Tenant.Id, $null, "Never", $null, "https://graph.windows.net").AccessToken
+    Connect-AzureAD -AadAccessToken $aadToken -MsAccessToken $graphToken -AccountId $Context.Account.Id -TenantId $Context.tenant.id -AzureEnvironmentName $Context.Environment.Name
     try { $TenantDetail = Get-AzureADTenantDetail -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
     if (-Not $TenantDetail)
     {
@@ -858,10 +853,22 @@ function LoginTo-SPO()
 }
 
 function ReloginTo-PnP(
-    [string] [Parameter(Mandatory = $true)] $Url)
+    [string] [Parameter(Mandatory = $true)] $Url,
+    [string] [Parameter(Mandatory = $false)] $ClientId = $null,
+    [string] [Parameter(Mandatory = $false)] $Thumbprint = $null
+    )
 {
     Write-Host "Relogin to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
-    $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -UseWebLogin
+    try { $AlyaConnection = Disconnect-PnPOnline } catch {}
+    $AlyaConnection = $null
+    if ($ClientId -and $Thumbprint)
+    {
+        $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName -NoTelemetry
+    }
+    else
+    {
+        $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -UseWebLogin -NoTelemetry
+    }
     $AlyaContext = $null
     try { $AlyaContext = Get-PnPContext -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
     if (-Not $AlyaContext)
@@ -869,23 +876,33 @@ function ReloginTo-PnP(
         Write-Error "Not logged in to SharePointPnPPowerShellOnline!" -ErrorAction Continue
         Exit 1
     }
-    #TODO return $AlyaConnection
+    return $AlyaConnection
 }
 
 function LoginTo-PnP(
-    [string] [Parameter(Mandatory = $true)] $Url)
+    [string] [Parameter(Mandatory = $true)] $Url,
+    [string] [Parameter(Mandatory = $false)] $ClientId = $null,
+    [string] [Parameter(Mandatory = $false)] $Thumbprint = $null
+    )
 {
     Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
     $AlyaConnection = $null
     try { $AlyaConnection = Get-PnPConnection -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
-    if ($Url -notlike "$($AlyaConnection.Url)*")
+    if ($AlyaConnection -and $Url -ne "$($AlyaConnection.Url)")
     {
-        $AlyaConnection = Disconnect-PnPOnline
+        try { $AlyaConnection = Disconnect-PnPOnline } catch {}
         $AlyaConnection = $null
     }
     if (-Not $AlyaConnection)
     {
-        $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -UseWebLogin
+        if ($ClientId -and $Thumbprint)
+        {
+            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName -NoTelemetry
+        }
+        else
+        {
+            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -UseWebLogin -NoTelemetry
+        }
     }
     $AlyaContext = $null
     try { $AlyaContext = Get-PnPContext -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
@@ -894,7 +911,7 @@ function LoginTo-PnP(
         Write-Error "Not logged in to SharePointPnPPowerShellOnline!" -ErrorAction Continue
         Exit 1
     }
-    #TODO return $AlyaConnection
+    return $AlyaConnection
 }
 function LoginTo-PowerApps()
 {

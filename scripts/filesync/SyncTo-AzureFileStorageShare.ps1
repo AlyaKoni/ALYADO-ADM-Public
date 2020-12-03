@@ -48,7 +48,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\SyncTo-AzureFileStorageShare-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 if (-Not $StorageAccountName)
 {
     $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdPrivateStorage)"
@@ -87,15 +87,15 @@ if ((Test-Path "$($UseLocalTempDriveLetter):\"))
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    throw "Ressource Group not found. Please create the Ressource Group $RessourceGroupName"
+    throw "Ressource Group not found. Please create the Ressource Group $ResourceGroupName"
 }
 
 # Checking storage account
 Write-Host "Checking storage account" -ForegroundColor $CommandInfo
-$StrgAccount = Get-AzStorageAccount -ResourceGroupName $RessourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
+$StrgAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
 if (-Not $StrgAccount)
 {
     throw "Storage account not found. Please create the storage account $StorageAccountName"
@@ -119,8 +119,9 @@ if (-Not $PSDrive)
     $ConnectTestResult = Test-NetConnection -ComputerName $FileServerName -Port 445
     if ($ConnectTestResult.TcpTestSucceeded)
     {
-        $StorageKey = (Get-AzStorageAccountKey -ResourceGroupName $RessourceGroupName -Name $StorageAccountName).Value[0]
-        $AccountKey = ConvertTo-SecureString -String "$StorageKey" -AsPlainText -Force
+        $StorageKey = (Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName).Value[0]
+        $AccountKey = ConvertTo-SecureString -String $StorageKey -AsPlainText -Force
+		Clear-Variable -Name "StorageKey"
         $Credential = New-Object -TypeName System.Management.Automation.PSCredential `
                          -ArgumentList "Azure\$($StorageAccountName)", $AccountKey
         $PSDrive = New-PSDrive -Name $UseLocalTempDriveLetter `

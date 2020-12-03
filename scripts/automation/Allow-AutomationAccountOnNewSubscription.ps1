@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\automation\Allow-AutomationAccountOnNewSubscription-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAutomation)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAutomation)"
 $AutomationAccountName = "$($AlyaNamingPrefix)aacc$($AlyaResIdAutomationAccount)"
 
 # Checking modules
@@ -72,16 +72,16 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group for automation account" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Error "Ressource Group not found. Please create the Ressource Group $RessourceGroupName" -ErrorAction Continue
+    Write-Error "Ressource Group not found. Please create the Ressource Group $ResourceGroupName" -ErrorAction Continue
     Exit
 }
 
 # Checking automation account
 Write-Host "Checking automation account" -ForegroundColor $CommandInfo
-$AutomationAccount = Get-AzAutomationAccount -ResourceGroupName $RessourceGroupName -Name $AutomationAccountName -ErrorAction SilentlyContinue
+$AutomationAccount = Get-AzAutomationAccount -ResourceGroupName $ResourceGroupName -Name $AutomationAccountName -ErrorAction SilentlyContinue
 if (-Not $AutomationAccount)
 {
     Write-Warning "Automation Account not found. Please create the Automation Account $AutomationAccountName"

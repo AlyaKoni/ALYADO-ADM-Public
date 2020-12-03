@@ -60,7 +60,7 @@ if ($retryCount -gt 5)
     Exit 99
 }
 
-$restartScript = [io.path]::GetFullPath($env:AllUsersProfile) + "\Start Menu\Programs\Startup\AlyaUpdateRestart.cmd"
+$restartScript = [io.path]::GetFullPath($env:AllUsersProfile) + "\Microsoft\Windows\Start Menu\Programs\Startup\AlyaUpdateRestart.cmd"
 
 Write-Host "Checking for updates" -ForegroundColor $CommandInfo
 $availableUpdates = Get-WUlist -MicrosoftUpdate
@@ -80,7 +80,7 @@ if ($availableUpdates.Count -gt 0)
     {
         Add-WUServiceManager -ServiceID "9482f4b4-e343-43b6-b170-9a65bc822c77"
     }
-    Start-WUScan #-SearchCriteria "IsInstalled=0 and IsHidden=0"
+    #Start-WUScan #-SearchCriteria "IsInstalled=0 and IsHidden=0"
     Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot -RootCategories 'Critical Updates', 'Definition Updates', 'Drivers', 'Microsoft', 'Security Updates', 'Updates', 'Feature Packs', 'Service Packs', 'Tools', 'Update Rollups', 'Upgrades'
     cmd /c shutdown /r /t 0
 }

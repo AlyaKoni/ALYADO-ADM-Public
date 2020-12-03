@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-ConditionalAccessPolicies-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 $CompName = Make-PascalCase($AlyaCompanyNameShort)
 $ConditionalAccessAppName = "$($CompName)ConditionalAccessApp"
@@ -77,20 +77,20 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Infrastructure Services";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Infrastructure Services";ownerEmail=$Context.Account.Id}
 }
 
 # Checking key vault
 Write-Host "Checking key vault" -ForegroundColor $CommandInfo
-$KeyVault = Get-AzKeyVault -ResourceGroupName $RessourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
+$KeyVault = Get-AzKeyVault -ResourceGroupName $ResourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
 if (-Not $KeyVault)
 {
     Write-Warning "Key Vault not found. Creating the Key Vault $KeyVaultName"
-    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
+    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
     if (-Not $KeyVault)
     {
         Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -142,9 +142,10 @@ if (-Not $AzureAdApplication)
         Start-Sleep -Seconds 10
         $tmp = Get-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId
     }
+    Start-Sleep -Seconds 60 # Looks like there is some time issue for admin consent #TODO 60 seconds enough
 
     #Admin consent
-    $apiToken = Get-AzAccessToken("74658136-14ec-4630-ad9b-26e160ff0fc6")
+    $apiToken = Get-AzAccessToken
     if (-Not $apiToken)
     {
         Write-Warning "Can't aquire an access token. Please give admin consent to application '$($ConditionalAccessAppName)' in the portal!"

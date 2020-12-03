@@ -77,7 +77,7 @@ if (-Not (Test-Path $inputFile))
 {
     throw "Input file '$inputFile' not found!"
 }
-$groupDefs = Import-Excel $inputFile -ErrorAction Stop
+$groupDefs = Import-Excel $inputFile -WorksheetName "Gruppen" -ErrorAction Stop
 
 Write-Host "Configured groups" -ForegroundColor $CommandInfo
 $groupDefs | Select-Object -Property Type, Name, Description | Format-Table -AutoSize

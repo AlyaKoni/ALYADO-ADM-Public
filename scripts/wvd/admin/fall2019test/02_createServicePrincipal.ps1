@@ -45,7 +45,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\02_createSer
 
 # Constants
 $RoleName = "RDS Owner"
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
@@ -122,6 +122,7 @@ else
     $AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
     $AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
 }
+Clear-Variable -Name "AlyaWvdServicePrincipalPassword"
 
 # Checking rds role assignment
 Write-Host "Checking rds role assignment" -ForegroundColor $CommandInfo

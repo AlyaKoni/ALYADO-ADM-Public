@@ -89,6 +89,8 @@ if (-Not $AzureKeyVaultSecret)
 }
 $AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
 $AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
+Clear-Variable -Name "AlyaWvdServicePrincipalPassword"
+Clear-Variable -Name "AzureKeyVaultSecret"
 
 # Login to WVD
 if (-Not $Global:RdsContext)

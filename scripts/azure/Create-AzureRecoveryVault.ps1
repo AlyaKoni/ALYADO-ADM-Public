@@ -44,9 +44,9 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Create-AzureRecoveryVault-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $RecoveryVaultName = "$($AlyaNamingPrefix)recv$($AlyaResIdRecoveryVault)"
-$LogAnaRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
+$LogAnaResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $LogAnaWrkspcName = "$($AlyaNamingPrefix)loga$($AlyaResIdLogAnalytics)"
 $LogAnaDiagnosticRuleName = "Diag-RecVault-$($RecoveryVaultName)"
 $LogAnaStorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdAuditStorage)"
@@ -92,29 +92,29 @@ if (-Not $ResProv)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Infrastructure Services";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Infrastructure Services";ownerEmail=$Context.Account.Id}
 }
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $LogAnaRessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $LogAnaResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $LogAnaRessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $LogAnaRessourceGroupName -Location $AlyaLocation -Tag @{displayName="Audit Logs";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $LogAnaResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $LogAnaResourceGroupName -Location $AlyaLocation -Tag @{displayName="Audit Logs";ownerEmail=$Context.Account.Id}
 }
 
 # Checking log analytics workspace
 Write-Host "Checking log analytics workspace" -ForegroundColor $CommandInfo
-$LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $LogAnaRessourceGroupName -Name $LogAnaWrkspcName -ErrorAction SilentlyContinue
+$LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $LogAnaResourceGroupName -Name $LogAnaWrkspcName -ErrorAction SilentlyContinue
 if (-Not $LogAnaWrkspc)
 {
     Write-Warning "Log analytics workspace not found. Creating the log analytics workspace $LogAnaWrkspcName"
-    $LogAnaWrkspc = New-AzOperationalInsightsWorkspace -Name $LogAnaWrkspcName -ResourceGroupName $LogAnaRessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Audit Log Workspace"}
+    $LogAnaWrkspc = New-AzOperationalInsightsWorkspace -Name $LogAnaWrkspcName -ResourceGroupName $LogAnaResourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Audit Log Workspace"}
     if (-Not $LogAnaWrkspc)
     {
         Write-Error "Log analytics workspace $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -124,11 +124,11 @@ if (-Not $LogAnaWrkspc)
 
 # Checking storage account
 Write-Host "Checking storage account" -ForegroundColor $CommandInfo
-$StrgAccount = Get-AzStorageAccount -ResourceGroupName $LogAnaRessourceGroupName -Name $LogAnaStorageAccountName -ErrorAction SilentlyContinue
+$StrgAccount = Get-AzStorageAccount -ResourceGroupName $LogAnaResourceGroupName -Name $LogAnaStorageAccountName -ErrorAction SilentlyContinue
 if (-Not $StrgAccount)
 {
     Write-Warning "Storage account not found. Creating the storage account $LogAnaStorageAccountName"
-    $StrgAccount = New-AzStorageAccount -Name $LogAnaStorageAccountName -ResourceGroupName $LogAnaRessourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Cool -Tag @{displayName="Audit Log Storage"}
+    $StrgAccount = New-AzStorageAccount -Name $LogAnaStorageAccountName -ResourceGroupName $LogAnaResourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Cool -Tag @{displayName="Audit Log Storage"}
     if (-Not $StrgAccount)
     {
         Write-Error "Storage account $LogAnaStorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -138,11 +138,11 @@ if (-Not $StrgAccount)
 
 # Checking recovery vault
 Write-Host "Checking recovery vault" -ForegroundColor $CommandInfo
-$RecVault = Get-AzRecoveryServicesVault -ResourceGroupName $RessourceGroupName -Name $RecoveryVaultName -ErrorAction SilentlyContinue
+$RecVault = Get-AzRecoveryServicesVault -ResourceGroupName $ResourceGroupName -Name $RecoveryVaultName -ErrorAction SilentlyContinue
 if (-Not $RecVault)
 {
     Write-Warning "Recovery vault not found. Creating the recovery vault $RecoveryVaultName"
-    $RecVault = New-AzRecoveryServicesVault -ResourceGroupName $RessourceGroupName -Name $RecoveryVaultName -Location $AlyaLocation
+    $RecVault = New-AzRecoveryServicesVault -ResourceGroupName $ResourceGroupName -Name $RecoveryVaultName -Location $AlyaLocation
 
     Write-Host "Configuring recovery vault"
     Set-AzRecoveryServicesBackupProperties -Vault $RecVault -BackupStorageRedundancy GeoRedundant

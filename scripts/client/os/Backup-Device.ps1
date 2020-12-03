@@ -1,7 +1,8 @@
 #Requires -Version 2.0
+#Requires -RunAsAdministrator
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,62 +30,30 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.03.2020 Konrad Brunner       Initial Version
+    30.10.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [ValidateNotNull()]
+    [string]$backupPath = $null #ex.: "D:\Backup"
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\network\Get-VpnGatewayDetails-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Backup-Device-$($AlyaTimeString).log" | Out-Null
 
-# Constants
-$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
-$VpnGatewayName = "$($AlyaNamingPrefix)vpng$($AlyaResIdVpnGateway)"
-$VpnConnectionName = "$($VpnGatewayName)con1"
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
-
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-
-# =============================================================
-# Azure stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Network | Get-VpnGatewayDetails | Azure" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
+#Main
+if (-Not (Test-Path $backupPath))
 {
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
+    Write-Error "Backup path $backupPath does not exist" -ErrorAction SilentlyContinue
+    Exit 99
 }
 
-$gw = Get-AzVirtualNetworkGateway -ResourceGroupName $ResourceGroupName -Name $VpnGatewayName
-$gw.IpConfigurationsText
-
-$con = Get-AzVirtualNetworkGatewayConnection -ResourceGroupName $ResourceGroupName -Name $VpnConnectionName
-$con.ConnectionProtocol
-$con.ConnectionType
-$con.DpdTimeoutSeconds
-$con.IpsecPolicies.Count
-$con.LocalNetworkGateway2Text
-$con.TunnelConnectionStatusText
-$con.UsePolicyBasedTrafficSelectors
-$con.UseLocalAzureIpAddress
-
-$con | fl
+cmd /c wbadmin start backup -backupTarget:"$backupPath" -include:C -allCritical -vssCopy 
 
 #Stopping Transscript
 Stop-Transcript

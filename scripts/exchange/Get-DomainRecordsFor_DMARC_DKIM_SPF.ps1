@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting: 2019, 2020
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,7 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.03.2020 Konrad Brunner       Initial Version
+    01.11.2020 Konrad Brunner       Initial Creation
 
 #>
 
@@ -41,50 +41,49 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\network\Get-VpnGatewayDetails-$($AlyaTimeString).log" | Out-Null
-
-# Constants
-$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
-$VpnGatewayName = "$($AlyaNamingPrefix)vpng$($AlyaResIdVpnGateway)"
-$VpnConnectionName = "$($VpnGatewayName)con1"
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
-
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Get-DomainRecordsFor_DMARC_DKIM_SPF-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
-# Azure stuff
+# Exchange stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Network | Get-VpnGatewayDetails | Azure" -ForegroundColor $CommandInfo
+Write-Host "EXCHANGE | Get-DomainRecordsFor_DMARC_DKIM_SPF | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
+# SPF generator https://dmarcly.com/tools/spf-record-generator
+Write-Host "SPF" -ForegroundColor $CommandInfo
+Write-Host "Type:  TXT"
+Write-Host "Name:  @"
+Write-Host "Value: v=spf1 include:spf.protection.outlook.com -all"
+# if sendgrid: v=spf1 include:sendgrid.net include:spf.protection.outlook.com –all
+Write-Host "TTL:   1 hour"
 
-$gw = Get-AzVirtualNetworkGateway -ResourceGroupName $ResourceGroupName -Name $VpnGatewayName
-$gw.IpConfigurationsText
+Write-Host "`nDMARC" -ForegroundColor $CommandInfo
+Write-Host "Type:  TXT"
+Write-Host "Name:  _dmarc"
+Write-Host "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
+Write-Host "TTL:   1 hour"
 
-$con = Get-AzVirtualNetworkGatewayConnection -ResourceGroupName $ResourceGroupName -Name $VpnConnectionName
-$con.ConnectionProtocol
-$con.ConnectionType
-$con.DpdTimeoutSeconds
-$con.IpsecPolicies.Count
-$con.LocalNetworkGateway2Text
-$con.TunnelConnectionStatusText
-$con.UsePolicyBasedTrafficSelectors
-$con.UseLocalAzureIpAddress
+Write-Host "`nDMARC Reports" -ForegroundColor $CommandInfo
+Write-Host "Type:  TXT"
+Write-Host "Name:  $($AlyaDomainName)._report._dmarc"
+Write-Host "Value: v=DMARC1"
+Write-Host "TTL:   1 hour"
 
-$con | fl
+Write-Host "`nDKIM 1" -ForegroundColor $CommandInfo
+Write-Host "Type:  CNAME"
+Write-Host "Name:  selector1._domainkey"
+Write-Host "Value: selector1-$($AlyaDomainName.Replace(".","-"))._domainkey.$($AlyaTenantName)"
+Write-Host "TTL:   1 hour"
+
+Write-Host "`nDKIM 2" -ForegroundColor $CommandInfo
+Write-Host "Type:  CNAME"
+Write-Host "Name:  selector2._domainkey"
+Write-Host "Value: selector2-$($AlyaDomainName.Replace(".","-"))._domainkey.$($AlyaTenantName)"
+Write-Host "TTL:   1 hour"
+
+Write-Host "`n"
 
 #Stopping Transscript
 Stop-Transcript

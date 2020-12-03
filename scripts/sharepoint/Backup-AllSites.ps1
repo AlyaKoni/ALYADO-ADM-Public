@@ -36,7 +36,7 @@
 
 [CmdletBinding()]
 Param(
-    [string]$backupLocation = $null, #Defaults to "$($AlyaData)\sharepoint\Backup"
+    [string]$backupLocation = "C:\Temp\Backup", #$null, #Defaults to "$($AlyaData)\sharepoint\Backup"
     [ValidateSet("Fast","Detailed")]
     [string]$exportMode = "Fast" #Fast, Detailed
 )
@@ -49,7 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Backup-AllSites-$($AlyaT
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.23.2007.1" #TODO Upgrade after bug is fixed https://github.com/pnp/PnP-PowerShell/issues/2849
+Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline"
 
 # Constants
 if (-Not $backupLocation)
@@ -59,6 +59,18 @@ if (-Not $backupLocation)
 if (-Not (Test-Path $backupLocation))
 {
     $tmp = New-Item -Path $backupLocation -ItemType Directory -Force
+}
+
+# Getting app information
+Write-Host "Getting app information" -ForegroundColor $CommandInfo
+. $PSScriptRoot\Configure-ServiceApplication.ps1
+
+# Checking app certificate
+Write-Host "Checking app certificate" -ForegroundColor $CommandInfo
+$cert = Get-ChildItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Thumbprint -eq $AlyaSharePointAppCertificate }
+if (-Not $cert)
+{
+    & "$PSScriptRoot\Install-ServiceApplicationCertificate.ps1"
 }
 
 # =============================================================
@@ -185,50 +197,80 @@ function Get-ExportObject(
     return $expObj
 }
 
-function Download-FolderRecursive($folderObj, $parentDir)
+function Download-FolderRecursive($folderObj, $webUrl, $parentDir)
 {
-    $items = @(Get-PnPFolderItem -FolderSiteRelativeUrl $folderObj.ServerRelativeUrl)
+    $url = $folderObj.ServerRelativeUrl
+    if ($webUrl -ne "/") { $url = $url.Replace($webUrl, "") }
+    $retries = 10
+    do
+    {
+        try
+        {
+            $items = @(Get-PnPFolderItem -FolderSiteRelativeUrl $url)
+            break
+        }
+        catch
+        {
+            Write-Error $_.Exception -ErrorAction Continue
+            Write-Warning "Retrying $retries times"
+            Start-Sleep -Seconds 15
+            $retries--
+            if ($retries -lt 0) { throw }
+        }
+    } while ($true)
     foreach($item in $items)
     {
-        $itemPath = $item.ServerRelativeUrl -replace "^$(([Uri]$item.Context.Url).AbsolutePath)/",""
-        $folderPath = Join-Path $parentDir $item.ServerRelativeUrl.Replace("/","\")
-        Write-Host $folderPath
+        $itemPath = Join-Path $parentDir $item.ServerRelativeUrl
+        if ($webUrl -ne "/") { $itemPath = $itemPath.Replace($webUrl.Replace("/","\"), "") }
+        Write-Host $itemPath
         if ($item.GetType().Name -eq "Folder")
         {
-            if(-Not (Test-Path $folderPath))
-            {
-                $tmp = New-Item -Path $folderPath -ItemType Directory -Force
-            }
-            Download-FolderRecursive -folderObj $item -parentDir $parentDir
+            Download-FolderRecursive -folderObj $item -webUrl $webUrl -parentDir $parentDir
         }
         else 
         {
-            $destinationFolderPath = Join-Path $parentDir ((Split-Path $itemPath).Replace("/","\"))
-            if(-Not (Test-Path $destinationFolderPath))
+            $folderPath = Split-Path -Path $itemPath
+            if(-Not (Test-Path $folderPath))
             {
-                $tmp = New-Item -Path $destinationFolderPath -ItemType Directory -Force
-                if(-Not (Test-Path $destinationFolderPath))
+                $tmp = New-Item -Path $folderPath -ItemType Directory -Force
+                if(-Not (Test-Path $folderPath))
                 {
                     Start-Sleep -Seconds 1
                 }
             }
             try
             {
-                Get-PnPFile -Url $item.ServerRelativeUrl -Path $destinationFolderPath -AsFile -Force # Latest version
-                $ctx= Get-PnPContext
-                $ctx.Load($item.Versions)
-                $ctx.ExecuteQuery()
-                foreach ($version in $item.Versions)
+                $retries = 10
+                do
                 {
-                    $versionValue = $version.VersionLabel
-                    $str = $version.OpenBinaryStream()
-                    $ctx.ExecuteQuery()
-                    $filename =  (Split-Path $item.ServerRelativeUrl -Leaf) + "." + $versionValue
-                    $filepath = Join-Path $destinationFolderPath $filename
-                    $fs = New-Object IO.FileStream $filepath ,'Append','Write','Read'
-                    $str.Value.CopyTo($fs) # Older version
-                    $fs.Close()
-                }
+                    try
+                    {
+                        Get-PnPFile -Url $item.ServerRelativeUrl -Path $folderPath -AsFile -Force # Latest version
+                        $ctx= Get-PnPContext
+                        $ctx.Load($item.Versions)
+                        $ctx.ExecuteQuery()
+                        foreach ($version in $item.Versions)
+                        {
+                            $versionValue = $version.VersionLabel
+                            $str = $version.OpenBinaryStream()
+                            $ctx.ExecuteQuery()
+                            $filename =  (Split-Path $item.ServerRelativeUrl -Leaf) + "." + $versionValue
+                            $filepath = Join-Path $folderPath $filename
+                            $fs = New-Object IO.FileStream $filepath ,'Append','Write','Read'
+                            $str.Value.CopyTo($fs) # Older version
+                            $fs.Close()
+                        }
+                        break
+                    }
+                    catch
+                    {
+                        Write-Error $_.Exception -ErrorAction Continue
+                        Write-Warning "Retrying $retries times"
+                        Start-Sleep -Seconds 15
+                        $retries--
+                        if ($retries -lt 0) { throw }
+                    }
+                } while ($true)
             } catch
             { 
 				try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
@@ -240,11 +282,43 @@ function Download-FolderRecursive($folderObj, $parentDir)
 }
 
 Write-Host "Connecting to SharePoint Online administration" -ForegroundColor $CommandInfo
-LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$retries = 10
+do
+{
+    try
+    {
+        $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+        break
+    }
+    catch
+    {
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Warning "Retrying $retries times"
+        Start-Sleep -Seconds 15
+        $retries--
+        if ($retries -lt 0) { throw }
+    }
+} while ($true)
 
 #Traverse site collections
 Write-Host "Getting all site collections" -ForegroundColor $CommandInfo
-$sites = Get-PnPTenantSite -Detailed
+$retries = 10
+do
+{
+    try
+    {
+        $sites = Get-PnPTenantSite -Detailed
+        break
+    }
+    catch
+    {
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Warning "Retrying $retries times"
+        Start-Sleep -Seconds 15
+        $retries--
+        if ($retries -lt 0) { throw }
+    }
+} while ($true)
 foreach($site in $sites)
 {
     $expSiteCol = $site
@@ -253,27 +327,74 @@ foreach($site in $sites)
     {
         Write-Host "Working on site collection $($siteUrl)" -ForegroundColor $CommandInfo
 
-        ReloginTo-PnP -Url $siteUrl
-        if ($exportMode -eq "Detailed")
+        $retries = 10
+        do
         {
-            $site = Get-PnPSite
-            $expSite = Get-ExportObject -obj $site -level 0 -maxlevel 2
-        }
-        else
+            try
+            {
+                $siteCon = ReloginTo-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+                break
+            }
+            catch
+            {
+                Write-Error $_.Exception -ErrorAction Continue
+                Write-Warning "Retrying $retries times"
+                Start-Sleep -Seconds 15
+                $retries--
+                if ($retries -lt 0) { throw }
+            }
+        } while ($true)
+        $retries = 10
+        do
         {
-            $expSite = Invoke-PnPSPRestMethod -Url "/_api/site"
-        }
+            try
+            {
+                if ($exportMode -eq "Detailed")
+                {
+                    $site = Get-PnPSite
+                    $expSite = Get-ExportObject -obj $site -level 0 -maxlevel 2
+                }
+                else
+                {
+                    $expSite = Invoke-PnPSPRestMethod -Url "/_api/site"
+                }
+                break
+            }
+            catch
+            {
+                Write-Error $_.Exception -ErrorAction Continue
+                Write-Warning "Retrying $retries times"
+                Start-Sleep -Seconds 15
+                $retries--
+                if ($retries -lt 0) { throw }
+            }
+        } while ($true)
 
-        ReloginTo-PnP -Url $siteUrl
-        $web = Get-PnPWeb
-        if ($exportMode -eq "Detailed")
+        $retries = 10
+        do
         {
-            $expWeb = Get-ExportObject -obj $web -level 0 -maxlevel 2
-        }
-        else
-        {
-            $expWeb = Invoke-PnPSPRestMethod -Url "/_api/web"
-        }
+            try
+            {
+                $web = Get-PnPWeb -Includes "ServerRelativeUrl", "RootFolder", "RootFolder.ServerRelativeUrl"
+                if ($exportMode -eq "Detailed")
+                {
+                    $expWeb = Get-ExportObject -obj $web -level 0 -maxlevel 2
+                }
+                else
+                {
+                    $expWeb = Invoke-PnPSPRestMethod -Url "/_api/web"
+                }
+                break
+            }
+            catch
+            {
+                Write-Error $_.Exception -ErrorAction Continue
+                Write-Warning "Retrying $retries times"
+                Start-Sleep -Seconds 15
+                $retries--
+                if ($retries -lt 0) { throw }
+            }
+        } while ($true)
 
         $dirName = $siteUrl.Replace("://","_").Replace("/","_").TrimEnd("_")
         $expDir = Join-Path $backupLocation $dirName
@@ -288,8 +409,24 @@ foreach($site in $sites)
         if ($expSiteCol.Template -ne "RedirectSite#0")
         {
             Write-Host "Exporting lists"
-            ReloginTo-PnP -Url $siteUrl
-            $lists = Get-PnpList -Includes @("ID", "Fields", "RootFolder")
+            $retries = 10
+            do
+            {
+                try
+                {
+                    $lists = Get-PnpList -Includes @("ID", "Fields", "RootFolder")
+                    break
+                }
+                catch
+                {
+                    Write-Error $_.Exception -ErrorAction Continue
+                    Write-Warning "Retrying $retries times"
+                    Start-Sleep -Seconds 15
+                    $retries--
+                    if ($retries -lt 0) { throw }
+                }
+            } while ($true)
+            
             foreach($list in $lists)
             {
                 try
@@ -306,29 +443,60 @@ foreach($site in $sites)
                         $tmp = New-Item -Path $listDir -ItemType Directory -Force
                     }
 
-                    ReloginTo-PnP -Url $siteUrl
-                    if ($exportMode -eq "Detailed")
-                    {$resp
-                        $expList = Get-ExportObject -obj $list -level 0 -maxlevel 2 -exportFields $true -exportLists $true -exportContentTypes $true -exportFolders $true
-                    }
-                    else
+                    $retries = 10
+                    do
                     {
-                        $expList = Invoke-PnPSPRestMethod -Url ("/_api/web/lists(guid'$($list.Id.Guid)')")
-                    }
-
-                    $allItems = @()
-                    if ($exportMode -eq "Detailed")
-                    {
-                        $items = Get-PnPListItem -List $list -PageSize 500
-                        foreach($item in $items)
+                        try
                         {
-                            $allItems += Get-ExportObject -obj $item -level 0 -maxlevel 2
+                            if ($exportMode -eq "Detailed")
+                            {
+                                $expList = Get-ExportObject -obj $list -level 0 -maxlevel 2 -exportFields $true -exportLists $true -exportContentTypes $true -exportFolders $true
+                            }
+                            else
+                            {
+                                $expList = Invoke-PnPSPRestMethod -Url ("/_api/web/lists(guid'$($list.Id.Guid)')")
+                            }
+                            break
                         }
-                    }
-                    else
+                        catch
+                        {
+                            Write-Error $_.Exception -ErrorAction Continue
+                            Write-Warning "Retrying $retries times"
+                            Start-Sleep -Seconds 15
+                            $retries--
+                            if ($retries -lt 0) { throw }
+                        }
+                    } while ($true)
+
+                    $retries = 10
+                    do
                     {
-                        $allItems = Invoke-PnPSPRestMethod -Url ("/_api/web/lists(guid'$($list.Id.Guid)')/items")
-                    }
+                        try
+                        {
+                            $allItems = @()
+                            if ($exportMode -eq "Detailed")
+                            {
+                                $items = Get-PnPListItem -List $list -PageSize 500
+                                foreach($item in $items)
+                                {
+                                    $allItems += Get-ExportObject -obj $item -level 0 -maxlevel 2
+                                }
+                            }
+                            else
+                            {
+                                $allItems = Invoke-PnPSPRestMethod -Url ("/_api/web/lists(guid'$($list.Id.Guid)')/items")
+                            }
+                            break
+                        }
+                        catch
+                        {
+                            Write-Error $_.Exception -ErrorAction Continue
+                            Write-Warning "Retrying $retries times"
+                            Start-Sleep -Seconds 15
+                            $retries--
+                            if ($retries -lt 0) { throw }
+                        }
+                    } while ($true)
 
                     $allItems | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $listDir "listItems.metadata") -Force
                     $expList | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $listDir "listDefinition.metadata") -Force
@@ -341,7 +509,6 @@ foreach($site in $sites)
             }
 
             Write-Host "Exporting files"
-            $web = Get-PnPWeb -Includes "RootFolder"
 
             if ((Test-Path "C:\AlyaExport"))
             {
@@ -352,7 +519,7 @@ foreach($site in $sites)
             {
                 throw "Not able to create symbolic link"
             }
-            Download-FolderRecursive -folderObj $web.RootFolder -parentDir "C:\AlyaExport"
+            Download-FolderRecursive -folderObj $web.RootFolder -webUrl $web.ServerRelativeUrl -parentDir "C:\AlyaExport"
             if ((Test-Path "C:\AlyaExport"))
             {
                 cmd /c rmdir "C:\AlyaExport"

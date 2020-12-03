@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\CreateAndUpdate-PublicStorageAccount-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdPublicStorage)"
 
 # Checking modules
@@ -72,20 +72,20 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Infrastructure Services";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Infrastructure Services";ownerEmail=$Context.Account.Id}
 }
 
 # Checking storage account
 Write-Host "Checking storage account" -ForegroundColor $CommandInfo
-$StrgAccount = Get-AzStorageAccount -ResourceGroupName $RessourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
+$StrgAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
 if (-Not $StrgAccount)
 {
     Write-Warning "Storage account not found. Creating the storage account $StorageAccountName"
-    $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Hot -Tag @{displayName="Public Storage"}
+    $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Hot -Tag @{displayName="Public Storage"}
     if (-Not $StrgAccount)
     {
         Write-Error "Storage account $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -149,7 +149,7 @@ foreach($container in $containers)
 
     # Checking container
     Write-Host "Checking container $StorageContainerName" -ForegroundColor $CommandInfo
-    $StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $RessourceGroupName -Name $StorageAccountName
+    $StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName
     $StrgKey = $StrgKeys.GetValue(0).Value
     $StrgContext = New-AzStorageContext -StorageAccountName $StorageAccountName -StorageAccountKey $StrgKey
     $PublicContainer = Get-AzStorageContainer -Context $StrgContext -Name $StorageContainerName -ErrorAction SilentlyContinue
@@ -176,10 +176,7 @@ foreach($container in $containers)
         $relPath = $SourceFile.FullName.Replace($BlobContainerRoot, "")
         Write-Host "  - $relPath"
         $mime = [System.Web.MimeMapping]::GetMimeMapping($SourceFile.FullName)
-        if (-Not $mime)
-        {
-            $mime = "application/octet-stream"
-        }
+        if ($SourceFile.FullName.EndsWith(".json")) { $mime = "application/json" }
         $BlobName = $relPath.Substring(1)
         $DestinationBlob = Get-AzStorageBlob -Context $StrgContext -Container $StorageContainerName -Blob $BlobName -ErrorAction SilentlyContinue
         if ($DestinationBlob)

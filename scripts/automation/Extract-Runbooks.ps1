@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\automation\Extract-Runbooks-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAutomation)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAutomation)"
 $AutomationAccountName = "$($AlyaNamingPrefix)aacc$($AlyaResIdAutomationAccount)"
 $SolutionDataRoot = "$($AlyaData)\automation"
 
@@ -73,16 +73,16 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Automation";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Automation";ownerEmail=$Context.Account.Id}
 }
 
 # Checking automation account
 Write-Host "Checking automation account" -ForegroundColor $CommandInfo
-$AutomationAccount = Get-AzAutomationAccount -ResourceGroupName $RessourceGroupName -Name $AutomationAccountName -ErrorAction SilentlyContinue
+$AutomationAccount = Get-AzAutomationAccount -ResourceGroupName $ResourceGroupName -Name $AutomationAccountName -ErrorAction SilentlyContinue
 if (-Not $AutomationAccount)
 {
     Write-Error "Automation Account not found. Please create the Automation Account first" -ErrorAction Continue
@@ -91,11 +91,11 @@ if (-Not $AutomationAccount)
 
 # Export runbooks
 Write-Host "Exporting automation runbooks" -ForegroundColor $CommandInfo
-$runbooks = Get-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName
+$runbooks = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName
 foreach($runbook in $runbooks)
 {
     Write-Host "Exporting $($runbook.Name) to $($SolutionDataRoot)"
-    Export-AzAutomationRunbook -ResourceGroupName $RessourceGroupName -AutomationAccountName $AutomationAccountName -Name $runbook.Name -Slot "Published" -OutputFolder $SolutionDataRoot -Force
+    Export-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $runbook.Name -Slot "Published" -OutputFolder $SolutionDataRoot -Force
 }
 
 #Stopping Transscript

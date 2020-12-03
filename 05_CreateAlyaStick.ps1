@@ -70,7 +70,7 @@ if ($disk)
         New-Item -Path "$alyaDir\tools" -ItemType Directory -Force | Out-Null
     }
 
-    cmd /c robocopy "$($AlyaRoot)" "$($alyaDir)" /MIR
+    cmd /c robocopy "$($AlyaRoot)" "$($alyaDir)" /MIR /XD "%SourceDir%\scripts\solutions" /XD .git /XD PublishProfiles /XD .vs /XD .vscode /XD _temp /XD _logs
 
     $to = "$alyaDir\tools\WindowsPowerShell"
 

@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-AzureSubAuditLogging-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdAuditStorage)"
 $LogAnaWrkspcName = "$($AlyaNamingPrefix)loga$($AlyaResIdLogAnalytics)"
 $DiagnosticRuleName = "Diag-Sub-$($AlyaSubscriptionName)"
@@ -74,20 +74,20 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Audit Logs";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Audit Logs";ownerEmail=$Context.Account.Id}
 }
 
 # Checking storage account
 Write-Host "Checking storage account" -ForegroundColor $CommandInfo
-$StrgAccount = Get-AzStorageAccount -ResourceGroupName $RessourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
+$StrgAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
 if (-Not $StrgAccount)
 {
     Write-Warning "Storage account not found. Creating the storage account $StorageAccountName"
-    $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Cool -Tag @{displayName="Audit Log Storage"}
+    $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Cool -Tag @{displayName="Audit Log Storage"}
     if (-Not $StrgAccount)
     {
         Write-Error "Storage account $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -97,11 +97,11 @@ if (-Not $StrgAccount)
 
 # Checking log analytics workspace
 Write-Host "Checking log analytics workspace" -ForegroundColor $CommandInfo
-$LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $RessourceGroupName -Name $LogAnaWrkspcName -ErrorAction SilentlyContinue
+$LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $ResourceGroupName -Name $LogAnaWrkspcName -ErrorAction SilentlyContinue
 if (-Not $LogAnaWrkspc)
 {
     Write-Warning "Log analytics workspace not found. Creating the log analytics workspace $LogAnaWrkspcName"
-    $LogAnaWrkspc = New-AzOperationalInsightsWorkspace -Name $LogAnaWrkspcName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Audit Log Workspace"}
+    $LogAnaWrkspc = New-AzOperationalInsightsWorkspace -Name $LogAnaWrkspcName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Audit Log Workspace"}
     if (-Not $LogAnaWrkspc)
     {
         Write-Error "Log analytics workspace $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue

@@ -44,9 +44,9 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Configure-VirtualNetworksTest-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupNameProd = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
+$ResourceGroupNameProd = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
 $VirtualNetworkNameProd = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
-$RessourceGroupNameTest = "$($AlyaNamingPrefixTest)resg$($AlyaResIdMainNetwork)"
+$ResourceGroupNameTest = "$($AlyaNamingPrefixTest)resg$($AlyaResIdMainNetwork)"
 $VirtualNetworkNameTest = "$($AlyaNamingPrefixTest)vnet$($AlyaResIdVirtualNetwork)"
 $DefaultSubnetName = "$($VirtualNetworkNameTest)snet{0}"
 $DefaultSubnetSecGrpName = "$($VirtualNetworkNameTest)snet{0}sgrp"
@@ -78,24 +78,24 @@ if (-Not $Context)
 
 # Checking ressource group prod
 Write-Host "Checking ressource group prod" -ForegroundColor $CommandInfo
-$ResGrpProd = Get-AzResourceGroup -Name $RessourceGroupNameProd -ErrorAction SilentlyContinue
+$ResGrpProd = Get-AzResourceGroup -Name $ResourceGroupNameProd -ErrorAction SilentlyContinue
 if (-Not $ResGrpProd)
 {
-    throw "Ressource Group not found. Please create the Ressource Group $RessourceGroupNameProd"
+    throw "Ressource Group not found. Please create the Ressource Group $ResourceGroupNameProd"
 }
 
 # Checking ressource group test
 Write-Host "Checking ressource group test" -ForegroundColor $CommandInfo
-$ResGrpTest = Get-AzResourceGroup -Name $RessourceGroupNameTest -ErrorAction SilentlyContinue
+$ResGrpTest = Get-AzResourceGroup -Name $ResourceGroupNameTest -ErrorAction SilentlyContinue
 if (-Not $ResGrpTest)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupNameTest"
-    $ResGrpTest = New-AzResourceGroup -Name $RessourceGroupNameTest -Location $AlyaLocation -Tag @{displayName="Main Test Network Services";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupNameTest"
+    $ResGrpTest = New-AzResourceGroup -Name $ResourceGroupNameTest -Location $AlyaLocation -Tag @{displayName="Main Test Network Services";ownerEmail=$Context.Account.Id}
 }
 
 # Checking virtual network prod
 Write-Host "Checking virtual network prod" -ForegroundColor $CommandInfo
-$VNetProd = Get-AzVirtualNetwork -ResourceGroupName $RessourceGroupNameProd -Name $VirtualNetworkNameProd -ErrorAction SilentlyContinue
+$VNetProd = Get-AzVirtualNetwork -ResourceGroupName $ResourceGroupNameProd -Name $VirtualNetworkNameProd -ErrorAction SilentlyContinue
 if (-Not $VNetProd)
 {
     throw "Virtual network not found. Please create the virtual network $VirtualNetworkNameProd"
@@ -103,11 +103,11 @@ if (-Not $VNetProd)
 
 # Checking virtual network test
 Write-Host "Checking virtual network test" -ForegroundColor $CommandInfo
-$VNetTest = Get-AzVirtualNetwork -ResourceGroupName $RessourceGroupNameTest -Name $VirtualNetworkNameTest -ErrorAction SilentlyContinue
+$VNetTest = Get-AzVirtualNetwork -ResourceGroupName $ResourceGroupNameTest -Name $VirtualNetworkNameTest -ErrorAction SilentlyContinue
 if (-Not $VNetTest)
 {
     Write-Warning "Virtual network not found. Creating the virtual network $VirtualNetworkNameTest"
-    $VNetTest = New-AzVirtualNetwork -ResourceGroupName $RessourceGroupNameTest -Name $VirtualNetworkNameTest -Location $AlyaLocation -AddressPrefix $AlyaTestNetwork
+    $VNetTest = New-AzVirtualNetwork -ResourceGroupName $ResourceGroupNameTest -Name $VirtualNetworkNameTest -Location $AlyaLocation -AddressPrefix $AlyaTestNetwork
 }
 
 # Calculating subnets
@@ -116,7 +116,7 @@ $Networks = Split-NetworkAddressWithoutGateway -netwandcidr $AlyaTestNetwork -sp
 
 # Checking network subnets and security groups
 Write-Host "Checking network subnets and security groups" -ForegroundColor $CommandInfo
-$VNet = Get-AzVirtualNetwork -ResourceGroupName $RessourceGroupNameTest -Name $VirtualNetworkNameTest -ErrorAction SilentlyContinue
+$VNet = Get-AzVirtualNetwork -ResourceGroupName $ResourceGroupNameTest -Name $VirtualNetworkNameTest -ErrorAction SilentlyContinue
 $Subnets = $VNet.Subnets
 $dirty = $false
 for ($i = 1; $i -lt ($Networks.Count+1); $i++)
@@ -127,11 +127,11 @@ for ($i = 1; $i -lt ($Networks.Count+1); $i++)
     $exist = $Subnets | where { $_.Name -eq $SubnetName }
     if (-Not $exist)
     {
-        $SubnetSecGrp = Get-AzNetworkSecurityGroup -ResourceGroupName $RessourceGroupNameTest -Name $SubnetSecGrpName -ErrorAction SilentlyContinue
+        $SubnetSecGrp = Get-AzNetworkSecurityGroup -ResourceGroupName $ResourceGroupNameTest -Name $SubnetSecGrpName -ErrorAction SilentlyContinue
         if (-Not $SubnetSecGrp)
         {
             Write-Warning "Network security group not found. Creating the network security group $SubnetSecGrpName"
-            $SubnetSecGrp = New-AzNetworkSecurityGroup -ResourceGroupName $RessourceGroupNameTest -Name $SubnetSecGrpName -Location $AlyaLocation
+            $SubnetSecGrp = New-AzNetworkSecurityGroup -ResourceGroupName $ResourceGroupNameTest -Name $SubnetSecGrpName -Location $AlyaLocation
         }
         Write-Warning "Subnet not found. Creating the subnet $SubnetName"
         Add-AzVirtualNetworkSubnetConfig -VirtualNetwork $VNet -Name $SubnetName -AddressPrefix $Subnet -NetworkSecurityGroup $SubnetSecGrp
@@ -145,7 +145,7 @@ if ($dirty)
 
 # Checking peering test
 Write-Host "Checking peering test" -ForegroundColor $CommandInfo
-$PeerTest = Get-AzVirtualNetworkPeering -ResourceGroupName $RessourceGroupNameTest -VirtualNetworkName $VirtualNetworkNameTest -Name $VirtualNetworkTestPeeringName -ErrorAction SilentlyContinue
+$PeerTest = Get-AzVirtualNetworkPeering -ResourceGroupName $ResourceGroupNameTest -VirtualNetworkName $VirtualNetworkNameTest -Name $VirtualNetworkTestPeeringName -ErrorAction SilentlyContinue
 if (-Not $PeerTest)
 {
     Write-Warning "Virtual network peering not found. Creating the virtual network peering $VirtualNetworkTestPeeringName"
@@ -161,7 +161,7 @@ if (-Not $PeerTest)
 
 # Checking peering prod
 Write-Host "Checking peering prod" -ForegroundColor $CommandInfo
-$PeerProd = Get-AzVirtualNetworkPeering -ResourceGroupName $RessourceGroupNameProd -VirtualNetworkName $VirtualNetworkNameProd -Name $VirtualNetworkProdPeeringName -ErrorAction SilentlyContinue
+$PeerProd = Get-AzVirtualNetworkPeering -ResourceGroupName $ResourceGroupNameProd -VirtualNetworkName $VirtualNetworkNameProd -Name $VirtualNetworkProdPeeringName -ErrorAction SilentlyContinue
 if (-Not $PeerProd)
 {
     Write-Warning "Virtual network peering not found. Creating the virtual network peering $VirtualNetworkProdPeeringName"

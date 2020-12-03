@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Create-AdVms-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAdResGrp)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAdResGrp)"
 $AvSetName = "$($AlyaNamingPrefix)avst001serv$($AlyaResIdAdSrv1)serv$($AlyaResIdAdSrv2)"
 $VMName1 = "$($AlyaNamingPrefix)serv$($AlyaResIdAdSrv1)"
 $VMName2 = "$($AlyaNamingPrefix)serv$($AlyaResIdAdSrv2)"
@@ -52,12 +52,12 @@ $VMNicName1 = "$($AlyaNamingPrefix)serv$($AlyaResIdAdSrv1)nic1"
 $VMNicName2 = "$($AlyaNamingPrefix)serv$($AlyaResIdAdSrv2)nic1"
 $VMDiskName1 = "$($AlyaNamingPrefix)serv$($AlyaResIdAdSrv1)osdisk"
 $VMDiskName2 = "$($AlyaNamingPrefix)serv$($AlyaResIdAdSrv2)osdisk"
-$DiagnosticRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
+$DiagnosticResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)"
-$NetworkRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
+$NetworkResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
 $VirtualNetworkName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
 $VMSubnetName = "$($VirtualNetworkName)snet$($AlyaResIdAdSNet)"
-$KeyVaultRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$KeyVaultResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 $RecoveryVaultName = "$($AlyaNamingPrefix)recv$($AlyaResIdRecoveryVault)"
 $BackupPolicyName = "NightlyPolicy"
@@ -87,16 +87,16 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Active Directory";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Active Directory";ownerEmail=$Context.Account.Id}
 }
 
 # Checking virtual network
 Write-Host "Checking virtual network" -ForegroundColor $CommandInfo
-$VNet = Get-AzVirtualNetwork -ResourceGroupName $NetworkRessourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
+$VNet = Get-AzVirtualNetwork -ResourceGroupName $NetworkResourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
 if (-Not $VNet)
 {
     throw "Virtual network not found. Please create the virtual network $VirtualNetworkName"
@@ -113,7 +113,7 @@ $Subnet = Get-AzVirtualNetworkSubnetConfig -Name $VMSubnetName -VirtualNetwork $
 
 # Checking storage account
 Write-Host "Checking diag storage account" -ForegroundColor $CommandInfo
-$StrgAccount = Get-AzStorageAccount -ResourceGroupName $DiagnosticRessourceGroupName -Name $DiagnosticStorageName -ErrorAction SilentlyContinue
+$StrgAccount = Get-AzStorageAccount -ResourceGroupName $DiagnosticResourceGroupName -Name $DiagnosticStorageName -ErrorAction SilentlyContinue
 if (-Not $StrgAccount)
 {
     throw "Storage account not found. Please create the diag storage account $StorageAccountName"
@@ -121,33 +121,33 @@ if (-Not $StrgAccount)
 
 # Checking vm nic1
 Write-Host "Checking vm nic1" -ForegroundColor $CommandInfo
-$VMNic1 = Get-AzNetworkInterface -ResourceGroupName $RessourceGroupName -Name $VMNicName1 -ErrorAction SilentlyContinue
+$VMNic1 = Get-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VMNicName1 -ErrorAction SilentlyContinue
 if (-Not $VMNic1)
 {
     Write-Warning "VM nic not found. Creating the vm nic $VMNicName1"
-    $VMNic1 = New-AzNetworkInterface -ResourceGroupName $RessourceGroupName -Name $VMNicName1 -Location $AlyaLocation -SubnetId $Subnet.Id -EnableAcceleratedNetworking:$false 
+    $VMNic1 = New-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VMNicName1 -Location $AlyaLocation -SubnetId $Subnet.Id -EnableAcceleratedNetworking:$false 
     $VMNic1.IpConfigurations[0].PrivateIpAllocationMethod = "Static"
     Set-AzNetworkInterface -NetworkInterface $VMNic1
 }
 
 # Checking vm nic2
 Write-Host "Checking vm nic2" -ForegroundColor $CommandInfo
-$VMNic2 = Get-AzNetworkInterface -ResourceGroupName $RessourceGroupName -Name $VMNicName2 -ErrorAction SilentlyContinue
+$VMNic2 = Get-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VMNicName2 -ErrorAction SilentlyContinue
 if (-Not $VMNic2)
 {
     Write-Warning "VM nic not found. Creating the vm nic $VMNicName2"
-    $VMNic2 = New-AzNetworkInterface -ResourceGroupName $RessourceGroupName -Name $VMNicName2 -Location $AlyaLocation -SubnetId $Subnet.Id -EnableAcceleratedNetworking:$false 
+    $VMNic2 = New-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VMNicName2 -Location $AlyaLocation -SubnetId $Subnet.Id -EnableAcceleratedNetworking:$false 
     $VMNic2.IpConfigurations[0].PrivateIpAllocationMethod = "Static"
     Set-AzNetworkInterface -NetworkInterface $VMNic2
 }
 
 # Checking key vault
 Write-Host "Checking key vault" -ForegroundColor $CommandInfo
-$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultRessourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
+$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultResourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
 if (-Not $KeyVault)
 {
     Write-Warning "Key Vault not found. Creating the Key Vault $KeyVaultName"
-    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
+    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
     if (-Not $KeyVault)
     {
         Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -172,10 +172,11 @@ else
     $VMPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
     $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
 }
+Clear-Variable -Name "VMPassword"
 
 # Checking recovery vault
 Write-Host "Checking recovery vault" -ForegroundColor $CommandInfo
-$RecVault = Get-AzRecoveryServicesVault -ResourceGroupName $KeyVaultRessourceGroupName -Name $RecoveryVaultName -ErrorAction SilentlyContinue
+$RecVault = Get-AzRecoveryServicesVault -ResourceGroupName $KeyVaultResourceGroupName -Name $RecoveryVaultName -ErrorAction SilentlyContinue
 if (-Not $RecVault)
 {
     throw "Recovery vault not found. Please create the recovery vault $RecoveryVaultName"
@@ -191,16 +192,16 @@ if (-Not $BkpPol)
 
 # Checking availability set
 Write-Host "Checking availability set" -ForegroundColor $CommandInfo
-$AvSet = Get-AzAvailabilitySet -ResourceGroupName $RessourceGroupName -Name $AvSetName -ErrorAction SilentlyContinue
+$AvSet = Get-AzAvailabilitySet -ResourceGroupName $ResourceGroupName -Name $AvSetName -ErrorAction SilentlyContinue
 if (-Not $AvSet)
 {
     Write-Warning "Availability set not found. Creating the availability set $AvSetName"
-    $AvSet = New-AzAvailabilitySet -ResourceGroupName $RessourceGroupName -Name $AvSetName -Location $AlyaLocation -PlatformFaultDomainCount 2 -PlatformUpdateDomainCount 2 -Sku Aligned
+    $AvSet = New-AzAvailabilitySet -ResourceGroupName $ResourceGroupName -Name $AvSetName -Location $AlyaLocation -PlatformFaultDomainCount 2 -PlatformUpdateDomainCount 2 -Sku Aligned
 }
 
 # Checking ad vm 1
 Write-Host "Checking ad vm 1" -ForegroundColor $CommandInfo
-$AdVm1 = Get-AzVM -ResourceGroupName $RessourceGroupName -Name $VMName1 -ErrorAction SilentlyContinue
+$AdVm1 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName1 -ErrorAction SilentlyContinue
 if (-Not $AdVm1)
 {
     Write-Warning "AD vm not found. Creating the ad vm $VMName1"
@@ -214,15 +215,15 @@ if (-Not $AdVm1)
     $VMConfig | Set-AzVMSourceImage -PublisherName "MicrosoftWindowsServer" -Offer "WindowsServer" -Skus "2019-Datacenter" -Version latest | Out-Null
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic1.Id | Out-Null
     $VMConfig | Set-AzVMOSDisk -Name $VMDiskName1 -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 127 | Out-Null
-    $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticRessourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
-    $tmp = New-AzVM -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -VM $VMConfig
-    $AdVm1 = Get-AzVM -ResourceGroupName $RessourceGroupName -Name $VMName1
+    $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
+    $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
+    $AdVm1 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName1
     $tmp = Set-AzResource -ResourceId $AdVm1.Id -Tag @{displayName="Active Directory First";ownerEmail=$Context.Account.Id} -Force
 }
 
 # Checking ad vm 2
 Write-Host "Checking ad vm 2" -ForegroundColor $CommandInfo
-$AdVm2 = Get-AzVM -ResourceGroupName $RessourceGroupName -Name $VMName2 -ErrorAction SilentlyContinue
+$AdVm2 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName2 -ErrorAction SilentlyContinue
 if (-Not $AdVm2)
 {
     Write-Warning "AD vm not found. Creating the ad vm $VMName2"
@@ -236,16 +237,16 @@ if (-Not $AdVm2)
     $VMConfig | Set-AzVMSourceImage -PublisherName "MicrosoftWindowsServer" -Offer "WindowsServer" -Skus "2019-Datacenter" -Version latest | Out-Null
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic2.Id | Out-Null
     $VMConfig | Set-AzVMOSDisk -Name $VMDiskName2 -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 127 | Out-Null
-    $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticRessourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
-    $tmp = New-AzVM -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -VM $VMConfig
-    $AdVm2 = Get-AzVM -ResourceGroupName $RessourceGroupName -Name $VMName2
+    $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
+    $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
+    $AdVm2 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName2
     $tmp = Set-AzResource -ResourceId $AdVm2.Id -Tag @{displayName="Active Directory Second";ownerEmail=$Context.Account.Id} -Force
 }
 
 # Checking anti malware vm 1 extension
 Write-Host "Checking anti malware vm 1 extension" -ForegroundColor $CommandInfo
 $VmExtName1 = "$($VMName1)AntiMalware"
-$VmExt1 = Get-AzVMExtension -ResourceGroupName $RessourceGroupName -VMName $VMName1 -Name $VmExtName1 -ErrorAction SilentlyContinue
+$VmExt1 = Get-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName1 -Name $VmExtName1 -ErrorAction SilentlyContinue
 if (-Not $VmExt1)
 {
     Write-Warning "AntiMalware extension on vm 1 not found. Installing AntiMalware on ad vm $VMName1"
@@ -272,7 +273,7 @@ if (-Not $VmExt1)
             }
         }
 '@
-    $VmExt1 = Set-AzVMExtension -ResourceGroupName $RessourceGroupName -VMName $VMName1 -Location $AlyaLocation `
+    $VmExt1 = Set-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName1 -Location $AlyaLocation `
         -Publisher "Microsoft.Azure.Security" -ExtensionType "IaaSAntimalware" -Name $VmExtName1 `
         -SettingString $amsettings -TypeHandlerVersion $typeHandlerVerMjandMn
 }
@@ -280,7 +281,7 @@ if (-Not $VmExt1)
 # Checking anti malware vm 2 extension
 Write-Host "Checking anti malware vm 2 extension" -ForegroundColor $CommandInfo
 $VmExtName2 = "$($VMName2)AntiMalware"
-$VmExt2 = Get-AzVMExtension -ResourceGroupName $RessourceGroupName -VMName $VMName2 -Name $VmExtName2 -ErrorAction SilentlyContinue
+$VmExt2 = Get-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName2 -Name $VmExtName2 -ErrorAction SilentlyContinue
 if (-Not $VmExt2)
 {
     Write-Warning "AntiMalware extension on vm 2 not found. Installing AntiMalware on ad vm $VMName2"
@@ -307,7 +308,7 @@ if (-Not $VmExt2)
             }
         }
 '@
-    $VmExt2 = Set-AzVMExtension -ResourceGroupName $RessourceGroupName -VMName $VMName2 -Location $AlyaLocation `
+    $VmExt2 = Set-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName2 -Location $AlyaLocation `
         -Publisher "Microsoft.Azure.Security" -ExtensionType "IaaSAntimalware" -Name $VmExtName2 `
         -SettingString $amsettings -TypeHandlerVersion $typeHandlerVerMjandMn
 }
@@ -318,7 +319,7 @@ $VmBkpItemContainer1 = Get-AzRecoveryServicesBackupContainer -VaultId $RecVault.
 if (-Not $VmBkpItemContainer1)
 {
     Write-Warning "VM 1 backup not yet enabled. Eanbling backup on ad vm $VMName1"
-    $VmBkpItemContainer1 = Enable-AzRecoveryServicesBackupProtection -ResourceGroupName $RessourceGroupName -Name $VMName1 -Policy $BkpPol -VaultId $RecVault.ID
+    $VmBkpItemContainer1 = Enable-AzRecoveryServicesBackupProtection -ResourceGroupName $ResourceGroupName -Name $VMName1 -Policy $BkpPol -VaultId $RecVault.ID
 }
 else
 {
@@ -335,7 +336,7 @@ $VmBkpItemContainer2 = Get-AzRecoveryServicesBackupContainer -VaultId $RecVault.
 if (-Not $VmBkpItemContainer2)
 {
     Write-Warning "VM 2 backup not yet enabled. Eanbling backup on ad vm $VMName2"
-    $VmBkpItemContainer2 = Enable-AzRecoveryServicesBackupProtection -ResourceGroupName $RessourceGroupName -Name $VMName2 -Policy $BkpPol -VaultId $RecVault.ID
+    $VmBkpItemContainer2 = Enable-AzRecoveryServicesBackupProtection -ResourceGroupName $ResourceGroupName -Name $VMName2 -Policy $BkpPol -VaultId $RecVault.ID
 }
 else
 {

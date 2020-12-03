@@ -37,7 +37,7 @@
 Param(
     $ToLocalDir = "C:\Users\KonradBrunner\OneDrive - Alya Consulting Inh. Konrad Brunner\Desktop\Source\ALYADO-ADM-CloudConfiguration\data\azure\publicStorage\corporate",
     $FromStorageBlobContainer = "corporate",
-    $StorageRessourceGroupName = $null, # Main infra by default
+    $StorageResourceGroupName = $null, # Main infra by default
     $StorageAccountName = $null # Public Storage by default
 )
 
@@ -48,9 +48,9 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\SyncFrom-AzureFileStorageBlob-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-if (-Not $StorageRessourceGroupName)
+if (-Not $StorageResourceGroupName)
 {
-    $StorageRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+    $StorageResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 }
 if (-Not $StorageAccountName)
 {
@@ -82,15 +82,15 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $StorageRessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $StorageResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    throw "Ressource Group not found. Please create the Ressource Group $StorageRessourceGroupName"
+    throw "Ressource Group not found. Please create the Ressource Group $StorageResourceGroupName"
 }
 
 # Checking storage account
 Write-Host "Checking storage account" -ForegroundColor $CommandInfo
-$StrgAccount = Get-AzStorageAccount -ResourceGroupName $StorageRessourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
+$StrgAccount = Get-AzStorageAccount -ResourceGroupName $StorageResourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
 if (-Not $StrgAccount)
 {
     throw "Storage account not found. Please create the storage account $StorageAccountName"

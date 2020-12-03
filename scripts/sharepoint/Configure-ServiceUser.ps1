@@ -29,8 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    05.12.2019 Konrad Brunner       Initial Version
-    25.02.2020 Konrad Brunner       Changes for a project
+    05.11.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Configure-ServiceUser-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-ServiceUser-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
@@ -62,31 +61,31 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Exchange | Configure-ServiceUser | O365" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Configure-ServiceUser | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Checking Exchange service account" -ForegroundColor $CommandInfo
+Write-Host "Checking SharePoint service account" -ForegroundColor $CommandInfo
 $CompName = Make-PascalCase($AlyaCompanyNameShort)
-$ExchUserName = "$($CompName)ExchangeServiceUser@$($AlyaTenantName)"
-$ExchUser = Get-MsolUser -UserPrincipalName $ExchUserName -ErrorAction SilentlyContinue
-if (-Not $ExchUser)
+$SPUserName = "$($CompName)SharePointServiceUser@$($AlyaTenantName)"
+$SPUser = Get-MsolUser -UserPrincipalName $SPUserName -ErrorAction SilentlyContinue
+if (-Not $SPUser)
 {
-    Write-Warning "Exchange service account not found. Creating the Exchange service account $ExchUserName"
-    $ExchUserPasswordForRunAsAccount = "$" + [Guid]::NewGuid().ToString() + "!"
-    $ExchUser = New-MsolUser -UserPrincipalName $ExchUserName -DisplayName "$($CompName) Exchange Service User" -FirstName "$($CompName) Exchange" -LastName "Service User" -UsageLocation "CH" -PasswordNeverExpires $true -Password $ExchUserPasswordForRunAsAccount -ForceChangePassword $False
+    Write-Warning "SharePoint service account not found. Creating the SharePoint service account $SPUserName"
+    $SPUserPasswordForRunAsAccount = "$" + [Guid]::NewGuid().ToString() + "!"
+    $SPUser = New-MsolUser -UserPrincipalName $SPUserName -DisplayName "$($CompName) SharePoint Service User" -FirstName "$($CompName) SharePoint" -LastName "Service User" -UsageLocation "CH" -PasswordNeverExpires $true -Password $SPUserPasswordForRunAsAccount -ForceChangePassword $False
 }
-Set-MsolUser -UserPrincipalName $ExchUserName -PasswordNeverExpires $true
+Set-MsolUser -UserPrincipalName $SPUserName -PasswordNeverExpires $true
 
-Write-Host "Checking Exchange service account role membership" -ForegroundColor $CommandInfo
-$ExchangeRole = Get-MsolRole | where { $_.Name -like "Exchange*" }
-$RoleMember = Get-MsolRoleMember -RoleObjectId $ExchangeRole.ObjectId -All | where { $_.ObjectId -eq $ExchUser.ObjectId }
+Write-Host "Checking SharePoint service account role membership" -ForegroundColor $CommandInfo
+$SharePointRole = Get-MsolRole | where { $_.Name -like "SharePoint*" }
+$RoleMember = Get-MsolRoleMember -RoleObjectId $SharePointRole.ObjectId -All | where { $_.ObjectId -eq $SPUser.ObjectId }
 if (-Not $RoleMember)
 {
-    Write-Warning "Exchange service account role membership not found. Creating the Exchange service account role membership"
-    $RoleMember = Add-MsolRoleMember -RoleObjectId $ExchangeRole.ObjectId -RoleMemberObjectId $ExchUser.ObjectId
+    Write-Warning "SharePoint service account role membership not found. Creating the SharePoint service account role membership"
+    $RoleMember = Add-MsolRoleMember -RoleObjectId $SharePointRole.ObjectId -RoleMemberObjectId $SPUser.ObjectId
 }
 
-Write-Host "Disable MFA for Exchange service account" -ForegroundColor $CommandInfo
+Write-Host "Disable MFA for SharePoint service account" -ForegroundColor $CommandInfo
 if (-Not $AlyaMfaDisabledGroupName)
 {
     $NoMfaGroupName = Read-Host -Prompt "Please specify NoMfaGroupName (Hit return for SGNOMFA)"
@@ -105,11 +104,11 @@ if (-Not $NoMfaGroup)
     Write-Warning "No MFA group not found. Creating the No MFA group"
     $NoMfaGroup = New-MsolGroup -DisplayName $NoMfaGroupName -Description "MFA is disabled for members in this group"
 }
-$GroupMember = Get-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -All | where { $_.ObjectId -eq $ExchUser.ObjectId }
+$GroupMember = Get-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -All | where { $_.ObjectId -eq $SPUser.ObjectId }
 if (-Not $GroupMember)
 {
-    Write-Warning "Exchange service account group membership not found. Creating the NoMfa group membership"
-    $GroupMember = Add-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -GroupMemberObjectId $ExchUser.ObjectId
+    Write-Warning "SharePoint service account group membership not found. Creating the NoMfa group membership"
+    $GroupMember = Add-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -GroupMemberObjectId $SPUser.ObjectId
 }
 
 # =============================================================
@@ -153,25 +152,25 @@ if (-Not $KeyVault)
 
 # Checking azure key vault secret
 Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo
-$ExchangeCredentialAssetName = "$($CompName)ExchangeServiceUserCredential"
-$AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $ExchangeCredentialAssetName -ErrorAction SilentlyContinue
+$SharePointCredentialAssetName = "$($CompName)SharePointServiceUserCredential"
+$AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SharePointCredentialAssetName -ErrorAction SilentlyContinue
 if (-Not $AzureKeyVaultSecret)
 {
-    Write-Warning "Key Vault secret not found. Creating the secret $ExchangeCredentialAssetName"
-    if (-Not $ExchUserPasswordForRunAsAccount)
+    Write-Warning "Key Vault secret not found. Creating the secret $SharePointCredentialAssetName"
+    if (-Not $SPUserPasswordForRunAsAccount)
     {
-        $ExchUserPasswordForRunAsAccountSave = Read-Host -Prompt "Please specify the $($CompName)ExchangeServiceUser password" -AsSecureString
-        $ExchUserPasswordForRunAsAccount = (New-Object PSCredential "user",$ExchUserPasswordForRunAsAccountSave).GetNetworkCredential().Password
+        $SPUserPasswordForRunAsAccountSave = Read-Host -Prompt "Please specify the $($CompName)SharePointServiceUser password" -AsSecureString
+        $SPUserPasswordForRunAsAccount = (New-Object PSCredential "user",$SPUserPasswordForRunAsAccountSave).GetNetworkCredential().Password
     }
     else
     {
-        $ExchUserPasswordForRunAsAccountSave = ConvertTo-SecureString $ExchUserPasswordForRunAsAccount -AsPlainText -Force
+        $SPUserPasswordForRunAsAccountSave = ConvertTo-SecureString $SPUserPasswordForRunAsAccount -AsPlainText -Force
     }
-    $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $ExchangeCredentialAssetName -SecretValue $ExchUserPasswordForRunAsAccountSave
+    $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SharePointCredentialAssetName -SecretValue $SPUserPasswordForRunAsAccountSave
 }
 else
 {
-    $ExchUserPasswordForRunAsAccount = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
+    $SPUserPasswordForRunAsAccount = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
 }
 
 #Stopping Transscript

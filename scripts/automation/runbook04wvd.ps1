@@ -83,8 +83,8 @@ try {
 	$MessageTitle = "Warnung"
 	$MessageBody = "Windows Virtual Desktop wird um {0} automatisch heruntergefahren"
 
-	$LmagWvdProdAppCred = Get-AutomationPSCredential -Name $AlyaWvdServicePrincipalNameProd
-	$LmagWvdTestAppCred = Get-AutomationPSCredential -Name $AlyaWvdServicePrincipalNameTest
+	$WvdProdAppCred = Get-AutomationPSCredential -Name $AlyaWvdServicePrincipalNameProd
+	$WvdTestAppCred = Get-AutomationPSCredential -Name $AlyaWvdServicePrincipalNameTest
 
 	# Members
 	$subs = $Subscriptions.Split(",")
@@ -153,7 +153,7 @@ try {
 							if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
 							{
 								$hostName = $vm.Name + "." + $AlyaLocalDomainName
-								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 								$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
 								foreach ($hpool in $hpools)
 								{
@@ -171,7 +171,7 @@ try {
 										}
 									}
 								}
-								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 								$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
 								foreach ($hpool in $hpools)
 								{
@@ -203,7 +203,7 @@ try {
 						if ($runTime -gt $warnTime -and -not ($startTime -and $startTime -gt $warnTime -and $runTime -gt $startTime))
 						{
 							$hostName = $vm.Name + "." + $AlyaLocalDomainName
-							$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+							$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 							$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
 							foreach ($hpool in $hpools)
 							{
@@ -220,7 +220,7 @@ try {
 									}
 								}
 							}
-							$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $LmagWvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+							$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 							$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
 							foreach ($hpool in $hpools)
 							{

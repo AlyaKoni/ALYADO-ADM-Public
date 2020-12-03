@@ -44,16 +44,16 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\image\Create-ImageHost-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
 $VMName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)"
 $VMNicName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)nic1"
 $VMDiskName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)osdisk"
-$DiagnosticRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
+$DiagnosticResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)"
-$NetworkRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
+$NetworkResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
 $VirtualNetworkName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
 $VMSubnetName = "$($VirtualNetworkName)snet$($AlyaResIdWvdImageSNet)"
-$KeyVaultRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$KeyVaultResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
@@ -81,16 +81,16 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Image Host";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Image Host";ownerEmail=$Context.Account.Id}
 }
 
 # Checking virtual network
 Write-Host "Checking virtual network" -ForegroundColor $CommandInfo
-$VNet = Get-AzVirtualNetwork -ResourceGroupName $NetworkRessourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
+$VNet = Get-AzVirtualNetwork -ResourceGroupName $NetworkResourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
 if (-Not $VNet)
 {
     throw "Virtual network not found. Please create the virtual network $VirtualNetworkName"
@@ -107,7 +107,7 @@ $Subnet = Get-AzVirtualNetworkSubnetConfig -Name $VMSubnetName -VirtualNetwork $
 
 # Checking storage account
 Write-Host "Checking diag storage account" -ForegroundColor $CommandInfo
-$StrgAccount = Get-AzStorageAccount -ResourceGroupName $DiagnosticRessourceGroupName -Name $DiagnosticStorageName -ErrorAction SilentlyContinue
+$StrgAccount = Get-AzStorageAccount -ResourceGroupName $DiagnosticResourceGroupName -Name $DiagnosticStorageName -ErrorAction SilentlyContinue
 if (-Not $StrgAccount)
 {
     throw "Storage account not found. Please create the diag storage account $StorageAccountName"
@@ -115,11 +115,11 @@ if (-Not $StrgAccount)
 
 # Checking vm nic
 Write-Host "Checking vm nic" -ForegroundColor $CommandInfo
-$VMNic = Get-AzNetworkInterface -ResourceGroupName $RessourceGroupName -Name $VMNicName -ErrorAction SilentlyContinue
+$VMNic = Get-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VMNicName -ErrorAction SilentlyContinue
 if (-Not $VMNic)
 {
     Write-Warning "VM nic not found. Creating the vm nic $VMNicName"
-    $VMNic = New-AzNetworkInterface -ResourceGroupName $RessourceGroupName -Name $VMNicName -Location $AlyaLocation -SubnetId $Subnet.Id -EnableAcceleratedNetworking:$false 
+    $VMNic = New-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VMNicName -Location $AlyaLocation -SubnetId $Subnet.Id -EnableAcceleratedNetworking:$false 
     Set-AzNetworkInterface -NetworkInterface $VMNic
 }
 #$VMNic.EnableAcceleratedNetworking = $false
@@ -127,11 +127,11 @@ if (-Not $VMNic)
 
 # Checking key vault
 Write-Host "Checking key vault" -ForegroundColor $CommandInfo
-$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultRessourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
+$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultResourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
 if (-Not $KeyVault)
 {
     Write-Warning "Key Vault not found. Creating the Key Vault $KeyVaultName"
-    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
+    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
     if (-Not $KeyVault)
     {
         Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -156,10 +156,11 @@ else
     $VMPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
     $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
 }
+Clear-Variable -Name "VMPassword"
 
 # Checking image host vm
 Write-Host "Checking image host vm" -ForegroundColor $CommandInfo
-$ImageHostVm = Get-AzVM -ResourceGroupName $RessourceGroupName -Name $VMName -ErrorAction SilentlyContinue
+$ImageHostVm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName -ErrorAction SilentlyContinue
 if (-Not $ImageHostVm)
 {
     Write-Warning "Image host vm not found. Creating the image host vm $VMName"
@@ -173,9 +174,9 @@ if (-Not $ImageHostVm)
     $VMConfig | Set-AzVMSourceImage -PublisherName "MicrosoftWindowsDesktop" -Offer "Windows-10" -Skus "19h2-evd" -Version latest | Out-Null
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic.Id | Out-Null
     $VMConfig | Set-AzVMOSDisk -Name $VMDiskName -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 127 | Out-Null
-    $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticRessourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
-    $tmp = New-AzVM -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -VM $VMConfig -DisableBginfoExtension
-    $ImageHostVm = Get-AzVM -ResourceGroupName $RessourceGroupName -Name $VMName
+    $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
+    $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig -DisableBginfoExtension
+    $ImageHostVm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName
     $tmp = Set-AzResource -ResourceId $ImageHostVm.Id -Tag @{displayName="Image Host";ownerEmail=$Context.Account.Id;stopTime=$AlyaWvdStopTime} -Force
 }
 
@@ -183,7 +184,7 @@ if (-Not $ImageHostVm)
 <#
 Write-Host "Checking anti malware vm extension" -ForegroundColor $CommandInfo
 $VmExtName = "$($VMName)AntiMalware"
-$VmExt = Get-AzVMExtension -ResourceGroupName $RessourceGroupName -VMName $VMName -Name $VmExtName -ErrorAction SilentlyContinue
+$VmExt = Get-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName -Name $VmExtName -ErrorAction SilentlyContinue
 if (-Not $VmExt)
 {
     Write-Warning "AntiMalware extension on vm not found. Installing AntiMalware on Image host vm $VMName"
@@ -210,7 +211,7 @@ if (-Not $VmExt)
             }
         }
 '@
-    $VmExt = Set-AzVMExtension -ResourceGroupName $RessourceGroupName -VMName $VMName -Location $AlyaLocation `
+    $VmExt = Set-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName -Location $AlyaLocation `
         -Publisher "Microsoft.Azure.Security" -ExtensionType "IaaSAntimalware" -Name $VmExtName `
         -SettingString $amsettings -TypeHandlerVersion $typeHandlerVerMjandMn
 }

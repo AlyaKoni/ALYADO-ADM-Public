@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Configure-VirtualNetworks-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
 $VirtualNetworkName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
 $DefaultSubnetName = "$($VirtualNetworkName)snet{0}"
 $DefaultSubnetSecGrpName = "$($VirtualNetworkName)snet{0}sgrp"
@@ -74,20 +74,20 @@ if (-Not $Context)
 
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $RessourceGroupName -ErrorAction SilentlyContinue
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $RessourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $RessourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Network Services";ownerEmail=$Context.Account.Id}
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Network Services";ownerEmail=$Context.Account.Id}
 }
 
 # Checking virtual network
 Write-Host "Checking virtual network" -ForegroundColor $CommandInfo
-$VNet = Get-AzVirtualNetwork -ResourceGroupName $RessourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
+$VNet = Get-AzVirtualNetwork -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
 if (-Not $VNet)
 {
     Write-Warning "Virtual network not found. Creating the virtual network $VirtualNetworkName"
-    $VNet = New-AzVirtualNetwork -ResourceGroupName $RessourceGroupName -Name $VirtualNetworkName -Location $AlyaLocation -AddressPrefix $AlyaProdNetwork
+    $VNet = New-AzVirtualNetwork -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkName -Location $AlyaLocation -AddressPrefix $AlyaProdNetwork
 }
 
 # Calculating subnets
@@ -96,7 +96,7 @@ $Networks = Split-NetworkAddressWithGateway -netwandcidr $AlyaProdNetwork -gwcid
 
 # Checking network subnets and security groups
 Write-Host "Checking network subnets and security groups" -ForegroundColor $CommandInfo
-$VNet = Get-AzVirtualNetwork -ResourceGroupName $RessourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
+$VNet = Get-AzVirtualNetwork -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
 $Subnets = $VNet.Subnets
 $dirty = $false
 for ($i = 1; $i -lt $Networks.Count; $i++)
@@ -107,11 +107,11 @@ for ($i = 1; $i -lt $Networks.Count; $i++)
     $exist = $Subnets | where { $_.Name -eq $SubnetName }
     if (-Not $exist)
     {
-        $SubnetSecGrp = Get-AzNetworkSecurityGroup -ResourceGroupName $RessourceGroupName -Name $SubnetSecGrpName -ErrorAction SilentlyContinue
+        $SubnetSecGrp = Get-AzNetworkSecurityGroup -ResourceGroupName $ResourceGroupName -Name $SubnetSecGrpName -ErrorAction SilentlyContinue
         if (-Not $SubnetSecGrp)
         {
             Write-Warning "Network security group not found. Creating the network security group $SubnetSecGrpName"
-            $SubnetSecGrp = New-AzNetworkSecurityGroup -ResourceGroupName $RessourceGroupName -Name $SubnetSecGrpName -Location $AlyaLocation
+            $SubnetSecGrp = New-AzNetworkSecurityGroup -ResourceGroupName $ResourceGroupName -Name $SubnetSecGrpName -Location $AlyaLocation
         }
         Write-Warning "Subnet not found. Creating the subnet $SubnetName"
         Add-AzVirtualNetworkSubnetConfig -VirtualNetwork $VNet -Name $SubnetName -AddressPrefix $Subnet -NetworkSecurityGroup $SubnetSecGrp

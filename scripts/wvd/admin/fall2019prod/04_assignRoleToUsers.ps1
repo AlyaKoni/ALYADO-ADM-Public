@@ -46,7 +46,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\04_assignRol
 # Constants
 $RoleNames = @("RDS Owner")
 $Users = $AlyaWvdAdmins
-$RessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
@@ -92,6 +92,8 @@ if (-Not $AzureKeyVaultSecret)
 }
 $AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
 $AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
+Clear-Variable -Name "AlyaWvdServicePrincipalPassword"
+Clear-Variable -Name "AzureKeyVaultSecret"
 
 # Login to WVD
 if (-Not $Global:RdsContext)

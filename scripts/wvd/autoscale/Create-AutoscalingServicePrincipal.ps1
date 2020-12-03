@@ -113,6 +113,7 @@ else
     $AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
     $AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
 }
+Clear-Variable -Name "AlyaWvdServicePrincipalPassword"
 
 
 Write-Host "ApplicationId: $($AzureAdApplication.ApplicationId)"

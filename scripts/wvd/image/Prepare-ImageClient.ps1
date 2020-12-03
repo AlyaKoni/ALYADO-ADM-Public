@@ -48,9 +48,9 @@ $VmToImage = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)"
 $VmResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
 $ImageName = "$($VmToImage)_ImageClient"
 $ImageResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
-$DiagnosticRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
+$DiagnosticResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)"
-$KeyVaultRessourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
+$KeyVaultResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 $DateString = (Get-Date -Format "_yyyyMMdd_HHmmss")
 $VMDiskName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)osdisk"
@@ -164,11 +164,11 @@ New-AzImage -Image $image -ImageName ($ImageName+$DateString) -ResourceGroupName
 
 # Checking key vault
 Write-Host "Checking key vault" -ForegroundColor $CommandInfo
-$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultRessourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
+$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultResourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
 if (-Not $KeyVault)
 {
     Write-Warning "Key Vault not found. Creating the Key Vault $KeyVaultName"
-    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $RessourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
+    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
     if (-Not $KeyVault)
     {
         Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -193,6 +193,7 @@ else
     $VMPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
     $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
 }
+Clear-Variable -Name "VMPassword"
 
 # Deleting source vm
 Write-Host "Deleting source vm '$($VmToImage)'" -ForegroundColor $CommandInfo
@@ -219,7 +220,7 @@ else
 $image = Get-AzImage -ImageName $ImageName -ResourceGroupName $ImageResourceGroupName
 $VmConfig | Set-AzVMSourceImage -Id $image.Id | Out-Null
 $VmConfig | Add-AzVMNetworkInterface -Id $netIface.Id | Out-Null
-$VmConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticRessourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
+$VmConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
 $VmConfig | Set-AzVMOSDisk -Name $VMDiskName -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 127 | Out-Null
 $newVm = New-AzVM -ResourceGroupName $VmResourceGroupName -Location $Vm.Location -VM $VmConfig -DisableBginfoExtension
 
