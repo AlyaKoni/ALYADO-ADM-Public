@@ -685,6 +685,14 @@ function Get-AdalAccessToken(
     [String] [Parameter(Mandatory = $false)] $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
 )
 {
+	#TODO check first if type exists
+    $module = Get-Module "AzureAdPreview"
+    if (-Not $module)
+    {
+        throw "This function requires the AzureAdPreview module loaded"
+    }
+    $dll = $module.FileList | where { $_ -like "*Microsoft.IdentityModel.Clients.ActiveDirectory.dll" }
+    Add-Type -Path $dll
     $resourceAppIdURI = "https://graph.microsoft.com"
     $authority = "https://login.microsoftonline.com/$AlyaTenantName"
     $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority

@@ -54,9 +54,11 @@ if (-Not (Test-Path $DataRoot))
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 
 # =============================================================
 # Intune stuff

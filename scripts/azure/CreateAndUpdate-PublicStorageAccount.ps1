@@ -96,10 +96,11 @@ $StrgContext = New-AzStorageContext -StorageAccountName $StorageAccountName
 
 # Checking CORS rules
 Write-Host "Checking CORS rules" -ForegroundColor $CommandInfo
-$StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob
+$StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob -ErrorAction SilentlyContinue
 if (-Not $StrgCorsRules)
 {
     Write-Warning "No CORS rules found. Creating the CORS rules."
+    Start-Sleep -Seconds 60
     $CorsRules = (@{
         AllowedHeaders=@("x-ms-blob-content-type","x-ms-blob-content-disposition");
         AllowedOrigins=@("$($AlyaSharePointUrl)", "$($AlyaWebPage)");
@@ -177,6 +178,7 @@ foreach($container in $containers)
         Write-Host "  - $relPath"
         $mime = [System.Web.MimeMapping]::GetMimeMapping($SourceFile.FullName)
         if ($SourceFile.FullName.EndsWith(".json")) { $mime = "application/json" }
+		if ($SourceFile.FullName.EndsWith(".svg")) { $mime = "image/svg+xml" }
         $BlobName = $relPath.Substring(1)
         $DestinationBlob = Get-AzStorageBlob -Context $StrgContext -Container $StorageContainerName -Blob $BlobName -ErrorAction SilentlyContinue
         if ($DestinationBlob)

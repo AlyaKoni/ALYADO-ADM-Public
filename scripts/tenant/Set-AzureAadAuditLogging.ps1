@@ -111,8 +111,9 @@ if (-Not $LogAnaWrkspc)
 
 # Setting auditing on azure active directory
 Write-Host "Setting auditing on azure active directory" -ForegroundColor $CommandInfo
-$token = Get-AzAccessToken("https://management.azure.com/")
+$token = Get-AzAccessToken -audience "https://management.azure.com/"
 $uri = "https://management.azure.com/providers/microsoft.aadiam/diagnosticSettings/{0}?api-version=2017-04-01-preview" -f $DiagnosticRuleName
+#TODO Sign in values for different license types
 $body = @"
 {
   "name": "$($DiagnosticRuleName)",
@@ -122,16 +123,43 @@ $body = @"
         "category": "AuditLogs",
         "enabled": true,
         "retentionPolicy": {
-          "days": 0,
-          "enabled": false
+                    "enabled": false,
+                    "days": 0
         }
-      },
-      {
+            }, {
         "category": "SignInLogs",
         "enabled": true,
         "retentionPolicy": {
-          "days": 0,
-          "enabled": false
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "NonInteractiveUserSignInLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "ServicePrincipalSignInLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "ManagedIdentitySignInLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "ProvisioningLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
         }
       }
     ],

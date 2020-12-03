@@ -26,9 +26,6 @@
     Siehe die GNU General Public License fuer weitere Details:
 	https://www.gnu.org/licenses/gpl-3.0.txt
 
-    To design your own SharePoint Theme use the UI Fabric Theme Designer
-    https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
-
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------

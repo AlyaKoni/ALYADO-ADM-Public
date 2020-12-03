@@ -117,6 +117,7 @@ if (-Not $AzureKeyVaultCertificate)
         Write-Error "Key vault cert creation is not sucessfull and its status is: $(KeyVaultCertificateProgress.Status)" -ErrorAction Continue 
         Exit 2
     }
+    $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -ErrorAction SilentlyContinue
 }
 
 # Checking application
