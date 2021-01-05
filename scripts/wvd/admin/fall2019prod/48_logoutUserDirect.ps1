@@ -36,9 +36,9 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-    [string]$serverName = "alyainfpvd51-0",
+    [string]$serverName = "hostname-0",
     [Parameter(Mandatory=$false)]
-    [string]$userName = "konrad.brunner"
+    [string]$userName = "first.last"
 )
 
 #Reading configuration
@@ -49,15 +49,6 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\48_logoutUse
 
 # Constants
 $ErrorActionPreference = "Stop"
-$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
-Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
-
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 # =============================================================
 # Windows stuff
@@ -67,54 +58,40 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "WVD | 48_logoutUserDirect | Windows" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking application
-Write-Host "Checking application" -ForegroundColor $CommandInfo
-$AzureAdApplication = Get-AzADApplication -DisplayName $AlyaWvdServicePrincipalNameProd -ErrorAction SilentlyContinue
-if (-Not $AzureAdApplication)
-{
-    throw "Azure AD Application not found. Please create the Azure AD Application $AlyaWvdServicePrincipalNameProd"
-}
-$AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameProd
-
-# Checking azure key vault secret
-Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo
-$AlyaWvdServicePrincipalAssetName = "$($AlyaWvdServicePrincipalNameProd)Key"
-$AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AlyaWvdServicePrincipalAssetName -ErrorAction SilentlyContinue
-if (-Not $AzureKeyVaultSecret)
-{
-    throw "Key Vault secret not found. Please create the secret $AlyaWvdServicePrincipalAssetName"
-}
-$AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
-$AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
-Clear-Variable -Name "AlyaWvdServicePrincipalPassword"
-Clear-Variable -Name "AzureKeyVaultSecret"
-
-# Login to WVD
-if (-Not $Global:RdsContext)
-{
-	Write-Host "Logging in to wvd" -ForegroundColor $CommandInfo
-	$rdsCreds = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.ApplicationId, $AlyaWvdServicePrincipalPasswordSave)
-	$Global:RdsContext = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $rdsCreds -ServicePrincipal -AadTenantId $AlyaTenantId
-	#LoginTo-Wvd -AppId $AzureAdServicePrincipal.ApplicationId -SecPwd $AlyaWvdServicePrincipalPasswordSave
-}
-
 #Main
 Write-Host "Actual logged in users" -ForegroundColor $CommandInfo
-Invoke-Command -ComputerName $serverName -ScriptBlock { quser }
 $res = Invoke-Command -ComputerName $serverName -ScriptBlock { quser }
+$res
+$fnd = $false
 foreach($re in $res)
 {
     $user = ($re.Split() | ? {$_})[0]
-    $id = ($re.Split() | ? {$_})[2]
+    $session = ($re.Split() | ? {$_})[1].Trim()
+    if ([string]::IsNullOrEmpty($session))
+    {
+        $id = ($re.Split() | ? {$_})[1]
+    }
+    else
+    {
+        $id = ($re.Split() | ? {$_})[2]
+    }
     if ($user -eq $userName)
     {
         Write-Host "Found user on id $($id), loging him out" -ForegroundColor Magenta
-        #Invoke-Command -ComputerName $serverName -ScriptBlock { logoff $id }
-    
+        Invoke-Command -ComputerName $serverName -ScriptBlock { logoff $id }
+        $fnd = $true
     }
 }
-Write-Host "New situation" -ForegroundColor $CommandInfo
-Invoke-Command -ComputerName $serverName -ScriptBlock { quser }
+
+if (-Not $fnd)
+{
+    Write-Host "Can't find user session on server" -ForegroundColor $CommandInfo
+}
+else
+{
+    Write-Host "New situation" -ForegroundColor $CommandInfo
+    Invoke-Command -ComputerName $serverName -ScriptBlock { quser }
+}
 
 #Stopping Transscript
 Stop-Transcript

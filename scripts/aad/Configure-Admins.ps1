@@ -45,12 +45,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-Admins-$($AlyaTimeStr
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-#Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-#LoginTo-Ad
 LoginTo-MSOL
 
 # =============================================================

@@ -49,9 +49,11 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-AzureB2BIntegr
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 
 # Logging in
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-AD
 LoginTo-SPO
 

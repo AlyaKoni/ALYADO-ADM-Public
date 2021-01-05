@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     21.09.2020 Konrad Brunner       Initial Version
+    16.12.2020 Konrad Brunner       Fixed bug, not removing users from groups
 
 #>
 
@@ -52,12 +53,14 @@ if (-Not $inputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MSOnline"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 LoginTo-MSOL
 
@@ -125,6 +128,31 @@ $licDefs | foreach {
             }
         }
         Write-Host $outStr.TrimEnd(",")
+    }
+}
+for ($i = 1; $i -le 20; $i++)
+{
+    $propName = "Lic"+$i
+    if ($licNames.$propName)
+    {
+        $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-ADM-LIC" + $licNames.$propName
+        if (-Not $byGroup.$grpName) {
+            $byGroup.$grpName = @{}
+            $byGroup.$grpName.Users = @()
+            $exGrp = Get-AzureADMSGroup -SearchString $grpName
+            if ($exGrp.Count -gt 1)
+            {
+                foreach($grp in $exGrp)
+                {
+                    if ($grp.DisplayName -eq $secGroup.DisplayName)
+                    {
+                        $exGrp = $grp
+                        break
+                    }
+                }
+            }
+            $byGroup.$grpName.Id = $exGrp.Id
+        }
     }
 }
 

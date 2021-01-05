@@ -48,10 +48,12 @@ $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdPublicStorage)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MSOnline"
     
 # Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 LoginTo-Msol
 

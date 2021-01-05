@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting: 2020
@@ -29,58 +29,43 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    11.10.2020 Konrad Brunner       Initial Version
+    14.12.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory=$false)]
+    [string]$serverName = "hostname-0",
+    [Parameter(Mandatory=$false)]
+    [string]$userName = "first.last"
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-OfficeGroupExternalSharingEnabled-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\48_logoutUserDirect-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-    
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+$ErrorActionPreference = "Stop"
 
 # =============================================================
-# Azure stuff
+# Windows stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-OfficeGroupExternalSharingEnabled | Azure" -ForegroundColor $CommandInfo
+Write-Host "WVD | 49_killAllUserProcesses | Windows" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Configuring settings template
-Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified" }
-if (-Not $Setting)
+#Main
+Write-Host "Found processes" -ForegroundColor $CommandInfo
+$prcs = Invoke-Command -ComputerName $serverName -ScriptBlock { Get-Process -IncludeUserName | where { $_.UserName -like "*$using:userName" } | select Id }
+$prcs
+foreach($prc in $prcs)
 {
-    Write-Warning "Setting not yet created. Creating one based on template."
-    $Setting = $SettingTemplate.CreateDirectorySetting()
-    $Setting["AllowToAddGuests"] = $true
-    $Setting["AllowGuestsToAccessGroups"] = $true
-    $Setting["AllowGuestsToBeGroupOwner"] = $true
-    New-AzureADDirectorySetting -DirectorySetting $Setting
-}
-else
-{
-    $Setting["AllowToAddGuests"] = $true
-    $Setting["AllowGuestsToAccessGroups"] = $true
-    $Setting["AllowGuestsToBeGroupOwner"] = $true
-    Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
+    Write-Output "Stopping process with id $($prc.id)"
+    Invoke-Command -ComputerName $serverName -ScriptBlock { Stop-Process -Id $using:prc.id -Force -ErrorAction Continue } -ErrorAction Continue
 }
 
 #Stopping Transscript

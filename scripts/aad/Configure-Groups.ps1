@@ -54,13 +54,14 @@ if (-Not $inputFile)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Uninstall-ModuleIfInstalled "AzureAd"
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-#LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 
 # =============================================================
@@ -160,9 +161,9 @@ foreach ($secGroup in $SecurityGroup)
             Write-Warning "Can't aquire an access token."
             exit
         }
-        $Global:retryCount = 10
         do
         {
+            $Global:retryCount = 10
             try
             {
                 $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
@@ -178,8 +179,8 @@ foreach ($secGroup in $SecurityGroup)
                 Write-Host "Exception catched: $($_.Exception.Message)"
                 Write-Host "Retrying $Global:retryCount times"
                 $Global:retryCount--
-                Write-Host "Sleeping 60 seconds"
-                Start-Sleep -Seconds 60
+                Write-Host "Sleeping 15 seconds"
+                Start-Sleep -Seconds 15
             }
         } while ($Global:retryCount -gt 0)
         foreach($license in $secGroup.Licenses.Split(","))
@@ -226,13 +227,30 @@ foreach ($secGroup in $SecurityGroup)
                         }
                     )
                 }
-                $requestBody = $licenceAssignmentConfig | ConvertTo-Json -Depth 5
-                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/assign"
-                $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
+                do
+                {
+                    $Global:retryCount = 10
+                    try
+                    {
+                        $requestBody = $licenceAssignmentConfig | ConvertTo-Json -Depth 5
+                        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/assign"
+                        $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
+                        $Global:retryCount = -1
+                    } catch {
+                        Write-Host "Exception catched: $($_.Exception.Message)"
+                        Write-Host "Retrying $Global:retryCount times"
+                        $Global:retryCount--
+                        Write-Host "Sleeping 15 seconds"
+                        Start-Sleep -Seconds 15
+                    }
+                } while ($Global:retryCount -gt 0)
             }
         }
-        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)/Reprocess"
-        $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $null -ErrorAction Stop
+        try
+        {
+            $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)/Reprocess"
+            $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $null -ErrorAction SilentlyContinue
+        } catch {}
     }
 }
 

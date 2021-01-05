@@ -52,13 +52,11 @@ if (-Not $inputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-#Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MSOnline"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-#LoginTo-Ad
 LoginTo-MSOL
 
 # =============================================================

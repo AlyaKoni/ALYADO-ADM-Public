@@ -49,6 +49,7 @@ Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "AzureAdPreview"
     
 # Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 
 # =============================================================

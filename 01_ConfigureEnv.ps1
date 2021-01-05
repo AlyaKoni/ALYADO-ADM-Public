@@ -619,17 +619,29 @@ function LoginTo-Az(
     {
         if ($AlyaContext.Tenant.Id -ne $AlyaTenantId)
         {
-            Remove-AzAccount -ContextName $AlyaTenantName
+            Remove-AzAccount -ContextName $AlyaTenantName | Out-Null
+            Remove-AzContext -InputObject $AlyaContext | Out-Null
             $AlyaContext = $null
         }
         else
         {
-            Set-AzContext -Context $AlyaContext
+            Set-AzContext -Context $AlyaContext | Out-Null
             $chk = Get-AzTenant -TenantId $AlyaTenantId -ErrorAction SilentlyContinue
             if (-Not $chk)
             {
-                Remove-AzAccount -ContextName $AlyaTenantName
+                Remove-AzAccount -ContextName $AlyaTenantName | Out-Null
+                Remove-AzContext -InputObject $AlyaContext | Out-Null
                 $AlyaContext = $null
+            }
+            else
+            {
+                $chk = Get-AzADServicePrincipal -First 1 -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
+                if (-Not $chk)
+                {
+                    Remove-AzAccount -ContextName $AlyaTenantName | Out-Null
+                    Remove-AzContext -InputObject $AlyaContext | Out-Null
+                    $AlyaContext = $null
+                }
             }
         }
     }

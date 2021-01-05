@@ -29,7 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    11.10.2020 Konrad Brunner       Initial Version
+    16.12.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -41,16 +41,15 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-OfficeGroupExternalSharingEnabled-$($AlyaTimeString).log" | Out-Null
-
-# Constants
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-Licenses-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "AzureAdPreview"
-    
-# Logins
+
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 
@@ -59,29 +58,20 @@ LoginTo-Ad
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-OfficeGroupExternalSharingEnabled | Azure" -ForegroundColor $CommandInfo
+Write-Host "AAD | Get-Licenses | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Configuring settings template
-Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified" }
-if (-Not $Setting)
-{
-    Write-Warning "Setting not yet created. Creating one based on template."
-    $Setting = $SettingTemplate.CreateDirectorySetting()
-    $Setting["AllowToAddGuests"] = $true
-    $Setting["AllowGuestsToAccessGroups"] = $true
-    $Setting["AllowGuestsToBeGroupOwner"] = $true
-    New-AzureADDirectorySetting -DirectorySetting $Setting
-}
-else
-{
-    $Setting["AllowToAddGuests"] = $true
-    $Setting["AllowGuestsToAccessGroups"] = $true
-    $Setting["AllowGuestsToBeGroupOwner"] = $true
-    Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
-}
+# Getting token
+$apiToken = Get-AzAccessToken
+
+# Getting licenses
+Write-Host "Getting licenses" -ForegroundColor $CommandInfo
+$header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
+$url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
+$response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
+$availableLics = $response | ConvertFrom-Json
+
+$availableLics | Select name,accountSkuId,availableUnits,totalUnits,consumedUnits | ft
 
 #Stopping Transscript
 Stop-Transcript
