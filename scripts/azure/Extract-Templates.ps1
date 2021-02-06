@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     02.03.2020 Konrad Brunner       Initial Version
+    07.01.2021 Konrad Brunner       Fixed file extension (.json)
 
 #>
 
@@ -82,7 +83,7 @@ foreach($grp in $grps)
     Write-Host "Exporting: $($grp.ResourceId)"
     $fileName = ($grp.ResourceId -replace "/", "_") + ".json"
     Export-AzResourceGroup -ResourceGroupName $grp.ResourceGroupName -Path . -IncludeParameterDefaultValue -IncludeComments -Pre -Force
-    Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($AlyaSubscriptionName + "_" + $grp.ResourceGroupName) -Force
+    Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($AlyaSubscriptionName + "_" + $grp.ResourceGroupName + ".json") -Force
 }
 Pop-Location
 

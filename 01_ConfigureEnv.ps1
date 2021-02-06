@@ -608,54 +608,102 @@ function Install-ScriptIfNotInstalled (
 #Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
 
 <# LOGIN FUNCTIONS #>
+function LogoutAllFrom-Az()
+{
+    Clear-AzContext -Scope Process -Force
+    Clear-AzContext -Scope CurrentUser -Force
+}
+function Get-CustomersContext(
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+{
+    $context = $null
+    if ($SubscriptionId)
+    {
+        $context = Get-AzContext -ListAvailable | where { $_.Name -like "*$SubscriptionId*$AlyaTenantId*" }
+    }
+    elseif ($SubscriptionName)
+    {
+        $context = Get-AzContext -ListAvailable | where { $_.Name -like "*$SubscriptionName*$AlyaTenantId*" }
+    }
+    else
+    {
+        $context = Get-AzContext -ListAvailable | where { $_.Name -like "*$AlyaTenantId*" }
+        if ($context -and $context.Count -gt 1) { $context = $context[0] }
+    }
+    return $context
+}
+function LogoutFrom-Az(
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+{
+    $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+    if ($AlyaContext)
+    {
+        Logout-AzAccount -ContextName $AlyaContext.Name | Out-Null
+        Remove-AzAccount -ContextName $AlyaContext.Name | Out-Null
+        Remove-AzContext -InputObject $AlyaContext | Out-Null
+        $AlyaContext = $null
+    }
+}
 function LoginTo-Az(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId)
 {
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
 
-    $AlyaContext = Get-AzContext -ListAvailable | where { $_.Name -eq $AlyaTenantName }
+    $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     if ($AlyaContext)
     {
         if ($AlyaContext.Tenant.Id -ne $AlyaTenantId)
         {
-            Remove-AzAccount -ContextName $AlyaTenantName | Out-Null
+            Logout-AzAccount -ContextName $AlyaContext.Name | Out-Null
+            Remove-AzAccount -ContextName $AlyaContext.Name | Out-Null
             Remove-AzContext -InputObject $AlyaContext | Out-Null
             $AlyaContext = $null
         }
         else
         {
-            Set-AzContext -Context $AlyaContext | Out-Null
-            $chk = Get-AzTenant -TenantId $AlyaTenantId -ErrorAction SilentlyContinue
+            $actContext = Get-AzContext
+            if ($actContext.Name -ne $AlyaContext.Name)
+            {
+                Set-AzContext -Context $AlyaContext -Force | Out-Null
+            }
+            $chk = Get-AzADServicePrincipal -First 1 -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
             if (-Not $chk)
             {
-                Remove-AzAccount -ContextName $AlyaTenantName | Out-Null
+                Logout-AzAccount -ContextName $AlyaContext.Name | Out-Null
+                Remove-AzAccount -ContextName $AlyaContext.Name | Out-Null
                 Remove-AzContext -InputObject $AlyaContext | Out-Null
                 $AlyaContext = $null
-            }
-            else
-            {
-                $chk = Get-AzADServicePrincipal -First 1 -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
-                if (-Not $chk)
-                {
-                    Remove-AzAccount -ContextName $AlyaTenantName | Out-Null
-                    Remove-AzContext -InputObject $AlyaContext | Out-Null
-                    $AlyaContext = $null
-                }
             }
         }
     }
     if (-Not $AlyaContext)
     {
-        Login-AzAccount -Tenant $AlyaTenantId -ContextName $AlyaTenantName
-        $AlyaContext = Get-AzContext -ListAvailable | where { $_.Name -eq $AlyaTenantName }
+        if ($SubscriptionId)
+        {
+            Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionId | Out-Null
+        }
+        if ($SubscriptionName)
+        {
+            Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionName | Out-Null
+        }
+        else
+        {
+            Connect-AzAccount -Tenant $AlyaTenantId | Out-Null
+        }
+        $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+    }
+    else
+    {
+        Set-AzContext -Context $AlyaContext | Out-Null
     }
     if (-Not $AlyaContext)
     {
         Write-Error "Not logged in to Az!" -ErrorAction Continue
         Exit 1
     }
-    Set-AzContext -Context $AlyaContext
     $sameSub = $false
     if ($SubscriptionId)
     {
@@ -670,21 +718,26 @@ function LoginTo-Az(
         Write-Host "Selecting subscription" -ForegroundColor $CommandInfo
         if ($SubscriptionId)
         {
-            Select-AzSubscription -SubscriptionId $SubscriptionId -ErrorAction Stop | Out-Null
+            $sub = Get-AzSubscription -SubscriptionId $SubscriptionId -ErrorAction Stop
+            Set-AzContext -SubscriptionObject $sub  | Out-Null
         }
-        else
+        elseif ($SubscriptionName)
         {
-            Select-AzSubscription -Subscription $SubscriptionName -ErrorAction Stop | Out-Null
+            $sub = Get-AzSubscription -SubscriptionName $SubscriptionName -ErrorAction Stop | Out-Null
+            Set-AzContext -SubscriptionObject $sub  | Out-Null
         }
     }
 }
 #LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 
-function Get-AzAccessToken($audience = "74658136-14ec-4630-ad9b-26e160ff0fc6")
+function Get-AzAccessToken(
+    $audience = "74658136-14ec-4630-ad9b-26e160ff0fc6",
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
 {
-    $Context = Get-AzContext -ListAvailable | where { $_.Name -eq $AlyaTenantName }
-    $token = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($Context.Account, $Context.Environment, $Context.Tenant.Id, $null, "Never", $null, $audience)
+    $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+    $token = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, $audience)
     if (-Not $token -or -Not $token.AccessToken)
     {
         throw "Can't aquire an access token."
@@ -694,8 +747,9 @@ function Get-AzAccessToken($audience = "74658136-14ec-4630-ad9b-26e160ff0fc6")
 
 function Get-AdalAccessToken(
     [String] [Parameter(Mandatory = $false)] $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547",
-    [String] [Parameter(Mandatory = $false)] $redirectUri = "urn:ietf:wg:oauth:2.0:oob"
-)
+    [String] [Parameter(Mandatory = $false)] $redirectUri = "urn:ietf:wg:oauth:2.0:oob",
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
 {
 	#TODO check first if type exists
     $module = Get-Module "AzureAdPreview"
@@ -709,24 +763,27 @@ function Get-AdalAccessToken(
     $authority = "https://login.microsoftonline.com/$AlyaTenantName"
     $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
     $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
-    $userUpn = (Get-AzContext -ListAvailable | where { $_.Name -eq $AlyaTenantName }).Account.Id
+    $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+    $userUpn = $AlyaContext.Account.Id
     $userId = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.UserIdentifier" -ArgumentList ($userUpn, "OptionalDisplayableId")
     $authResult = $authContext.AcquireTokenAsync($resourceAppIdURI,$clientId,$redirectUri,$platformParameters,$userId).Result
     return $authResult.AccessToken
 }
 
-function LoginTo-Ad()
+function LoginTo-Ad(
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
 {
     Write-Host "Login to AzureAd" -ForegroundColor $CommandInfo
     try { Disconnect-AzureAD -ErrorAction SilentlyContinue } catch {}
-    $Context = Get-AzContext -ListAvailable | where { $_.Name -eq $AlyaTenantName }
-    if (-Not $Context)
+    $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+    if (-Not $AlyaContext)
     {
         throw "Please login first to Az to minimize number of logins"
     }
-    $graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($Context.Account, $Context.Environment, $Context.Tenant.Id, $null, "Never", $null, "https://graph.microsoft.com").AccessToken
-    $aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($Context.Account, $Context.Environment, $Context.Tenant.Id, $null, "Never", $null, "https://graph.windows.net").AccessToken
-    Connect-AzureAD -AadAccessToken $aadToken -MsAccessToken $graphToken -AccountId $Context.Account.Id -TenantId $Context.tenant.id -AzureEnvironmentName $Context.Environment.Name
+    $graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.microsoft.com").AccessToken
+    $aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.windows.net").AccessToken
+    Connect-AzureAD -AadAccessToken $aadToken -MsAccessToken $graphToken -AccountId $AlyaContext.Account.Id -TenantId $AlyaContext.tenant.id -AzureEnvironmentName $AlyaContext.Environment.Name
     try { $TenantDetail = Get-AzureADTenantDetail -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
     if (-Not $TenantDetail)
     {
@@ -831,7 +888,28 @@ function DisconnectFrom-EXOandIPPS()
     #>
 }
 
-function LoginTo-Msol()
+function LoginTo-Msol(
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+{
+    Write-Host "Login to AzureAd" -ForegroundColor $CommandInfo
+    $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+    if (-Not $AlyaContext)
+    {
+        throw "Please login first to Az to minimize number of logins"
+    }
+    $graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.microsoft.com").AccessToken
+    $aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.windows.net").AccessToken
+    Connect-MsolService -AdGraphAccessToken $aadToken -MsGraphAccessToken $graphToken -AzureEnvironment $AlyaContext.Environment.Name
+    try { $TenantDetail = Get-MsolCompanyInformation -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
+    if (-Not $TenantDetail)
+    {
+        Write-Error "Not logged in to AzureAd!" -ErrorAction Continue
+        Exit 1
+    }
+}
+
+function LoginTo-MsolInteractive()
 {
     Write-Host "Login to MSOL" -ForegroundColor $CommandInfo
     $TenantDetail = $null
@@ -933,6 +1011,7 @@ function LoginTo-PnP(
     }
     return $AlyaConnection
 }
+
 function LoginTo-PowerApps()
 {
     Write-Host "Login to PowerApps" -ForegroundColor $CommandInfo
@@ -1551,7 +1630,7 @@ if ($AlyaNamingPrefixTest.Length -gt 8)
     Write-Error "Max 8 chars allowed for AlyaNamingPrefixTest '$($AlyaNamingPrefixTest)' which is $($AlyaNamingPrefixTest.Length) long" -ErrorAction Continue
     exit
 }
-if ($AlyaAzureNetwork -and $AlyaProdNetwork)
+if ($AlyaAzureNetwork -and $AlyaProdNetwork -and $AlyaAzureNetwork -ne "PleaseSpecify" -and $AlyaProdNetwork -ne "PleaseSpecify")
 {
     if (-Not (CheckSubnetInSubnet $AlyaProdNetwork $AlyaAzureNetwork))
     {
@@ -1559,7 +1638,7 @@ if ($AlyaAzureNetwork -and $AlyaProdNetwork)
         exit
     }
 }
-if ($AlyaAzureNetwork -and $AlyaTestNetwork)
+if ($AlyaAzureNetwork -and $AlyaTestNetwork -and $AlyaAzureNetwork -ne "PleaseSpecify" -and $AlyaTestNetwork -ne "PleaseSpecify")
 {
     if (-Not (CheckSubnetInSubnet $AlyaTestNetwork $AlyaAzureNetwork))
     {

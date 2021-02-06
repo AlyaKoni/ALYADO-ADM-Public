@@ -541,7 +541,7 @@ $homePageTemplateColHub = @"
                 <pnp:CanvasControl WebPartType="Text" ControlId="e99e59fa-fa55-4177-a21d-8e900060b080" Order="1" Column="1">
                   <pnp:CanvasControlProperties>
 				  
-                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Willkommen auf der Informationsseite für Kunden und Partner der Alya Consulting&lt;/h2&gt;&lt;p&gt;Auf dieser Seite findest Du alle Informationen, die Dir von uns zur Verfügung gestellt werden.&amp;nbsp;&lt;/p&gt;" />
+                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Willkommen auf der Informationsseite für Kunden und Partner der $($AlyaCompanyNameFull)&lt;/h2&gt;&lt;p&gt;Auf dieser Seite findest Du alle Informationen, die Dir von uns zur Verfügung gestellt werden.&amp;nbsp;&lt;/p&gt;" />
                   
 				  </pnp:CanvasControlProperties>
                 </pnp:CanvasControl>
@@ -549,7 +549,7 @@ $homePageTemplateColHub = @"
                 <pnp:CanvasControl WebPartType="Text" ControlId="3365c6c2-b36a-4618-aab8-77eec661df40" Order="2" Column="1">
                   <pnp:CanvasControlProperties>
 				  
-                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Welcome to the information page for customers and partners of Alya Consulting&lt;/h2&gt;&lt;p&gt;On this page you will find all the information that we have made available to you.&amp;nbsp;&lt;/p&gt;" />
+                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Welcome to the information page for customers and partners of $($AlyaCompanyNameFull)&lt;/h2&gt;&lt;p&gt;On this page you will find all the information that we have made available to you.&amp;nbsp;&lt;/p&gt;" />
                   
 				  </pnp:CanvasControlProperties>
                 </pnp:CanvasControl>
@@ -741,7 +741,7 @@ $homePageTemplateRoot = @"
                 <pnp:CanvasControl WebPartType="Text" ControlId="afca2a68-4c3c-418f-b19b-c4a1b519d99b" Order="1" Column="1">
                   <pnp:CanvasControlProperties>
 				  
-                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Willkommen bei Alya Consulting&lt;/h2&gt;&lt;p&gt;Wir heissen Dich herzlich willkomen auf der SharePoint Seite von Alya Consulting. Bitte wähle unten eine Option, um Deine Inhalte möglichst einfach zu finden.&lt;/p&gt;" />
+                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Willkommen bei $($AlyaCompanyNameFull)&lt;/h2&gt;&lt;p&gt;Wir heissen Dich herzlich willkommen auf der SharePoint Seite von $($AlyaCompanyNameFull). Bitte wähle unten eine Option, um Deine Inhalte möglichst einfach zu finden.&lt;/p&gt;" />
                   
 				  </pnp:CanvasControlProperties>
                 </pnp:CanvasControl>
@@ -795,7 +795,7 @@ $homePageTemplateRoot = @"
 				<pnp:CanvasControl WebPartType="Text" ControlId="b5ba8bc7-de7a-4ffc-afeb-9ce950dbee6b" Order="3" Column="1">
                   <pnp:CanvasControlProperties>
 				  
-                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Welcome to Alya Consulting&lt;/h2&gt;&lt;p&gt;We welcome you to the SharePoint site of Alya Consulting. Please select an option below to find your content as easy as possible.&lt;/p&gt;" />
+                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Welcome to $($AlyaCompanyNameFull)&lt;/h2&gt;&lt;p&gt;We welcome you to the SharePoint site of $($AlyaCompanyNameFull). Please select an option below to find your content as easy as possible.&lt;/p&gt;" />
                   
 				  </pnp:CanvasControlProperties>
                 </pnp:CanvasControl>
@@ -942,13 +942,13 @@ $hubSites = @(
         homePageTemplate = $homePageTemplateColHub
     },
     @{
-        short = "PRI"
-        title = "$prefix-PRI-Hub"
-        url = "$prefix-PRI-Hub"
+        short = "PRS"
+        title = "$prefix-PRS-Hub"
+        url = "$prefix-PRS-Hub"
         template = "TeamSite"
         locale4Creation = 1031 #TODO from config
-        description = "Hub Seite für private Seiten"
-        siteScriptDescription = "Fügt der Hub Site das PRI Design hinzu"
+        description = "Hub Seite für persönliche Seiten"
+        siteScriptDescription = "Fügt der Hub Site das PRS Design hinzu"
         siteScript = $defaultSiteScript
         subSiteScript = $null
         headerLayout = "Compact"   # Standard, Compact

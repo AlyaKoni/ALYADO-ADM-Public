@@ -78,9 +78,9 @@ foreach($hubSite in $hubSites)
     ###Processing designs
     Write-Host "Processing designs for Hub Site $($hubSite.title)" -ForegroundColor $TitleColor
 
-    $SiteScriptName = "$($AlyaCompanyNameShort.ToUpper()) Hub-$($hubSite.short) SiteScript "+$siteLocale
-    $SiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper()) Hub-$($hubSite.short) Team Site "+$siteLocale
-    $SiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper()) Hub-$($hubSite.short) Communication Site "+$siteLocale
+    $SiteScriptName = "$($AlyaCompanyNameShort.ToUpper())SP Hub-$($hubSite.short) SiteScript "+$siteLocale
+    $SiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper())SP Hub-$($hubSite.short) Team Site "+$siteLocale
+    $SiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper())SP Hub-$($hubSite.short) Communication Site "+$siteLocale
 
     # Getting theme
     Write-Host "Getting theme" -ForegroundColor $CommandInfo
@@ -138,9 +138,9 @@ foreach($hubSite in $hubSites)
     # Checking site script for sub sites
     if ($hubSite.subSiteScript)
     {
-        $SubSiteScriptName = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) SiteScript "+$siteLocale
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) Team Site "+$siteLocale
-        $SubSiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) Communication Site "+$siteLocale
+        $SubSiteScriptName = "$($AlyaCompanyNameShort.ToUpper())SP Site-$($hubSite.short) SiteScript "+$siteLocale
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper())SP Site-$($hubSite.short) Team Site "+$siteLocale
+        $SubSiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper())SP Site-$($hubSite.short) Communication Site "+$siteLocale
 
         # Checking site script
         Write-Host "Checking site script" -ForegroundColor $CommandInfo
@@ -340,6 +340,7 @@ Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.26
 
 ###Processing Hub Site Start Pages
 #Set-PnPTraceLog -On -WriteToConsole -Level Debug
+#To export it: Export-PnPClientSidePage -Force -Identity Home.aspx -Out $tempFile
 Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
 foreach($hubSite in $hubSites)
 {

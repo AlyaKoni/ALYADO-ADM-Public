@@ -103,20 +103,32 @@ if (-Not (Test-Path (Join-Path $contentRoot $lastExeFile)))
     Write-Host "    Downloading $ftpUrl/$lastExeDir/$lastExeFile"
     $profile = [Environment]::GetFolderPath("UserProfile")
     $downloads = $profile+"\downloads"
-    $lastfilename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
+    $lastfilename = $null
+    $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+    if ($file)
+    {
+        $lastfilename = $file.Name
+    }
     $filename = $null
     $Global:attempts = 10
     while ($Global:attempts -ge 0)
     {
         Write-Host "    from $downloadUrl"
+        Write-Host "      please use IE and just press save to download" -ForegroundColor $CommandSuccess
+        Write-Host "      please don't start any other download!" -ForegroundColor $CommandWarning
         try {
             #TODO Better download!
             start "$ftpUrl/$lastExeDir/$lastExeFile"
             do
             {
                 Start-Sleep -Seconds 10
-                $filename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
-                if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+                if ($file)
+                {
+                    $filename = $file.Name
+                    if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                    if ($filename.Contains("partial")) { $filename = $lastfilename }
+                }
             } while ($lastfilename -eq $filename)
             $Global:attempts = -1
         } catch {
@@ -177,20 +189,32 @@ if (-Not (Test-Path (Join-Path $contentRoot $lastPatchFile)))
     Write-Host "    Downloading $ftpUrl/$lastPatchDir/$lastPatchFile"
     $profile = [Environment]::GetFolderPath("UserProfile")
     $downloads = $profile+"\downloads"
-    $lastfilename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
+    $lastfilename = $null
+    $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+    if ($file)
+    {
+        $lastfilename = $file.Name
+    }
     $filename = $null
     $Global:attempts = 10
     while ($Global:attempts -ge 0)
     {
         Write-Host "    from $downloadUrl"
+        Write-Host "      please use IE and just press save to download" -ForegroundColor $CommandSuccess
+        Write-Host "      please don't start any other download!" -ForegroundColor $CommandWarning
         try {
             #TODO Better download!
             start "$ftpUrl/$lastPatchDir/$lastPatchFile"
             do
             {
                 Start-Sleep -Seconds 10
-                $filename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
-                if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+                if ($file)
+                {
+                    $filename = $file.Name
+                    if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                    if ($filename.Contains("partial")) { $filename = $lastfilename }
+                }
             } while ($lastfilename -eq $filename)
             $Global:attempts = -1
         } catch {

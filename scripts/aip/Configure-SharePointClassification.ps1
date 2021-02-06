@@ -43,7 +43,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Configure-SharePointClassification-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Configure-SharePointClassification-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdPublicStorage)"

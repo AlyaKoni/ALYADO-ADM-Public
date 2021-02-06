@@ -27,9 +27,9 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "2.8.85.0",
+                           "productVersion":  "2.9.111.0",
                            "publisher":  "Microsoft Corporation",
-                           "productCode":  "{BABF7665-BCC5-430C-91AF-CFDC9D5B13C8}",
+                           "productCode":  "{3B10ED08-EFB6-43D3-A6FA-5E0D7636A7D9}",
                            "upgradeCode":  "{5D9EC71D-960E-4E58-ADA1-C43B094DAE72}",
                            "productName":  "Microsoft Azure Information Protection",
                            "packageType":  "PerMachine"
@@ -55,7 +55,7 @@
                                "check32BitOn64System":  true,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "2.8.85.0"
+                               "detectionValue":  "2.9.111.0"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  true,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "2.8.85.0"
+                      "comparisonValue":  "2.9.111.0"
                   }
               ],
     "installExperience":  {

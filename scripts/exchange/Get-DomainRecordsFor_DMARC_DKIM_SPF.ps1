@@ -41,7 +41,11 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Get-DomainRecordsFor_DMARC_DKIM_SPF-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Get-DomainRecordsFor_DMARC_DKIM_SPF-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 
 # =============================================================
 # Exchange stuff
@@ -51,39 +55,67 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "EXCHANGE | Get-DomainRecordsFor_DMARC_DKIM_SPF | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# SPF generator https://dmarcly.com/tools/spf-record-generator
-Write-Host "SPF" -ForegroundColor $CommandInfo
-Write-Host "Type:  TXT"
-Write-Host "Name:  @"
-Write-Host "Value: v=spf1 include:spf.protection.outlook.com -all"
-# if sendgrid: v=spf1 include:sendgrid.net include:spf.protection.outlook.com –all
-Write-Host "TTL:   1 hour"
+$domains = @()
 
-Write-Host "`nDMARC" -ForegroundColor $CommandInfo
-Write-Host "Type:  TXT"
-Write-Host "Name:  _dmarc"
-Write-Host "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
-Write-Host "TTL:   1 hour"
+$domains += $AlyaDomainName
+foreach ($dom in $AlyaAdditionalDomainNames)
+{
+    $domains += $dom
+}
 
-Write-Host "`nDMARC Reports" -ForegroundColor $CommandInfo
-Write-Host "Type:  TXT"
-Write-Host "Name:  $($AlyaDomainName)._report._dmarc"
-Write-Host "Value: v=DMARC1"
-Write-Host "TTL:   1 hour"
+foreach ($dom in $domains)
+{
+    Write-Host "DNS config for domain $dom" -ForegroundColor $CommandSuccess
 
-Write-Host "`nDKIM 1" -ForegroundColor $CommandInfo
-Write-Host "Type:  CNAME"
-Write-Host "Name:  selector1._domainkey"
-Write-Host "Value: selector1-$($AlyaDomainName.Replace(".","-"))._domainkey.$($AlyaTenantName)"
-Write-Host "TTL:   1 hour"
+    # SPF generator https://dmarcly.com/tools/spf-record-generator
+    Write-Host "SPF" -ForegroundColor $CommandInfo
+    Write-Host "Type:  TXT"
+    Write-Host "Name:  @"
+    Write-Host "Value: v=spf1 include:spf.protection.outlook.com -all"
+    # if sendgrid: v=spf1 include:sendgrid.net include:spf.protection.outlook.com –all
+    Write-Host "TTL:   1 hour"
 
-Write-Host "`nDKIM 2" -ForegroundColor $CommandInfo
-Write-Host "Type:  CNAME"
-Write-Host "Name:  selector2._domainkey"
-Write-Host "Value: selector2-$($AlyaDomainName.Replace(".","-"))._domainkey.$($AlyaTenantName)"
-Write-Host "TTL:   1 hour"
+    Write-Host "`nDMARC" -ForegroundColor $CommandInfo
+    Write-Host "Type:  TXT"
+    Write-Host "Name:  _dmarc"
+    Write-Host "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
+    Write-Host "TTL:   1 hour"
 
-Write-Host "`n"
+    Write-Host "`nDMARC Reports" -ForegroundColor $CommandInfo
+    Write-Host "Type:  TXT"
+    Write-Host "Name:  $($dom)._report._dmarc"
+    Write-Host "Value: v=DMARC1"
+    Write-Host "TTL:   1 hour"
 
+    try
+    {
+        LoginTo-EXO
+        $conf = Get-DkimSigningConfig -Identity $dom | Format-List Selector1CNAME, Selector2CNAME
+
+        Write-Host "`nDKIM 1" -ForegroundColor $CommandInfo
+        Write-Host "Type:  CNAME"
+        Write-Host "Name:  selector1._domainkey"
+        Write-Host "Value: $($conf.Selector1CNAME)"
+        Write-Host "TTL:   1 hour"
+
+        Write-Host "`nDKIM 2" -ForegroundColor $CommandInfo
+        Write-Host "Type:  CNAME"
+        Write-Host "Name:  selector2._domainkey"
+        Write-Host "Value: $($conf.Selector2CNAME)"
+        Write-Host "TTL:   1 hour"
+
+    }
+    catch
+    {
+        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+	    Write-Error ($_.Exception) -ErrorAction Continue
+    }
+    finally
+    {
+        DisconnectFrom-EXOandIPPS
+    }
+    Write-Host "`n"
+
+}
 #Stopping Transscript
 Stop-Transcript

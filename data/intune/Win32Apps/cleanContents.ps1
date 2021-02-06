@@ -31,4 +31,13 @@ foreach ($dir in $dirs)
             Remove-Item -Path $todelPath -Force
         }
     }
+    if ($dir.Name -eq "AcroRdrDC")
+    {
+        $todelPath = Join-Path $dir.FullName "version.json"
+        $todelFile = Get-Item -Path $todelPath -ErrorAction SilentlyContinue
+        if ($todelFile)
+        {
+            Remove-Item -Path $todelPath -Force
+        }
+    }
 }

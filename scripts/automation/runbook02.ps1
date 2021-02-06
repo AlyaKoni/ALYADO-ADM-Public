@@ -51,7 +51,7 @@ $ErrorActionPreference = "Stop"
 
 # Constants
 $RunAsConnectionName = "AzureRunAsConnection"
-$ModulesToInstall = @( @{Name="Microsoft.RDInfra.RDPowershell"; Version=$null} ) #Version $null means latest
+$ModulesToInstall = @( @{Name="AzureAdPreview"; Version=$null}, @{Name="Microsoft.RDInfra.RDPowershell"; Version=$null} ) #Version $null means latest
 
 # Functions
 Function ImportAutomationModule

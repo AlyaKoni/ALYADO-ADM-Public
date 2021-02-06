@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     26.02.2020 Konrad Brunner       Initial Version
+    05.01.2021 Konrad Brunner       Fixed provider registration
 
 #>
 
@@ -109,10 +110,28 @@ if (-Not $LogAnaWrkspc)
     }
 }
 
+# Checking resource provider registration
+Write-Host "Checking resource provider registration" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "microsoft.insights" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Register-AzResourceProvider -ProviderNamespace "microsoft.insights"
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "microsoft.insights" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
+}
+
 # Setting auditing on azure active directory
 Write-Host "Setting auditing on azure active directory" -ForegroundColor $CommandInfo
 $token = Get-AzAccessToken -audience "https://management.azure.com/"
-$uri = "https://management.azure.com/providers/microsoft.aadiam/diagnosticSettings/{0}?api-version=2017-04-01-preview" -f $DiagnosticRuleName
+$headers = @{
+    "Authorization" = "Bearer $($token)"
+    "Content-Type"  = "application/json"
+}
+#$uri = "https://management.azure.com/providers/microsoft.aadiam/diagnosticSettings?api-version=2017-04-01-preview" -f $DiagnosticRuleName
+#$response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers
 #TODO Sign in values for different license types
 $body = @"
 {
@@ -169,11 +188,9 @@ $body = @"
   }
 }
 "@
-$headers = @{
-    "Authorization" = "Bearer $($token)"
-    "Content-Type"  = "application/json"
-}
-$response = Invoke-WebRequest -Method Put -Uri $uri -Body $body -Headers $headers
+$method = "Put"
+$uri = "https://management.azure.com/providers/microsoft.aadiam/diagnosticSettings/{0}?api-version=2017-04-01-preview" -f $DiagnosticRuleName
+$response = Invoke-WebRequest -Method $method -Uri $uri -Body $body -Headers $headers
 
 if ($response.StatusCode -ne 200) {
     throw "An error occured setting diagnostic settings on azure active directory: $($response | out-string)"

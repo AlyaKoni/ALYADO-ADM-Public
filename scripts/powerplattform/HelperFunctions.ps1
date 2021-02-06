@@ -35,6 +35,8 @@
 
 # Source from https://github.com/microsoft/powerapps-tools/tree/master/Administration/AdminInADay/SetupScripts/GenerateAppsAndFlows
 
+$UsedBapApiHost = "api.bap.microsoft.com"
+
 function Get-AudienceForHostName
 {
     [CmdletBinding()]
@@ -274,11 +276,11 @@ function Upload-FileToBlogStorage(
         Write-Host "Failed to read the file"
         throw
     }
-    $generateResourceStorageUrl = "https://management.azure.com/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/generateResourceStorage`?api-version=" + $ApiVersion
+    $generateResourceStorageUrl = "https://$UsedBapApiHost/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/generateResourceStorage`?api-version=" + $ApiVersion
     $generateResourceStorageResponse = Invoke-Request -Uri $generateResourceStorageUrl -Method POST -ParseContent -ThrowOnFailure
     $originalBlobUri = $generateResourceStorageResponse.sharedAccessSignature
     $uri = [System.Uri] $originalBlobUri 
-    $filename = "filename.zip"
+    $filename = Split-Path $FilePath -Leaf
     $uriHost = $uri.Host
     $uriPath = $uri.AbsolutePath
     $uriQuery = $uri.Query
@@ -306,7 +308,7 @@ function Get-ImportPackageResources(
     [string] $ApiVersion = "2016-11-01"
 )
 {
-    $listParametersUri = "https://management.azure.com/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/listImportParameters`?api-version=" + $ApiVersion
+    $listParametersUri = "https://$UsedBapApiHost/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/listImportParameters`?api-version=" + $ApiVersion
     $listParametersBody = @{ 
         packageLink = @{
             value = $ImportPackageBlobUri
@@ -335,7 +337,7 @@ function Import-Package(
     $blobUri = Upload-FileToBlogStorage -EnvironmentName $EnvironmentName -FilePath $ImportPackageFilePath -ApiVersion $ApiVersion
     $parsedListParametersResponse = Get-ImportPackageResources -EnvironmentName $EnvironmentName -ImportPackageBlobUri $blobUri -ApiVersion $ApiVersion
     $includedResources = Configure-ImportResourcesObject -resources $parsedListParametersResponse.properties.resources -EnvironmentName $EnvironmentName -DefaultToExportSuggestions $DefaultToExportSuggestions -NewApp $NewApp -ResourceName $ResourceName
-    $validateImportPackageUri = "https://management.azure.com/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/validateImportPackage`?api-version=" + $ApiVersion
+    $validateImportPackageUri = "https://$UsedBapApiHost/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/validateImportPackage`?api-version=" + $ApiVersion
     $validateImportPackageBody = @{ 
         details = $parsedListParametersResponse.properties.details
         packageLink = $parsedListParametersResponse.properties.packageLink
@@ -348,9 +350,9 @@ function Import-Package(
         Write-Host "Package failed validation with the following errors \n" + $parsedValidateImportResponse.errors
         throw
     }
-    $importPackageUri = "https://management.azure.com/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/importPackage`?api-version=" + $ApiVersion
+    $importPackageUri = "https://$UsedBapApiHost/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/importPackage`?api-version=" + $ApiVersion
     $importPackageResponse = Invoke-Request -Uri $importPackageUri -Method POST -Body $validateImportPackageBody -ThrowOnFailure
-    $importStatusUri= $importPackageResponse.Headers['Location']
+    $importStatusUri = $importPackageResponse.Headers['Location']
     while($importPackageResponse.StatusCode -ne 200) 
     {
         Start-Sleep -s 5

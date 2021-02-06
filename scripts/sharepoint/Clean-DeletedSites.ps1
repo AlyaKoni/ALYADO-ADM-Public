@@ -55,11 +55,29 @@ Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline"
 LoginTo-PnP $AlyaSharePointAdminUrl
 
 $RecycleBinItems = Get-PnPTenantRecycleBinItem
-foreach ($RecycleBinItem in $RecycleBinItems)
+if ($RecycleBinItems -and $RecycleBinItems.Count -gt 0)
 {
-    Write-Host "Cleaning site: $($RecycleBinItem.Url)"
-    Clear-PnPTenantRecycleBinItem -Url $RecycleBinItem.Url -Wait -Force
-    #TODO Clean Office Group
+    Write-Host "Following sites will be deleted permanently:" -ForegroundColor $CommandInfo
+    foreach ($RecycleBinItem in $RecycleBinItems)
+    {
+        Write-Host " - $($RecycleBinItem.Url)"
+    }
+    pause
+    foreach ($RecycleBinItem in $RecycleBinItems)
+    {
+        Write-Host "Cleaning site: $($RecycleBinItem.Url)"
+        Clear-PnPTenantRecycleBinItem -Url $RecycleBinItem.Url -Wait -Force
+    }
+
+    if (-Not $AlyaComingFromGroup)
+    {
+        Write-Host "Running $($AlyaScripts)\exchange\Delete-OfficeGroupPermanently.ps1"
+        & "$($AlyaScripts)\exchange\Delete-OfficeGroupPermanently.ps1"
+    }
+}
+else
+{
+    Write-Host "No sites to be deleted found"
 }
 
 #Stopping Transscript

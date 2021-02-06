@@ -121,7 +121,13 @@ foreach($packageDir in $packageDirs)
         }
         $profile = [Environment]::GetFolderPath("UserProfile")
         $downloads = $profile+"\downloads"
-        $lastfilename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
+        $lastfilename = $null
+        $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+        if ($file)
+        {
+            $lastfilename = $file.Name
+        }
+        $filename = $null
         $content = $downloadShortcut | Get-Content -Raw -Encoding UTF8
         [regex]$regex = "URL=.*"
         $downloadUrl = [regex]::Match($content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Substring(4)
@@ -129,14 +135,20 @@ foreach($packageDir in $packageDirs)
         while ($attempts -ge 0)
         {
             Write-Host "    from $downloadUrl"
+            Write-Host "      please don't start any other download!" -ForegroundColor $CommandWarning
             try {
                 #TODO Better download!
                 start $downloadUrl
                 do
                 {
                     Start-Sleep -Seconds 10
-                    $filename = (Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1).Name
-                    if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                    $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+                    if ($file)
+                    {
+                        $filename = $file.Name
+                        if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                        if ($filename.Contains("partial")) { $filename = $lastfilename }
+                    }
                 } while ($lastfilename -eq $filename)
                 $attempts = -1
             } catch {

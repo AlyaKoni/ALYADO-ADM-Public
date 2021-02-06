@@ -120,7 +120,8 @@ if (-Not $AzureKeyVaultCertificate)
 
 #Exporting certificate
 Write-Host "Exporting certificate" -ForegroundColor $CommandInfo
-$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".pfx")
+$CompName = Make-PascalCase($AlyaCompanyNameShort)
+$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($CompName + $AzureCertificateName + ".pfx")
 $PfxCertPlainPasswordForRunAsAccount = "`$" + [Guid]::NewGuid().ToString() + "!"
 #Getting the certificate 
 $CertificateRetrieved = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AzureCertificateName
@@ -135,7 +136,7 @@ Clear-Variable -Name "PfxCertPlainPasswordForRunAsAccount"
 
 try
 {
-    Import-PfxCertificate -CertStoreLocation "Cert:\LocalMachine\My" -FilePath $PfxCertPathForRunAsAccount -Password $CertPasswordForRunAsAccount
+    Import-PfxCertificate -CertStoreLocation "Cert:\LocalMachine\My" -FilePath $PfxCertPathForRunAsAccount -Password $CertPasswordForRunAsAccount -Exportable $true
     Write-Host "Certificate imported to Cert:\LocalMachine\My"
     Write-Host "Thumbprint: $($AzureKeyVaultCertificate.Thumbprint)"
 }

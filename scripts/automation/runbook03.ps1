@@ -123,12 +123,13 @@ try {
 		-CertificateThumbprint $RunAsConnection.CertificateThumbprint
 
 	# Find the application
+	Write-Output ("Getting application")
 	$Filter = "AppId eq '" + $RunasConnection.ApplicationId + "'"
 	$Application = Get-AzureADApplication -Filter $Filter 
 
 	# Create RunAs certificate
 	Write-Output ("Creating new certificate")
-	$SelfSignedCertNoOfMonthsUntilExpired = 12
+	$SelfSignedCertNoOfMonthsUntilExpired = 4
 	$SelfSignedCertPlainPassword = (New-Guid).Guid
 	$CertificateName = $AutomationAccountName + $RunAsCertificateName
 	$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($CertificateName + ".pfx")
@@ -142,10 +143,12 @@ try {
 	Export-Certificate -Cert ("Cert:\LocalMachine\My\" + $Cert.Thumbprint) -FilePath $CerCertPathForRunAsAccount -Type CERT | Write-Verbose
 
 	# Add new certificate to application
+	Write-Output ("Adding new certificate to application")
 	New-AzureADApplicationKeyCredential -ObjectId $Application.ObjectId -CustomKeyIdentifier ([System.Convert]::ToBase64String($Cert.GetCertHash())) `
 			 -Type AsymmetricX509Cert -Usage Verify -Value ([System.Convert]::ToBase64String($Cert.GetRawCertData())) -StartDate $Cert.NotBefore -EndDate $Cert.NotAfter | Write-Verbose
 
 	# Update the certificate with the new one in the Automation account
+	Write-Output ("Updating automation account")
 	Set-AzureRmAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Path $PfxCertPathForRunAsAccount -Name $RunAsCertificateName `
 				 -Password $CertPassword -Exportable:$true -AzureRmContext $Context | Write-Verbose
 
