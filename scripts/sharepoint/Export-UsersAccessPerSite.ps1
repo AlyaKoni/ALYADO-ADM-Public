@@ -44,9 +44,13 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-UsersAccessPerSite-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline"
-Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
+
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 
 # Getting app information
 Write-Host "Getting SharePoint app information" -ForegroundColor $CommandInfo

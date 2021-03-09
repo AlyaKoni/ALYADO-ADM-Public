@@ -49,9 +49,13 @@ $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline"
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 LoginTo-PnP $AlyaSharePointAdminUrl
 
 $RecycleBinItems = Get-PnPTenantRecycleBinItem

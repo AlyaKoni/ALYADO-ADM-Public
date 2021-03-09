@@ -53,10 +53,12 @@ $ExternalGroupsToExclude = $AlyaMfaDisabledForGroups
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MSOnline"
     
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 LoginTo-Msol
 
 # =============================================================
@@ -218,7 +220,7 @@ if (-Not $ExcludeGroupId)
 
 # Getting role assignments
 Write-Host "Getting role assignments" -ForegroundColor $CommandInfo
-$roleDefs = @{"Company Administrator"=$null;"Exchange Service Administrator"=$null;"Teams Service Administrator"=$null;"SharePoint Service Administrator"=$null;"Privileged Role Administrator"=$null}
+$roleDefs = @{"Company Administrator"=$null;"Exchange Administrator"=$null;"Teams Administrator"=$null;"SharePoint Administrator"=$null;"Privileged Role Administrator"=$null}
 $roleDefKeys = ($roleDefs.Clone()).Keys
 $ExcludeRoleIds = ""
 foreach($roleName in $roleDefKeys)

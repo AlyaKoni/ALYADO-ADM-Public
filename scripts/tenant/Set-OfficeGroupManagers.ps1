@@ -76,11 +76,11 @@ if ([string]::IsNullOrEmpty($AlyaGroupManagerGroupName))
 Write-Host "Preparing usage guidelines" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzung.html"))
 {
-    throw "Please prepare Office Groups usage guidelines"
+    throw "Please prepare Office Groups usage guidelines: $AlyaData\azure\publicStorage\pages\OfficeGroupsNutzung.html"
 }
 if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExterne.html"))
 {
-    throw "Please prepare Office Groups usage guidelines for externals"
+    throw "Please prepare Office Groups usage guidelines for externals: $AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExterne.html"
 }
 
 # Configuring group setting
@@ -89,7 +89,7 @@ $MsolCompanySettings = Get-MsolCompanyInformation
 if ($MsolCompanySettings.UsersPermissionToCreateGroupsEnabled)
 {
     Write-Warning "UsersPermissionToCreateGroupsEnabled was enabled. Disabling it now."
-    Set-MsolCompanySettings -UsersPermissionToCreateGroupsEnabled $False
+    Set-MsolCompanySettings -UsersPermissionToCreateGroupsEnabled $false
 }
 else
 {

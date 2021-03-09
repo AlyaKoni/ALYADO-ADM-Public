@@ -1,7 +1,6 @@
 # Constants
 $prefix = $AlyaCompanyNameShort.ToUpper() + "SP"
 $ThemeName = "$($AlyaCompanyName) Default Theme"
-$siteLocale = "de-CH"
 $defaultSiteScript = @"
 {
   "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
@@ -13,7 +12,7 @@ $defaultSiteScript = @"
     {
       "verb": "setRegionalSettings",
       "timeZone": 4,
-      "locale": 2055,
+      "locale": 1033,
       "sortOrder": 25,
       "hourFormat": "24"
     }
@@ -33,7 +32,7 @@ $cusSubSiteScript = @"
     {
       "verb": "setRegionalSettings",
       "timeZone": 4,
-      "locale": 2055,
+      "locale": 1033,
       "sortOrder": 25,
       "hourFormat": "24"
     },
@@ -168,7 +167,7 @@ $prtSubSiteScript = @"
     {
       "verb": "setRegionalSettings",
       "timeZone": 4,
-      "locale": 2055,
+      "locale": 1033,
       "sortOrder": 25,
       "hourFormat": "24"
     },
@@ -787,7 +786,7 @@ $homePageTemplateRoot = @"
 					
 					&quot;links&quot;:{&quot;baseUrl&quot;:&quot;{hosturl}&quot;,&quot;
 						items[0].sourceItem.url&quot;:&quot;{site}_layouts{site}15{site}sharepoint.aspx&quot;,&quot;
-						items[1].sourceItem.url&quot;:&quot;{hosturl}{site}sites{site}ALYASPT-COL-Hub&quot;},
+						items[1].sourceItem.url&quot;:&quot;{hosturl}{site}sites{site}$($prefix)-COL-Hub&quot;},
 					
 					&quot;componentDependencies&quot;:{&quot;layoutComponentId&quot;:&quot;706e33c8-af37-4e7b-9d22-6e5694d92a6f&quot;}}, &quot;dynamicDataPaths&quot;: {}, 
 					&quot;dynamicDataValues&quot;: {}}" ControlId="c70391ea-0b10-4ee9-b2b4-006d3fcad0cd" Order="2" Column="1" />
@@ -847,7 +846,7 @@ $homePageTemplateRoot = @"
 					
 					&quot;links&quot;:{&quot;baseUrl&quot;:&quot;{hosturl}&quot;,
 						&quot;items[0].sourceItem.url&quot;:&quot;{site}_layouts{site}15{site}sharepoint.aspx&quot;,
-						&quot;items[1].sourceItem.url&quot;:&quot;{hosturl}{site}sites{site}ALYASPT-COL-Hub&quot;},
+						&quot;items[1].sourceItem.url&quot;:&quot;{hosturl}{site}sites{site}$($prefix)-COL-Hub&quot;},
 					
 					&quot;componentDependencies&quot;:{&quot;layoutComponentId&quot;:&quot;706e33c8-af37-4e7b-9d22-6e5694d92a6f&quot;}}, 
 					&quot;dynamicDataPaths&quot;: {}, &quot;dynamicDataValues&quot;: {}}" ControlId="c70391ea-0b10-4ee9-b2b4-006d3fcad0cd" Order="4" Column="1" />
@@ -886,9 +885,9 @@ $hubSites = @(
         title = "$prefix-ADM-Hub"
         url = "$prefix-ADM-Hub"
         template = "TeamSite"
-        locale4Creation = 1031 #TODO from config
-        description = "Hub Seite für die Zusammenarbeit in der Administration"
-        siteScriptDescription = "Fügt der Hub Site das ADM Design hinzu"
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the administrative sites"
+        siteScriptDescription = "Assigns the ADM site design"
         siteScript = $defaultSiteScript
         subSiteScript = $null
         headerLayout = "Compact"   # Standard, Compact
@@ -901,9 +900,9 @@ $hubSites = @(
         title = "$prefix-CUS-Hub"
         url = "$prefix-CUS-Hub"
         template = "TeamSite"
-        locale4Creation = 1031 #TODO from config
-        description = "Hub Seite für die Zusammenarbeit mit Kunden"
-        siteScriptDescription = "Fügt der Hub Site das CUS Design hinzu"
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the collaboration with customers"
+        siteScriptDescription = "Assigns the CUS site design"
         siteScript = $defaultSiteScript
         subSiteScript = $cusSubSiteScript
         headerLayout = "Compact"   # Standard, Compact
@@ -916,9 +915,9 @@ $hubSites = @(
         title = "$prefix-PRT-Hub"
         url = "$prefix-PRT-Hub"
         template = "TeamSite"
-        locale4Creation = 1031 #TODO from config
-        description = "Hub Seite für die Zusammenarbeit mit Partnern"
-        siteScriptDescription = "Fügt der Hub Site das PRT Design hinzu"
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the collaboration with partners"
+        siteScriptDescription = "Assigns the PRT site design"
         siteScript = $defaultSiteScript
         subSiteScript = $prtSubSiteScript
         headerLayout = "Compact"   # Standard, Compact
@@ -931,9 +930,9 @@ $hubSites = @(
         title = "$prefix-COL-Hub"
         url = "$prefix-COL-Hub"
         template = "TeamSite"
-        locale4Creation = 1031 #TODO from config
-        description = "Hub Seite für die Kollaboration mit Externen"
-        siteScriptDescription = "Fügt der Hub Site das COL Design hinzu"
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the collaboration with externals"
+        siteScriptDescription = "Assigns the COL site design"
         siteScript = $defaultSiteScript
         subSiteScript = $null
         headerLayout = "Compact"   # Standard, Compact
@@ -946,9 +945,9 @@ $hubSites = @(
         title = "$prefix-PRS-Hub"
         url = "$prefix-PRS-Hub"
         template = "TeamSite"
-        locale4Creation = 1031 #TODO from config
-        description = "Hub Seite für persönliche Seiten"
-        siteScriptDescription = "Fügt der Hub Site das PRS Design hinzu"
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the personal sites"
+        siteScriptDescription = "Assigns the PRS site design"
         siteScript = $defaultSiteScript
         subSiteScript = $null
         headerLayout = "Compact"   # Standard, Compact

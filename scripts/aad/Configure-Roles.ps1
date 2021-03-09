@@ -177,7 +177,11 @@ Write-Host "Configuring roles:" -ForegroundColor $CommandInfo
 foreach($roleName in ($builtinRoles.Keys | Sort-Object))
 {
     Write-Host "  role '$($roleName)'"
-    $newUsers = $builtinRoles[$roleName] | where { $_ -notlike "##*"}
+    $newUsers = $builtinRoles[$roleName]
+
+    if ($newUsers -and $newUsers[0] -like "##*") {
+        continue
+    }
 
     $role = Get-MsolRole -RoleName $roleName
     $actMembs = Get-MsolRoleMember -RoleObjectId $role.ObjectId
@@ -200,7 +204,7 @@ foreach($roleName in ($builtinRoles.Keys | Sort-Object))
             $found = $false
             $actMembs | foreach {
                 $actMemb = $_
-                if ($newMemb -eq $actMemb.EmailAddress)
+                if ($newMemb -eq $actMemb.EmailAddress -or $newMemb -eq $actMemb.ObjectId)
                 {
                     $found = $true
                     #break

@@ -50,16 +50,20 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-TermGroup-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.dll"
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.Runtime.dll"
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.Taxonomy.dll"
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.23.2007.1" #TODO Upgrade after bug is fixed https://github.com/pnp/PnP-PowerShell/issues/2849
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Members
 [Byte[]]$amp = 0xEF,0xBC,0x86
 
-# Logging in
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 LoginTo-PnP -Url $AlyaSharePointAdminUrl
 $ctx= Get-PnPContext
 $ctx.ExecuteQuery()

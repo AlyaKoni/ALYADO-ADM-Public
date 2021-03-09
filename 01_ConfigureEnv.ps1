@@ -892,7 +892,7 @@ function LoginTo-Msol(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId)
 {
-    Write-Host "Login to AzureAd" -ForegroundColor $CommandInfo
+    Write-Host "Login to MSOnline" -ForegroundColor $CommandInfo
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     if (-Not $AlyaContext)
     {
@@ -956,36 +956,27 @@ function ReloginTo-PnP(
     [string] [Parameter(Mandatory = $false)] $Thumbprint = $null
     )
 {
-    Write-Host "Relogin to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
-    try { $AlyaConnection = Disconnect-PnPOnline } catch {}
-    $AlyaConnection = $null
-    if ($ClientId -and $Thumbprint)
-    {
-        $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName -NoTelemetry
-    }
-    else
-    {
-        $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -UseWebLogin -NoTelemetry
-    }
-    $AlyaContext = $null
-    try { $AlyaContext = Get-PnPContext -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
-    if (-Not $AlyaContext)
-    {
-        Write-Error "Not logged in to SharePointPnPPowerShellOnline!" -ErrorAction Continue
-        Exit 1
-    }
-    return $AlyaConnection
+    return LoginTo-PnP -Url $Url -ClientId $ClientId -Thumbprint $Thumbprint -Relogin $true
 }
 
 function LoginTo-PnP(
     [string] [Parameter(Mandatory = $true)] $Url,
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
-    [string] [Parameter(Mandatory = $false)] $Thumbprint = $null
+    [string] [Parameter(Mandatory = $false)] $Thumbprint = $null,
+    [bool] [Parameter(Mandatory = $false)] $Relogin = $false
     )
 {
     Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
+    $env:PNPPOWERSHELL_DISABLETELEMETRY = "true"
     $AlyaConnection = $null
-    try { $AlyaConnection = Get-PnPConnection -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
+    if ($Relogin)
+    {
+        try { $AlyaConnection = Disconnect-PnPOnline } catch {}
+    }
+    else
+    {
+        try { $AlyaConnection = Get-PnPConnection -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
+    }
     if ($AlyaConnection -and $Url -ne "$($AlyaConnection.Url)")
     {
         try { $AlyaConnection = Disconnect-PnPOnline } catch {}
@@ -995,11 +986,18 @@ function LoginTo-PnP(
     {
         if ($ClientId -and $Thumbprint)
         {
-            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName -NoTelemetry
+            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName
         }
         else
         {
-            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -UseWebLogin -NoTelemetry
+            if ($Relogin)
+            {
+                $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -Interactive -ForceAuthentication
+            }
+            else
+            {
+                $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -Interactive
+            }
         }
     }
     $AlyaContext = $null

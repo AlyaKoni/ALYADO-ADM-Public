@@ -30,11 +30,14 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     15.09.2020 Konrad Brunner       Initial Version
+    15.02.2021 Konrad Brunner       Added locale selection and pages option
 
 #>
 
 [CmdletBinding()]
 Param(
+    $siteLocale = "de-CH",
+    $overwritePages = $false
 )
 
 #Reading configuration
@@ -45,24 +48,28 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-HubSites-$($Al
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.23.2007.1" #TODO Upgrade after bug is fixed https://github.com/pnp/PnP-PowerShell/issues/2849
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 LoginTo-SPO
 
 # Constants
-if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-deCH.ps1"))
+if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
 {
-    Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration.ps1"
-    . $AlyaData\sharepoint\HubSitesConfiguration-deCH.ps1
+    Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
+    . $AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1
 }
 else
 {
-    Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate.ps1"
-    Write-Warning "We suggest to copy the HubSitesConfigurationTemplate.ps1 to your data\sharepoint directory"
+    Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
+    Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
     pause
-    . $PSScriptRoot\HubSitesConfigurationTemplate-deCH.ps1
+    . $PSScriptRoot\HubSitesConfigurationTemplate-$siteLocale.ps1
 }
 
 # =============================================================
@@ -78,9 +85,9 @@ foreach($hubSite in $hubSites)
     ###Processing designs
     Write-Host "Processing designs for Hub Site $($hubSite.title)" -ForegroundColor $TitleColor
 
-    $SiteScriptName = "$($AlyaCompanyNameShort.ToUpper())SP Hub-$($hubSite.short) SiteScript "+$siteLocale
-    $SiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper())SP Hub-$($hubSite.short) Team Site "+$siteLocale
-    $SiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper())SP Hub-$($hubSite.short) Communication Site "+$siteLocale
+    $SiteScriptName = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) HubSite SiteScript "+$siteLocale
+    $SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) HubSite Team Site "+$siteLocale
+    $SiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) HubSite Communication Site "+$siteLocale
 
     # Getting theme
     Write-Host "Getting theme" -ForegroundColor $CommandInfo
@@ -138,9 +145,9 @@ foreach($hubSite in $hubSites)
     # Checking site script for sub sites
     if ($hubSite.subSiteScript)
     {
-        $SubSiteScriptName = "$($AlyaCompanyNameShort.ToUpper())SP Site-$($hubSite.short) SiteScript "+$siteLocale
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper())SP Site-$($hubSite.short) Team Site "+$siteLocale
-        $SubSiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper())SP Site-$($hubSite.short) Communication Site "+$siteLocale
+        $SubSiteScriptName = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite SiteScript "+$siteLocale
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Team Site "+$siteLocale
+        $SubSiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Communication Site "+$siteLocale
 
         # Checking site script
         Write-Host "Checking site script" -ForegroundColor $CommandInfo
@@ -200,8 +207,9 @@ foreach($hubSite in $hubSites)
         $site = New-PnPSite -Type $hubSite.template -Title $hubSite.title -Alias $hubSite.url -Description $hubSite.description
         do {
             Start-Sleep -Seconds 15
-            $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed
+            try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed -ErrorAction SilentlyContinue } catch {}
         } while (-Not $site)
+        try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {}
     }
     foreach ($usrEmail in $AlyaSharePointNewSiteCollectionAdmins)
     {
@@ -234,15 +242,13 @@ foreach($hubSite in $hubSites)
     Invoke-PnPQuery
     if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
     {
-        Set-PnpWeb -Web $web -SiteLogoUrl $hubSite.siteLogoUrl
         $fname = Split-Path -Path $hubSite.siteLogoUrl -Leaf
         $tempFile = [System.IO.Path]::GetTempFileName()+$fname
         Invoke-RestMethod -Method GET -UseBasicParsing -Uri $hubSite.siteLogoUrl -OutFile $tempFile
-        Connect-PnPOnline -Scopes "Group.ReadWrite.All","User.Read.All"
-        $group = Get-PnPUnifiedGroup -Identity $hubSite.title
-        Set-PnPUnifiedGroup -Identity $group -GroupLogoPath $tempFile
+        Set-PnPSite -LogoFilePath $tempFile
         Remove-Item -Path $tempFile
     }
+    try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {}
 }
 
 ###Processing navigation
@@ -277,8 +283,8 @@ foreach($hubSite in $hubSites)
     if ($hubSite.subSiteScript)
     {
         Write-Host "Hub Site $($hubSite.title)"
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) Team Site "+$siteLocale
-        $SubSiteDesignNameComm = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSite.short) Communication Site "+$siteLocale
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper()) $($hubSite.short) SubSite Team Site "+$siteLocale
+        $SubSiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper()) $($hubSite.short) SubSite Communication Site "+$siteLocale
         $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
         $SubSiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameComm"}
 
@@ -336,32 +342,34 @@ foreach($hubSite in $hubSites)
     }
 }
 
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.26.2010.0" #TODO Remove after bug is fixed https://github.com/pnp/PnP-PowerShell/issues/2849
-
 ###Processing Hub Site Start Pages
-#Set-PnPTraceLog -On -WriteToConsole -Level Debug
-#To export it: Export-PnPClientSidePage -Force -Identity Home.aspx -Out $tempFile
-Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
-foreach($hubSite in $hubSites)
+if ($overwritePages)
 {
-    #$hubSite = $hubSites[0]
-    LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
-    $tempFile = [System.IO.Path]::GetTempFileName()
-    $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
-    $tmp = Apply-PnPProvisioningTemplate -Path $tempFile
-    Remove-Item -Path $tempFile
-}
-#Set-PnPTraceLog -Off
 
-###Processing Root Site Start Page
-if ($homePageTemplateRoot)
-{
-    Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
-    LoginTo-PnP -Url "$($AlyaSharePointUrl)"
-    $tempFile = [System.IO.Path]::GetTempFileName()
-    $homePageTemplateRoot | Set-Content -Path $tempFile -Encoding UTF8
-    $tmp = Apply-PnPProvisioningTemplate -Path $tempFile
-    Remove-Item -Path $tempFile
+    #Set-PnPTraceLog -On -WriteToConsole -Level Debug
+    #To export it: Export-PnPClientSidePage -Force -Identity Home.aspx -Out $tempFile
+    Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
+    foreach($hubSite in $hubSites)
+    {
+        #$hubSite = $hubSites[0]
+        LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
+        $tmp = Apply-PnPProvisioningTemplate -Path $tempFile
+        Remove-Item -Path $tempFile
+    }
+    #Set-PnPTraceLog -Off
+
+    ###Processing Root Site Start Page
+    if ($homePageTemplateRoot)
+    {
+        Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
+        LoginTo-PnP -Url "$($AlyaSharePointUrl)"
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        $homePageTemplateRoot | Set-Content -Path $tempFile -Encoding UTF8
+        $tmp = Apply-PnPProvisioningTemplate -Path $tempFile
+        Remove-Item -Path $tempFile
+    }
 }
 
 ###Configuring access to hub and root sites

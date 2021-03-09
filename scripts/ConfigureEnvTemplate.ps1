@@ -46,6 +46,7 @@ $AlyaCompanyName = "PleaseSpecify" #Example:"AlyaConsulting"
 $AlyaCompanyNameFull = "PleaseSpecify" #Example:"Alya Consulting Inh. Konrad Brunner"
 $AlyaCompanyNameShort = "PleaseSpecify" #Example:"alya"
 $AlyaDomainName = "PleaseSpecify" #Example:"alyaconsulting.ch"
+$AlyaAdditionalDomainNames = @()
 $AlyaLocalDomainName = "PleaseSpecify" #Example:"alyaconsulting.ch"
 $AlyaEnvName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShort)1stp"
 $AlyaEnvNameTest = "PleaseSpecify" #Example:"$($AlyaCompanyNameShort)1stt"
@@ -53,6 +54,10 @@ $AlyaSubscriptionName = "PleaseSpecify" #Example:"$($AlyaEnvName)"
 $AlyaSubscriptionNameTest = $AlyaSubscriptionName #Example:"$($AlyaEnvNameTest)"
 $AlyaNamingPrefix = "PleaseSpecify" #Example:"$($AlyaEnvName)"
 $AlyaNamingPrefixTest = "PleaseSpecify" #Example:"$($AlyaEnvNameTest)"
+$AlyaAllSubscriptions = @(
+    $AlyaSubscriptionName, 
+    $AlyaSubscriptionNameTest
+)
 $AlyaLocation = "PleaseSpecify" #Example:"westeurope"
 $AlyaWebPage = "PleaseSpecify" #Example:"https://alyaconsulting.ch"
 $AlyaPrivacyUrl = "PleaseSpecify" #Example:"https://alyaconsulting.ch/Home/Privacy"
@@ -83,6 +88,7 @@ $AlyaResIdJumpHostResGrp = "PleaseSpecify" #Example:"010"
 $AlyaResIdWebSiteResGrp = "PleaseSpecify" #Example:"011"
 $AlyaResIdLetsEncryptResGrp = "PleaseSpecify" #Example:"012"
 $AlyaResIdWormResGrp = "PleaseSpecify" #Example:"015"
+$AlyaResIdOrdCatResGrp = "PleaseSpecify" #Example:"016"
 $AlyaResIdWvdImageResGrp = "PleaseSpecify" #Example:"040"
 $AlyaResIdLogAnalytics = "PleaseSpecify" #Example:"002"
 $AlyaResIdVirtualNetwork = "PleaseSpecify" #Example:"000"
@@ -92,6 +98,7 @@ $AlyaResIdAuditStorage = "PleaseSpecify" #Example:"002"
 $AlyaResIdPublicStorage = "PleaseSpecify" #Example:"001"
 $AlyaResIdPrivateStorage = "PleaseSpecify" #Example:"004"
 $AlyaResIdWormStorage = "PleaseSpecify" #Example:"015"
+$AlyaResIdOrdCatStorage = "PleaseSpecify" #Example:"016"
 $AlyaResIdRecoveryVault = "PleaseSpecify" #Example:"001"
 $AlyaResIdAutomationAccount = "PleaseSpecify" #Example:"001"
 $AlyaResIdWormAutomationAccount = "PleaseSpecify" #Example:"015"
@@ -105,6 +112,7 @@ $AlyaResIdWvdImageClient = "PleaseSpecify" #Example:"041"
 $AlyaResIdWvdImageServer = "PleaseSpecify" #Example:"042"
 $AlyaResIdWvdImageSNet = "PleaseSpecify" #Example:"05"
 $AlyaResIdWvdHostSNet = "PleaseSpecify" #Example:"01"
+$AlyaResIdOrdCatFuncApp = "PleaseSpecify" #Example:"016"
 
 <# SHARING SETTINGS #>
 $AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" # AdminOnly, KnownAccountsOnly, ByLink
@@ -125,8 +133,6 @@ $AlyaJumpHostBackupPolicy = "PleaseSpecify" #Example:"NightlyPolicy"
 <# GROUP SETTINGS #>
 $AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-MFADISABLED"
 $AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("ALYAOG-ADM-AlleExternen")
-$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-O365GROUPMANAGERS" # Only members can create groups
-#TODO $AlyaGroupManagerMembers = @()
 $AlyaAllInternals = "PleaseSpecify" #Example:"ALYAOG-ADM-AlleInternen"
 $AlyaAllExternals = "PleaseSpecify" #Example:"ALYAOG-ADM-AlleExternen"
 
@@ -167,6 +173,7 @@ $AlyaSharePointUrl = "https://$($AlyaTenantNameId).sharepoint.com"
 $AlyaSharePointAdminUrl = "https://$($AlyaTenantNameId)-admin.sharepoint.com"
 $AlyaSharePointNewSiteOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
 $AlyaSharePointNewSiteAdditionalOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
+$AlyaSharePointNewSiteCollectionAdmins = @( $AlyaSharePointNewSiteOwner, $AlyaSharePointNewSiteAdditionalOwner )
 #https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
 $AlyaSpThemeDef = @{ 
     "themePrimary" = "#000000";
@@ -193,9 +200,20 @@ $AlyaSpThemeDef = @{
     "white" = "#ffffff";
 }
 
+<# TEAMS SETTINGS #>
+$AlyaTeamsNewTeamOwner = $AlyaSharePointNewSiteOwner
+$AlyaTeamsNewTeamAdditionalOwner = $AlyaSharePointNewSiteOwner
+
+<# OFFICE GROUP SETTINGS #>
+$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-O365GROUPMANAGERS" # Only members can create groups
+#TODO $AlyaGroupManagerMembers = @()
+$AlyaOfficeGroupsNewGroupOwner = $AlyaSharePointNewSiteOwner
+$AlyaOfficeGroupsNewGroupAdditionalOwner = $AlyaSharePointNewSiteOwner
+
 <# AIP SETTINGS #>
 $AlyaAipApiServiceLocation = "PleaseSpecify" #Example:
 $AlyaAipOnboardingPolicy = 0 # 0=norestriction 1=onlyLicenseUser else group name to use
+$AlyaAipCustomPageUrl = "PleaseSpecify"
 
 <# INTUNE SETTINGS #>
 $AlyaDeviceCategories = @("Standard")
@@ -209,10 +227,14 @@ $AlyaWelcomeScreenBackgroundUrl = "PleaseSpecify"
 <# WORM BACKUP SETTINGS #>
 $AlyaWormStorageAccountName = "PleaseSpecify"
 $AlyaWormCreateBackupWebHookUrl = "PleaseSpecify"
-$AlyaWormStartMergingWebHookUrl = "PleaseSpecify"
 $AlyaWormDoneBackupWebHookUrl = "PleaseSpecify"
+$AlyaWormStartMergingWebHookUrl = "PleaseSpecify"
 $AlyaWormSasTokenContainer = "PleaseSpecify"
 $AlyaWormSasTokenBlob = "PleaseSpecify"
+
+<# ORDER CATALOG SETTINGS #>
+$AlyaOrderEmailCustomer = "PleaseSpecify"
+$AlyaOrderEmailAlya = "PleaseSpecify"
 
 <# PSTN SETTINGS #>
 $AlyaPstnGateway = "PleaseSpecify" #Example:"pstn.provider.ch"

@@ -45,7 +45,9 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Sync-ProfileInformation-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline" -exactVersion "3.23.2007.1" #TODO Upgrade after bug is fixed https://github.com/pnp/PnP-PowerShell/issues/2849
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 Install-ModuleIfNotInstalled "MSOnline"
 Install-ModuleIfNotInstalled "Microsoft.Online.SharePoint.PowerShell"
 Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
@@ -53,7 +55,9 @@ Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.Runtime.dll"
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.UserProfiles.dll"
 
-# Logging in
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 LoginTo-SPO
 LoginTo-MSOL
 LoginTo-PnP -Url $AlyaSharePointAdminUrl

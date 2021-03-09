@@ -49,10 +49,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-SiteLogo-$($AlyaTime
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-# Logging in
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 LoginTo-SPO
 
 # =============================================================

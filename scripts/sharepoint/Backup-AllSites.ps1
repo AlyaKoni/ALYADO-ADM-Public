@@ -49,7 +49,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Backup-AllSites-$($AlyaT
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "SharePointPnPPowerShellOnline"
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
+
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 
 # Constants
 if (-Not $backupLocation)
