@@ -107,7 +107,57 @@ else
     Write-Host "AipServiceDocumentTrackingFeature was already enabled"
 }
 
-Get-AipServiceConfiguration | fl
+$aipConfiguration = Get-AipServiceConfiguration
+$aipConfiguration | fl
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "AIP | Configure-AIPService | Exchange Online" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+LoginTo-EXO
+$actConfiguration = Get-IRMConfiguration
+
+if (-Not $actConfiguration.SimplifiedClientAccessEnabled)
+{
+    Write-Warning "SimplifiedClientAccessEnabled was disbled. Enabling it now."
+    Set-IRMConfiguration -SimplifiedClientAccessEnabled $true
+}
+if (-Not $actConfiguration.LicensingLocation)
+{
+    Write-Warning "LicensingLocation was not configured. Configuring it now."
+    Set-IRMConfiguration -LicensingLocation $aipConfiguration.LicensingIntranetDistributionPointUrl
+}
+else
+{
+    if ($actConfiguration.LicensingLocation -ne $aipConfiguration.LicensingIntranetDistributionPointUrl)
+    {
+        throw "LicensingLocation wrong configured. Please check."
+    }
+}
+if (-Not $actConfiguration.InternalLicensingEnabled)
+{
+    Write-Warning "InternalLicensingEnabled was disbled. Enabling it now."
+    Set-IRMConfiguration -InternalLicensingEnabled $true
+}
+if (-Not $actConfiguration.ExternalLicensingEnabled)
+{
+    Write-Warning "ExternalLicensingEnabled was disbled. Enabling it now."
+    Set-IRMConfiguration -ExternalLicensingEnabled $true
+}
+if (-Not $actConfiguration.AzureRMSLicensingEnabled)
+{
+    Write-Warning "AzureRMSLicensingEnabled was disbled. Enabling it now."
+    Set-IRMConfiguration -AzureRMSLicensingEnabled $true
+}
+if (-Not $actConfiguration.AutomaticServiceUpdateEnabled)
+{
+    Write-Warning "AutomaticServiceUpdateEnabled was disbled. Enabling it now."
+    Set-IRMConfiguration -AutomaticServiceUpdateEnabled $true
+}
+#Test-IRMConfiguration -Sender first.last@domain.ch
+
+Get-IRMConfiguration | fl
+DisconnectFrom-EXOandIPPS
 
 #Stopping Transscript
 Stop-Transcript

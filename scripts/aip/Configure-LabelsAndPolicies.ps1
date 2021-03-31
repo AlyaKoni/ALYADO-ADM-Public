@@ -101,8 +101,6 @@ try
     foreach($labelDef in $labelDefs)
     {
         #$labelDef = $labelDefs[0]
-        #$labelDef = $labelDefs[1]
-        #$labelDef = $labelDefs[2]
         if (-Not [string]::IsNullOrEmpty($labelDef.NameEN))
         {
             Write-Host "  Label: $($labelDef.NameEN)"
@@ -144,7 +142,7 @@ try
                 $encryptionProtectionType = "Template"
                 $encryptionPromptUser = $false
                 $encryptionContentExpiredOnDateInDaysOrNever = "Never"
-                $encryptionOfflineAccessDays = 365
+                $encryptionOfflineAccessDays = 14
                 if ($labelDef.EncryptionTarget -eq "User defined")
                 {
                     $encryptionProtectionType = "UserDefined"
@@ -193,9 +191,19 @@ try
             {
                 Set-Label -Identity $labelName -EncryptionEnabled $false
             }
+
+            #TODO advanced settings
+            #Set-Label -Identity Confidential -AdvancedSettings @{labelByCustomProperties="Secure Islands label is Confidential,Classification,Confidential"}
+            #Set-Label -Identity Confidential -AdvancedSettings @{customPropertiesByLabel="Classification,Confidential"}
+
+            #Set-Label -Identity "Recipients Only" -AdvancedSettings @{SMimeSign=$false}
+            #Set-Label -Identity "Recipients Only" -AdvancedSettings @{SMimeEncrypt=$false}
+
+            #Set-Label -Identity Public -AdvancedSettings @{color="#40e0d0"}
         }
         else
         {
+            #TODO check following code
             if ($label -and -not [string]::IsNullOrEmpty( $labelDef.EncryptionPermissionEmail))
             {
                 $encryptionRightsDefinitions += ";"+$labelDef.EncryptionPermissionEmail
@@ -305,18 +313,47 @@ try
             Set-LabelPolicy -Identity $publishDef.ProfileName -AddLabels $labelsToAdd -RemoveLabels $labelsToRemove -Comment $publishDef.Description -AddExchangeLocation $publishDef.ExchangeLoc -AddSharePointLocation $publishDef.SharePointLoc
             
             #Advanced settings
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{RequireDowngradeJustification=$false}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnablebarHiding=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{DisableDnf=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{Mandatory=$false}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{SiteAndGroupMandatory=$false}
             #https://docs.microsoft.com/en-us/azure/information-protection/rms-client/clientv2-admin-guide-customizations
-            #Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{HideBarByDefault="False"}
-            #Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{PostponeMandatoryBeforeSave="False"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{DisableMandatoryInOutlook="True"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookRecommendationEnabled="False"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableContainerSupport="True"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissions=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{HideBarByDefault=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{DisableMandatoryInOutlook=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookRecommendationEnabled=$false}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableContainerSupport=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookDefaultLabel="None"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{PFileSupportedExtensions="*"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissions="True"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissionsForCustomProtectedFiles="True"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{AdditionalPPrefixExtensions="*"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{PostponeMandatoryBeforeSave=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissions=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissionsForCustomProtectedFiles=$true}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{AttachmentAction="Automatic"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{ReportAnIssueLink="mailto:$AlyaSupportEmail"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{ReportAnIssueLink="mailto:konrad.brunner@alyaconsulting.ch"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookWarnUntrustedCollaborationLabel=$null}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookJustifyUntrustedCollaborationLabel=$null}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookBlockUntrustedCollaborationLabel=$null}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookBlockTrustedDomains=$null}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookJustifyTrustedDomains=$null}
             Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookUnlabeledCollaborationAction="Off"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookOverrideUnlabeledCollaborationExtensions=$null}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookUnlabeledCollaborationActionOverrideMailBodyBehavior="Off"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableOutlookDistributionListExpansion=$false}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookGetEmailAddressesTimeOutMSProperty="3000"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableAudit=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{LogMatchedContent=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableLabelByMailHeader=$null}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableLabelBySharePointProperties=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{RunPolicyInBackground=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{JustificationTextForUserText=$null}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{SharepointWebRequestTimeout="00:05:00"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{SharepointFileWebRequestTimeout="00:15:00"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookSkipSmimeOnReadingPaneEnabled=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableTrackAndRevoke=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableRevokeGuiSupport=$true}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OfficeContentExtractionTimeout="00:00:15"}
             if ($publishDef.DefaultLabel -and -Not [string]::IsNullOrEmpty($publishDef.DefaultLabel.Trim()))
             {
                 $deflabel = Get-Label -Identity $publishDef.DefaultLabel -ErrorAction SilentlyContinue
@@ -333,17 +370,7 @@ try
             {
                 Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{CustomUrl=$AlyaAipCustomPageUrl}
             }
-            #TODO Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableAudit="False"}
-            #Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{LogMatchedContent="True"}
-            #Set-Label -Identity $publishDef.ProfileName -AdvancedSettings @{SMimeSign="True"}
-            #Set-Label -Identity $publishDef.ProfileName -AdvancedSettings @{SMimeEncrypt="True"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{RunPolicyInBackground = "true"}
-            #Set-Label -Identity $publishDef.ProfileName -AdvancedSettings @{color="#40e0d0"}
-            #Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{ UseCopyAndPreserveNTFSOwner ="true"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{RequireDowngradeJustification="False"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookDefaultLabel="None"}
             Set-LabelPolicy -Identity $publishDef.ProfileName -RetryDistribution
-            #Set-LabelPolicy -AdvancedSettings @{ AdditionalPPrefixExtensions ="*"}
         }
     }
 

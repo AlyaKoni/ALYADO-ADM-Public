@@ -12,7 +12,7 @@ foreach ($dir in $dirs)
     {
         $tmp = Remove-Item -Path (Join-Path $dir.FullName "Package") -Recurse -Force
     }
-    if ($dir.Name -eq "LocalPrinters")
+    if ($dir.Name -eq "LocalPrinters" -or $dir.Name -eq "LocalPrinters_unused")
     {
         $zipDir = Join-Path $dir.FullName "ContentZip"
         $zdirs = Get-ChildItem -Path $zipDir -Directory

@@ -80,18 +80,19 @@ $azureUrls = @( `
     "*.msft.net", `
     "*.microsoftonline.com", `
     "*.microsoftazuread-sso.com", `
-    "*.wvd.microsoft.com" `
+    "*.wvd.microsoft.com", `
+    "*.azure-apihub.net" `
 )
 
 if (-Not $urlsonly)
 {
-    if (-Not $dataonly) { Write-Host "`nAzure IP Ranges" -ForegroundColor $informationColor }
+    if (-Not $dataonly) { Write-Host "`nAzure IP Ranges" -ForegroundColor $CommandInfo }
     $azureIps.ip | Sort-Object -Unique
 }
 
 if (-Not $ipsonly)
 {
-    if (-Not $dataonly) { Write-Host "`nAzure URLs" -ForegroundColor $informationColor }
+    if (-Not $dataonly) { Write-Host "`nAzure URLs" -ForegroundColor $CommandInfo }
     $azureUrls | Sort-Object -Unique
 }
 
@@ -135,13 +136,13 @@ $o365Ips = $endpointSets | ForEach-Object {
 
 if (-Not $urlsonly)
 {
-    if (-Not $dataonly) { Write-Host "`nO365 IP Ranges" -ForegroundColor $informationColor }
+    if (-Not $dataonly) { Write-Host "`nO365 IP Ranges" -ForegroundColor $CommandInfo }
     $o365Ips.ip | Sort-Object -Unique
 }
 
 if (-Not $ipsonly)
 {
-    if (-Not $dataonly) { Write-Host "`nO365 URLs" -ForegroundColor $informationColor }
+    if (-Not $dataonly) { Write-Host "`nO365 URLs" -ForegroundColor $CommandInfo }
     $o365Urls.url | Sort-Object -Unique
 }
 
