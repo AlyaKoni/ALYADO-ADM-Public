@@ -29,67 +29,36 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    14.09.2020 Konrad Brunner       Initial Version
+    12.04.2021 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    $devopsUser = "who@alyaconsulting.onmicrosoft.com",
-    $devopsToken = "????????????????????????????????????????????????????",
-    $fromUsers = @("Konrad Brunner <konrad.brunner@alyaconsulting.ch>", "Konrad Brunner <konrad.brunner@alyaconsulting.ch>"),
-    $toUser = "Konrad Brunner <konrad.brunner@alyaconsulting.ch>"
+    $devopsUrl = "https://dev.azure.com/alyaconsulting",
+    $devopsToken = "????????????????????????????????????????????????????"
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\source\Move-DevOpsTasks-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\source\List-AllProjects-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "VSTeam"
 
 # =============================================================
-# AD stuff
+# DevOps stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Source | Move-DevOpsTasks | DEVOPS" -ForegroundColor $CommandInfo
+Write-Host "DevOps | List-AllProjects | DEVOPS" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Main
-$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $devopsUser,$devopsToken)))
-
-$wiMin = 999999
-$wiMax = 0
-for ($i=1; $i -le 2100; $i++)
-{
-    $url = "https://mobimo.visualstudio.com/_apis/wit/workitems?ids=$($i)&api-version=4.1"
-    $result = $null
-    try {
-        $result = Invoke-RestMethod -Uri $url -Method Get -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)} -ErrorAction SilentlyContinue
-    } catch {}
-    if ($result -and $result.count -gt 0)
-    {
-        if ($i -lt $wiMin) { $wiMin = $i }
-        if ($i -gt $wiMax) { $wiMax = $i }
-        $item = $result.value[0]
-        Write-Host "Found work item $($i): $($item.fields."System.AssignedTo")"
-        $assTo = $item.fields."System.AssignedTo"
-        $proj = $item.fields."System.TeamProject"
-        if ($fromUsers -contains $assTo)
-        {
-            $url = "https://mobimo.visualstudio.com/_apis/wit/workitems/$($i)?api-version=4.1"
-            $body = '[{"op": "add","path": "/fields/System.AssignedTo","value": "'+$toUser+'"}]'
-            Invoke-RestMethod -Uri $url -Method PATCH -ContentType "application/json-patch+json" -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)} -ErrorAction SilentlyContinue
-        }
-    }
-    else
-    {
-        Write-Host "Work item $($i) does not exists"
-    }
-}
-
-Write-Host "Min work item $($wiMin)"
-Write-Host "Max work item $($wiMax)"
+Set-VSTeamAccount -Account $devopsUrl -PersonalAccessToken $devopsToken
+Get-VSTeamProject
 
 #Stopping Transscript
 Stop-Transcript

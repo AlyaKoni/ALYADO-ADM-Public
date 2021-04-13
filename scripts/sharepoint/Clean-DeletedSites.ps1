@@ -43,10 +43,6 @@ Param(
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Clean-DeletedSites-$($AlyaTimeString).log" | Out-Null
 
-# Constants
-$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
-$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
-
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az"

@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting: 2020
@@ -29,75 +29,67 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.03.2020 Konrad Brunner       Initial Version
-    07.01.2021 Konrad Brunner       Fixed file extension (.json)
+    14.09.2020 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    $devopsUser = "who@alyaconsulting.onmicrosoft.com",
+    $devopsToken = "????????????????????????????????????????????????????",
+    $fromUsers = @("Konrad Brunner <konrad.brunner@alyaconsulting.ch>", "Konrad Brunner <konrad.brunner@alyaconsulting.ch>"),
+    $toUser = "Konrad Brunner <konrad.brunner@alyaconsulting.ch>"
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-Templates-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
-
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+Start-Transcript -Path "$($AlyaLogs)\scripts\devops\Move-DevOpsTasks-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
-# Azure stuff
+# DevOps stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Azure | Extract-Templates | AZURE" -ForegroundColor $CommandInfo
+Write-Host "DevOps | Move-DevOpsTasks | DEVOPS" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
+#Main
+$base64AuthInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(("{0}:{1}" -f $devopsUser,$devopsToken)))
 
-# Exporting all resourcegroup templates
-Write-Host "Exporting all resourcegroup templates" -ForegroundColor $CommandInfo
-$TemplateRoot = "$($AlyaData)\azure\templates"
-Write-Host "  to $($TemplateRoot)" -ForegroundColor $CommandInfo
-if (-Not (Test-Path -Path $TemplateRoot -PathType Container))
+$wiMin = 999999
+$wiMax = 0
+for ($i=1; $i -le 2100; $i++)
 {
-    New-Item -Path $TemplateRoot -ItemType Directory -Force | Out-Null
-}
-Push-Location -Path $TemplateRoot
-
-foreach($subscriptionName in ($AlyaAllSubscriptions | Sort-Object -Unique))
-{
-    $sub = Get-AzSubscription -SubscriptionName $subscriptionName -TenantId $AlyaTenantId -ErrorAction SilentlyContinue
-    if ($sub)
+    $url = "https://mobimo.visualstudio.com/_apis/wit/workitems?ids=$($i)&api-version=4.1"
+    $result = $null
+    try {
+        $result = Invoke-RestMethod -Uri $url -Method Get -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)} -ErrorAction SilentlyContinue
+    } catch {}
+    if ($result -and $result.count -gt 0)
     {
-        Select-AzSubscription -SubscriptionObject $sub -Force
-        $grps = Get-AzResourceGroup
-        foreach($grp in $grps)
+        if ($i -lt $wiMin) { $wiMin = $i }
+        if ($i -gt $wiMax) { $wiMax = $i }
+        $item = $result.value[0]
+        Write-Host "Found work item $($i): $($item.fields."System.AssignedTo")"
+        $assTo = $item.fields."System.AssignedTo"
+        $proj = $item.fields."System.TeamProject"
+        if ($fromUsers -contains $assTo)
         {
-            Write-Host "Exporting ressource group $($grp.ResourceId) from subscription $($subscriptionName)"
-            $fileName = ($grp.ResourceId -replace "/", "_") + ".json"
-            Export-AzResourceGroup -ResourceGroupName $grp.ResourceGroupName -Path . -IncludeParameterDefaultValue -IncludeComments -Pre -Force
-            Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($subscriptionName + "_" + $grp.ResourceGroupName + ".json") -Force
+            $url = "https://mobimo.visualstudio.com/_apis/wit/workitems/$($i)?api-version=4.1"
+            $body = '[{"op": "add","path": "/fields/System.AssignedTo","value": "'+$toUser+'"}]'
+            Invoke-RestMethod -Uri $url -Method PATCH -ContentType "application/json-patch+json" -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) -Headers @{Authorization=("Basic {0}" -f $base64AuthInfo)} -ErrorAction SilentlyContinue
         }
-    } else
+    }
+    else
     {
-        Write-Warning "Can't find subscription with name $($subscriptionName)"
+        Write-Host "Work item $($i) does not exists"
     }
 }
 
-Pop-Location
+Write-Host "Min work item $($wiMin)"
+Write-Host "Max work item $($wiMax)"
 
 #Stopping Transscript
 Stop-Transcript

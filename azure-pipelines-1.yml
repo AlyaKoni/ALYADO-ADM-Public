@@ -1,0 +1,18 @@
+# Commit pipeline
+name: 'Build on Commit'
+
+trigger:
+- master
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- checkout: self
+  displayName: Checkout Repo
+- script: echo Hello, world!
+  displayName: 'Run a one-line script'
+- script: |
+    echo Add other tasks to build, test, and deploy your project.
+    echo See https://aka.ms/yaml
+  displayName: 'Run a multi-line script'

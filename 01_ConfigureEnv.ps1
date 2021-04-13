@@ -39,6 +39,7 @@
     14.09.2020 Konrad Brunner       Moved Alya global variables to data\ConfigureEnv.ps1
     17.09.2020 Konrad Brunner       Added custom property checks
     24.09.2020 Konrad Brunner       LoginTo-EXO and LoginTo-IPPS
+    12.04.2021 Konrad Brunner       Added DevOps login
 
 #>
 
@@ -65,6 +66,7 @@ if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
 
 <# POWERSHELL #>
 $ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
 
 <# TLS Connections #>
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -171,14 +173,7 @@ $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmss")
 <# FUNCTIONS #>
 function Is-InternetConnected()
 {
-    if ((test-connection 8.8.8.8 -Count 1 -Quiet -ErrorAction SilentlyContinue))
-    {
-        return $true
-    }
-    else
-    {
-        return $false
-    }
+    return (Test-NetConnection -ComputerName www.powershellgallery.com -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet)
 }
 
 function Reset-ConsoleWidth()
@@ -610,12 +605,12 @@ function Install-ScriptIfNotInstalled (
 <# LOGIN FUNCTIONS #>
 function LogoutAllFrom-Az()
 {
-    Clear-AzContext -Scope Process -Force
-    Clear-AzContext -Scope CurrentUser -Force
+    Clear-AzContext -Scope Process -Force -ErrorAction SilentlyContinue
+    Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
 }
 function Get-CustomersContext(
-    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
 {
     $context = $null
     if ($SubscriptionId)
@@ -634,32 +629,33 @@ function Get-CustomersContext(
     return $context
 }
 function LogoutFrom-Az(
-    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
 {
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     if ($AlyaContext)
     {
-        Logout-AzAccount -ContextName $AlyaContext.Name | Out-Null
-        Remove-AzAccount -ContextName $AlyaContext.Name | Out-Null
-        Remove-AzContext -InputObject $AlyaContext | Out-Null
+        Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+        Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+        Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
         $AlyaContext = $null
     }
 }
 function LoginTo-Az(
-    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
 {
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
 
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     if ($AlyaContext)
     {
+        Write-Host "  checking existing context"
         if ($AlyaContext.Tenant.Id -ne $AlyaTenantId)
         {
-            Logout-AzAccount -ContextName $AlyaContext.Name | Out-Null
-            Remove-AzAccount -ContextName $AlyaContext.Name | Out-Null
-            Remove-AzContext -InputObject $AlyaContext | Out-Null
+            Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+            Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+            Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
             $AlyaContext = $null
         }
         else
@@ -672,27 +668,44 @@ function LoginTo-Az(
             $chk = Get-AzADServicePrincipal -First 1 -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
             if (-Not $chk)
             {
-                Logout-AzAccount -ContextName $AlyaContext.Name | Out-Null
-                Remove-AzAccount -ContextName $AlyaContext.Name | Out-Null
-                Remove-AzContext -InputObject $AlyaContext | Out-Null
+                Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+                Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+                Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
                 $AlyaContext = $null
             }
         }
     }
     if (-Not $AlyaContext)
     {
-        if ($SubscriptionId)
+        $DEVOPS_CLIENT_ID = $env:DEVOPS_CLIENT_ID
+        $DEVOPS_CLIENT_SECRET = $env:DEVOPS_CLIENT_SECRET
+        $DEVOPS_TENANT_ID = $env:DEVOPS_TENANT_ID
+        if ([string]::IsNullOrEmpty($DEVOPS_CLIENT_ID) -or `
+            [string]::IsNullOrEmpty($DEVOPS_CLIENT_SECRET) -or `
+            [string]::IsNullOrEmpty($DEVOPS_TENANT_ID))
         {
-            Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionId | Out-Null
-        }
-        if ($SubscriptionName)
-        {
-            Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionName | Out-Null
+            #PowerShell login
+            if ($SubscriptionId)
+            {
+                Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionId | Out-Null
+            }
+            if ($SubscriptionName)
+            {
+                Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionName | Out-Null
+            }
+            else
+            {
+                Connect-AzAccount -Tenant $AlyaTenantId | Out-Null
+            }
         }
         else
         {
-            Connect-AzAccount -Tenant $AlyaTenantId | Out-Null
-        }
+            #DevOps login
+            Write-Host "  within DevOps"
+            $DEVOPS_CLIENT_SECRET_SEC = ConvertTo-SecureString $DEVOPS_CLIENT_SECRET -AsPlainText -Force
+            $DEVOPS_CREDS = New-Object -TypeName System.Management.Automation.PSCredential($DEVOPS_CLIENT_ID, $DEVOPS_CLIENT_SECRET_SEC)
+            Connect-AzAccount -ServicePrincipal -Credential $DEVOPS_CREDS -Tenant $DEVOPS_TENANT_ID
+        }    
         $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     }
     else
@@ -732,9 +745,9 @@ function LoginTo-Az(
 
 
 function Get-AzAccessToken(
-    $audience = "74658136-14ec-4630-ad9b-26e160ff0fc6",
-    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+    [string] [Parameter(Mandatory = $false)] $audience = "74658136-14ec-4630-ad9b-26e160ff0fc6",
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
 {
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     $token = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, $audience)
@@ -748,8 +761,8 @@ function Get-AzAccessToken(
 function Get-AdalAccessToken(
     [String] [Parameter(Mandatory = $false)] $clientId = "d1ddf0e4-d672-4dae-b554-9d5bdfd93547",
     [String] [Parameter(Mandatory = $false)] $redirectUri = "urn:ietf:wg:oauth:2.0:oob",
-    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
 {
 	#TODO check first if type exists
     $module = Get-Module "AzureAdPreview"
@@ -771,8 +784,8 @@ function Get-AdalAccessToken(
 }
 
 function LoginTo-Ad(
-    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
 {
     Write-Host "Login to AzureAd" -ForegroundColor $CommandInfo
     try { Disconnect-AzureAD -ErrorAction SilentlyContinue } catch {}
@@ -793,8 +806,8 @@ function LoginTo-Ad(
 }
 
 function ReloginTo-Wvd(
-    [String] [Parameter(Mandatory = $false)] $AppId,
-    [SecureString] [Parameter(Mandatory = $false)] $SecPwd)
+    [String] [Parameter(Mandatory = $false)] $AppId = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $SecPwd = $null)
 {
     throw "TODO: Kontext issues if using this function"
     Write-Host "Relogin to WVD" -ForegroundColor $CommandInfo
@@ -810,8 +823,8 @@ function ReloginTo-Wvd(
 }
 
 function LoginTo-Wvd(
-    [String] [Parameter(Mandatory = $false)] $AppId,
-    [SecureString] [Parameter(Mandatory = $false)] $SecPwd)
+    [String] [Parameter(Mandatory = $false)] $AppId = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $SecPwd = $null)
 {
     throw "TODO: Kontext issues if using this function"
     Write-Host "Login to WVD" -ForegroundColor $CommandInfo
@@ -889,8 +902,8 @@ function DisconnectFrom-EXOandIPPS()
 }
 
 function LoginTo-Msol(
-    [string] [Parameter(Mandatory = $false)] $SubscriptionName,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId)
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
 {
     Write-Host "Login to MSOnline" -ForegroundColor $CommandInfo
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
@@ -1214,7 +1227,7 @@ function Get-MsGraphObject
             $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
-            if ($StatusCode -eq 429) {
+            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
                 Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
                 Start-Sleep -Seconds 45
             }
@@ -1226,7 +1239,7 @@ function Get-MsGraphObject
                 }
             }
         }
-    } while ($StatusCode -eq 429)
+    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
     return $Result
 }
 
@@ -1257,7 +1270,7 @@ function Delete-MsGraphObject
             $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
-            if ($StatusCode -eq 429) {
+            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
                 Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
                 Start-Sleep -Seconds 45
             }
@@ -1266,7 +1279,7 @@ function Delete-MsGraphObject
                 throw
             }
         }
-    } while ($StatusCode -eq 429)
+    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
     return $Result
 }
 
@@ -1299,7 +1312,7 @@ function Post-MsGraph
             $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
-            if ($StatusCode -eq 429) {
+            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
                 Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
                 Start-Sleep -Seconds 45
             }
@@ -1308,7 +1321,7 @@ function Post-MsGraph
                 throw
             }
         }
-    } while ($StatusCode -eq 429)
+    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
     if ($Results.value) {
         $Results.value
     }
@@ -1346,7 +1359,7 @@ function Patch-MsGraph
             $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
-            if ($StatusCode -eq 429) {
+            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
                 Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
                 Start-Sleep -Seconds 45
             }
@@ -1355,7 +1368,7 @@ function Patch-MsGraph
                 throw
             }
         }
-    } while ($StatusCode -eq 429)
+    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
     if ($Results.value) {
         $Results.value
     }

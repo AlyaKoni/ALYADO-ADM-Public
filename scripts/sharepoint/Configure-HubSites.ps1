@@ -204,7 +204,7 @@ foreach($hubSite in $hubSites)
     {
         Write-Warning "Hub site not found. Creating now hub site $($hubSite.title)"
         LoginTo-PnP -Url $AlyaSharePointAdminUrl
-        $site = New-PnPSite -Type $hubSite.template -Title $hubSite.title -Alias $hubSite.url -Description $hubSite.description
+        $site = New-PnPSite -Type $hubSite.template -Title $hubSite.title -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Description $hubSite.description -Wait
         do {
             Start-Sleep -Seconds 15
             try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed -ErrorAction SilentlyContinue } catch {}
@@ -228,7 +228,7 @@ foreach($hubSite in $hubSites)
     {
         Invoke-SPOSiteDesign -Identity $SiteDesignTeam.Id -WebUrl "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
     }
-    if ($hubSite.template -eq "Communication")
+    if ($hubSite.template -eq "CommunicationSite")
     {
         Invoke-SPOSiteDesign -Identity $SiteDesignComm.Id -WebUrl "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
     }
@@ -242,11 +242,20 @@ foreach($hubSite in $hubSites)
     Invoke-PnPQuery
     if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
     {
-        $fname = Split-Path -Path $hubSite.siteLogoUrl -Leaf
-        $tempFile = [System.IO.Path]::GetTempFileName()+$fname
-        Invoke-RestMethod -Method GET -UseBasicParsing -Uri $hubSite.siteLogoUrl -OutFile $tempFile
-        Set-PnPSite -LogoFilePath $tempFile
-        Remove-Item -Path $tempFile
+        if ($hubSite.template -eq "TeamSite")
+        {
+            $fname = Split-Path -Path $hubSite.siteLogoUrl -Leaf
+            $tempFile = [System.IO.Path]::GetTempFileName()+$fname
+            Invoke-RestMethod -Method GET -UseBasicParsing -Uri $hubSite.siteLogoUrl -OutFile $tempFile
+            Set-PnPSite -LogoFilePath $tempFile
+            Remove-Item -Path $tempFile
+        }
+        if ($hubSite.template -eq "CommunicationSite")
+        {
+            $web.SiteLogoUrl = $hubSite.siteLogoUrl
+            $web.Update()
+            Invoke-PnPQuery
+        }
     }
     try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {}
 }

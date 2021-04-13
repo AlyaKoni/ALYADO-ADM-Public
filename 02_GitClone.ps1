@@ -141,6 +141,9 @@ if (-Not $devopsHost)
 {
     $devopsHost = $AlyaGlobalConfig.source.devops.Substring($AlyaGlobalConfig.source.devops.IndexOf("@")+1,$AlyaGlobalConfig.source.devops.IndexOf(":")-$AlyaGlobalConfig.source.devops.IndexOf("@")-1)
 }
+$devopsPort = 22
+if ($AlyaGlobalConfig.source.devops.StartsWith("http://")) { $devopsPort = 80 }
+if ($AlyaGlobalConfig.source.devops.StartsWith("https://")) { $devopsPort = 443 }
 if ((Test-Path $sshConfigPath))
 {
     $kexCont = Get-Content -Path $sshConfigPath -Raw
@@ -178,10 +181,10 @@ else
 }
 
 Write-Host "Checking connection" -ForegroundColor $CommandInfo #Adding host to known_hosts
-$devopsHost = ([System.Uri]$AlyaGlobalConfig.source.devops).Authority
-if (-Not $devopsHost)
+$networkTest = Test-NetConnection -ComputerName $devopsHost -Port $devopsPort
+if (-Not $networkTest.TcpTestSucceeded)
 {
-    $devopsHost = $AlyaGlobalConfig.source.devops.Substring($AlyaGlobalConfig.source.devops.IndexOf("@")+1,$AlyaGlobalConfig.source.devops.IndexOf(":")-$AlyaGlobalConfig.source.devops.IndexOf("@")-1)
+    throw "No network connection to $($devopsHost):$($devopsPort)"
 }
 $proc = New-Object System.Diagnostics.Process
 $proc.StartInfo.FileName = "$AlyaGitRoot\usr\bin\ssh.exe"

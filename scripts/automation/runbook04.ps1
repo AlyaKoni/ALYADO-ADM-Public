@@ -71,7 +71,7 @@ try {
 try {
 	# Members
 	$subs = $Subscriptions.Split(",")
-	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, 'W. Europe Standard Time')
+	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, $TimeZone)
 	"Run time $($runTime)"
 
 	# Processing subscriptions
@@ -109,38 +109,86 @@ try {
 						"- stopTime parsed: $($stopTime)"
 					}
 				}
-				if ($startTime)
-				{
-					if ($runTime -gt $startTime -and -not ($stopTime -and $startTime -lt $stopTime -and $runTime -gt $stopTime))
-					{
-						$VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-						foreach ($VMStatus in $VMDetail.Statuses)
-						{
-							"- VM Status: $($VMStatus.Code)"
-							if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0)
-							{
-								"- Starting VM"
-								Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
-							}
-						}
-					}
-				}
-				if ($stopTime)
-				{
-					if ($runTime -gt $stopTime -and -not ($startTime -and $startTime -gt $stopTime -and $runTime -gt $startTime))
-					{
-						$VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-						foreach ($VMStatus in $VMDetail.Statuses)
-						{ 
-							"- VM Status: $($VMStatus.Code)"
-							if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
-							{
-								"- Stopping VM"
-								Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
-							}
-						}
-					}
-				}
+	            if ($startTime)
+	            {
+	                if ($stopTime)
+	                {
+		                if ($runTime -lt $stopTime -and $runTime -gt $startTime)
+		                {
+						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    foreach ($VMStatus in $VMDetail.Statuses)
+						    {
+							    "- VM Status: $($VMStatus.Code)"
+							    if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
+							    {
+								    "- Starting VM"
+								    Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
+							    }
+		                    }
+		                }
+                        else
+		                {
+						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    foreach ($VMStatus in $VMDetail.Statuses)
+						    {
+							    "- VM Status: $($VMStatus.Code)"
+							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+							    {
+								    "- Stopping VM"
+								    Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+							    }
+		                    }
+		                }
+	                }
+		            else
+		            {
+		                if ($runTime -gt $startTime)
+		                {
+						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    foreach ($VMStatus in $VMDetail.Statuses)
+						    {
+							    "- VM Status: $($VMStatus.Code)"
+							    if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
+							    {
+								    "- Starting VM"
+								    Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
+							    }
+		                    }
+		                }
+		            }
+	            }
+	            else
+	            {
+	                if ($stopTime)
+	                {
+		                if ($runTime -gt $stopTime)
+		                {
+						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    foreach ($VMStatus in $VMDetail.Statuses)
+						    {
+							    "- VM Status: $($VMStatus.Code)"
+							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+							    {
+								    "- Stopping VM"
+								    Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+							    }
+		                    }
+		                }
+		                if ($runTime.Hour -eq 0 -and $stopTime.Hour -eq 23)
+		                {
+						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    foreach ($VMStatus in $VMDetail.Statuses)
+						    {
+							    "- VM Status: $($VMStatus.Code)"
+							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+							    {
+								    "- Stopping VM"
+								    Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+							    }
+		                    }
+		                }
+	                }
+	            }
 			}
 		}
 	}

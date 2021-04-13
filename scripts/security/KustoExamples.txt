@@ -1,0 +1,87 @@
+Examples:
+https://docs.microsoft.com/en-us/azure/azure-monitor/logs/manage-cost-storage
+
+Log count per table:
+union withsource=sourceTable *
+| project sourceTable
+| summarize count() by sourceTable
+
+Log count per Category:
+AzureDiagnostics
+| summarize LogCount = count() by Category
+| sort by LogCount desc
+
+Usage: 
+Usage 
+| where TimeGenerated > ago(32d)
+| where StartTime >= startofday(ago(31d)) and EndTime < startofday(now())
+| where IsBillable == true
+| summarize TotalGB = sum(Quantity) / 1000 by Solution, DataType
+| sort by TotalGB desc
+Usage 
+| where TimeGenerated > ago(32d)
+| where StartTime >= startofday(ago(31d)) and EndTime < startofday(now())
+| where IsBillable == true
+| summarize TotalGB = sum(Quantity) / 1000. by bin(StartTime, 1d), DataType 
+| render columnchart
+Usage 
+| where TimeGenerated > ago(32d)
+| where StartTime >= startofday(ago(31d)) and EndTime < startofday(now())
+| where IsBillable == true
+| summarize TotalGB = sum(Quantity) / 1000. by bin(StartTime, 1d), Solution 
+| render columnchart
+AzureDiagnostics
+| where TimeGenerated > ago(32d)
+| where _IsBillable == true
+| summarize count(), TotalGB=sum(_BilledSize) / 1000000000 by ResourceProvider, ResourceId, Category
+| sort by TotalGB desc
+Event
+| where TimeGenerated > ago(32d)
+| where _IsBillable == true
+| summarize count(), Bytes=sum(_BilledSize) by EventID, bin(TimeGenerated, 1d)
+| render columnchart
+SystemEvents
+| where timestamp > ago(32d)
+| where type == "Billing"
+| extend BillingTelemetryType = tostring(dimensions["BillingTelemetryType"])
+| extend BillingTelemetrySizeInBytes = todouble(measurements["BillingTelemetrySize"])
+| summarize sum(BillingTelemetrySizeInBytes) by BillingTelemetryType, bin(timestamp, 1d) | render barchart
+
+Heartbeat:
+Heartbeat 
+| where TimeGenerated > startofday(ago(31d))
+| summarize nodes = dcount(Computer) by bin(TimeGenerated, 1d)    
+| render timechart
+
+Security Alerts:
+SecurityAlert
+| where TimeGenerated > ago(2d)
+| extend HostName = tostring(parse_json(Entities)[0]['HostName'])
+| extend AccountName = tostring(parse_json(Entities)[1]['Name'])
+| extend ActivityStartTime = parse_json(ExtendedProperties)['Activity start time (UTC)']
+| extend ActivityEndTime = parse_json(ExtendedProperties)['Activity end time (UTC)']
+| extend AttackerSourceIp = tostring(parse_json(ExtendedProperties)['Attacker source IP'])
+| extend _AttackerSourceIp = extract("IP Address: ([^,]+)", 1, AttackerSourceIp)
+| extend NumberOfExistingAccountsUsedBySourceToSignIn = parse_json(ExtendedProperties)['Number of existing accounts used by source to sign in']
+| extend NumberOfFailedAuthenticationAttemptsToHost = parse_json(ExtendedProperties)['Number of failed authentication attempts to host']
+| extend NumberOfNonexistentAccountsUsedBySourceToSignIn = parse_json(ExtendedProperties)['Number of nonexistent accounts used by source to sign in']
+| extend TopAccountsWithFailedSignInAttempts = parse_json(ExtendedProperties)['Top accounts with failed sign in attempts (count)']
+| extend WasRdpSessionInitiated = parse_json(ExtendedProperties)['Was RDP session initiated']
+| project TimeGenerated,
+          AlertName,
+          SystemAlertId,
+          AlertType,
+          HostName,
+          AccountName,
+          StartTime,
+          ProcessingEndTime,
+          ActivityStartTime,
+          ActivityEndTime,
+          _AttackerSourceIp,
+          NumberOfExistingAccountsUsedBySourceToSignIn,
+          NumberOfFailedAuthenticationAttemptsToHost,
+          TopAccountsWithFailedSignInAttempts,
+          WasRdpSessionInitiated
+| sort by TimeGenerated desc
+
+

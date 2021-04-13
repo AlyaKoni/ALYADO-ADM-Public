@@ -1,0 +1,52 @@
+# Extraction pipeline
+name: 'Nightly Extraction'
+
+trigger:
+- none
+
+schedules:
+- cron: '0 0 * * *'
+  displayName: 'Nightly extraction'
+  branches:
+    include:
+    - master
+  always: true
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- checkout: self
+  displayName: Checkout Repo
+  persistCredentials: true
+  clean: true
+- task: AzureCLI@2
+  displayName: Store Credentials
+  inputs:
+    azureSubscription: 'alyainfp(02016285-d8fb-4cd2-a126-3cbd9e1df1d2)'
+    scriptType: 'ps'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      Write-Host "##vso[task.setvariable variable=DEVOPS_CLIENT_ID]$($env:servicePrincipalId)"
+      Write-Host "##vso[task.setvariable variable=DEVOPS_CLIENT_SECRET]$($env:servicePrincipalKey)"
+      Write-Host "##vso[task.setvariable variable=DEVOPS_TENANT_ID]$($env:tenantId)"
+    addSpnToEnvironment: true
+    failOnStandardError: true
+- task: AzurePowerShell@5
+  displayName: Extract Templates
+  inputs:
+    azureSubscription: 'alyainfp(02016285-d8fb-4cd2-a126-3cbd9e1df1d2)'
+    ScriptType: 'FilePath'
+    ScriptPath: '.\scripts\azure\Extract-Templates.ps1'
+    FailOnStandardError: true
+    azurePowerShellVersion: 'LatestVersion'
+- task: CmdLine@2
+  displayName: Commit Changes
+  inputs:
+    script: |
+      git config --global user.email "info@alyaconsulting.ch"
+      git config --global user.name "Alya DevOps Pipeline"
+      git checkout -b master
+      git add -A
+      git commit -m "Commited by pipeline [skip ci]"
+      git push -u origin master

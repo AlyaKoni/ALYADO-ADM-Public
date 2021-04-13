@@ -37,7 +37,8 @@
 [CmdletBinding()]
 Param(
     [string[]]$directoriesToAnalyse = @("C:\Users"),
-    [string[]]$urlsToDocLibs = @("/sites/example/DocLib1")
+    [string[]]$urlsToDocLibs = @("sites/example/DocLib1"),
+    [string]$delemitter = ","
 )
 
 #Reading configuration
@@ -56,8 +57,10 @@ $TypeDefinition = @"
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.AccessControl;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using System.Text;
 
 namespace SharePointFileShareMigrationAnalysis
 {
@@ -81,8 +84,8 @@ namespace SharePointFileShareMigrationAnalysis
             internal FILETIME ftCreationTime;
             internal FILETIME ftLastAccessTime;
             internal FILETIME ftLastWriteTime;
-            internal int nFileSizeHigh;
-            internal int nFileSizeLow;
+            internal uint nFileSizeHigh;
+            internal uint nFileSizeLow;
             internal int dwReserved0;
             internal int dwReserved1;
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
@@ -175,25 +178,36 @@ namespace SharePointFileShareMigrationAnalysis
             public long Files { get; set; }
         }
 
+        // Limitations
         internal static long byteToGb = 1024 * 1024 * 1024;
+        internal static long fileSizeLimit = 250;
+        internal static int fullPathLimit = 400;
+        internal static int fileFolderNameLimit = 255;
+        internal static int numFilesLimit = 300000;
+        internal static string notAllowedChars = "\\/:*?\"<>|";
+        internal static string notAllowedCharsODL = "~#%&{}\\/:*?\"<>|";
+        internal static string notAllowedLeadingAndTrailingChars = " ";
+        internal static string notAllowedFileNameStarting = "~$";
+        internal static string notAllowedFolderNameInRootDir = "forms";
+        internal static string notAllowedInFileNames = "_vti_";
         internal static string[] notAllowedNames = new string[] {
-            ".Lock",
+            ".lock",
             "con",
-            "PRN",
+            "prn",
             "aux",
-            "NUL",
+            "nul",
             "_vti_",
             "desktop.ini",
-            "COM0",
-            "COM1",
-            "COM2",
-            "COM3",
-            "COM4",
-            "COM5",
-            "COM6",
-            "COM7",
-            "COM8",
-            "COM9",
+            "com0",
+            "com1",
+            "com2",
+            "com3",
+            "com4",
+            "com5",
+            "com6",
+            "com7",
+            "com8",
+            "com9",
             "lpt0",
             "lpt1",
             "lpt2",
@@ -218,11 +232,11 @@ namespace SharePointFileShareMigrationAnalysis
             IntPtr findHandle = FindFirstFile(filePath, out findData);
             if (findHandle != INVALID_HANDLE_VALUE)
             {
-                return (long)findData.nFileSizeLow + (long)findData.nFileSizeHigh * 4294967296;
+                return (long)findData.nFileSizeLow + (long)findData.nFileSizeHigh * ((long)uint.MaxValue+1);
             }
             else
             {
-                return 0;
+                return -1;
             }
         }
 
@@ -250,6 +264,30 @@ namespace SharePointFileShareMigrationAnalysis
             return results;
         }
 
+        internal static bool IsFolderReadable(string directoryPath)
+        {
+            FileSystemRights accessType = FileSystemRights.ListDirectory;
+            bool hasAccess = true;
+            try
+            {
+                AuthorizationRuleCollection collection = Directory.
+                                            GetAccessControl(directoryPath)
+                                            .GetAccessRules(true, true, typeof(System.Security.Principal.NTAccount));
+                foreach (FileSystemAccessRule rule in collection)
+                {
+                    if ((rule.FileSystemRights & accessType) > 0)
+                    {
+                        return hasAccess;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                hasAccess = false;
+            }
+            return hasAccess;
+        }
+
         internal static List<string> GetFiles(string dirName)
         {
             List<string> results = new List<string>();
@@ -273,129 +311,159 @@ namespace SharePointFileShareMigrationAnalysis
             return results;
         }
 
-        internal static DirInfo GetInfo(string root, string di, string path, StreamWriter ffi, StreamWriter cfi, StreamWriter efi, Dictionary<string, DirInfo> typeInfo)
+        internal static DirInfo GetInfo(string root, string di, string path, string delemitter, StreamWriter ffi, StreamWriter cfi, StreamWriter efi, Dictionary<string, DirInfo> typeInfo)
         {
             string name = GetName(di);
-            int dirTotLength = di.Length - root.Length + path.Length;
-            if (name.IndexOfAny("\\/:*?\"<>|".ToCharArray()) > -1)
-                lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { di, "Dir", "Not allowed character found: \\ / : * ? \" < > |" }); }
-            if (name.Trim() != name)
-                lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { di, "Dir", "Not allowed leading or trailing space found" }); }
-            if (name.ToCharArray()[0] == '~')
-                lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { di, "Dir", "A name starting with ~ is not allowed" }); }
-            foreach (string notAllowedName in notAllowedNames)
+            if (!IsFolderReadable(di))
             {
-                if (name.ToLower() == notAllowedName.ToLower())
-                    lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { di, "Dir", "The name " + notAllowedName + " is not allowed" }); }
+                lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "No access" }); }
+                DirInfo info = new DirInfo();
+                info.Size = 0;
+                info.Files = 0;
+                return info;
             }
-            if (root == di && name == "forms")
-                lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { di, "Dir", "A name forms is in root not allowed" }); }
-            if (dirTotLength > 400)
-                efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { di, "Dir", "Full folder path can have up to 400 characters" });
-            if (name.Length > 255)
-                efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { di, "Dir", "Folder name can have up to 255 characters" });
-            List<string> files = GetFiles(di);
-            List<string> subDirs = GetDirectories(di);
-            long allFilesSize = 0;
-            long subDirsSize = 0;
-            long subDirsFilesCount = files.Count;
-            if ((files.Count + subDirs.Count) > 5000)
-                lock (efi) { efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { di, "Dir", "Directory has more than 5000 elements" }); }
-            long subDirsDirsCount = subDirs.Count;
-            int maxPathLength = dirTotLength;
-            Parallel.ForEach(files, new ParallelOptions {
-                MaxDegreeOfParallelism = Environment.ProcessorCount > 1 ? Environment.ProcessorCount - 1 : 1 }, 
-                (fi) =>
+            else
             {
-                long fileSize = GetFileSize(fi);
-                if (fileSize == 0)
-                    lock (efi) { efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "Zero length" }); }
-                allFilesSize += fileSize;
-                string fname = GetName(fi);
-                int fileTotLength = dirTotLength + 1 + fname.Length;
-                string fext = "";
-                if (fname.IndexOf(".") > -1) fext = fname.Substring(fname.LastIndexOf("."));
-                lock (typeInfo)
-                {
-                    if (!typeInfo.ContainsKey(fext)) typeInfo.Add(fext, new DirInfo());
-                    typeInfo[fext].Files += 1;
-                    typeInfo[fext].Size += fileSize;
-                }
-                //TODO SpecialCharactersStateInFileFolderNames for # and %
-                if (fname.IndexOfAny("\\/:*?\"<>|".ToCharArray()) > -1)
-                    lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "Not allowed character found: \\ / : * ? \" < > |" }); }
-                if (fname.Trim() != fname)
-                    lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "Not allowed leading or trailing space found" }); }
+                int dirTotLength = di.Length - root.Length + path.Length;
+                if (name.IndexOfAny(notAllowedChars.ToCharArray()) > -1)
+                    lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Not allowed character found: " + notAllowedChars }); }
+                if (name.Trim() != name)
+                    lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Not allowed leading or trailing space found" }); }
                 foreach (string notAllowedName in notAllowedNames)
                 {
-                    if (fname.ToLower() == notAllowedName.ToLower())
-                        lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "The name " + notAllowedName + " is not allowed" }); }
+                    if (name.ToLower() == notAllowedName.ToLower())
+                        lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "The name " + notAllowedName + " is not allowed" }); }
                 }
-                if (fname.ToCharArray()[0] == '~')
-                    lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "A name starting with ~ is not allowed" }); }
-                if (fname.ToCharArray()[0] == '$')
-                    lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "A name starting with $ is not allowed" }); }
-                if (fname.Contains("_vti_"))
-                    lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "File name should not contain _vti_" }); }
-                if ((fileSize / byteToGb) > 100)
-                    lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "Too big. only 100GB allowed" }); }
-                if (fileTotLength > 400)
-                    lock (efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "Folder name and file name combinations can have up to 400 characters" }); }
-                if (fname.Length > 255)
-                    efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, "File", "File name can have up to 255 characters" });
-                if (fileTotLength > maxPathLength)
-                    maxPathLength = fileTotLength;
-                lock(ffi){ ffi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { fi, fileSize, fileTotLength }); }
-            });
-            Parallel.ForEach(subDirs, new ParallelOptions {
-                MaxDegreeOfParallelism = Environment.ProcessorCount > 1 ? Environment.ProcessorCount - 1 : 1 }, 
-                (sdi) =>
-            {
-                DirInfo subinfo = GetInfo(root, sdi, path, ffi, cfi, efi, typeInfo);
-                lock (subDirs)
+                if (root == di && name == notAllowedFolderNameInRootDir)
+                    lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "A name forms is in root not allowed" }); }
+                if (dirTotLength > fullPathLimit)
+                    efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Full folder path can have up to " + fullPathLimit + " characters" });
+                if (name.Length > fileFolderNameLimit)
+                    efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Folder name can have up to " + fileFolderNameLimit + " characters" });
+                List<string> files = GetFiles(di);
+                List<string> subDirs = GetDirectories(di);
+                long allFilesSize = 0;
+                long subDirsSize = 0;
+                long subDirsFilesCount = files.Count;
+                if ((files.Count + subDirs.Count) > 5000)
+                    lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Directory has more than 5000 elements (only SharePoint)" }); }
+                long subDirsDirsCount = subDirs.Count;
+                int maxPathLength = dirTotLength;
+                Parallel.ForEach(files, new ParallelOptions
                 {
-                    subDirsSize += subinfo.Size;
-                    subDirsFilesCount += subinfo.Files;
+                    MaxDegreeOfParallelism = Environment.ProcessorCount > 1 ? Environment.ProcessorCount - 1 : 1
+                },
+                    (fi) =>
+                    {
+                        long fileSize = GetFileSize(fi);
+                        if (fileSize < 0)
+                        {
+                            try {
+                                FileInfo finf = new FileInfo(fi);
+                                fileSize = finf.Length;
+                            } catch (Exception) {}
+                        }
+                        if (fileSize < 0)
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Error getting file size" }); }
+                        if (fileSize == 0)
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Zero length" }); }
+                        allFilesSize += fileSize;
+                        string fname = GetName(fi);
+                        int fileTotLength = dirTotLength + 1 + fname.Length;
+                        string fext = "";
+                        if (fname.IndexOf(".") > -1) fext = fname.Substring(fname.LastIndexOf("."));
+                        lock (typeInfo)
+                        {
+                            if (!typeInfo.ContainsKey(fext)) typeInfo.Add(fext, new DirInfo());
+                            typeInfo[fext].Files += 1;
+                            typeInfo[fext].Size += fileSize;
+                        }
+                        //TODO SpecialCharactersStateInFileFolderNames for # and %
+                        if (fname.IndexOfAny(notAllowedChars.ToCharArray()) > -1)
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Not allowed character found: \\ / : * ? \" < > |" }); }
+                        if (fname.Trim() != fname)
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Not allowed leading or trailing space found" }); }
+                        foreach (string notAllowedName in notAllowedNames)
+                        {
+                            if (fname.ToLower() == notAllowedName.ToLower())
+                                lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "The name " + notAllowedName + " is not allowed" }); }
+                        }
+                        if (fname.StartsWith(notAllowedFileNameStarting))
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "A name starting with " + notAllowedFileNameStarting + " is not allowed" }); }
+                        if (fname.Contains(notAllowedInFileNames))
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "File name should not contain _vti_" }); }
+                        if ((fileSize / byteToGb) > fileSizeLimit)
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Too big. only " + fileSizeLimit + "GB allowed" }); }
+                        if (fileTotLength > fullPathLimit)
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Folder name and file name combinations can have up to 400 characters" }); }
+                        if (fname.Length > fileFolderNameLimit)
+                            efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "File name can have up to 255 characters" });
+                        if (fileTotLength > maxPathLength)
+                            maxPathLength = fileTotLength;
+                        lock (ffi) { ffi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, fileSize, fileTotLength }); }
+                    });
+                Parallel.ForEach(subDirs, new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = Environment.ProcessorCount > 1 ? Environment.ProcessorCount - 1 : 1
+                },
+                    (sdi) =>
+                    {
+                        DirInfo subinfo = GetInfo(root, sdi, path, delemitter, ffi, cfi, efi, typeInfo);
+                        lock (subDirs)
+                        {
+                            subDirsSize += subinfo.Size;
+                            subDirsFilesCount += subinfo.Files;
+                        }
+                    });
+                if (root != di && subDirsFilesCount > numFilesLimit)
+                {
+                    efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Too much files for sync. Should not have more than " + numFilesLimit });
                 }
-            });
-            lock(cfi){ cfi.WriteLine("\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\",\"{6}\"", new object[] { di, files.Count, subDirs.Count, allFilesSize, (allFilesSize + subDirsSize), subDirsFilesCount, maxPathLength }); }
-            DirInfo info = new DirInfo();
-            info.Size = allFilesSize + subDirsSize;
-            info.Files = subDirsFilesCount;
-            return info;
+                lock (cfi) { cfi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"" + delemitter + "\"{3}\"" + delemitter + "\"{4}\"" + delemitter + "\"{5}\"" + delemitter + "\"{6}\"", new object[] { di, files.Count, subDirs.Count, allFilesSize, (allFilesSize + subDirsSize), subDirsFilesCount, maxPathLength }); }
+                DirInfo info = new DirInfo();
+                info.Size = allFilesSize + subDirsSize;
+                info.Files = subDirsFilesCount;
+                return info;
+            }
         }
 
-        public static void Analyse(string[] dirs, string[] urls, string csvLocation)
+        public static void Analyse(string[] dirs, string[] urls, string csvLocation, string delemitter)
         {
             try
             {
-                using (StreamWriter ffi = new FileInfo(csvLocation+"\\SPShareAnalysis_Files.csv").CreateText())
+                //using (StreamWriter ffi = new FileInfo(csvLocation+"\\SPShareAnalysis_Files.csv").CreateText())
+                using (StreamWriter ffi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Files.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                 {
                     ffi.AutoFlush = true;
-                    lock(ffi){ ffi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { "Path", "Size [Bytes]", "PathLength" }); }
-                    using (StreamWriter cfi = new FileInfo(csvLocation+"\\SPShareAnalysis_Dirs.csv").CreateText())
+                    lock (ffi) { ffi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { "Path", "Size [Bytes]", "PathLength" }); }
+                    //using (StreamWriter cfi = new FileInfo(csvLocation+"\\SPShareAnalysis_Dirs.csv").CreateText())
+                    using (StreamWriter cfi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Dirs.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                     {
                         cfi.AutoFlush = true;
-                        lock(cfi){ cfi.WriteLine("\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\",\"{6}\"", new object[] { "Path", "#Files", "#Dirs", "Size [Bytes]", "TotalSize [Bytes]", "#FilesTotal", "MaxPathLength" }); }
-                        using (StreamWriter efi = new FileInfo(csvLocation+"\\SPShareAnalysis_Errors.csv").CreateText())
+                        lock (cfi) { cfi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"" + delemitter + "\"{3}\"" + delemitter + "\"{4}\"" + delemitter + "\"{5}\"" + delemitter + "\"{6}\"", new object[] { "Path", "#Files", "#Dirs", "Size [Bytes]", "TotalSize [Bytes]", "#FilesTotal", "MaxPathLength" }); }
+                        //using (StreamWriter efi = new FileInfo(csvLocation+"\\SPShareAnalysis_Errors.csv").CreateText())
+                        using (StreamWriter efi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Errors.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                         {
                             efi.AutoFlush = true;
-                            lock(efi){ efi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { "Path", "Type", "Error" }); }
-                            using (StreamWriter tfi = new FileInfo(csvLocation+"\\SPShareAnalysis_Types.csv").CreateText())
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { "Path", "Type", "Error" }); }
+                            //using (StreamWriter tfi = new FileInfo(csvLocation+"\\SPShareAnalysis_Types.csv").CreateText())
+                            using (StreamWriter tfi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Types.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                             {
                                 tfi.AutoFlush = true;
-                                lock(tfi){ tfi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { "Type", "Count", "Total Size [Bytes]" }); }
+                                lock (tfi) { tfi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { "Type", "Count", "Total Size [Bytes]" }); }
                                 Dictionary<string, DirInfo> typeInfo = new Dictionary<string, DirInfo>();
-                                Parallel.ForEach(dirs, new ParallelOptions {
-                                    MaxDegreeOfParallelism = Environment.ProcessorCount > 1 ? Environment.ProcessorCount - 1 : 1 }, 
-                                    (currentDir) =>
+                                Parallel.ForEach(dirs, new ParallelOptions
+                                {
+                                    MaxDegreeOfParallelism = Environment.ProcessorCount > 1 ? Environment.ProcessorCount - 1 : 1
+                                },
+                                (currentDir) =>
                                 {
                                     string currentUrl = urls[Array.IndexOf(dirs, currentDir)];
                                     currentUrl = currentUrl.TrimEnd("/\\".ToCharArray()) + "/";
-                                    GetInfo(currentDir, currentDir, currentUrl, ffi, cfi, efi, typeInfo);
+                                    GetInfo(currentDir, currentDir, currentUrl, delemitter, ffi, cfi, efi, typeInfo);
                                 });
                                 foreach (KeyValuePair<string, DirInfo> type in typeInfo)
-                                    lock(tfi){ tfi.WriteLine("\"{0}\",\"{1}\",\"{2}\"", new object[] { type.Key, type.Value.Files, type.Value.Size }); }
+                                    lock (tfi) { tfi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { type.Key, type.Value.Files, type.Value.Size }); }
                             }
                         }
                     }
@@ -403,12 +471,12 @@ namespace SharePointFileShareMigrationAnalysis
             }
             catch (Exception ex)
             {
-                lock(Console.Error){ Console.Error.WriteLine("An exception happended: " + ex.GetType().ToString()); }
-                lock(Console.Error){ Console.Error.WriteLine(ex.Message); }
-                lock(Console.Error){ Console.Error.WriteLine(ex.StackTrace); }
+                lock (Console.Error) { Console.Error.WriteLine("An exception happended: " + ex.GetType().ToString()); }
+                lock (Console.Error) { Console.Error.WriteLine(ex.Message); }
+                lock (Console.Error) { Console.Error.WriteLine(ex.StackTrace); }
             }
         }
-        
+
     }
 }
 "@
@@ -451,7 +519,7 @@ if (-Not (Test-Path $AlyaTemp))
 }
 
 Write-Host "Analysing directories" -ForegroundColor $CommandInfo
-[SharePointFileShareMigrationAnalysis.Helper]::Analyse($directoriesToAnalyse, $urlsToDocLibs, $AlyaTemp)
+[SharePointFileShareMigrationAnalysis.Helper]::Analyse($directoriesToAnalyse, $urlsToDocLibs, $AlyaTemp, $delemitter)
 
 Write-Host "Exporting excel file:" -ForegroundColor $CommandInfo
 $outputFile = "$($AlyaData)\sharepoint\FileSystemAnalysis4Migration.xlsx"
@@ -460,14 +528,41 @@ $SPShareAnalysisFiles = Import-Csv -Path "$AlyaTemp\SPShareAnalysis_Files.csv"
 $SPShareAnalysisDirs = Import-Csv -Path "$AlyaTemp\SPShareAnalysis_Dirs.csv"
 $SPShareAnalysisErrors = Import-Csv -Path "$AlyaTemp\SPShareAnalysis_Errors.csv"
 $SPShareAnalysisTypes = Import-Csv -Path "$AlyaTemp\SPShareAnalysis_Types.csv"
-
-$excel = $SPShareAnalysisFiles | Export-Excel -Path $outputFile -WorksheetName "Files" -TableName "Files" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
-Close-ExcelPackage $excel
-$excel = $SPShareAnalysisDirs | Export-Excel -Path $outputFile -WorksheetName "Dirs" -TableName "Dirs" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
-Close-ExcelPackage $excel
+$SPShareAnalysisDirsCount = ($SPShareAnalysisDirs | Measure-Object).Count
+$SPShareAnalysisErrorsCount = ($SPShareAnalysisErrors | Measure-Object).Count
+$SPShareAnalysisTypesCount = ($SPShareAnalysisTypes | Measure-Object).Count
+$SPShareAnalysisFilesCount = ($SPShareAnalysisFiles | Measure-Object).Count
+if ($SPShareAnalysisFilesCount -gt 999999)
+{
+    Write-Warning "Too much file rows. Truncated to 1 million and saved csv instead"
+    $SPShareAnalysisFiles = $SPShareAnalysisFiles | Select-Object -First 999999
+    Copy-Item -Path "$AlyaTemp\SPShareAnalysis_Files.csv" -Destination "$($AlyaData)\sharepoint\SPShareAnalysis_Files.csv" -Force
+}
+if ($SPShareAnalysisDirsCount -gt 999999)
+{
+    Write-Warning "Too much dir rows. Truncated to 1 million and saved csv instead"
+    $SPShareAnalysisDirs = $SPShareAnalysisDirs | Select-Object -First 999999
+    Copy-Item -Path "$AlyaTemp\SPShareAnalysis_Dirs.csv" -Destination "$($AlyaData)\sharepoint\SPShareAnalysis_Dirs.csv" -Force
+}
+if ($SPShareAnalysisTypesCount -gt 999999)
+{
+    Write-Warning "Too much type rows. Truncated to 1 million and saved csv instead"
+    $SPShareAnalysisTypes = $SPShareAnalysisTypes | Select-Object -First 999999
+    Copy-Item -Path "$AlyaTemp\SPShareAnalysis_Types.csv" -Destination "$($AlyaData)\sharepoint\SPShareAnalysis_Types.csv" -Force
+}
+if ($SPShareAnalysisErrorsCount -gt 999999)
+{
+    Write-Warning "Too much error rows. Truncated to 1 million and saved csv instead"
+    $SPShareAnalysisErrors = $SPShareAnalysisErrors | Select-Object -First 999999
+    Copy-Item -Path "$AlyaTemp\SPShareAnalysis_Errors.csv" -Destination "$($AlyaData)\sharepoint\SPShareAnalysis_Errors.csv" -Force
+}
 $excel = $SPShareAnalysisErrors | Export-Excel -Path $outputFile -WorksheetName "Errors" -TableName "Errors" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
 Close-ExcelPackage $excel
 $excel = $SPShareAnalysisTypes | Export-Excel -Path $outputFile -WorksheetName "Types" -TableName "Types" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
+Close-ExcelPackage $excel
+$excel = $SPShareAnalysisDirs | Export-Excel -Path $outputFile -WorksheetName "Dirs" -TableName "Dirs" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
+Close-ExcelPackage $excel
+$excel = $SPShareAnalysisFiles | Export-Excel -Path $outputFile -WorksheetName "Files" -TableName "Files" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
 Close-ExcelPackage $excel -Show
 
 Remove-Item -Path "$AlyaTemp\SPShareAnalysis_Files.csv" -Force
