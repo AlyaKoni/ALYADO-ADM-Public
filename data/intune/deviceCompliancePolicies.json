@@ -49,11 +49,43 @@
                 ]
             }
         ]
-    }, {
+    },{
+		"@odata.type":  "#microsoft.graph.androidCompliancePolicy",
+        "roleScopeTagIds": ["0"],
+		"description":  "Compliance policy for android administrative manageded devices",
+		"displayName":  "Android Admin Compliance Policy",
+        "passwordRequired": true,
+        "passwordMinimumLength": 8,
+        "passwordRequiredType": "numeric",
+		"requiredPasswordComplexity":  "none",
+        "passwordMinutesOfInactivityBeforeLock": null,
+        "passwordExpirationDays": 365,
+        "passwordPreviousPasswordBlockCount": 1,
+        "passwordSignInFailureCountBeforeFactoryReset": null,
+		"securityPreventInstallAppsFromUnknownSources":  false,
+		"securityDisableUsbDebugging":  false,
+		"securityRequireVerifyApps":  false,
+		"deviceThreatProtectionEnabled":  false,
+		"deviceThreatProtectionRequiredSecurityLevel":  "unavailable",
+		"advancedThreatProtectionRequiredSecurityLevel":  "unavailable",
+		"securityBlockJailbrokenDevices":  false,
+		"securityBlockDeviceAdministratorManagedDevices":  false,
+		"osMinimumVersion":  null,
+		"osMaximumVersion":  null,
+		"minAndroidSecurityPatchLevel":  null,
+		"storageRequireEncryption":  false,
+		"securityRequireSafetyNetAttestationBasicIntegrity":  false,
+		"securityRequireSafetyNetAttestationCertifiedDevice":  false,
+		"securityRequireGooglePlayServices":  false,
+		"securityRequireUpToDateSecurityProviders":  false,
+		"securityRequireCompanyPortalAppIntegrity":  false,
+		"conditionStatementId":  null,
+		"restrictedApps": []
+	  }, {
         "@odata.type": "#microsoft.graph.androidWorkProfileCompliancePolicy",
         "roleScopeTagIds": ["0"],
         "description": "Checks the compliance of personal owned android devices",
-        "displayName": "Android Compliance Policy Personal",
+        "displayName": "Android Enterprise Personal Compliance Policy",
         "passwordRequired": true,
         "passwordMinimumLength": 8,
         "passwordRequiredType": "numeric",
@@ -93,7 +125,7 @@
         ]
     },{
         "@odata.type": "#microsoft.graph.androidDeviceOwnerCompliancePolicy",
-        "displayName": "Android Compliance Policy Owned",
+        "displayName": "Android Enterprise Owned Compliance Policy",
         "description": "Checks the compliance of company owned android devices",
         "roleScopeTagIds": ["0"],
         "deviceThreatProtectionEnabled": false,

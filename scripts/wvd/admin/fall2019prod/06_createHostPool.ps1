@@ -345,8 +345,9 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     Write-Host "    Remote session"
     $session = New-PSSession -ComputerName $actHostName
     Invoke-Command -Session $session {
-        #Set-MpPreference -ExclusionPath "\\$($ShareServer)\*\*\*\*.vhd", "C:\Program Files\FSLogix\Apps"
-        #Set-MpPreference -ExclusionExtension "vhd"
+        #Set-MpPreference -ExclusionPath "\\$($ShareServer)\*\*\*\*.vhd", "\\$($ShareServer)\*\*\*\*.vhdx", "%TEMP%\*.vhd", "%TEMP%\*.vhdx", "%Windir%\TEMP\*.vhd", "%Windir%\TEMP\*.vhdx", "%ProgramFiles%\FSLogix\Apps\frxdrv.sys", "%ProgramFiles%\FSLogix\Apps\frxdrvvt.sys", "%ProgramFiles%\FSLogix\Apps\frxccd.sys"
+        #Set-MpPreference -ExclusionExtension "vhd", "vhdx"
+        #Set-MpPreference -ExclusionProcess "%ProgramFiles%\FSLogix\Apps\frxccd.exe", "%ProgramFiles%\FSLogix\Apps\frxccds.exe", "%ProgramFiles%\FSLogix\Apps\frxsvc.exe"
         #Set-MpPreference -DisableArchiveScanning $false
         #Set-MpPreference -DisableAutoExclusions $false
         #Set-MpPreference -DisableBehaviorMonitoring $false
