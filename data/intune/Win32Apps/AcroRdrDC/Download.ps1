@@ -98,176 +98,20 @@ foreach ($CurDir in $parentDirs)
     }
 }
 
+$webclient = New-Object System.Net.WebClient
 if (-Not (Test-Path (Join-Path $contentRoot $lastExeFile)))
 {
     Write-Host "    Downloading $ftpUrl/$lastExeDir/$lastExeFile"
-    $profile = [Environment]::GetFolderPath("UserProfile")
-    $downloads = $profile+"\downloads"
-    $lastfilename = $null
-    $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
-    if ($file)
-    {
-        $lastfilename = $file.Name
-    }
-    $filename = $null
-    $Global:attempts = 10
-    while ($Global:attempts -ge 0)
-    {
-        Write-Host "    from $downloadUrl"
-        Write-Host "      please use IE and just press save to download" -ForegroundColor $CommandSuccess
-        Write-Host "      please don't start any other download!" -ForegroundColor $CommandWarning
-        try {
-            #TODO Better download!
-            start "$ftpUrl/$lastExeDir/$lastExeFile"
-            do
-            {
-                Start-Sleep -Seconds 10
-                $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
-                if ($file)
-                {
-                    $filename = $file.Name
-                    if ($filename.Contains("crdownload")) { $filename = $lastfilename }
-                    if ($filename.Contains("partial")) { $filename = $lastfilename }
-                }
-            } while ($lastfilename -eq $filename)
-            $Global:attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
-            $Global:attempts--
-            if ($Global:attempts -lt 0) { throw }
-            Start-Sleep -Seconds 10
-        }
-    }
-    if (-Not $filename)
-    {
-        throw "Not able to download file"
-    }
-    else
-    {
-        $sourcePath = $downloads+"\"+$filename
-        $destPath = (Join-Path $contentRoot $lastExeFile)
-        Move-Item -Path $sourcePath -Destination $destPath -Force
-    }
-
-    <#
-    $Global:attempts = 10
-    while ($Global:attempts -ge 0)
-    {
-        $Global:attempts = 10
-        try {
-            do {
-                try {
-                    $webclient = New-Object System.Net.WebClient
-                    $webclient.DownloadFile("$ftpUrl/$lastExeDir/$lastExeFile", (Join-Path $contentRoot $lastExeFile))
-                } catch {
-                    $StatusCode = $_.Exception.Response.StatusCode.value__
-                    if ($StatusCode -eq 429) {
-                        Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                        Start-Sleep -Seconds 45
-                    }
-                    else {
-                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 3) -ForegroundColor $CommandError } catch {}
-						Write-Host ($_.Exception) -ForegroundColor $CommandError
-                        throw
-                    }
-                }
-            } while ($StatusCode -eq 429)
-            $Global:attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
-            $Global:attempts--
-            if ($Global:attempts -lt 0) { throw }
-            Start-Sleep -Seconds 10
-        }
-    }
-    #>
+    $destPath = (Join-Path $contentRoot $lastExeFile)
+    $uri = New-Object System.Uri("$ftpUrl/$lastExeDir/$lastExeFile")
+    $webclient.DownloadFile($uri, $destPath)
 }
 if (-Not (Test-Path (Join-Path $contentRoot $lastPatchFile)))
 {
     Write-Host "    Downloading $ftpUrl/$lastPatchDir/$lastPatchFile"
-    $profile = [Environment]::GetFolderPath("UserProfile")
-    $downloads = $profile+"\downloads"
-    $lastfilename = $null
-    $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
-    if ($file)
-    {
-        $lastfilename = $file.Name
-    }
-    $filename = $null
-    $Global:attempts = 10
-    while ($Global:attempts -ge 0)
-    {
-        Write-Host "    from $downloadUrl"
-        Write-Host "      please use IE and just press save to download" -ForegroundColor $CommandSuccess
-        Write-Host "      please don't start any other download!" -ForegroundColor $CommandWarning
-        try {
-            #TODO Better download!
-            start "$ftpUrl/$lastPatchDir/$lastPatchFile"
-            do
-            {
-                Start-Sleep -Seconds 10
-                $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
-                if ($file)
-                {
-                    $filename = $file.Name
-                    if ($filename.Contains("crdownload")) { $filename = $lastfilename }
-                    if ($filename.Contains("partial")) { $filename = $lastfilename }
-                }
-            } while ($lastfilename -eq $filename)
-            $Global:attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
-            $Global:attempts--
-            if ($Global:attempts -lt 0) { throw }
-            Start-Sleep -Seconds 10
-        }
-    }
-    if (-Not $filename)
-    {
-        throw "Not able to download file"
-    }
-    else
-    {
-        $sourcePath = $downloads+"\"+$filename
-        $destPath = (Join-Path $contentRoot $lastPatchFile)
-        Move-Item -Path $sourcePath -Destination $destPath -Force
-    }
-
-    <#
-    $Global:attempts = 10
-    while ($Global:attempts -ge 0)
-    {
-        try {
-            do {
-                try {
-                    $webclient = New-Object System.Net.WebClient
-                    $webclient.DownloadFile("$ftpUrl/$lastPatchDir/$lastPatchFile", (Join-Path $contentRoot $lastPatchFile))
-                } catch {
-                    $StatusCode = $_.Exception.Response.StatusCode.value__
-                    if ($StatusCode -eq 429) {
-                        Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                        Start-Sleep -Seconds 45
-                    }
-                    else {
-                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 3) -ForegroundColor $CommandError } catch {}
-						Write-Host ($_.Exception) -ForegroundColor $CommandError
-                        throw
-                    }
-                }
-            } while ($StatusCode -eq 429)
-            $Global:attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
-            $Global:attempts--
-            if ($Global:attempts -lt 0) { throw }
-            Start-Sleep -Seconds 10
-        }
-    }
-    #>
+    $destPath = (Join-Path $contentRoot $lastPatchFile)
+    $uri = New-Object System.Uri("$ftpUrl/$lastPatchDir/$lastPatchFile")
+    $webclient.DownloadFile($uri, $destPath)
 }
 
 $tmpPath = (Join-Path $contentRoot "Tmp")
