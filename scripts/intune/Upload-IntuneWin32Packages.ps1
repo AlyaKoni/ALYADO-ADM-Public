@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2019, 2020
+    Copyright (c) Alya Consulting, 2019-2021
 
     This file is part of the Alya Base Configuration.
     The Alya Base Configuration is free software: you can redistribute it
@@ -207,17 +207,29 @@ foreach($packageDir in $packages)
         Write-Host "    version: $($version)"
         if ($regPath)
         {
-            $appConfig.detectionRules[0].detectionValue = $version
-            $appConfig.detectionRules[0].keyPath = $regPath
-            $appConfig.detectionRules[0].valueName = $regValue
-            $appConfig.rules[0].comparisonValue = $version
-            $appConfig.rules[0].keyPath = $regPath
-            $appConfig.rules[0].valueName = $regValue
+            foreach($ruleWVersion in $appConfig.detectionRules)
+            {
+                $ruleWVersion.detectionValue = $version
+                $ruleWVersion.keyPath = $regPath
+                $ruleWVersion.valueName = $regValue
+            }
+            foreach($ruleWVersion in $appConfig.rules)
+            {
+                $ruleWVersion.comparisonValue = $version
+                $ruleWVersion.keyPath = $regPath
+                $ruleWVersion.valueName = $regValue
+            }
         }
         else
         {
-            $appConfig.detectionRules[0].detectionValue = ([Version]$version).ToString()
-            $appConfig.rules[0].comparisonValue = ([Version]$version).ToString()
+            foreach($ruleWVersion in $appConfig.detectionRules)
+            {
+                $ruleWVersion.detectionValue = ([Version]$version).ToString()
+            }
+            foreach($ruleWVersion in $appConfig.rules)
+            {
+                $ruleWVersion.comparisonValue = ([Version]$version).ToString()
+            }
         }
     }
 
@@ -307,6 +319,8 @@ foreach($packageDir in $packages)
 
     # Uploading intunewin content
     Write-Host "  Uploading intunewin content"
+    $OldProgressPreference = $ProgressPreference
+    $ProgressPreference = "Continue"
     Start-Sleep -Seconds 10 # first chunk has often 403
     $chunkSizeInBytes = 1024 * 1024 * 6
 	$sasRenewalTimer = [System.Diagnostics.Stopwatch]::StartNew()
@@ -388,7 +402,8 @@ foreach($packageDir in $packages)
         }
 	}
     Write-Progress -Completed -Activity "    Uploading intunewin"
-	
+	$ProgressPreference = $OldProgressPreference
+
 	# Finalize the upload.
 	$curi = "$($file.azureStorageUri)&comp=blocklist"
 	$xml = '<?xml version="1.0" encoding="utf-8"?><BlockList>'

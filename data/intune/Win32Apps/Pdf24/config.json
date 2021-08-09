@@ -17,7 +17,7 @@
     "roleScopeTagIds":  [
 
                         ],
-    "fileName":  "pdf24-creator-10.0.8.intunewin",
+    "fileName":  "pdf24-creator-10.0.12.intunewin",
     "installCommandLine":  "Install.cmd",
     "uninstallCommandLine":  "Uninstall.cmd",
     "applicableArchitectures":  "x64",
@@ -27,14 +27,14 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "10.0.8",
+                           "productVersion":  "10.0.12",
                            "publisher":  "geek software GmbH",
-                           "productCode":  "{0F30ECF7-49A3-463B-8BF8-C98DE9F36A51}",
+                           "productCode":  "{0DF7C4E4-3941-42FD-8707-6EBD5B8032A8}",
                            "upgradeCode":  "{8D2DF301-CE53-4939-81C2-D659E7B857BE}",
                            "productName":  "PDF24 Creator",
                            "packageType":  "PerMachine"
                        },
-    "setupFilePath":  "pdf24-creator-10.0.8.msi",
+    "setupFilePath":  "pdf24-creator-10.0.12.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -55,7 +55,7 @@
                                "check32BitOn64System":  true,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "10.0.8"
+                               "detectionValue":  "10.0.12"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  true,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "10.0.8"
+                      "comparisonValue":  "10.0.12"
                   }
               ],
     "installExperience":  {

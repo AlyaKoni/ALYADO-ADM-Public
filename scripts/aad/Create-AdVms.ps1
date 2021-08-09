@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -91,7 +91,15 @@ $ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyCont
 if (-Not $ResGrp)
 {
     Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Active Directory";ownerEmail=$Context.Account.Id}
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Active Directory and DNS";ownerEmail=$Context.Account.Id}
+}
+
+# Checking ressource group vnet
+Write-Host "Checking ressource group vnet" -ForegroundColor $CommandInfo
+$ResGrp = Get-AzResourceGroup -Name $NetworkResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $ResGrp)
+{
+    throw "Ressource Group not found. Pleas ecreate the Ressource Group $NetworkResourceGroupName"
 }
 
 # Checking virtual network

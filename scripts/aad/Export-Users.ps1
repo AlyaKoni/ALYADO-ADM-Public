@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -52,11 +52,13 @@ if (-Not $outputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "MSOnline"
 Install-ModuleIfNotInstalled "ImportExcel"
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-MSOL
 
 # =============================================================

@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2021
+    Copyright (c) Alya Consulting, 2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -217,6 +217,10 @@ LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 # Installing app package
 Write-Host "Installing app package" -ForegroundColor $CommandInfo
 Install-PnPApp -Identity $app.Id -Scope "Tenant"
+
+#
+# TODO Some modules needs to be unloaded to make next script working!
+#
 
 # Running M365lpConfiguration.ps1
 Write-Host "Running M365lpConfiguration.ps1" -ForegroundColor $CommandInfo

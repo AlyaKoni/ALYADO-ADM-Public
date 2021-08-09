@@ -26,15 +26,15 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "1.0.1",
+                           "productVersion":  "1.1.0",
                            "publisher":  "Inkscape",
-                           "productCode":  "{776C087E-B714-4153-9414-79592EC61B4A}",
+                           "productCode":  "{BB039842-4166-4A3C-90BC-316F6E6BDC83}",
                            "upgradeCode":  "{4D5FEDAA-84A0-48BE-BD2A-08246398361A}",
                            "productName":  "Inkscape",
                            "packageType":  "PerMachine"
                        },
-    "fileName":  "Install.intunewin",
-    "setupFilePath":  "Install.cmd",
+    "fileName":  "inkscape-1.1-x64.intunewin",
+    "setupFilePath":  "inkscape-1.1-x64.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -55,7 +55,7 @@
                                "check32BitOn64System":  false,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "1.0.1"
+                               "detectionValue":  "1.1.0"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  false,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "1.0.1"
+                      "comparisonValue":  "1.1.0"
                   }
               ],
     "installExperience":  {

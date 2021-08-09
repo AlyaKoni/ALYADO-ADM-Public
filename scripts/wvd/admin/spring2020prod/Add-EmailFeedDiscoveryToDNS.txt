@@ -1,0 +1,3 @@
+Type: TXT
+Host:_msradc
+Text: https://rdweb.wvd.microsoft.com/api/arm/feeddiscovery

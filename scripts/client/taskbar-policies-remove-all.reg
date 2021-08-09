@@ -1,0 +1,59 @@
+Windows Registry Editor Version 5.00
+
+;------------------------------------------------------------
+;Removes ALL Taskbar Policies for PCs Not connected to Domain
+;Applies to Windows XP, Vista, 7, 8 and Windows 10
+;Created by Ramesh Srinivasan
+;The Winhelponline Blog
+;http://www.winhelponline.com/blog
+;------------------------------------------------------------
+
+[HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer]
+"HideClock"=-
+"HideSCAVolume"=-
+"HideSCANetwork"=-
+"LockTaskbar"=-
+"NoAutoTrayNotify"=-
+"NoCloseDragDropBands"=-
+"NoTaskGrouping"=-
+"NoToolbarsOnTaskbar"=-
+"NoTrayContextMenu"=-
+"NoTrayItemsDisplay"=-
+"TaskbarLockAll"=-
+"TaskbarNoAddRemoveToolbar"=-
+"TaskbarNoRedock"=-
+"TaskbarNoResize"=-
+"TaskbarNoNotification"=-
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer]
+"HideClock"=-
+"HideSCAVolume"=-
+"HideSCANetwork"=-
+"LockTaskbar"=-
+"NoAutoTrayNotify"=-
+"NoCloseDragDropBands"=-
+"NoTaskGrouping"=-
+"NoToolbarsOnTaskbar"=-
+"NoTrayContextMenu"=-
+"NoTrayItemsDisplay"=-
+"TaskbarLockAll"=-
+"TaskbarNoAddRemoveToolbar"=-
+"TaskbarNoRedock"=-
+"TaskbarNoResize"=-
+"TaskbarNoNotification"=-
+
+[HKEY_CURRENT_USER\SOFTWARE\Policies\Microsoft\Windows\Explorer]
+"DisableNotificationCenter"=-
+"EnableLegacyBalloonNotifications"=-
+"NoPinningStoreToTaskbar"=-
+"NoSystraySystemPromotion"=-
+"NoPinningToDestinations"=-
+"TaskbarNoPinnedList"=-
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Windows\Explorer]
+"DisableNotificationCenter"=-
+"EnableLegacyBalloonNotifications"=-
+"NoPinningStoreToTaskbar"=-
+"NoSystraySystemPromotion"=-
+"NoPinningToDestinations"=-
+"TaskbarNoPinnedList"=-

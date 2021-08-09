@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2021
+    Copyright (c) Alya Consulting, 2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,19 +29,20 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    01.02.2021 Konrad Brunner       Initial Creation
+    28.05.2021 Konrad Brunner       Initial Creation
 
 #>
 
 [CmdletBinding()]
 Param(
+	[string]$emailAddress = "TenantAdmins"
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Enable_DKIM_DomainKeys-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\security\Add-EmailToSecurityCenterAlerts-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -52,39 +53,31 @@ Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Enable_DKIM_DomainKeys | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "Security | Add-EmailToSecurityCenterAlerts | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-$domains = @()
-
-$domains += $AlyaDomainName
-foreach ($dom in $AlyaAdditionalDomainNames)
-{
-    $domains += $dom
-}
 
 try
 {
-    LoginTo-EXO
-    foreach ($dom in $domains)
+    LoginTo-IPPS
+    $protAlerts = Get-ProtectionAlert
+    foreach($protAlert in $protAlerts)
     {
-        Write-Host "Checking domain $dom"
-        $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
-        if ($conf)
+        #$protAlert = $protAlerts[0]
+        #$protAlert = $protAlerts[1]
+        $actUsers = ([string[]]$protAlert.NotifyUser) | foreach { $_.toLower() }
+        if ($actUsers -notcontains $emailAddress.ToLower())
         {
-            if (-Not $conf.Enabled)
+            Write-Host "Adding to $($protAlert.Name)"
+            $actUsers += $emailAddress
+            if ($protAlert.IsSystemRule)
             {
-                Write-Warning "Enabling DKIM config for domain $dom"
-                Set-DkimSigningConfig -DomainName $dom -Enabled $true
+                Write-Warning "  Can't change system rule"
+                Write-Warning "  See https://github.com/MicrosoftDocs/office-docs-powershell/issues/3433"
             }
             else
             {
-                Write-Host "  Domain key was already enabled"
+                Set-ProtectionAlert -Identity $protAlert.DistinguishedName -NotifyUser $actUsers
             }
-        }
-        else
-        {
-            Write-Error "Domain key config not found. Please run first the script Create_DKIM_DomainKeys.ps1" -ErrorAction Continue
         }
     }
 }

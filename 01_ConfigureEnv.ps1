@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2019, 2020
+    Copyright (c) Alya Consulting, 2019-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -40,6 +40,7 @@
     17.09.2020 Konrad Brunner       Added custom property checks
     24.09.2020 Konrad Brunner       LoginTo-EXO and LoginTo-IPPS
     12.04.2021 Konrad Brunner       Added DevOps login
+    12.07.2021 Konrad Brunner       Added own module path
 
 #>
 
@@ -79,6 +80,11 @@ $AlyaLocal = "$AlyaRoot\_local"
 $AlyaData = "$AlyaRoot\data"
 $AlyaScripts = "$AlyaRoot\scripts"
 $AlyaTools = "$AlyaRoot\tools"
+$AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShellOverwrites\Modules"
+if (-Not $AlyaModulePath)
+{
+    $AlyaModulePath = $AlyaDefaultModulePath
+}
 $AlyaOfficeRoot = "C:\Program Files\Microsoft Office\root\Office16"
 $AlyaGitRoot = Join-Path (Join-Path $AlyaRoot "tools") "git"
 $AlyaDeployToolRoot = Join-Path (Join-Path $AlyaRoot "tools") "officedeploy"
@@ -98,6 +104,23 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
 {
     Write-Host "Adding tools\WindowsPowerShell\Scripts to Path"
     $env:Path = "$($AlyaTools)\WindowsPowerShell\Scripts;"+$env:Path
+}
+
+# Loading local custom configuration
+Write-Host "Loading configuration" -ForegroundColor Cyan
+if ((Test-Path $AlyaLocal\ConfigureEnv.ps1))
+{
+    . $AlyaLocal\ConfigureEnv.ps1
+}
+if ($AlyaModulePath -ne $AlyaDefaultModulePath)
+{
+    if (-Not (Test-Path $AlyaModulePath))
+    {
+        New-Item -Path $AlyaModulePath -ItemType Directory -Force
+    }
+    $CurrentPSModulePathValue = [Environment]::GetEnvironmentVariable("PSModulePath", "Process")
+    $NewPSModulePathValue = $AlyaModulePath + ";" + $CurrentPSModulePathValue
+    [Environment]::SetEnvironmentVariable("PSModulePath", $NewPSModulePathValue, "Process")
 }
 
 <# CLIENT SETTINGS #>
@@ -429,6 +452,10 @@ function Install-ModuleIfNotInstalled (
         {
             $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
                 Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            if (-Not $module)
+            {
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue
+            }
         }
         $autoUpdate = $false
         $requestedVersion = $exactVersion
@@ -441,6 +468,10 @@ function Install-ModuleIfNotInstalled (
         {
             $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
                 Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            if (-Not $module)
+            {
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue
+            }
         }
         $requestedVersion = $newestVersion
     }
@@ -468,6 +499,7 @@ function Install-ModuleIfNotInstalled (
         {
             throw "Please install the powershell package management"
         }
+        if ($moduleName -ne "PowerShellGet") { Install-ModuleIfNotInstalled "PowerShellGet" }
         Import-Module -Name 'PowershellGet'
         if ((Get-PackageProvider -Name NuGet -Force).Version -lt '2.8.5.201')
         {
@@ -490,7 +522,29 @@ function Install-ModuleIfNotInstalled (
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
         #TODO Unload module
-        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose
+        $paramIM = (Get-Command Install-Module).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
+        if ($paramIM)
+        {
+	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
+	        {
+	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose -AcceptLicense
+	        }
+	        else
+	        {
+	            Find-Module -Name $moduleName @optionalArgs | Save-Module -Path $AlyaModulePath -Force -Verbose -AcceptLicense
+	        }
+        }
+        else
+        {
+	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
+	        {
+	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose
+	        }
+	        else
+	        {
+	            Find-Module -Name $moduleName @optionalArgs | Save-Module -Path $AlyaModulePath -Force -Verbose
+	        }
+        }
         $module = Get-Module -Name $moduleName -ListAvailable |`
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
@@ -499,10 +553,14 @@ function Install-ModuleIfNotInstalled (
                 Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
             if (-Not $module)
             {
-                Write-Error "Not able to install the module!" -ErrorAction Continue
-                exit
-            }
-        }
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue
+                if (-Not $module)
+	            {
+	                Write-Error "Not able to install the module!" -ErrorAction Continue
+	                exit
+	            }
+	        }
+	    }
     }
     if ($exactVersion -ne "0.0.0.0")
     {
@@ -590,7 +648,15 @@ function Install-ScriptIfNotInstalled (
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating script {0} to version [{1}] within scope of the current user.' -f $scriptName, $requestedVersion)
         #TODO Unload script
-        Install-Script -Name $scriptName @optionalArgs -Scope CurrentUser -AcceptLicense -Force -Verbose
+        $paramAL = (Get-Command Install-Script).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
+        if ($paramAL)
+        {
+            Install-Script -Name $scriptName @optionalArgs -Scope CurrentUser -AcceptLicense -Force -Verbose
+        }
+        else
+        {
+            Install-Script -Name $scriptName @optionalArgs -Scope CurrentUser -Force -Verbose
+        }
         $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
         Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $script)
@@ -887,6 +953,11 @@ function LoginTo-IPPS()
     }
 }
 
+function LogoutFrom-EXOandIPPS()
+{
+    DisconnectFrom-EXOandIPPS
+}
+
 function DisconnectFrom-EXOandIPPS()
 {
     Write-Host "Disconnecting from EXO and IPPS" -ForegroundColor $CommandInfo
@@ -909,12 +980,16 @@ function LoginTo-Msol(
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     if (-Not $AlyaContext)
     {
-        throw "Please login first to Az to minimize number of logins"
+        Write-Warning "Please login first to Az to minimize number of logins"
+		Connect-MsolService
     }
-    $graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.microsoft.com").AccessToken
-    $aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.windows.net").AccessToken
-    Connect-MsolService -AdGraphAccessToken $aadToken -MsGraphAccessToken $graphToken -AzureEnvironment $AlyaContext.Environment.Name
-    try { $TenantDetail = Get-MsolCompanyInformation -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
+	else
+	{
+		$graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.microsoft.com").AccessToken
+		$aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.windows.net").AccessToken
+		Connect-MsolService -AdGraphAccessToken $aadToken -MsGraphAccessToken $graphToken -AzureEnvironment $AlyaContext.Environment.Name
+    }
+	try { $TenantDetail = Get-MsolCompanyInformation -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
     if (-Not $TenantDetail)
     {
         Write-Error "Not logged in to AzureAd!" -ErrorAction Continue
@@ -984,33 +1059,27 @@ function LoginTo-PnP(
     $AlyaConnection = $null
     if ($Relogin)
     {
-        try { $AlyaConnection = Disconnect-PnPOnline } catch {}
+        try { 
+            $AlyaConnection = Disconnect-PnPOnline
+        } catch {}
     }
     else
     {
         try { $AlyaConnection = Get-PnPConnection -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
     }
-    if ($AlyaConnection -and $Url -ne "$($AlyaConnection.Url)")
+    if ($ClientId -and $Thumbprint)
     {
-        try { $AlyaConnection = Disconnect-PnPOnline } catch {}
-        $AlyaConnection = $null
+        $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName
     }
-    if (-Not $AlyaConnection)
+    else
     {
-        if ($ClientId -and $Thumbprint)
+        if ($Relogin)
         {
-            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName
+            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -Interactive -ForceAuthentication
         }
         else
         {
-            if ($Relogin)
-            {
-                $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -Interactive -ForceAuthentication
-            }
-            else
-            {
-                $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -Interactive
-            }
+            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -Interactive
         }
     }
     $AlyaContext = $null

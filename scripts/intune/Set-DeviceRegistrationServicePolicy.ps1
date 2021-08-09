@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2019, 2020
+    Copyright (c) Alya Consulting, 2019-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -45,9 +45,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServic
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "MsOnline"
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "MSOnline"
 
-# Logins
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-MSOL
 
 # =============================================================

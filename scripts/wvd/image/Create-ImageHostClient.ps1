@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -171,7 +171,8 @@ if (-Not $ImageHostVm)
     #TODO -LicenseType $AlyaVmLicenseType if server and hybrid benefit
     $VMConfig = New-AzVMConfig -VMName $VMName -VMSize "Standard_D4s_v3" #-LicenseType PAYG
     $VMConfig | Set-AzVMOperatingSystem -Windows -ComputerName $VMName -Credential $VMCredential -ProvisionVMAgent -EnableAutoUpdate -TimeZone $AlyaTimeZone | Out-Null
-    $VMConfig | Set-AzVMSourceImage -PublisherName "MicrosoftWindowsDesktop" -Offer "Windows-10" -Skus "19h2-evd" -Version latest | Out-Null
+    $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "Windows-10" | where { $_.Skus -like "*-evd" -and $_.Skus -notlike "rs*" } | select -Last 1).Skus
+    $VMConfig | Set-AzVMSourceImage -PublisherName "MicrosoftWindowsDesktop" -Offer "Windows-10" -Skus $sku -Version latest | Out-Null
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic.Id | Out-Null
     $VMConfig | Set-AzVMOSDisk -Name $VMDiskName -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 127 | Out-Null
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null

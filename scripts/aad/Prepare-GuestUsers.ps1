@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -45,10 +45,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Prepare-GuestUsers-$($AlyaTimeS
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "MSOnline"
 
-# Logins
-LoginTo-Msol
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MSOL
 
 # Constants
 $CompStart = $AlyaB2BCompStart

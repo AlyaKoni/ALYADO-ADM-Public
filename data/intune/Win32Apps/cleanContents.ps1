@@ -15,10 +15,13 @@ foreach ($dir in $dirs)
     if ($dir.Name -eq "LocalPrinters" -or $dir.Name -eq "LocalPrinters_unused")
     {
         $zipDir = Join-Path $dir.FullName "ContentZip"
-        $zdirs = Get-ChildItem -Path $zipDir -Directory
-        foreach ($zdir in $zdirs)
+        if ((Test-Path $zipDir))
         {
-            $tmp = Remove-Item -Path $zdir.FullName -Recurse -Force
+            $zdirs = Get-ChildItem -Path $zipDir -Directory
+            foreach ($zdir in $zdirs)
+            {
+                $tmp = Remove-Item -Path $zdir.FullName -Recurse -Force
+            }
         }
     }
     if ($dir.Name -eq "AzInfoProtection")

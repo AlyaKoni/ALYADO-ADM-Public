@@ -1,7 +1,7 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2021
+    Copyright (c) Alya Consulting, 2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,62 +29,58 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    01.02.2021 Konrad Brunner       Initial Creation
+    23.06.2021 Konrad Brunner       Initial Version
 
 #>
+
 
 [CmdletBinding()]
 Param(
 )
 
-#Reading configuration
+# Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Create_DKIM_DomainKeys-$($AlyaTimeString).log" | Out-Null
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-LogicApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "Az"
+
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 # =============================================================
-# Exchange stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Create_DKIM_DomainKeys | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "Automation | Extract-LogicApps | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$domains = @()
-
-$domains += $AlyaDomainName
-foreach ($dom in $AlyaAdditionalDomainNames)
+# Getting context
+$Context = Get-AzContext
+if (-Not $Context)
 {
-    $domains += $dom
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
 }
 
-try
+# Exporting all logic apps
+Write-Host "Exporting all logic apps" -ForegroundColor $CommandInfo
+$LogicApps = Get-AzLogicApp
+$LogicAppRoot = "$($AlyaData)\azure\logicApps"
+if (-Not (Test-Path -Path $LogicAppRoot -PathType Container))
 {
-    LoginTo-EXO
-    foreach ($dom in $domains)
-    {
-        Write-Host "Checking domain $dom"
-        $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
-        if (-Not $conf)
-        {
-            Write-Warning "Creating DKIM config for domain $dom"
-            New-DkimSigningConfig -DomainName $dom -Enabled $false
-        }
-    }
+    New-Item -Path $LogicAppRoot -ItemType Directory -Force | Out-Null
 }
-catch
+foreach($logicApp in $LogicApps)
 {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
-}
-finally
-{
-    DisconnectFrom-EXOandIPPS
+    Write-Host "Exporting app $($logicApp.Id)"
+    $logicAppName = $logicApp.Id.Substring($logicApp.Id.IndexOf("resourceGroups")+15, $logicApp.Id.IndexOf("providers")-$logicApp.Id.IndexOf("resourceGroups")-16) + "-" + $logicApp.Name
+    $logicApp.Definition.ToString() | Set-Content -Path "$LogicAppRoot\$($logicAppName)_Definition.json" -Force -Encoding UTF8
+    $logicApp.Parameters.'$connections'.Value.ToString() | Set-Content -Path "$LogicAppRoot\$($logicAppName)_Connections.json" -Force -Encoding UTF8
 }
 
 #Stopping Transscript

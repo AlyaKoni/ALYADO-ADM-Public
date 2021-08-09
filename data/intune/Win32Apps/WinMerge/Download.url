@@ -2,7 +2,7 @@
 Prop3=19,11
 [InternetShortcut]
 IDList=
-URL=https://downloads.sourceforge.net/winmerge/WinMerge-2.16.10-x64-Setup.exe
+URL=https://github.com/WinMerge/winmerge/releases/download/v2.16.12/WinMerge-2.16.12-x64-Setup.exe
 HotKey=0
 
 

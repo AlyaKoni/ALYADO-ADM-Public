@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -54,9 +54,9 @@ $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)
 $NetworkResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
 $VirtualNetworkName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
 $VMSubnetName = "$($VirtualNetworkName)snet$($AlyaResIdJumpHostSNet)"
-$KeyVaultResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
-$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
+$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdJumpHostResGrp)"
 $RecoveryVaultName = "$($AlyaNamingPrefix)recv$($AlyaResIdRecoveryVault)"
+$RecoveryVaultResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $BackupPolicyName = $AlyaJumpHostBackupPolicy
 
 # Checking modules
@@ -138,11 +138,11 @@ if (-Not $VMNic)
 
 # Checking key vault
 Write-Host "Checking key vault" -ForegroundColor $CommandInfo
-$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultResourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
+$KeyVault = Get-AzKeyVault -ResourceGroupName $ResourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
 if (-Not $KeyVault)
 {
     Write-Warning "Key Vault not found. Creating the Key Vault $KeyVaultName"
-    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Main Infrastructure Keyvault"}
+    $KeyVault = New-AzKeyVault -VaultName $KeyVaultName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku Standard
     if (-Not $KeyVault)
     {
         Write-Error "Key Vault $KeyVaultName creation failed. Please fix and start over again" -ErrorAction Continue
@@ -152,8 +152,7 @@ if (-Not $KeyVault)
 
 # Checking azure key vault secret
 Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo
-$CompName = Make-PascalCase($AlyaCompanyNameShort)
-$JumpHostCredentialAssetName = "$($CompName)JumpHostAdminCredential"
+$JumpHostCredentialAssetName = "$($VMName)adminCredentials"
 $AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $JumpHostCredentialAssetName -ErrorAction SilentlyContinue
 if (-Not $AzureKeyVaultSecret)
 {
@@ -173,7 +172,7 @@ Clear-Variable -Name "VMPassword"
 if ($AlyaJumpHostBackupEnabled)
 {
     Write-Host "Checking recovery vault" -ForegroundColor $CommandInfo
-    $RecVault = Get-AzRecoveryServicesVault -ResourceGroupName $KeyVaultResourceGroupName -Name $RecoveryVaultName -ErrorAction SilentlyContinue
+    $RecVault = Get-AzRecoveryServicesVault -ResourceGroupName $RecoveryVaultResourceGroupName -Name $RecoveryVaultName -ErrorAction SilentlyContinue
     if (-Not $RecVault)
     {
         throw "Recovery vault not found. Please create the recovery vault $RecoveryVaultName"

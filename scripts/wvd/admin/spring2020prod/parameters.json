@@ -1,0 +1,172 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "artifactsLocation": {
+            "value": "https://wvdportalstorageblob.blob.core.windows.net/galleryartifacts/Configuration_6-1-2021.zip"
+        },
+        "nestedTemplatesLocation": {
+            "value": "https://catalogartifact.azureedge.net/publicartifacts/Microsoft.Hostpool-ARM-1.5.2/"
+        },
+        "hostpoolName": {
+            "value": "alyapinfavdh001"
+        },
+        "hostpoolToken": {
+            "value": null
+        },
+        "vmAdministratorAccountUsername": {
+            "value": "alyapinfavdh001admin"
+        },
+        "vmAdministratorAccountPassword": {
+            "value": null
+        },
+        "administratorAccountUsername": {
+            "value": "konrad.brunner@swissshooting.ch"
+        },
+        "administratorAccountPassword": {
+            "value": null
+        },
+        "hostpoolResourceGroup": {
+            "value": "alyapinfresg040"
+        },
+        "hostpoolProperties": {
+            "value": {
+                "friendlyName": null,
+                "description": null,
+                "hostPoolType": "Pooled",
+                "personalDesktopAssignmentType": null,
+                "applicationGroupReferences": [
+                    "/subscriptions/090a4f2d-c8aa-4f23-b3d0-25a31d3f6ccc/resourcegroups/alyapinfresg040/providers/Microsoft.DesktopVirtualization/applicationgroups/alyapinfavda001"
+                ],
+                "customRdpProperty": "drivestoredirect:s:*;audiomode:i:0;videoplaybackmode:i:1;redirectclipboard:i:1;redirectprinters:i:1;devicestoredirect:s:*;redirectcomports:i:1;redirectsmartcards:i:1;usbdevicestoredirect:s:*;enablecredsspsupport:i:1;use multimon:i:1;",
+                "maxSessionLimit": 3,
+                "loadBalancerType": "DepthFirst",
+                "validationEnvironment": true,
+                "ring": null,
+                "registrationInfo": {
+                    "resetToken": false,
+                    "expirationTime": "2021-08-06T12:23:39.6870634Z",
+                    "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6Ijk3NkE4Q0I1MTQwNjkyM0E4MkU4QUQ3MUYzQjE4NzEyN0Y2OTRDOTkiLCJ0eXAiOiJKV1QifQ.eyJSZWdpc3RyYXRpb25JZCI6ImMyMDExZWQ1LTQ0OGMtNDczYi1hMWIyLTdiNzNmNjI3OTU4MCIsIkJyb2tlclVyaSI6Imh0dHBzOi8vcmRicm9rZXItZy1ldS1yMC53dmQubWljcm9zb2Z0LmNvbS8iLCJEaWFnbm9zdGljc1VyaSI6Imh0dHBzOi8vcmRkaWFnbm9zdGljcy1nLWV1LXIwLnd2ZC5taWNyb3NvZnQuY29tLyIsIkVuZHBvaW50UG9vbElkIjoiMTA1MThkZTAtMGZkNC00Y2JiLWIyNzItNDMwYTU2NDllODYwIiwiR2xvYmFsQnJva2VyVXJpIjoiaHR0cHM6Ly9yZGJyb2tlci53dmQubWljcm9zb2Z0LmNvbS8iLCJHZW9ncmFwaHkiOiJFVSIsIkdsb2JhbEJyb2tlclJlc291cmNlSWRVcmkiOiJodHRwczovLzEwNTE4ZGUwLTBmZDQtNGNiYi1iMjcyLTQzMGE1NjQ5ZTg2MC5yZGJyb2tlci53dmQubWljcm9zb2Z0LmNvbS8iLCJCcm9rZXJSZXNvdXJjZUlkVXJpIjoiaHR0cHM6Ly8xMDUxOGRlMC0wZmQ0LTRjYmItYjI3Mi00MzBhNTY0OWU4NjAucmRicm9rZXItZy1ldS1yMC53dmQubWljcm9zb2Z0LmNvbS8iLCJEaWFnbm9zdGljc1Jlc291cmNlSWRVcmkiOiJodHRwczovLzEwNTE4ZGUwLTBmZDQtNGNiYi1iMjcyLTQzMGE1NjQ5ZTg2MC5yZGRpYWdub3N0aWNzLWctZXUtcjAud3ZkLm1pY3Jvc29mdC5jb20vIiwibmJmIjoxNjI4MTY2MjIwLCJleHAiOjE2MjgyNTI2MTksImlzcyI6IlJESW5mcmFUb2tlbk1hbmFnZXIiLCJhdWQiOiJSRG1pIn0.EHAHPvU1NJZS4xeDV2SdLwsiUDGF4yhM9HZf-B_3vte_FwPHFTGef-YeHuX9XkMNGZT-YTPW378UiHWhzgBba-TUDlnmkAk1xK4--6eit3GVkAhc6Es2tes8UhV7tajO3TYagjS_oa4TeaAJ2P5zNwPtjAV6wfLItce9G7m43oFJsZ6L_gQ4EdnGnAm3jiOVjKthTLeTCsAqu1ViqABcvEXgdmZj-sy99nBLnUDcbOVI8ReJgZMVA1JYKBtJbGQ1OKzda4GT273IfxgeHM5OvxCCkMAOyq0G3wy-pW7jLHKlelX9gzRBzS2GWgwjzTpAcmV-VJj75ogiSnYqDuevzA",
+                    "registrationTokenOperation": "None"
+                },
+                "vmTemplate": "{\"domain\":\"swissshooting.ch\",\"galleryImageOffer\":\"office-365\",\"galleryImagePublisher\":\"MicrosoftWindowsDesktop\",\"galleryImageSKU\":\"20h2-evd-o365pp-g2\",\"imageType\":\"Gallery\",\"imageUri\":null,\"customImageId\":null,\"namePrefix\":\"alyapinfvd41\",\"osDiskType\":\"Premium_LRS\",\"useManagedDisks\":true,\"vmSize\":{\"id\":\"Standard_D4s_v4\",\"cores\":4,\"ram\":16},\"galleryItemId\":\"microsoftwindowsdesktop.office-36520h2-evd-o365pp-g2\"}",
+                "preferredAppGroupType": "Desktop",
+                "migrationRequest": null,
+                "cloudPcResource": false,
+                "startVMOnConnect": false,
+                "ssoadfsAuthority": null,
+                "ssoClientId": null,
+                "ssoClientSecretKeyVaultPath": null,
+                "ssoSecretType": null,
+                "objectId": "10518de0-0fd4-4cbb-b272-430a5649e860"
+            }
+        },
+        "hostpoolLocation": {
+            "value": "westeurope"
+        },
+        "availabilityOption": {
+            "value": "AvailabilitySet"
+        },
+        "availabilitySetName": {
+            "value": "alyapinfavda001"
+        },
+        "createAvailabilitySet": {
+            "value": true
+        },
+        "availabilitySetUpdateDomainCount": {
+            "value": 2
+        },
+        "availabilitySetFaultDomainCount": {
+            "value": 2
+        },
+        "availabilityZone": {
+            "value": 1
+        },
+        "vmInitialNumber": {
+            "value": 0
+        },
+        "vmResourceGroup": {
+            "value": "alyapinfresg041"
+        },
+        "vmLocation": {
+            "value": "westeurope"
+        },
+        "vmSize": {
+            "value": "Standard_D4s_v4"
+        },
+        "vmNumberOfInstances": {
+            "value": 1
+        },
+        "vmNamePrefix": {
+            "value": "alyapinfvd41"
+        },
+        "vmImageType": {
+            "value": "Gallery"
+        },
+        "vmDiskType": {
+            "value": "Premium_LRS"
+        },
+        "vmUseManagedDisks": {
+            "value": true
+        },
+        "existingVnetName": {
+            "value": "alyapinfvnet001"
+        },
+        "existingSubnetName": {
+            "value": "alyapinfvnet001snet04"
+        },
+        "virtualNetworkResourceGroupName": {
+            "value": "alyapinfresg000"
+        },
+        "createNetworkSecurityGroup": {
+            "value": false
+        },
+        "domain": {
+            "value": "swissshooting.ch"
+        },
+        "aadJoin": {
+            "value": false
+        },
+        "intune": {
+            "value": false
+        },
+        "bootDiagnostics": {
+            "value": {
+                "enabled": true
+            }
+        },
+        "availabilitySetTags": {
+            "value": {}
+        },
+        "networkInterfaceTags": {
+            "value": {}
+        },
+        "networkSecurityGroupTags": {
+            "value": {}
+        },
+        "virtualMachineTags": {
+            "value": {}
+        },
+        "imageTags": {
+            "value": {}
+        },
+        "deploymentId": {
+            "value": "dafbaf6f-9bb3-44d7-a54c-585e69322036"
+        },
+        "apiVersion": {
+            "value": "2019-12-10-preview"
+        },
+        "vmGalleryImageOffer": {
+            "value": "office-365"
+        },
+        "vmGalleryImagePublisher": {
+            "value": "MicrosoftWindowsDesktop"
+        },
+        "vmGalleryImageSKU": {
+            "value": "20h2-evd-o365pp-g2"
+        },
+        "vmGalleryImageHasPlan": {
+            "value": false
+        }
+    }
+}

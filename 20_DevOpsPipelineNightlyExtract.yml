@@ -23,7 +23,7 @@ steps:
 - task: AzureCLI@2
   displayName: Store Credentials
   inputs:
-    azureSubscription: 'alyainfp(02016285-d8fb-4cd2-a126-3cbd9e1df1d2)'
+    azureSubscription: 'alyainfp(0a0c6885-d808-4c08-a806-38bd8e0df182)'
     scriptType: 'ps'
     scriptLocation: 'inlineScript'
     inlineScript: |
@@ -35,9 +35,9 @@ steps:
 - task: AzurePowerShell@5
   displayName: Extract Templates
   inputs:
-    azureSubscription: 'alyainfp(02016285-d8fb-4cd2-a126-3cbd9e1df1d2)'
+    azureSubscription: 'alyainfp(0a0c6885-d808-4c08-a806-38bd8e0df182)'
     ScriptType: 'FilePath'
-    ScriptPath: '.\scripts\azure\Extract-Templates.ps1'
+    ScriptPath: '.\20_ExtractAll.ps1'
     FailOnStandardError: true
     azurePowerShellVersion: 'LatestVersion'
 - task: CmdLine@2

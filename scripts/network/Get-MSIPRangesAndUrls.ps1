@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -53,23 +53,14 @@ Param
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Get-MSIPRangesAndUrls-$($AlyaTimeString).log" | Out-Null
 
 # Azure IP ranges updated every Wednesday
-$AzureIPRangesPage = Invoke-WebRequest -Uri https://www.microsoft.com/en-us/download/confirmation.aspx?id=41653 -Method Get -UseBasicParsing 
-[XML]$AzureIPRanges = Invoke-RestMethod -uri ($AzureIPRangesPage.Links |Where {$_.outerhtml -like "*Click here*"}).href[0] 
-Foreach ($iprange in $Azureipranges.AzurePublicIpAddresses.region) 
-{
-    if ($iprange.name -like "*europe*")
-    {
-        $azureIps = $iprange.iprange.subnet | ForEach-Object {
-            [PSCustomObject]@{
-                ip = $_;
-            }
-        }
-    }
-}
+$AzureIPRangesPage = Invoke-WebRequest -Uri https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519 -Method Get -UseBasicParsing 
+$azureIps = Invoke-RestMethod -uri ($AzureIPRangesPage.Links |Where {$_.outerhtml -like "*Click here*"}).href[0]
 
 $azureUrls = @( `
     "*.azure.com", `
     "*.azure.net", `
+    "*.azure-dns.com", `
+    "*.azure-dns.net", `
     "*.azurecomcdn.net", `
     "*.azureedge.net", `
     "*.msecnd.net", `
@@ -78,16 +69,27 @@ $azureUrls = @( `
     "*.sendgrid.com", `
     "*.aadrm.com", `
     "*.msft.net", `
+    "*.microsoft.com", `
     "*.microsoftonline.com", `
     "*.microsoftazuread-sso.com", `
-    "*.wvd.microsoft.com", `
-    "*.azure-apihub.net" `
+    "www.msftconnecttest.com", `
+    "aka.ms", `
+    "*.sfx.ms", `
+    "*.azure-apihub.net", `
+    "*.azure-apihub.net", `
+    "*.digicert.com", `
+    "169.254.169.254", `
+    "168.63.129.16" `
 )
 
 if (-Not $urlsonly)
 {
     if (-Not $dataonly) { Write-Host "`nAzure IP Ranges" -ForegroundColor $CommandInfo }
-    $azureIps.ip | Sort-Object -Unique
+    foreach($azureIpRange in $azureIps.values)
+    {
+        "`nAzure: $($azureIpRange.name)"
+        $azureIpRange.properties.addressPrefixes
+    }
 }
 
 if (-Not $ipsonly)

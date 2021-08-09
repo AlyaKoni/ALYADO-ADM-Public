@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2020
+    Copyright (c) Alya Consulting, 2020-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -133,11 +133,25 @@ foreach ($secGroup in $SecurityGroup)
         Write-Host "   - Group already exists! Updating."
         if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
         {
-            $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -MailNickname $secGroup.Alias -Visibility $secGroup.Visibility
+            if ([string]::IsNullOrEmpty($secGroup.Alias))
+            {
+                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -Visibility $secGroup.Visibility
+            }
+            else
+            {
+                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -MailNickname $secGroup.Alias -Visibility $secGroup.Visibility
+            }
         }
         else
         {
-            $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -MailNickname $secGroup.Alias -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+            if ([string]::IsNullOrEmpty($secGroup.Alias))
+            {
+                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+            }
+            else
+            {
+                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -MailNickname $secGroup.Alias -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+            }
         }
     }
     else
@@ -145,11 +159,25 @@ foreach ($secGroup in $SecurityGroup)
         Write-Host "   - Group doesn't exists! Creating."
         if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
         {
-            $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.Alias -SecurityEnabled $True -Visibility $secGroup.Visibility
+            if ([string]::IsNullOrEmpty($secGroup.Alias))
+            {
+                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.DisplayName -SecurityEnabled $True -Visibility $secGroup.Visibility
+            }
+            else
+            {
+                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -Visibility $secGroup.Visibility
+            }
         }
         else
         {
-            $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+            if ([string]::IsNullOrEmpty($secGroup.Alias))
+            {
+                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.DisplayName -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+            }
+            else
+            {
+                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+            }
         }
     }
 
@@ -486,7 +514,9 @@ foreach ($secGroup in $GroupToDisable)
     if ($exGrp)
     {
         Write-Host "    disabling"
-        Set-AzureADMSGroup -Id $exGrp.Id -MailEnabled $false -SecurityEnabled $false -Visibility $false
+        try { Set-AzureADMSGroup -Id $exGrp.Id -MailEnabled $false -ErrorAction SilentlyContinue } catch {}
+        try { Set-AzureADMSGroup -Id $exGrp.Id -SecurityEnabled $false -ErrorAction SilentlyContinue } catch {}
+        try { Set-AzureADMSGroup -Id $exGrp.Id -Visibility $false -ErrorAction SilentlyContinue } catch {}
     }
 }
 

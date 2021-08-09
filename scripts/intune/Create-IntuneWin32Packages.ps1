@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting: 2019, 2020
+    Copyright (c) Alya Consulting, 2019-2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -79,12 +79,26 @@ foreach($packageDir in $packageDirs)
     $packagePath = Join-Path $packageDir.FullName "Package"
     if ((Test-Path $contentPath))
     {
-        $tmp = Remove-Item -Path $contentPath -Recurse -Force -Confirm:$false
+        try
+        {
+            $tmp = Remove-Item -Path $contentPath -Recurse -Force -Confirm:$false
+        } catch
+        {
+            Write-Warning "Was not able to delete directory. Please delete $contentPath.deleteMe by hand"
+            $tmp = Move-Item -Path $contentPath -Destination "$contentPath.deleteMe"
+        }
     }
     $tmp = New-Item -Path $contentPath -ItemType Directory
     if ((Test-Path $packagePath))
     {
-        $tmp = Remove-Item -Path $packagePath -Recurse -Force -Confirm:$false
+        try
+        {
+            $tmp = Remove-Item -Path $packagePath -Recurse -Force -Confirm:$false
+        } catch
+        {
+            Write-Warning "Was not able to delete directory. Please delete $packagePath.deleteMe by hand"
+            $tmp = Move-Item -Path $packagePath -Destination "$packagePath.deleteMe"
+        }
     }
     $tmp = New-Item -Path $packagePath -ItemType Directory
 

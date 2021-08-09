@@ -17,7 +17,7 @@
     "roleScopeTagIds":  [
 
                         ],
-    "fileName":  "RemoteDesktop_1.2.1672.0_x64.intunewin",
+    "fileName":  "RemoteDesktop_1.2.1844.0_x64.intunewin",
     "installCommandLine":  "Install.cmd",
     "uninstallCommandLine":  "Uninstall.cmd",
     "applicableArchitectures":  "x64",
@@ -27,14 +27,14 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "1.2.1672.0",
+                           "productVersion":  "1.2.1844.0",
                            "publisher":  "Microsoft Corporation",
-                           "productCode":  "{CD7D52DB-9CB4-49A4-9554-8A229C9F6674}",
+                           "productCode":  "{165FD401-29C4-45DD-95B9-EED69E67CB41}",
                            "upgradeCode":  "{F35D4E51-0F33-426C-B8A8-3ECF4ADBFC5F}",
                            "productName":  "Remote Desktop",
                            "packageType":  "PerUser"
                        },
-    "setupFilePath":  "RemoteDesktop_1.2.1672.0_x64.msi",
+    "setupFilePath":  "RemoteDesktop_1.2.1844.0_x64.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -55,7 +55,7 @@
                                "check32BitOn64System":  false,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "1.2.1672.0"
+                               "detectionValue":  "1.2.1844.0"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  false,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "1.2.1672.0"
+                      "comparisonValue":  "1.2.1844.0"
                   }
               ],
     "installExperience":  {
