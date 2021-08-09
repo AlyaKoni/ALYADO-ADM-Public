@@ -73,6 +73,8 @@ $AlyaB2BCompStart = "PleaseSpecify" #Example:"["
 $AlyaB2BCompEnd = "PleaseSpecify" #Example:"]"
 $AlyaVMLicenseTypeClient = "PleaseSpecify" #Example:"None" #Windows_Client=HybridBenefit, None=PAYG
 $AlyaVMLicenseTypeServer = "PleaseSpecify" #Example:"None" #Windows_Server=HybridBenefit, None=PAYG
+$AlyaServerOuProd = $null #Example:"OU=PROD,OU=WVD,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
+$AlyaServerOuTest = $null #Example:"OU=TEST,OU=WVD,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
 
 <# LOGOS #>
 $AlyaLogoUrlQuad = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzQuadrat_256x248_wbg.png"
@@ -104,6 +106,8 @@ $AlyaResIdAutomationAccount = "PleaseSpecify" #Example:"001"
 $AlyaResIdWormAutomationAccount = "PleaseSpecify" #Example:"015"
 $AlyaResIdAdSrv1 = "PleaseSpecify" #Example:"001"
 $AlyaResIdAdSrv2 = "PleaseSpecify" #Example:"002"
+$AlyaResIdForwarderSrv = "PleaseSpecify" #Example:"003"
+$AlyaResIdAdminCenterSrv = "PleaseSpecify" #Example:"004"
 $AlyaResIdAdSNet = "PleaseSpecify" #Example:"04"
 $AlyaResIdJumpHost = "PleaseSpecify" #Example:"010"
 $AlyaResIdJumpHostSNet = "PleaseSpecify" #Example:"05"
@@ -133,6 +137,8 @@ $AlyaJumpHostBackupPolicy = "PleaseSpecify" #Example:"NightlyPolicy"
 <# GROUP SETTINGS #>
 $AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-MFADISABLED"
 $AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("ALYAOG-ADM-AlleExternen")
+$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-O365GROUPMANAGERS" # Only members can create groups
+#TODO $AlyaGroupManagerMembers = @()
 $AlyaAllInternals = "PleaseSpecify" #Example:"ALYAOG-ADM-AlleInternen"
 $AlyaAllExternals = "PleaseSpecify" #Example:"ALYAOG-ADM-AlleExternen"
 
