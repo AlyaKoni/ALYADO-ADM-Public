@@ -31,6 +31,7 @@
     ---------- -------------------- ----------------------------
     15.09.2020 Konrad Brunner       Initial Version
     15.02.2021 Konrad Brunner       Added locale selection and pages option
+    10.08.2021 Konrad Brunner       Hub connection
 
 #>
 
@@ -82,6 +83,39 @@ Write-Host "=====================================================`n" -Foreground
 
 foreach($hubSite in $hubSites)
 {
+    ###Processing site
+    Write-Host "Processing site for Hub Site $($hubSite.title)" -ForegroundColor $TitleColor
+
+    $site = $null
+    try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed -ErrorAction SilentlyContinue } catch {}
+    if (-Not $site)
+    {
+        Write-Warning "Hub site not found. Creating now hub site $($hubSite.title)"
+        LoginTo-PnP -Url $AlyaSharePointAdminUrl
+        $site = New-PnPSite -Type $hubSite.template -Title $hubSite.title -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Description $hubSite.description -Wait
+        do {
+            Start-Sleep -Seconds 15
+            try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed -ErrorAction SilentlyContinue } catch {}
+        } while (-Not $site)
+        Start-Sleep -Seconds 60
+        try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {}
+    }
+    $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed
+    foreach ($usrEmail in $AlyaSharePointNewSiteCollectionAdmins)
+    {
+        $tmp = Set-SPOUser -Site $Site -LoginName $usrEmail -IsSiteCollectionAdmin $True
+    }
+    $tmp = Set-SPOUser -Site $Site -LoginName $AlyaSharePointNewSiteOwner -IsSiteCollectionAdmin $True
+    $tmp = Set-SPOSite -Identity $Site -Owner $AlyaSharePointNewSiteOwner
+    if (-Not $site.IsHubSite)
+    {
+        Write-Host "Registering site as hub site"
+        $siteReg = Register-SPOHubSite -Site "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Principals $null
+        #TODO Principals
+        Start-Sleep -Seconds 60
+        $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed
+    }
+    
     ###Processing designs
     Write-Host "Processing designs for Hub Site $($hubSite.title)" -ForegroundColor $TitleColor
 
@@ -99,6 +133,7 @@ foreach($hubSite in $hubSites)
 
     # Checking site script
     Write-Host "Checking site script" -ForegroundColor $CommandInfo
+    $hubSite.siteScript = $hubSite.siteScript.Replace("##HUBSITEID##", $site.HubSiteId).Replace("##HUBSITENAME##", $hubSite.title)
     $SiteScript = Get-SPOSiteScript | where { $_.Title -eq "$SiteScriptName"}
     if (-Not $SiteScript)
     {
@@ -151,6 +186,7 @@ foreach($hubSite in $hubSites)
 
         # Checking site script
         Write-Host "Checking site script" -ForegroundColor $CommandInfo
+        $hubSite.subSiteScript = $hubSite.subSiteScript.Replace("##HUBSITEID##", $site.HubSiteId).Replace("##HUBSITENAME##", $hubSite.title)
         $SubSiteScript = Get-SPOSiteScript | where { $_.Title -eq "$SubSiteScriptName"}
         if (-Not $SubSiteScript)
         {
@@ -195,34 +231,8 @@ foreach($hubSite in $hubSites)
         }
     }
 
-    ###Processing site
-    Write-Host "Processing site for Hub Site $($hubSite.title)" -ForegroundColor $TitleColor
-
-    $site = $null
-    try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed -ErrorAction SilentlyContinue } catch {}
-    if (-Not $site)
-    {
-        Write-Warning "Hub site not found. Creating now hub site $($hubSite.title)"
-        LoginTo-PnP -Url $AlyaSharePointAdminUrl
-        $site = New-PnPSite -Type $hubSite.template -Title $hubSite.title -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Description $hubSite.description -Wait
-        do {
-            Start-Sleep -Seconds 15
-            try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed -ErrorAction SilentlyContinue } catch {}
-        } while (-Not $site)
-        try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {}
-    }
-    foreach ($usrEmail in $AlyaSharePointNewSiteCollectionAdmins)
-    {
-        $tmp = Set-SPOUser -Site $Site -LoginName $usrEmail -IsSiteCollectionAdmin $True
-    }
-    $tmp = Set-SPOUser -Site $Site -LoginName $AlyaSharePointNewSiteOwner -IsSiteCollectionAdmin $True
-    $tmp = Set-SPOSite -Identity $Site -Owner $AlyaSharePointNewSiteOwner
-    if (-Not $site.IsHubSite)
-    {
-        Write-Host "Registering site as hub site"
-        $siteReg = Register-SPOHubSite -Site "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Principals $null
-        #TODO Principals
-    }
+    ###Processing site design
+    Write-Host "Processing site design for Hub Site $($hubSite.title)" -ForegroundColor $TitleColor
 
     if ($hubSite.template -eq "TeamSite")
     {
@@ -258,6 +268,7 @@ foreach($hubSite in $hubSites)
         }
     }
     try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {}
+    
 }
 
 ###Processing navigation
@@ -315,6 +326,10 @@ foreach($hubSite in $hubSites)
                 if ($template -eq "SITEPAGEPUBLISHING#0")
                 {
                     Invoke-SPOSiteDesign -Identity $SubSiteDesignComm.Id -WebUrl $child
+                }
+                if ($template -ne "GROUP#0" -and $template -ne "SITEPAGEPUBLISHING#0")
+                {
+                    Write-Warning "Dont know how to handle site template $template"
                 }
             } catch
             {

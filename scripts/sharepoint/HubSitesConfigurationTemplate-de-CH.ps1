@@ -17,10 +17,36 @@ $defaultSiteScript = @"
       "hourFormat": "24"
     }
   ],
+  "bindata": {},
   "version": 1
 }
 "@ #https://www.sitedesigner.io/#/
 #TODO locale and timeZone from config
+$defaultSubSiteScript = @"
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
+  "actions": [
+    {
+      "verb": "applyTheme",
+      "themeName": "$themeName"
+    },
+    {
+      "verb": "setRegionalSettings",
+      "timeZone": 4,
+      "locale": 2055,
+      "sortOrder": 25,
+      "hourFormat": "24"
+    },
+    {
+      "verb": "joinHubSite",
+      "hubSiteId": "##HUBSITEID##",
+      "name": "##HUBSITENAME##"
+    }
+  ],
+  "bindata": {},
+  "version": 1
+}
+"@ #https://www.sitedesigner.io/#/
 $cusSubSiteScript = @"
 {
   "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
@@ -149,6 +175,11 @@ $cusSubSiteScript = @"
           "title": "Zeiterfassung"
         }
       ]
+    },
+    {
+      "verb": "joinHubSite",
+      "hubSiteId": "##HUBSITEID##",
+      "name": "##HUBSITENAME##"
     }
   ],
   "bindata": {},
@@ -324,6 +355,11 @@ $prtSubSiteScript = @"
           "title": "Zeiterfassung"
         }
       ]
+    },
+    {
+      "verb": "joinHubSite",
+      "hubSiteId": "##HUBSITEID##",
+      "name": "##HUBSITENAME##"
     }
   ],
   "bindata": {},
@@ -889,7 +925,7 @@ $hubSites = @(
         description = "Hub Seite für die Zusammenarbeit in der Administration"
         siteScriptDescription = "Fügt der Hub Site das ADM Design hinzu"
         siteScript = $defaultSiteScript
-        subSiteScript = $null
+        subSiteScript = $defaultSubSiteScript
         headerLayout = "Compact"   # Standard, Compact
         headerEmphasis = "None"  # None, Neutral, Soft, Strong
         siteLogoUrl = $AlyaLogoUrlQuad
@@ -934,7 +970,7 @@ $hubSites = @(
         description = "Hub Seite für die Kollaboration mit Externen"
         siteScriptDescription = "Fügt der Hub Site das COL Design hinzu"
         siteScript = $defaultSiteScript
-        subSiteScript = $null
+        subSiteScript = $defaultSubSiteScript
         headerLayout = "Compact"   # Standard, Compact
         headerEmphasis = "None"  # None, Neutral, Soft, Strong
         siteLogoUrl = $AlyaLogoUrlQuad
@@ -949,7 +985,7 @@ $hubSites = @(
         description = "Hub Seite für persönliche Seiten"
         siteScriptDescription = "Fügt der Hub Site das PRS Design hinzu"
         siteScript = $defaultSiteScript
-        subSiteScript = $null
+        subSiteScript = $defaultSubSiteScript
         headerLayout = "Compact"   # Standard, Compact
         headerEmphasis = "None"  # None, Neutral, Soft, Strong
         siteLogoUrl = $AlyaLogoUrlQuad
