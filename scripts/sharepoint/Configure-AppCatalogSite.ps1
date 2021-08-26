@@ -133,7 +133,7 @@ if (-Not $site)
     Write-Host "Setting site design" -ForegroundColor $CommandInfo
     if ($hubSiteDef.subSiteScript)
     {
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper()) Site-$($hubSiteDef.short) Team Site "+$siteLocale
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Team Site "+$siteLocale
         $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
         if (-Not $SubSiteDesignTeam)
         {
@@ -143,7 +143,7 @@ if (-Not $site)
     }
     else
     {
-        $SiteDesignNameTeam = "$($AlyaCompanyNameShort.ToUpper()) Hub-$($hubSiteDef.short) Team Site "+$siteLocale
+		$SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) HubSite Team Site "+$siteLocale
         $SiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameTeam"}
         if (-Not $SiteDesignTeam)
         {

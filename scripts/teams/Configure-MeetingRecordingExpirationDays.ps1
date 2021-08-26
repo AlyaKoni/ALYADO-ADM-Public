@@ -46,7 +46,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-MeetingRecordingExp
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module "SkypeOnlineConnector"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
@@ -57,12 +60,7 @@ Write-Host "Teams | Configure-MeetingRecordingExpirationDays | CsOnline" -Foregr
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-$sfbSession = New-CsOnlineSession
-Import-PSSession $sfbSession -AllowClobber
-
 Set-CsTeamsMeetingPolicy -Identity Global -MeetingRecordingExpirationDays $MeetingRecordingExpirationDays
-
-Get-PSSession | Remove-PSSession
 
 #Stopping Transscript
 Stop-Transcript

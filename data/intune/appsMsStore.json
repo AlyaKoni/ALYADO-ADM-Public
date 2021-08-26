@@ -26,31 +26,6 @@
     },
     {
         "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
-        "displayName":  "Cortana Device Setup",
-        "description":  "This app lets you set up and control your Cortana-enabled devices, including the Surface Headphones and Harman Kardon Invoke. The Cortana Device Setup app will also help you connect your music, calendar, and email accounts, stay up to date with the latest software, and give you helpful tips to get started.",
-        "publisher":  "Microsoft Corporation",
-        "largeIcon":  null,
-        "isFeatured":  false,
-        "privacyInformationUrl":  null,
-        "informationUrl":  null,
-        "owner":  null,
-        "developer":  null,
-        "notes":  null,
-        "roleScopeTagIds":  [
-
-                            ],
-        "productKey":  "9NBFJPF436H3/0016",
-        "licenseType":  "online",
-        "packageIdentityName":  "Application_enterprise",
-        "licensingType":  {
-                              "supportUserLicensing":  true,
-                              "supportDeviceLicensing":  true,
-                              "supportsUserLicensing":  true,
-                              "supportsDeviceLicensing":  true
-                          }
-    },
-    {
-        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
         "displayName":  "HP Smart",
         "description":  "Print, scan, and share files by using HP Smart with your HP Printer. HP Smart makes it easy to get started and keeps you going with features like Print Anywhere or Mobile Fax!\r\n \r\n\r\n· Start with a hassle-free set up, then print, scan, copy, and share files directly from your computer to your friends, co-workers, or a linked cloud account \r\n· Manage or print to your printer using any network connection\r\n· Order supplies, get support, and manage your HP account straight from the app\r\n· Create high-quality scans by importing existing files or scanning from your printer, and improve them by cropping the file, adding filters and text, or adjusting saturation, contrast, and brightness\r\n· It’s easy to send secure faxes from the app with Mobile Fax\r\n· Be more productive with Smart Tasks—customizable one-click shortcuts\r\n· Access hundreds of printable crafts, cards, and learning activities for free with Printables! Get involved and get your family creating together!\r\n \r\nSome HP Smart features require a network connection and an HP account for full functionality. Certain features/software are available in English language only. For a full list of supported printers, visit: http://support.hp.com/us-en/document/c03722645?openCLC=true",
         "publisher":  "HP Inc.",
@@ -290,31 +265,6 @@
 
                             ],
         "productKey":  "9MSPC6MP8FM4/0016",
-        "licenseType":  "online",
-        "packageIdentityName":  "Application_enterprise",
-        "licensingType":  {
-                              "supportUserLicensing":  true,
-                              "supportDeviceLicensing":  true,
-                              "supportsUserLicensing":  true,
-                              "supportsDeviceLicensing":  true
-                          }
-    },
-    {
-        "@odata.type":  "#microsoft.graph.microsoftStoreForBusinessApp",
-        "displayName":  "Office Lens",
-        "description":  "Office Lens trims, enhances, and makes pictures of whiteboards and docs readable. You can use Office Lens to convert images to PDF, Word and PowerPoint files, and you can even save images to OneNote or OneDrive. \r\n \r\nOffice Lens is like having a scanner in your pocket. Like magic, it will digitize notes from whiteboards or blackboards. Always find important documents or business cards. Sketch your ideas and snap a picture for later. Don\u0027t lose receipts or stray sticky notes again!\r\n \r\nBy installing the app, you agree to these terms and conditions: http://aka.ms/olenswindowsterms.\r\n\r\nScenarios:\r\n- Capture and crop a picture of a whiteboard or blackboard and share your meeting notes with co-workers.\r\n- Make digital copies of your printed documents, business cards, or posters and trim them precisely.\r\n- Printed and handwritten text will be automatically recognized (using OCR), so you can search for words in images and then copy and edit them. ",
-        "publisher":  "Microsoft Corporation",
-        "largeIcon":  null,
-        "isFeatured":  false,
-        "privacyInformationUrl":  null,
-        "informationUrl":  null,
-        "owner":  null,
-        "developer":  null,
-        "notes":  null,
-        "roleScopeTagIds":  [
-
-                            ],
-        "productKey":  "9WZDNCRFJ3T8/0016",
         "licenseType":  "online",
         "packageIdentityName":  "Application_enterprise",
         "licensingType":  {

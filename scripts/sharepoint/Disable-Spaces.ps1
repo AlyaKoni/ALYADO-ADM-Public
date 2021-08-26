@@ -61,17 +61,17 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Disable-Spaces | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Disabling ShowEveryoneClaim
+# Disabling SpacesActivation
 Write-Host "Disabling SpacesActivation" -ForegroundColor $CommandInfo
 <#$TenantConfig = Get-SPOTenant
-if ($TenantConfig.ShowEveryoneClaim)
+if ($TenantConfig.SpacesActivation)
 {
-    Write-Warning "ShowEveryoneClaim was enabled. Disabling it now"#>
+    Write-Warning "SpacesActivation was enabled. Disabling it now"#>
     Set-SPODisableSpacesActivation -Scope Tenant -Disable $true 
 <#}
 else
 {
-    Write-Host "ShowEveryoneClaim was already disabled" -ForegroundColor $CommandSuccess
+    Write-Host "SpacesActivation was already disabled" -ForegroundColor $CommandSuccess
 }#>
 
 #Stopping Transscript

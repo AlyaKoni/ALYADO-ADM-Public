@@ -92,27 +92,29 @@ if (-Not $VNet)
 
 # Getting my ip
 Write-Host "Getting my ip" -ForegroundColor $CommandInfo
-$myIpTest = (Invoke-WebRequest "myexternalip.com/raw?$($guid)=1" -ErrorAction SilentlyContinue).content
+$myIpTest = (Invoke-WebRequest "https://myexternalip.com/raw?$($guid)=1" -ErrorAction SilentlyContinue).content
 $myIp = $null
 if (-not $myIpTest -or $myIp -ne $myIpTest)
 {
     $myIp = $myIpTest
-    $myIpTest = (Invoke-WebRequest "bot.whatismyipaddress.com?$($guid)=1" -ErrorAction SilentlyContinue).content
+    $myIpTest = (Invoke-WebRequest "https://api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
     if (-not $myIpTest -or $myIp -ne $myIpTest)
     {
         $myIp = $myIpTest
-        $myIpTest = (Invoke-WebRequest "ident.me?$($guid)=1" -ErrorAction SilentlyContinue).content
+        $myIpTest = (Invoke-WebRequest "https://ifconfig.me/ip?$($guid)=1" -ErrorAction SilentlyContinue).content
         if (-not $myIpTest -or $myIp -ne $myIpTest)
         {
             $myIp = $myIpTest
-            $myIpTest = (Invoke-WebRequest "api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
+            $myIpTest = (Invoke-WebRequest "http://checkip.amazonaws.com/?$($guid)=1" -ErrorAction SilentlyContinue).content
             if (-not $myIpTest -or $myIp -ne $myIpTest)
             {
                 $myIp = $myIpTest
-                $myIpTest = (Invoke-WebRequest "ipconfig.me?$($guid)=1" -ErrorAction SilentlyContinue).content
+                $myIpTest = (Invoke-WebRequest "http://checkip.dyndns.org/?$($guid)=1" -ErrorAction SilentlyContinue).content
+                $myIpTest = ($myIpTest  |  Select-String -Pattern "\d{1,3}(\.\d{1,3}){3}" -AllMatches).Matches.Value
                 if (-not $myIpTest -or $myIp -ne $myIpTest)
                 {
-                    $myIp = (Invoke-WebRequest "ifconfig.me/ip?$($guid)=1" -ErrorAction SilentlyContinue).content
+                    $myIpTest = (Invoke-WebRequest "http://www.myip.ch/?$($guid)=1" -ErrorAction SilentlyContinue).content
+                    $myIp = ($myIpTest  |  Select-String -Pattern "\d{1,3}(\.\d{1,3}){3}" -AllMatches).Matches.Value
                 }
             }
         }

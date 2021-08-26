@@ -1,6 +1,6 @@
 # Constants
-$prefix = $AlyaCompanyNameShort.ToUpper() + "SP"
-$ThemeName = "$($AlyaCompanyName) Default Theme"
+$prefix = "$($AlyaCompanyNameShortM365.ToUpper())SP"
+$ThemeName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Theme"
 $defaultSiteScript = @"
 {
   "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
@@ -121,50 +121,35 @@ $cusSubSiteScript = @"
           "verb": "addSPField"
         },
         {
-          "schemaXml": "<Field Type=\"Lookup\" DisplayName=\"Projekt\" Required=\"TRUE\" EnforceUniqueValues=\"FALSE\" ShowField=\"Title\" UnlimitedLengthInDocumentLibrary=\"FALSE\" RelationshipDeleteBehavior=\"None\" ID=\"{5ea49afa-f77e-11ea-adc1-0242ac120002}\" StaticName=\"Projekt\" Name=\"Projekt\" />",
+          "verb": "addSPLookupFieldXml",
+          "schemaXml": "<Field Description=\"Auf das zu buchende Projekt\" Type=\"Lookup\" DisplayName=\"Projekt\" Required=\"TRUE\" EnforceUniqueValues=\"FALSE\" ShowField=\"Title\" UnlimitedLengthInDocumentLibrary=\"FALSE\" RelationshipDeleteBehavior=\"None\" ID=\"{5ea49afa-f77e-11ea-adc1-0242ac120002}\" StaticName=\"Projekt\" Name=\"Projekt\" />",
           "addToDefaultView": true,
-          "targetListName": "Projekte",
-          "verb": "addSPLookupFieldXml"
+          "targetListName": "Projekte"
         },
         {
-          "displayName": "Datum",
-          "internalName": "Datum",
-          "isRequired": true,
-          "addToDefaultView": true,
-          "fieldType": "DateTime",
-          "enforceUnique": false,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Datum der Dienstleistung\" DisplayName=\"Datum\" FriendlyDisplayFormat=\"Disabled\" Format=\"DateOnly\" Name=\"Datum\" Required=\"TRUE\" Title=\"Datum\" Type=\"DateTime\" ID=\"{7c6830e2-3fff-4ecc-b277-7fcfdf53579b}\" StaticName=\"Datum\"><Default>[today]</Default></Field>",
+          "addToDefaultView": true
         },
         {
-          "displayName": "Aufwand",
-          "internalName": "Aufwand",
-          "isRequired": false,
-          "addToDefaultView": true,
-          "fieldType": "Number",
-          "enforceUnique": false,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Decimals=\"2\" Description=\"Aufwand in Stunden\" DisplayName=\"Aufwand\" Format=\"Dropdown\" Min=\"0\" Name=\"Aufwand\" Percentage=\"FALSE\" Required=\"TRUE\" Title=\"Aufwand\" Type=\"Number\" ID=\"{099f6e16-46d1-4936-9645-6e0fc91cccfb}\" StaticName=\"Aufwand\" />",
+          "addToDefaultView": true
         },
         {
-          "schemaXml": "<Field Type=\"Choice\" DisplayName=\"Ort\" Required=\"TRUE\" Format=\"Dropdown\" StaticName=\"Ort\" Name=\"Ort\"><Default>Remote</Default><CHOICES><CHOICE>Remote</CHOICE><CHOICE>OnSite</CHOICE></CHOICES></Field>",
-          "addToDefaultView": true,
-          "verb": "addSPFieldXml"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Ort der Leistungserbringung\" Type=\"Choice\" DisplayName=\"Ort\" Required=\"TRUE\" Format=\"Dropdown\" StaticName=\"Ort\" Name=\"Ort\" ID=\"{71638146-62b0-495b-9dce-f9f11a90d86a}\"><Default>Remote</Default><CHOICES><CHOICE>Remote</CHOICE><CHOICE>OnSite</CHOICE></CHOICES></Field>",
+          "addToDefaultView": true
         },
         {
-          "displayName": "Fahrzeit",
-          "internalName": "Fahrzeit",
-          "isRequired": false,
-          "addToDefaultView": true,
-          "fieldType": "Number",
-          "enforceUnique": false,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Decimals=\"2\" Description=\"Reisezeit zum Kunden\" DisplayName=\"Fahrzeit\" Format=\"Dropdown\" Min=\"0\" Name=\"Fahrzeit\" Percentage=\"FALSE\" Required=\"FALSE\" Title=\"Fahrzeit\" Type=\"Number\" ID=\"{1be037a2-c97e-49ff-913c-4d8a9c5c73bc}\" StaticName=\"Fahrzeit\" />",
+          "addToDefaultView": true
         },
         {
-          "fieldType": "Boolean",
-          "displayName": "Verrechnet",
-          "internalName": "Verrechnet",
-          "isRequired": true,
-          "addToDefaultView": true,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Gibt an, ob die Leistung bereits verrechnet wurde\" DisplayName=\"Verrechnet\" Format=\"Dropdown\" Name=\"Verrechnet\" Title=\"Verrechnet\" Type=\"Boolean\" ID=\"{7ed723dc-b331-4119-a158-1ce8c02684b5}\" StaticName=\"Verrechnet\"><Default>0</Default></Field>",
+          "addToDefaultView": true
         },
         {
           "verb": "setDescription",
@@ -301,50 +286,35 @@ $prtSubSiteScript = @"
           "verb": "addSPField"
         },
         {
-          "schemaXml": "<Field Type=\"Lookup\" DisplayName=\"Projekt\" Required=\"TRUE\" EnforceUniqueValues=\"FALSE\" ShowField=\"Title\" UnlimitedLengthInDocumentLibrary=\"FALSE\" RelationshipDeleteBehavior=\"None\" ID=\"{5ea49afa-f77e-11ea-adc1-0242ac120002}\" StaticName=\"Projekt\" Name=\"Projekt\" />",
+          "verb": "addSPLookupFieldXml",
+          "schemaXml": "<Field Description=\"Auf das zu buchende Projekt\" Type=\"Lookup\" DisplayName=\"Projekt\" Required=\"TRUE\" EnforceUniqueValues=\"FALSE\" ShowField=\"Title\" UnlimitedLengthInDocumentLibrary=\"FALSE\" RelationshipDeleteBehavior=\"None\" ID=\"{5ea49afa-f77e-11ea-adc1-0242ac120002}\" StaticName=\"Projekt\" Name=\"Projekt\" />",
           "addToDefaultView": true,
-          "targetListName": "Projekte",
-          "verb": "addSPLookupFieldXml"
+          "targetListName": "Projekte"
         },
         {
-          "displayName": "Datum",
-          "internalName": "Datum",
-          "isRequired": true,
-          "addToDefaultView": true,
-          "fieldType": "DateTime",
-          "enforceUnique": false,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Datum der Dienstleistung\" DisplayName=\"Datum\" FriendlyDisplayFormat=\"Disabled\" Format=\"DateOnly\" Name=\"Datum\" Required=\"TRUE\" Title=\"Datum\" Type=\"DateTime\" ID=\"{7c6830e2-3fff-4ecc-b277-7fcfdf53579b}\" StaticName=\"Datum\"><Default>[today]</Default></Field>",
+          "addToDefaultView": true
         },
         {
-          "displayName": "Aufwand",
-          "internalName": "Aufwand",
-          "isRequired": false,
-          "addToDefaultView": true,
-          "fieldType": "Number",
-          "enforceUnique": false,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Decimals=\"2\" Description=\"Aufwand in Stunden\" DisplayName=\"Aufwand\" Format=\"Dropdown\" Min=\"0\" Name=\"Aufwand\" Percentage=\"FALSE\" Required=\"TRUE\" Title=\"Aufwand\" Type=\"Number\" ID=\"{099f6e16-46d1-4936-9645-6e0fc91cccfb}\" StaticName=\"Aufwand\" />",
+          "addToDefaultView": true
         },
         {
-          "schemaXml": "<Field Type=\"Choice\" DisplayName=\"Ort\" Required=\"TRUE\" Format=\"Dropdown\" StaticName=\"Ort\" Name=\"Ort\"><Default>Remote</Default><CHOICES><CHOICE>Remote</CHOICE><CHOICE>OnSite</CHOICE></CHOICES></Field>",
-          "addToDefaultView": true,
-          "verb": "addSPFieldXml"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Ort der Leistungserbringung\" Type=\"Choice\" DisplayName=\"Ort\" Required=\"TRUE\" Format=\"Dropdown\" StaticName=\"Ort\" Name=\"Ort\" ID=\"{71638146-62b0-495b-9dce-f9f11a90d86a}\"><Default>Remote</Default><CHOICES><CHOICE>Remote</CHOICE><CHOICE>OnSite</CHOICE></CHOICES></Field>",
+          "addToDefaultView": true
         },
         {
-          "displayName": "Fahrzeit",
-          "internalName": "Fahrzeit",
-          "isRequired": false,
-          "addToDefaultView": true,
-          "fieldType": "Number",
-          "enforceUnique": false,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Decimals=\"2\" Description=\"Reisezeit zum Kunden\" DisplayName=\"Fahrzeit\" Format=\"Dropdown\" Min=\"0\" Name=\"Fahrzeit\" Percentage=\"FALSE\" Required=\"FALSE\" Title=\"Fahrzeit\" Type=\"Number\" ID=\"{1be037a2-c97e-49ff-913c-4d8a9c5c73bc}\" StaticName=\"Fahrzeit\" />",
+          "addToDefaultView": true
         },
         {
-          "fieldType": "Boolean",
-          "displayName": "Verrechnet",
-          "internalName": "Verrechnet",
-          "isRequired": true,
-          "addToDefaultView": true,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Gibt an, ob die Leistung bereits verrechnet wurde\" DisplayName=\"Verrechnet\" Format=\"Dropdown\" Name=\"Verrechnet\" Title=\"Verrechnet\" Type=\"Boolean\" ID=\"{7ed723dc-b331-4119-a158-1ce8c02684b5}\" StaticName=\"Verrechnet\"><Default>0</Default></Field>",
+          "addToDefaultView": true
         },
         {
           "verb": "setDescription",
@@ -366,7 +336,7 @@ $prtSubSiteScript = @"
   "version": 1
 }
 "@ #https://www.sitedesigner.io/#/
-$homePageTemplateGenHub = @"
+$homePageTemplateGenHubTeamSite = @"
 <pnp:Provisioning xmlns:pnp="http://schemas.dev.office.com/PnP/2020/02/ProvisioningSchema">
   <pnp:Preferences Generator="OfficeDevPnP.Core, Version=3.22.2006.2, Culture=neutral, PublicKeyToken=5e633289e95c321a" />
   <pnp:Templates ID="CONTAINER-TEMPLATE-A2BA1813C436408E9D627E9700B0CBE6">
@@ -561,7 +531,7 @@ $homePageTemplateGenHub = @"
   </pnp:Templates>
 </pnp:Provisioning>
 "@
-$homePageTemplateColHub = @"
+$homePageTemplateColHubTeamSite = @"
 <pnp:Provisioning xmlns:pnp="http://schemas.dev.office.com/PnP/2020/02/ProvisioningSchema">
   <pnp:Preferences Generator="OfficeDevPnP.Core, Version=3.22.2006.2, Culture=neutral, PublicKeyToken=5e633289e95c321a" />
   <pnp:Templates ID="CONTAINER-TEMPLATE-3940765AA81744DB8C5DE0508525E2B9">
@@ -761,7 +731,7 @@ $homePageTemplateColHub = @"
   </pnp:Templates>
 </pnp:Provisioning>
 "@
-$homePageTemplateRoot = @"
+$homePageTemplateRootTeamSite = @"
 <pnp:Provisioning xmlns:pnp="http://schemas.dev.office.com/PnP/2020/02/ProvisioningSchema">
   <pnp:Preferences Generator="OfficeDevPnP.Core, Version=3.22.2006.2, Culture=neutral, PublicKeyToken=5e633289e95c321a" />
   <pnp:Templates ID="CONTAINER-TEMPLATE-63AB748351994E7FB87B89714DA92117">
@@ -917,78 +887,78 @@ $homePageTemplateRoot = @"
 "@
 $hubSites = @(
     @{
-        short = "ADM"
-        title = "$prefix-ADM-Hub"
-        url = "$prefix-ADM-Hub"
-        template = "TeamSite"
-        locale4Creation = 1033 #TODO from config
-        description = "Hub site for the administrative sites"
-        siteScriptDescription = "Assigns the ADM site design"
-        siteScript = $defaultSiteScript
-        subSiteScript = $defaultSubSiteScript
-        headerLayout = "Compact"   # Standard, Compact
-        headerEmphasis = "None"  # None, Neutral, Soft, Strong
-        siteLogoUrl = $AlyaLogoUrlQuad
-        homePageTemplate = $homePageTemplateGenHub
-    },
-    @{
-        short = "CUS"
-        title = "$prefix-CUS-Hub"
-        url = "$prefix-CUS-Hub"
-        template = "TeamSite"
-        locale4Creation = 1033 #TODO from config
-        description = "Hub site for the collaboration with customers"
-        siteScriptDescription = "Assigns the CUS site design"
-        siteScript = $defaultSiteScript
-        subSiteScript = $cusSubSiteScript
-        headerLayout = "Compact"   # Standard, Compact
-        headerEmphasis = "None"  # None, Neutral, Soft, Strong
-        siteLogoUrl = $AlyaLogoUrlQuad
-        homePageTemplate = $homePageTemplateGenHub
-    },
-    @{
-        short = "PRT"
-        title = "$prefix-PRT-Hub"
-        url = "$prefix-PRT-Hub"
-        template = "TeamSite"
-        locale4Creation = 1033 #TODO from config
-        description = "Hub site for the collaboration with partners"
-        siteScriptDescription = "Assigns the PRT site design"
-        siteScript = $defaultSiteScript
-        subSiteScript = $prtSubSiteScript
-        headerLayout = "Compact"   # Standard, Compact
-        headerEmphasis = "None"  # None, Neutral, Soft, Strong
-        siteLogoUrl = $AlyaLogoUrlQuad
-        homePageTemplate = $homePageTemplateGenHub
-    },
-    @{
-        short = "COL"
-        title = "$prefix-COL-Hub"
-        url = "$prefix-COL-Hub"
-        template = "TeamSite"
-        locale4Creation = 1033 #TODO from config
-        description = "Hub site for the collaboration with externals"
-        siteScriptDescription = "Assigns the COL site design"
-        siteScript = $defaultSiteScript
-        subSiteScript = $defaultSubSiteScript
-        headerLayout = "Compact"   # Standard, Compact
-        headerEmphasis = "None"  # None, Neutral, Soft, Strong
-        siteLogoUrl = $AlyaLogoUrlQuad
-        homePageTemplate = $homePageTemplateColHub
-    },
-    @{
         short = "PRS"
         title = "$prefix-PRS-Hub"
         url = "$prefix-PRS-Hub"
-        template = "TeamSite"
+        template = "CommunicationSite" # TeamSite, CommunicationSite
         locale4Creation = 1033 #TODO from config
         description = "Hub site for the personal sites"
         siteScriptDescription = "Assigns the PRS site design"
         siteScript = $defaultSiteScript
         subSiteScript = $defaultSubSiteScript
-        headerLayout = "Compact"   # Standard, Compact
+        headerLayout = "Compact"   # Standard, Compact (others not yet supported by MS)
         headerEmphasis = "None"  # None, Neutral, Soft, Strong
         siteLogoUrl = $AlyaLogoUrlQuad
-        homePageTemplate = $homePageTemplateGenHub
+        homePageTemplate = $homePageTemplateGenHubTeamSite
+    },
+    @{
+        short = "ADM"
+        title = "$prefix-ADM-Hub"
+        url = "$prefix-ADM-Hub"
+        template = "TeamSite" # TeamSite, CommunicationSite
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the administrative sites"
+        siteScriptDescription = "Assigns the ADM site design"
+        siteScript = $defaultSiteScript
+        subSiteScript = $defaultSubSiteScript
+        headerLayout = "Compact"   # Standard, Compact (others not yet supported by MS)
+        headerEmphasis = "None"  # None, Neutral, Soft, Strong
+        siteLogoUrl = $AlyaLogoUrlQuad
+        homePageTemplate = $homePageTemplateGenHubTeamSite
+    },
+    @{
+        short = "CUS"
+        title = "$prefix-CUS-Hub"
+        url = "$prefix-CUS-Hub"
+        template = "TeamSite" # TeamSite, CommunicationSite
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the collaboration with customers"
+        siteScriptDescription = "Assigns the CUS site design"
+        siteScript = $defaultSiteScript
+        subSiteScript = $cusSubSiteScript
+        headerLayout = "Compact"   # Standard, Compact (others not yet supported by MS)
+        headerEmphasis = "None"  # None, Neutral, Soft, Strong
+        siteLogoUrl = $AlyaLogoUrlQuad
+        homePageTemplate = $homePageTemplateGenHubTeamSite
+    },
+    @{
+        short = "PRT"
+        title = "$prefix-PRT-Hub"
+        url = "$prefix-PRT-Hub"
+        template = "TeamSite" # TeamSite, CommunicationSite
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the collaboration with partners"
+        siteScriptDescription = "Assigns the PRT site design"
+        siteScript = $defaultSiteScript
+        subSiteScript = $prtSubSiteScript
+        headerLayout = "Compact"   # Standard, Compact (others not yet supported by MS)
+        headerEmphasis = "None"  # None, Neutral, Soft, Strong
+        siteLogoUrl = $AlyaLogoUrlQuad
+        homePageTemplate = $homePageTemplateGenHubTeamSite
+    },
+    @{
+        short = "COL"
+        title = "$prefix-COL-Hub"
+        url = "$prefix-COL-Hub"
+        template = "TeamSite" # TeamSite, CommunicationSite
+        locale4Creation = 1033 #TODO from config
+        description = "Hub site for the collaboration with externals"
+        siteScriptDescription = "Assigns the COL site design"
+        siteScript = $defaultSiteScript
+        subSiteScript = $defaultSubSiteScript
+        headerLayout = "Compact"   # Standard, Compact (others not yet supported by MS)
+        headerEmphasis = "None"  # None, Neutral, Soft, Strong
+        siteLogoUrl = $AlyaLogoUrlQuad
+        homePageTemplate = $homePageTemplateColHubTeamSite
     }
 )

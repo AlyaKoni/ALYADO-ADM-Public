@@ -51,10 +51,11 @@ Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 LoginTo-SPO
 
 # Constants
-$ThemeName = "$($AlyaCompanyName) Default Theme"
-$SiteScriptName = "$($ThemeName) Script"
-$SiteDesignNameTeam = "$($ThemeName) Team Site"
-$SiteDesignNameComm = "$($ThemeName) Communication Site"
+
+$ThemeName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Theme"
+$SiteScriptName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Script"
+$SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Team Site"
+$SiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Communication Site"
 $SiteScriptDef = @"
 {
   "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",

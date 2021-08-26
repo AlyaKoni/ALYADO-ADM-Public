@@ -32,6 +32,7 @@
     15.09.2020 Konrad Brunner       Initial Version
     15.02.2021 Konrad Brunner       Added locale selection and pages option
     10.08.2021 Konrad Brunner       Hub connection
+    26.08.2021 Konrad Brunner       Support for Communication Sites
 
 #>
 
@@ -70,7 +71,7 @@ else
     Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
     Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
     pause
-    . $PSScriptRoot\HubSitesConfigurationTemplate-$siteLocale.ps1
+    . $AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1
 }
 
 # =============================================================
@@ -92,7 +93,14 @@ foreach($hubSite in $hubSites)
     {
         Write-Warning "Hub site not found. Creating now hub site $($hubSite.title)"
         LoginTo-PnP -Url $AlyaSharePointAdminUrl
-        $site = New-PnPSite -Type $hubSite.template -Title $hubSite.title -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Description $hubSite.description -Wait
+        if ($hubSite.template -eq "TeamSite")
+        {
+            $site = New-PnPSite -Type "TeamSite" -Title $hubSite.title -Alias "$($hubSite.url)" -Description $hubSite.description -Wait
+        }
+        else
+        {
+            $site = New-PnPSite -Type $hubSite.template -Title $hubSite.title -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Description $hubSite.description -Wait
+        }
         do {
             Start-Sleep -Seconds 15
             try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Detailed -ErrorAction SilentlyContinue } catch {}
@@ -303,8 +311,8 @@ foreach($hubSite in $hubSites)
     if ($hubSite.subSiteScript)
     {
         Write-Host "Hub Site $($hubSite.title)"
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper()) $($hubSite.short) SubSite Team Site "+$siteLocale
-        $SubSiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper()) $($hubSite.short) SubSite Communication Site "+$siteLocale
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Team Site "+$siteLocale
+        $SubSiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Communication Site "+$siteLocale
         $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
         $SubSiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameComm"}
 
@@ -379,7 +387,7 @@ if ($overwritePages)
         LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
         $tempFile = [System.IO.Path]::GetTempFileName()
         $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
-        $tmp = Apply-PnPProvisioningTemplate -Path $tempFile
+        $tmp = Invoke-PnPSiteTemplate -Path $tempFile
         Remove-Item -Path $tempFile
     }
     #Set-PnPTraceLog -Off
@@ -391,7 +399,7 @@ if ($overwritePages)
         LoginTo-PnP -Url "$($AlyaSharePointUrl)"
         $tempFile = [System.IO.Path]::GetTempFileName()
         $homePageTemplateRoot | Set-Content -Path $tempFile -Encoding UTF8
-        $tmp = Apply-PnPProvisioningTemplate -Path $tempFile
+        $tmp = Invoke-PnPSiteTemplate -Path $tempFile
         Remove-Item -Path $tempFile
     }
 }

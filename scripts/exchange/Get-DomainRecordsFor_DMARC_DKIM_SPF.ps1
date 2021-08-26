@@ -78,7 +78,7 @@ foreach ($dom in $domains)
     Write-Host "`nDMARC" -ForegroundColor $CommandInfo
     Write-Host "Type:  TXT"
     Write-Host "Name:  _dmarc"
-    Write-Host "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
+    Write-Host "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; rf=afrf; fo=0:s; aspf=r; adkim=r; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
     Write-Host "TTL:   1 hour"
 
     Write-Host "`nDMARC Reports" -ForegroundColor $CommandInfo
@@ -90,18 +90,20 @@ foreach ($dom in $domains)
     try
     {
         LoginTo-EXO
-        $conf = Get-DkimSigningConfig -Identity $dom | Format-List Selector1CNAME, Selector2CNAME
+        $cfg = Get-DkimSigningConfig -Identity $dom
+        $Selector1CNAME = $cfg.Selector1CNAME
+        $Selector2CNAME = $cfg.Selector2CNAME
 
         Write-Host "`nDKIM 1" -ForegroundColor $CommandInfo
         Write-Host "Type:  CNAME"
         Write-Host "Name:  selector1._domainkey"
-        Write-Host "Value: $($conf.Selector1CNAME)"
+        Write-Host "Value: $Selector1CNAME"
         Write-Host "TTL:   1 hour"
 
         Write-Host "`nDKIM 2" -ForegroundColor $CommandInfo
         Write-Host "Type:  CNAME"
         Write-Host "Name:  selector2._domainkey"
-        Write-Host "Value: $($conf.Selector2CNAME)"
+        Write-Host "Value: $Selector2CNAME"
         Write-Host "TTL:   1 hour"
 
     }
@@ -116,6 +118,11 @@ foreach ($dom in $domains)
     }
     Write-Host "`n"
 
+    Write-Host "If you like to get a service for DMARC reports, you can get one for free here:"
+    Write-Host "https://dmarc.postmarkapp.com/?utm_source=dmarcdigests&utm_medium=web&utm_content=pricing"
+    Write-Host "`n"
+
 }
+
 #Stopping Transscript
 Stop-Transcript

@@ -1,0 +1,26 @@
+﻿[{
+        "Comment1": "=================================================",
+        "Comment2": "WIN10 Update Profiles",
+        "Comment3": "================================================="
+    }, {
+        "@odata.type": "#microsoft.graph.windowsFeatureUpdateProfile",
+		"displayName": "Win10 Feature Configuration",
+        "description": "Configures features on win10 devices",
+        "featureUpdateVersion": "21H1",
+        "roleScopeTagIds": ["0"],
+        "deployableContentDisplayName": null,
+        "endOfSupportDate": "2022-12-13T00:00:00Z"
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "MAC Profiles",
+        "Comment3": "================================================="
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "ANDROID Profiles",
+        "Comment3": "================================================="
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "IOS Profiles",
+        "Comment3": "================================================="
+    }
+]

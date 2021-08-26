@@ -45,7 +45,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Allow-CloudRecordingForCalls-
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module "SkypeOnlineConnector"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
@@ -56,12 +59,7 @@ Write-Host "Teams | Allow-CloudRecordingForCalls | CsOnline" -ForegroundColor $C
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-$sfbSession = New-CsOnlineSession
-Import-PSSession $sfbSession -AllowClobber
-
 Set-CsTeamsCallingPolicy -Identity Global -AllowCloudRecordingForCalls $true 
-
-Get-PSSession | Remove-PSSession
 
 #Stopping Transscript
 Stop-Transcript

@@ -45,6 +45,7 @@ $AlyaTenantName = "PleaseSpecify" #Example:"$($AlyaTenantNameId).onmicrosoft.com
 $AlyaCompanyName = "PleaseSpecify" #Example:"AlyaConsulting"
 $AlyaCompanyNameFull = "PleaseSpecify" #Example:"Alya Consulting Inh. Konrad Brunner"
 $AlyaCompanyNameShort = "PleaseSpecify" #Example:"alya"
+$AlyaCompanyNameShortM365 = $AlyaCompanyNameShort
 $AlyaDomainName = "PleaseSpecify" #Example:"alyaconsulting.ch"
 $AlyaAdditionalDomainNames = @()
 $AlyaLocalDomainName = "PleaseSpecify" #Example:"alyaconsulting.ch"
@@ -137,8 +138,6 @@ $AlyaJumpHostBackupPolicy = "PleaseSpecify" #Example:"NightlyPolicy"
 <# GROUP SETTINGS #>
 $AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-MFADISABLED"
 $AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("ALYAOG-ADM-AlleExternen")
-$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-O365GROUPMANAGERS" # Only members can create groups
-#TODO $AlyaGroupManagerMembers = @()
 $AlyaAllInternals = "PleaseSpecify" #Example:"ALYAOG-ADM-AlleInternen"
 $AlyaAllExternals = "PleaseSpecify" #Example:"ALYAOG-ADM-AlleExternen"
 

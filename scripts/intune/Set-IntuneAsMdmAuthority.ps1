@@ -67,32 +67,31 @@ if (-Not $Context)
 }
 $token = Get-AdalAccessToken
 
-# Main
-
 # Getting actual authority
 Write-Host "Getting actual authority" -ForegroundColor $CommandInfo
 $uri = "https://graph.microsoft.com/beta/organization('$AlyaTenantId')?`$select=mobiledevicemanagementauthority"
-$MDMAuthority = (Get-MsGraphObject -AccessToken $token -Uri $uri).value.mobileDeviceManagementAuthority
+$MDMAuthority = (Get-MsGraphObject -AccessToken $token -Uri $uri).mobileDeviceManagementAuthority
 Write-Host "  Actual authority: $MDMAuthority"
 
 if($MDMAuthority -notlike "intune")
 {
-
-    Write-Host "We have actually an issue, configuring the MDM authority by script."
-    Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
-    Write-Host " - Select 'Microsoft Intune'"
-    Write-Host " - Set for MDM and MAM 'All'"
-    Write-Host " - Save"
-    start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility
-    pause
-
-    #TODO
-    throw "TODO Issue still open?"
-
-    # Setting intune as authority
-    Write-Host "Setting intune as authority" -ForegroundColor $CommandInfo
-    $uri = "https://graph.microsoft.com/beta/organization/$AlyaTenantId/setMobileDeviceManagementAuthority"
-    $ret = Post-MsGraph -AccessToken $token -Uri $uri -Body "{}"
+    try
+    {
+        # Setting intune as authority
+        Write-Host "Setting intune as authority" -ForegroundColor $CommandInfo
+        $uri = "https://graph.microsoft.com/beta/organization/$AlyaTenantId/setMobileDeviceManagementAuthority"
+        $ret = Post-MsGraph -AccessToken $token -Uri $uri -Body "{}"
+    }
+    catch
+    {
+        Write-Host "We have actually an issue, configuring the MDM authority by script."
+        Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
+        Write-Host " - Select 'Microsoft Intune'"
+        Write-Host " - Set for MDM and MAM 'All'"
+        Write-Host " - Save"
+        start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility
+        pause
+    }
 }
 
 #Stopping Transscript

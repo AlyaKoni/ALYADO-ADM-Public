@@ -46,11 +46,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServic
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureADPreview"
 Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-AD
 LoginTo-MSOL
 
 # =============================================================
@@ -61,9 +63,17 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Set-DeviceRegistrationServicePolicy | MsOnline" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+# Getting context
+$Context = Get-AzContext
+if (-Not $Context)
+{
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
+}
+
 # Main
 Write-Host "Getting actual DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-Get-MsolDeviceRegistrationServicePolicy
+Get-MsolDeviceRegistrationServicePolicy -ErrorAction SilentlyContinue
 
 Write-Host "Setting DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
 if ($AlyaAllowDeviceRegistration -and $AlyaAllowDeviceRegistration -ne "None" -and $AlyaAllowDeviceRegistration -ne "All")
@@ -71,13 +81,7 @@ if ($AlyaAllowDeviceRegistration -and $AlyaAllowDeviceRegistration -ne "None" -a
     $AlyaAllowDeviceRegistrationOption = "Selected"
     $AlyaAllowedGroups = Get-MsolGroup -SearchString $AlyaAllowDeviceRegistration
     #TODO Next part does not makes sense, may set cmdlt requires the user param filled!
-    $caRole = Get-MsolRole -RoleName "Company Administrator"
-    $caRoleMembs = Get-MsolRoleMember -RoleObjectId $caRole.ObjectId
-    $AlyaAllowedUsers = @()
-    foreach ($caRoleMemb in $caRoleMembs)
-    {
-        $AlyaAllowedUsers += Get-MsolUser -UserPrincipalName $caRoleMemb.EmailAddress
-    }
+    $AlyaAllowedUsers = Get-MsolUser -UserPrincipalName $Context.Account.Id
 }
 else
 {
@@ -86,15 +90,46 @@ else
 
 if ($AlyaAllowDeviceRegistrationOption -eq "Selected")
 {
-    Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $AlyaAllowDeviceRegistrationOption -AllowedToWorkplaceJoin "None" -MaximumDevicesPerUser 100 -RequireMultiFactorAuth $true -Groups $AlyaAllowedGroups -Users $AlyaAllowedUsers
+    try
+    {
+        $sel = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::Selected
+        $non = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::None
+        Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $sel -AllowedToWorkplaceJoin $non -MaximumDevicesPerUser 100 -RequireMultiFactorAuth $true -Users $AlyaAllowedUsers -Groups $AlyaAllowedGroups
+    }
+    catch
+    {
+        Write-Host "We have actually an issue, configuring the DeviceRegistrationOption by script."
+        Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
+        Write-Host " - Select 'Microsoft Intune'"
+        Write-Host " - Set for MDM and MAM 'Selected'"
+        Write-Host " - Add group '$AlyaAllowDeviceRegistration'"
+        Write-Host " - Save"
+        start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility
+        pause
+    }
 }
 else
 {
-    Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $AlyaAllowDeviceRegistrationOption -AllowedToWorkplaceJoin "None" -MaximumDevicesPerUser 100 -RequireMultiFactorAuth $true
+    try
+    {
+        $all = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::All
+        $non = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::None
+        Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $all -AllowedToWorkplaceJoin $non -MaximumDevicesPerUser 100 -RequireMultiFactorAuth $true
+    }
+    catch
+    {
+        Write-Host "We have actually an issue, configuring the DeviceRegistrationOption by script."
+        Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
+        Write-Host " - Select 'Microsoft Intune'"
+        Write-Host " - Set for MDM and MAM 'All'"
+        Write-Host " - Save"
+        start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility
+        pause
+    }
 }
 
 Write-Host "Getting new DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-Get-MsolDeviceRegistrationServicePolicy
+Get-MsolDeviceRegistrationServicePolicy -ErrorAction SilentlyContinue
 
 #Stopping Transscript
 Stop-Transcript

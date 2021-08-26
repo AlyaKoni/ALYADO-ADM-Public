@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     02.03.2020 Konrad Brunner       Initial Version
+	16.08.2021 Konrad Brunner		Added provider registration
 
 #>
 
@@ -68,6 +69,20 @@ if (-Not $Context)
 {
     Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
+}
+
+# Checking resource provider registration
+Write-Host "Checking resource provider registration" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Storage" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Write-Warning "Resource provider Microsoft.Storage not registered. Registering now resource provider Microsoft.Storage"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.Storage" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Storage" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
 }
 
 # Checking ressource group

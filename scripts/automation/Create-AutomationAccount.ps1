@@ -323,12 +323,10 @@ if ($AlyaWvdTenantNameProd)
         }
         else
         {
-            $appKey = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
-            $appKeySec = ConvertTo-SecureString $appKey -AsPlainText -Force
+            $appKeySec = $AzureKeyVaultSecret.SecretValue
         }
-        Clear-Variable -Name "appKey"
-        Clear-Variable -Name "AzureKeyVaultSecret"
-
+        Clear-Variable -Name appKey -Force
+        Clear-Variable -Name AzureKeyVaultSecret -Force
 
         # Checking application
         Write-Host "Checking application $asset" -ForegroundColor $CommandInfo

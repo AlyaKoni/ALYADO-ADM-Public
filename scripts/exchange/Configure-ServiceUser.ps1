@@ -79,7 +79,7 @@ if (-Not $ExchUser)
 Set-MsolUser -UserPrincipalName $ExchUserName -PasswordNeverExpires $true
 
 Write-Host "Checking Exchange service account role membership" -ForegroundColor $CommandInfo
-$ExchangeRole = Get-MsolRole | where { $_.Name -like "Exchange*" }
+$ExchangeRole = Get-MsolRole | where { $_.Name -eq "Exchange Administrator" }
 $RoleMember = Get-MsolRoleMember -RoleObjectId $ExchangeRole.ObjectId -All | where { $_.ObjectId -eq $ExchUser.ObjectId }
 if (-Not $RoleMember)
 {

@@ -181,8 +181,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $ConditionalAccessAppPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
-    $ConditionalAccessAppPasswordSave = ConvertTo-SecureString $ConditionalAccessAppPassword -AsPlainText -Force
+    $ConditionalAccessAppPasswordSave = $AzureKeyVaultSecret.SecretValue
 }
 
 # Getting graph access token

@@ -1,22 +1,5 @@
 ﻿[{
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "AbaCliK 2",
-        "description": "AbaCliK – sammeln, organisieren und verteilen",
-        "publisher": "ABACUS Research AG",
-        "largeIcon": null,
-        "isFeatured": false,
-        "privacyInformationUrl": null,
-        "informationUrl": "https://play.google.com/store/apps/details?id=ch.abacus.android.abaclik2\u0026hl=de-CH",
-        "owner": null,
-        "developer": null,
-        "notes": null,
-        "roleScopeTagIds": [],
-        "packageId": "ch.abacus.android.abaclik2",
-        "appIdentifier": "ch.abacus.android.abaclik2",
-        "appStoreUrl": "https://play.google.com/store/apps/details?id=ch.abacus.android.abaclik2\u0026hl=de-CH",
-        "appTracks": []
-    }, {
-        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "displayName": "Adobe Acrobat Reader: PDF bearbeiten \u0026 erstellen",
         "description": "Mit Adobe Acrobat Reader Dokumente direkt von deinem Gerät ausdrucken.",
         "publisher": "Adobe",
@@ -65,23 +48,6 @@
         "packageId": "com.microsoft.ipviewer",
         "appIdentifier": "com.microsoft.ipviewer",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.ipviewer\u0026hl=de-CH",
-        "appTracks": []
-    }, {
-        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Erste Hilfe des SRK",
-        "description": "Erste Hilfe für deine Tasche",
-        "publisher": "Schweizerisches Rotes Kreuz",
-        "largeIcon": null,
-        "isFeatured": false,
-        "privacyInformationUrl": null,
-        "informationUrl": "https://play.google.com/store/apps/details?id=com.cube.gdpc.che\u0026hl=de-CH",
-        "owner": null,
-        "developer": null,
-        "notes": null,
-        "roleScopeTagIds": [],
-        "packageId": "com.cube.gdpc.che",
-        "appIdentifier": "com.cube.gdpc.che",
-        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.cube.gdpc.che\u0026hl=de-CH",
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
@@ -136,23 +102,6 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft Defender ATP (Enterprise)",
-        "description": "Schützt Microsoft 365 E5-lizenzierte Geschäftsbenutzer vor Cybersicherheitsbedrohungen",
-        "publisher": "Microsoft Corporation",
-        "largeIcon": null,
-        "isFeatured": false,
-        "privacyInformationUrl": null,
-        "informationUrl": "https://play.google.com/store/apps/details?id=com.microsoft.scmx\u0026hl=de-CH",
-        "owner": null,
-        "developer": null,
-        "notes": null,
-        "roleScopeTagIds": [],
-        "packageId": "com.microsoft.scmx",
-        "appIdentifier": "com.microsoft.scmx",
-        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.scmx\u0026hl=de-CH",
-        "appTracks": []
-    }, {
-        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "displayName": "Microsoft Edge",
         "description": "Erstklassige Leistung, bessere Privatsphäre, höhere Produktivität, mehr Wert.",
         "publisher": "Microsoft Corporation",
@@ -201,23 +150,6 @@
         "packageId": "com.microsoft.launcher",
         "appIdentifier": "com.microsoft.launcher",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.launcher\u0026hl=de-CH",
-        "appTracks": []
-    }, {
-        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft Office Lens - PDF Scanner",
-        "description": "Office Lens is ein mobile PDF-Scanner für Dokumente und Whiteboardbilder.",
-        "publisher": "Microsoft Corporation",
-        "largeIcon": null,
-        "isFeatured": false,
-        "privacyInformationUrl": null,
-        "informationUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.officelens\u0026hl=de-CH",
-        "owner": null,
-        "developer": null,
-        "notes": null,
-        "roleScopeTagIds": [],
-        "packageId": "com.microsoft.office.officelens",
-        "appIdentifier": "com.microsoft.office.officelens",
-        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.officelens\u0026hl=de-CH",
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",

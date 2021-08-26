@@ -36,7 +36,7 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-    [string]$UserUpn = "rebecca.kilcher@alyaconsulting.ch"
+    [string]$UserUpn = "konrad.brunner@alyaconsulting.ch"
 )
 
 #Reading configuration
@@ -82,10 +82,9 @@ if (-Not $AzureKeyVaultSecret)
 {
     throw "Key Vault secret not found. Please create the secret $AlyaWvdServicePrincipalAssetName"
 }
-$AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
-$AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
-Clear-Variable -Name "AlyaWvdServicePrincipalPassword"
-Clear-Variable -Name "AzureKeyVaultSecret"
+$AlyaWvdServicePrincipalPasswordSave = $AzureKeyVaultSecret.SecretValue
+Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force
+Clear-Variable -Name AzureKeyVaultSecret -Force
 
 # Login to WVD
 if (-Not $Global:RdsContext)

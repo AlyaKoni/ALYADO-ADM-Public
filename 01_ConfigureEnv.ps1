@@ -66,8 +66,8 @@ if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
 }
 
 <# POWERSHELL #>
-$ErrorActionPreference = "Stop"
-$ProgressPreference = "SilentlyContinue"
+$Global:ErrorActionPreference = "Stop"
+$Global:ProgressPreference = "SilentlyContinue"
 
 <# TLS Connections #>
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -196,7 +196,12 @@ $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmss")
 <# FUNCTIONS #>
 function Is-InternetConnected()
 {
-    return (Test-NetConnection -ComputerName www.powershellgallery.com -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet)
+    $ret = Test-NetConnection -ComputerName 8.8.8.8 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
+    if (-Not $ret)
+    {
+        $ret = Test-NetConnection -ComputerName 1.1.1.1 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
+    }
+    return $ret
 }
 
 function Reset-ConsoleWidth()
@@ -441,7 +446,7 @@ function Install-ModuleIfNotInstalled (
     [Version] $newestVersion = Get-PublishedModuleVersion $moduleName
     if (-Not $newestVersion)
     {
-        Write-Warning "This does not looks like a module from Powershell Gallery"
+        Write-Warning "Module '$moduleName' does not looks like a module from Powershell Gallery"
         return
     }
     if ($exactVersion -ne "0.0.0.0")
@@ -528,6 +533,9 @@ function Install-ModuleIfNotInstalled (
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
 	        {
 	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose -AcceptLicense
+                if ($moduleName -eq "PowerShellGet") {
+                    Write-Warning "PowerShellGet has been updated. Possibly you need to restart your PowerShell session or ISE"
+                }
 	        }
 	        else
 	        {
@@ -539,6 +547,9 @@ function Install-ModuleIfNotInstalled (
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
 	        {
 	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose
+                if ($moduleName -eq "PowerShellGet") {
+                    Write-Warning "PowerShellGet has been updated. Possibly you need to restart your PowerShell session or ISE"
+                }
 	        }
 	        else
 	        {
@@ -572,7 +583,7 @@ function Install-ModuleIfNotInstalled (
         Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking
     }
 }
-#Install-ModuleIfNotInstalled "Az"
+#Install-ModuleIfNotInstalled "PowerShellGet"
 #Install-ModuleIfNotInstalled -moduleName "Az" -exactVersion "4.6.0"
 #Get-Module -Name Az
 #Get-InstalledModule -Name Az
@@ -831,7 +842,7 @@ function Get-AdalAccessToken(
     [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
 {
 	#TODO check first if type exists
-    $module = Get-Module "AzureAdPreview"
+    $module = Get-Module "AzureAdPreview" -ListAvailable
     if (-Not $module)
     {
         throw "This function requires the AzureAdPreview module loaded"
@@ -920,6 +931,62 @@ function LoginTo-Wvd(
     if (-Not $Context)
     {
         Write-Error "Not logged in to WVD!" -ErrorAction Continue
+        Exit 1
+    }
+}
+
+function LoginTo-MSStore()
+{
+    Write-Host "Login to MSStore" -ForegroundColor $CommandInfo
+    try
+    {
+        $apps = Get-MSStoreInventory -IncludeOffline -MaxResults 1
+    }
+    catch
+    {
+        try
+        {
+            if (-Not $Global:AlyaStroreCreds)
+            {
+                $Global:AlyaStroreCreds = Get-Credential -Message "Please provide MS Store admin credentials"
+            }
+            Connect-MSStore -Credentials $Global:AlyaStroreCreds
+            $apps = Get-MSStoreInventory -IncludeOffline -MaxResults 1
+        }
+        catch
+        {
+            Write-Warning "Please grant access to the store app"
+            Grant-MSStoreClientAppAccess
+            Connect-MSStore -Credentials $Global:AlyaStroreCreds
+            $apps = Get-MSStoreInventory -IncludeOffline -MaxResults 1
+        }
+    }
+}
+
+function LoginTo-Teams()
+{
+    Write-Host "Login to Teams" -ForegroundColor $CommandInfo
+    try { $TenantDetail = Get-CsTenant -ErrorAction SilentlyContinue } catch {}
+    if ($TenantDetail -and $TenantDetail.TenantId -ne $AlyaTenantId)
+    {
+        Write-Warning "Logged in to wrong teams tenant! Logging out now"
+        Disconnect-MicrosoftTeams
+        $TenantDetail = $null
+    }
+
+    if ($TenantDetail)
+    {
+        Write-Host "Already logged in"
+    }
+    else
+    {
+        Connect-MicrosoftTeams
+    }
+
+    $TenantDetail = Get-CsTenant -ErrorAction SilentlyContinue
+    if (-Not $TenantDetail)
+    {
+        Write-Error "Not logged in to Teams!" -ErrorAction Continue
         Exit 1
     }
 }
@@ -1289,11 +1356,10 @@ function Get-MsGraphObject
         }
     }
     $Result = ""
-    $StatusCode = ""
+    $StatusCode = 200
     do {
         try {
             $Result = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "GET" -ContentType "application/json"
-            $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
             if ($StatusCode -eq 429 -or $StatusCode -eq 503) {

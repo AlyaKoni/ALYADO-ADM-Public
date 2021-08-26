@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     02.03.2020 Konrad Brunner       Initial version
+	16.08.2021 Konrad Brunner		Added provider registration
 
 #>
 
@@ -75,19 +76,46 @@ if (-Not $Context)
     Exit 1
 }
 
-# Register providers
-Write-Host "Checking resource provider" -ForegroundColor $CommandInfo
-$ResProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.RecoveryServices" -Location $AlyaLocation -ErrorAction SilentlyContinue
-if (-Not $ResProv)
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.Storage" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Storage" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
 {
-    Write-Warning "Resource provider not found. Registering the resource provider Microsoft.RecoveryServices"
-    Register-AzResourceProvider -ProviderNamespace "Microsoft.RecoveryServices"
+    Write-Warning "Resource provider Microsoft.Storage not registered. Registering now resource provider Microsoft.Storage"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.Storage" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Storage" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
 }
-$ResProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation -ErrorAction SilentlyContinue
-if (-Not $ResProv)
+
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.RecoveryServices" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.RecoveryServices" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
 {
-    Write-Warning "Resource provider not found. Registering the resource provider Microsoft.Insights"
-    Register-AzResourceProvider -ProviderNamespace "Microsoft.Insights"
+    Write-Warning "Resource provider Microsoft.RecoveryServices not registered. Registering now resource provider Microsoft.RecoveryServices"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.RecoveryServices" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.RecoveryServices" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
+}
+
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.Insights" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Write-Warning "Resource provider Microsoft.Insights not registered. Registering now resource provider Microsoft.Insights"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.Insights" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
 }
 
 # Checking ressource group

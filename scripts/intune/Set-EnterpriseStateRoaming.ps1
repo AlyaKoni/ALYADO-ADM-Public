@@ -54,9 +54,11 @@ Write-Host "=====================================================`n" -Foreground
 # Main
 #TODO
 Write-Warning "We do not have yet a scripted solution for this task!"
+Write-Warning "Attention: enterprise state roaming is not available in all licenses!"
 Write-Host "Please go to portal and enable enterprise state roaming for all users"
 Write-Host "https://portal.azure.com/#blade/Microsoft_AAD_Devices/DevicesMenuBlade/RoamingSettings/menuId/RoamingSettings"
 start https://portal.azure.com/#blade/Microsoft_AAD_Devices/DevicesMenuBlade/RoamingSettings/menuId/RoamingSettings
+pause
 
 #Stopping Transscript
 Stop-Transcript

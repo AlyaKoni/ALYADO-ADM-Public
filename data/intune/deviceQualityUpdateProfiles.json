@@ -1,0 +1,29 @@
+﻿[{
+        "Comment1": "=================================================",
+        "Comment2": "WIN10 Update Profiles",
+        "Comment3": "================================================="
+    }, {
+        "@odata.type": "#microsoft.graph.windowsQualityUpdateProfile",
+		"displayName": "Win10 QualityUpdate Configuration",
+        "description": "Configures quality updates on win10 devices",
+        "roleScopeTagIds": ["0"],
+        "releaseDateDisplayName": null,
+        "deployableContentDisplayName": null,
+        "expeditedUpdateSettings": {
+            "qualityUpdateRelease": "2021-08-10T00:00:00Z",
+            "daysUntilForcedReboot": 1
+        }
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "MAC Profiles",
+        "Comment3": "================================================="
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "ANDROID Profiles",
+        "Comment3": "================================================="
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "IOS Profiles",
+        "Comment3": "================================================="
+    }
+]

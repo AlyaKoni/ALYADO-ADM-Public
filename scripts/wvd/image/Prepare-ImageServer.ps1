@@ -190,10 +190,10 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $VMPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
-    $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
+    $VMPasswordSec = $AzureKeyVaultSecret.SecretValue
 }
-Clear-Variable -Name "VMPassword"
+Clear-Variable -Name VMPassword -Force
+Clear-Variable -Name AzureKeyVaultSecret -Force
 
 # Deleting source vm
 Write-Host "Deleting source vm '$($VmToImage)'" -ForegroundColor $CommandInfo

@@ -115,8 +115,7 @@ if (-Not $AzureKeyVaultSecret)
 {
     throw "Key Vault secret not found. Please create the secret $AlyaWvdServicePrincipalAssetName"
 }
-$AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
-$AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
+$AlyaWvdServicePrincipalPasswordSave = $AzureKeyVaultSecret.SecretValue
 Clear-Variable -Name AzureKeyVaultSecret -Force
 Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force
 

@@ -155,7 +155,9 @@
             "C:\\windows\\IMECache"
         ],
         "defenderProcessesToExclude": [
-            "C:\\Program Files\\Microsoft VS Code\\Code.exe"
+            "C:\\Program Files\\Microsoft VS Code\\Code.exe",
+            "C:\\Program Files\\Remote Desktop\\msrdcw.exe",
+            "C:\\Program Files\\Remote Desktop\\msrdc.exe"
         ],
         "lockScreenAllowTimeoutConfiguration": false,
         "lockScreenBlockActionCenterNotifications": true,
@@ -503,7 +505,9 @@
             "C:\\windows\\IMECache"
         ],
         "defenderProcessesToExclude": [
-            "C:\\Program Files\\Microsoft VS Code\\Code.exe"
+            "C:\\Program Files\\Microsoft VS Code\\Code.exe",
+            "C:\\Program Files\\Remote Desktop\\msrdcw.exe",
+            "C:\\Program Files\\Remote Desktop\\msrdc.exe"
         ],
         "defenderPotentiallyUnwantedAppAction": null,
         "defenderScanDirection": null,

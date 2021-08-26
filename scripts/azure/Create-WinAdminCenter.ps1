@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     09.08.2021 Konrad Brunner       Initial Version
+	16.08.2021 Konrad Brunner		Added provider registration
 
 #>
 
@@ -92,6 +93,20 @@ if (-Not $Context)
 {
     Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
     Exit 1
+}
+
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.Storage" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Storage" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Write-Warning "Resource provider Microsoft.Storage not registered. Registering now resource provider Microsoft.Storage"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.Storage" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Storage" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
 }
 
 # Checking ressource group
@@ -181,10 +196,10 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $VMPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
-    $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
+    $VMPasswordSec = $AzureKeyVaultSecret.SecretValue
 }
-Clear-Variable -Name "VMPassword"
+Clear-Variable -Name VMPassword -Force
+Clear-Variable -Name AzureKeyVaultSecret -Force
 
 # Checking vm nic
 Write-Host "Checking vm nic" -ForegroundColor $CommandInfo

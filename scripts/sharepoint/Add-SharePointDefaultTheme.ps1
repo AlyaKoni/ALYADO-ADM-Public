@@ -58,8 +58,7 @@ Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 LoginTo-SPO
 
 # Constants
-$ThemeName = "$($AlyaCompanyName) Default Theme"
-$ThemeDef = $AlyaSpThemeDef
+$ThemeName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Theme"
 
 # =============================================================
 # O365 stuff
@@ -75,7 +74,7 @@ try { $Theme = Get-SPOTheme -Name $ThemeName -ErrorAction SilentlyContinue } cat
 if (-Not $Theme)
 {
     Write-Warning "Theme not found. Creating now theme $ThemeName"
-    Add-SPOTheme -Identity $ThemeName -Palette $ThemeDef -Overwrite -IsInverted $false
+    Add-SPOTheme -Identity $ThemeName -Palette $AlyaSpThemeDef -Overwrite -IsInverted $false
 }
 
 #Stopping Transscript

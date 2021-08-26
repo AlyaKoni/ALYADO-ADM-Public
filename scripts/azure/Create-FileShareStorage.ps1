@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     09.08.2021 Konrad Brunner       Initial Version
+	16.08.2021 Konrad Brunner		Added provider registration
 
 #>
 

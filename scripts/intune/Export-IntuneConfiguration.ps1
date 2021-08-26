@@ -620,6 +620,26 @@ $softwareUpdatePoliciesIos = Get-MsGraphObject -AccessToken $token -Uri $uri
 $softwareUpdatePoliciesIos | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\softwareUpdatePoliciesIos.json")) -Force
 
 
+##### Starting exports FeatureUpdateProfiles
+#####
+Write-Host "Exporting FeatureUpdateProfiles" -ForegroundColor $CommandInfo
+
+#windowsFeatureUpdateProfiles
+$uri = "https://graph.microsoft.com/beta/deviceManagement/windowsFeatureUpdateProfiles"
+$windowsFeatureUpdateProfilesWin = Get-MsGraphObject -AccessToken $token -Uri $uri
+$windowsFeatureUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\windowsFeatureUpdateProfiles.json")) -Force
+
+
+##### Starting exports QualityUpdateProfiles
+#####
+Write-Host "Exporting QualityUpdateProfiles" -ForegroundColor $CommandInfo
+
+#windowsFeatureUpdateProfiles
+$uri = "https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles"
+$windowsQualityUpdateProfilesWin = Get-MsGraphObject -AccessToken $token -Uri $uri
+$windowsQualityUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\windowsQualityUpdateProfiles.json")) -Force
+
+
 ##### Starting exports TermsAndConditions
 #####
 Write-Host "Exporting TermsAndConditions" -ForegroundColor $CommandInfo

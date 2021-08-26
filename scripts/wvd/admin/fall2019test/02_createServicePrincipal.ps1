@@ -119,10 +119,10 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $AlyaWvdServicePrincipalPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
-    $AlyaWvdServicePrincipalPasswordSave = ConvertTo-SecureString $AlyaWvdServicePrincipalPassword -AsPlainText -Force
+    $AlyaWvdServicePrincipalPasswordSave = $AzureKeyVaultSecret.SecretValue
 }
-Clear-Variable -Name "AlyaWvdServicePrincipalPassword"
+Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force
+Clear-Variable -Name AzureKeyVaultSecret -Force
 
 # Checking rds role assignment
 Write-Host "Checking rds role assignment" -ForegroundColor $CommandInfo

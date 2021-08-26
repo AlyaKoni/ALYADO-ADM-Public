@@ -1,32 +1,5 @@
 ﻿[{
         "@odata.type": "#microsoft.graph.iosStoreApp",
-        "displayName": "iOS AbaCliK 2",
-        "description": "AbaCliK 2 is now available in a completely revised second version.\nSpecial attention was paid to the simplified entry of data.\n \nAbaCliK includes the following functions:\n \nENTER EXPENSES EFFICIENTLY:\nPhotograph your documents, add information and synchronize the expenses with the ERP software. Maintain a constant overview of your expenditures.\n \nSIMPLE WORK TIME RECORDING:\nAdministrative tasks such as time recording must be efficient. If desired, AbaCliK records when an employee enters or exits the workplace. Manual entry is also supported.\n \nQUICKER INVOICING THANKS TO MOBILE SERVICE ENTRY:\nEnter services such as working hours or travel expenses when they are incurred. Assign these directly to customer or projects in the Abacus Business Software anywhere, anytime.\n \nEmployee Self Service: Personnel management of the future:\nEmployees can request and report absences such as holiday and sick days and independently modify and synchronize personal information. Send payroll settlements and wage statements to employees from anywhere using AbaCliK.",
-        "publisher": "ABACUS Research",
-        "largeIcon": null,
-        "isFeatured": false,
-        "privacyInformationUrl": "",
-        "informationUrl": null,
-        "owner": "",
-        "developer": "",
-        "notes": "",
-        "roleScopeTagIds": [],
-        "bundleId": "ch.abacus.abaclik2",
-        "appStoreUrl": "https://apps.apple.com/us/app/abaclik-2/id1205951267?uo=4",
-        "applicableDeviceType": {
-            "iPad": true,
-            "iPhoneAndIPod": true
-        },
-        "minimumSupportedOperatingSystem": {
-            "v8_0": true,
-            "v9_0": false,
-            "v10_0": false,
-            "v11_0": false,
-            "v12_0": false,
-            "v13_0": false
-        }
-    }, {
-        "@odata.type": "#microsoft.graph.iosStoreApp",
         "displayName": "iOS Adobe Acrobat Reader for PDF",
         "description": "The free Adobe Acrobat Reader PDF app is trusted by millions of people around the world.\n \nAdobe Acrobat Reader is the free global standard for reliably viewing, signing, and commenting on PDF documents.\n \nVIEW PDFs\n• Quickly open and view PDF documents.\n• Search, scroll, and zoom in and out.\n• Choose Single Page or Continuous scroll mode.\n \nANNOTATE PDFs\n• Comment on PDFs using sticky notes and drawing tools.\n• Highlight and mark up text with annotation tools.\n• View and respond to annotations in the comments list.\n• Use Apple Pencil with iPad Pro for exceptional commenting precision.\n \nWORK WITH OTHERS AND SHARE PDFs\n• Quickly access documents shared for viewing, review, or signature.\n• Collaborate with others by adding your comments to PDFs sent to you for review. \n• Receive activity notifications for files you’ve shared for viewing and review.\n• Track pending actions on documents shared with you.\n• Easily share PDFs with others by creating links you can send by email.\n \nWORK WITH SCANNED DOCUMENTS\n• Easily access scanned PDFs that you’ve captured using the free Adobe Scan app.\n• Open your scans in Acrobat Reader to fill in, sign, review, and share.\n \nFILL AND SIGN FORMS\n• Quickly fill out PDF forms by typing text into fields.\n• Use your finger or Apple Pencil to e-sign any PDF document.\n \nSTORE, ACCESS, AND PRINT FILES\n• Sign in to your free Adobe Document Cloud account to store and access files across devices.\n• Star files to keep important documents at your fingertips.\n• Connect to your Dropbox account and access other storage providers including iCloud Drive, Box, Microsoft OneDrive, and Google Drive.\n• Print documents from your device.\n \nDARK MODE\nSwitch to dark mode in iOS 13 and change the background color of the app window. This is not only easy on the eye in low light, but may also prolong the battery life of your device.\n\nCONNECT TO GOOGLE DRIVE\n• Access PDFs and other files stored on your Google Drive with ease.\n• Create, view, edit, combine, compress, export, share, and star Google Drive files directly in Acrobat Reader.\n \nIN-APP PURCHASE\nSubscribe for even more PDF power. Subscriptions work across mobile and web.\n• Organize and edit PDFs.\n• Create PDF files from documents or images.\n• Export PDFs to Microsoft Word, Excel, or PowerPoint.\n• Compress PDFs to reduce file size.\n• Combine files into one PDF.\n\nIN-APP PURCHASE DETAILS\n• Payment will be charged to your iTunes account at confirmation of purchase.\n• Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current period.\n \nAdobe Acrobat Reader is a Microsoft Intune supported partner app and accommodates multiple identities. \n \nTerms \u0026 Conditions: Your use of this application is governed by the Adobe General Terms of Use (https://adobe.com/go/terms_linkfree_en and the Adobe Privacy Policy (http://www.adobe.com/go/privacy_policy_linkfree_en).\n\nDo Not Sell My Information: https://www.adobe.com/privacy/ca-rights-linkfree.html",
         "publisher": "Adobe Inc.",
@@ -94,33 +67,6 @@
         "roleScopeTagIds": [],
         "bundleId": "com.microsoft.rms-sharing",
         "appStoreUrl": "https://apps.apple.com/us/app/azure-information-protection/id689516635?uo=4",
-        "applicableDeviceType": {
-            "iPad": true,
-            "iPhoneAndIPod": true
-        },
-        "minimumSupportedOperatingSystem": {
-            "v8_0": true,
-            "v9_0": false,
-            "v10_0": false,
-            "v11_0": false,
-            "v12_0": false,
-            "v13_0": false
-        }
-    }, {
-        "@odata.type": "#microsoft.graph.iosStoreApp",
-        "displayName": "iOS First Aid by Swiss Red Cross",
-        "description": "Easy-to-use, free and yet incredibly valuable. The first-aid app. Have lifesaving advice and information about emergencies always with you when you need it. Clear, interactive instructions – step by step. It has never been easier to learn and master first aid.\n\nDeveloped by the rescue organizations of the Swiss Red Cross as part of a worldwide project of the International Federation of Red Cross and Red Crescent Societies (IFRC) and the Global Disaster Preparedness Center, the first-aid app contains all the current first-aid guidelines specified by the IFRC.\n\nThe rescue organizations of the Swiss Red Cross :\n\nRedog, Rega, Swiss Lifesaving Association, Swiss Army Medical Association and the Swiss Federation of Samaritans.\n\nContinued use of GPS running in the background can dramatically decrease battery life",
-        "publisher": "Schweizerisches Rotes Kreuz",
-        "largeIcon": null,
-        "isFeatured": false,
-        "privacyInformationUrl": "",
-        "informationUrl": null,
-        "owner": "",
-        "developer": "",
-        "notes": "",
-        "roleScopeTagIds": [],
-        "bundleId": "org.redcross.gdpcswitzerland",
-        "appStoreUrl": "https://apps.apple.com/us/app/first-aid-by-swiss-red-cross/id903028871?uo=4",
         "applicableDeviceType": {
             "iPad": true,
             "iPhoneAndIPod": true
@@ -256,33 +202,6 @@
         "roleScopeTagIds": [],
         "bundleId": "com.microsoft.Office.Excel",
         "appStoreUrl": "https://apps.apple.com/us/app/microsoft-excel/id586683407?uo=4",
-        "applicableDeviceType": {
-            "iPad": true,
-            "iPhoneAndIPod": true
-        },
-        "minimumSupportedOperatingSystem": {
-            "v8_0": true,
-            "v9_0": false,
-            "v10_0": false,
-            "v11_0": false,
-            "v12_0": false,
-            "v13_0": false
-        }
-    }, {
-        "@odata.type": "#microsoft.graph.iosStoreApp",
-        "displayName": "iOS Microsoft Office Lens|PDF Scan",
-        "description": "Office Lens trims, enhances and makes pictures of whiteboards and documents readable. Office Lens can convert images to editable Word and PowerPoint files too. \n\nOffice Lens is like having a scanner in your pocket. Like magic, it will digitize notes on whiteboards or blackboards. Always find important documents or business cards. Sketch your ideas and snap a picture for later. Don\u0027t lose receipts or stray sticky notes again! \n \nScenarios:\n- Capture and crop a picture of a whiteboard or blackboard and share your meeting notes with co-workers.\n- Make digital copies of your printed documents, business cards or posters and trim them precisely.\n- Printed and handwritten text will be automatically recognized (using OCR), so you can search for words in images and then copy and edit them. \n \nFeatures:\n- With Whiteboard mode, Office Lens trims and cleans up glare and shadows.\n- With Document mode, Office Lens trims and colors images perfectly.\n- Pictures can be saved to OneNote, OneDrive or other cloud storage.\n- Business Card mode can extract contact information and save it into your address book and OneNote. This feature works best with the following business cards: English, German, Spanish and Simplified Chinese. Support for more languages is coming soon.\n- Choose to convert images to Word (.docx), PowerPoint (.pptx) or PDF (.pdf) files that are automatically saved to OneDrive.",
-        "publisher": "Microsoft Corporation",
-        "largeIcon": null,
-        "isFeatured": true,
-        "privacyInformationUrl": "",
-        "informationUrl": null,
-        "owner": "",
-        "developer": "",
-        "notes": "",
-        "roleScopeTagIds": [],
-        "bundleId": "com.microsoft.officelens",
-        "appStoreUrl": "https://apps.apple.com/us/app/microsoft-office-lens-pdf-scan/id975925059?uo=4",
         "applicableDeviceType": {
             "iPad": true,
             "iPhoneAndIPod": true
