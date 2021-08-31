@@ -107,9 +107,9 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
 }
 
 # Loading local custom configuration
-Write-Host "Loading configuration" -ForegroundColor Cyan
 if ((Test-Path $AlyaLocal\ConfigureEnv.ps1))
 {
+    Write-Host "Loading local configuration" -ForegroundColor Cyan
     . $AlyaLocal\ConfigureEnv.ps1
 }
 if ($AlyaModulePath -ne $AlyaDefaultModulePath)

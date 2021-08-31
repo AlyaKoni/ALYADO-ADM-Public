@@ -79,8 +79,8 @@ foreach($logicApp in $LogicApps)
 {
     Write-Host "Exporting app $($logicApp.Id)"
     $logicAppName = $logicApp.Id.Substring($logicApp.Id.IndexOf("resourceGroups")+15, $logicApp.Id.IndexOf("providers")-$logicApp.Id.IndexOf("resourceGroups")-16) + "-" + $logicApp.Name
-    $logicApp.Definition.ToString() | Set-Content -Path "$LogicAppRoot\$($logicAppName)_Definition.json" -Force -Encoding UTF8
-    $logicApp.Parameters.'$connections'.Value.ToString() | Set-Content -Path "$LogicAppRoot\$($logicAppName)_Connections.json" -Force -Encoding UTF8
+    if ($logicApp.Definition) { $logicApp.Definition.ToString() | Set-Content -Path "$LogicAppRoot\$($logicAppName)_Definition.json" -Force -Encoding UTF8 }
+    if ($logicApp.Parameters -and $logicApp.Parameters.'$connections' -and $logicApp.Parameters.'$connections'.Value) { $logicApp.Parameters.'$connections'.Value.ToString() | Set-Content -Path "$LogicAppRoot\$($logicAppName)_Connections.json" -Force -Encoding UTF8 }
 }
 
 #Stopping Transscript

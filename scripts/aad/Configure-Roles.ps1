@@ -35,7 +35,8 @@
 
 [CmdletBinding()]
 Param(
-    [string]$inputFile = $null #Defaults to "$AlyaData\aad\Rollen.xlsx"
+    [string]$inputFile = $null, #Defaults to "$AlyaData\aad\Rollen.xlsx"
+    [bool]$configurePIM = $true
 )
 
 #Reading configuration
@@ -52,14 +53,15 @@ if (-Not $inputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Uninstall-ModuleIfInstalled "AzureAD"
 Install-ModuleIfNotInstalled "ImportExcel"
 Install-ModuleIfNotInstalled "Az"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "AzureADPreview"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+#Connect-AzureAD #TODO: Only works this way. Permission by token does not work
 
 # =============================================================
 # Azure stuff
@@ -80,12 +82,12 @@ $roleDefs = Import-Excel $inputFile -ErrorAction Stop
 # Configured roles
 Write-Host "Configured roles:" -ForegroundColor $CommandInfo
 $lastRole = $null
-$ownRoles = @{}
-$builtinRoles = @{}
-$mode = 0
+$allRoles = @{}
+$eligibleRoles = @{}
+$permanentRoles = @{}
 foreach ($roleDef in $roleDefs)
 {
-    if ([string]::IsNullOrEmpty($roleDef.Role) -and [string]::IsNullOrEmpty($roleDef.UserOrOwnRole))
+    if ([string]::IsNullOrEmpty($roleDef.Role) -and [string]::IsNullOrEmpty($roleDef.Permanent) -and [string]::IsNullOrEmpty($roleDef.Eligible))
     {
         continue
     }
@@ -97,126 +99,216 @@ foreach ($roleDef in $roleDefs)
     }
     $lastRole = $roleName
 
-    if ($roleName -eq "Own Roles")
+    if (-Not [string]::IsNullOrEmpty($roleName) -and $roleName -ne "Role")
     {
-        $mode = 1
-        continue
-    }
-    if ($roleName -eq "Builtin Roles")
-    {
-        $mode = 2
-        continue
+        $allRoles.$roleName = $false
     }
 
-    if ($mode -eq 1)
+    if (-Not [string]::IsNullOrEmpty($roleDef.Eligible))
     {
-        if ($ownRoles.ContainsKey($roleName))
+        if ($roleDef.Eligible -like "##*") {
+            continue
+        }
+        if ($eligibleRoles.ContainsKey($roleName))
         {
-            $ownRoles.$roleName += $roleDef.UserOrOwnRole
+            $principal = Get-AzureADUser -objectId $roleDef.Eligible
+            $eligibleRoles.$roleName += $principal
         }
         else
         {
-            $ownRoles.$roleName = @($roleDef.UserOrOwnRole)
+            $principal = Get-AzureADUser -objectId $roleDef.Eligible
+            $eligibleRoles.$roleName = @($principal)
         }
     }
-    else
+
+    if (-Not [string]::IsNullOrEmpty($roleDef.Permanent))
     {
-        if ($builtinRoles.ContainsKey($roleName))
+        if ($roleDef.Permanent -like "##*") {
+            $allRoles.$roleName = $true
+            continue
+        }
+        if ($permanentRoles.ContainsKey($roleName))
         {
-            if ($ownRoles.ContainsKey($roleDef.UserOrOwnRole))
-            {
-                foreach($user in $ownRoles[$roleDef.UserOrOwnRole])
-                {
-                    if (-Not $builtinRoles.$roleName -contains $user)
-                    {
-                        $builtinRoles.$roleName += $user
-                    }
-                }
-            }
-            else
-            {
-                $builtinRoles.$roleName += $roleDef.UserOrOwnRole
-            }
+            $principal = Get-AzureADUser -objectId $roleDef.Permanent
+            $permanentRoles.$roleName += $principal
         }
         else
         {
-            if ($ownRoles.ContainsKey($roleDef.UserOrOwnRole))
-            {
-                $builtinRoles.$roleName = $ownRoles[$roleDef.UserOrOwnRole]
-            }
-            else
-            {
-                $builtinRoles.$roleName = @($roleDef.UserOrOwnRole)
-            }
+            $principal = Get-AzureADUser -objectId $roleDef.Permanent
+            $permanentRoles.$roleName = @($principal)
         }
     }
 }
 
-Write-Host "Own roles:"
-foreach($key in $ownRoles.Keys) { Write-Host "  $key" }
-Write-Host "BuiltIn roles:"
-foreach($key in $builtinRoles.Keys) { Write-Host "  $key" }
+Write-Host "Configured roles:"
+foreach($key in $allRoles.Keys) { Write-Host "  $key" }
 
 # Checking built in roles
 Write-Host "Checking built in roles:" -ForegroundColor $CommandInfo
-$allBuiltinRoles = Get-MsolRole
+$allBuiltInRoles = Get-AzureADMSRoleDefinition
 $missFound = $false
-foreach($role in $allBuiltinRoles)
+foreach($role in $allBuiltInRoles)
 {
-    if (-Not $builtinRoles.ContainsKey($role.Name))
+    if (-Not $allRoles.Keys.Contains($role.DisplayName))
     {
-        Write-Warning "The role '$($role.Name)' is not present in the excel sheet. Please update it!"
+        Write-Warning "The role '$($role.DisplayName)' is not present in the excel sheet. Please update it!"
         $missFound = $true
     }
 }
 if (-Not $missFound)
 {
-    Write-Host "No missing role found"
+    Write-Host "No missing role found in the excel sheet"
+}
+$missFound = $false
+foreach($role in $allRoles.Keys)
+{
+    if (-Not ($allBuiltInRoles | where { $_.DisplayName -eq $role}))
+    {
+        Write-Warning "The role '$($role)' was not found as built in role. Please check it!"
+        $missFound = $true
+    }
+}
+if (-Not $missFound)
+{
+    Write-Host "No wrong role found in the excel sheet"
 }
 
-# Configuring roles
-Write-Host "Configuring roles:" -ForegroundColor $CommandInfo
-foreach($roleName in ($builtinRoles.Keys | Sort-Object))
+foreach($roleName in $allRoles.Keys)
 {
-    Write-Host "  role '$($roleName)'"
-    $newUsers = $builtinRoles[$roleName]
-
-    $role = Get-MsolRole -RoleName $roleName
-    $actMembs = Get-MsolRoleMember -RoleObjectId $role.ObjectId
-
-    #Removing inactivated members
-    $actMembs | foreach {
-        $actMemb = $_
-        if ($actMemb.EmailAddress -And ((-Not $newUsers) -or ($newUsers -notcontains $actMemb.EmailAddress)))
-        {
-            Write-Host "    removing user $($actMemb.EmailAddress)" -ForegroundColor $CommandError
-            Remove-MsolRoleMember -RoleObjectId $role.ObjectId -RoleMemberObjectId $actMemb.ObjectId
-        }
+    Write-Host "Role '$($roleName)'" -ForegroundColor $CommandInfo
+    if ($allRoles[$roleName])
+    {
+        #Don't touch
     }
+    else
+    {
+        # Configuring permanent roles
+        Write-Host "Configuring permanent role"
+        $newUsers = $permanentRoles[$roleName]
 
-    #Adding new members
-    $newUsers | foreach {
-        $newMemb = $_
-        if ($newMemb -like "##*") {
-            continue
-        }
-        if ($newMemb)
-        {
-            $found = $false
-            $actMembs | foreach {
-                $actMemb = $_
-                if ($newMemb -eq $actMemb.EmailAddress -or $newMemb -eq $actMemb.ObjectId)
+        $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq '$roleName'"
+        $actMembs = Get-AzureADMSRoleAssignment -Filter "RoleDefinitionId eq '$($role.Id)'"
+
+        #Removing inactivated members
+        $actMembs | foreach {
+            $actMemb = $_
+            if ($actMemb)
+            {
+                if ((-Not $newUsers) -or ($newUsers.ObjectId -notcontains $actMemb.PrincipalId))
                 {
-                    $found = $true
-                    #break
+                    $principal = Get-AzureADUser -objectId $actMemb.PrincipalId
+                    Write-Host "    Warning: this script does not check actual PIM assignments!" #TODO
+                    Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
+
+                    if ((Get-AzContext).Account.Id -eq $principal.UserPrincipalName)
+                    {
+                        Write-Host "    you can't remove yourself!!!" -ForegroundColor $CommandError
+                    }
+                    else
+                    {
+                        $title    = 'Role Assigments'
+                        $question = 'Are you sure you want to remove the assignment?'
+                        $choices  = '&Yes', '&No'
+                        $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+                        if ($decision -eq 0) {
+                            Remove-AzureADMSRoleAssignment -Id $actMemb.Id
+                        }
+                    }
                 }
             }
-            if (-Not $found)
+        }
+
+        #Adding new members
+        $newUsers | foreach {
+            $newMemb = $_
+            if ($newMemb)
             {
-                Write-Host "    adding user $($newMemb)" -ForegroundColor $CommandWarning
-                Add-MsolRoleMember -RoleObjectId $role.ObjectId -RoleMemberEmailAddress $newMemb
+                $found = $false
+                $actMembs | foreach {
+                    $actMemb = $_
+                    if ($newMemb.ObjectId -eq $actMemb.PrincipalId)
+                    {
+                        $found = $true
+                    }
+                }
+                if (-Not $found)
+                {
+                    Write-Host "    adding user $($newMemb.UserPrincipalName)" -ForegroundColor $CommandWarning
+                    New-AzureADMSRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $newMemb.ObjectId -DirectoryScopeId '/'
+                }
             }
         }
+
+        if ($configurePIM)
+        {
+
+            $newUsers = $eligibleRoles[$roleName]
+
+            # Configuring eligible role settings
+            Write-Host "Configuring eligible role settings"
+            $role = Get-AzureADMSPrivilegedRoleDefinition -ProviderId "aadRoles" -ResourceId $AlyaTenantId -Filter "DisplayName eq '$($roleName)'"
+            #$settings = Get-AzureADMSPrivilegedRoleSetting -ProviderId "aadRoles" -Filter "ResourceId eq '$AlyaTenantId' and RoleDefinitionId eq '$($role.Id)'"
+            Write-Host "  Please update notification settings for role '$($roleName)'"
+            Write-Host "    Additional recipients '$($AlyaSecurityEmail)'"
+            Write-Host "    MS does not allow this per PowerShell :-("
+
+            # Configuring eligible roles
+            Write-Host "Configuring eligible role"
+            $actMembs = Get-AzureADMSPrivilegedRoleAssignment -ProviderId "aadRoles" -ResourceId $AlyaTenantId -Filter "RoleDefinitionId eq '$($role.Id)' and AssignmentState eq 'Eligible'"
+
+            #Removing inactivated members
+            $actMembs | foreach {
+                $actMemb = $_
+                if ($actMemb)
+                {
+                    if ((-Not $newUsers) -or ($newUsers.ObjectId -notcontains $actMemb.SubjectId))
+                    {
+                        $principal = Get-AzureADUser -objectId $actMemb.SubjectId
+                        Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
+                        $title    = 'Role Assigments'
+                        $question = 'Are you sure you want to remove the assignment?'
+                        $choices  = '&Yes', '&No'
+                        $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+                        if ($decision -eq 0) {
+                            Write-Host "  Please remove assigment by hand"
+                            Write-Host "    MS does not allow this per PowerShell :-("
+                            #$req = Get-AzureADMSPrivilegedRoleAssignmentRequest -ProviderId "aadRoles" -Filter "ResourceId eq '$AlyaTenantId' and RoleDefinitionId eq '$($role.Id)' and AssignmentState eq 'Eligible' and SubjectId eq '$($actMemb.SubjectId)'"
+                            #Close-AzureADMSPrivilegedRoleAssignmentRequest -ProviderId "aadRoles" -Id $req.Id
+                            #Set-AzureADMSPrivilegedRoleAssignmentRequest -ProviderId "AzureResources" -Id $req.ResourceId -Reason "{'RequestorReason':'Revoked by Alya role script','AdminReason':'Revoked by Alya role script'}" -Decision "AdminDenied"
+                        }
+                    }
+                }
+            }
+
+            #Adding new members
+            $newUsers | foreach {
+                $newMemb = $_
+                if ($newMemb)
+                {
+                    $found = $false
+                    $actMembs | foreach {
+                        $actMemb = $_
+                        if ($newMemb.ObjectId -eq $actMemb.SubjectId)
+                        {
+                            $found = $true
+                        }
+                    }
+                    if (-Not $found)
+                    {
+                        Write-Host "    adding user $($newMemb.UserPrincipalName)" -ForegroundColor $CommandWarning
+                        $schedule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedSchedule
+                        $schedule.Type = "Once"
+                        $schedule.StartDateTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                        $schedule.endDateTime = $null
+                        Open-AzureADMSPrivilegedRoleAssignmentRequest -ProviderId "aadRoles" -ResourceId $AlyaTenantId `
+                            -RoleDefinitionId $role.Id -SubjectId $newMemb.ObjectId -Type "adminAdd" -AssignmentState "Eligible" `
+                            -Schedule $schedule -Reason "Assigned by Alya role script"
+                    }
+                }
+            }
+
+        }
+
     }
 }
 

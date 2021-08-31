@@ -1,5 +1,22 @@
-$ftpUrl = "ftp://ftp.adobe.com/pub/adobe/reader/win/AcrobatDC"
-Write-Host "    Downloading files from $ftpUrl"
+#
+# Downloading Setup Exe
+#
+
+Write-Host "`n`n"
+Write-Host "Adobe Reader download"
+Write-Host "====================="
+Write-Host "Please provide the Reader download URLs provided with your adobe distribution agreement"
+$setupDownloadUrl = Read-Host -Prompt 'setupDownloadUrl'
+$updateDownloadUrl = Read-Host -Prompt 'updateDownloadUrl'
+Write-Host "`n`n"
+Write-Host "We launch now a browser with the Adobe Reader setup download page."
+Write-Host " - Select 'Windows 10'"
+Write-Host " - Select 'All LAnguages (MUI)'"
+Write-Host " - Select 'Latest release'"
+Write-Host " - Choose 'Download now / Jetzt herunterladen'"
+Write-Host "`n"
+pause
+Write-Host "`n"
 
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
@@ -7,122 +24,134 @@ if (-Not (Test-Path $contentRoot))
 {
     $tmp = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-
-$FTPRequest = [System.Net.FtpWebRequest]::Create($ftpUrl)
-$FTPRequest.Method = [System.Net.WebRequestMethods+FTP]::ListDirectoryDetails
-$FTPRequest.UseBinary = $False
-$FTPRequest.KeepAlive = $False
-$FTPResponse = $FTPRequest.GetResponse()
-$ResponseStream = $FTPResponse.GetResponseStream()
-$StreamReader = New-Object System.IO.Streamreader $ResponseStream
-$DirListing = (($StreamReader.ReadToEnd()) -split [Environment]::NewLine)
-$StreamReader.Close()
-#$DirListing = $DirListing[2..($DirListing.Length-2)]
-$FTPResponse.Close()
-$parentDirs = @()
-foreach ($CurLine in $DirListing)
+$profile = [Environment]::GetFolderPath("UserProfile")
+$downloads = $profile+"\downloads"
+$lastfilename = $null
+$file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+if ($file)
 {
-    $LineTok = ($CurLine -split '\ +')
-    $CurDir = $LineTok[8..($LineTok.Length-1)]
-    $DirBool = $LineTok[0].StartsWith("d")
-    If ($DirBool)
-    {
-        $parentDirs += $CurDir
-    }
+    $lastfilename = $file.Name
 }
-$parentDirs = $parentDirs | Sort-Object -Descending
-$lastExeDir = $null
-$lastExeFile = $null
-$lastPatchDir = $null
-$lastPatchFile = $null
-foreach ($CurDir in $parentDirs)
+$filename = $null
+$attempts = 10
+while ($attempts -ge 0)
 {
-    Write-Host "    Searching dir $CurDir"
-    $Global:attempts = 10
-    while ($Global:attempts -ge 0)
-    {
-        try {
-            do {
-                try {
-                    $FTPRequest = [System.Net.FtpWebRequest]::Create("$ftpUrl/$CurDir")
-                    $FTPRequest.Method = [System.Net.WebRequestMethods+FTP]::ListDirectoryDetails
-                    $FTPRequest.UseBinary = $False
-                    $FTPRequest.KeepAlive = $False
-                    $FTPResponse = $FTPRequest.GetResponse()
-                    $ResponseStream = $FTPResponse.GetResponseStream()
-                    $StreamReader = New-Object System.IO.Streamreader $ResponseStream
-                    $SubListing = (($StreamReader.ReadToEnd()) -split [Environment]::NewLine)
-                    $StreamReader.Close()
-                    $FTPResponse.Close()
-                } catch {
-                    $StatusCode = $_.Exception.Response.StatusCode.value__
-                    if ($StatusCode -eq 429) {
-                        Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                        Start-Sleep -Seconds 45
-                    }
-                    else {
-                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 3) -ForegroundColor $CommandError } catch {}
-						Write-Host ($_.Exception) -ForegroundColor $CommandError
-                        throw
-                    }
-                }
-            } while ($StatusCode -eq 429)
-            $Global:attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-            Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
-            $Global:attempts--
-            if ($Global:attempts -lt 0) { throw }
+    Write-Host "Downloading setup file from $setupDownloadUrl"
+    Write-Warning "Please don't start any other download!"
+    try {
+        start $setupDownloadUrl
+        do
+        {
             Start-Sleep -Seconds 10
-        }
+            $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+            if ($file)
+            {
+                $filename = $file.Name
+                if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                if ($filename.Contains("partial")) { $filename = $lastfilename }
+            }
+        } while ($lastfilename -eq $filename)
+        $attempts = -1
+    } catch {
+        Write-Host "Catched exception $($_.Exception.Message)"
+        Write-Host "Retrying $attempts times"
+        $attempts--
+        if ($attempts -lt 0) { throw }
+        Start-Sleep -Seconds 10
     }
-    foreach ($CurLine in $SubListing)
+}
+Start-Sleep -Seconds 3
+if ($filename)
+{
+    $setupTxtPath = (Join-Path $contentRoot "SetupName.txt")
+    $filename | Set-Content -Path $setupTxtPath -Encoding UTF8 -Force
+    $sourcePath = $downloads+"\"+$filename
+    $tmpPath = (Join-Path $contentRoot "Tmp")
+    & "$sourcePath" -sfx_o"$tmpPath" -sfx_ne
+    do
     {
-        $LineTok = ($CurLine -split '\ +')
-        $CurFile = $LineTok[$LineTok.Length-1]
-        $DirBool = $LineTok[0].StartsWith("d")
-        if (-Not $lastExeDir -and $CurFile.Contains("MUI.exe"))
+        Start-Sleep -Seconds 5
+        $process = Get-Process -Name $filename.Replace(".exe","") -ErrorAction SilentlyContinue
+    } while ($process)
+    Move-Item -Path (Join-Path $tmpPath "AcroRead.msi") -Destination $contentRoot -Force
+    Move-Item -Path (Join-Path $tmpPath "Data1.cab") -Destination $contentRoot -Force
+    Move-Item -Path (Join-Path $tmpPath "*.msp") -Destination $contentRoot -Force
+    Remove-Item -Path $tmpPath -Recurse -Force
+    Remove-Item -Path $sourcePath -Force
+}
+else
+{
+    throw "We were not able to download the reader setup"
+}
+
+#
+# Downloading Update
+#
+
+Write-Host "`n`n"
+Write-Host "At the time we wrote this script, there was no update available"
+Write-Host "Please visit $updateDownloadUrl"
+Write-Host "Call us to update this script, if an update is now available"
+Write-Host "`n`n"
+
+exit
+
+Write-Host "`n`n"
+Write-Host "We launch now a browser with the Adobe Reader update download page."
+Write-Host " - TODO"
+Write-Host " - TODO"
+Write-Host " - TODO"
+Write-Host " - TODO"
+Write-Host "`n"
+pause
+Write-Host "`n"
+$lastfilename = $null
+$file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+if ($file)
+{
+    $lastfilename = $file.Name
+}
+$filename = $null
+$attempts = 10
+while ($attempts -ge 0)
+{
+    Write-Host "Downloading setup file from $updateDownloadUrl"
+    Write-Warning "Please don't start any other download!"
+    try {
+        start $updateDownloadUrl
+        do
         {
-            Write-Host "    Found exe in $CurDir/$CurFile"
-            $lastExeDir = $CurDir
-            $lastExeFile = $CurFile
-            if ($lastPatchDir) { break }
-        }
-        if (-Not $lastPatchDir -and $CurFile.Contains("MUI.msp"))
-        {
-            Write-Host "    Found patch in $CurDir/$CurFile"
-            $lastPatchDir = $CurDir
-            $lastPatchFile = $CurFile
-            if ($lastExeDir) { break }
-        }
+            Start-Sleep -Seconds 10
+            $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+            if ($file)
+            {
+                $filename = $file.Name
+                if ($filename.Contains("crdownload")) { $filename = $lastfilename }
+                if ($filename.Contains("partial")) { $filename = $lastfilename }
+            }
+        } while ($lastfilename -eq $filename)
+        $attempts = -1
+    } catch {
+        Write-Host "Catched exception $($_.Exception.Message)"
+        Write-Host "Retrying $attempts times"
+        $attempts--
+        if ($attempts -lt 0) { throw }
+        Start-Sleep -Seconds 10
     }
 }
-
-$webclient = New-Object System.Net.WebClient
-if (-Not (Test-Path (Join-Path $contentRoot $lastExeFile)))
+Start-Sleep -Seconds 3
+if ($filename)
 {
-    Write-Host "    Downloading $ftpUrl/$lastExeDir/$lastExeFile"
-    $destPath = (Join-Path $contentRoot $lastExeFile)
-    $uri = New-Object System.Uri("$ftpUrl/$lastExeDir/$lastExeFile")
-    $webclient.DownloadFile($uri, $destPath)
+    $sourcePath = $downloads+"\"+$filename
+    $patch = Get-ChildItem -Path $contentRoot -Filter "*.msp"
+    if ($patch)
+    {
+        $patch | Remove-Item -Force
+    }
+    Move-Item -Path $sourcePath -Destination $contentRoot -Force
 }
-if (-Not (Test-Path (Join-Path $contentRoot $lastPatchFile)))
+else
 {
-    Write-Host "    Downloading $ftpUrl/$lastPatchDir/$lastPatchFile"
-    $destPath = (Join-Path $contentRoot $lastPatchFile)
-    $uri = New-Object System.Uri("$ftpUrl/$lastPatchDir/$lastPatchFile")
-    $webclient.DownloadFile($uri, $destPath)
+    throw "We were not able to download the reader update"
 }
 
-$tmpPath = (Join-Path $contentRoot "Tmp")
-& "$(Join-Path $contentRoot $lastExeFile)" -sfx_o"$tmpPath" -sfx_ne
-do
-{
-    Start-Sleep -Seconds 5
-    $process = Get-Process -Name $lastExeFile.Replace(".exe","") -ErrorAction SilentlyContinue
-
-} while ($process)
-Move-Item -Path (Join-Path $tmpPath "AcroRead.msi") -Destination $contentRoot -Force
-Move-Item -Path (Join-Path $tmpPath "Data1.cab") -Destination $contentRoot -Force
-Remove-Item -Path $tmpPath -Recurse -Force
-Remove-Item -Path (Join-Path $contentRoot $lastExeFile) -Force
