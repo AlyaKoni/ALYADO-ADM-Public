@@ -45,7 +45,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\18_setAppGro
 
 # Constants
 $BasePath = "C:\$($AlyaCompanyName)\WvdIcons"
-$HostPoolName = "$($AlyaNamingPrefixProd)hpol002"
+$HostPoolName = "$($AlyaNamingPrefix)hpol002"
 $availableIcons = @("Word","Excel","PowerPoint","Outlook","OneDrive","Access","Visio","Explorer","OneNote2016","SkypeForBusiness","Project","GoogleChrome","CitrixWorkspace","IrfanView64453","Pdf24","Taskmanager","SapLogon","FinancialConsolidation","FileZilla","BarracudaMessageArchiverSearch","AcrobatReader2017","AutodeskDesignReview","DwgTrueView2020English","Visimove","DimMan","DrTaxOffice","IDLCockpit","Immopac","Quorum","Teams","IMSWare","AbacusAbaStart","AdobeCreativeCloud","AgentRansack","Firefox","TinyPicExe","WinRar","Notepad","RemoteDesktopConnection","MicrosoftEdgeBeta","AcrobatReaderDC","AdobeAcrobatDC")
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
@@ -91,8 +91,8 @@ if (-Not $AzureKeyVaultSecret)
     throw "Key Vault secret not found. Please create the secret $AlyaWvdServicePrincipalAssetName"
 }
 $AlyaWvdServicePrincipalPasswordSave = $AzureKeyVaultSecret.SecretValue
-Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force
-Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force -ErrorAction SilentlyContinue
+Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Login to WVD
 if (-Not $Global:RdsContext)

@@ -192,8 +192,8 @@ else
 {
     $VMPasswordSec = $AzureKeyVaultSecret.SecretValue
 }
-Clear-Variable -Name VMPassword -Force
-Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name VMPassword -Force -ErrorAction SilentlyContinue
+Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Deleting source vm
 Write-Host "Deleting source vm '$($VmToImage)'" -ForegroundColor $CommandInfo

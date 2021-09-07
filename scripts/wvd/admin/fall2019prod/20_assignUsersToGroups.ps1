@@ -44,11 +44,11 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\20_assignUsersToGroups-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$appGrps = @(@("Desktop Application Group","$($AlyaNamingPrefixProd)hpol001",@("DSG_O365_App_Desktop")),`
-            @("Standard Apps","$($AlyaNamingPrefixProd)hpol002",@("DSG_O365_App_Standard")),`
-            @("Visio App","$($AlyaNamingPrefixProd)hpol002",@("DSG_O365_App_Visio")),`
-            @("Project App","$($AlyaNamingPrefixProd)hpol002",@("DSG_O365_App_Project")),`
-            @("Adobe Apps","$($AlyaNamingPrefixProd)hpol002",@("DSG_O365_App_Adobe")))
+$appGrps = @(@("Desktop Application Group","$($AlyaNamingPrefix)hpol001",@("DSG_O365_App_Desktop")),`
+            @("Standard Apps","$($AlyaNamingPrefix)hpol002",@("DSG_O365_App_Standard")),`
+            @("Visio App","$($AlyaNamingPrefix)hpol002",@("DSG_O365_App_Visio")),`
+            @("Project App","$($AlyaNamingPrefix)hpol002",@("DSG_O365_App_Project")),`
+            @("Adobe Apps","$($AlyaNamingPrefix)hpol002",@("DSG_O365_App_Adobe")))
 $allAdmins = @("konrad.brunner@alyaconsulting.ch", "first.last@alyaconsulting.ch")
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
@@ -94,8 +94,8 @@ if (-Not $AzureKeyVaultSecret)
     throw "Key Vault secret not found. Please create the secret $AlyaWvdServicePrincipalAssetName"
 }
 $AlyaWvdServicePrincipalPasswordSave = $AzureKeyVaultSecret.SecretValue
-Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force
-Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force -ErrorAction SilentlyContinue
+Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Login to WVD
 if (-Not $Global:RdsContext)

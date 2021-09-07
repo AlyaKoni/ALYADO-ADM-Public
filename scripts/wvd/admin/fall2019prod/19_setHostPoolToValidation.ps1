@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\19_setHostPoolToValidation-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$HostPoolName = "$($AlyaNamingPrefixProd)hpol002"
+$HostPoolName = "$($AlyaNamingPrefix)hpol002"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
@@ -89,8 +89,8 @@ if (-Not $AzureKeyVaultSecret)
     throw "Key Vault secret not found. Please create the secret $AlyaWvdServicePrincipalAssetName"
 }
 $AlyaWvdServicePrincipalPasswordSave = $AzureKeyVaultSecret.SecretValue
-Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force
-Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force -ErrorAction SilentlyContinue
+Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Login to WVD
 if (-Not $Global:RdsContext)

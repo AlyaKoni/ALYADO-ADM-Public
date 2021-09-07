@@ -325,8 +325,8 @@ if ($AlyaWvdTenantNameProd)
         {
             $appKeySec = $AzureKeyVaultSecret.SecretValue
         }
-        Clear-Variable -Name appKey -Force
-        Clear-Variable -Name AzureKeyVaultSecret -Force
+        Clear-Variable -Name appKey -Force -ErrorAction SilentlyContinue
+        Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
         # Checking application
         Write-Host "Checking application $asset" -ForegroundColor $CommandInfo

@@ -1,0 +1,111 @@
+#Requires -Version 2.0
+
+<#
+    Copyright (c) Alya Consulting: 2020-2021
+
+    This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    The Alya Base Configuration is free software: you can redistribute it
+	and/or modify it under the terms of the GNU General Public License as
+	published by the Free Software Foundation, either version 3 of the
+	License, or (at your option) any later version.
+    Alya Base Configuration is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+
+    Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
+	Bedingungen der GNU General Public License, wie von der Free Software
+	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veroeffentlichten Version, weiter verteilen und/oder modifizieren.
+    Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
+	aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    Siehe die GNU General Public License fuer weitere Details:
+	https://www.gnu.org/licenses/gpl-3.0.txt
+
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    01.04.2020 Konrad Brunner       Initial Version
+
+#>
+
+param (
+    [String]$StartFrom = $null
+)
+
+if (-Not $StartFrom -or $StartFrom -ne "StartUp")
+{
+    $StartupPath = [Environment]::GetFolderPath("CommonStartup")
+    $ProgramsPath = "C:\AlyaConsulting"
+    $ActPath = $PSCommandPath
+    $ScriptName = "SetUserToDECH.ps1"
+    $CmdName = "SetUserToDECH.cmd"
+    $ScriptPath = Join-Path -Path $ProgramsPath -ChildPath $ScriptName
+    $CmdPath = Join-Path -Path $StartupPath -ChildPath $CmdName
+    if (-Not (Test-Path $ProgramsPath -PathType Container))
+    {
+        New-Item -Path $ProgramsPath -Force -ItemType Directory
+    }
+    Copy-Item -Path $ActPath -Destination $ScriptPath -Force -Confirm:$false
+    $CmdContent = @"
+start "SetUserToDECH" /min powershell.exe -NoLogo -WindowStyle Hidden -ExecutionPolicy Bypass -Command "$($ScriptPath) -StartFrom StartUp"
+"@
+    $CmdContent | Set-Content -Path $CmdPath -Force
+}
+else
+{
+    # Run the script
+    #TODO Set-WinUILanguageOverride
+    $UserLanguageList = Get-WinUserLanguageList
+    if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "de-CH" })) {
+        $UserLanguageList.Add("de-CH")
+    }
+    if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "fr-CH" })) {
+        $UserLanguageList.Add("fr-CH")
+    }
+    if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "it-CH" })) {
+        $UserLanguageList.Add("it-CH")
+    }
+    if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "en-CH" })) {
+        $UserLanguageList.Add("en-CH")
+    }
+    for ($i=0; $i -lt ($UserLanguageList.Count-1); $i++)
+    {
+        if ($UserLanguageList[$i].LanguageTag.StartsWith("en"))
+        {
+            $move = $UserLanguageList[$i+1]
+            $UserLanguageList[$i+1] = $UserLanguageList[$i]
+            $UserLanguageList[$i] = $move
+        }
+    }
+    for ($j=0; $j -lt ($UserLanguageList.Count-1); $j++)
+    {
+        for ($i=0; $i -lt ($UserLanguageList.Count-1); $i++)
+        {
+            if (-Not $UserLanguageList[$i].LanguageTag.EndsWith("CH"))
+            {
+                $move = $UserLanguageList[$i+1]
+                $UserLanguageList[$i+1] = $UserLanguageList[$i]
+                $UserLanguageList[$i] = $move
+            }
+        }
+    }
+    foreach($lng in $UserLanguageList)
+    {
+        $lng.Handwriting=$true
+        $lng.Spellchecking=$true
+        if ($lng.InputMethodTips)
+        {
+            $lng.InputMethodTips[0] = $lng.InputMethodTips[0].Replace(":00000407",":00000807")
+        }
+        if ($lng.LanguageTag -eq "en-ch")
+        {
+            $lng.InputMethodTips.Add("0409:00000807")
+        }
+    }
+    Set-WinUserLanguageList -LanguageList $UserLanguageList -Force
+}

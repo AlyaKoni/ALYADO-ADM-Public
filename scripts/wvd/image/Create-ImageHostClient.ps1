@@ -155,8 +155,8 @@ else
 {
     $VMPasswordSec = $AzureKeyVaultSecret.SecretValue
 }
-Clear-Variable -Name VMPassword -Force
-Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name VMPassword -Force -ErrorAction SilentlyContinue
+Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Checking image host vm
 Write-Host "Checking image host vm" -ForegroundColor $CommandInfo

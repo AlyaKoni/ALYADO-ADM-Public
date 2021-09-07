@@ -110,7 +110,7 @@ else
 {
     $WacSalt = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
 }
-Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Checking vm
 Write-Host "Checking vm" -ForegroundColor $CommandInfo

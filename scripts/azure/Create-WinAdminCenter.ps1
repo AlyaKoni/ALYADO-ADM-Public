@@ -198,8 +198,8 @@ else
 {
     $VMPasswordSec = $AzureKeyVaultSecret.SecretValue
 }
-Clear-Variable -Name VMPassword -Force
-Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name VMPassword -Force -ErrorAction SilentlyContinue
+Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Checking vm nic
 Write-Host "Checking vm nic" -ForegroundColor $CommandInfo
@@ -286,7 +286,7 @@ if (-Not $VmDomainJoinExt)
         -Name $VmDomainJoinExtName -DomainName $DomJoinName -OUPath $DomJoinOUPath -JoinOption $DomJoinOption -Credential $DomJoinCredential -Restart `
         -TypeHandlerVersion $typeHandlerVerMjandMn 
 }
-Clear-Variable -Name "DomJoinCredential"
+Clear-Variable -Name "DomJoinCredential" -Force -ErrorAction SilentlyContinue
 
 # Checking azure key vault certificate
 Write-Host "Checking azure key vault certificate" -ForegroundColor $CommandInfo

@@ -131,7 +131,7 @@ $CertCollection.Import($CertificateBytes, $null, [System.Security.Cryptography.X
 #Export the .pfx file 
 $ProtectedCertificateBytes = $CertCollection.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, $PfxCertPlainPasswordForRunAsAccount)
 $CertPasswordForRunAsAccount = ConvertTo-SecureString $PfxCertPlainPasswordForRunAsAccount -AsPlainText -Force
-Clear-Variable -Name "PfxCertPlainPasswordForRunAsAccount"
+Clear-Variable -Name "PfxCertPlainPasswordForRunAsAccount" -Force -ErrorAction SilentlyContinue
 [System.IO.File]::WriteAllBytes($PfxCertPathForRunAsAccount, $ProtectedCertificateBytes)
 
 try

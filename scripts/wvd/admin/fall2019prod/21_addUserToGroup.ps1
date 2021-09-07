@@ -46,7 +46,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\21_addUserTo
 # Constants
 #Actually no B2B accounts. Will come in the future
 $UserNamesToAdd = @("konrad.brunner@alyaconsulting.ch","first.last@alyaconsulting.ch")
-$HostPoolName = "$($AlyaNamingPrefixProd)hpol001"
+$HostPoolName = "$($AlyaNamingPrefix)hpol001"
 $AppGroupName = "Desktop Application Group"
 $WVDApplicationId = "12345678-1234-1234-1234-123456789012"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
@@ -93,8 +93,8 @@ if (-Not $AzureKeyVaultSecret)
     throw "Key Vault secret not found. Please create the secret $AlyaWvdServicePrincipalAssetName"
 }
 $AlyaWvdServicePrincipalPasswordSave = $AzureKeyVaultSecret.SecretValue
-Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force
-Clear-Variable -Name AzureKeyVaultSecret -Force
+Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force -ErrorAction SilentlyContinue
+Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Login to WVD
 if (-Not $Global:RdsContext)

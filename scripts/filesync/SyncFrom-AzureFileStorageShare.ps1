@@ -121,7 +121,7 @@ if (-Not $PSDrive)
     {
         $StorageKey = (Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName).Value[0]
         $AccountKey = ConvertTo-SecureString -String $StorageKey -AsPlainText -Force
-		Clear-Variable -Name "StorageKey"
+		Clear-Variable -Name "StorageKey" -Force -ErrorAction SilentlyContinue
         $Credential = New-Object -TypeName System.Management.Automation.PSCredential `
                          -ArgumentList "Azure\$($StorageAccountName)", $AccountKey
         $PSDrive = New-PSDrive -Name $UseLocalTempDriveLetter `
