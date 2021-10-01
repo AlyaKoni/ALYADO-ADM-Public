@@ -172,7 +172,7 @@ if (-Not $VmExt)
             "salt": $WacSalt
         }
 "@
-    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.AdminCenter" -Type "AdminCenter" | select -last 1).Version
+    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.AdminCenter" -Type "AdminCenter" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
     $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
     $VmExt = Set-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName -Location $AlyaLocation `
