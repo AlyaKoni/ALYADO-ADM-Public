@@ -29,52 +29,47 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    14.01.2021 Konrad Brunner       Initial Creation
+    04.10.2021 Konrad Brunner       Initial Creation
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$appId = $null
 )
+
+if (-Not $appId)
+{
+    throw "Please specify the appId the access has to be restricted"
+}
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Setup-DoNotReplySharedMailbox-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Setup-DoNotReplyAppAccess-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
-Install-ModuleIfNotInstalled "Az"
-
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 # =============================================================
 # Exchange stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Setup-DoNotReplySharedMailbox | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "EXCHANGE | Setup-DoNotReplyAppAccess | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Configuring DoNotReply Shared Mailbox in Exchange"
+Write-Host "Configuring DoNotReply App Access"
 try
 {
     Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
     LoginTo-EXO
 
     $mailbox = Get-Mailbox -Identity "DoNotReply" -ErrorAction SilentlyContinue
-    if (-Not $mailbox)
-    {
-        Write-Warning "Creating the shared mailbox DoNotReply"
-        New-Mailbox -Shared -Name "DoNotReply" -DisplayName "DoNotReply" -Alias "DoNotReply"
-    }
-    $mailbox = Get-Mailbox -Identity "DoNotReply"
-    $doNotReplyUserId = $mailbox.ExternalDirectoryObjectId
     $doNotReplyEmail = $mailbox.EmailAddresses[0].Replace("SMTP:","")
-
+    New-ApplicationAccessPolicy -AccessRight RestrictAccess -AppId $appId -PolicyScopeGroupId $doNotReplyEmail -Description "Restrict this app's access to $doNotReplyEmail"
 }
 catch
 {
@@ -84,20 +79,6 @@ catch
 finally
 {
     DisconnectFrom-EXOandIPPS
-}
-
-# =============================================================
-# Azure stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Setup-DoNotReplySharedMailbox | Azure" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-if ($doNotReplyUserId)
-{
-    Write-Host "Blocking DoNotReply account from login"
-    Update-AzADUser -ObjectId $doNotReplyUserId -EnableAccount $false
 }
 
 #Stopping Transscript

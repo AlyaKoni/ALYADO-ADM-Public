@@ -1,16 +1,60 @@
 $rootDir = $PSScriptRoot
+
+function Remove-OneDriveItemRecursive
+{
+    [cmdletbinding()]
+    param(
+        [string] $Path
+    )
+    if ($Path -and (Test-Path -LiteralPath $Path))
+    {
+        $Items = Get-ChildItem -LiteralPath $Path -File -Recurse
+        foreach ($Item in $Items)
+        {
+            try
+            {
+                $Item.Delete()
+            } catch
+            {
+                throw "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message)"
+            }
+        }
+        $Items = Get-ChildItem -LiteralPath $Path -Directory -Recurse | Sort-object -Property { $_.FullName.Length } -Descending
+        foreach ($Item in $Items)
+        {
+            try
+            {
+                $Item.Delete()
+            } catch
+            {
+                throw "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message)"
+            }
+        }
+        try
+        {
+            (Get-Item -LiteralPath $Path).Delete()
+        } catch
+        {
+            throw "Remove-OneDriveItemRecursive - Couldn't delete $($Path), error: $($_.Exception.Message)"
+        }
+    } else
+    {
+        Write-Warning "Remove-OneDriveItemRecursive - Path $Path doesn't exists. Skipping. "
+    }
+}
+
 $dirs = Get-ChildItem -Path $rootDir -Directory
 foreach ($dir in $dirs)
 {
     Write-Host "Cleaning $($dir.Name)"
     if ((Test-Path (Join-Path $dir.FullName "Content")))
     {
-        $tmp = Remove-Item -Path (Join-Path $dir.FullName "Content") -Recurse -Force
+        $tmp = Remove-OneDriveItemRecursive -Path (Join-Path $dir.FullName "Content")
     }
     # Uncomment following block, if package directory should not be cleared
     if ((Test-Path (Join-Path $dir.FullName "Package")))
     {
-        $tmp = Remove-Item -Path (Join-Path $dir.FullName "Package") -Recurse -Force
+        $tmp = Remove-OneDriveItemRecursive -Path (Join-Path $dir.FullName "Package")
     }
     if ($dir.Name -eq "LocalPrinters" -or $dir.Name -eq "LocalPrinters_unused")
     {
@@ -20,7 +64,7 @@ foreach ($dir in $dirs)
             $zdirs = Get-ChildItem -Path $zipDir -Directory
             foreach ($zdir in $zdirs)
             {
-                $tmp = Remove-Item -Path $zdir.FullName -Recurse -Force
+                $tmp = Remove-OneDriveItemRecursive -Path $zdir.FullName
             }
         }
     }

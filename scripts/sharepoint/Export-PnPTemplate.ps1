@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,43 +29,35 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    24.10.2020 Konrad Brunner       Initial version
+    03.10.2021 Konrad Brunner       Initial Version
+
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory=$true)]
+    [string]$SiteUrl
 )
 
 #Reading configuration
-. $PSScriptRoot\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\04_PrepareModulesAndPackages-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-PnPTemplate-$($AlyaTimeString).log" | Out-Null
 
-#Main
-Install-ModuleIfNotInstalled "PackageManagement"
-Install-ModuleIfNotInstalled "PowershellGet"
-Install-ModuleIfNotInstalled "Az"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "MSOnline"
-Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
-Install-ModuleIfNotInstalled "ImportExcel"
-Install-ModuleIfNotInstalled "AIPService"
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
-Install-ModuleIfNotInstalled "MicrosoftTeams"
-Install-ModuleIfNotInstalled "PSWindowsUpdate"
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+# Checking modules
 Install-ModuleIfNotInstalled "PnP.PowerShell"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Intune"
-Install-ModuleIfNotInstalled "WindowsAutopilotIntune"
-Install-ModuleIfNotInstalled "MSStore"
-Install-ModuleIfNotInstalled "Pscx"
-Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM"
-Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\log4net"
-Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
-Install-PackageIfNotInstalled "log4net"
-Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
-Uninstall-ModuleIfInstalled "AzureAd"
+
+# Logins
+LoginTo-PnP -Url $SiteUrl
+
+# Export site template
+$outfile = "$AlyaData\sharepoint\PnPTemplate_" + $SiteUrl.Replace("https://", "").Replace("/", "_") + ".xml"
+Get-PnPSiteTemplate -Out $outfile -IncludeAllTermGroups -IncludeSiteCollectionTermGroup -IncludeSiteGroups `
+    -IncludeTermGroupsSecurity -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
+    -PersistBrandingFiles -PersistPublishingFiles -PersistMultiLanguageResources -Encoding ([System.Text.Encoding]::UTF8) -Force
+
+Write-Host "Template exported to $outfile" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript

@@ -252,7 +252,7 @@ function Import-AutomationModule([string] $ModuleName, [bool] $UseAzModule = $fa
     $ModuleContentUrl = Get-ModuleContentUrl $ModuleName
     # Find the actual blob storage location of the module
     do {
-        $ModuleContentUrl = (Invoke-WebRequest -Uri $ModuleContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore).Headers.Location 
+        $ModuleContentUrl = (Invoke-WebRequest -Uri $ModuleContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore).Headers.Location
     } while (!$ModuleContentUrl.Contains(".nupkg"))
 
     $CurrentModule = & $GetAutomationModule `

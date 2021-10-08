@@ -1,0 +1,4 @@
+Workload,FilePath,Name,Mailbox,IsArchive,TargetRootFolder,ContentCodePage,SPFileContainer,SPManifestContainer,SPSiteUrl
+Exchange,,Archiv1.pst,x.y@alyaconsulting.ch,TRUE,/Archiv1,,,,
+Exchange,,Archiv2.pst,x.y@alyaconsulting.ch,TRUE,/Archiv2,,,,
+Exchange,,Archiv3.pst,x.y@alyaconsulting.ch,TRUE,/Archiv3,,,,

@@ -1,0 +1,34 @@
+Taskbar
+DEL /F /S /Q /A "%AppData%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*"
+REG DELETE HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Taskband /F
+taskkill /f /im explorer.exe
+start explorer.exe
+
+Check files in 
+ - C:\Users\Default\AppData\Local\Microsoft\Windows\Shell
+ - %userprofile%\AppData\Local\Microsoft\Windows\Shell
+ 
+%AppData%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar
+Export-StartLayout -Path StartLayout.xml
+<?xml version="1.0" encoding="utf-8"?>
+<LayoutModificationTemplate
+    xmlns="http://schemas.microsoft.com/Start/2014/LayoutModification"
+    xmlns:defaultlayout="http://schemas.microsoft.com/Start/2014/FullDefaultLayout"
+    xmlns:start="http://schemas.microsoft.com/Start/2014/StartLayout"
+    xmlns:taskbar="http://schemas.microsoft.com/Start/2014/TaskbarLayout"
+    Version="1">
+  <CustomTaskbarLayoutCollection PinListPlacement="Replace">
+    <defaultlayout:TaskbarLayout>
+      <taskbar:TaskbarPinList>
+        <taskbar:DesktopApp DesktopApplicationLinkPath="#leaveempty"/>
+      </taskbar:TaskbarPinList>
+    </defaultlayout:TaskbarLayout>
+  </CustomTaskbarLayoutCollection>
+</LayoutModificationTemplate>
+
+
+To remove store app
+HKCU:Software\Policies\Microsoft\Windows\Explorer\
+NoPinningStoreToTaskbar DWORD 1
+
+

@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2021
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,7 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    24.10.2020 Konrad Brunner       Initial version
+    08.09.2021 Konrad Brunner       Initial version
 #>
 
 [CmdletBinding()]
@@ -40,32 +40,10 @@ Param(
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\04_PrepareModulesAndPackages-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\06_UnblockAllFiles-$($AlyaTimeString).log" | Out-Null
 
 #Main
-Install-ModuleIfNotInstalled "PackageManagement"
-Install-ModuleIfNotInstalled "PowershellGet"
-Install-ModuleIfNotInstalled "Az"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "MSOnline"
-Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
-Install-ModuleIfNotInstalled "ImportExcel"
-Install-ModuleIfNotInstalled "AIPService"
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
-Install-ModuleIfNotInstalled "MicrosoftTeams"
-Install-ModuleIfNotInstalled "PSWindowsUpdate"
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
-Install-ModuleIfNotInstalled "PnP.PowerShell"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Intune"
-Install-ModuleIfNotInstalled "WindowsAutopilotIntune"
-Install-ModuleIfNotInstalled "MSStore"
-Install-ModuleIfNotInstalled "Pscx"
-Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM"
-Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\log4net"
-Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
-Install-PackageIfNotInstalled "log4net"
-Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
-Uninstall-ModuleIfInstalled "AzureAd"
+Get-ChildItem -Path $AlyaRoot -Recurse | Unblock-File
 
 #Stopping Transscript
 Stop-Transcript

@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     24.10.2020 Konrad Brunner       Initial version
+    05.10.2021 Konrad Brunner       Incorporated AlyaModulePath
 #>
 
 [CmdletBinding()]
@@ -65,25 +66,35 @@ if ($disk)
     {
         New-Item -Path $alyaDir -ItemType Directory -Force | Out-Null
     }
+
+    cmd /c robocopy "$($AlyaRoot)" "$($alyaDir)" /MIR /XD "%SourceDir%\scripts\solutions" /XD .git /XD PublishProfiles /XD .vs /XD .vscode /XD _temp /XD _logs
+
     if (-Not (Test-Path "$alyaDir\tools"))
     {
         New-Item -Path "$alyaDir\tools" -ItemType Directory -Force | Out-Null
     }
-
-    cmd /c robocopy "$($AlyaRoot)" "$($alyaDir)" /MIR /XD "%SourceDir%\scripts\solutions" /XD .git /XD PublishProfiles /XD .vs /XD .vscode /XD _temp /XD _logs
-
     $to = "$alyaDir\tools\WindowsPowerShell"
 
-    $prop = Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "{F42EE2D3-909F-4907-8871-4C22FC0BF756}" -ErrorAction SilentlyContinue
-    if ($prop -and $prop.'{F42EE2D3-909F-4907-8871-4C22FC0BF756}')
+    if ($AlyaModulePath -eq $AlyaDefaultModulePath)
     {
-        $from = "$($prop.'{F42EE2D3-909F-4907-8871-4C22FC0BF756}')\WindowsPowerShell"
+        $prop = Get-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "{F42EE2D3-909F-4907-8871-4C22FC0BF756}" -ErrorAction SilentlyContinue
+        if ($prop -and $prop.'{F42EE2D3-909F-4907-8871-4C22FC0BF756}')
+        {
+            $from = "$($prop.'{F42EE2D3-909F-4907-8871-4C22FC0BF756}')\WindowsPowerShell"
+        }
+        else
+        {
+            $from = Join-Path ([Environment]::GetFolderPath("MyDocuments"))  "WindowsPowerShell"
+        }
     }
     else
     {
-        $from = "$($env:USERPROFILE)\Documents\WindowsPowerShell"
+        $from = $AlyaModulePath.Replace("\Modules\", "").Replace("\Modules", "")
     }
     cmd /c robocopy "$($from)" "$($to)" /MIR
+    $scriptPathFrom = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Scripts"
+    $scriptPathTo = "$alyaDir\tools\WindowsPowerShell\Scripts"
+    cmd /c xcopy /d /e /v /i /h /r /k /y "$($scriptPathFrom)" "$($scriptPathTo)"
 }
 else
 {

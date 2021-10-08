@@ -83,7 +83,7 @@ param(
         }
     }
 
-    $PackageDetails = Invoke-RestMethod -Method Get -UseBasicParsing -Uri $SearchResult.id 
+    $PackageDetails = Invoke-RestMethod -Method Get -UseBasicParsing -Uri $SearchResult.id
 
     if(!$ModuleVersion) {
 

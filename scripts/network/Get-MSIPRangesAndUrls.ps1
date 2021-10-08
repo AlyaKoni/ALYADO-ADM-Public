@@ -53,7 +53,7 @@ Param
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Get-MSIPRangesAndUrls-$($AlyaTimeString).log" | Out-Null
 
 # Azure IP ranges updated every Wednesday
-$AzureIPRangesPage = Invoke-WebRequest -Uri https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519 -Method Get -UseBasicParsing 
+$AzureIPRangesPage = Invoke-WebRequest -Uri https://www.microsoft.com/en-us/download/confirmation.aspx?id=56519 -Method Get -UseBasicParsing
 $azureIps = Invoke-RestMethod -uri ($AzureIPRangesPage.Links |Where {$_.outerhtml -like "*Click here*"}).href[0]
 
 $azureUrls = @( `

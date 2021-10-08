@@ -41,6 +41,7 @@
     24.09.2020 Konrad Brunner       LoginTo-EXO and LoginTo-IPPS
     12.04.2021 Konrad Brunner       Added DevOps login
     12.07.2021 Konrad Brunner       Added own module path
+    04.10.2021 Konrad Brunner       Proxy default credentials
 
 #>
 
@@ -71,6 +72,8 @@ $Global:ProgressPreference = "SilentlyContinue"
 
 <# TLS Connections #>
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$proxy = [System.Net.WebRequest]::GetSystemWebProxy()
+$proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 
 <# PATHS #>
 $AlyaRoot = "$PSScriptRoot"
@@ -80,7 +83,7 @@ $AlyaLocal = "$AlyaRoot\_local"
 $AlyaData = "$AlyaRoot\data"
 $AlyaScripts = "$AlyaRoot\scripts"
 $AlyaTools = "$AlyaRoot\tools"
-$AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShellOverwrites\Modules"
+$AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Modules"
 if (-Not $AlyaModulePath)
 {
     $AlyaModulePath = $AlyaDefaultModulePath
@@ -97,13 +100,19 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Modules") -and `
      -Not $env:PSModulePath.Contains("$($AlyaTools)\WindowsPowerShell\Modules"))
 {
     Write-Host "Adding tools\WindowsPowerShell\Modules to PSModulePath"
-    $env:PSModulePath = "$($AlyaTools)\WindowsPowerShell\Modules;"+$env:PSModulePath
+    if (-Not $env:PSModulePath.StartsWith("$($AlyaTools)\WindowsPowerShell\Modules"))
+    {
+        $env:PSModulePath = "$($AlyaTools)\WindowsPowerShell\Modules;"+$env:PSModulePath
+    }
 }
 if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
      -Not $env:Path.Contains("$($AlyaTools)\WindowsPowerShell\Scripts"))
 {
     Write-Host "Adding tools\WindowsPowerShell\Scripts to Path"
-    $env:Path = "$($AlyaTools)\WindowsPowerShell\Scripts;"+$env:Path
+    if (-Not $env:Path.StartsWith("$($AlyaTools)\WindowsPowerShell\Scripts"))
+    {
+        $env:Path = "$($AlyaTools)\WindowsPowerShell\Scripts;"+$env:Path
+    }
 }
 
 # Loading local custom configuration
@@ -118,9 +127,10 @@ if ($AlyaModulePath -ne $AlyaDefaultModulePath)
     {
         New-Item -Path $AlyaModulePath -ItemType Directory -Force
     }
-    $CurrentPSModulePathValue = [Environment]::GetEnvironmentVariable("PSModulePath", "Process")
-    $NewPSModulePathValue = $AlyaModulePath + ";" + $CurrentPSModulePathValue
-    [Environment]::SetEnvironmentVariable("PSModulePath", $NewPSModulePathValue, "Process")
+    if (-Not $env:PSModulePath.StartsWith("$($AlyaModulePath)"))
+    {
+        $env:PSModulePath = "$($AlyaModulePath);"+$env:PSModulePath
+    }
 }
 
 <# CLIENT SETTINGS #>
@@ -194,6 +204,48 @@ else
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmss")
 
 <# FUNCTIONS #>
+function Remove-OneDriveItemRecursive
+{
+    [cmdletbinding()]
+    param(
+        [string] $Path
+    )
+    if ($Path -and (Test-Path -LiteralPath $Path))
+    {
+        $Items = Get-ChildItem -LiteralPath $Path -File -Recurse
+        foreach ($Item in $Items)
+        {
+            try
+            {
+                $Item.Delete()
+            } catch
+            {
+                throw "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message)"
+            }
+        }
+        $Items = Get-ChildItem -LiteralPath $Path -Directory -Recurse | Sort-object -Property { $_.FullName.Length } -Descending
+        foreach ($Item in $Items)
+        {
+            try
+            {
+                $Item.Delete()
+            } catch
+            {
+                throw "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message)"
+            }
+        }
+        try
+        {
+            (Get-Item -LiteralPath $Path).Delete()
+        } catch
+        {
+            throw "Remove-OneDriveItemRecursive - Couldn't delete $($Path), error: $($_.Exception.Message)"
+        }
+    } else
+    {
+        Write-Warning "Remove-OneDriveItemRecursive - Path $Path doesn't exists. Skipping. "
+    }
+}
 function Is-InternetConnected()
 {
     $ret = Test-NetConnection -ComputerName 8.8.8.8 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
@@ -318,8 +370,24 @@ function Check-Module (
             Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
-            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            try
+            {
+                try
+                {
+                    $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                        Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                }
+                catch
+                {
+                    Import-Module -Name PowerShellGet
+                    $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                        Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                }
+            }
+            catch
+            {
+                
+            }
         }
     }
     else
@@ -328,8 +396,17 @@ function Check-Module (
             Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
-            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            try
+            {
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
+            catch
+            {
+                Import-Module -Name PowerShellGet
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
         }
     }
     if (-Not $module)
@@ -402,8 +479,17 @@ function Uninstall-ModuleIfInstalled (
             Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
-            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            try
+            {
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
+            catch
+            {
+                Import-Module -Name PowerShellGet
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
         }
     }
     else
@@ -411,7 +497,15 @@ function Uninstall-ModuleIfInstalled (
         $module = Get-Module -Name $moduleName -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
-            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
+            try
+            {
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
+            }
+            catch
+            {
+                Import-Module -Name PowerShellGet
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
+            }
         }
     }
     if ($module)
@@ -442,6 +536,40 @@ function Install-ModuleIfNotInstalled (
         Write-Warning "No internet connection. Not able to check any module!"
         return
     }
+    $gmCmd = Get-Command Get-Module
+    if (-Not $gmCmd)
+    {
+        throw "Can't find cmdlt Get-Module"
+    }
+    $pkg = Get-Module -Name "PackageManagement" -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
+    if ($moduleName -ne "PackageManagement" -and (-Not $pkg -or $pkg.Version -lt [Version]"1.4.7"))
+    {
+        Install-ModuleIfNotInstalled "PackageManagement"
+        throw "PackageManagement updated! Please restart your powershell session"
+    }
+    $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
+    if (-Not $regRep)
+    {
+        Register-PSRepository -Name "PSGallery" -SourceLocation "https://www.powershellgallery.com/api/v2/" -PublishLocation "https://www.powershellgallery.com/api/v2/package/" -ScriptSourceLocation "https://www.powershellgallery.com/api/v2/items/psscript/" -ScriptPublishLocation "https://www.powershellgallery.com/api/v2/package/" -InstallationPolicy Trusted -PackageManagementProvider NuGet
+    }
+    else
+    {
+        if ($regRep.InstallationPolicy -ne "Trusted")
+        {
+	        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+        }
+    }
+    $psg = Get-Module -Name PowerShellGet -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
+    if ($moduleName -ne "PackageManagement" -and $moduleName -ne "PowerShellGet" -and (-Not $psg -or $psg.Version -lt [Version]"2.0.0.0"))
+    {
+        Install-ModuleIfNotInstalled "PowerShellGet"
+        throw "PowerShellGet updated! Please restart your powershell session"
+    }
+    if ((Get-PackageProvider -Name NuGet -Force).Version -lt '2.8.5.201')
+    {
+        Write-Warning "Installing nuget"
+        Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
+    }
     $requestedVersion = $minimalVersion
     [Version] $newestVersion = Get-PublishedModuleVersion $moduleName
     if (-Not $newestVersion)
@@ -455,11 +583,20 @@ function Install-ModuleIfNotInstalled (
             Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
-            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            try
+            {
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
+            catch
+            {
+                Import-Module -Name PowerShellGet
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
             }
         }
         $autoUpdate = $false
@@ -471,11 +608,20 @@ function Install-ModuleIfNotInstalled (
             Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
-            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            try
+            {
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
+            catch
+            {
+                Import-Module -Name PowerShellGet
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
             }
         }
         $requestedVersion = $newestVersion
@@ -504,25 +650,6 @@ function Install-ModuleIfNotInstalled (
         {
             throw "Please install the powershell package management"
         }
-        if ($moduleName -ne "PowerShellGet") { Install-ModuleIfNotInstalled "PowerShellGet" }
-        Import-Module -Name 'PowershellGet'
-        if ((Get-PackageProvider -Name NuGet -Force).Version -lt '2.8.5.201')
-        {
-            Write-Warning "Installing nuget"
-            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
-        }
-        $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
-        if (-Not $regRep)
-        {
-            Register-PSRepository -Name "PSGallery" -SourceLocation "https://www.powershellgallery.com/api/v2/" -PublishLocation "https://www.powershellgallery.com/api/v2/package/" -ScriptSourceLocation "https://www.powershellgallery.com/api/v2/items/psscript/" -ScriptPublishLocation "https://www.powershellgallery.com/api/v2/package/" -InstallationPolicy Trusted -PackageManagementProvider NuGet
-        }
-        else
-        {
-            if ($regRep.InstallationPolicy -ne "Trusted")
-            {
-	            Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
-            }
-        }
         $optionalArgs = New-Object -TypeName Hashtable
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
@@ -533,13 +660,10 @@ function Install-ModuleIfNotInstalled (
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
 	        {
 	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose -AcceptLicense
-                if ($moduleName -eq "PowerShellGet") {
-                    Write-Warning "PowerShellGet has been updated. Possibly you need to restart your PowerShell session or ISE"
-                }
 	        }
 	        else
 	        {
-	            Find-Module -Name $moduleName @optionalArgs | Save-Module -Path $AlyaModulePath -Force -Verbose -AcceptLicense
+                Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -Force -Verbose -AcceptLicense
 	        }
         }
         else
@@ -547,24 +671,30 @@ function Install-ModuleIfNotInstalled (
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
 	        {
 	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose
-                if ($moduleName -eq "PowerShellGet") {
-                    Write-Warning "PowerShellGet has been updated. Possibly you need to restart your PowerShell session or ISE"
-                }
 	        }
 	        else
 	        {
-	            Find-Module -Name $moduleName @optionalArgs | Save-Module -Path $AlyaModulePath -Force -Verbose
+                Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -Force -Verbose
 	        }
         }
         $module = Get-Module -Name $moduleName -ListAvailable |`
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
-            $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            try
+            {
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
+            catch
+            {
+                Import-Module -Name PowerShellGet
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
                 if (-Not $module)
 	            {
 	                Write-Error "Not able to install the module!" -ErrorAction Continue
@@ -584,7 +714,7 @@ function Install-ModuleIfNotInstalled (
     }
 }
 #Install-ModuleIfNotInstalled "PowerShellGet"
-#Install-ModuleIfNotInstalled -moduleName "Az" -exactVersion "4.6.0"
+#Install-ModuleIfNotInstalled "Az"
 #Get-Module -Name Az
 #Get-InstalledModule -Name Az
 
