@@ -8,7 +8,7 @@
                       "type":  "image/png",
                       "@odata.type":  "#microsoft.graph.mimeContent"
                   },
-    "isFeatured":  true,
+    "isFeatured":  false,
     "privacyInformationUrl":  "https://www.jam-software.de/",
     "informationUrl":  "https://www.jam-software.de/",
     "owner":  "",
