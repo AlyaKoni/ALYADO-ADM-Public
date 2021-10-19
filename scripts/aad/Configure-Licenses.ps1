@@ -31,6 +31,7 @@
     ---------- -------------------- ----------------------------
     21.09.2020 Konrad Brunner       Initial Version
     16.12.2020 Konrad Brunner       Fixed bug, not removing users from groups
+    19.10.2021 Konrad Brunner       Changed LIC group names
 
 #>
 
@@ -94,14 +95,14 @@ $licDefs | foreach {
     if ($licDef.Name -like "*@*")
     {
         $outStr = " - $($licDef.Name): "
-        for ($i = 1; $i -le 20; $i++)
+        for ($i = 1; $i -le 40; $i++)
         {
             $propName = "Lic"+$i
             if ($licDef.$propName -eq 1)
             {
                 $outStr += "$($licNames.$propName),"
 
-                $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-ADM-LIC" + $licNames.$propName
+                $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-LIC-" + $licNames.$propName
                 if (-Not $byGroup.$grpName) {
                     $byGroup.$grpName = @{}
                     $byGroup.$grpName.Users = @()
@@ -130,12 +131,12 @@ $licDefs | foreach {
         Write-Host $outStr.TrimEnd(",")
     }
 }
-for ($i = 1; $i -le 20; $i++)
+for ($i = 1; $i -le 40; $i++)
 {
     $propName = "Lic"+$i
     if ($licNames.$propName)
     {
-        $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-ADM-LIC" + $licNames.$propName
+        $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-LIC-" + $licNames.$propName
         if (-Not $byGroup.$grpName) {
             $byGroup.$grpName = @{}
             $byGroup.$grpName.Users = @()

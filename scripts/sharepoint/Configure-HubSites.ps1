@@ -304,8 +304,8 @@ foreach($hubSite in $hubSites)
     }
 }
 
-###Processing designs
-Write-Host "Processing site designs of connected sites" -ForegroundColor $TitleColor
+###Processing designs for connected sites
+Write-Host "Processing site designs for connected sites" -ForegroundColor $TitleColor
 foreach($hubSite in $hubSites)
 {
     if ($hubSite.subSiteScript)
@@ -374,36 +374,6 @@ foreach($hubSite in $hubSites)
     }
 }
 
-###Processing Hub Site Start Pages
-if ($overwritePages)
-{
-
-    #Set-PnPTraceLog -On -WriteToConsole -Level Debug
-    #To export it: Export-PnPClientSidePage -Force -Identity Home.aspx -Out $tempFile
-    Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
-    foreach($hubSite in $hubSites)
-    {
-        #$hubSite = $hubSites[0]
-        LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
-        $tempFile = [System.IO.Path]::GetTempFileName()
-        $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
-        $tmp = Invoke-PnPSiteTemplate -Path $tempFile
-        Remove-Item -Path $tempFile
-    }
-    #Set-PnPTraceLog -Off
-
-    ###Processing Root Site Start Page
-    if ($homePageTemplateRoot)
-    {
-        Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
-        LoginTo-PnP -Url "$($AlyaSharePointUrl)"
-        $tempFile = [System.IO.Path]::GetTempFileName()
-        $homePageTemplateRoot | Set-Content -Path $tempFile -Encoding UTF8
-        $tmp = Invoke-PnPSiteTemplate -Path $tempFile
-        Remove-Item -Path $tempFile
-    }
-}
-
 ###Configuring access to hub and root sites
 Write-Host "Configuring access to hub and root sites" -ForegroundColor $TitleColor
 foreach($hubSite in $hubSites)
@@ -423,6 +393,57 @@ $group = Get-PnPGroup -AssociatedVisitorGroup
 $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)"
 Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
 Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllExternals@$AlyaDomainName"
+
+###Processing Hub Site Start Pages
+
+#ATTENTION: Invoke-PnPSiteTemplate runs into an error if this code runs from start
+#           Looks like dll hell. Some dll is loaded which has a missing function
+#           Still trying to unload that dll
+Disconnect-SPOService
+Remove-Module Az.Accounts -Force -ErrorAction SilentlyContinue
+Remove-Module Az.Resources -Force -ErrorAction SilentlyContinue
+Remove-Module AzureADPreview -Force -ErrorAction SilentlyContinue
+Remove-Module Microsoft.Online.SharePoint.PowerShell -Force -ErrorAction SilentlyContinue
+
+if ($overwritePages)
+{
+
+    #Set-PnPTraceLog -On -WriteToConsole -Level Debug
+    #To export it: Export-PnPClientSidePage -Force -Identity Home.aspx -Out $tempFile
+    Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
+    foreach($hubSite in $hubSites)
+    {
+        #$hubSite = $hubSites[0]
+        LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
+        $tmp = Invoke-PnPSiteTemplate -Path $tempFile
+        Remove-Item -Path $tempFile
+    }
+    #Set-PnPTraceLog -Off
+
+    ###Processing Root Site Start Page
+    if ($homePageTemplateRootTeamSite) # defined in hub def script
+    {
+        Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
+        LoginTo-PnP -Url "$($AlyaSharePointUrl)"
+        Set-PnPWeb -Title "$($AlyaCompanyNameShortM365.ToUpper())SP"
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        $homePageTemplateRootTeamSite | Set-Content -Path $tempFile -Encoding UTF8
+        $tmp = Invoke-PnPSiteTemplate -Path $tempFile
+        Remove-Item -Path $tempFile
+    }
+
+    ###Processing Root Site logo
+    $web = Get-PnPWeb -Includes HeaderEmphasis,HeaderLayout,SiteLogoUrl,QuickLaunchEnabled
+    $web.WebTemplate
+    if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
+    {
+        $web.SiteLogoUrl = $AlyaLogoUrlQuad
+        $web.Update()
+        Invoke-PnPQuery
+    }
+}
 
 #Stopping Transscript
 Stop-Transcript

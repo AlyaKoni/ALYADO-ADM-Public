@@ -130,10 +130,14 @@ if (-Not $site)
     LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName"
 
     # Setting site design
+    <#
+
+    Getting error: Die Website lässt keine Websitedesigns zu
+
     Write-Host "Setting site design" -ForegroundColor $CommandInfo
     if ($hubSiteDef.subSiteScript)
     {
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Team Site "+$siteLocale
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) SubSite Team Site "+$siteLocale
         $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
         if (-Not $SubSiteDesignTeam)
         {
@@ -143,7 +147,7 @@ if (-Not $site)
     }
     else
     {
-		$SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) HubSite Team Site "+$siteLocale
+		$SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) HubSite Team Site "+$siteLocale
         $SiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameTeam"}
         if (-Not $SiteDesignTeam)
         {
@@ -151,12 +155,12 @@ if (-Not $site)
         }
         Invoke-SPOSiteDesign -Identity $SiteDesignTeam.Id -WebUrl "$($AlyaSharePointUrl)/sites/$catalogSiteName"
     }
+    #>
 
-    # Configuring access to catalog site
+    # Configuring access to catalog site for internals
     Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
     $mgroup = Get-PnPGroup -AssociatedMemberGroup
     Add-SPOUser -Site $site -Group $mgroup.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
-    Add-SPOUser -Site $site -Group $mgroup.Title -LoginName "$AlyaAllExternals@$AlyaDomainName"
 
     # Configuring permissions
     Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
@@ -164,7 +168,27 @@ if (-Not $site)
     $eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
     $cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
     $temp = Set-SPOSiteGroup -Site $site -Identity $mgroup.Title -PermissionLevelsToAdd $cRole.Name -PermissionLevelsToRemove $eRole.Name
+
+    # Configuring access to catalog site
+    Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
+    $mgroup = Get-PnPGroup -AssociatedVisitorGroup
+    Add-SPOUser -Site $site -Group $mgroup.Title -LoginName "$AlyaAllExternals@$AlyaDomainName"
+
+    # Configuring site logo
+    Write-Host "Configuring site logo" -ForegroundColor $CommandInfo
+    $web = Get-PnPWeb -Includes SiteLogoUrl
+    if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
+    {
+        $fname = Split-Path -Path $AlyaLogoUrlQuad -Leaf
+        $tempFile = [System.IO.Path]::GetTempFileName()+$fname
+        Invoke-RestMethod -Method GET -UseBasicParsing -Uri $AlyaLogoUrlQuad -OutFile $tempFile
+        Set-PnPSite -LogoFilePath $tempFile
+        Remove-Item -Path $tempFile
+    }
+
 }
+
+#TODO Logo
 
 #Stopping Transscript
 Stop-Transcript

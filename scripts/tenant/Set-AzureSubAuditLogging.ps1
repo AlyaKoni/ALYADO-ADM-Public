@@ -130,7 +130,7 @@ $LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $ResourceG
 if (-Not $LogAnaWrkspc)
 {
     Write-Warning "Log analytics workspace not found. Creating the log analytics workspace $LogAnaWrkspcName"
-    $LogAnaWrkspc = New-AzOperationalInsightsWorkspace -Name $LogAnaWrkspcName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku Standard -Tag @{displayName="Audit Log Workspace"}
+    $LogAnaWrkspc = New-AzOperationalInsightsWorkspace -Name $LogAnaWrkspcName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -Sku "pergb2018" -Tag @{displayName="Audit Log Workspace"} -RetentionInDays 180
     if (-Not $LogAnaWrkspc)
     {
         Write-Error "Log analytics workspace $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue

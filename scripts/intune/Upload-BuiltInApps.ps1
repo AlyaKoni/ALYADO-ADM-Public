@@ -35,7 +35,7 @@
 
 [CmdletBinding()]
 Param(
-    [string]$BuiltInAppsFile = $null #defaults to $($AlyaData)\intune\builtInApps.json
+    [string]$BuiltInAppsFile = $null #defaults to $($AlyaData)\intune\appsBuiltIn.json
 )
 
 # Loading configuration
@@ -47,7 +47,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-BuiltInApps-$($AlyaTi
 # Constants
 if (-Not $BuiltInAppsFile)
 {
-    $BuiltInAppsFile = "$($AlyaData)\intune\builtInApps.json"
+    $BuiltInAppsFile = "$($AlyaData)\intune\appsBuiltIn.json"
 }
 
 # Checking modules
@@ -81,7 +81,7 @@ $builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding UTF8 | ConvertF
 # Processing defined builtInApps
 foreach($builtInApp in $builtInApps)
 {
-    if ($builtInApp.displayName.EndsWith("_unused")) { continue }
+    if (-Not $builtInApp.displayName -or $builtInApp.displayName.EndsWith("_unused")) { continue }
     Write-Host "Configuring builtInApp $($builtInApp.displayName)" -ForegroundColor $CommandInfo
     
     # Checking if builtInApp exists

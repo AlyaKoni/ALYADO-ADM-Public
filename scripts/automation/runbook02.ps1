@@ -30,14 +30,12 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     14.11.2019 Konrad Brunner       Initial Version
+    18.10.2021 Konrad Brunner       Move to Az
 
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseApprovedVerbs", "")]
 param(
-    [Parameter(Mandatory = $true)]
-    [string] $SubscriptionName,
-
     [Parameter(Mandatory = $true)]
     [string] $ResourceGroupName,
 
@@ -51,19 +49,12 @@ $ErrorActionPreference = "Stop"
 
 # Constants
 $RunAsConnectionName = "AzureRunAsConnection"
-$ModulesToInstall = @( @{Name="AzureAdPreview"; Version=$null}, @{Name="Microsoft.RDInfra.RDPowershell"; Version=$null} ) #Version $null means latest
+$ModulesToInstall = @( @{Name="Microsoft.RDInfra.RDPowershell"; Version=$null}, @{Name="AzureAdPreview"; Version=$null}, @{Name="Az.Accounts"; Version=$null}, @{Name="Az.Automation"; Version=$null}, @{Name="Az.Storage"; Version=$null}, @{Name="Az.Compute"; Version=$null}, @{Name="Az.Resources"; Version=$null} ) #Version $null means latest
 
 # Functions
-Function ImportAutomationModule
+Function GetModuleContentUrl
 {   
 param(
-
-    [Parameter(Mandatory=$true)]
-    [String] $ResourceGroupName,
-
-    [Parameter(Mandatory=$true)]
-    [String] $AutomationAccountName,
-
     [Parameter(Mandatory=$true)]
     [String] $ModuleName,
 
@@ -77,71 +68,66 @@ param(
 
     if($SearchResult.Length -and $SearchResult.Length -gt 1) {
         $SearchResult = $SearchResult | Where-Object -FilterScript {
-
             return $_.properties.title -eq $ModuleName
-
         }
     }
 
     $PackageDetails = Invoke-RestMethod -Method Get -UseBasicParsing -Uri $SearchResult.id
-
     if(!$ModuleVersion) {
-
         $ModuleVersion = $PackageDetails.entry.properties.version
     }
 
     $ModuleContentUrl = "https://www.powershellgallery.com/api/v2/package/$ModuleName/$ModuleVersion"
-
     do {
-
-        $ActualUrl = $ModuleContentUrl
         $ModuleContentUrl = (Invoke-WebRequest -Uri $ModuleContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore).Headers.Location 
 
     } while(!$ModuleContentUrl.Contains(".nupkg"))
 
-    $ActualUrl = $ModuleContentUrl
-
-    $AutomationModule = New-AzureRmAutomationModule `
-        -ResourceGroupName $ResourceGroupName `
-        -AutomationAccountName $AutomationAccountName `
-        -Name $ModuleName `
-        -ContentLink $ActualUrl -AzureRmContext $Context
-
-    while(
-
-        (!([string]::IsNullOrEmpty($AutomationModule))) -and
-        $AutomationModule.ProvisioningState -ne "Created" -and
-        $AutomationModule.ProvisioningState -ne "Succeeded" -and
-        $AutomationModule.ProvisioningState -ne "Failed"
-
-    ){
-        Write-Verbose -Message "Polling for module import completion"
-        Start-Sleep -Seconds 10
-        $AutomationModule = $AutomationModule | Get-AzureRmAutomationModule -AzureRmContext $Context
-    }
-
-
-    if($AutomationModule.ProvisioningState -eq "Failed") {
-
-        Write-Error "     Importing $ModuleName module to Automation failed." -ErrorAction Continue
-
-    } else {
-        $ActualUrl
-    }
+    $ModuleContentUrl
 }
+
+#Update profile and automation modules
+function Update-ProfileAndAutomationVersionToLatest
+{
+    Write-Output "Importing Az.Accounts and Az.Automation modules"
+    $ProfileModuleName = "Az.Accounts"
+    $AutomationModuleName = "Az.Automation"
+    $WebClient = New-Object System.Net.WebClient
+    # Download Az.Profile to temp location
+    $ProfileURL = GetModuleContentUrl $ProfileModuleName
+    $ProfilePath = Join-Path $env:TEMP ($ProfileModuleName + ".zip")
+    $WebClient.DownloadFile($ProfileURL, $ProfilePath)
+    # Download Az.Automation to temp location
+    $AutomationURL = GetModuleContentUrl $AutomationModuleName
+    $AutomationPath = Join-Path $env:TEMP ($AutomationModuleName + ".zip")
+    $WebClient.DownloadFile($AutomationURL, $AutomationPath)
+    # Create folder for unzipping the Module files
+    $PathFolderName = New-Guid
+    $PathFolder = Join-Path $env:TEMP $PathFolderName
+    # Unzip files
+    $ProfileUnzipPath = Join-Path $PathFolder $ProfileModuleName
+    Expand-Archive -Path $ProfilePath -DestinationPath $ProfileUnzipPath -Force
+    $AutomationUnzipPath = Join-Path $PathFolder $AutomationModuleName
+    Expand-Archive -Path $AutomationPath -DestinationPath $AutomationUnzipPath -Force
+    # Import modules
+    Import-Module (Join-Path $ProfileUnzipPath ($ProfileModuleName + ".psd1")) -Force -Verbose
+    Import-Module (Join-Path $AutomationUnzipPath ($AutomationModuleName + ".psd1")) -Force -Verbose
+}
+Update-ProfileAndAutomationVersionToLatest
 
 # Login-AzureAutomation
 try {
     $RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
-    Write-Output "Logging in to AzureRm ($AzureEnvironment)..."
-    Add-AzureRmAccount `
+    Write-Output "Logging in to Az ($AzureEnvironment)..."
+    Add-AzAccount `
         -ServicePrincipal `
         -TenantId $RunAsConnection.TenantId `
         -ApplicationId $RunAsConnection.ApplicationId `
         -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
         -Environment $AzureEnvironment
-    Select-AzureRmSubscription -Subscription $SubscriptionName  | Write-Verbose
-    $Context = Get-AzureRmContext
+
+    Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
+    $Context = Get-AzContext
 } catch {
     if (!$RunAsConnection) {
         Write-Output $RunAsConnectionName
@@ -151,35 +137,55 @@ try {
     throw
 }
 
+# Import modules if they are not in the Automation account
 try {
-	# Import modules if they are not in the Automation account
 	foreach($ModuleToInstall in $ModulesToInstall)
 	{
 		$ModuleName = $ModuleToInstall.Name
 		$ModuleVersion = $ModuleToInstall.Version
 		Write-Output "Checking module $ModuleName..."
-		$ADModule = Get-AzureRMAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
-								-Name $ModuleName -AzureRmContext $Context -ErrorAction SilentlyContinue
+		$AzureADGalleryURL = GetModuleContentUrl -ModuleName $ModuleName -ModuleVersion $ModuleVersion
+		if (-Not $AzureADGalleryURL)
+		{
+			Write-Error "Can't find module $ModuleName" -ErrorAction Continue
+		}
+
+		$ADModule = Get-AzAutomationModule -ResourceGroupName $ResourceGroupName `
+					    -AutomationAccountName $AutomationAccountName `
+					    -Name $ModuleName -ErrorAction SilentlyContinue
+
 		if ([string]::IsNullOrEmpty($ADModule))
 		{
 			Write-Output "  Installing..."
-			$AzureADGalleryURL = ImportAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
-								-ModuleName $ModuleName -ModuleVersion $ModuleVersion
-			if (-Not $AzureADGalleryURL)
-			{
-				Write-Error "Can't find module $ModuleName" -ErrorAction Continue
-			}
-			else
-			{
-				New-AzureRMAutomationModule `
-					-ResourceGroupName $ResourceGroupName `
-					-AutomationAccountName $AutomationAccountName `
-					-Name $ModuleName `
-					-ContentLink $AzureADGalleryURL
-			}
 		}
+        else
+        {
+			Write-Output "  Updating..."
+        }
+
+        $AutomationModule = New-AzAutomationModule `
+            -ResourceGroupName $ResourceGroupName `
+            -AutomationAccountName $AutomationAccountName `
+            -Name $ModuleName `
+            -ContentLink $AzureADGalleryURL
+
+        while((!([string]::IsNullOrEmpty($AutomationModule))) -and
+            $AutomationModule.ProvisioningState -ne "Created" -and
+            $AutomationModule.ProvisioningState -ne "Succeeded" -and
+            $AutomationModule.ProvisioningState -ne "Failed")
+        {
+            Write-Verbose -Message "Polling for module import completion"
+            Start-Sleep -Seconds 10
+            $AutomationModule = $AutomationModule | Get-AzAutomationModule
+        }
+
+        if($AutomationModule.ProvisioningState -eq "Failed") {
+            throw "Importing $ModuleName module to Automation failed."
+        }
+            
 	}
 } catch {
     Write-Error $_.Exception -ErrorAction Continue
     throw
 }
+Write-Output "Done"

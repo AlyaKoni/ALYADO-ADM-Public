@@ -29,7 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    27.02.2020 Konrad Brunner       Initial Version
+    19.10.2021 Konrad Brunner       Initial Version
 
 #>
 
@@ -41,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-PasswordReset-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-UserGroupCreationDisabled-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 
@@ -60,28 +60,19 @@ LoginTo-MSOL
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-PasswordReset | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-UserGroupCreationDisabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 $MsolCompanySettings = Get-MsolCompanyInformation
-if ($MsolCompanySettings.SelfServePasswordResetEnabled -ne $AlyaPasswordResetEnabled)
+if ($MsolCompanySettings.UsersPermissionToCreateGroupsEnabled)
 {
-    Write-Warning "SelfServePasswordReset was set to $($MsolCompanySettings.SelfServePasswordResetEnabled). Setting it now to $($AlyaPasswordResetEnabled)."
-    Set-MsolCompanySettings -SelfServePasswordResetEnabled $AlyaPasswordResetEnabled
+    Write-Warning "UsersPermissionToCreateGroupsEnabled was enabled. Disabling it."
+    Set-MsolCompanySettings -UsersPermissionToCreateGroupsEnabled $false
 }
 else
 {
-    Write-Host "SelfServePasswordReset was already set to $($AlyaPasswordResetEnabled)." -ForegroundColor $CommandSuccess
+    Write-Host "UsersPermissionToCreateGroupsEnabled was already disabled." -ForegroundColor $CommandSuccess
 }
 
-if ($AlyaPasswordResetEnabled)
-{
-    Write-Host "Enabling password reset options" -ForegroundColor $CommandInfo
-    Write-Host "You have now to configure password reset options. Pleas browse to"
-    Write-Host "  https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
-    Write-Host "and allow password reset for all users. Also configure reset options."
-    pause
-    start https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset
-}
 #Stopping Transscript
 Stop-Transcript

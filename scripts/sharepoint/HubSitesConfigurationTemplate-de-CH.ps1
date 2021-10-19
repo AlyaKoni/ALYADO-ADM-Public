@@ -787,7 +787,7 @@ $homePageTemplateRootTeamSite = @"
 					&quot;pane_link_button&quot;:0}, 
 					&quot;serverProcessedContent&quot;: {&quot;htmlStrings&quot;:{},
 					&quot;searchablePlainTexts&quot;:{&quot;title&quot;:&quot;Bitte wähle eine Option&quot;,
-					&quot;items[0].title&quot;:&quot;Ich bin ein Alya Mitarbeiter&quot;,&quot;items[1].title&quot;:&quot;Ich bin KEIN Alya Mitarbeiter&quot;},
+					&quot;items[0].title&quot;:&quot;Ich bin ein $($AlyaCompanyName) Mitarbeiter&quot;,&quot;items[1].title&quot;:&quot;Ich bin KEIN $($AlyaCompanyName) Mitarbeiter&quot;},
 					&quot;imageSources&quot;:{&quot;items[1].rawPreviewImageUrl&quot;:&quot;{site}_api{site}v2.1{site}sites{site}alyaconsulting031.sharepoint.com,0ea97c04-97f2-4c4b-9506-d823c3b6bd5a,d587f72d-9c8f-4de7-9d86-61c0a6912374{site}items{site}af646fff-dcb1-4cbd-8d5b-23b36dc6a23a{site}driveItem{site}thumbnails{site}0{site}c400x99999{site}content?preferNoRedirect=true&quot;},
 					
 					&quot;links&quot;:{&quot;baseUrl&quot;:&quot;{hosturl}&quot;,&quot;
@@ -846,8 +846,8 @@ $homePageTemplateRootTeamSite = @"
 					&quot;serverProcessedContent&quot;: {&quot;htmlStrings&quot;:{},
 					
 					&quot;searchablePlainTexts&quot;:{&quot;title&quot;:&quot;Please choose an option&quot;,
-						&quot;items[0].title&quot;:&quot;I'm an Alya employee&quot;,
-						&quot;items[1].title&quot;:&quot;I'm NOT an Alya employee&quot;},
+						&quot;items[0].title&quot;:&quot;I'm an $($AlyaCompanyName) employee&quot;,
+						&quot;items[1].title&quot;:&quot;I'm NOT an $($AlyaCompanyName) employee&quot;},
 					&quot;imageSources&quot;:{&quot;items[1].rawPreviewImageUrl&quot;:&quot;{site}_api{site}v2.1{site}sites{site}alyaconsulting031.sharepoint.com,0ea97c04-97f2-4c4b-9506-d823c3b6bd5a,d587f72d-9c8f-4de7-9d86-61c0a6912374{site}items{site}af646fff-dcb1-4cbd-8d5b-23b36dc6a23a{site}driveItem{site}thumbnails{site}0{site}c400x99999{site}content?preferNoRedirect=true&quot;},
 					
 					&quot;links&quot;:{&quot;baseUrl&quot;:&quot;{hosturl}&quot;,
@@ -905,7 +905,7 @@ $hubSites = @(
         short = "ADM"
         title = "$prefix-ADM-Hub"
         url = "$prefix-ADM-Hub"
-        template = "TeamSite" # TeamSite, CommunicationSite
+        template = "CommunicationSite" # TeamSite, CommunicationSite
         locale4Creation = 1031 #TODO from config
         description = "Hub Seite für die Zusammenarbeit in der Administration"
         siteScriptDescription = "Fügt der Hub Site das ADM Design hinzu"
@@ -920,7 +920,7 @@ $hubSites = @(
         short = "CUS"
         title = "$prefix-CUS-Hub"
         url = "$prefix-CUS-Hub"
-        template = "TeamSite" # TeamSite, CommunicationSite
+        template = "CommunicationSite" # TeamSite, CommunicationSite
         locale4Creation = 1031 #TODO from config
         description = "Hub Seite für die Zusammenarbeit mit Kunden"
         siteScriptDescription = "Fügt der Hub Site das CUS Design hinzu"
@@ -935,7 +935,7 @@ $hubSites = @(
         short = "PRT"
         title = "$prefix-PRT-Hub"
         url = "$prefix-PRT-Hub"
-        template = "TeamSite" # TeamSite, CommunicationSite
+        template = "CommunicationSite" # TeamSite, CommunicationSite
         locale4Creation = 1031 #TODO from config
         description = "Hub Seite für die Zusammenarbeit mit Partnern"
         siteScriptDescription = "Fügt der Hub Site das PRT Design hinzu"
@@ -950,7 +950,7 @@ $hubSites = @(
         short = "COL"
         title = "$prefix-COL-Hub"
         url = "$prefix-COL-Hub"
-        template = "TeamSite" # TeamSite, CommunicationSite
+        template = "CommunicationSite" # TeamSite, CommunicationSite
         locale4Creation = 1031 #TODO from config
         description = "Hub Seite für die Kollaboration mit Externen"
         siteScriptDescription = "Fügt der Hub Site das COL Design hinzu"

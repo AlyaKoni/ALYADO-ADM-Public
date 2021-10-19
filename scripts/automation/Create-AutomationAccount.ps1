@@ -374,7 +374,7 @@ if (-Not $Runnbook)
     {
         $Schedule = New-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly2AM" -StartTime ((Get-Date "02:00:00").AddDays(1)) -MonthInterval 1 -DaysOfMonth One -TimeZone ([System.TimeZoneInfo]::Local).Id
     }
-    $JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureModuleClass"="AzureRm";"AzureEnvironment"="AzureCloud"}
+    $JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureModuleClass"="Az";"AzureEnvironment"="AzureCloud"}
     $tmp = Register-AzAutomationScheduledRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb01") -ScheduleName "Monthly2AM" -Parameters $JobParams
 }
 else
@@ -403,6 +403,13 @@ if (-Not $Runnbook)
     }
     $tmp = Import-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02") -Type PowerShell -Description "Installs required modules in the automation account" -Tags @{displayName="Module Installer"} -Path $runbookPath -Force
     $tmp = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02")
+    $Schedule = Get-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly3AM" -ErrorAction SilentlyContinue
+    if (-Not $Schedule)
+    {
+        $Schedule = New-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly3AM" -StartTime ((Get-Date "03:00:00").AddDays(1)) -MonthInterval 1 -DaysOfWeek Sunday -DayOfWeekOccurrence First -TimeZone ([System.TimeZoneInfo]::Local).Id
+    }
+    $JobParams = @{"SubscriptionName"=$AlyaSubscriptionName;"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureEnvironment"="AzureCloud"}
+    $tmp = Register-AzAutomationScheduledRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb02") -ScheduleName "Monthly3AM" -Parameters $JobParams
 }
 else
 {

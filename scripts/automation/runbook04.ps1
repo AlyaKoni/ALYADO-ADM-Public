@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     17.03.2020 Konrad Brunner       Initial Version
+    18.10.2021 Konrad Brunner       Move to Az
 
 #>
 
@@ -49,23 +50,23 @@ $RunAsCertificateName = "AzureRunAsCertificate"
 $ConnectionTypeName = "AzureServicePrincipal"
 
 # Login-AzureAutomation
+# Login-AzureAutomation
 try {
-    $RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
-    Write-Output "Logging in to AzureRm ($AzureEnvironment)..."
-    Add-AzureRmAccount `
-        -ServicePrincipal `
-        -TenantId $RunAsConnection.TenantId `
-        -ApplicationId $RunAsConnection.ApplicationId `
-        -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
-        -Environment $AzureEnvironment
-    $Context = Get-AzureRmContext
+	$RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
+	Write-Output "Logging in to Az ($AzureEnvironment)..."
+	$tmp = Add-AzAccount `
+		-ServicePrincipal `
+		-TenantId $RunAsConnection.TenantId `
+        -SubscriptionId $RunAsConnection.SubscriptionId `
+		-ApplicationId $RunAsConnection.ApplicationId `
+		-CertificateThumbprint $RunAsConnection.CertificateThumbprint `
+		-Environment $AzureEnvironment
 } catch {
-    if (!$RunAsConnection) {
-        Write-Output $RunAsConnectionName
-        try { Write-Output ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
-        Write-Output "Connection $RunAsConnectionName not found."
-    }
-    throw
+	if (!$RunAsConnection) {
+		Write-Output $_.Exception
+		Write-Output "Connection $RunAsConnectionName not found."
+	}
+	throw
 }
 
 try {
@@ -78,12 +79,12 @@ try {
 	foreach($sub in $subs)
 	{
 		"Processing subscription: $($sub)"
-		Select-AzureRmSubscription -SubscriptionId $sub | Out-Null
+		Select-AzSubscription -SubscriptionId $sub | Out-Null
 
-		Get-AzureRmResourceGroup | foreach {
+		Get-AzResourceGroup | foreach {
 			$ResGName = $_.ResourceGroupName
 			"  Checking ressource group $($ResGName)"
-			foreach($vm in (Get-AzureRmVM -ResourceGroupName $ResGName))
+			foreach($vm in (Get-AzVM -ResourceGroupName $ResGName))
 			{
 				"    Checking VM $($vm.Name)"
 				$tags = $vm.Tags
@@ -115,27 +116,27 @@ try {
 	                {
 		                if ($runTime -lt $stopTime -and $runTime -gt $startTime)
 		                {
-						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 						    foreach ($VMStatus in $VMDetail.Statuses)
 						    {
 							    "- VM Status: $($VMStatus.Code)"
 							    if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
 							    {
 								    "- Starting VM"
-								    Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
+								    Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
 							    }
 		                    }
 		                }
                         else
 		                {
-						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 						    foreach ($VMStatus in $VMDetail.Statuses)
 						    {
 							    "- VM Status: $($VMStatus.Code)"
 							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
 							    {
 								    "- Stopping VM"
-								    Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+								    Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
 							    }
 		                    }
 		                }
@@ -144,14 +145,14 @@ try {
 		            {
 		                if ($runTime -gt $startTime)
 		                {
-						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 						    foreach ($VMStatus in $VMDetail.Statuses)
 						    {
 							    "- VM Status: $($VMStatus.Code)"
 							    if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
 							    {
 								    "- Starting VM"
-								    Start-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name
+								    Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
 							    }
 		                    }
 		                }
@@ -163,27 +164,27 @@ try {
 	                {
 		                if ($runTime -gt $stopTime)
 		                {
-						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 						    foreach ($VMStatus in $VMDetail.Statuses)
 						    {
 							    "- VM Status: $($VMStatus.Code)"
 							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
 							    {
 								    "- Stopping VM"
-								    Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+								    Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
 							    }
 		                    }
 		                }
 		                if ($runTime.Hour -eq 0 -and $stopTime.Hour -eq 23)
 		                {
-						    $VMDetail = Get-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 						    foreach ($VMStatus in $VMDetail.Statuses)
 						    {
 							    "- VM Status: $($VMStatus.Code)"
 							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
 							    {
 								    "- Stopping VM"
-								    Stop-AzureRmVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+								    Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
 							    }
 		                    }
 		                }

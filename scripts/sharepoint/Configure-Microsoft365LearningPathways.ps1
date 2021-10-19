@@ -59,11 +59,11 @@ LoginTo-SPO
 # Constants
 if ($siteLocale -eq "de-CH")
 {
-    $learningPathwaysTitle = "LearningPathways"
+    $learningPathwaysTitle = "M365Training"
 }
 else
 {
-    $learningPathwaysTitle = "LearningPathways"
+    $learningPathwaysTitle = "M365Training"
 }
 
 if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
@@ -121,11 +121,25 @@ if (-Not $site)
     Write-Host "Login to learning pathways" -ForegroundColor $CommandInfo
     LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
+    # Multilanguage settings
+    $Web = Get-PnpWeb -Includes Language, SupportedUILanguageIds
+    $Web.IsMultilingual = $true
+    foreach($id in @(1031,1033,1040,1036))
+    {
+        if ($id -ne $Web.Language -and $Web.SupportedUILanguageIds -notcontains $id)
+        {
+            $Web.AddSupportedUILanguage($id)
+        }
+    }
+    $Web.Update()
+    Invoke-PnPQuery
+    Enable-PnPFeature -Identity "24611c05-ee19-45da-955f-6602264abaf8" -Force
+
     # Setting site design
     Write-Host "Setting site design" -ForegroundColor $CommandInfo
     if ($hubSiteDef.subSiteScript)
     {
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Team Site "+$siteLocale
+        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) SubSite Team Site "+$siteLocale
         $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
         if (-Not $SubSiteDesignTeam)
         {
@@ -135,7 +149,7 @@ if (-Not $site)
     }
     else
     {
-		$SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) HubSite Team Site "+$siteLocale
+		$SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) HubSite Team Site "+$siteLocale
         $SiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameTeam"}
         if (-Not $SiteDesignTeam)
         {
@@ -151,28 +165,21 @@ if (-Not $site)
 
     # Configuring permissions
     Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
+    $mgroup = Get-PnPGroup -AssociatedMemberGroup
     $aRoles = Get-PnPRoleDefinition
     $eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
     $cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
     $temp = Set-SPOSiteGroup -Site $site -Identity $mgroup.Title -PermissionLevelsToAdd $cRole.Name -PermissionLevelsToRemove $eRole.Name
 
-    # Configuring site theme
-    Write-Host "Configuring site theme" -ForegroundColor $CommandInfo
-    $web = Get-PnPWeb -Includes HeaderEmphasis,HeaderLayout,SiteLogoUrl,QuickLaunchEnabled
-    $web.HeaderLayout = $hubSite.headerLayout
-    $web.HeaderEmphasis = $hubSite.headerEmphasis
-    $web.QuickLaunchEnabled = $false
-    $web.Update()
-    Invoke-PnPQuery
+    # Configuring site logo
+    Write-Host "Configuring site logo" -ForegroundColor $CommandInfo
+    $web = Get-PnPWeb -Includes SiteLogoUrl
     if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
     {
-        $fname = Split-Path -Path $hubSite.siteLogoUrl -Leaf
-        $tempFile = [System.IO.Path]::GetTempFileName()+$fname
-        Invoke-RestMethod -Method GET -UseBasicParsing -Uri $hubSite.siteLogoUrl -OutFile $tempFile
-        Set-PnPSite -LogoFilePath $tempFile
-        Remove-Item -Path $tempFile
+        $web.SiteLogoUrl = $AlyaLogoUrlQuad
+        $web.Update()
+        Invoke-PnPQuery
     }
-    try { Disconnect-PnPOnline -ErrorAction SilentlyContinue } catch {}
 
 }
 
@@ -191,11 +198,15 @@ if (-Not (Test-Path "$AlyaTemp"))
 {
     New-Item -Path "$AlyaTemp" -ItemType Directory -Force | Out-Null
 }
-Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/customlearning.sppkg" -Method GET -OutFile "$AlyaTemp\customlearning.sppkg"
-Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/M365lpConfiguration.ps1" -Method GET -OutFile "$AlyaTemp\M365lpConfiguration.ps1"
-Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/TelemetryOptOut.ps1" -Method GET -OutFile "$AlyaTemp\TelemetryOptOut.ps1"
-Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/UpdateM365lpCDN.ps1" -Method GET -OutFile "$AlyaTemp\UpdateM365lpCDN.ps1"
-Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/UpdateM365lpSiteUrl.ps1" -Method GET -OutFile "$AlyaTemp\UpdateM365lpSiteUrl.ps1"
+if (-Not (Test-Path "$AlyaTemp\LearningPathways"))
+{
+    New-Item -Path "$AlyaTemp\LearningPathways" -ItemType Directory -Force | Out-Null
+}
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/customlearning.sppkg" -Method GET -OutFile "$AlyaTemp\LearningPathways\customlearning.sppkg"
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/M365lpConfiguration.ps1" -Method GET -OutFile "$AlyaTemp\LearningPathways\M365lpConfiguration.ps1"
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/TelemetryOptOut.ps1" -Method GET -OutFile "$AlyaTemp\LearningPathways\TelemetryOptOut.ps1"
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/UpdateM365lpCDN.ps1" -Method GET -OutFile "$AlyaTemp\LearningPathways\UpdateM365lpCDN.ps1"
+Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-office-365/raw/main/installation/UpdateM365lpSiteUrl.ps1" -Method GET -OutFile "$AlyaTemp\LearningPathways\UpdateM365lpSiteUrl.ps1"
 
 # Login to app catalog
 Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
@@ -203,7 +214,7 @@ LoginTo-PnP -Url $appCatalogUrl
 
 # Deploying app package
 Write-Host "Deploying app package" -ForegroundColor $CommandInfo
-$app = Add-PnPApp -Path "$AlyaTemp\customlearning.sppkg" -Scope Tenant -Overwrite -Publish
+$app = Add-PnPApp -Path "$AlyaTemp\LearningPathways\customlearning.sppkg" -Scope Tenant -Overwrite -Publish
 $app = Get-PnPApp -Identity $app.Id -Scope "Tenant"
 if (-Not $app.Deployed)
 {
@@ -217,18 +228,28 @@ LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 # Installing app package
 Write-Host "Installing app package" -ForegroundColor $CommandInfo
 Install-PnPApp -Identity $app.Id -Scope "Tenant"
+#TODO Update
 
 #
 # TODO Some modules needs to be unloaded to make next script working!
+# Until resolved, just run next commands in a new session
 #
+<#
+$newProcess = New-Object System.Diagnostics.ProcessStartInfo "Powershell";
+$newProcess.Arguments = "& '" + "$AlyaTemp\LearningPathways\M365lpConfiguration.ps1" + "' -TenantName $AlyaTenantNameId -SiteCollectionName $learningPathwaysSiteName"
+$newProcess.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Normal
+$newProcess.LoadUserProfile = $true
+$process = [System.Diagnostics.Process]::Start($newProcess)
+$process.WaitForExit()
+#>
 
 # Running M365lpConfiguration.ps1
 Write-Host "Running M365lpConfiguration.ps1" -ForegroundColor $CommandInfo
-& "$AlyaTemp\M365lpConfiguration.ps1" -TenantName $AlyaTenantNameId -SiteCollectionName $learningPathwaysSiteName
+& "$AlyaTemp\LearningPathways\M365lpConfiguration.ps1" -TenantName $AlyaTenantNameId -SiteCollectionName $learningPathwaysSiteName
 
 # Running TelemetryOptOut.ps1
 Write-Host "Running TelemetryOptOut.ps1" -ForegroundColor $CommandInfo
-& "$AlyaTemp\TelemetryOptOut.ps1" -TenantName $AlyaTenantNameId -SiteCollectionName $learningPathwaysSiteName
+& "$AlyaTemp\LearningPathways\TelemetryOptOut.ps1" -TenantName $AlyaTenantNameId -SiteCollectionName $learningPathwaysSiteName
 
 # Setting homepage
 Write-Host "Setting homepage" -ForegroundColor $CommandInfo

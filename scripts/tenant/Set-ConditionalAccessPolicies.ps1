@@ -182,6 +182,7 @@ if (-Not $AzureKeyVaultSecret)
 else
 {
     $ConditionalAccessAppPasswordSave = $AzureKeyVaultSecret.SecretValue
+    $ConditionalAccessAppPassword = (New-Object PSCredential $ConditionalAccessAppAssetName,$ConditionalAccessAppPasswordSave).GetNetworkCredential().Password
 }
 
 # Getting graph access token

@@ -190,7 +190,7 @@ foreach($packageDir in $packages)
                 {
                     $version = $toInstall.VersionInfo.FileVersion
                 }
-                if ($toInstall.VersionInfo.ProductVersion)
+                elseif ($toInstall.VersionInfo.ProductVersion)
                 {
                     $version = $toInstall.VersionInfo.ProductVersion
                 }
