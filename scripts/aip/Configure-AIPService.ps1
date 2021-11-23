@@ -137,6 +137,11 @@ else
 if (-Not $actConfiguration.InternalLicensingEnabled)
 {
     Write-Warning "InternalLicensingEnabled was disbled. Enabling it now."
+    if (-Not $actConfiguration.RMSOnlineKeySharingLocation)
+    {
+        Set-IRMConfiguration -RMSOnlineKeySharingLocation "https://sp-rms.eu.aadrm.com/TenantManagement/ServicePartner.svc"
+    }
+    Import-RMSTrustedPublishingDomain -RMSOnline -Name "RMS Online"
     Set-IRMConfiguration -InternalLicensingEnabled $true
 }
 if (-Not $actConfiguration.ExternalLicensingEnabled)

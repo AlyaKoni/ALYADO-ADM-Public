@@ -230,7 +230,7 @@ try
         $RequiredResourceAccessMsGraph.ResourceAppId = "00000003-0000-0000-c000-000000000000"
         $RequiredResourceAccessMsGraph.ResourceAccess = $AppPermissionMsGraph
 
-        Set-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId -RequiredResourceAccess $RequiredResourceAccessAdGraph, $RequiredResourceAccessMsGraph, $RequiredResourceAccessSharePoint
+        Set-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId -RequiredResourceAccess $RequiredResourceAccessAdGraph, $RequiredResourceAccessMsGraph
         $tmp = Get-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId
         while ($tmp.RequiredResourceAccess.Count -lt 2)
         {
@@ -406,9 +406,9 @@ if (-Not $Runnbook)
     $Schedule = Get-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly3AM" -ErrorAction SilentlyContinue
     if (-Not $Schedule)
     {
-        $Schedule = New-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly3AM" -StartTime ((Get-Date "03:00:00").AddDays(1)) -MonthInterval 1 -DaysOfWeek Sunday -DayOfWeekOccurrence First -TimeZone ([System.TimeZoneInfo]::Local).Id
+        $Schedule = New-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly3AM" -StartTime ((Get-Date "03:00:00").AddDays(1)) -MonthInterval 1 -DayOfWeek Friday -DayOfWeekOccurrence First -TimeZone ([System.TimeZoneInfo]::Local).Id
     }
-    $JobParams = @{"SubscriptionName"=$AlyaSubscriptionName;"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureEnvironment"="AzureCloud"}
+    $JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureEnvironment"="AzureCloud"}
     $tmp = Register-AzAutomationScheduledRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb02") -ScheduleName "Monthly3AM" -Parameters $JobParams
 }
 else
@@ -533,7 +533,7 @@ Write-Host "  Job status: "$($Job.Status)
 
 Write-Host "Starting module installation" -ForegroundColor $CommandInfo
 Write-Host "  Please wait..."
-$JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"SubscriptionName"=$AlyaSubscriptionName;"AzureEnvironment"="AzureCloud"}
+$JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureEnvironment"="AzureCloud"}
 $Job = Start-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02") -Parameters $JobParams
 $doLoop = $true
 While ($doLoop) {

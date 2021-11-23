@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     03.09.2020 Konrad Brunner       Initial Version
+    23.11.2021 Konrad Brunner       Group policies
 
 #>
 
@@ -379,6 +380,109 @@ if (-Not (Test-Path "$DataRoot\CorporateDeviceEnrollment")) { $tmp = New-Item -P
 $uri = "https://graph.microsoft.com/beta/deviceManagement/importedDeviceIdentities"
 $importedDeviceIdentities = Get-MsGraphObject -AccessToken $token -Uri $uri
 $importedDeviceIdentities | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\CorporateDeviceEnrollment\importedDeviceIdentities.json")) -Force
+
+
+##### Starting exports GroupPolicyConfiguration
+#####
+Write-Host "Exporting GroupPolicyConfiguration" -ForegroundColor $CommandInfo
+if (-Not (Test-Path "$DataRoot\GroupPolicyConfiguration")) { $tmp = New-Item -Path "$DataRoot\GroupPolicyConfiguration" -ItemType Directory -Force }
+
+#groupPolicyDefinitions
+$uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions"
+$groupPolicyDefinitions = Get-MsGraphCollection -AccessToken $token -Uri $uri
+$groupPolicyDefinitions | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\GroupPolicyConfiguration\groupPolicyDefinitions.json")) -Force
+
+#groupPolicyCategories
+$uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyCategories"
+$groupPolicyCategories = Get-MsGraphCollection -AccessToken $token -Uri $uri
+$groupPolicyCategories | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\GroupPolicyConfiguration\groupPolicyCategories.json")) -Force
+
+#groupPolicyUploadedDefinitionFiles
+$uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyUploadedDefinitionFiles"
+$groupPolicyUploadedDefinitionFiles = Get-MsGraphCollection -AccessToken $token -Uri $uri
+$groupPolicyUploadedDefinitionFiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\GroupPolicyConfiguration\groupPolicyUploadedDefinitionFiles.json")) -Force
+
+#groupPolicyConfigurations
+$uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations"
+$groupPolicyConfigurations = Get-MsGraphCollection -AccessToken $token -Uri $uri
+foreach($policy in $groupPolicyConfigurations)
+{
+    #$policy = $groupPolicyConfigurations[3]
+    $policy | Add-Member -MemberType NoteProperty -Name "@odata.type" -Value "#microsoft.graph.groupPolicyConfiguration" -Force
+
+    $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/assignments"
+    $assignments = Get-MsGraphCollection -AccessToken $token -Uri $uri
+    $policy | Add-Member -MemberType NoteProperty -Name assignments -Value $assignments -Force
+
+    $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues"
+    $definitionValues = Get-MsGraphCollection -AccessToken $token -Uri $uri
+    foreach($definitionValue in $definitionValues)
+    {
+        #$definitionValue = $definitionValues[0]
+        $definitionValue | Add-Member -MemberType NoteProperty -Name "@odata.type" -Value "#microsoft.graph.groupPolicyDefinitionValue" -Force
+
+        $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/definition"
+        $definitionValueDefinition = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+        $definitionValue | Add-Member -MemberType NoteProperty -Name definition -Value $definitionValueDefinition -Force
+        $definitionValue | Add-Member -MemberType NoteProperty -Name "definition@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($definitionValueDefinition.id)')" -Force
+
+        $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues?`$expand=presentation"
+        $presentationValues = Get-MsGraphCollection -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+        foreach($presentationValue in $presentationValues)
+        {
+            $presentationValue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($definitionValueDefinition.id)')/presentations('$($presentationValue.presentation.id)')" -Force
+            try
+            {
+                # TODO BadRequest
+                $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition"
+                $presentationValueDefinition = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                $presentationValue | Add-Member -MemberType NoteProperty -Name definition -Value $presentationValueDefinition -Force
+            } catch { }
+            try
+            {
+                # TODO BadRequest
+                $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/nextVersionDefinition"
+                $presentationValueDefinitionNext = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                $presentationValue | Add-Member -MemberType NoteProperty -Name definitionNext -Value $presentationValueDefinitionNext -Force
+            } catch { }
+            try
+            {
+                # TODO BadRequest
+                $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/previousVersionDefinition"
+                $presentationValueDefinitionPrev = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                $presentationValue | Add-Member -MemberType NoteProperty -Name definitionPrev -Value $presentationValueDefinitionPrev -Force
+            } catch { }
+            try
+            {
+                # TODO BadRequest
+                $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/category/definitions"
+                $presentationValueCategories = Get-MsGraphCollection -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                $presentationValue | Add-Member -MemberType NoteProperty -Name categories -Value $presentationValueCategories -Force
+            } catch { }
+            try
+            {
+                # TODO BadRequest
+                $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/definitionFile/definitions"
+                $presentationValueFiles = Get-MsGraphCollection -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                $presentationValue | Add-Member -MemberType NoteProperty -Name files -Value $presentationValueFiles -Force
+            } catch { }
+            try
+            {
+                # TODO BadRequest
+                $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/presentations"
+                $presentationValuePresentations = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                $presentationValue | Add-Member -MemberType NoteProperty -Name presentations -Value $presentationValuePresentations.value -Force
+            } catch { }
+            <#
+            GET /deviceManagement/groupPolicyConfigurations/{groupPolicyConfigurationId}/definitionValues/{groupPolicyDefinitionValueId}/presentationValues/{groupPolicyPresentationValueId}/presentation/definition/category/definitions/{groupPolicyDefinitionId}
+            GET /deviceManagement/groupPolicyConfigurations/{groupPolicyConfigurationId}/definitionValues/{groupPolicyDefinitionValueId}/presentationValues/{groupPolicyPresentationValueId}/presentation/definition/definitionFile/definitions/{groupPolicyDefinitionId}
+            #>
+        }
+        $definitionValue | Add-Member -MemberType NoteProperty -Name presentationValues -Value $presentationValues -Force
+    }
+    $policy | Add-Member -MemberType NoteProperty -Name definitionValues -Value $definitionValues -Force
+}
+$groupPolicyConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\GroupPolicyConfiguration\groupPolicyConfigurations.json")) -Force
 
 
 ##### Starting exports DeviceConfiguration

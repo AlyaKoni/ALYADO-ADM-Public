@@ -30,13 +30,15 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     29.09.2020 Konrad Brunner       Initial Version
+    23.10.2021 Konrad Brunner       Added apps path
 
 #>
 
 [CmdletBinding()]
 Param(
     [string]$CreateOnlyAppWithName = $null,
-    [string]$ContinueAtAppWithName = $null
+    [string]$ContinueAtAppWithName = $null,
+    [string]$AppsPath = "Win32Apps"
 )
 
 # Loading configuration
@@ -46,7 +48,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Create-IntuneWin32Packages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$DataRoot = Join-Path (Join-Path $AlyaData "intune") "Win32Apps"
+$DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
 if (-Not (Test-Path $DataRoot))
 {
     $tmp = New-Item -Path $DataRoot -ItemType Directory -Force

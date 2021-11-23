@@ -87,7 +87,6 @@ else
         {
             Write-Host "Installing $($toInst.FullName)"
             Write-Host "MSI Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-            #https://support.mozilla.org/de/kb/firefox-uber-msi-installationspakete-bereitstellen
             $installString = "msiexec.exe /i `"$($toInst.FullName)`" /qn /norestart /L* `"C:\ProgramData\AlyaConsulting\Logs\PDF24-Install-$AlyaTimeString.log`" ALLUSERS=1 AUTOUPDATE=No DESKTOPICONS=No FAXPRINTER=No REGISTERREADER=No"
             Write-Host "command: $installString"
             cmd /c "$installString"

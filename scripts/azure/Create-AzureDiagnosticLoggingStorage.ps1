@@ -100,7 +100,7 @@ $StrgAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name 
 if (-Not $StrgAccount)
 {
     Write-Warning "Storage account not found. Creating the storage account $StorageAccountName"
-    $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind BlobStorage -AccessTier Cool -Tag @{displayName="Diagnostic Log Storage"}
+    $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind StorageV2 -AccessTier Cool -Tag @{displayName="Diagnostic Log Storage"}
     if (-Not $StrgAccount)
     {
         Write-Error "Storage account $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue

@@ -28,13 +28,15 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     30.09.2020 Konrad Brunner       Initial Version
+    23.10.2021 Konrad Brunner       Added apps path
 
 #>
 
 [CmdletBinding()]
 Param(
     [string]$UploadOnlyAppWithName = $null,
-    [string]$ContinueAtAppWithName = $null
+    [string]$ContinueAtAppWithName = $null,
+    [string]$AppsPath = "Win32Apps"
 )
 
 # Loading configuration
@@ -45,7 +47,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-IntuneWin32Packages-$
 
 # Constants
 $AppPrefix = "Win10 "
-$DataRoot = Join-Path (Join-Path $AlyaData "intune") "Win32Apps"
+$DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
 if (-Not (Test-Path $DataRoot))
 {
     $tmp = New-Item -Path $DataRoot -ItemType Directory -Force

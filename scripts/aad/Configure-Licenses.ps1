@@ -32,6 +32,7 @@
     21.09.2020 Konrad Brunner       Initial Version
     16.12.2020 Konrad Brunner       Fixed bug, not removing users from groups
     19.10.2021 Konrad Brunner       Changed LIC group names
+    15.11.2021 Konrad Brunner       Fixed not existing group
 
 #>
 
@@ -168,38 +169,41 @@ Write-Host "Syncing licensed users with license groups" -ForegroundColor $Comman
 foreach ($group in $byGroup.Keys)
 {
     Write-Host "  Group '$group'"
-    $members = Get-AzureADGroupMember -ObjectId $byGroup[$group].Id
-    foreach ($member in $members)
+    if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
     {
-        if (-Not $byGroup[$group].Users.Contains($member.UserPrincipalName))
-        {
-            #Remove member
-            Write-Host "    Removing member '$($member.UserPrincipalName)'"
-            Remove-AzureADGroupMember -ObjectId $byGroup[$group].Id -MemberId $member.ObjectId
-        }
-    }
-    foreach ($user in $byGroup[$group].Users)
-    {
-            $fnd = $false
+        $members = Get-AzureADGroupMember -ObjectId $byGroup[$group].Id
         foreach ($member in $members)
         {
-            if ($member.UserPrincipalName -eq $user)
+            if (-Not $byGroup[$group].Users.Contains($member.UserPrincipalName))
             {
-                $fnd = $true
+                #Remove member
+                Write-Host "    Removing member '$($member.UserPrincipalName)'"
+                Remove-AzureADGroupMember -ObjectId $byGroup[$group].Id -MemberId $member.ObjectId
             }
         }
-        if (-Not $fnd)
+        foreach ($user in $byGroup[$group].Users)
         {
-            #Adding member
-            Write-Host "    Adding member '$user'"
-            $adUser = Get-AzureADUser -ObjectId $user -ErrorAction SilentlyContinue
-            if (-Not $adUser)
+            $fnd = $false
+            foreach ($member in $members)
             {
-                Write-Warning "     Member '$user' not found in AAD"
+                if ($member.UserPrincipalName -eq $user)
+                {
+                    $fnd = $true
+                }
             }
-            else
+            if (-Not $fnd)
             {
-                Add-AzureADGroupMember  -ObjectId $byGroup[$group].Id -RefObjectId $adUser.ObjectId
+                #Adding member
+                Write-Host "    Adding member '$user'"
+                $adUser = Get-AzureADUser -ObjectId $user -ErrorAction SilentlyContinue
+                if (-Not $adUser)
+                {
+                    Write-Warning "     Member '$user' not found in AAD"
+                }
+                else
+                {
+                    Add-AzureADGroupMember  -ObjectId $byGroup[$group].Id -RefObjectId $adUser.ObjectId
+                }
             }
         }
     }

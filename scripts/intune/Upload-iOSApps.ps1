@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     25.08.2021 Konrad Brunner       Initial Version
+    03.11.2021 Konrad Brunner       Added v14_0
 
 #>
 
@@ -134,6 +135,7 @@ foreach($iosApp in $appsIOS)
         v11_0=$osVersion.ToString().StartsWith(11)
         v12_0=$osVersion.ToString().StartsWith(12)
         v13_0=$osVersion.ToString().StartsWith(13)
+        v14_0=$osVersion.ToString().StartsWith(14)
     }
         
     # Checking if iosApp exists

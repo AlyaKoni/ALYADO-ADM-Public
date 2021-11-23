@@ -49,7 +49,10 @@ Param(
     [Parameter(Mandatory=$true)]
     [string]$VirtualNetworkName,
     [Parameter(Mandatory=$true)]
-    [string]$SubnetName
+    [string]$SubnetName,
+    [bool]$WithPrivateEndpoint = $false,
+    [bool]$WithADIntegration = $false,
+    [bool]$WithAADIntegration = $false
 )
 
 # Loading configuration
@@ -175,13 +178,16 @@ if (-Not $Subnet)
     throw "Subnet not found. Please create the subnet $SubnetName"
 }
 
-# Checking private endpoint network policies
-Write-Host "Checking private endpoint network policies" -ForegroundColor $CommandInfo
-if ($Subnet.PrivateEndpointNetworkPolicies -ne "Disabled")
+if ($WithPrivateEndpoint)
 {
-    Write-Warning "Private endpoint network policies not disabled, disabling it now"
-    $Subnet.PrivateEndpointNetworkPolicies = "Disabled"
-    $VNet = $VNet | Set-AzVirtualNetwork
+    # Checking private endpoint network policies
+    Write-Host "Checking private endpoint network policies" -ForegroundColor $CommandInfo
+    if ($Subnet.PrivateEndpointNetworkPolicies -ne "Disabled")
+    {
+        Write-Warning "Private endpoint network policies not disabled, disabling it now"
+        $Subnet.PrivateEndpointNetworkPolicies = "Disabled"
+        $VNet = $VNet | Set-AzVirtualNetwork
+    }
 }
 
 # =============================================================
@@ -286,141 +292,165 @@ if ($StorageType -eq "Premium" -or $StorageType -eq "PremHot" -or $StorageType -
 # Checking Private Endpoint and DNS
 # =============================================================
 
-Write-Host "Checking private endpoint" -ForegroundColor $CommandInfo
-$privateEndpointName = "$($StorageAccountNameFiles)pe"
-$privateEndpoint = Get-AzPrivateEndpoint -ResourceGroupName $ResourceGroupName -Name $privateEndpointName -ErrorAction SilentlyContinue
-if (-Not $privateEndpoint)
+if ($WithPrivateEndpoint)
 {
-    Write-Warning "Private endpoint not found. Creating now endpoint $privateEndpointName"
-    $privateEndpointConnection = New-AzPrivateLinkServiceConnection `
-        -Name "$($StorageAccountNameFiles)con" `
-        -PrivateLinkServiceId $StrgAccountFiles.Id `
-        -GroupId "file"
-    $privateEndpoint = New-AzPrivateEndpoint `
-        -ResourceGroupName $ResourceGroupName `
-        -Name $privateEndpointName `
-        -Location $VNet.Location `
-        -Subnet $Subnet `
-        -PrivateLinkServiceConnection $privateEndpointConnection
-}
 
-Write-Host "Checking private DNS zone" -ForegroundColor $CommandInfo
-$storageAccountSuffix = $Context | `
-    Select-Object -ExpandProperty Environment | `
-    Select-Object -ExpandProperty StorageEndpointSuffix
-$dnsZoneName = "privatelink.file.$storageAccountSuffix"
-$dnsZone = Get-AzPrivateDnsZone | `
-    Where-Object { $_.Name -eq $dnsZoneName } | `
-    Where-Object {
-        $privateDnsLink = Get-AzPrivateDnsVirtualNetworkLink `
-                -ResourceGroupName $_.ResourceGroupName `
-                -ZoneName $_.Name `
-                -ErrorAction SilentlyContinue
-        $privateDnsLink.VirtualNetworkId -eq $VNet.Id
+    Write-Host "Checking private endpoint" -ForegroundColor $CommandInfo
+    $privateEndpointName = "$($StorageAccountNameFiles)pe"
+    $privateEndpoint = Get-AzPrivateEndpoint -ResourceGroupName $ResourceGroupName -Name $privateEndpointName -ErrorAction SilentlyContinue
+    if (-Not $privateEndpoint)
+    {
+        Write-Warning "Private endpoint not found. Creating now endpoint $privateEndpointName"
+        $privateEndpointConnection = New-AzPrivateLinkServiceConnection `
+            -Name "$($StorageAccountNameFiles)con" `
+            -PrivateLinkServiceId $StrgAccountFiles.Id `
+            -GroupId "file"
+        $privateEndpoint = New-AzPrivateEndpoint `
+            -ResourceGroupName $ResourceGroupName `
+            -Name $privateEndpointName `
+            -Location $VNet.Location `
+            -Subnet $Subnet `
+            -PrivateLinkServiceConnection $privateEndpointConnection
     }
-if (-Not $dnsZone)
-{
-    Write-Warning "Private DNS zone not found. Creating now private DNS zone $privateZoneName with link"
-    $dnsZone = New-AzPrivateDnsZone `
-            -ResourceGroupName $NetworkResourceGroupName `
-            -Name $dnsZoneName
-    $privateDnsLink = New-AzPrivateDnsVirtualNetworkLink `
-            -ResourceGroupName $NetworkResourceGroupName `
-            -ZoneName $dnsZoneName `
-            -Name "$VirtualNetworkName-link-$dnsZoneName" `
-            -VirtualNetworkId $VNet.Id
-}
 
-Write-Host "Checking private DNS record set" -ForegroundColor $CommandInfo
-$privateEndpointIP = $privateEndpoint | `
-    Select-Object -ExpandProperty NetworkInterfaces | `
-    Select-Object @{ 
-        Name = "NetworkInterfaces"; 
-        Expression = { Get-AzNetworkInterface -ResourceId $_.Id } 
-    } | `
-    Select-Object -ExpandProperty NetworkInterfaces | `
-    Select-Object -ExpandProperty IpConfigurations | `
-    Select-Object -ExpandProperty PrivateIpAddress
-$privateDnsRecordConfig = New-AzPrivateDnsRecordConfig `
-    -IPv4Address $privateEndpointIP
-$privateDnsRecordSet = Get-AzPrivateDnsRecordSet `
-    -ResourceGroupName $NetworkResourceGroupName `
-    -Name $StorageAccountNameFiles `
-    -RecordType A `
-    -ZoneName $dnsZoneName -ErrorAction SilentlyContinue
-if (-Not $privateDnsRecordSet)
-{
-    Write-Warning "Private DNS record set not found. Creating now private DNS record set"
-    New-AzPrivateDnsRecordSet `
+    Write-Host "Checking private DNS zone" -ForegroundColor $CommandInfo
+    $storageAccountSuffix = $Context | `
+        Select-Object -ExpandProperty Environment | `
+        Select-Object -ExpandProperty StorageEndpointSuffix
+    $dnsZoneName = "privatelink.file.$storageAccountSuffix"
+    $dnsZone = Get-AzPrivateDnsZone | `
+        Where-Object { $_.Name -eq $dnsZoneName } | `
+        Where-Object {
+            $privateDnsLink = Get-AzPrivateDnsVirtualNetworkLink `
+                    -ResourceGroupName $_.ResourceGroupName `
+                    -ZoneName $_.Name `
+                    -ErrorAction SilentlyContinue
+            $privateDnsLink.VirtualNetworkId -eq $VNet.Id
+        }
+    if (-Not $dnsZone)
+    {
+        Write-Warning "Private DNS zone not found. Creating now private DNS zone $privateZoneName with link"
+        $dnsZone = New-AzPrivateDnsZone `
+                -ResourceGroupName $NetworkResourceGroupName `
+                -Name $dnsZoneName
+        $privateDnsLink = New-AzPrivateDnsVirtualNetworkLink `
+                -ResourceGroupName $NetworkResourceGroupName `
+                -ZoneName $dnsZoneName `
+                -Name "$VirtualNetworkName-link-$dnsZoneName" `
+                -VirtualNetworkId $VNet.Id
+    }
+
+    Write-Host "Checking private DNS record set" -ForegroundColor $CommandInfo
+    $privateEndpointIP = $privateEndpoint | `
+        Select-Object -ExpandProperty NetworkInterfaces | `
+        Select-Object @{ 
+            Name = "NetworkInterfaces"; 
+            Expression = { Get-AzNetworkInterface -ResourceId $_.Id } 
+        } | `
+        Select-Object -ExpandProperty NetworkInterfaces | `
+        Select-Object -ExpandProperty IpConfigurations | `
+        Select-Object -ExpandProperty PrivateIpAddress
+    $privateDnsRecordConfig = New-AzPrivateDnsRecordConfig `
+        -IPv4Address $privateEndpointIP
+    $privateDnsRecordSet = Get-AzPrivateDnsRecordSet `
         -ResourceGroupName $NetworkResourceGroupName `
         -Name $StorageAccountNameFiles `
         -RecordType A `
-        -ZoneName $dnsZoneName `
-        -Ttl 600 `
-        -PrivateDnsRecords $privateDnsRecordConfig | Out-Null
+        -ZoneName $dnsZoneName -ErrorAction SilentlyContinue
+    if (-Not $privateDnsRecordSet)
+    {
+        Write-Warning "Private DNS record set not found. Creating now private DNS record set"
+        New-AzPrivateDnsRecordSet `
+            -ResourceGroupName $NetworkResourceGroupName `
+            -Name $StorageAccountNameFiles `
+            -RecordType A `
+            -ZoneName $dnsZoneName `
+            -Ttl 600 `
+            -PrivateDnsRecords $privateDnsRecordConfig | Out-Null
+    }
+
+    Write-Host "Disabling public storage access" -ForegroundColor $CommandInfo
+    $StrgAccountFiles | Update-AzStorageAccountNetworkRuleSet `
+        -DefaultAction Deny `
+        -Bypass AzureServices `
+        -WarningAction SilentlyContinue | Out-Null
 }
 
-Write-Host "Disabling public storage access" -ForegroundColor $CommandInfo
-$StrgAccountFiles | Update-AzStorageAccountNetworkRuleSet `
-    -DefaultAction Deny `
-    -Bypass AzureServices `
-    -WarningAction SilentlyContinue | Out-Null
+# =============================================================
+# Enabling AAD Integration
+# =============================================================
+
+if ($WithAADIntegration)
+{
+    
+}
 
 # =============================================================
 # Enabling AD Integration
 # =============================================================
 
-if (-Not $StrgAccountFiles.AzureFilesIdentityBasedAuth)
+if ($WithADIntegration)
 {
-    Write-Warning "AD integration not yet enabled. Enabling now AD integration"
-    $toolDir = "$AlyaTools\AzFilesHybrid"
-    if (-Not (Test-Path $toolDir))
-    {
-        New-Item -Path $toolDir -ItemType Directory -Force | Out-Null
-        $req = Invoke-WebRequest -Uri "https://github.com/Azure-Samples/azure-files-samples/releases" -UseBasicParsing -Method Get
-        [regex]$regex = "[^`"]*/release[^`"]*windows/[^`"]*"
-        [regex]$regex = "[^`"]*/AzFilesHybrid.zip[^`"]*"
-        $getUrl = "https://github.com"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-        $outFile = "$toolDir\AzFilesHybrid.zip"
-        $req = Invoke-WebRequest -Uri $getUrl -OutFile $outFile
-        Expand-Archive -Path $outFile -DestinationPath $toolDir -Force
-        Remove-Item -Path $outFile -Force | Out-Null
-        pushd $toolDir
-        .\CopyToPSPath.ps1
-        popd
-    }
 
-    # Integrate
-    Import-Module -Name AzFilesHybrid
-    $DomainAccountType = "ComputerAccount"
-    $OuDistinguishedName = $null
-    $EncryptionType = "AES256"
-    Join-AzStorageAccountForAuth `
-        -ResourceGroupName $ResourceGroupName `
-        -StorageAccountName $StorageAccountNameFiles `
-        -DomainAccountType $DomainAccountType `
-        -OrganizationalUnitDistinguishedName $OuDistinguishedName `
-        -EncryptionType $EncryptionType
-    Update-AzStorageAccountAuthForAES256 -ResourceGroupName $ResourceGroupName -StorageAccountName $StorageAccountNameFiles
-    Debug-AzStorageAccountAuth -StorageAccountName $StorageAccountNameFiles -ResourceGroupName $ResourceGroupName -Verbose
-
-    # Check
-    $StrgAccountFiles = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageAccountNameFiles -ErrorAction SilentlyContinue
     if (-Not $StrgAccountFiles.AzureFilesIdentityBasedAuth)
     {
-        Write-Error "Was not able to enable the AD integration"
+        Write-Warning "AD integration not yet enabled. Enabling now AD integration"
+        $toolDir = "$AlyaTools\AzFilesHybrid"
+        if (-Not (Test-Path $toolDir))
+        {
+            New-Item -Path $toolDir -ItemType Directory -Force | Out-Null
+            $req = Invoke-WebRequest -Uri "https://github.com/Azure-Samples/azure-files-samples/releases" -UseBasicParsing -Method Get
+            [regex]$regex = "[^`"]*/release[^`"]*windows/[^`"]*"
+            [regex]$regex = "[^`"]*/AzFilesHybrid.zip[^`"]*"
+            $getUrl = "https://github.com"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+            $outFile = "$toolDir\AzFilesHybrid.zip"
+            $req = Invoke-WebRequest -Uri $getUrl -OutFile $outFile
+            Expand-Archive -Path $outFile -DestinationPath $toolDir -Force
+            Remove-Item -Path $outFile -Force | Out-Null
+            pushd $toolDir
+            .\CopyToPSPath.ps1
+            popd
+        }
+
+        # Integrate
+        Import-Module -Name AzFilesHybrid
+        $DomainAccountType = "ComputerAccount"
+        $OuDistinguishedName = $null
+        $EncryptionType = "AES256"
+        Join-AzStorageAccountForAuth `
+            -ResourceGroupName $ResourceGroupName `
+            -StorageAccountName $StorageAccountNameFiles `
+            -DomainAccountType $DomainAccountType `
+            -OrganizationalUnitDistinguishedName $OuDistinguishedName `
+            -EncryptionType $EncryptionType
+        Update-AzStorageAccountAuthForAES256 -ResourceGroupName $ResourceGroupName -StorageAccountName $StorageAccountNameFiles
+        Debug-AzStorageAccountAuth -StorageAccountName $StorageAccountNameFiles -ResourceGroupName $ResourceGroupName -Verbose
+
+        # Check
+        $StrgAccountFiles = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageAccountNameFiles -ErrorAction SilentlyContinue
+        if (-Not $StrgAccountFiles.AzureFilesIdentityBasedAuth)
+        {
+            Write-Error "Was not able to enable the AD integration"
+        }
+        else
+        {
+            $StrgAccountFiles.AzureFilesIdentityBasedAuth | fl
+            $StrgAccountFiles.AzureFilesIdentityBasedAuth.ActiveDirectoryProperties
+        }
+        #Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountNameFiles -ListKerbKey
     }
-    else
-    {
-        $StrgAccountFiles.AzureFilesIdentityBasedAuth | fl
-        $StrgAccountFiles.AzureFilesIdentityBasedAuth.ActiveDirectoryProperties
-    }
-    #Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountNameFiles -ListKerbKey
 }
 
+# =============================================================
+# Configuring permissions
+# =============================================================
+
 # To set Default permission for storage account
-$defaultPermission = "None" #None|StorageFileDataSmbShareContributor|StorageFileDataSmbShareReader|StorageFileDataSmbShareElevatedContributor
-$StrgAccountFiles = Set-AzStorageAccount -ResourceGroupName $ResourceGroupName -AccountName $StorageAccountNameFiles -DefaultSharePermission $defaultPermission
+if ($WithADIntegration)
+{
+    $defaultPermission = "None" #None|StorageFileDataSmbShareContributor|StorageFileDataSmbShareReader|StorageFileDataSmbShareElevatedContributor
+    $StrgAccountFiles = Set-AzStorageAccount -ResourceGroupName $ResourceGroupName -AccountName $StorageAccountNameFiles -DefaultSharePermission $defaultPermission
+}
 
 # Setting Share Access
 # ATTENTION: Permissions can require very long time until they are reflected on the client!
@@ -429,23 +459,60 @@ $FileShareContributorRole = Get-AzRoleDefinition "Storage File Data SMB Share Co
 $FileShareElevatedRole = Get-AzRoleDefinition "Storage File Data SMB Share Elevated Contributor"
 $scope = "/subscriptions/$($Context.Subscription.Id)/resourceGroups/$ResourceGroupName/providers/Microsoft.Storage/storageAccounts/$StorageAccountNameFiles/fileServices/default/fileshares/$ShareName"
 
-$admGrpName = "$($StorageAccountNameFiles)_$($ShareName)_admin"
-$cntGrpName = "$($StorageAccountNameFiles)_$($ShareName)_contributor"
-$rdrGrpName = "$($StorageAccountNameFiles)_$($ShareName)_reader"
+$admGrpName = "$($AlyaCompanyNameShortM365)SG-STG-$($StorageAccountNameFiles)-$($ShareName)-Admin"
+$cntGrpName = "$($AlyaCompanyNameShortM365)SG-STG-$($StorageAccountNameFiles)-$($ShareName)-Contributor"
+$rdrGrpName = "$($AlyaCompanyNameShortM365)SG-STG-$($StorageAccountNameFiles)-$($ShareName)-Reader"
 
-$admGrp = Get-AzAdGroup -DisplayName $admGrpName
-$cntGrp = Get-AzAdGroup -DisplayName $cntGrpName
-$rdrGrp = Get-AzAdGroup -DisplayName $rdrGrpName
+$admGrp = Get-AzAdGroup -DisplayName $admGrpName -ErrorAction SilentlyContinue
+if (-Not $admGrp -And -not $WithADIntegration)
+{
+    Write-Warning "Admin Security group  not found. Creating it now"
+    $admGrp = New-AzAdGroup -DisplayName $admGrpName -MailNickname $admGrpName -Description "Group to assign admin access to share '$ShareName' on storage '$StorageAccountNameFiles'"
+}
+$admGrpMembs = Get-AzADGroupMember -GroupObjectId $admGrp.Id
+$fnd = $false
+foreach($admGrpMemb in $admGrpMembs)
+{
+    if ($admGrpMemb.UserPrincipalName -eq $context.Account.Id)
+    {
+        $fnd = $true
+        break
+    }
+}
+if (-Not $fnd)
+{
+    Add-AzADGroupMember -TargetGroupObjectId $admGrp.Id -MemberUserPrincipalName $context.Account.Id
+}
 
-New-AzRoleAssignment -ObjectId $admGrp.Id -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope
-New-AzRoleAssignment -ObjectId $cntGrp.Id -RoleDefinitionName $FileShareContributorRole.Name -Scope $scope
-New-AzRoleAssignment -ObjectId $rdrGrp.Id -RoleDefinitionName $FileShareReaderRole.Name -Scope $scope
-New-AzRoleAssignment -SignInName $context.Account.Id -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope
+$cntGrp = Get-AzAdGroup -DisplayName $cntGrpName -ErrorAction SilentlyContinue
+if (-Not $cntGrp -And -not $WithADIntegration)
+{
+    Write-Warning "Contributor Security group  not found. Creating it now"
+    $cntGrp = New-AzAdGroup -DisplayName $cntGrpName -MailNickname $cntGrpName -Description "Group to assign contributor access to share '$ShareName' on storage '$StorageAccountNameFiles'"
+}
+$rdrGrp = Get-AzAdGroup -DisplayName $rdrGrpName -ErrorAction SilentlyContinue
+if (-Not $rdrGrp -And -not $WithADIntegration)
+{
+    Write-Warning "Reader Security group  not found. Creating it now"
+    $rdrGrp = New-AzAdGroup -DisplayName $rdrGrpName -MailNickname $rdrGrpName -Description "Group to assign reader access to share '$ShareName' on storage '$StorageAccountNameFiles'"
+}
 
-#New-AzRoleAssignment -SignInName "k.brunner@hundegger.com" -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope
-#New-AzRoleAssignment -SignInName "s.feneberg@hundegger.com" -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope
-#New-AzRoleAssignment -SignInName "feneberg.s@hundegger.com" -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope
-#New-AzRoleAssignment -SignInName "m365test@hundegger.com" -RoleDefinitionName $FileShareReaderRole.Name -Scope $scope
+$ass = Get-AzRoleAssignment -ObjectId $admGrp.Id -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope -ErrorAction SilentlyContinue
+if (-Not $ass)
+{
+    New-AzRoleAssignment -ObjectId $admGrp.Id -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope
+}
+$ass = Get-AzRoleAssignment -ObjectId $cntGrp.Id -RoleDefinitionName $FileShareContributorRole.Name -Scope $scope -ErrorAction SilentlyContinue
+if (-Not $ass)
+{
+    New-AzRoleAssignment -ObjectId $cntGrp.Id -RoleDefinitionName $FileShareContributorRole.Name -Scope $scope
+}
+$ass = Get-AzRoleAssignment -ObjectId $rdrGrp.Id -RoleDefinitionName $FileShareReaderRole.Name -Scope $scope -ErrorAction SilentlyContinue
+if (-Not $ass)
+{
+    New-AzRoleAssignment -ObjectId $rdrGrp.Id -RoleDefinitionName $FileShareReaderRole.Name -Scope $scope
+}
+#New-AzRoleAssignment -SignInName $context.Account.Id -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope
 
 Get-AzRoleAssignment -Scope $scope -RoleDefinitionName $FileShareReaderRole.Name
 Get-AzRoleAssignment -Scope $scope -RoleDefinitionName $FileShareContributorRole.Name
@@ -455,40 +522,42 @@ Get-AzRoleAssignment -Scope $scope -RoleDefinitionName $FileShareElevatedRole.Na
 #Remove-AzRoleAssignment -RoleDefinitionName $FileShareContributorRole.Name -Scope $scope -SignInName "k.brunner@hundegger.com"
 #Remove-AzRoleAssignment -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope -SignInName "k.brunner@hundegger.com"
 
-$keys = Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountNameFiles
-$pwdSec = ConvertTo-SecureString -String $keys[0].Value -AsPlainText -Force
-$shareCred = New-Object PSCredential "Azure\$StorageAccountNameFiles", $pwdSec
-New-PSDrive -Name Z -PSProvider FileSystem -Root "\\$StorageAccountNameFiles.file.core.windows.net\$ShareName" -Credential $shareCred
-Get-PSDrive
-
-
-$InheritanceFlagContainerAndObject = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-$PropagationFlagNone = [System.Security.AccessControl.PropagationFlags]::None
-$AccessTypeAllow = [System.Security.AccessControl.AccessControlType]::Allow 
-$AccessFullControl = [System.Security.AccessControl.FileSystemRights]::FullControl
-$AccessReadExecute = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
-$AccessModify = [System.Security.AccessControl.FileSystemRights]::CreateDirectories -bor [System.Security.AccessControl.FileSystemRights]::CreateFiles -bor [System.Security.AccessControl.FileSystemRights]::AppendData -bor [System.Security.AccessControl.FileSystemRights]::WriteData
-$acl = Get-ACL -Path Z:
-foreach($acc in $acl.Access)
+if ($WithADIntegration)
 {
-    $acc
-    if ($acc.IdentityReference -like "HUNDEGGER\*")
-    {
-        $tmp = $acl.RemoveAccessRule($acc)
-    }
-}
-Set-Acl Z:\ $acl
-$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($admGrpName, $AccessFullControl, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
-$acl.SetAccessRule($accessRule)
-$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($cntGrpName, $AccessModify, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
-$acl.SetAccessRule($accessRule)
-$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($rdrGrpName, $AccessReadExecute, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
-$acl.SetAccessRule($accessRule)
-$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($context.Account.Id, $AccessFullControl, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
-$acl.SetAccessRule($accessRule)
-Set-Acl Z:\ $acl
+    $keys = Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountNameFiles
+    $pwdSec = ConvertTo-SecureString -String $keys[0].Value -AsPlainText -Force
+    $shareCred = New-Object PSCredential "Azure\$StorageAccountNameFiles", $pwdSec
+    New-PSDrive -Name Z -PSProvider FileSystem -Root "\\$StorageAccountNameFiles.file.core.windows.net\$ShareName" -Credential $shareCred
+    Get-PSDrive
 
-Remove-PSDrive -Name Z -Force
+    $InheritanceFlagContainerAndObject = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+    $PropagationFlagNone = [System.Security.AccessControl.PropagationFlags]::None
+    $AccessTypeAllow = [System.Security.AccessControl.AccessControlType]::Allow 
+    $AccessFullControl = [System.Security.AccessControl.FileSystemRights]::FullControl
+    $AccessReadExecute = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+    $AccessModify = [System.Security.AccessControl.FileSystemRights]::CreateDirectories -bor [System.Security.AccessControl.FileSystemRights]::CreateFiles -bor [System.Security.AccessControl.FileSystemRights]::AppendData -bor [System.Security.AccessControl.FileSystemRights]::WriteData
+    $acl = Get-ACL -Path Z:
+    foreach($acc in $acl.Access)
+    {
+        $acc
+        if ($acc.IdentityReference -like "$AlyaLocalDomainName\*")
+        {
+            $tmp = $acl.RemoveAccessRule($acc)
+        }
+    }
+    Set-Acl Z:\ $acl
+    $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($admGrpName, $AccessFullControl, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
+    $acl.SetAccessRule($accessRule)
+    $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($cntGrpName, $AccessModify, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
+    $acl.SetAccessRule($accessRule)
+    $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($rdrGrpName, $AccessReadExecute, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
+    $acl.SetAccessRule($accessRule)
+    #$accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($context.Account.Id, $AccessFullControl, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
+    #$acl.SetAccessRule($accessRule)
+    Set-Acl Z:\ $acl
+
+    Remove-PSDrive -Name Z -Force
+}
 
 <#
 # Update the password of the AD DS account registered for the storage account

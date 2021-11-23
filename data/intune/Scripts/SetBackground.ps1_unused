@@ -30,16 +30,57 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     01.04.2020 Konrad Brunner       Initial Version
+    04.11.2021 Konrad Brunner       Enhanced the script
 
 #>
 
+$WallpaperUrl = "https://alyapinfstrg001.blob.core.windows.net/images/DesktopBackgroundH.jpg"
+$WallpaperStyle = "Fill"
+
+$Style = Switch ($WallpaperStyle) {
+  
+    "Fill" {"10"}
+    "Fit" {"6"}
+    "Stretch" {"2"}
+    "Tile" {"0"}
+    "Center" {"0"}
+    "Span" {"22"}
+}
+$Tile = 0
+if ($WallpaperStyle -eq "Tile") { $Tile = 1 }
 $path = [Environment]::GetFolderPath("ApplicationData") + "\AlyaConsulting\Background"
 if (-Not (Test-Path $path))
 {
     New-Item -ItemType Directory -Force -Path $path | Out-Null
 }
-$localFile = "$path\DesktopBackgroundH.jpg"
-Start-BitsTransfer -Source "https://alyapinfstrg001.blob.core.windows.net/images/DesktopBackgroundH.jpg" -Destination $localFile
-Set-ItemProperty -path 'HKCU:\Control Panel\Desktop\' -name wallpaper -value $localFile
-rundll32.exe user32.dll, UpdatePerUserSystemParameters
-kill -n explorer
+$localFile = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)
+$localFileTmp = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)+".tmp"
+Start-BitsTransfer -Source $WallpaperUrl -Destination $localFileTmp
+$localFileHash = Get-FileHash -Path $localFile
+$localFileTmpHash = Get-FileHash -Path $localFileTmp
+if ($localFileHash.Hash -eq $localFileTmpHash.Hash)
+{
+    Remove-Item -Path $localFileTmp -Force
+}
+else
+{
+    Move-Item -Path $localFileTmp -Destination $localFile -Force
+
+    Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\' -Name "WallpaperStyle" -value $Style
+    Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\' -Name "TileWallpaper" -value $Tile
+
+    Add-Type -TypeDefinition @"
+    using System;
+    using System.Runtime.InteropServices;
+    public class User32Call
+    {
+        [DllImport("User32.dll",CharSet=CharSet.Unicode)]
+        public static extern int SystemParametersInfo (Int32 uAction,
+                                                       Int32 uParam,
+                                                       String lpvParam,
+                                                       Int32 fuWinIni);
+    }
+"@
+  
+    $ret =[User32Call]::SystemParametersInfo(0x0014, 0, $localFile, (0x01 -bor 0x02))
+}

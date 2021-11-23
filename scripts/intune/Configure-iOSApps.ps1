@@ -142,7 +142,15 @@ foreach($iosApp in $iosApps)
             Write-Host "        Adding assignment $($assignment.target."@odata.type")"
 	        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/assignments"
             $body = $assignment | ConvertTo-Json -Depth 50
-	        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
+            try
+            {
+    	        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
+            }
+            catch
+            {
+		        try { Write-Host $_.Exception -ForegroundColor $CommandError } catch {}
+                continue
+            }
         }
         else
         {

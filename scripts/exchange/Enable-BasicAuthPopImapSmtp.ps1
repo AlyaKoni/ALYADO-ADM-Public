@@ -35,6 +35,7 @@
 
 [CmdletBinding()]
 Param(
+    [string]$userUpn = "Dino.Tartaruga@swissshooting.ch" #$null
 )
 
 #Reading configuration
@@ -62,7 +63,7 @@ try
     LoginTo-EXO
 
     Write-Host "  Checking policy EnableBasicAuthPopImapSmtp" -ForegroundColor $CommandInfo
-    $pol = Get-AuthenticationPolicy -Identity "EnableBasicAuthPopImapSmtp"
+    $pol = Get-AuthenticationPolicy -Identity "EnableBasicAuthPopImapSmtp" -ErrorAction SilentlyContinue
     if (-Not $pol)
     {
         Write-Warning "Authentication policy EnableBasicAuthPopImapSmtp not found. Creating it now"
@@ -70,7 +71,13 @@ try
     }
     else
     {
-        Write-Host "Authentication policy EnableBasicAuthPopImapSmtp already exists" -ForegroundColor $CommandSuccess
+        Write-Host "Authentication policy EnableBasicAuthPopImapSmtp already exists"
+    }
+
+    if (-Not $pol.AllowBasicAuthImap -or -Not $pol.AllowBasicAuthSmtp -or -Not $pol.AllowBasicAuthPop)
+    {
+        Write-Warning "One of pop, imap or smtp was disabled. Enabling them now all"
+        Set-AuthenticationPolicy -Name "EnableBasicAuthPopImapSmtp" -AllowBasicAuthSmtp -AllowBasicAuthPop -AllowBasicAuthImap
     }
 
     <#
@@ -83,7 +90,17 @@ try
     }
     #>
 
+    # Setting authentication policy for user
+    Write-Host "Setting authentication policy for user " -ForegroundColor $CommandInfo
+    $user = Get-User | where { $_.RecipientType -eq "UserMailbox" -and $_.UserPrincipalName -eq "$userUpn" }
+    if ($user.AuthenticationPolicy -ne "EnableBasicAuthPopImapSmtp")
+    {
+        Set-User -Identity $user.UserPrincipalName -AuthenticationPolicy "EnableBasicAuthPopImapSmtp"
+        #Set-CasMailbox <mailbox account> -SmtpClientAuthenticationDisabled $False
+    }
+
     # Setting authentication policy for all users
+    <#
     Write-Host "Setting authentication policy for all users" -ForegroundColor $CommandInfo
     $users = Get-User | where { $_.RecipientType -eq "UserMailbox" -and $_.UserPrincipalName -like "*@$AlyaDomainName*" }
     foreach($user in $users)
@@ -94,6 +111,7 @@ try
             #Set-CasMailbox <mailbox account> -SmtpClientAuthenticationDisabled $False
         }
     }
+    #>
 
 }
 catch

@@ -80,6 +80,7 @@ $scripts = Get-ChildItem -Path $ScriptDir -Filter "*.ps1"
 # Processing scripts
 foreach($script in $scripts)
 {
+    if ($script.Name.IndexOf("_unused") -gt -1) { continue }
     Write-Host "Configuring script $($script.Name)" -ForegroundColor $CommandInfo
 
     # Loading script

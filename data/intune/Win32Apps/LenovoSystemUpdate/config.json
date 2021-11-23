@@ -1,0 +1,102 @@
+﻿{
+    "@odata.type":  "#microsoft.graph.win32LobApp",
+    "displayName":  "Win10 LenovoSystemUpdate",
+    "description":  "Installs system_update_5.07.0131.exe",
+    "publisher":  "Lenovo",
+    "largeIcon":  {
+                      "value":  "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",
+                      "type":  "image/png",
+                      "@odata.type":  "#microsoft.graph.mimeContent"
+                  },
+    "isFeatured":  false,
+    "privacyInformationUrl":  "https://www.lenovo.com/de/de/privacy/",
+    "informationUrl":  "https://support.lenovo.com/",
+    "owner":  "",
+    "developer":  null,
+    "notes":  "",
+    "roleScopeTagIds":  [
+
+                        ],
+    "fileName":  "system_update_5.07.0131.intunewin",
+    "installCommandLine":  "Install.cmd",
+    "uninstallCommandLine":  "Uninstall.cmd",
+    "applicableArchitectures":  "x64",
+    "minimumFreeDiskSpaceInMB":  600,
+    "minimumMemoryInMB":  100,
+    "minimumNumberOfProcessors":  1,
+    "minimumCpuSpeedInMHz":  1,
+    "msiInformation":  null,
+    "setupFilePath":  "system_update_5.07.0131.exe",
+    "minimumSupportedWindowsRelease":  "1607",
+    "minimumSupportedOperatingSystem":  {
+                                            "v8_0":  false,
+                                            "v8_1":  false,
+                                            "v10_0":  false,
+                                            "v10_1607":  true,
+                                            "v10_1703":  false,
+                                            "v10_1709":  false,
+                                            "v10_1803":  false,
+                                            "v10_1809":  false,
+                                            "v10_1903":  false,
+                                            "v10_1909":  false,
+                                            "v10_2004":  false,
+                                            "v10_2H20":  false,
+                                            "v10_21H1":  false
+                                        },
+    "detectionRules":  [
+                           {
+                               "@odata.type":  "#microsoft.graph.win32LobAppRegistryDetection",
+                               "check32BitOn64System":  false,
+                               "keyPath":  "Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Lenovo\\System Update",
+                               "valueName":  "Version",
+                               "detectionType":  "version",
+                               "operator":  "greaterThanOrEqual",
+                               "detectionValue":  "5.7.131"
+                           }
+                       ],
+    "requirementRules":  [
+
+                         ],
+    "rules":  [
+                  {
+                      "@odata.type":  "#microsoft.graph.win32LobAppRegistryRule",
+                      "ruleType":  "detection",
+                      "check32BitOn64System":  false,
+                      "keyPath":  "Computer\\HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Lenovo\\System Update",
+                      "valueName":  "Version",
+                      "operationType":  "version",
+                      "operator":  "greaterThanOrEqual",
+                      "comparisonValue":  "5.7.131"
+                  }
+              ],
+    "installExperience":  {
+                              "runAsAccount":  "system",
+                              "deviceRestartBehavior":  "suppress"
+                          },
+    "returnCodes":  [
+                        {
+                            "returnCode":  -1,
+                            "type":  "failed"
+                        },
+                        {
+                            "returnCode":  0,
+                            "type":  "success"
+                        },
+                        {
+                            "returnCode":  1707,
+                            "type":  "success"
+                        },
+                        {
+                            "returnCode":  3010,
+                            "type":  "softReboot"
+                        },
+                        {
+                            "returnCode":  1641,
+                            "type":  "hardReboot"
+                        },
+                        {
+                            "returnCode":  1618,
+                            "type":  "retry"
+                        }
+                    ]
+}

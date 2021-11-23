@@ -445,7 +445,14 @@ try
                 if ($grp.O365SubscriptionEnabled -ne $null) { $SubscriptionEnabled = $grp.O365SubscriptionEnabled }
                 if ($grp.O365ModerationEnabled -ne $null) { $ModerationEnabled = $grp.O365ModerationEnabled }
                 if ($grp.O365HiddenFromExchangeClientsEnabled -ne $null) { $HiddenFromExchangeClientsEnabled = $grp.O365HiddenFromExchangeClientsEnabled }
-                Set-UnifiedGroup -Identity $grp.DisplayName -Alias $grp.Alias -HiddenFromAddressListsEnabled:$true -CalendarMemberReadOnly:$true -RejectMessagesFromSendersOrMembers:$true -UnifiedGroupWelcomeMessageEnabled:$false -SubscriptionEnabled:$false -ModerationEnabled:$false -HiddenFromExchangeClientsEnabled:$true
+                Set-UnifiedGroup -Identity $grp.DisplayName -Alias $grp.Alias `
+                        -HiddenFromAddressListsEnabled:$HiddenFromAddressListsEnabled `
+                        -CalendarMemberReadOnly:$CalendarMemberReadOnly `
+                        -RejectMessagesFromSendersOrMembers:$RejectMessagesFromSendersOrMembers `
+                        -UnifiedGroupWelcomeMessageEnabled:$UnifiedGroupWelcomeMessageEnabled `
+                        -SubscriptionEnabled:$SubscriptionEnabled `
+                        -ModerationEnabled:$ModerationEnabled `
+                        -HiddenFromExchangeClientsEnabled:$HiddenFromExchangeClientsEnabled
                 $Global:retryCount = -1
             }
             else

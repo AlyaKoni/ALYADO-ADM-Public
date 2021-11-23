@@ -41,6 +41,9 @@ Recoverable Items
 Local Exchange Server
 =====================
 
+Get all roles for a user
+	Get-ManagementRoleAssignment -GetEffectiveUsers | Where-Object {$_.EffectiveUserName -eq "Username"} | select-object Role
+
 Get Mailbox statistics
 	$Db = Get-MailboxDatabase
 	$stats = Get-MailboxStatistics -Database $Db.Name | where {$_.disconnectdate -ne $null}
@@ -77,3 +80,10 @@ List all mailboxes
 		Write-Host "Company,Name,EmailAddress,UserPrincipalName,ForwardingSmtpAddress,Identity,IsMailboxEnabled,IsResource,IsShared,IsValid,SamAccountName"
 		Write-Host "$($Company),$($Name),$($EmailAddress),$($UserPrincipalName),$($ForwardingSmtpAddress),$($Identity),$($IsMailboxEnabled),$($IsResource),$($IsShared),$($IsValid),$($SamAccountName)"
 	}
+
+List all public folders
+	Get-PublicFolder -Recurse
+
+Check MRSProxy
+	Get-MailboxServer | Test-MRSHealth | Select Identity,Check,Passed,Message | ft -auto
+

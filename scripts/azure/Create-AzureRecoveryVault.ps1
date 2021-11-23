@@ -173,7 +173,7 @@ if (-Not $RecVault)
     $RecVault = New-AzRecoveryServicesVault -ResourceGroupName $ResourceGroupName -Name $RecoveryVaultName -Location $AlyaLocation
 
     Write-Host "Configuring recovery vault"
-    Set-AzRecoveryServicesBackupProperties -Vault $RecVault -BackupStorageRedundancy GeoRedundant
+    Set-AzRecoveryServicesBackupProperty -Vault $RecVault -BackupStorageRedundancy GeoRedundant
     Set-AzRecoveryServicesAsrVaultContext -Vault $RecVault
     Set-AzRecoveryServicesAsrAlertSetting -CustomEmailAddress $AlyaGeneralInformEmail -EnableEmailSubscriptionOwner -LocaleID DE
     Set-AzRecoveryServicesAsrNotificationSetting -CustomEmailAddress $AlyaGeneralInformEmail -EnableEmailSubscriptionOwner -LocaleID DE

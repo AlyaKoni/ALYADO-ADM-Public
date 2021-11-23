@@ -66,7 +66,7 @@ Install-ModuleIfNotInstalled "Az"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 
 # Logins
-LoginTo-Az
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Teams
 
 # =============================================================
@@ -186,14 +186,15 @@ foreach($memb in $NewOwners)
         Write-Warning "Adding owner $memb to team."
         Add-TeamUser -GroupId $Team.GroupId -Role Owner -User $memb
     }
-    if ($OwerwriteMembersOwnersGuests)
+}
+if ($OwerwriteMembersOwnersGuests)
+{
+    $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Owner
+    foreach($tmemb in $TMembers)
     {
-        foreach($tmemb in $TMembers)
+        if ($NewOwners -notcontains $tmemb.User)
         {
-            if ($NewOwners -notcontains $tmemb.User)
-            {
-                Remove-TeamUser -GroupId $Team.GroupId -Role Owner -User $tmemb.User
-            }
+            Remove-TeamUser -GroupId $Team.GroupId -Role Owner -User $tmemb.User
         }
     }
 }
@@ -286,14 +287,15 @@ foreach($memb in $NewMembers)
             Add-TeamUser -GroupId $Team.GroupId -Role Member -User $memb
         }
     }
-    if ($OwerwriteMembersOwnersGuests)
+}
+if ($OwerwriteMembersOwnersGuests)
+{
+    $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Member
+    foreach($tmemb in $TMembers)
     {
-        foreach($tmemb in $TMembers)
+        if ($NewMembers -notcontains $tmemb.User)
         {
-            if ($NewMembers -notcontains $tmemb.User)
-            {
-                Remove-TeamUser -GroupId $Team.GroupId -Role Member -User $tmemb.User
-            }
+            Remove-TeamUser -GroupId $Team.GroupId -Role Member -User $tmemb.User
         }
     }
 }
@@ -372,7 +374,7 @@ foreach($memb in $NewGuests)
     $fnd = $false
     foreach($tmemb in $TMembers)
     {
-        if ($memb -eq $tmemb.User)
+        if ($tmemb.User -like "$($memb.Replace("@","_"))#*" )
         {
             $fnd = $true
             break
@@ -383,14 +385,25 @@ foreach($memb in $NewGuests)
         Write-Warning "Adding guest $memb to team."
         Add-TeamUser -GroupId $Team.GroupId -User $memb
     }
-    if ($OwerwriteMembersOwnersGuests)
+}
+if ($OwerwriteMembersOwnersGuests)
+{
+    $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Guest
+    foreach($tmemb in $TMembers)
     {
-        foreach($tmemb in $TMembers)
+        $fnd = $false
+        foreach($guest in $NewGuests)
         {
-            if ($NewGuests -notcontains $tmemb.User)
+            if ($tmemb.User -like "$($guest.Replace("@","_"))#*" )
             {
-                Remove-TeamUser -GroupId $Team.GroupId -User $tmemb.User
+                $fnd = $true
+                break
             }
+        }
+        if (-Not $fnd)
+        {
+            Write-Warning "Removing guest $memb from team."
+            Remove-TeamUser -GroupId $Team.GroupId -User $tmemb.User
         }
     }
 }

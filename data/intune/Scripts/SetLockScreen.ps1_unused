@@ -1,0 +1,84 @@
+﻿#Requires -Version 2.0
+
+<#
+    Copyright (c) Alya Consulting: 2021
+
+    This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    The Alya Base Configuration is free software: you can redistribute it
+	and/or modify it under the terms of the GNU General Public License as
+	published by the Free Software Foundation, either version 3 of the
+	License, or (at your option) any later version.
+    Alya Base Configuration is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+
+    Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
+	Bedingungen der GNU General Public License, wie von der Free Software
+	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veroeffentlichten Version, weiter verteilen und/oder modifizieren.
+    Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
+	aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    Siehe die GNU General Public License fuer weitere Details:
+	https://www.gnu.org/licenses/gpl-3.0.txt
+
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    04.11.2021 Konrad Brunner       Initial Version
+
+#>
+
+$WallpaperUrl = "https://alyapinfstrg001.blob.core.windows.net/images/DesktopBackgroundH.jpg"
+
+$path = [Environment]::GetFolderPath("ApplicationData") + "\AlyaConsulting\Background"
+if (-Not (Test-Path $path))
+{
+    New-Item -ItemType Directory -Force -Path $path | Out-Null
+}
+$localFile = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)
+$localFileTmp = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)+".tmp"
+Start-BitsTransfer -Source $WallpaperUrl -Destination $localFileTmp
+$localFileHash = Get-FileHash -Path $localFile
+$localFileTmpHash = Get-FileHash -Path $localFileTmp
+if ($localFileHash.Hash -eq $localFileTmpHash.Hash)
+{
+    Remove-Item -Path $localFileTmp -Force
+}
+else
+{
+    Move-Item -Path $localFileTmp -Destination $localFile -Force
+
+    $tkdwnYes = "Y"
+    $admins = "Administrators"
+    if ((Get-WinSystemLocale).Name.IndexOf("de-") -gt -1)
+    {
+        $tkdwnYes = "J"
+        $admins = "Administratoren"
+    }
+
+    # Clearing LockScreen cache
+    Start-Process -filePath "$env:SystemRoot\system32\takeown.exe" -ArgumentList "/F `"$env:ProgramData\Microsoft\Windows\SystemData`" /R /A /D $tkdwnYes" -NoNewWindow -Wait
+    Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:ProgramData\Microsoft\Windows\SystemData`" /grant $($admins):'(OI)(CI)F' /T" -NoNewWindow -Wait
+    Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:ProgramData\Microsoft\Windows\SystemData\S-1-5-18\ReadOnly`" /reset /T" -NoNewWindow -Wait
+    Remove-Item -Path "$env:ProgramData\Microsoft\Windows\SystemData\S-1-5-18\ReadOnly\LockScreen_Z\*" -Force
+
+    # Copy image to LockScreen
+    Start-Process -filePath "$env:SystemRoot\system32\takeown.exe" -ArgumentList "/F `"$env:SystemRoot\Web\Screen`" /R /A /D $tkdwnYes" -NoNewWindow -Wait
+    Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:SystemRoot\Web\Screen`" /grant $($admins):'(OI)(CI)F' /T" -NoNewWindow -Wait
+    Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:SystemRoot\Web\Screen`" /reset /T" -NoNewWindow -Wait
+    $images = Get-ChildItem -Path "$env:SystemRoot\Web\Screen" -Filter *.jpg
+    foreach ($image in $images)
+    {
+        if (-Not (Test-Path ($image.FullName+".orig")))
+        {
+            Move-Item -Path $image.FullName -Destination ($image.FullName+".orig") -Force
+        }
+    }
+    Copy-Item -Path $localFile -Destination "$env:SystemRoot\Web\Screen\img100.jpg" -Force
+
+}

@@ -61,6 +61,7 @@ Install-ModuleIfNotInstalled "AzureADPreview"
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+Connect-AzureAD
 #Connect-AzureAD #TODO: Only works this way. Permission by token does not work
 
 # =============================================================
@@ -173,6 +174,7 @@ if (-Not $missFound)
     Write-Host "No wrong role found in the excel sheet"
 }
 
+# Adding new role members
 foreach($roleName in $allRoles.Keys)
 {
     Write-Host "Role '$($roleName)'" -ForegroundColor $CommandInfo
@@ -188,35 +190,6 @@ foreach($roleName in $allRoles.Keys)
 
         $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq '$roleName'"
         $actMembs = Get-AzureADMSRoleAssignment -Filter "RoleDefinitionId eq '$($role.Id)'"
-
-        #Removing inactivated members
-        $actMembs | foreach {
-            $actMemb = $_
-            if ($actMemb)
-            {
-                if ((-Not $newUsers) -or ($newUsers.ObjectId -notcontains $actMemb.PrincipalId))
-                {
-                    $principal = Get-AzureADUser -objectId $actMemb.PrincipalId
-                    Write-Host "    Warning: this script does not check actual PIM assignments!" #TODO
-                    Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
-
-                    if ((Get-AzContext).Account.Id -eq $principal.UserPrincipalName)
-                    {
-                        Write-Host "    you can't remove yourself!!!" -ForegroundColor $CommandError
-                    }
-                    else
-                    {
-                        $title    = 'Role Assigments'
-                        $question = 'Are you sure you want to remove the assignment?'
-                        $choices  = '&Yes', '&No'
-                        $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
-                        if ($decision -eq 0) {
-                            Remove-AzureADMSRoleAssignment -Id $actMemb.Id
-                        }
-                    }
-                }
-            }
-        }
 
         #Adding new members
         $newUsers | foreach {
@@ -309,6 +282,54 @@ foreach($roleName in $allRoles.Keys)
 
         }
 
+    }
+}
+
+# Removing role members
+foreach($roleName in $allRoles.Keys)
+{
+    Write-Host "Role '$($roleName)'" -ForegroundColor $CommandInfo
+    if ($allRoles[$roleName])
+    {
+        #Don't touch
+    }
+    else
+    {
+        # Configuring permanent roles
+        Write-Host "Configuring permanent role"
+        $newUsers = $permanentRoles[$roleName]
+
+        $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq '$roleName'"
+        $actMembs = Get-AzureADMSRoleAssignment -Filter "RoleDefinitionId eq '$($role.Id)'"
+
+        #Removing inactivated members
+        $actMembs | foreach {
+            $actMemb = $_
+            if ($actMemb)
+            {
+                if ((-Not $newUsers) -or ($newUsers.ObjectId -notcontains $actMemb.PrincipalId))
+                {
+                    $principal = Get-AzureADUser -objectId $actMemb.PrincipalId
+                    Write-Host "    Warning: this script does not check actual PIM assignments!" #TODO
+                    Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
+
+                    if ((Get-AzContext).Account.Id -eq $principal.UserPrincipalName)
+                    {
+                        Write-Host "    you can't remove yourself!!!" -ForegroundColor $CommandError
+                    }
+                    else
+                    {
+                        $title    = 'Role Assigments'
+                        $question = 'Are you sure you want to remove the assignment?'
+                        $choices  = '&Yes', '&No'
+                        $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+                        if ($decision -eq 0) {
+                            Remove-AzureADMSRoleAssignment -Id $actMemb.Id
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
