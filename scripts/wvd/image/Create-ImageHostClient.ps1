@@ -45,9 +45,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\image\Create-ImageHost-$($AlyaT
 
 # Constants
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
-$VMName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)"
-$VMNicName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)nic1"
-$VMDiskName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)osdisk"
+$VMName = "$($AlyaNamingPrefix)wvdi$($AlyaResIdWvdImageClient)"
+$VMNicName = "$($VMName)nic1"
+$VMDiskName = "$($VMName)osdisk"
 $DiagnosticResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)"
 $NetworkResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
@@ -178,7 +178,7 @@ if (-Not $ImageHostVm)
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
     $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig -DisableBginfoExtension
     $ImageHostVm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName
-    $tmp = Set-AzResource -ResourceId $ImageHostVm.Id -Tag @{displayName="Image Host";ownerEmail=$Context.Account.Id;stopTime=$AlyaWvdStopTime} -Force
+    $tmp = Set-AzResource -ResourceId $ImageHostVm.Id -Tag @{displayName="AVD Image Host";ownerEmail=$Context.Account.Id;stopTime=$AlyaWvdStopTime} -Force
 }
 
 # Checking anti malware vm extension

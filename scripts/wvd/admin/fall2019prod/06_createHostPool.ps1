@@ -121,9 +121,9 @@ Clear-Variable -Name AlyaWvdServicePrincipalPassword -Force -ErrorAction Silentl
 if (-Not $Global:RdsContext)
 {
 	Write-Host "Logging in to wvd" -ForegroundColor $CommandInfo
-	$rdsCreds = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.ApplicationId, $AlyaWvdServicePrincipalPasswordSave)
+	$rdsCreds = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.AppId, $AlyaWvdServicePrincipalPasswordSave)
 	$Global:RdsContext = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $rdsCreds -ServicePrincipal -AadTenantId $AlyaTenantId
-	#LoginTo-Wvd -AppId $AzureAdServicePrincipal.ApplicationId -SecPwd $AlyaWvdServicePrincipalPasswordSave
+	#LoginTo-Wvd -AppId $AzureAdServicePrincipal.AppId -SecPwd $AlyaWvdServicePrincipalPasswordSave
 }
 
 # Getting members
@@ -154,7 +154,7 @@ $ParametersObject["rdshVmSize"] = $VmSize
 $ParametersObject["existingDomainUPN"] = $AdminDomainUPN
 $ParametersObject["hostPoolName"] = $HostPoolName
 $ParametersObject["defaultDesktopUsers"] = ($AlyaWvdAdmins -join ",")
-$ParametersObject["tenantAdminUpnOrApplicationId"] = $AzureAdServicePrincipal.ApplicationId.Guid.ToString()
+$ParametersObject["tenantAdminUpnOrApplicationId"] = $AzureAdServicePrincipal.AppId.Guid.ToString()
 $ParametersObject["location"] = $AlyaLocation
 $ParametersObject["rdshNamePrefix"] = $NamePrefix
 $ParametersObject["existingTenantName"] = $AlyaWvdTenantNameProd
@@ -373,7 +373,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
 
 # Login to WVD
 Write-Host "Logging in to wvd" -ForegroundColor $CommandInfo
-$rdsCreds = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.ApplicationId, $AlyaWvdServicePrincipalPasswordSave)
+$rdsCreds = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.AppId, $AlyaWvdServicePrincipalPasswordSave)
 $Global:RdsContext = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $rdsCreds -ServicePrincipal -AadTenantId $AlyaTenantId
 
 #Write-Host "Setting hostpool to validation (test)" -ForegroundColor $CommandInfo

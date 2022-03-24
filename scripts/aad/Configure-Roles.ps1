@@ -36,7 +36,8 @@
 [CmdletBinding()]
 Param(
     [string]$inputFile = $null, #Defaults to "$AlyaData\aad\Rollen.xlsx"
-    [bool]$configurePIM = $true
+    [bool]$configurePIM = $true,
+    [bool]$updateRoleSettings = $false
 )
 
 #Reading configuration
@@ -172,6 +173,75 @@ foreach($role in $allRoles.Keys)
 if (-Not $missFound)
 {
     Write-Host "No wrong role found in the excel sheet"
+}
+
+# Checking role settings
+if ($updateRoleSettings)
+{
+    Write-Host "Checking role settings" -ForegroundColor $CommandInfo
+    $allSettings = Get-AzureADMSPrivilegedRoleSetting -ProviderId "aadRoles" -Filter "ResourceId eq '$($AlyaTenantId)'"
+    foreach($roleName in $allRoles.Keys)
+    {
+        if ($allRoles[$roleName])
+        {
+            #Don't touch
+        }
+        else
+        {
+            Write-Host "Role '$($roleName)'"
+            $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq 'Global Administrator'"
+            $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq '$roleName'"
+            $roleSetting = $allSettings | where { $_.RoleDefinitionId -eq $role.Id}
+            if ($roleSetting)
+            {
+                $settingUserMemberExpirationRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
+                $settingUserMemberExpirationRule.RuleIdentifier = "ExpirationRule"
+                $settingUserMemberExpirationRule.Setting = "{`"permanentAssignment`":true,`"maximumGrantPeriodInMinutes`":540}"
+                $settingUserMemberJustificationRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
+                $settingUserMemberJustificationRule.RuleIdentifier = "JustificationRule"
+                $settingUserMemberJustificationRule.Setting = "{`"required`":true}"
+                $settingUserMemberMfaRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
+                $settingUserMemberMfaRule.RuleIdentifier = "MfaRule"
+                $settingUserMemberMfaRule.Setting = "{`"mfaRequired`":true}"
+                $userMemberSettings = @($settingUserMemberExpirationRule, $settingUserMemberJustificationRule, $settingUserMemberMfaRule)
+
+                $settingAdminMemberExpirationRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
+                $settingAdminMemberExpirationRule.RuleIdentifier = "ExpirationRule"
+                if ($roleName -eq "Global Administrator")
+                {
+                    $settingAdminMemberExpirationRule.Setting = "{`"permanentAssignment`":false,`"maximumGrantPeriodInMinutes`":21600}"
+                }
+                else
+                {
+                    $settingAdminMemberExpirationRule.Setting = "{`"maximumGrantPeriod`":`"180.00:00:00`",`"maximumGrantPeriodInMinutes`":259200,`"permanentAssignment`":true}"
+                }
+                $settingAdminMemberJustificationRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
+                $settingAdminMemberJustificationRule.RuleIdentifier = "JustificationRule"
+                $settingAdminMemberJustificationRule.Setting = "{`"required`":true}"
+                $settingAdminMemberMfaRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
+                $settingAdminMemberMfaRule.RuleIdentifier = "MfaRule"
+                $settingAdminMemberMfaRule.Setting = "{`"mfaRequired`":true}"
+                $adminMemberSettings = @($settingAdminMemberExpirationRule, $settingAdminMemberJustificationRule, $settingAdminMemberMfaRule)
+            
+                $settingAdminEligibleMfaRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
+                $settingAdminEligibleMfaRule.RuleIdentifier = "MfaRule"
+                $settingAdminEligibleMfaRule.Setting = "{`"mfaRequired`":true}"
+                $adminEligibleSettings = @($settingAdminEligibleMfaRule)
+
+                Set-AzureADMSPrivilegedRoleSetting -ProviderId "aadRoles" -ResourceId $AlyaTenantId `
+                    -Id $roleSetting.Id `
+                    -RoleDefinitionId $role.Id `
+                    -UserMemberSettings $userMemberSettings `
+                    -AdminMemberSettings $adminMemberSettings `
+                    -AdminEligibleSettings $adminEligibleSettings
+            
+            }
+            else
+            {
+                Write-Warning "Role '$($roleName)' does not has a role setting"
+            }
+        }
+    }
 }
 
 # Adding new role members

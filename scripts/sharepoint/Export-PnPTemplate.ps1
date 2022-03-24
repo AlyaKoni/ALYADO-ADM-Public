@@ -49,7 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-PnPTemplate-$($Al
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logins
-LoginTo-PnP -Url $SiteUrl
+$siteCon = LoginTo-PnP -Url $SiteUrl
 
 # Export site template
 $outfile = "$AlyaData\sharepoint\PnPTemplate_" + $SiteUrl.Replace("https://", "").Replace("/", "_") + ".xml"

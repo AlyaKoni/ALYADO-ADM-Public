@@ -82,6 +82,9 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Configure-HubSites | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCnt = Get-PnPContext
+
 foreach($hubSite in $hubSites)
 {
     ###Processing site
@@ -92,7 +95,7 @@ foreach($hubSite in $hubSites)
     if (-Not $site)
     {
         Write-Warning "Hub site not found. Creating now hub site $($hubSite.title)"
-        LoginTo-PnP -Url $AlyaSharePointAdminUrl
+		$null = Set-PnPContext -Context $adminCnt
         if ($hubSite.template -eq "TeamSite")
         {
             $site = New-PnPSite -Type "TeamSite" -Title $hubSite.title -Alias "$($hubSite.url)" -Description $hubSite.description -Wait
@@ -251,7 +254,8 @@ foreach($hubSite in $hubSites)
         Invoke-SPOSiteDesign -Identity $SiteDesignComm.Id -WebUrl "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
     }
 
-    LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+	$null = Set-PnPContext -Context $adminCnt
+	$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
     $web = Get-PnPWeb -Includes HeaderEmphasis,HeaderLayout,SiteLogoUrl,QuickLaunchEnabled
     $web.HeaderLayout = $hubSite.headerLayout
     $web.HeaderEmphasis = $hubSite.headerEmphasis
@@ -286,7 +290,8 @@ foreach($hubSite in $hubSites)
     if ($hubSite.short -ne "COL")
     {
         Write-Host "Hub Site $($hubSite.title)"
-        ReloginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+		$null = Set-PnPContext -Context $adminCnt
+		$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
         $site = Get-PnPSite
         $topNavs = Get-PnPNavigationNode -Location TopNavigationBar
         foreach($hubSiteI in $hubSites)
@@ -316,7 +321,8 @@ foreach($hubSite in $hubSites)
         $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
         $SubSiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameComm"}
 
-        ReloginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+		$null = Set-PnPContext -Context $adminCnt
+		$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
         $site = Get-PnPSite
         $hubSiteObj = Get-PnPHubSite -Identity $site
         $childs = Get-PnPHubSiteChild -Identity $hubSiteObj
@@ -324,7 +330,8 @@ foreach($hubSite in $hubSites)
         {
             try
             {
-                ReloginTo-PnP -Url $child
+				$null = Set-PnPContext -Context $adminCnt
+				$siteCon = LoginTo-PnP -Url $child
                 $site = Get-PnPWeb -Includes WebTemplate, Configuration
                 $template = $site.WebTemplate + "#" + $site.Configuration
                 if ($template -eq "GROUP#0")
@@ -349,7 +356,8 @@ foreach($hubSite in $hubSites)
 
 ###SharePoint Home Featured Links
 Write-Host "Processing SharePoint Home Featured Links" -ForegroundColor $TitleColor
-ReloginTo-PnP -Url "$($AlyaSharePointUrl)"
+$null = Set-PnPContext -Context $adminCnt
+$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
 $list = Get-PnPList -Identity "SharePointHomeOrgLinks"
 $items = Get-PnPListItem -List $list -Fields "Title","Url"
 foreach($hubSite in $hubSites)
@@ -379,7 +387,8 @@ Write-Host "Configuring access to hub and root sites" -ForegroundColor $TitleCol
 foreach($hubSite in $hubSites)
 {
     #$hubSite = $hubSites[0]
-    LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+	$null = Set-PnPContext -Context $adminCnt
+	$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
     $group = Get-PnPGroup -AssociatedVisitorGroup
     $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
     Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
@@ -388,7 +397,8 @@ foreach($hubSite in $hubSites)
         Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllExternals@$AlyaDomainName"
     }
 }
-LoginTo-PnP -Url "$($AlyaSharePointUrl)"
+$null = Set-PnPContext -Context $adminCnt
+$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
 $group = Get-PnPGroup -AssociatedVisitorGroup
 $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)"
 Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
@@ -414,7 +424,8 @@ if ($overwritePages)
     foreach($hubSite in $hubSites)
     {
         #$hubSite = $hubSites[0]
-        LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+		$null = Set-PnPContext -Context $adminCnt
+		$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
         $tempFile = [System.IO.Path]::GetTempFileName()
         $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
         $tmp = Invoke-PnPSiteTemplate -Path $tempFile
@@ -426,7 +437,8 @@ if ($overwritePages)
     if ($homePageTemplateRootTeamSite) # defined in hub def script
     {
         Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
-        LoginTo-PnP -Url "$($AlyaSharePointUrl)"
+		$null = Set-PnPContext -Context $adminCnt
+		$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
         Set-PnPWeb -Title "$($AlyaCompanyNameShortM365.ToUpper())SP"
         $tempFile = [System.IO.Path]::GetTempFileName()
         $homePageTemplateRootTeamSite | Set-Content -Path $tempFile -Encoding UTF8

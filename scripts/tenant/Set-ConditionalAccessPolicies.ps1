@@ -186,7 +186,7 @@ else
 }
 
 # Getting graph access token
-$AccessToken = Connect-MsGraphAsDelegated -ClientID $AzureAdServicePrincipal.ApplicationId -ClientSecret $ConditionalAccessAppPassword
+$AccessToken = Connect-MsGraphAsDelegated -ClientID $AzureAdServicePrincipal.AppId -ClientSecret $ConditionalAccessAppPassword
 
 # Checking no mfa group
 Write-Host "Checking MFA exclude group" -ForegroundColor $CommandInfo

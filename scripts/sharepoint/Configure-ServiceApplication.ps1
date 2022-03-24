@@ -245,7 +245,7 @@ else
     $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $applicationName
 }
 
-$AlyaSharePointAppId = $AzureAdServicePrincipal.ApplicationId
+$AlyaSharePointAppId = $AzureAdServicePrincipal.AppId
 $AlyaSharePointAppCertificate = $AzureKeyVaultCertificate.Thumbprint
 Write-Host "ClientId: $AlyaSharePointAppId"
 Write-Host "Thumbprint: $AlyaSharePointAppCertificate"

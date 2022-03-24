@@ -35,14 +35,19 @@
 
 [CmdletBinding()]
 Param(
-    [string]$userUpn = "Dino.Tartaruga@swissshooting.ch" #$null
+    [string]$userUpn = $null
 )
+
+if (-Not $userUpn)
+{
+    throw "Please specify the userUpn"
+}
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Enable-BasicAuthPopImapSmtp-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Enable-BasicAuthPopImapSmtp-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo

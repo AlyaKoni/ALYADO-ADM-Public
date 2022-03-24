@@ -50,7 +50,6 @@ $RunAsCertificateName = "AzureRunAsCertificate"
 $ConnectionTypeName = "AzureServicePrincipal"
 
 # Login-AzureAutomation
-# Login-AzureAutomation
 try {
 	$RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
 	Write-Output "Logging in to Az ($AzureEnvironment)..."

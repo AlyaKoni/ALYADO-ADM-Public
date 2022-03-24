@@ -18,9 +18,9 @@ if (-Not $driverVersion)
     #$pfid from "https://www.nvidia.de/Download/API/lookupValueSearch.aspx?TypeID=3&ParentID=$psid"
     #$osid from "https://www.nvidia.de/Download/API/lookupValueSearch.aspx?TypeID=4&ParentID=$psid"
 
-    $psid = 101
-    $pfid = 845
-    $osid = 135
+    $psid = 124
+    $pfid = 720
+    $osid = 57
     $lid = 9
     $lang = "en-us"
     $rpf = 1

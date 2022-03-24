@@ -64,7 +64,8 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
-LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCnt = Get-PnPContext
 $ctx= Get-PnPContext
 $ctx.ExecuteQuery()
 

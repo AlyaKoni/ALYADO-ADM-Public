@@ -1831,43 +1831,8 @@ function Split-NetworkAddressWithoutGateway()
     }
     return $networks
 }
-function CheckSubnetInSubnet ([string]$addr1, [string]$addr2)
-{
-    $network1, [int]$subnetlen1 = $addr1.Split('/')
-    $network2, [int]$subnetlen2 = $addr2.Split('/')
-    [int64] $unetwork1 = IP-toINT64 $network1
-    [int64] $unetwork2 = IP-toINT64 $network2
-    if($subnetlen1 -lt 32)
-	{
-        [int64] $mask1 = CIDR-toINT64 $subnetlen1
-    }
-    if($subnetlen2 -lt 32)
-	{
-        [int64] $mask2 = CIDR-toINT64 $subnetlen2
-    }
-    if($mask1 -and $mask2){
-        if($mask1 -lt $mask2){
-            return $False
-        }else{
-            return CheckNetworkToSubnet $unetwork2 $mask2 $unetwork1
-        }
-    }ElseIf($mask1){
-        return CheckSubnetToNetwork $unetwork1 $mask1 $unetwork2
-    }ElseIf($mask2){
-        return CheckNetworkToSubnet $unetwork2 $mask2 $unetwork1
-    }Else{
-        CheckNetworkToNetwork $unetwork1 $unetwork2
-    }
-}
-#CheckSubnetInSubnet "172.16.72.0/24" "172.16.0.0/16" true
-#CheckSubnetInSubnet "172.16.72.1" "172.16.0.0/16" true
-#CheckSubnetInSubnet "172.16.0.0/28" "172.16.72.0/24" false
-#CheckSubnetInSubnet "172.16.72.0/24" "172.16.0.0/28" false
-#CheckSubnetInSubnet "172.16.72.0" "172.16.0.0/28" fals
 function CheckNetworkToSubnet ([int64]$un2, [int64]$ma2, [int64]$un1)
 {
-    $ReturnArray = "" | Select-Object -Property Condition,Direction
-
     if($un2 -eq ($ma2 -band $un1)){
         return $True
     }else{
@@ -1876,8 +1841,6 @@ function CheckNetworkToSubnet ([int64]$un2, [int64]$ma2, [int64]$un1)
 }
 function CheckSubnetToNetwork ([int64]$un1, [int64]$ma1, [int64]$un2)
 {
-    $ReturnArray = "" | Select-Object -Property Condition,Direction
-
     if($un1 -eq ($ma1 -band $un2)){
         return $False
     }else{
@@ -1886,14 +1849,31 @@ function CheckSubnetToNetwork ([int64]$un1, [int64]$ma1, [int64]$un2)
 }
 function CheckNetworkToNetwork ([int64]$un1, [int64]$un2)
 {
-    $ReturnArray = "" | Select-Object -Property Condition,Direction
-
     if($un1 -eq $un2){
         return $True
     }else{
         return $False
     }
 }
+function CheckSubnetInSubnet ([string]$isAddr, [string]$withinAddr)
+{
+    $network1, [int]$subnetlen1 = $isAddr.Split('/')
+    $network2, [int]$subnetlen2 = $withinAddr.Split('/')
+    $network1addr = [Net.IPAddress]::Parse($network1)
+    $mask1addr = [Net.IPAddress]::Parse((CIDR-toMask -cidr $subnetlen1))
+    $network2addr = [Net.IPAddress]::Parse($network2)
+    $mask2addr = [Net.IPAddress]::Parse((CIDR-toMask -cidr $subnetlen2))
+    $bcast1 = new-object net.ipaddress (([system.net.ipaddress]::parse("255.255.255.255").address -bxor $mask1addr.address -bor $network1addr.address))
+    $bcast2 = new-object net.ipaddress (([system.net.ipaddress]::parse("255.255.255.255").address -bxor $mask2addr.address -bor $network2addr.address))
+    $nwk1 = new-object net.ipaddress (($mask1addr.address -band $network1addr.address))
+    $nwk2 = new-object net.ipaddress (($mask2addr.address -band $network2addr.address))
+    return $nwk1.Address -gt $nwk2.Address -and $bcast1.Address -lt $bcast2.Address
+}
+#CheckSubnetInSubnet "172.16.72.0/24" "172.16.0.0/16" true
+#CheckSubnetInSubnet "172.16.72.1" "172.16.0.0/16" true
+#CheckSubnetInSubnet "172.16.0.0/28" "172.16.72.0/24" false
+#CheckSubnetInSubnet "172.16.72.0/24" "172.16.0.0/28" false
+#CheckSubnetInSubnet "172.16.72.0" "172.16.0.0/28" fals
 
 # Checking custom properties
 if ($AlyaNamingPrefix.Length -gt 8)

@@ -126,18 +126,18 @@ Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 # Checking rds role assignment
 Write-Host "Checking rds role assignment" -ForegroundColor $CommandInfo
-$RoleAss = Get-RdsRoleAssignment -TenantGroupName $AlyaWvdTenantGroupName -TenantName $AlyaWvdTenantNameProd -ServicePrincipalName $AzureAdServicePrincipal.ApplicationId
+$RoleAss = Get-RdsRoleAssignment -TenantGroupName $AlyaWvdTenantGroupName -TenantName $AlyaWvdTenantNameProd -ServicePrincipalName $AzureAdServicePrincipal.AppId
 if (-Not $RoleAss)
 {
     Write-Warning "Role assignment not found. Creating the role assignment for $AlyaWvdServicePrincipalNameProd"
-    $RoleAss = New-RdsRoleAssignment -RoleDefinitionName $RoleName -ApplicationId $AzureAdServicePrincipal.ApplicationId -TenantGroupName $AlyaWvdTenantGroupName -TenantName $AlyaWvdTenantNameProd
+    $RoleAss = New-RdsRoleAssignment -RoleDefinitionName $RoleName -ApplicationId $AzureAdServicePrincipal.AppId -TenantGroupName $AlyaWvdTenantGroupName -TenantName $AlyaWvdTenantNameProd
 }
 
 #Testing login
 Write-Host "Waiting 30 seconds to prevent from errors ..."
 Start-Sleep -Seconds 30
 Write-Host "Testing login with service principal" -ForegroundColor $CommandInfo
-$creds = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.ApplicationId, $AlyaWvdServicePrincipalPasswordSave)
+$creds = New-Object System.Management.Automation.PSCredential($AzureAdServicePrincipal.AppId, $AlyaWvdServicePrincipalPasswordSave)
 Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $creds -ServicePrincipal -AadTenantId $AlyaTenantId -ErrorAction Stop
 
 #Stopping Transscript

@@ -21,7 +21,7 @@
                 "minUserCspVersion": null,
                 "version": "1.0"
             },
-            "presentationValues": {
+            "presentationValues": [{
                 "@odata.type": "#microsoft.graph.groupPolicyPresentationValueBoolean",
                 "value": true,
                 "presentation": {
@@ -35,7 +35,7 @@
                 "categories": null,
                 "files": null,
                 "presentations": null
-            }
+            }]
         }
     }, {
         "@odata.type": "#microsoft.graph.groupPolicyConfiguration",

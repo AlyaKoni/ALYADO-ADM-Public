@@ -45,9 +45,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\image\Create-ImageHostServer-$(
 
 # Constants
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
-$VMName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)"
-$VMNicName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)nic1"
-$VMDiskName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)osdisk"
+$VMName = "$($AlyaNamingPrefix)wvdi$($AlyaResIdWvdImageServer)"
+$VMNicName = "$($VMName)nic1"
+$VMDiskName = "$($VMName)osdisk"
 $DiagnosticResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)"
 $NetworkResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"

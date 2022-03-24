@@ -75,18 +75,21 @@ $adUser = Get-ADUser -Filter "UserPrincipalName -eq '$($userToImport)'" -ErrorAc
 if ($adUser)
 {
     Write-Error "User with UPN '$($userToImport)' already exists in local AD" -ErrorAction Continue
-    return
+}
+else
+{
+    Write-Host "Creating user with UPN '$($userToImport)' in local AD"
+    $san = $userToImport.Substring(0, $userToImport.IndexOf("@"))
+    New-ADUser -SamAccountName $san -GivenName $aadUser.LastName -Surname $aadUser.FirstName -Name $aadUser.DisplayName -DisplayName $aadUser.DisplayName -EmailAddress $aadUser.UserPrincipalName -UserPrincipalName $aadUser.UserPrincipalName -ChangePasswordAtLogon $false -AccountPassword $newPassword -Enabled $true
 }
 
-Write-Host "Creating user with UPN '$($userToImport)' in local AD"
-
-$san = $userToImport.Substring(0, $userToImport.IndexOf("@"))
-New-ADUser -SamAccountName $san -GivenName $aadUser.LastName -Surname $aadUser.FirstName -Name $aadUser.DisplayName -DisplayName $aadUser.DisplayName -EmailAddress $aadUser.UserPrincipalName -UserPrincipalName $aadUser.UserPrincipalName -ChangePasswordAtLogon $false -AccountPassword $newPassword -Enabled $true
 $adUser = Get-ADUser -Filter "UserPrincipalName -eq '$($userToImport)'" -ErrorAction SilentlyContinue
-
-$GUIDbyte = $adUser.objectGUID.ToByteArray()
-$immuID = [System.Convert]::ToBase64String($GUIDbyte)
-Set-MsolUser -UserPrincipalName $userToImport -ImmutableId $immuID
+if ($aadUser.ImmutableId.ToString() -ne $adUser.objectGUID.ToString())
+{
+    $GUIDbyte = $adUser.objectGUID.ToByteArray()
+    $immuID = [System.Convert]::ToBase64String($GUIDbyte)
+    Set-MsolUser -UserPrincipalName $userToImport -ImmutableId $immuID
+}
 
 Start-ADSyncSyncCycle
 Start-Sleep -Seconds 30

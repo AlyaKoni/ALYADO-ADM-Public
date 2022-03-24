@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.09.2020 Konrad Brunner       Initial Version
+    28.12.2021 Konrad Brunner       Switch to teams module
 
 #>
 
@@ -45,45 +46,42 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Add-PSTNGateway-$($AlyaTimeStr
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module "SkypeOnlineConnector"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
 
-#Constants 
-$MSTEAMS_URL = $AlyaPstnGateway
-$PORT_VON_SBC = $AlyaPstnPort
+# Logins
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "PSTN | Add-PSTNGateway | CsOnline" -ForegroundColor $CommandInfo
+Write-Host "PSTN | Add-PSTNGateway | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-$sfbSession = New-CsOnlineSession
-Import-PSSession $sfbSession -AllowClobber
-
-if (-Not ((Get-CsTenant).DomainUrlMap -contains $MSTEAMS_URL))
+if ((Get-CsTenant).VerifiedDomains.Name -notcontains $AlyaPstnGateway)
 {
-    Write-Host "$MSTEAMS_URL is not yet in the DomainUrlMap" -ForegroundColor Red
+    Write-Host "$AlyaPstnGateway is not yet in the VerifiedDomains list" -ForegroundColor Red
     Write-Host "Please create a user in this domain, assign a O365E1 license and wait up to some hours or days" -ForegroundColor Red
+    exit 1
+}
+if (((Get-CsTenant).VerifiedDomains | where { $_.Name -eq $AlyaPstnGateway }).Status -ne "Enabled")
+{
+    Write-Host "$AlyaPstnGateway is not yet enabled" -ForegroundColor Red
+    Write-Host "Please enbale the domain $AlyaPstnGateway" -ForegroundColor Red
+    exit 2
+}
+
+$PSTNGateway = Get-CsOnlinePSTNGateway -Identity $AlyaPstnGateway -ErrorAction SilentlyContinue
+if (-Not $PSTNGateway)
+{
+    New-CsOnlinePSTNGateway -Fqdn $AlyaPstnGateway -SipSignalingPort $AlyaPstnPort -MaxConcurrentSessions 100 -Enabled $true -ForwardPai $true -ForwardCallHistory $true
 }
 else
 {
-    $PSTNGateway = Get-CsOnlinePSTNGateway -Identity $MSTEAMS_URL -ErrorAction SilentlyContinue
-    if (-Not $PSTNGateway)
-    {
-        New-CsOnlinePSTNGateway -Fqdn $MSTEAMS_URL -SipSignalingPort $PORT_VON_SBC -MaxConcurrentSessions 100 -Enabled $true -ForwardPai $true -ForwardCallHistory $true
-    }
-    else
-    {
-        Write-Host "Gateway already exists!"
-    }
+    Write-Host "Gateway already exists!"
 }
-
-Get-CsOnlinePSTNGateway
-
-Get-PSSession | Remove-PSSession
 
 #Stopping Transscript
 Stop-Transcript

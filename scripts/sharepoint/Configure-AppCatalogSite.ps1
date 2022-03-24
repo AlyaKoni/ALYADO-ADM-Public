@@ -98,6 +98,9 @@ if (-Not $admHubSite)
     Write-Error "ADM Hub site $hubSiteName not found. Please crate it first"
 }
 
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCnt = Get-PnPContext
+
 # Checking app catalog site collection
 Write-Host "Checking app catalog site collection" -ForegroundColor $CommandInfo
 $catalogSiteName = "$prefix-ADM-$catalogTitle"
@@ -106,7 +109,6 @@ try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteNam
 if (-Not $site)
 {
     Write-Warning "Checking existance of other App Catalog site"
-    LoginTo-PnP -Url $AlyaSharePointAdminUrl
     $appCatalogUrl = Get-PnPTenantAppCatalogUrl
     if ($appCatalogUrl -and -not $appCatalogUrl.EndsWith($catalogSiteName))
     {
@@ -127,7 +129,8 @@ if (-Not $site)
 
     # Login to app catalog
     Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
-    LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName"
+	$null = Set-PnPContext -Context $adminCnt
+	$siteCon = LoginTo-PnP "$($AlyaSharePointUrl)/sites/$catalogSiteName"
 
     # Setting site design
     <#

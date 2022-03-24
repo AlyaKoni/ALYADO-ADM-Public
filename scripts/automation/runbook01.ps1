@@ -1,27 +1,37 @@
-#Requires -Version 2.0
+ï»¿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2022
 
-    THIS FILE IS **NOT** PART OF THE ALYA BASE CONFIGURATION!	
-    This unpublished material is proprietary to Alya Consulting.
-    All rights reserved. The methods and techniques described
-    herein are considered trade secrets and/or confidential. 
-    Reproduction or distribution, in whole or in part, is 
-    forbidden except by express written permission of Alya Consulting.
+    This file is part of the Alya Base Configuration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    The Alya Base Configuration is free software: you can redistribute it
+	and/or modify it under the terms of the GNU General Public License as
+	published by the Free Software Foundation, either version 3 of the
+	License, or (at your option) any later version.
+    Alya Base Configuration is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
-	DIESE DATEI IST **NICHT** BESTANDTEIL DER ALYA BASIS KONFIGURATION!
-    Dieses unveröffentlichte Material ist Eigentum von Alya Consulting.
-    Alle Rechte vorbehalten. Die beschriebenen Methoden und Techniken
-    werden hierin als Geschäftsgeheimnisse und/oder vertraulich betrachtet. 
-    Die Reproduktion oder Verteilung, ganz oder teilweise, ist 
-    verboten, ausser mit ausdrücklicher schriftlicher Genehmigung von Alya Consulting.
+    Diese Datei ist Teil der Alya Basis Konfiguration.
+	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
+	Bedingungen der GNU General Public License, wie von der Free Software
+	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veroeffentlichten Version, weiter verteilen und/oder modifizieren.
+    Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
+	aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    Siehe die GNU General Public License fuer weitere Details:
+	https://www.gnu.org/licenses/gpl-3.0.txt
 
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
     14.11.2019 Konrad Brunner       Initial Version
     18.10.2021 Konrad Brunner       Move to Az
+    23.01.2022 Konrad Brunner       Fixed issue with new found dependency module
 
 #>
 
@@ -87,7 +97,7 @@ param(
     [int] $SimultaneousModuleImportJobCount = 10,
 
     [Parameter(Mandatory=$false)]
-    [string] $AzureModuleClass = 'AzureRM',
+    [string] $AzureModuleClass = 'Az',
 
     [Parameter(Mandatory=$false)]
     [string] $AzureEnvironment = 'AzureCloud',
@@ -142,31 +152,41 @@ function Login-AzureAutomation([bool] $AzModuleOnly) {
     try {
         $RunAsConnection = Get-AutomationConnection -Name "AzureRunAsConnection"
         Write-Output "Logging in to Azure ($AzureEnvironment)..."
-
+        
+        if (!$RunAsConnection.ApplicationId) {
+            $ErrorMessage = "Connection 'AzureRunAsConnection' is incompatible type."
+            throw $ErrorMessage            
+        }
+        
         if ($AzModuleOnly) {
-            Add-AzAccount `
+           Write-Output "  Az"
+           Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
+           Connect-AzAccount `
                 -ServicePrincipal `
                 -TenantId $RunAsConnection.TenantId `
                 -ApplicationId $RunAsConnection.ApplicationId `
                 -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
                 -Environment $AzureEnvironment
-
-            Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
+            Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID | Write-Verbose
         } else {
+            Write-Output "  AzureRm..."
+            Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
             Add-AzureRmAccount `
                 -ServicePrincipal `
                 -TenantId $RunAsConnection.TenantId `
                 -ApplicationId $RunAsConnection.ApplicationId `
                 -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
                 -Environment $AzureEnvironment
-
             Select-AzureRmSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
         }
     } catch {
 		if (!$RunAsConnection) {
-			Write-Output $RunAsConnectionName
 			try { Write-Output ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
-			Write-Output "Connection $RunAsConnectionName not found."
+			Write-Output "Connection 'AzureRunAsConnection' not found."
+		}
+		else
+		{
+            $RunAsConnection | fl | Write-Output
 		}
 		throw
     }
@@ -308,6 +328,8 @@ function AreAllModulesAdded([string[]] $ModuleListToAdd) {
                 break
             }
         }
+
+		#Write-Warning "ToAdd $ModuleNameToAdd $ModuleAccounted"
         
         if (!$ModuleAccounted) {
             $Result = $false
@@ -337,6 +359,7 @@ function Create-ModuleImportMapOrder([bool] $AzModuleOnly) {
     }
 
     # Get all the non-conflicting modules in the current automation account
+	#Write-Warning "$GetAutomationModule"
     $CurrentAutomationModuleList = & $GetAutomationModule `
                                         -ResourceGroupName $ResourceGroupName `
                                         -AutomationAccountName $AutomationAccountName |
@@ -345,48 +368,81 @@ function Create-ModuleImportMapOrder([bool] $AzModuleOnly) {
             (!$AzModuleOnly -and ($_.Name -eq 'AzureRM' -or $_.Name -like 'AzureRM.*' -or
             $_.Name -eq 'Azure' -or $_.Name -like 'Azure.*'))
         }
+	$CurrentAutomationModuleList = $CurrentAutomationModuleList.Name
 
     # Get the latest version of the AzureRM.Profile OR Az.Accounts module
+    #Write-Warning "ProfileOrAccountsModuleName: $($ProfileOrAccountsModuleName)"
     $VersionAndDependencies = Get-ModuleDependencyAndLatestVersion $ProfileOrAccountsModuleName
+    #Write-Warning "VersionAndDependencies start: $($VersionAndDependencies[1])"
 
     $ModuleEntry = $ProfileOrAccountsModuleName
     $ModuleEntryArray = ,$ModuleEntry
     $ModuleImportMapOrder += ,$ModuleEntryArray
+    #Write-Warning "ModuleEntry $($ModuleEntry)"
+    #Write-Warning "ModuleEntryArray $($ModuleEntryArray)"
+    #Write-Warning "ModuleImportMapOrder $($ModuleImportMapOrder)"
+
+	$WorkingAutomationModuleList = $CurrentAutomationModuleList
 
     do {
-        $NextAutomationModuleList = $null
+        Write-Warning "WorkingAutomationModuleList $($WorkingAutomationModuleList.Count)"
+		$NextAutomationModuleList = $null
         $CurrentChainVersion = $null
         # Add it to the list if the modules are not available in the same list 
-        foreach ($Module in $CurrentAutomationModuleList) {
-            $Name = $Module.Name
+        foreach ($Name in $WorkingAutomationModuleList) {
+            #$Name = $Module.Name
+			if (-Not $Name -or $Name.Length -eq 0) { continue }
 
-            Write-Verbose "Checking dependencies for $Name"
-            $VersionAndDependencies = Get-ModuleDependencyAndLatestVersion $Module.Name
+            Write-Warning "Checking dependencies for $Name"
+            $VersionAndDependencies = Get-ModuleDependencyAndLatestVersion $Name
             if ($null -eq $VersionAndDependencies) {
                 continue
             }
 
             $Dependencies = $VersionAndDependencies[1].Split("|")
+        	#Write-Warning "VersionAndDependencies: $($VersionAndDependencies[1])"
 
-            $AzureModuleEntry = $Module.Name
+        	#Write-Warning "Checking $($Dependencies.Count) dependendencies"
+			foreach($Dependency in $Dependencies)
+			{
+				$Modulename = $Dependency.Substring(0, $Dependency.IndexOf(":"))
+	        	#Write-Warning "  Checking Modulename $Modulename"
+				$moduleExists = $CurrentAutomationModuleList -contains $Modulename
+				if (-Not $moduleExists)
+				{
+					Write-Warning "Found new module in dependencies: $Dependency"
+					$NextAutomationModuleList += ,$Modulename
+					$CurrentAutomationModuleList += ,$Modulename
+				}
+			}
+
+			$allDependenciesAdded = AreAllModulesAdded $Dependencies
+			$allEntriesAdded = AreAllModulesAdded $Name
+        	#Write-Warning "allDependenciesAdded $allDependenciesAdded"
+        	#Write-Warning "allEntriesAdded $allEntriesAdded"
 
             # If the previous list contains all the dependencies then add it to current list
-            if ((-not $Dependencies) -or (AreAllModulesAdded $Dependencies)) {
-                Write-Verbose "Adding module $Name to dependency chain"
-                $CurrentChainVersion += ,$AzureModuleEntry
+            if ((-not $Dependencies) -or ($allDependenciesAdded)) {
+                Write-Warning "Adding module $Name to dependency chain"
+                $CurrentChainVersion += ,$Name
             } else {
                 # else add it back to the main loop variable list if not already added
-                if (!(AreAllModulesAdded $AzureModuleEntry)) {
-                    Write-Verbose "Module $Name does not have all dependencies added as yet. Moving module for later import"
-                    $NextAutomationModuleList += ,$Module
+                if (!$allEntriesAdded) {
+                    Write-Warning "Module $Name does not have all dependencies added yet. Moving module for later import"
+                    #$NextAutomationModuleList += ,$Module
+                    $NextAutomationModuleList += ,$Name
                 }
             }
         }
 
-        $ModuleImportMapOrder += ,$CurrentChainVersion
-        $CurrentAutomationModuleList = $NextAutomationModuleList
+    	#Write-Warning "NextAutomationModuleList $NextAutomationModuleList"
+    	#Write-Warning "CurrentChainVersion $CurrentChainVersion"
 
-    } while ($null -ne $CurrentAutomationModuleList)
+        $ModuleImportMapOrder += ,$CurrentChainVersion
+    	#Write-Warning "ModuleImportMapOrder $ModuleImportMapOrder"
+        $WorkingAutomationModuleList = $NextAutomationModuleList
+
+    } while ($null -ne $WorkingAutomationModuleList)
 
     $ModuleImportMapOrder
 }
@@ -410,12 +466,14 @@ function Wait-AllModulesImported(
         $Module = $ModuleList[$i]
 
         Write-Output ("Checking import Status for module : {0}" -f $Module)
+        $maxRetries = 10
         while ($true) {
             $AutomationModule = & $GetAutomationModule `
                                     -Name $Module `
                                     -ResourceGroupName $ResourceGroupName `
                                     -AutomationAccountName $AutomationAccountName
 
+            Write-Output ("ProvisioningState: $($AutomationModule.ProvisioningState)")
             $IsTerminalProvisioningState = ($AutomationModule.ProvisioningState -eq "Succeeded") -or
                                            ($AutomationModule.ProvisioningState -eq "Failed")
 
@@ -425,6 +483,12 @@ function Wait-AllModulesImported(
 
             Write-Verbose ("Module {0} is getting imported" -f $Module)
             Start-Sleep -Seconds 30
+            $maxRetries--
+            if ($maxRetries -lt 0)
+            {
+                Write-Error "Was not able to install module within 300 seconds. Breaking now." -ErrorAction Continue
+                break
+            }
         }
 
         if ($AutomationModule.ProvisioningState -ne "Succeeded") {
@@ -491,9 +555,25 @@ function Update-ProfileAndAutomationVersionToLatest([string] $AutomationModuleNa
 
     # Unzip files
     $ProfileUnzipPath = Join-Path $PathFolder $ProfileModuleName
-    Expand-Archive -Path $ProfilePath -DestinationPath $ProfileUnzipPath -Force
+    $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+    if ($cmdTst)
+    {
+        Expand-Archive -Path $ProfilePath -DestinationPath $ProfileUnzipPath -Force #AlyaAutofixed
+    }
+    else
+    {
+        Expand-Archive -Path $ProfilePath -OutputPath $ProfileUnzipPath -Force #AlyaAutofixed
+    }
     $AutomationUnzipPath = Join-Path $PathFolder $AutomationModuleName
-    Expand-Archive -Path $AutomationPath -DestinationPath $AutomationUnzipPath -Force
+    $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+    if ($cmdTst)
+    {
+        Expand-Archive -Path $AutomationPath -DestinationPath $AutomationUnzipPath -Force #AlyaAutofixed
+    }
+    else
+    {
+        Expand-Archive -Path $AutomationPath -OutputPath $AutomationUnzipPath -Force #AlyaAutofixed
+    }
 
     # Import modules
     Import-Module (Join-Path $ProfileUnzipPath ($ProfileModuleName + ".psd1")) -Force -Verbose
@@ -522,18 +602,28 @@ if ($AzureModuleClass -eq "Az") {
     $UseAzModule = $false
     $AutomationModuleName = $script:AzureRMAutomationModuleName
 } else {
-     Write-Error "Invalid AzureModuleClass: '$AzureModuleClass'. Must be either Az or AzureRM" -ErrorAction Continue -ErrorAction Stop
+     Write-Error "Invalid AzureModuleClass: '$AzureModuleClass'. Must be either Az or AzureRM" -ErrorAction Stop
 }
 
 # Import the latest version of the Az automation and accounts version to the local sandbox
-Update-ProfileAndAutomationVersionToLatest $AutomationModuleName
-
+Write-Output "Update-ProfileAndAutomationVersionToLatest"
+try
+{
+	Update-ProfileAndAutomationVersionToLatest $AutomationModuleName
+}
+catch
+{
+	Write-Warning $_.Exception
+}
 if ($Login) {
     Login-AzureAutomation $UseAzModule
 }
 
+Write-Output "Create-ModuleImportMapOrder"
 $ModuleImportMapOrder = Create-ModuleImportMapOrder $UseAzModule
+Write-Output "Import-ModulesInAutomationAccordingToDependency"
 Import-ModulesInAutomationAccordingToDependency $ModuleImportMapOrder $UseAzModule
 
+Write-Output "Done"
 
 #endregion

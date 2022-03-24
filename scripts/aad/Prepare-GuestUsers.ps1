@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,11 +30,13 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     27.02.2020 Konrad Brunner       Initial Version
+    02.02.2022 Konrad Brunner       Added lastNameFirst option
 
 #>
 
 [CmdletBinding()]
 Param(
+    [bool]$lastNameFirst = $false
 )
 
 #Reading configuration
@@ -107,209 +109,353 @@ function Main
             #$comp = "Extern"
             $comp = $domain.ToLower()
         }
-        if ($oldUser.first) {$first = $oldUser.first.ToLower()} else {$first = ""}
-        if ($oldUser.last) {$last = $oldUser.last.ToLower()} else {$last = ""}
-        if ($oldUser.disp) {$disp = $oldUser.disp.ToLower()} else {$disp = ""}
-        $first = $first.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
-        $last = $last.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
-        $disp = $disp.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
 
-        if ($name.IndexOf(".") -gt -1)
+        if (-Not [String]::IsNullOrEmpty($oldUser.first) -And `            -Not [String]::IsNullOrEmpty($oldUser.last))
         {
-            $namePrts = $name.Split(".")
+            $first = $oldUser.first
+            $last = $oldUser.last
         }
         else
         {
-            $namePrts = $name.Split("-_")
-        }
-        switch($namePrts.Length)
-        {
-            1 {
-                if ($namePrts[0] -ne ($first+$last) -and $namePrts[0] -ne ($last+$first))
+            if ($oldUser.first) {$first = $oldUser.first.ToLower()} else {$first = ""}
+            if ($oldUser.last) {$last = $oldUser.last.ToLower()} else {$last = ""}
+            if ($oldUser.disp) {$disp = $oldUser.disp.ToLower()} else {$disp = ""}
+            $first = $first.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
+            $last = $last.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
+            $disp = $disp.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
+
+            $dispFirstLast = $disp.Split()
+            if ($first -eq "")
+            {
+                $first = $dispFirstLast[0]
+            }
+            if ($last -eq "")
+            {
+                switch($dispFirstLast.Length)
                 {
-                    if ($nachnamen -contains $namePrts[0])
-                    {
-                        $last = $namePrts[0]
-                    }
-                    elseif ($vornamen -contains $namePrts[0])
-                    {
-                        $first = $namePrts[0]
-                    }
-					else
-                    {
-                        if (-Not ($first -eq $namePrts[0] -and $last -eq "" -or `                            $last -eq $namePrts[0] -and $first -eq "" -or `                            $last -ne "" -and $first -ne ""))
-                        {
-                            $fndName = $false
-                            foreach($nachname in $nachnamen)
-                            {
-                                if ($namePrts[0].Contains($nachname))
-                                {
-                                    $last = $nachname
-                                    $first = $namePrts[0].Replace($nachname, "")
-                                    $fndName = $true
-                                    break
-                                }
-                            }
-                            foreach($vorname in $vornamen)
-                            {
-                                if ($namePrts[0].Contains($vorname))
-                                {
-                                    $first = $vorname
-                                    $last = $namePrts[0].Replace($vorname, "")
-                                    $fndName = $true
-                                    break
-                                }
-                            }
-                            if ($fndName)
-                            {
-                                $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
-                                if ($decision -eq 1)
-                                {
-                                    $fndName = $false
-                                }
-                            }
-                            if (-Not $fndName)
-                            {
-                                $decision = $Host.UI.PromptForChoice("Confirm", "What is '$($namePrts[0])'?", @("&First", "&Last", "&None", "&Skip"), 1)
-                                if ($decision -eq 0)
-                                {
-                                    $first = $namePrts[0]
-                                    $last = ""
-                                }
-                                if ($decision -eq 1)
-                                {
-                                    $last = $namePrts[0]
-                                    $first = ""
-                                }
-                                if ($decision -eq 2)
-                                {
-                                    $response  = $Host.UI.Prompt("Question", "Specify first and last for: '$($namePrts[0])'?", @("First", "Last"))
-                                    $first = $response["First"]
-                                    $last = $response["Last"]
-                                }
-                            }
-                        }
-                    }
+                    1 {
+                        $last = $dispFirstLast[0]
+                      }
+                    2 {
+                        $last = $dispFirstLast[1]
+                      }
+                    3 {
+                        $last = $dispFirstLast[2]
+                      }
                 }
             }
-            {($_ -gt 1)} {
-                switch($namePrts.Length)
-                {
-                    2 {
-                        $tests = @(@{
-                            "first" = $namePrts[0]
-                            "last" = $namePrts[1]
-                        },@{
-                            "last" = $namePrts[0]
-                            "first" = $namePrts[1]
-                        })
-                    }
-                    3 {
-                        $tests = @(@{
-                            "first" = $namePrts[0]+"-"+$namePrts[1]
-                            "last" = $namePrts[2]
-                        },@{
-                            "first" = $namePrts[0]
-                            "last" = $namePrts[1]+"-"+$namePrts[2]
-                        },@{
-                            "first" = $namePrts[0]+" "+$namePrts[1]
-                            "last" = $namePrts[2]
-                        },@{
-                            "first" = $namePrts[0]
-                            "last" = $namePrts[1]+" "+$namePrts[2]
-                        },
-                        @{
-                            "last" = $namePrts[0]+"-"+$namePrts[1]
-                            "first" = $namePrts[2]
-                        },@{
-                            "last" = $namePrts[0]
-                            "first" = $namePrts[1]+"-"+$namePrts[2]
-                        },@{
-                            "last" = $namePrts[0]+" "+$namePrts[1]
-                            "first" = $namePrts[2]
-                        },@{
-                            "last" = $namePrts[0]
-                            "first" = $namePrts[1]+" "+$namePrts[2]
-                        })
-                    }
-                }
-                $fndVorname = $null
-                $fndNachname = $null
-                foreach($test in $tests)
-                {
-                    if ($vornamen -contains $test.first)
+
+            if ($name.IndexOf(".") -gt -1)
+            {
+                $namePrts = $name.Split(".")
+            }
+            else
+            {
+                $namePrts = $name.Split("-_")
+            }
+            switch($namePrts.Length)
+            {
+                1 {
+                    if ($namePrts[0] -ne ($first+$last) -and $namePrts[0] -ne ($last+$first))
                     {
-                        $first = $test.first
-                        $last = $test.last.Replace("-"," ")
-                        $fndVorname = $first
-                        break
-                    }
-                    if ($nachnamen -contains $test.last)
-                    {
-                        $last = $test.last
-                        $first = $test.first
-                        $fndNachname = $last
-                        break
-                    }
-                }
-                if (-Not $fndVorname -and -Not $fndNachname)
-                {
-                    switch($namePrts.Length)
-                    {
-                        2 {
-                            if (($first -ne $namePrts[0] -and $last -ne $namePrts[1]) -and `
-                                ($first -ne $namePrts[1] -and $last -ne $namePrts[0]))
-                            {
-                                $first = $namePrts[0]
-                                $last = $namePrts[1]
-                                $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&Swap"), 0)
-                                if ($decision -eq 1)
-                                {
-                                    $tmp = $first
-                                    $first = $last
-                                    $last = $tmp
-                                }
-                            }
+                        if ($nachnamen -contains $namePrts[0])
+                        {
+                            $last = $namePrts[0]
                         }
-                        3 {
-                            if (($first -ne $namePrts[0] -and $last -ne ($namePrts[1]+" "+$namePrts[2])) -and `
-                                ($first -ne ($namePrts[0]+"-"+$namePrts[1]) -and $last -ne $namePrts[2]) -and `
-                                ($first -ne ($namePrts[0]+" "+$namePrts[1]) -and $last -ne $namePrts[2]) -and `
-                                ($last -ne $namePrts[0] -and $first -ne ($namePrts[1]+"-"+$namePrts[2])) -and `
-                                ($last -ne $namePrts[0] -and $first -ne ($namePrts[1]+" "+$namePrts[2])) -and `
-                                ($last -ne ($namePrts[0]+" "+$namePrts[1]) -and $first -ne $namePrts[2]))
+                        elseif ($vornamen -contains $namePrts[0])
+                        {
+                            $first = $namePrts[0]
+                        }
+					    else
+                        {
+                            if (-Not ($first -eq $namePrts[0] -and $last -eq "" -or `                                $last -eq $namePrts[0] -and $first -eq "" -or `                                $last -ne "" -and $first -ne ""))
                             {
-                                $first = $namePrts[0]
-                                $last = ($namePrts[1]+" "+$namePrts[2])
-                                $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
-                                if ($decision -eq 1)
+                                $fndName = $false
+                                foreach($nachname in $nachnamen)
                                 {
-                                    $first = ($namePrts[0]+" "+$namePrts[1])
-                                    $last = $namePrts[2]
+                                    if ($namePrts[0].Contains($nachname))
+                                    {
+                                        $last = $nachname
+                                        $first = $namePrts[0].Replace($nachname, "")
+                                        $fndName = $true
+                                        break
+                                    }
+                                }
+                                foreach($vorname in $vornamen)
+                                {
+                                    if ($namePrts[0].Contains($vorname))
+                                    {
+                                        $first = $vorname
+                                        $last = $namePrts[0].Replace($vorname, "")
+                                        $fndName = $true
+                                        break
+                                    }
+                                }
+                                if ($fndName)
+                                {
                                     $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
                                     if ($decision -eq 1)
                                     {
-                                        $first = $namePrts[2]
-                                        $last = ($namePrts[0]+" "+$namePrts[1])
+                                        $fndName = $false
+                                    }
+                                }
+                                if (-Not $fndName)
+                                {
+                                    $decision = $Host.UI.PromptForChoice("Confirm", "What is '$($namePrts[0])'?", @("&First", "&Last", "&None", "&Skip"), 1)
+                                    if ($decision -eq 0)
+                                    {
+                                        $first = $namePrts[0]
+                                        $last = ""
+                                    }
+                                    if ($decision -eq 1)
+                                    {
+                                        $last = $namePrts[0]
+                                        $first = ""
+                                    }
+                                    if ($decision -eq 2)
+                                    {
+                                        $response  = $Host.UI.Prompt("Question", "Specify first and last for: '$($namePrts[0])'?", @("First", "Last"))
+                                        $first = $response["First"]
+                                        $last = $response["Last"]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                {($_ -gt 1)} {
+                    switch($namePrts.Length)
+                    {
+                        2 {
+                            $tests = @()
+                            if ($first -ne "" -and $last -ne "")
+                            {
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $last
+                                }
+                            }
+                            elseif ($first -eq "" -and $last -ne "")
+                            {
+                                $tests += @{
+                                    "first" = $namePrts[0]
+                                    "last" = $last
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[1]
+                                    "last" = $last
+                                }
+                            }
+                            elseif ($first -ne "" -and $last -eq "")
+                            {
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[0]
+                                }
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[1]
+                                }
+                            }
+                            else
+                            {
+                                $tests += @{
+                                    "first" = $namePrts[0]
+                                    "last" = $namePrts[1]
+                                }
+                                $tests += @{
+                                    "last" = $namePrts[0]
+                                    "first" = $namePrts[1]
+                                }
+                            }
+
+                        }
+                        3 {
+                            $tests = @()
+                            if ($first -ne "" -and $last -ne "")
+                            {
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $last
+                                }
+                            }
+                            elseif ($first -eq "" -and $last -ne "")
+                            {
+                                $tests += @{
+                                    "first" = $namePrts[0]+"-"+$namePrts[1]
+                                    "last" = $last
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[0]+" "+$namePrts[1]
+                                    "last" = $last
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[1]+"-"+$namePrts[2]
+                                    "last" = $last
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[1]+" "+$namePrts[2]
+                                    "last" = $last
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[0]
+                                    "last" = $last
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[1]
+                                    "last" = $last
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[2]
+                                    "last" = $last
+                                }
+                            }
+                            elseif ($first -ne "" -and $last -eq "")
+                            {
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[0]+"-"+$namePrts[1]
+                                }
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[0]+" "+$namePrts[1]
+                                }
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[1]+"-"+$namePrts[2]
+                                }
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[1]+" "+$namePrts[2]
+                                }
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[0]
+                                }
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[1]
+                                }
+                                $tests += @{
+                                    "first" = $first
+                                    "last" = $namePrts[2]
+                                }
+                            }
+                            else
+                            {
+                                $tests += @{
+                                    "first" = $namePrts[0]+"-"+$namePrts[1]
+                                    "last" = $namePrts[2]
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[0]
+                                    "last" = $namePrts[1]+"-"+$namePrts[2]
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[0]+" "+$namePrts[1]
+                                    "last" = $namePrts[2]
+                                }
+                                $tests += @{
+                                    "first" = $namePrts[0]
+                                    "last" = $namePrts[1]+" "+$namePrts[2]
+                                }
+                                $tests += @{
+                                    "last" = $namePrts[0]+"-"+$namePrts[1]
+                                    "first" = $namePrts[2]
+                                }
+                                $tests += @{
+                                    "last" = $namePrts[0]
+                                    "first" = $namePrts[1]+"-"+$namePrts[2]
+                                }
+                                $tests += @{
+                                    "last" = $namePrts[0]+" "+$namePrts[1]
+                                    "first" = $namePrts[2]
+                                }
+                                $tests += @{
+                                    "last" = $namePrts[0]
+                                    "first" = $namePrts[1]+" "+$namePrts[2]
+                                }
+                            }
+                        }
+                    }
+                    $fndVorname = $null
+                    $fndNachname = $null
+                    foreach($test in $tests)
+                    {
+                        if ($vornamen -contains $test.first)
+                        {
+                            $first = $test.first
+                            $last = $test.last.Replace("-"," ")
+                            $fndVorname = $first
+                            break
+                        }
+                        if ($nachnamen -contains $test.last)
+                        {
+                            $last = $test.last
+                            $first = $test.first
+                            $fndNachname = $last
+                            break
+                        }
+                    }
+                    if (-Not $fndVorname -and -Not $fndNachname)
+                    {
+                        switch($namePrts.Length)
+                        {
+                            2 {
+                                if (($first -ne $namePrts[0] -and $last -ne $namePrts[1]) -and `
+                                    ($first -ne $namePrts[1] -and $last -ne $namePrts[0]))
+                                {
+                                    $first = $namePrts[0]
+                                    $last = $namePrts[1]
+                                    $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&Swap"), 0)
+                                    if ($decision -eq 1)
+                                    {
+                                        $tmp = $first
+                                        $first = $last
+                                        $last = $tmp
+                                    }
+                                }
+                            }
+                            3 {
+                                if (($first -ne $namePrts[0] -and $last -ne ($namePrts[1]+" "+$namePrts[2])) -and `
+                                    ($first -ne ($namePrts[0]+"-"+$namePrts[1]) -and $last -ne $namePrts[2]) -and `
+                                    ($first -ne ($namePrts[0]+" "+$namePrts[1]) -and $last -ne $namePrts[2]) -and `
+                                    ($last -ne $namePrts[0] -and $first -ne ($namePrts[1]+"-"+$namePrts[2])) -and `
+                                    ($last -ne $namePrts[0] -and $first -ne ($namePrts[1]+" "+$namePrts[2])) -and `
+                                    ($last -ne ($namePrts[0]+" "+$namePrts[1]) -and $first -ne $namePrts[2]))
+                                {
+                                    $first = $namePrts[0]
+                                    $last = ($namePrts[1]+" "+$namePrts[2])
+                                    $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
+                                    if ($decision -eq 1)
+                                    {
+                                        $first = ($namePrts[0]+" "+$namePrts[1])
+                                        $last = $namePrts[2]
                                         $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
                                         if ($decision -eq 1)
                                         {
-                                            $first = ($namePrts[1]+" "+$namePrts[2])
-                                            $last = $namePrts[0]
+                                            $first = $namePrts[2]
+                                            $last = ($namePrts[0]+" "+$namePrts[1])
                                             $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
                                             if ($decision -eq 1)
                                             {
-                                                $first = ($namePrts[0]+"-"+$namePrts[1])
-                                                $last = $namePrts[2]
+                                                $first = ($namePrts[1]+" "+$namePrts[2])
+                                                $last = $namePrts[0]
                                                 $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
                                                 if ($decision -eq 1)
                                                 {
-                                                    $first = ($namePrts[1]+"-"+$namePrts[2])
-                                                    $last = $namePrts[0]
+                                                    $first = ($namePrts[0]+"-"+$namePrts[1])
+                                                    $last = $namePrts[2]
                                                     $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
                                                     if ($decision -eq 1)
                                                     {
-                                                        throw "really?"
+                                                        $first = ($namePrts[1]+"-"+$namePrts[2])
+                                                        $last = $namePrts[0]
+                                                        $decision = $Host.UI.PromptForChoice("Confirm", "Is First='$($first)' Last='$($last)' correct?", @("&Yes", "&No"), 0)
+                                                        if ($decision -eq 1)
+                                                        {
+                                                            throw "really?"
+                                                        }
                                                     }
                                                 }
                                             }
@@ -319,63 +465,67 @@ function Main
                             }
                         }
                     }
-                }
-                else
-                {
-                    if ($fndVorname)
+                    else
                     {
-                        if ($namePrts.Length -gt 2)
+                        if ($fndVorname)
                         {
-                            if ($namePrts[0] -eq $fndVorname)
+                            if ($namePrts.Length -gt 2)
                             {
-                                if ($vornamen -contains $namePrts[1])
+                                if ($namePrts[0] -eq $fndVorname)
                                 {
-                                    $first = $namePrts[0]+" "+$namePrts[1]
-                                    $last = $namePrts[2]
+                                    if ($vornamen -contains $namePrts[1])
+                                    {
+                                        $first = $namePrts[0]+" "+$namePrts[1]
+                                        $last = $namePrts[2]
+                                    }
+                                    else
+                                    {
+                                        $first = $namePrts[0]
+                                        $last = $namePrts[1]+" "+$namePrts[2]
+                                    }
                                 }
-                                else
+                                if ($namePrts[2] -eq $fndVorname)
                                 {
-                                    $first = $namePrts[0]
-                                    $last = $namePrts[1]+" "+$namePrts[2]
+                                    $first = $namePrts[2]
+                                    $last = $namePrts[0]+" "+$namePrts[1]
                                 }
-                            }
-                            if ($namePrts[2] -eq $fndVorname)
-                            {
-                                $first = $namePrts[2]
-                                $last = $namePrts[0]+" "+$namePrts[1]
                             }
                         }
-                    }
-                    if ($fndNachname)
-                    {
+                        if ($fndNachname)
+                        {
                         
+                        }
                     }
                 }
+                default { throw "Not implemented" }
             }
-            default { throw "Not implemented" }
-        }
-        $first = Make-PascalCase -string $first
-        $last = Make-PascalCase -string $last
-        $firstChk = $first.Replace("ae","ä").Replace("ue","ü").Replace("oe","ö")
-        if ($oldUser.disp.Contains($firstChk))
-        {
-            $first = $firstChk
-        }
-        $lastChk = $last.Replace("ae","ä").Replace("ue","ü").Replace("oe","ö")
-        if ($oldUser.disp.Contains($lastChk))
-        {
-            $last = $lastChk
+            $first = Make-PascalCase -string $first
+            $last = Make-PascalCase -string $last
+            $firstChk = $first.Replace("ae","ä").Replace("ue","ü").Replace("oe","ö")
+            if ($oldUser.disp.Contains($firstChk))
+            {
+                $first = $firstChk
+            }
+            $lastChk = $last.Replace("ae","ä").Replace("ue","ü").Replace("oe","ö")
+            if ($oldUser.disp.Contains($lastChk))
+            {
+                $last = $lastChk
+            }
         }
         $disp = ($first + " " + $last).Trim() + " " + $CompStart + $comp + $CompEnd
+        if ($lastNameFirst)
+        {
+            $disp = ($last + " " + $first).Trim() + " " + $CompStart + $comp + $CompEnd
+        }
         if ($first -eq "") {$first = $null}
         if ($last -eq "") {$last = $null}
         $newUser = @{disp=$disp;first=$first;last=$last}
-        if ($oldUser.first) {$first = $oldUser.first.ToLower()} else {$first = ""}
-        if ($oldUser.last) {$last = $oldUser.last.ToLower()} else {$last = ""}
-        if ($oldUser.disp) {$disp = $oldUser.disp.ToLower()} else {$disp = ""}
-        $first = $first.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
-        $last = $last.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
-        $disp = $disp.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
+        #if ($oldUser.first) {$first = $oldUser.first.ToLower()} else {$first = ""}
+        #if ($oldUser.last) {$last = $oldUser.last.ToLower()} else {$last = ""}
+        #if ($oldUser.disp) {$disp = $oldUser.disp.ToLower()} else {$disp = ""}
+        #$first = $first.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
+        #$last = $last.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
+        #$disp = $disp.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
 
         if (($oldUser | ConvertTo-Json -Compress) -ne ($newUser | ConvertTo-Json -Compress))
         {

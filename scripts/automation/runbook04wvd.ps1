@@ -88,7 +88,7 @@ try {
 
 	# Members
 	$subs = $Subscriptions.Split(",")
-	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, 'W. Europe Standard Time')
+	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, $TimeZone)
 	"Run time $($runTime)"
 
 	# Processing subscriptions

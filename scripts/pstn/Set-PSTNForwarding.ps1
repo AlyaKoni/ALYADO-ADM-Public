@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.09.2020 Konrad Brunner       Initial Version
+    28.12.2021 Konrad Brunner       Switch to teams module
 
 #>
 
@@ -45,23 +46,21 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Set-PSTNForwarding-$($AlyaTime
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module "SkypeOnlineConnector"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "PSTN | Set-PSTNForwarding | CsOnline" -ForegroundColor $CommandInfo
+Write-Host "PSTN | Set-PSTNForwarding | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-$sfbSession = New-CsOnlineSession
-Import-PSSession $sfbSession -AllowClobber
-
-Set-CsOnlinePSTNGateway -identity $AlyaPstnGateway -ForwardPAI $true -ForwardCallHistory $true
-
-Get-PSSession | Remove-PSSession
+Set-CsOnlinePSTNGateway -Identity $AlyaPstnGateway -ForwardPAI $true -ForwardCallHistory $true
 
 #Stopping Transscript
 Stop-Transcript

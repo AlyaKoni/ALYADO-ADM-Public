@@ -17,7 +17,7 @@
     "roleScopeTagIds":  [
 
                         ],
-    "fileName":  "pdf24-creator-10.0.12.intunewin",
+    "fileName":  "pdf24-creator-10.6.3.intunewin",
     "installCommandLine":  "Install.cmd",
     "uninstallCommandLine":  "Uninstall.cmd",
     "applicableArchitectures":  "x64",
@@ -27,14 +27,14 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "10.0.12",
+                           "productVersion":  "10.6.3",
                            "publisher":  "geek software GmbH",
-                           "productCode":  "{0DF7C4E4-3941-42FD-8707-6EBD5B8032A8}",
+                           "productCode":  "{FFA513F0-339A-48DB-A573-718C40037C72}",
                            "upgradeCode":  "{8D2DF301-CE53-4939-81C2-D659E7B857BE}",
                            "productName":  "PDF24 Creator",
                            "packageType":  "PerMachine"
                        },
-    "setupFilePath":  "pdf24-creator-10.0.12.msi",
+    "setupFilePath":  "pdf24-creator-10.6.3.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -50,12 +50,12 @@
     "detectionRules":  [
                            {
                                "@odata.type":  "#microsoft.graph.win32LobAppFileSystemDetection",
-                               "path":  "%ProgramFiles(x86)%\\PDF24",
+                               "path":  "%ProgramFiles%\\PDF24",
                                "fileOrFolderName":  "pdf24.exe",
-                               "check32BitOn64System":  true,
+                               "check32BitOn64System":  false,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "10.0.12"
+                               "detectionValue":  "10.6.3"
                            }
                        ],
     "requirementRules":  [
@@ -65,12 +65,12 @@
                   {
                       "@odata.type":  "#microsoft.graph.win32LobAppFileSystemRule",
                       "ruleType":  "detection",
-                      "path":  "%ProgramFiles(x86)%\\PDF24",
+                      "path":  "%ProgramFiles%\\PDF24",
                       "fileOrFolderName":  "pdf24.exe",
-                      "check32BitOn64System":  true,
+                      "check32BitOn64System":  false,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "10.0.12"
+                      "comparisonValue":  "10.6.3"
                   }
               ],
     "installExperience":  {

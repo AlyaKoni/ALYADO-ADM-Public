@@ -98,6 +98,9 @@ if (-Not $admHubSite)
     Write-Error "ADM Hub site $hubSiteName not found. Please crate it first"
 }
 
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCnt = Get-PnPContext
+
 # Checking learning pathways site collection
 Write-Host "Checking learning pathways site collection" -ForegroundColor $CommandInfo
 $learningPathwaysSiteName = "$prefix-ADM-$learningPathwaysTitle"
@@ -106,7 +109,6 @@ try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$learningPathwa
 if (-Not $site)
 {
     Write-Warning "Learning pathways site not found. Creating now learning pathways site $learningPathwaysSiteName"
-    LoginTo-PnP -Url $AlyaSharePointAdminUrl
     $site = New-PnPSite -Type "CommunicationSite" -Title $learningPathwaysSiteName -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Description "Learning Pathways" -Wait
     do {
         Start-Sleep -Seconds 15
@@ -119,7 +121,8 @@ if (-Not $site)
 
     # Login to learning pathways
     Write-Host "Login to learning pathways" -ForegroundColor $CommandInfo
-    LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
+	$null = Set-PnPContext -Context $adminCnt
+	$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
     # Multilanguage settings
     $Web = Get-PnpWeb -Includes Language, SupportedUILanguageIds
@@ -185,7 +188,7 @@ if (-Not $site)
 
 # Checking app catalog
 Write-Host "Checking app catalog" -ForegroundColor $CommandInfo
-LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$null = Set-PnPContext -Context $adminCnt
 $appCatalogUrl = Get-PnPTenantAppCatalogUrl
 if (-Not $appCatalogUrl)
 {
@@ -210,7 +213,8 @@ Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-
 
 # Login to app catalog
 Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
-LoginTo-PnP -Url $appCatalogUrl
+$null = Set-PnPContext -Context $adminCnt
+$siteCon = LoginTo-PnP -Url $appCatalogUrl
 
 # Deploying app package
 Write-Host "Deploying app package" -ForegroundColor $CommandInfo
@@ -223,7 +227,8 @@ if (-Not $app.Deployed)
 
 # Login to learning pathways
 Write-Host "Login to learning pathways" -ForegroundColor $CommandInfo
-LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
+$null = Set-PnPContext -Context $adminCnt
+$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
 # Installing app package
 Write-Host "Installing app package" -ForegroundColor $CommandInfo
@@ -253,7 +258,8 @@ Write-Host "Running TelemetryOptOut.ps1" -ForegroundColor $CommandInfo
 
 # Setting homepage
 Write-Host "Setting homepage" -ForegroundColor $CommandInfo
-LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
+$null = Set-PnPContext -Context $adminCnt
+$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 Set-PnPHomePage -RootFolderRelativeUrl "SitePages/CustomLearningViewer.aspx"
 
 # Launching custom configuration

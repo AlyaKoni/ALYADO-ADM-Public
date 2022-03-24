@@ -343,7 +343,7 @@ if ($AlyaWvdTenantNameProd)
         if (-Not $AutomationCredential)
         {
             Write-Warning "Automation credential not found. Creating the Automation credential $asset"
-            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $AzureAdServicePrincipal.ApplicationId, $appKeySec
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $AzureAdServicePrincipal.AppId, $appKeySec
             New-AzAutomationCredential -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $asset -Value $Credential
         }
         #Remove-AutomationCredential -ResourceGroupName $ResourceGroupOMS -automationAccountName $AutomationAccountName -Name $asset -Force -ErrorAction SilentlyContinue
@@ -442,7 +442,7 @@ if (-Not $Runnbook)
     {
         $Schedule = New-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName –Name "Monthly4AM" -StartTime ((Get-Date "04:00:00").AddDays(1)) -MonthInterval 1 -DaysOfMonth One -TimeZone ([System.TimeZoneInfo]::Local).Id
     }
-    $JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"SubscriptionName"=$AlyaSubscriptionName;"AzureEnvironment"="AzureCloud"}
+    $JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureEnvironment"="AzureCloud"}
     $tmp = Register-AzAutomationScheduledRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb03") -ScheduleName "Monthly4AM" -Parameters $JobParams
 }
 else

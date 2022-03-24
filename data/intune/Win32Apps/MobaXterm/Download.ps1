@@ -1,4 +1,4 @@
-#
+﻿#
 # Downloading Setup Msi
 #
 
@@ -16,5 +16,13 @@ if (-Not (Test-Path $contentRoot))
 $zipFile = Join-Path $contentRoot (Split-Path -Path $newUrl -Leaf)
 Start-BitsTransfer -Source $newUrl -Destination $zipFile
 
-Expand-Archive -Path $zipFile -OutputPath $contentRoot -Force
+$cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+if ($cmdTst)
+{
+    Expand-Archive -Path $zipFile -DestinationPath $contentRoot -Force #AlyaAutofixed
+}
+else
+{
+    Expand-Archive -Path $zipFile -OutputPath $contentRoot -Force #AlyaAutofixed
+}
 Remove-Item -Path $zipFile -Force

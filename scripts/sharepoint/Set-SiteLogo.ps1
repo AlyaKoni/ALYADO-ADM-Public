@@ -76,7 +76,7 @@ if (-Not $Site)
 }
 
 # Setting theme
-LoginTo-PnP -Url $Url
+$siteCon = LoginTo-PnP -Url $Url
 $Site = Get-PnPSite
 Set-PnpWeb -Web $Site.RootWeb -SiteLogoUrl $LogoUrl
 

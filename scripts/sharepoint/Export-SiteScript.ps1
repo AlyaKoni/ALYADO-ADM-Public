@@ -50,7 +50,7 @@ Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logins
-LoginTo-PnP -Url $SiteUrl
+$siteCon = LoginTo-PnP -Url $SiteUrl
 
 # Export site script
 $site = Get-PnPWeb

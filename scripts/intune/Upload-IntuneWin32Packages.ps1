@@ -177,10 +177,23 @@ foreach($packageDir in $packages)
         }
         else
         {
-            $toInstall = Get-ChildItem -Path $contentPath -Filter "*.msi" | Sort-Object -Property Name
+            $firstTry = "msi"
+            $secondTry = "exe"
+            $packagePreference = Get-Item -Path (Join-Path $packageDir.FullName "PackagePreference.txt") -ErrorAction SilentlyContinue
+            if ($packagePreference)
+            {
+                $packagePreference = $packagePreference | Get-Content
+                if ($packagePreference -eq "exe")
+                {
+                    $firstTry = "exe"
+                    $secondTry = "msi"
+                }
+            }
+
+            $toInstall = Get-ChildItem -Path $contentPath -Filter "*.$firstTry" | Sort-Object -Property Name
             if (-Not $toInstall)
             {
-                $toInstall = Get-ChildItem -Path $contentPath -Filter "*.exe" | Sort-Object -Property Name
+                $toInstall = Get-ChildItem -Path $contentPath -Filter "*.$secondTry" | Sort-Object -Property Name
             }
             if ($toInstall)
             {

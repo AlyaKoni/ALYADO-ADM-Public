@@ -405,7 +405,15 @@ if ($WithADIntegration)
             $getUrl = "https://github.com"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
             $outFile = "$toolDir\AzFilesHybrid.zip"
             $req = Invoke-WebRequest -Uri $getUrl -OutFile $outFile
-            Expand-Archive -Path $outFile -DestinationPath $toolDir -Force
+            $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+            if ($cmdTst)
+            {
+                Expand-Archive -Path $outFile -DestinationPath $toolDir -Force #AlyaAutofixed
+            }
+            else
+            {
+                Expand-Archive -Path $outFile -OutputPath $toolDir -Force #AlyaAutofixed
+            }
             Remove-Item -Path $outFile -Force | Out-Null
             pushd $toolDir
             .\CopyToPSPath.ps1

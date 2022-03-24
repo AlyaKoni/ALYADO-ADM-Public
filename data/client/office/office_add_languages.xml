@@ -1,0 +1,14 @@
+<Configuration>
+  <Add Version="MatchInstalled">
+    <Product ID="LanguagePack">
+      <Language ID="en-us"/>
+      <Language ID="fr-fr"/>
+      <Language ID="de-de"/>
+    </Product>
+    <Product ID="ProofingTools">
+      <Language ID="en-us"/>
+      <Language ID="fr-fr"/>
+      <Language ID="de-de"/>
+    </Product>
+  </Add>
+</Configuration>

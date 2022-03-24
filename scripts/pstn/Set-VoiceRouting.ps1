@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.09.2020 Konrad Brunner       Initial Version
+    28.12.2021 Konrad Brunner       Switch to teams module
 
 #>
 
@@ -45,28 +46,39 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Set-VoiceRouting-$($AlyaTimeSt
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module "SkypeOnlineConnector"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "PSTN | Set-VoiceRouting | CsOnline" -ForegroundColor $CommandInfo
+Write-Host "PSTN | Set-VoiceRouting | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Main 
-$sfbSession = New-CsOnlineSession
-Import-PSSession $sfbSession -AllowClobber
+#Main
+$VoiceRoute = Get-CsOnlineVoiceRoute -Identity $AlyaPstnVoiceRouteName -ErrorAction SilentlyContinue
+if (-Not $VoiceRoute)
+{
+    New-CsOnlineVoiceRoute -Name $AlyaPstnVoiceRouteName -NumberPattern ".*" -Priority 0 -OnlinePstnGatewayList $AlyaPstnGateway -OnlinePstnUsages $AlyaPstnUsageRecordsName
+}
+else
+{
+    Write-Host "Voice Route already exists!"
+}
 
-Set-CsOnlinePstnUsage -Identity Global -Usage @{Add=$AlyaPstnPolicyName}
-New-CsOnlineVoiceRoute -Identity $AlyaPstnPolicyName -OnlinePstnGatewayList $AlyaPstnGateway -Priority 1 -OnlinePstnUsages $AlyaPstnPolicyName -NumberPattern ".*"
-Get-CsOnlineVoiceRoute
-
-New-CsOnlineVoiceRoutingPolicy $AlyaPstnPolicyName -OnlinePstnUsages $AlyaPstnPolicyName
-Get-CsOnlineVoiceRoutingPolicy
-
-Get-PSSession | Remove-PSSession
+$VoiceRoutePolicy = Get-CsOnlineVoiceRoutingPolicy -Identity $AlyaPstnVoiceRoutePolicyName -ErrorAction SilentlyContinue
+if (-Not $VoiceRoutePolicy)
+{
+    New-CsOnlineVoiceRoutingPolicy -Name $AlyaPstnVoiceRoutePolicyName -OnlinePstnUsages $AlyaPstnUsageRecordsName
+}
+else
+{
+    Write-Host "Voice Route Policy already exists!"
+}
 
 #Stopping Transscript
 Stop-Transcript

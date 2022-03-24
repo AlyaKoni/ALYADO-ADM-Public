@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\image\Prepare-ImageServer-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$VmToImage = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageServer)"
+$VmToImage = "$($AlyaNamingPrefix)wvdi$($AlyaResIdWvdImageServer)"
 $VmResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
 $ImageName = "$($VmToImage)_ImageServer"
 $ImageResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"

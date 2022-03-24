@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021
@@ -108,7 +108,15 @@ else
         Get-Content -Path $versionFile -Raw -Encoding UTF8
 
         # Unpacking content
-        Expand-Archive -Path "$AlyaScriptDir\Content.zip" -DestinationPath "$AlyaScriptDir" -Force
+        $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+        if ($cmdTst)
+        {
+            Expand-Archive -Path "$AlyaScriptDir\Content.zip" -DestinationPath "$AlyaScriptDir" -Force #AlyaAutofixed
+        }
+        else
+        {
+            Expand-Archive -Path "$AlyaScriptDir\Content.zip" -OutputPath "$AlyaScriptDir" -Force #AlyaAutofixed
+        }
         $templateRoot = Join-Path $AlyaScriptDir "ContentZip"
 
         # Defining templatePath

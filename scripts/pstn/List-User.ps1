@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.09.2020 Konrad Brunner       Initial Version
+    28.12.2021 Konrad Brunner       Switch to teams module
 
 #>
 
@@ -45,22 +46,28 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\List-User-$($AlyaTimeString).l
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module "SkypeOnlineConnector"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "PSTN | List-User | CsOnline" -ForegroundColor $CommandInfo
+Write-Host "PSTN | List-User | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-$sfbSession = New-CsOnlineSession
-Import-PSSession $sfbSession -AllowClobber
-
+Write-Host "CsOnlineUsers:" -ForegroundColor $CommandInfo
 Get-CsOnlineUser
-Get-CsOnlineUser | select -Property UserPrincipalName, LineURI
+
+Write-Host "CsOnlineVoiceUsers:" -ForegroundColor $CommandInfo
+Get-CsOnlineVoiceUser
+
+Write-Host "CsOnlineUser lines:" -ForegroundColor $CommandInfo
+Get-CsOnlineUser | select -Property UserPrincipalName, LineURI, OnPremLineURI
 
 #Stopping Transscript
 Stop-Transcript

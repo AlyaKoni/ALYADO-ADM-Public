@@ -52,7 +52,8 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
-LoginTo-PnP $AlyaSharePointAdminUrl
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCnt = Get-PnPContext
 
 $RecycleBinItems = Get-PnPTenantRecycleBinItem
 if ($RecycleBinItems -and $RecycleBinItems.Count -gt 0)

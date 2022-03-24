@@ -1,7 +1,7 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -31,6 +31,7 @@
     ---------- -------------------- ----------------------------
     14.11.2019 Konrad Brunner       Initial Version
     18.10.2021 Konrad Brunner       Move to Az
+    24.01.2022 Konrad Brunner       Fixed unwanted module updates
 
 #>
 
@@ -106,28 +107,48 @@ function Update-ProfileAndAutomationVersionToLatest
     $PathFolder = Join-Path $env:TEMP $PathFolderName
     # Unzip files
     $ProfileUnzipPath = Join-Path $PathFolder $ProfileModuleName
-    Expand-Archive -Path $ProfilePath -DestinationPath $ProfileUnzipPath -Force
+    $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+    if ($cmdTst)
+    {
+        Expand-Archive -Path $ProfilePath -DestinationPath $ProfileUnzipPath -Force #AlyaAutofixed
+    }
+    else
+    {
+        Expand-Archive -Path $ProfilePath -OutputPath $ProfileUnzipPath -Force #AlyaAutofixed
+    }
     $AutomationUnzipPath = Join-Path $PathFolder $AutomationModuleName
-    Expand-Archive -Path $AutomationPath -DestinationPath $AutomationUnzipPath -Force
+    $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+    if ($cmdTst)
+    {
+        Expand-Archive -Path $AutomationPath -DestinationPath $AutomationUnzipPath -Force #AlyaAutofixed
+    }
+    else
+    {
+        Expand-Archive -Path $AutomationPath -OutputPath $AutomationUnzipPath -Force #AlyaAutofixed
+    }
     # Import modules
     Import-Module (Join-Path $ProfileUnzipPath ($ProfileModuleName + ".psd1")) -Force -Verbose
     Import-Module (Join-Path $AutomationUnzipPath ($AutomationModuleName + ".psd1")) -Force -Verbose
 }
-Update-ProfileAndAutomationVersionToLatest
+try
+{
+	#Update-ProfileAndAutomationVersionToLatest
+} catch {
+	Write-Warning $_.Exception
+}
 
 # Login-AzureAutomation
 try {
     $RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
     Write-Output "Logging in to Az ($AzureEnvironment)..."
+    Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
     Add-AzAccount `
         -ServicePrincipal `
         -TenantId $RunAsConnection.TenantId `
         -ApplicationId $RunAsConnection.ApplicationId `
         -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
         -Environment $AzureEnvironment
-
     Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
-    $Context = Get-AzContext
 } catch {
     if (!$RunAsConnection) {
         Write-Output $RunAsConnectionName
@@ -143,7 +164,7 @@ try {
 	{
 		$ModuleName = $ModuleToInstall.Name
 		$ModuleVersion = $ModuleToInstall.Version
-		Write-Output "Checking module $ModuleName..."
+		Write-Output "Checking module $ModuleName $ModuleVersion ..."
 		$AzureADGalleryURL = GetModuleContentUrl -ModuleName $ModuleName -ModuleVersion $ModuleVersion
 		if (-Not $AzureADGalleryURL)
 		{
@@ -154,35 +175,45 @@ try {
 					    -AutomationAccountName $AutomationAccountName `
 					    -Name $ModuleName -ErrorAction SilentlyContinue
 
+		$toBeinstalled = $false
 		if ([string]::IsNullOrEmpty($ADModule))
 		{
 			Write-Output "  Installing..."
+			$toBeinstalled = $true
 		}
         else
         {
-			Write-Output "  Updating..."
+			$AzureADGalleryURLActual = GetModuleContentUrl -ModuleName $ModuleName -ModuleVersion $ADModule.Version.ToString()
+			if ($AzureADGalleryURL -ne $AzureADGalleryURLActual)
+			{
+				Write-Output "  Updating..."
+				$toBeinstalled = $true
+			}
         }
 
-        $AutomationModule = New-AzAutomationModule `
-            -ResourceGroupName $ResourceGroupName `
-            -AutomationAccountName $AutomationAccountName `
-            -Name $ModuleName `
-            -ContentLink $AzureADGalleryURL
+		if ($toBeinstalled)
+		{
+			Write-Output "    Importing $ModuleName module to Automation account"
+			$AutomationModule = New-AzAutomationModule `
+				-ResourceGroupName $ResourceGroupName `
+				-AutomationAccountName $AutomationAccountName `
+				-Name $ModuleName `
+				-ContentLink $AzureADGalleryURL
 
-        while((!([string]::IsNullOrEmpty($AutomationModule))) -and
-            $AutomationModule.ProvisioningState -ne "Created" -and
-            $AutomationModule.ProvisioningState -ne "Succeeded" -and
-            $AutomationModule.ProvisioningState -ne "Failed")
-        {
-            Write-Verbose -Message "Polling for module import completion"
-            Start-Sleep -Seconds 10
-            $AutomationModule = $AutomationModule | Get-AzAutomationModule
-        }
+			while((!([string]::IsNullOrEmpty($AutomationModule))) -and
+				$AutomationModule.ProvisioningState -ne "Created" -and
+				$AutomationModule.ProvisioningState -ne "Succeeded" -and
+				$AutomationModule.ProvisioningState -ne "Failed")
+			{
+				Write-Verbose -Message "      Polling for module import completion"
+				Start-Sleep -Seconds 10
+				$AutomationModule = $AutomationModule | Get-AzAutomationModule
+			}
 
-        if($AutomationModule.ProvisioningState -eq "Failed") {
-            throw "Importing $ModuleName module to Automation failed."
-        }
-            
+			if($AutomationModule.ProvisioningState -eq "Failed") {
+				throw "Importing $ModuleName module to Automation failed."
+			}
+		}  
 	}
 } catch {
     Write-Error $_.Exception -ErrorAction Continue

@@ -69,6 +69,13 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AAD | Export-Users | MSOL" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+# Functions
+function Convert-ObjectIdToSid
+{
+    param([String] $ObjectId)
+    $d=[UInt32[]]::new(4);[Buffer]::BlockCopy([Guid]::Parse($ObjectId).ToByteArray(),0,$d,0,16);"S-1-12-1-$d".Replace(' ','-')
+}
+
 # Getting users
 Write-Host "Getting users" -ForegroundColor $CommandInfo
 $users = Get-MsolUser -All
@@ -84,6 +91,7 @@ foreach($user in $users)
         }
     }
 }
+$propNames += "SID"
 function MoveFront($propName)
 {
     $idx = $propNames.IndexOf($propName)
@@ -93,6 +101,8 @@ function MoveFront($propName)
     }
     $propNames[0] = $propName
 }
+MoveFront "ObjectId"
+MoveFront "SID"
 MoveFront "Licenses"
 MoveFront "LastName"
 MoveFront "FirstName"
@@ -109,10 +119,15 @@ foreach($user in $users)
     $allProps = $user.PSObject.Properties
     foreach($prop in $propNames)
     {
+        if ($prop -eq "SID") { continue }
         $psProp = $allProps | where { $_.Name -eq $prop }
         if (-Not $psProp)
         {
             Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ""
+        }
+        if ($prop -eq "ObjectId")
+        {
+            Add-Member -InputObject $psuser -MemberType NoteProperty -Name "SID" -Value (Convert-ObjectIdToSid -ObjectId $user."$prop")
         }
         switch ($psProp.TypeNameOfValue)
         {

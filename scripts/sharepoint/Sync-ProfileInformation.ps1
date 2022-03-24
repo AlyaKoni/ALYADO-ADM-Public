@@ -60,7 +60,8 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 LoginTo-SPO
 LoginTo-MSOL
-LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCnt = Get-PnPContext
 $ctx= Get-PnPContext
 $ctx.ExecuteQuery()
 

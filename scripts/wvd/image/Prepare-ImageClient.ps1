@@ -44,7 +44,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\image\Prepare-Image-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-$VmToImage = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)"
+$VmToImage = "$($AlyaNamingPrefix)wvdi$($AlyaResIdWvdImageClient)"
 $VmResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
 $ImageName = "$($VmToImage)_ImageClient"
 $ImageResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdWvdImageResGrp)"
@@ -53,7 +53,7 @@ $DiagnosticStorageName = "$($AlyaNamingPrefix)strg$($AlyaResIdDiagnosticStorage)
 $KeyVaultResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 $DateString = (Get-Date -Format "_yyyyMMdd_HHmmss")
-$VMDiskName = "$($AlyaNamingPrefix)serv$($AlyaResIdWvdImageClient)osdisk"
+$VMDiskName = "$($VmToImage)osdisk"
 
 Write-Host "Please prepare first the source host ($VmToImage) like described in PrepareVmImage.pdf"
 Write-Host '  - Start a PowerShell as Administrator'
@@ -228,14 +228,14 @@ $newVm = New-AzVM -ResourceGroupName $VmResourceGroupName -Location $Vm.Location
 Write-Host "Setting tags" -ForegroundColor $CommandInfo
 if (-Not $tags)
 {
-    $tags += @{displayName="Image Host"}
+    $tags += @{displayName="AVD Image Host"}
     $tags += @{stopTime=$AlyaWvdStopTime}
     $tags += @{ownerEmail=$Context.Account.Id}
 }
 Set-AzResource -ResourceGroupName $VmResourceGroupName -Name $VmToImage -ResourceType "Microsoft.Compute/VirtualMachines" -Tag $tags -Force
 
 $tags = (Get-AzResource -ResourceGroupName $ImageResourceGroupName -Name $ImageName -ErrorAction SilentlyContinue).Tags
-$tags += @{displayName="WVD Image"}
+$tags += @{displayName="AVD Image"}
 $tags += @{ownerEmail=$Context.Account.Id}
 Set-AzResource -ResourceGroupName $ImageResourceGroupName -Name $ImageName -ResourceType "Microsoft.Compute/images" -Tag $tags -Force
 Set-AzResource -ResourceGroupName $ImageResourceGroupName -Name ($ImageName+$DateString) -ResourceType "Microsoft.Compute/images" -Tag $tags -Force

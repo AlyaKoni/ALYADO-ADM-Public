@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.09.2020 Konrad Brunner       Initial Version
+    28.12.2021 Konrad Brunner       Switch to teams module
 
 #>
 
@@ -37,9 +38,9 @@
 Param(
     [ValidateSet("User", "AutoAttendant", "CallQueue", IgnoreCase = $true)]
     $type = "User",
-    [ValidateNotNullOrEmpty]
+    [ValidateNotNullOrEmpty()]
     $upn = "konrad.brunner@alyaconsulting.ch",
-    [ValidateNotNullOrEmpty]
+    [ValidateNotNullOrEmpty()]
     $number = "tel:+41625620460"
 )
 
@@ -69,33 +70,30 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Activate-User-$($AlyaTimeStrin
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module "SkypeOnlineConnector"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "PSTN | Activate-User | CsOnline" -ForegroundColor $CommandInfo
+Write-Host "PSTN | Activate-User | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-$sfbSession = New-CsOnlineSession
-Import-PSSession $sfbSession -AllowClobber
-
 if ($type -eq "User")
 {
     Set-CsUser -Identity $upn -OnPremLineURI $number -EnterpriseVoiceEnabled $true -HostedVoiceMail $true
-    Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName "Unrestricted"
+    Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName $AlyaPstnVoiceRoutePolicyName
 }
-
 if ($type -eq "AutoAttendant" -or $type -eq "CallQueue")
 {
     Set-CsOnlineApplicationInstance -Identity $upn -OnpremPhoneNumber $number
-    Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName "Unrestricted"
+    Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName $AlyaPstnVoiceRoutePolicyName
 }
-
-Get-PSSession | Remove-PSSession
 
 #Stopping Transscript
 Stop-Transcript

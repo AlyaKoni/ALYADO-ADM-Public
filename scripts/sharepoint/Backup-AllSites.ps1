@@ -294,6 +294,7 @@ do
     try
     {
         $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+		$adminCnt = Get-PnPContext
         break
     }
     catch
@@ -338,7 +339,8 @@ foreach($site in $sites)
         {
             try
             {
-                $siteCon = ReloginTo-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+				$null = Set-PnPContext -Context $adminCnt
+                $siteCon = LoginTo-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
                 break
             }
             catch

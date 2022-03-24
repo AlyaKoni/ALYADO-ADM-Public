@@ -89,6 +89,7 @@ do
     try
     {
         $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+		$adminCnt = Get-PnPContext
         $sitesToProcess = Get-PnPTenantSite -Detailed -IncludeOneDriveSites | where { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
         try { $AlyaConnection = Disconnect-PnPOnline } catch {}
         break
@@ -491,7 +492,8 @@ foreach($site in $sitesToProcess)
     {
         try
         {
-            $siteCon = ReloginTo-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+			$null = Set-PnPContext -Context $adminCnt
+			$siteCon = LoginTo-PnP-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
             $web = Get-PnPWeb
             $admins = Get-PnPSiteCollectionAdmin
             foreach($admin in $admins)

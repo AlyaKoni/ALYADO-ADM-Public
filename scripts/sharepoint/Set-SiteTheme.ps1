@@ -84,7 +84,7 @@ if (-Not $Site)
 }
 
 # Setting theme
-LoginTo-PnP -Url $Url
+$siteCon = LoginTo-PnP -Url $Url
 $Site = Get-PnPSite
 Set-PnPWebTheme -Web $Site.RootWeb -Theme $Theme
 

@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -31,14 +31,12 @@
     ---------- -------------------- ----------------------------
     14.11.2019 Konrad Brunner       Initial Version
     18.10.2021 Konrad Brunner       Move to Az
+    10.02.2022 Konrad Brunner       fixed Add-AdAppCredential by replacing with REST call
 
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseApprovedVerbs", "")]
 param(
-    [Parameter(Mandatory = $true)]
-    [string] $SubscriptionName,
-
     [Parameter(Mandatory = $true)]
     [string] $ResourceGroupName,
 
@@ -74,15 +72,16 @@ $AzureCertificateName = $AutomationAccountName + $RunAsCertificateName
 
 # Login-AzureAutomation
 try {
-	$RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
-	Write-Output "Logging in to Az ($AzureEnvironment)..."
-	$tmp = Add-AzAccount `
-		-ServicePrincipal `
-		-TenantId $RunAsConnection.TenantId `
-        -SubscriptionId $RunAsConnection.SubscriptionId `
-		-ApplicationId $RunAsConnection.ApplicationId `
-		-CertificateThumbprint $RunAsConnection.CertificateThumbprint `
-		-Environment $AzureEnvironment
+    $RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
+    Write-Output "Logging in to Az ($AzureEnvironment)..."
+    Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
+    Add-AzAccount `
+        -ServicePrincipal `
+        -TenantId $RunAsConnection.TenantId `
+        -ApplicationId $RunAsConnection.ApplicationId `
+        -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
+        -Environment $AzureEnvironment
+    Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
 } catch {
 	if (!$RunAsConnection) {
 		Write-Output $_.Exception
@@ -95,84 +94,73 @@ try {
 
 	# Check AzureAutomationCertificate
 	$RunAsCert = Get-AutomationCertificate -Name $RunAsCertificateName
+	Write-Output ("Existing certificate will expire at " + $RunAsCert.NotAfter)
+	<#
 	if ($RunAsCert.NotAfter -gt (Get-Date).AddMonths(3))
 	{
-		Write-Output ("Certificate will expire at " + $RunAsCert.NotAfter)
 		Write-Output ("Nothing to do!")
 		Exit(0)
 	}
-
-	# Check AzureAD module if it is not in the Automation account.
-	$ADModule = Get-AzAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
-							 -Name "AzureADPreview" -ErrorAction SilentlyContinue
-	if ([string]::IsNullOrEmpty($ADModule))
-	{
-		$ADModule = Get-AzAutomationModule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName `
-								-Name "AzureAD" -ErrorAction SilentlyContinue
-		if ([string]::IsNullOrEmpty($ADModule))
-		{
-			$ErrorMessage = "Missing AzureAd module."
-			throw $ErrorMessage
-		}
-	}
-
-	# Connect to Azure AD to manage the application
-	Write-Output "Logging in to AzureAd..."
-	Connect-AzureAD `
-		-TenantId $RunAsConnection.TenantId `
-		-ApplicationId $RunAsConnection.ApplicationId `
-		-CertificateThumbprint $RunAsConnection.CertificateThumbprint
+	#>
 
 	# Find the application
-	Write-Output ("Getting application")
+	Write-Output ("Getting application $($RunasConnection.ApplicationId)")
 	$Filter = "AppId eq '" + $RunasConnection.ApplicationId + "'"
-	$Application = Get-AzureADApplication -Filter $Filter 
+	$Application = Get-AzADApplication -Filter $Filter
+	if (-Not $Application) { throw "Application with id $($RunasConnection.ApplicationId) not found" }
 
 	# Create RunAs certificate
 	Write-Output ("Creating new certificate")
 	$SelfSignedCertNoOfMonthsUntilExpired = 6
-	$SelfSignedCertPlainPassword = [Guid]::NewGuid().ToString()
-	$CertificateName = $AutomationAccountName + $RunAsCertificateName
-	$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($CertificateName + ".pfx")
-	$CerCertPathForRunAsAccount = Join-Path $env:TEMP ($CertificateName + ".cer")
-	$Cert = New-SelfSignedCertificate -DnsName $CertificateName -CertStoreLocation Cert:\LocalMachine\My `
+	$SelfSignedCertPlainPassword = "-"+[Guid]::NewGuid().ToString()+"]"
+	$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".pfx")
+    $CertPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
+	Clear-Variable -Name "SelfSignedCertPlainPassword" -Force -ErrorAction SilentlyContinue
+	$Cert = New-SelfSignedCertificate -DnsName $AzureCertificateName -CertStoreLocation Cert:\LocalMachine\My `
 						-KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
 						-NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired) -HashAlgorithm SHA256
-	$CertPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
-	Clear-Variable -Name "SelfSignedCertPlainPassword" -Force -ErrorAction SilentlyContinue
 	Export-PfxCertificate -Cert ("Cert:\LocalMachine\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CertPassword -Force | Write-Verbose
-	Export-Certificate -Cert ("Cert:\LocalMachine\My\" + $Cert.Thumbprint) -FilePath $CerCertPathForRunAsAccount -Type CERT | Write-Verbose
-
-	# Add new certificate to application
-	Write-Output ("Adding new certificate to application")
-    $before = Get-AzureADApplicationKeyCredential -ObjectId $Application.ObjectId
-	New-AzureADApplicationKeyCredential -ObjectId $Application.ObjectId -CustomKeyIdentifier ([System.Convert]::ToBase64String($Cert.GetCertHash())) `
-			 -Type AsymmetricX509Cert -Usage Verify -Value ([System.Convert]::ToBase64String($Cert.GetRawCertData())) -StartDate $Cert.NotBefore -EndDate $Cert.NotAfter | Write-Verbose
+    $CerKeyValue = [System.Convert]::ToBase64String($Cert.GetRawCertData())
+    $CerThumbprint = [System.Convert]::ToBase64String($Cert.GetCertHash())
+    $CerThumbprintString = $Cert.Thumbprint
+    $CerStartDate = $Cert.NotBefore
+    $CerEndDate = $Cert.NotAfter
 
 	# Update the certificate in the Automation account with the new one 
-	Write-Output ("Updating automation account")
+	Write-Output ("Updating automation account certificate")
 	Set-AzAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Path $PfxCertPathForRunAsAccount -Name $RunAsCertificateName `
-				 -Password $CertPassword -Exportable:$true | Write-Verbose
+				 -Password $CertPassword -Exportable:$true
 
 	# Update the RunAs connection with the new certificate information
-	$ConnectionFieldValues = @{"ApplicationId" = $RunasConnection.ApplicationId ; "TenantId" = $RunAsConnection.TenantId; "CertificateThumbprint" = $Cert.Thumbprint; "SubscriptionId" = $RunAsConnection.SubscriptionId }
-
+	Write-Output ("Updating automation account connection")
+	$ConnectionFieldValues = @{
+		"ApplicationId" = $RunasConnection.ApplicationId
+		"TenantId" = $RunAsConnection.TenantId
+		"CertificateThumbprint" = $CerThumbprintString
+		"SubscriptionId" = $RunAsConnection.SubscriptionId
+	}
 	# Can't just update the thumbprint value due to bug https://github.com/Azure/azure-powershell/issues/5862 so deleting / creating connection 
 	Remove-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName -Force
 	New-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName `
-				  -ConnectionFieldValues $ConnectionFieldValues -ConnectionTypeName $ConnectionTypeName | Write-Verbose
+				  -ConnectionFieldValues $ConnectionFieldValues -ConnectionTypeName $ConnectionTypeName
 
-	# Removing old certificate from application
-	Write-Output ("Removing old certificate from application")
-    $after = Get-AzureADApplicationKeyCredential -ObjectId $Application.ObjectId
-    foreach ($actCert in $after)
-    {
-        if ($before.KeyId -contains $actCert.KeyId)
-        {
-            Write-Output ("Removing old certificate $($actCert.KeyId)")
-            Remove-AzureADApplicationKeyCredential -ObjectId $Application.ObjectId -KeyId $actCert.KeyId
-        }
-    }
+	# Add new certificate to application
+	Write-Output ("Adding new certificate to application")
+	$payload = @"
+{
+"keyCredentials": [{
+	"@odata.type": "microsoft.graph.keyCredential",
+	"customKeyIdentifier": "$CerThumbprint",
+	"key": "$CerKeyValue",
+	"keyId": "$([System.Guid]::NewGuid().ToString())",
+	"type": "AsymmetricX509Cert",
+	"usage": "Verify",
+	"startDateTime": "$($CerStartDate.ToString("o"))",
+	"endDateTime": "$($CerEndDate.ToString("o"))"
+}]
+}
+"@
+	Invoke-AzRestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$($Application.Id)" -Method PATCH -Payload $payload
 
 	Write-Output ("RunAs certificate credentials have been updated")
 } catch {
