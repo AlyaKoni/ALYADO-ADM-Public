@@ -329,8 +329,8 @@ function Import-Package(
     [string] $EnvironmentName,
     [string] $ImportPackageFilePath,
     [string] $ApiVersion = "2016-11-01",
-    [bool] $DefaultToExportSuggestions = $false,
-    [bool] $NewApp = $false,
+    [bool]   $DefaultToExportSuggestions = $false,
+    [bool]   $NewApp = $false,
     [string] $ResourceName
 )
 {
@@ -364,4 +364,60 @@ function Import-Package(
         Write-Host "Package failed import with the following errors " + $parsedImportPackageResponse.properties.errors
     }
     return $parsedImportPackageResponse
+}
+
+function Export-Package(
+    [string] $EnvironmentName,
+    [string] $ExportPackageFilePath,
+    [string] $ApiVersion = "2016-11-01",
+    [bool]   $DefaultToExportSuggestions = $false,
+    [object] $App
+)
+{
+
+    $getPackageUri = "https://$UsedBapApiHost/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/listPackageResources`?api-version=" + $ApiVersion
+    $getPackageBody = @{ 
+        baseResourceIds = @("/providers/Microsoft.PowerApps/apps/$($App.AppName)")
+    }
+    $getPackageResponse = Invoke-Request -Uri $getPackageUri -Method POST -Body $getPackageBody -ThrowOnFailure
+    $getPackageResponse = ConvertFrom-Json $getPackageResponse.Content
+    if ($getPackageResponse.Status -ne "Succeeded")
+    {
+        throw "Error getting package resources"
+    }
+
+    $resourceIds = @()
+    foreach($resource in $getPackageResponse.resources.PSObject.Properties.Name)
+    {
+        $resourceIds += $getPackageResponse.resources."$resource".id
+    }
+
+    $exportPackageUri = "https://$UsedBapApiHost/providers/Microsoft.BusinessAppPlatform/environments/" + $EnvironmentName + "/exportPackage`?api-version=" + $ApiVersion
+    $exportPackageBody = @{
+        includedResourceIds = $resourceIds
+        details = @{
+            displayName = $App.Internal.properties.displayName
+            description = $App.Internal.properties.description
+            creator = $App.Owner.displayName
+            sourceEnvironment = $EnvironmentName
+        }
+        resources = $getPackageResponse.resources
+    }
+    $exportPackageResponse = Invoke-Request -Uri $exportPackageUri -Method POST -Body $exportPackageBody -ThrowOnFailure
+    $exportPackageJobUri = $exportPackageResponse.Headers['Location']
+    $exportPackageResponse = ConvertFrom-Json $exportPackageResponse.Content
+    if ($exportPackageResponse.Status -ne "Running" -and $exportPackageResponse.Status -ne "Succeeded")
+    {
+        throw "Error export package job creation"
+    }
+
+    do
+    {
+        Start-Sleep -Seconds 2
+        $exportPackageJob = Invoke-Request -Uri $exportPackageJobUri -Method GET -ThrowOnFailure
+        $exportPackageJob = ConvertFrom-Json $exportPackageJob.Content
+    } while ($exportPackageJob.properties.status -ne "Succeeded")
+
+    $exportPackageZipUri = $exportPackageJob.properties.packageLink.value
+    Invoke-WebRequest -Uri $exportPackageZipUri -Method GET -OutFile $ExportPackageFilePath
 }

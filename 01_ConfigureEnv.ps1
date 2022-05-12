@@ -850,7 +850,8 @@ function LogoutFrom-Az(
 }
 function LoginTo-Az(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
+    [string] [Parameter(Mandatory = $false)] $AuthScope = $null)
 {
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
 
@@ -894,15 +895,36 @@ function LoginTo-Az(
             #PowerShell login
             if ($SubscriptionId)
             {
-                Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionId | Out-Null
+                if ($AuthScope)
+                {
+                    Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionId -AuthScope $AuthScope | Out-Null
+                }
+                else
+                {
+                    Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionId | Out-Null
+                }
             }
-            if ($SubscriptionName)
+            elseif ($SubscriptionName)
             {
-                Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionName | Out-Null
+                if ($AuthScope)
+                {
+                    Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionName -AuthScope $AuthScope | Out-Null
+                }
+                else
+                {
+                    Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionName | Out-Null
+                }
             }
             else
             {
-                Connect-AzAccount -Tenant $AlyaTenantId | Out-Null
+                if ($AuthScope)
+                {
+                    Connect-AzAccount -Tenant $AlyaTenantId -AuthScope $AuthScope | Out-Null
+                }
+                else
+                {
+                    Connect-AzAccount -Tenant $AlyaTenantId | Out-Null
+                }
             }
         }
         else
@@ -1292,19 +1314,7 @@ function LoginTo-PnP(
 function LoginTo-PowerApps()
 {
     Write-Host "Login to PowerApps" -ForegroundColor $CommandInfo
-    $AlyaConnection = $null
-    try { $AlyaConnection = Get-PowerAppConnection -ErrorAction SilentlyContinue } catch [System.Management.Automation.MethodInvocationException] {}
-    if (-Not $AlyaConnection)
-    {
-        Add-PowerAppsAccount
-    }
-    $AlyaConnection = $null
-    try { $AlyaConnection = Get-PowerAppConnection -ErrorAction SilentlyContinue } catch [System.Management.Automation.MethodInvocationException] {}
-    if (-Not $AlyaConnection)
-    {
-        Write-Error "Not logged in to PowerApps!" -ErrorAction Continue
-        Exit 1
-    }
+    Add-PowerAppsAccount
 }
 
 function LoginTo-AADRM()
@@ -1867,7 +1877,7 @@ function CheckSubnetInSubnet ([string]$isAddr, [string]$withinAddr)
     $bcast2 = new-object net.ipaddress (([system.net.ipaddress]::parse("255.255.255.255").address -bxor $mask2addr.address -bor $network2addr.address))
     $nwk1 = new-object net.ipaddress (($mask1addr.address -band $network1addr.address))
     $nwk2 = new-object net.ipaddress (($mask2addr.address -band $network2addr.address))
-    return $nwk1.Address -gt $nwk2.Address -and $bcast1.Address -lt $bcast2.Address
+    return $nwk1.Address -ge $nwk2.Address -and $bcast1.Address -le $bcast2.Address
 }
 #CheckSubnetInSubnet "172.16.72.0/24" "172.16.0.0/16" true
 #CheckSubnetInSubnet "172.16.72.1" "172.16.0.0/16" true

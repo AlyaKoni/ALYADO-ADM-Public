@@ -1,8 +1,10 @@
 #Preparation
+$clientHasOndeDriveBackup = $false
 $userName = $env:USERNAME
 $hostName = $env:COMPUTERNAME
 $localAppData = $env:LOCALAPPDATA
 $appData = $env:APPDATA
+$userprofile = $env:USERPROFILE
 if (-Not $PSScriptRoot)
 {
 	$PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
@@ -14,6 +16,107 @@ if (-Not (Test-Path $userHostDir))
 }
 $timeString = (Get-Date).ToString("yyyyMMddHHmmss")
 Start-Transcript -Path "$userHostDir\BackupUserData-$timeString.log" | Out-Null
+
+#Backup Downloads
+Write-Host "Downloads Backup" -ForegroundColor Cyan
+$downloadsDir = "$userprofile\Downloads"
+if (Test-Path $downloadsDir)
+{
+    if (-Not (Test-Path "$userHostDir\Downloads"))
+    {
+        $null = New-Item -Path "$userHostDir\Downloads" -ItemType Directory -Force
+    }
+    robocopy /mir /r:1 /w:1 /xj $downloadsDir "$userHostDir\Downloads"
+}
+else
+{
+    Write-Host "  No Downloads dir found"
+}
+
+#Backup Music
+Write-Host "Music Backup" -ForegroundColor Cyan
+$musicDir = "$userprofile\Music"
+if (Test-Path $musicDir)
+{
+    if (-Not (Test-Path "$userHostDir\Music"))
+    {
+        $null = New-Item -Path "$userHostDir\Music" -ItemType Directory -Force
+    }
+    robocopy /mir /r:1 /w:1 /xj $musicDir "$userHostDir\Music"
+}
+else
+{
+    Write-Host "  No Music dir found"
+}
+
+#Backup Videos
+Write-Host "Videos Backup" -ForegroundColor Cyan
+$videosDir = "$userprofile\Videos"
+if (Test-Path $downloadsDir)
+{
+    if (-Not (Test-Path "$userHostDir\Videos"))
+    {
+        $null = New-Item -Path "$userHostDir\Videos" -ItemType Directory -Force
+    }
+    robocopy /mir /r:1 /w:1 /xj $videosDir "$userHostDir\Videos"
+}
+else
+{
+    Write-Host "  No Videos dir found"
+}
+
+if (-Not $clientHasOndeDriveBackup)
+{
+
+    #Backup Desktop
+    Write-Host "Desktop Backup" -ForegroundColor Cyan
+    $desktopDir = "$userprofile\Desktop"
+    if (Test-Path $desktopDir)
+    {
+        if (-Not (Test-Path "$userHostDir\Desktop"))
+        {
+            $null = New-Item -Path "$userHostDir\Desktop" -ItemType Directory -Force
+        }
+        robocopy /mir /r:1 /w:1 /xj $desktopDir "$userHostDir\Desktop"
+    }
+    else
+    {
+        Write-Host "  No Desktop dir found"
+    }
+
+    #Backup Documents
+    Write-Host "Documents Backup" -ForegroundColor Cyan
+    $documentsDir = "$userprofile\Documents"
+    if (Test-Path $documentsDir)
+    {
+        if (-Not (Test-Path "$userHostDir\Documents"))
+        {
+            $null = New-Item -Path "$userHostDir\Documents" -ItemType Directory -Force
+        }
+        robocopy /mir /r:1 /w:1 /xj $documentsDir "$userHostDir\Documents"
+    }
+    else
+    {
+        Write-Host "  No Documents dir found"
+    }
+
+    #Backup Pictures
+    Write-Host "Pictures Backup" -ForegroundColor Cyan
+    $picturesDir = "$userprofile\Pictures"
+    if (Test-Path $picturesDir)
+    {
+        if (-Not (Test-Path "$userHostDir\Pictures"))
+        {
+            $null = New-Item -Path "$userHostDir\Pictures" -ItemType Directory -Force
+        }
+        robocopy /mir /r:1 /w:1 /xj $picturesDir "$userHostDir\Pictures"
+    }
+    else
+    {
+        Write-Host "  No Pictures dir found"
+    }
+
+}
 
 #Backup Chrome
 Write-Host "Chrome Backup" -ForegroundColor Cyan

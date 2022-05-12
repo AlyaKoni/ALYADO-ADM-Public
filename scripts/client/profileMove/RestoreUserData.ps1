@@ -3,6 +3,7 @@ $userName = $env:USERNAME
 $hostName = $env:COMPUTERNAME
 $localAppData = $env:LOCALAPPDATA
 $appData = $env:APPDATA
+$userprofile = $env:USERPROFILE
 if (-Not $PSScriptRoot)
 {
 	$PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
@@ -46,7 +47,7 @@ if (Test-Path $taskbarDir)
     {
         $null = New-Item -Path "$appData\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar" -ItemType Directory -Force
     }
-    robocopy /mir /r:1 /w:1 /xj $taskbarDir "$appData\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
+    xcopy /d /e /v /i /r /k /y "$taskbarDir\*" "$appData\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar"
 }
 else
 {
@@ -145,6 +146,102 @@ if (Test-Path $chromeDir)
 else
 {
     Write-Host "  No Chrome configuration found in $chromeDir"
+}
+
+#Restoring Downloads
+Write-Host "Downloads Restore" -ForegroundColor Cyan
+$downloadsDir = "$userHostDir\Downloads"
+if (Test-Path $downloadsDir)
+{
+    if (-Not (Test-Path "$userprofile\Downloads"))
+    {
+        $null = New-Item -Path "$userprofile\Downloads" -ItemType Directory -Force
+    }
+    xcopy /d /e /v /i /r /k /y "$downloadsDir\*" "$userprofile\Downloads"
+}
+else
+{
+    Write-Host "  No Downloads dir found"
+}
+
+#Restoring Music
+Write-Host "Music Restore" -ForegroundColor Cyan
+$musicDir = "$userHostDir\Music"
+if (Test-Path $musicDir)
+{
+    if (-Not (Test-Path "$userprofile\Music"))
+    {
+        $null = New-Item -Path "$userprofile\Music" -ItemType Directory -Force
+    }
+    xcopy /d /e /v /i /r /k /y "$musicDir\*" "$userprofile\Music"
+}
+else
+{
+    Write-Host "  No Music dir found"
+}
+
+#Restoring Videos
+Write-Host "Videos Restore" -ForegroundColor Cyan
+$videosDir = "$userHostDir\Videos"
+if (Test-Path $videosDir)
+{
+    if (-Not (Test-Path "$userprofile\Videos"))
+    {
+        $null = New-Item -Path "$userprofile\Videos" -ItemType Directory -Force
+    }
+    xcopy /d /e /v /i /r /k /y "$videosDir\*" "$userprofile\Videos"
+}
+else
+{
+    Write-Host "  No Videos dir found"
+}
+
+#Restoring Desktop
+Write-Host "Desktop Restore" -ForegroundColor Cyan
+$desktopDir = "$userHostDir\Desktop"
+if (Test-Path $desktopDir)
+{
+    if (-Not (Test-Path "$userprofile\Desktop"))
+    {
+        $null = New-Item -Path "$userprofile\Desktop" -ItemType Directory -Force
+    }
+    xcopy /d /e /v /i /r /k /y "$desktopDir\*" "$userprofile\Desktop"
+}
+else
+{
+    Write-Host "  No Desktop dir found"
+}
+
+#Restoring Documents
+Write-Host "Documents Restore" -ForegroundColor Cyan
+$documentsDir = "$userHostDir\Documents"
+if (Test-Path $documentsDir)
+{
+    if (-Not (Test-Path "$userprofile\Documents"))
+    {
+        $null = New-Item -Path "$userprofile\Documents" -ItemType Directory -Force
+    }
+    xcopy /d /e /v /i /r /k /y "$documentsDir\*" "$userprofile\Documents"
+}
+else
+{
+    Write-Host "  No Documents dir found"
+}
+
+#Restoring Pictures
+Write-Host "Pictures Restore" -ForegroundColor Cyan
+$picturesDir = "$userHostDir\Pictures"
+if (Test-Path $picturesDir)
+{
+    if (-Not (Test-Path "$userprofile\Pictures"))
+    {
+        $null = New-Item -Path "$userprofile\Pictures" -ItemType Directory -Force
+    }
+    xcopy /d /e /v /i /r /k /y "$picturesDir\*" "$userprofile\Pictures"
+}
+else
+{
+    Write-Host "  No Pictures dir found"
 }
 
 Stop-Transcript
