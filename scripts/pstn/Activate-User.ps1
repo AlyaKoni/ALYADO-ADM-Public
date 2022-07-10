@@ -57,7 +57,7 @@ if ($type -eq "AutoAttendant" -or $type -eq "CallQueue")
 {
     if ($number.StartsWith("tel:"))
     {
-        Write-Error "If type is not 'User', the number must to start with 'tel:'" -ErrorAction Continue
+        Write-Error "If type is not 'User', the number must not start with 'tel:'" -ErrorAction Continue
         exit
     }
 }
@@ -86,11 +86,13 @@ Write-Host "=====================================================`n" -Foreground
 #Main 
 if ($type -eq "User")
 {
-    Set-CsUser -Identity $upn -OnPremLineURI $number -EnterpriseVoiceEnabled $true -HostedVoiceMail $true
+    Write-Host "Setting user $upn lineuri to $number" -ForegroundColor $CommandInfo
+    Set-CsUser -Identity $upn -LineURI $number -EnterpriseVoiceEnabled $true -HostedVoiceMail $true
     Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName $AlyaPstnVoiceRoutePolicyName
 }
 if ($type -eq "AutoAttendant" -or $type -eq "CallQueue")
 {
+    Write-Host "Setting auto attendant or call queue $upn lineuri to $number" -ForegroundColor $CommandInfo
     Set-CsOnlineApplicationInstance -Identity $upn -OnpremPhoneNumber $number
     Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName $AlyaPstnVoiceRoutePolicyName
 }

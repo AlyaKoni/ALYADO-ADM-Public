@@ -76,88 +76,88 @@ try
     Write-Host "Checking distribution group Privacy" -ForegroundColor $CommandInfo
     if ($AlyaPrivacyEmail -like "*@$AlyaDomainName")
     {
-        $dGrp = Get-DistributionGroup -Identity "$AlyaCompanyNameShortM365 Privacy" -ErrorAction SilentlyContinue
+        $dGrp = Get-DistributionGroup -Identity "$AlyaCompanyName Privacy" -ErrorAction SilentlyContinue
         if (-Not $dGrp)
         {
             $grpAlias = $AlyaPrivacyEmail.Replace("@$AlyaDomainName", "")
             Write-Warning "  Distribution group Privacy does not exist. Creating it now"
-            $dGrp = New-DistributionGroup -Name "$AlyaCompanyNameShortM365 Privacy" -Alias $grpAlias -PrimarySmtpAddress $AlyaPrivacyEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
+            $dGrp = New-DistributionGroup -Name "$AlyaCompanyName Privacy" -Alias $grpAlias -PrimarySmtpAddress $AlyaPrivacyEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
         }
     }
     $dGrp | Set-DistributionGroup -Alias $grpAlias -PrimarySmtpAddress $AlyaPrivacyEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
     Write-Host "  checking members"
-    $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyNameShortM365 Privacy"
+    $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyName Privacy"
     $memb = $membs | where { $_.PrimarySmtpAddress -eq $ownerEmail }
     if (-Not $memb)
     {
         Write-Host "  adding member $ownerEmail"
-        $memb = Add-DistributionGroupMember -Identity "$AlyaCompanyNameShortM365 Privacy" -Member $ownerEmail
+        $memb = Add-DistributionGroupMember -Identity "$AlyaCompanyName Privacy" -Member $ownerEmail
     }
 
     # Security
     Write-Host "Checking distribution group Security" -ForegroundColor $CommandInfo
     if ($AlyaSecurityEmail -like "*@$AlyaDomainName")
     {
-        $dGrp = Get-DistributionGroup -Identity "$AlyaCompanyNameShortM365 Security" -ErrorAction SilentlyContinue
+        $dGrp = Get-DistributionGroup -Identity "$AlyaCompanyName Security" -ErrorAction SilentlyContinue
         if (-Not $dGrp)
         {
             $grpAlias = $AlyaSecurityEmail.Replace("@$AlyaDomainName", "")
             Write-Warning "  Distribution group Security does not exist. Creating it now"
-            $dGrp = New-DistributionGroup -Name "$AlyaCompanyNameShortM365 Security" -Alias $grpAlias -PrimarySmtpAddress $AlyaSecurityEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
+            $dGrp = New-DistributionGroup -Name "$AlyaCompanyName Security" -Alias $grpAlias -PrimarySmtpAddress $AlyaSecurityEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
         }
     }
     $dGrp | Set-DistributionGroup -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
     Write-Host "  checking members"
-    $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyNameShortM365 Security"
+    $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyName Security"
     $memb = $membs | where { $_.PrimarySmtpAddress -eq $ownerEmail }
     if (-Not $memb)
     {
         Write-Host "  adding member $ownerEmail"
-        $memb = Add-DistributionGroupMember -Identity "$AlyaCompanyNameShortM365 Security" -Member $ownerEmail
+        $memb = Add-DistributionGroupMember -Identity "$AlyaCompanyName Security" -Member $ownerEmail
     }
 
     # GeneralInform
     Write-Host "Checking distribution group GeneralInform" -ForegroundColor $CommandInfo
     if ($AlyaGeneralInformEmail -like "*@$AlyaDomainName")
     {
-        $dGrp = Get-DistributionGroup -Identity "$AlyaCompanyNameShortM365 Cloud" -ErrorAction SilentlyContinue
+        $dGrp = Get-DistributionGroup -Identity "$AlyaCompanyName Cloud" -ErrorAction SilentlyContinue
         if (-Not $dGrp)
         {
             $grpAlias = $AlyaGeneralInformEmail.Replace("@$AlyaDomainName", "")
             Write-Warning "  Distribution group GeneralInform does not exist. Creating it now"
-            $dGrp = New-DistributionGroup -Name "$AlyaCompanyNameShortM365 Cloud" -Alias $grpAlias -PrimarySmtpAddress $AlyaGeneralInformEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
+            $dGrp = New-DistributionGroup -Name "$AlyaCompanyName Cloud" -Alias $grpAlias -PrimarySmtpAddress $AlyaGeneralInformEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
         }
     }
     $dGrp | Set-DistributionGroup -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
     Write-Host "  checking members"
-    $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyNameShortM365 Cloud"
+    $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyName Cloud"
     $memb = $membs | where { $_.PrimarySmtpAddress -eq $ownerEmail }
     if (-Not $memb)
     {
         Write-Host "  adding member $ownerEmail"
-        $memb = Add-DistributionGroupMember -Identity "$AlyaCompanyNameShortM365 Cloud" -Member $ownerEmail
+        $memb = Add-DistributionGroupMember -Identity "$AlyaCompanyName Cloud" -Member $ownerEmail
     }
 
     # Support
     Write-Host "Checking distribution group Support" -ForegroundColor $CommandInfo
     if ($AlyaSupportEmail -like "*@$AlyaDomainName")
     {
-        $dGrp = Get-DistributionGroup -Identity "$AlyaCompanyNameShortM365 Support" -ErrorAction SilentlyContinue
+        $dGrp = Get-DistributionGroup -Identity "$AlyaCompanyName Support" -ErrorAction SilentlyContinue
         if (-Not $dGrp)
         {
             $grpAlias = $AlyaSupportEmail.Replace("@$AlyaDomainName", "")
             Write-Warning "  Distribution group Support does not exist. Creating it now"
-            $dGrp = New-DistributionGroup -Name "$AlyaCompanyNameShortM365 Support" -Alias $grpAlias -PrimarySmtpAddress $AlyaSupportEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
+            $dGrp = New-DistributionGroup -Name "$AlyaCompanyName Support" -Alias $grpAlias -PrimarySmtpAddress $AlyaSupportEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
         }
     }
     $dGrp | Set-DistributionGroup -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
     Write-Host "  checking members"
-    $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyNameShortM365 Support"
+    $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyName Support"
     $memb = $membs | where { $_.PrimarySmtpAddress -eq $ownerEmail }
     if (-Not $memb)
     {
         Write-Host "  adding member $ownerEmail"
-        $memb = Add-DistributionGroupMember -Identity "$AlyaCompanyNameShortM365 Support" -Member $ownerEmail
+        $memb = Add-DistributionGroupMember -Identity "$AlyaCompanyName Support" -Member $ownerEmail
     }
 
 }

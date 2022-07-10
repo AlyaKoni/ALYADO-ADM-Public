@@ -69,6 +69,10 @@ if ($AlyaSharingPolicy -eq "KnownAccountsOnly")
 }
 if ($AlyaSharingPolicy -eq "AdminOnly")
 {
+    $SharingOption = "ExistingExternalUserSharingOnly"
+}
+if ($AlyaSharingPolicy -eq "None")
+{
     $SharingOption = "Disabled"
 }
 

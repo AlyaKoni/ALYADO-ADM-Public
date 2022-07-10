@@ -35,10 +35,11 @@
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory = $true)]
     [string]$userUpn = $null
 )
 
-if (-Not $userUpn)
+if ([string]::IsNullOrEmpty($userUpn))
 {
     throw "Please specify the userUpn"
 }

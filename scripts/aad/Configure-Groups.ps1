@@ -83,15 +83,15 @@ $groupDefs = Import-Excel $inputFile -WorksheetName "Gruppen" -ErrorAction Stop
 Write-Host "Configured groups" -ForegroundColor $CommandInfo
 $groupDefs | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
 $SecurityGroup = @()
-$O365Group = @()
+$M365Group = @()
 $GroupToDisable = @()
 foreach ($groupDef in $groupDefs)
 {
     if ($groupDef.Activ -eq "yes")
     {
-        if ($groupDef.Type -eq "O365Group")
+        if ($groupDef.Type -eq "M365Group" -or $groupDef.Type -eq "O365Group")
         {
-            $O365Group += $groupDef
+            $M365Group += $groupDef
         }
         if ($groupDef.Type -eq "SecurityGroup")
         {
@@ -189,9 +189,9 @@ foreach ($secGroup in $SecurityGroup)
             Write-Warning "Can't aquire an access token."
             exit
         }
+        $Global:retryCount = 10
         do
         {
-            $Global:retryCount = 10
             try
             {
                 $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
@@ -217,7 +217,7 @@ foreach ($secGroup in $SecurityGroup)
             $licSku = $null
             foreach($exlic in $actualLics.licenses)
             {
-                if ($exlic.accountSkuId -eq "$($AlyaTenantNameId):$($license)")
+                if ($exlic.accountSkuId -like "*:$($license)")
                 {
                     $licPresent = $true
                     break
@@ -255,9 +255,9 @@ foreach ($secGroup in $SecurityGroup)
                         }
                     )
                 }
+                $Global:retryCount = 3
                 do
                 {
-                    $Global:retryCount = 10
                     try
                     {
                         $requestBody = $licenceAssignmentConfig | ConvertTo-Json -Depth 5
@@ -282,8 +282,8 @@ foreach ($secGroup in $SecurityGroup)
     }
 }
 
-Write-Host "Checking o365 groups" -ForegroundColor $CommandInfo
-foreach ($secGroup in $O365Group)
+Write-Host "Checking M365 groups" -ForegroundColor $CommandInfo
+foreach ($secGroup in $M365Group)
 {
     Write-Host "  Group '$($secGroup.DisplayName)'"
     $exGrp = Get-AzureADMSGroup -SearchString $secGroup.DisplayName
@@ -358,7 +358,7 @@ foreach ($secGroup in $O365Group)
             $licSku = $null
             foreach($exlic in $actualLics.licenses)
             {
-                if ($exlic.accountSkuId -eq "$($AlyaTenantNameId):$($license)")
+                if ($exlic.accountSkuId -like "*:$($license)")
                 {
                     $licPresent = $true
                     break
@@ -414,14 +414,14 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AAD | Configure-Groups | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Configuring O365 group settings in exchange online" -ForegroundColor $CommandInfo
+Write-Host "Configuring M365 group settings in exchange online" -ForegroundColor $CommandInfo
 try
 {
     Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
     LoginTo-EXO
 
-    Write-Host "Checking O365 groups" -ForegroundColor $CommandInfo
-    foreach ($grp in $O365Group)
+    Write-Host "Checking M365 groups" -ForegroundColor $CommandInfo
+    foreach ($grp in $M365Group)
     {
         Write-Host "  Group '$($grp.DisplayName)'"
         $Global:retryCount = 5
@@ -476,7 +476,7 @@ finally
 }
 
 Write-Host "Setting ProcessingState" -ForegroundColor $CommandInfo
-foreach ($secGroup in $o365Group)
+foreach ($secGroup in $M365Group)
 {
     $exGrp = Get-AzureADMSGroup -SearchString $secGroup.DisplayName
     if ($exGrp.Count -gt 1)

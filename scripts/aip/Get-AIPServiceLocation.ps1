@@ -61,7 +61,7 @@ Write-Host "=====================================================`n" -Foreground
 
 $conf = Get-AipServiceConfiguration
 $serviceLocation = $conf.LicensingIntranetDistributionPointUrl -replace "/_wmcs/licensing", ""
-$serviceLocation
+Write-Host "serviceLocation: $serviceLocation"
 
 #Stopping Transscript
 Stop-Transcript

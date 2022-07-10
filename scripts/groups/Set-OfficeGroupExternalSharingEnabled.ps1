@@ -64,7 +64,7 @@ Write-Host "Groups | Set-OfficeGroupExternalSharingEnabled | Azure" -ForegroundC
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Configuring settings template
-Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
+Write-Host "Configuring settings template Group.Unified" -ForegroundColor $CommandInfo
 $SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
 $Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified" }
 if (-Not $Setting)
@@ -85,6 +85,24 @@ else
     $Setting["AllowGuestsToBeGroupOwner"] = $true
     Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
 }
+
+<#
+Write-Host "Configuring settings template Group.Unified.Guest" -ForegroundColor $CommandInfo
+$SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
+$Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified.Guest" }
+if (-Not $Setting)
+{
+    Write-Warning "Setting not yet created. Creating one based on template."
+    $Setting = $SettingTemplate.CreateDirectorySetting()
+    $Setting["AllowToAddGuests"] = $false
+    New-AzureADDirectorySetting -DirectorySetting $Setting
+}
+else
+{
+    $Setting["AllowToAddGuests"] = $false
+    Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
+}
+#>
 
 #Stopping Transscript
 Stop-Transcript

@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -137,9 +137,12 @@ $AlyaJumpHostBackupPolicy = "PleaseSpecify" #Example:"NightlyPolicy"
 
 <# GROUP SETTINGS #>
 $AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-MFADISABLED"
-$AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("ALYAOG-ADM-AlleExternen")
-$AlyaAllInternals = "PleaseSpecify" #Example:"ALYAOG-ADM-AlleInternen"
-$AlyaAllExternals = "PleaseSpecify" #Example:"ALYAOG-ADM-AlleExternen"
+$AlyaMfaEnabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-MFAENABLED"
+$AlyaSsprEnabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-SSPRENABLED"
+$AlyaPwdResetDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-PWDCHNGDISABLED"
+$AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("ALYAMG-ADM-AlleExternen")
+$AlyaAllInternals = "PleaseSpecify" #Example:"ALYAMG-ADM-AlleInternen"
+$AlyaAllExternals = "PleaseSpecify" #Example:"ALYAMG-ADM-AlleExternen"
 
 <# NETWORK SETTINGS #>
 $AlyaAzureNetwork = "PleaseSpecify" #Example:"172.16.0.0/16"

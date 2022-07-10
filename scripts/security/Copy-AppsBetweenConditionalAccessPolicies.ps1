@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2022
@@ -26,53 +26,67 @@
     Siehe die GNU General Public License fuer weitere Details:
 	https://www.gnu.org/licenses/gpl-3.0.txt
 
-    To design your own SharePoint Theme use the UI Fabric Theme Designer
-    https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
-
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    04.03.2022 Konrad Brunner       Initial Version
+    27.06.2022 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory = $true)]
+    [string]$condAccessRuleNameFrom,
+    [Parameter(Mandatory = $true)]
+    [string]$condAccessRuleNameTo
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-OneDriveLoopSharingCapability-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\security\Copy-AppsBetweenConditionalAccessPolicies-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
-
-# Logging in
-LoginTo-SPO
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
+    
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 
 # =============================================================
-# O365 stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-OneDriveLoopSharingCapability | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Copy-AppsBetweenConditionalAccessPolicies | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Setting sharing capability
-Write-Host "Setting OneDrive loop sharing capability" -ForegroundColor $CommandInfo
-$TenantConfig = Get-SPOTenant
-if ($TenantConfig.OneDriveLoopSharingCapability -ne "ExternalUserAndGuestSharing")
+# Getting context
+$Context = Get-AzContext
+if (-Not $Context)
 {
-    Write-Warning "sharing capability was set to $($TenantConfig.OneDriveLoopSharingCapability). Setting now sharing capability to 'ExternalUserAndGuestSharing'"
-    Set-SPOTenant -OneDriveLoopSharingCapability "ExternalUserAndGuestSharing"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
 }
-else
+
+# Getting from conditional access policy
+Write-Host "Getting from conditional access policy" -ForegroundColor $CommandInfo
+$policyFrom = Get-AzureADMSConditionalAccessPolicy | where { $_.displayName -eq $condAccessRuleNameFrom }
+if (-Not $policyFrom.Conditions.Applications)
 {
-    Write-Host "Sharing capability was already set to 'ExternalUserAndGuestSharing'" -ForegroundColor $CommandSuccess
+    $policyFrom.Conditions.Applications = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessApplicationCondition
 }
+
+# Getting to conditional access policy
+Write-Host "Getting to conditional access policy" -ForegroundColor $CommandInfo
+$policyTo = Get-AzureADMSConditionalAccessPolicy | where { $_.displayName -eq $condAccessRuleNameTo }
+
+# Copying apps
+Write-Host "Copying apps from $($condAccessRuleNameFrom) to $($condAccessRuleNameTo)" -ForegroundColor $CommandInfo
+Set-AzureADMSConditionalAccessPolicy -PolicyId $policyTo.id -Conditions $policyFrom.Conditions
 
 #Stopping Transscript
 Stop-Transcript

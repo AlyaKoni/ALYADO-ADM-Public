@@ -340,8 +340,8 @@
         "localSecurityOptionsBlockUsersInstallingPrinterDrivers": false,
         "localSecurityOptionsBlockRemoteOpticalDriveAccess": true,
         "localSecurityOptionsFormatAndEjectOfRemovableMediaAllowedUser": "administratorsAndInteractiveUsers",
-        "localSecurityOptionsMachineInactivityLimit": null,
-        "localSecurityOptionsMachineInactivityLimitInMinutes": null,
+        "localSecurityOptionsMachineInactivityLimit": 10,
+        "localSecurityOptionsMachineInactivityLimitInMinutes": 10,
         "localSecurityOptionsDoNotRequireCtrlAltDel": false,
         "localSecurityOptionsHideLastSignedInUser": false,
         "localSecurityOptionsHideUsernameAtSignIn": false,
@@ -786,6 +786,14 @@
             }
         ]
     }, {
+        "@odata.type": "#microsoft.graph.windowsHealthMonitoringConfiguration",
+        "roleScopeTagIds": ["0"],
+        "description": "Configures intune data collection on win10 devices",
+        "displayName": "Win10 Intune Data Collection",
+        "allowDeviceHealthMonitoring": "enabled",
+        "configDeviceHealthMonitoringScope": "bootPerformance,windowsUpdates",
+        "configDeviceHealthMonitoringCustomScope": null
+    }, {
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Configures local groups on win10 devices",
@@ -807,59 +815,66 @@
         "omaSettings": [{
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "DisplayOffTimeoutOnBattery",
-                "description": null,
+                "description": "Period of inactivity before Windows turns off the display",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/DisplayOffTimeoutOnBattery",
                 "value": "\u003cenabled/\u003e\u003cdata id=\"EnterVideoDCPowerDownTimeOut\" value=\"1800\"/\u003e"
             }, {
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "DisplayOffTimeoutPluggedIn",
-                "description": null,
+                "description": "Period of inactivity before Windows turns off the display",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/DisplayOffTimeoutPluggedIn",
                 "value": "\u003cenabled/\u003e\u003cdata id=\"EnterVideoACPowerDownTimeOut\" value=\"3600\"/\u003e"
             }, {
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "StandbyTimeoutOnBattery",
-                "description": null,
+                "description": "Period of inactivity before Windows transitions the system to sleep",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/StandbyTimeoutOnBattery",
                 "value": "\u003cenabled/\u003e\u003cdata id=\"EnterDCStandbyTimeOut\" value=\"7200\"/\u003e"
             }, {
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "StandbyTimeoutPluggedIn",
-                "description": null,
+                "description": "Period of inactivity before Windows transitions the system to sleep",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/StandbyTimeoutPluggedIn",
                 "value": "\u003cenabled/\u003e\u003cdata id=\"EnterACStandbyTimeOut\" value=\"28800\"/\u003e"
             }, {
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "HibernateTimeoutPluggedIn",
-                "description": null,
+                "description": "Period of inactivity before Windows transitions the system to hibernate",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/HibernateTimeoutPluggedIn",
                 "value": "\u003cenabled/\u003e\u003cdata id=\"EnterACHibernateTimeOut\" value=\"0\"/\u003e"
             }, {
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "HibernateTimeoutOnBattery",
-                "description": null,
+                "description": "Period of inactivity before Windows transitions the system to hibernate",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/HibernateTimeoutOnBattery",
                 "value": "\u003cenabled/\u003e\u003cdata id=\"EnterDCHibernateTimeOut\" value=\"7200\"/\u003e"
             }, {
                 "@odata.type": "#microsoft.graph.omaSettingInteger",
                 "displayName": "SelectLidCloseActionPluggedIn",
-                "description": null,
+                "description": "action that Windows takes when a user closes the lid on a mobile PC",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/SelectLidCloseActionPluggedIn",
                 "value": 0,
                 "isReadOnly": false
             }, {
                 "@odata.type": "#microsoft.graph.omaSettingInteger",
                 "displayName": "SelectLidCloseActionOnBattery",
-                "description": null,
+                "description": "Action that Windows takes when a user closes the lid on a mobile PC",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/SelectLidCloseActionOnBattery",
                 "value": 0,
                 "isReadOnly": false
             }, {
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "AllowStandbyWhenSleepingPluggedIn",
-                "description": null,
+                "description": "Windows is allowed to use standby states when putting the computer in a sleep state",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/AllowStandbyWhenSleepingPluggedIn",
                 "value": "\u003cdisabled/\u003e"
+            }, {
+                "@odata.type": "#microsoft.graph.omaSettingInteger",
+                "displayName": "MaxInactivityTimeDeviceLock",
+                "description": "Time in minutes, the device will be locked",
+                "omaUri": "./Device/Vendor/MSFT/Policy/Config/DeviceLock/MaxInactivityTimeDeviceLock",
+                "value": 30,
+                "isReadOnly": false
             }
         ]
     }, {

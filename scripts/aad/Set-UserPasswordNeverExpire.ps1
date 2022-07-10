@@ -30,11 +30,13 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     15.10.2020 Konrad Brunner       Initial Version
+    06.07.2022 Konrad Brunner       Change to AzureAdPreview
 
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory = $true)]
     [ValidateNotNull()]
     [string]$userUpn
 )
@@ -48,31 +50,34 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserPasswordNeverExpire-$($
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-Ad
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Set-UserPasswordNeverExpire | O365" -ForegroundColor $CommandInfo
+Write-Host "AAD | Set-UserPasswordNeverExpire | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Getting user" -ForegroundColor $CommandInfo
-$user = Get-MsolUser -UserPrincipalName $userUpn
+$user = Get-AzureADUser -ObjectId $userUpn
 
 if ($user)
 {
-    Write-Host "Password never expires is set to $($user.PasswordNeverExpires)"
-    if (-Not $user.PasswordNeverExpires)
+    if (-Not $user.PasswordPolicies -contains "DisablePasswordExpiration")
     {
-        Write-Host "Setting to $true"
-        $user | Set-MsolUser -PasswordNeverExpires $true
+        Write-Host "Diasabling password expiration"
+        Set-AzureADUser -ObjectId $userUpn -PasswordPolicies DisablePasswordExpiration
+    }
+    else
+    {
+        Write-Host "Password expiration was already disabled"
     }
 }
 else

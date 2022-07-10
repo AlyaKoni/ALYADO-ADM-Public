@@ -42,7 +42,8 @@ Param(
     [ValidateNotNullOrEmpty()]
     $attendantNumber = "+41625620460",
     [ValidateNotNullOrEmpty()]
-    $callGroupUserUpns = @("konrad.brunner@alyaconsulting.ch")
+    $callGroupUserUpns = @("konrad.brunner@alyaconsulting.ch"),
+    $setCallerIdToAutoResponder = $false
 )
 if ($attendantNumber.StartsWith("tel:"))
 {
@@ -214,3 +215,7 @@ if (-Not $appInstanceAssoc)
     $null = New-CsOnlineApplicationInstanceAssociation -Identities @($appInstance.ObjectId) -ConfigurationId $autoAttendant.Identity -ConfigurationType "AutoAttendant"
 }
 
+if ($setCallerIdToAutoResponder)
+{
+    Set-CsCallingLineIdentity -Identity "Global" -CallingIDSubstitute Resource -EnableUserOverride $false -ResourceAccount $appInstance.ObjectId -CompanyName $attendantName
+}

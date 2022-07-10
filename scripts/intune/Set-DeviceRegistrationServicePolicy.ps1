@@ -45,15 +45,16 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServic
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
-Install-ModuleIfNotInstalled "AzureADPreview"
+#Install-ModuleIfNotInstalled "Az"
+#Install-ModuleIfNotInstalled "AzureADPreview"
 Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-AD
-LoginTo-MSOL
+#LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+#LoginTo-AD
+Connect-MsolService
+#LoginTo-MSOL
 
 # =============================================================
 # Intune stuff
@@ -94,10 +95,13 @@ if ($AlyaAllowDeviceRegistrationOption -eq "Selected")
     {
         $sel = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::Selected
         $non = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::None
-        Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $sel -AllowedToWorkplaceJoin $non -MaximumDevicesPerUser 100 -RequireMultiFactorAuth $true -Users $AlyaAllowedUsers -Groups $AlyaAllowedGroups
+        Set-MsolDeviceRegistrationServicePolicy -MaximumDevicesPerUser 50
+        Set-MsolDeviceRegistrationServicePolicy -RequireMultiFactorAuth $true
+        Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $sel -AllowedToWorkplaceJoin $non -Users $AlyaAllowedUsers -Groups $AlyaAllowedGroups
     }
     catch
     {
+        Write-Error $_.Exception -ErrorAction Continue
         Write-Host "We have actually an issue, configuring the DeviceRegistrationOption by script."
         Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
         Write-Host " - Select 'Microsoft Intune'"
@@ -114,10 +118,13 @@ else
     {
         $all = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::All
         $non = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::None
-        Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $all -AllowedToWorkplaceJoin $non -MaximumDevicesPerUser 100 -RequireMultiFactorAuth $true
+        Set-MsolDeviceRegistrationServicePolicy -MaximumDevicesPerUser 50
+        Set-MsolDeviceRegistrationServicePolicy -RequireMultiFactorAuth $true
+        Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $all -AllowedToWorkplaceJoin $non
     }
     catch
     {
+        Write-Error $_.Exception -ErrorAction Continue
         Write-Host "We have actually an issue, configuring the DeviceRegistrationOption by script."
         Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
         Write-Host " - Select 'Microsoft Intune'"

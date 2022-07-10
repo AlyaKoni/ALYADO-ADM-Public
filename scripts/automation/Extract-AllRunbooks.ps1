@@ -1,7 +1,7 @@
 ﻿#Requires -Version 5.1
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     23.06.2021 Konrad Brunner       Initial Version
+    08.06.2022 Konrad Brunner       Fixed export error, if no published version
 
 #>
 
@@ -96,7 +97,21 @@ foreach($AutomationAccount in $AutomationAccounts)
     foreach($runbook in $runbooks)
     {
         Write-Host "    Exporting $($runbook.Name) to $($AccountRoot)"
-        $tmp = Export-AzAutomationRunbook -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName -Name $runbook.Name -Slot "Published" -OutputFolder $AccountRoot -Force
+        try
+        {
+            $tmp = Export-AzAutomationRunbook -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName -Name $runbook.Name -Slot "Published" -OutputFolder $AccountRoot -Force
+        }
+        catch
+        {
+            try
+            {
+                $tmp = Export-AzAutomationRunbook -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName -Name $runbook.Name -Slot "Draft" -OutputFolder $AccountRoot -Force
+            }
+            catch
+            {
+                Write-Warning "Not able to export this runbook!"
+            }
+        }
     }
 }
 

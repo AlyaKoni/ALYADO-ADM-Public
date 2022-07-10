@@ -1191,6 +1191,11 @@ function DisconnectFrom-EXOandIPPS()
     #>
 }
 
+function LogoutFrom-Msol()
+{
+    [Microsoft.Online.Administration.Automation.ConnectMsolService]::ClearUserSessionState()
+}
+
 function LoginTo-Msol(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null)
@@ -1211,8 +1216,7 @@ function LoginTo-Msol(
 	try { $TenantDetail = Get-MsolCompanyInformation -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
     if (-Not $TenantDetail)
     {
-        Write-Error "Not logged in to AzureAd!" -ErrorAction Continue
-        Exit 1
+        throw "Not logged in to AzureAd!"
     }
 }
 
@@ -1235,8 +1239,7 @@ function LoginTo-MsolInteractive()
     try { $TenantDetail = Get-MsolDomain -ErrorAction SilentlyContinue } catch [Microsoft.Online.Administration.Automation.MicrosoftOnlineException] {}
     if (-Not $TenantDetail)
     {
-        Write-Error "Not logged in to Msol!" -ErrorAction Continue
-        Exit 1
+        throw "Not logged in to Msol!"
     }
 }
 
@@ -1252,8 +1255,7 @@ function LoginTo-SPO()
     try { $Site = Get-SPOSite -Identity $AlyaSharePointAdminUrl -ErrorAction SilentlyContinue } catch {}
     if (-Not $Site)
     {
-        Write-Error "Not logged in to SPO!" -ErrorAction Continue
-        Exit 1
+        throw "Not logged in to SPO!"
     }
 }
 
@@ -1266,55 +1268,123 @@ function ReloginTo-PnP(
     return LoginTo-PnP -Url $Url -ClientId $ClientId -Thumbprint $Thumbprint -Relogin $true
 }
 
+function LogoutAllFrom-PnP(
+    )
+{
+    foreach($Connection in $Global:AlyaPnpConnections)
+    {
+        if ($Connection -ne $null)
+        {
+            LogoutFrom-PnP -Connection $Connection
+        }
+    }
+    $Global:AlyaPnpConnections = @()
+}
+
+function LogoutFrom-PnP(
+    [object] [Parameter(Mandatory = $true)] $Connection
+    )
+{
+    if ($Connection -ne $null -and $Connection.Url -ne $null)
+    {
+        if ($Connection.ClientId -and $Connection.Thumbprint)
+        {
+            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -ne $Connection.Url.TrimEnd("/") -and $_.ClientId -ne $Connection.ClientId }
+        }
+        else
+        {
+            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -ne $Connection.Url.TrimEnd("/") }
+        }
+    }
+    try { $null = Disconnect-PnPOnline -Connection $Connection -ErrorAction SilentlyContinue } catch {}
+}
+
+$AlyaPnpConnectionsDefined = Get-Variable -Name "AlyaPnpConnections" -Scope Global -ErrorAction SilentlyContinue
+if (-Not $AlyaPnpConnectionsDefined) { $Global:AlyaPnpConnections = @() }
 function LoginTo-PnP(
     [string] [Parameter(Mandatory = $true)] $Url,
+    [string] [Parameter(Mandatory = $false)] $TenantAdminUrl = $null,
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
     [string] [Parameter(Mandatory = $false)] $Thumbprint = $null,
     [bool] [Parameter(Mandatory = $false)] $Relogin = $false
     )
 {
     Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
+    if ($TenantAdminUrl -eq $null)
+    {
+        $TenantAdminUrl = $AlyaSharePointAdminUrl
+    }
     $env:PNPPOWERSHELL_DISABLETELEMETRY = "true"
+
     $AlyaConnection = $null
-    if ($Relogin)
-    {
-        try { 
-            $AlyaConnection = Disconnect-PnPOnline
-        } catch {}
-    }
-    else
-    {
-        try { $AlyaConnection = Get-PnPConnection -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
-    }
+    $CreatedConnection = $false
     if ($ClientId -and $Thumbprint)
     {
-        $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName
+        $AlyaConnection = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") -and $_.ClientId -eq $ClientId }
     }
     else
     {
-        if ($Relogin)
+        $AlyaConnection = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") }
+    }
+
+    if ($AlyaConnection -ne $null -and $Relogin)
+    {
+        $null = Disconnect-PnPOnline -Connection $AlyaConnection
+        if ($ClientId -and $Thumbprint)
         {
-            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -Interactive -ForceAuthentication
+            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -ne $Url.TrimEnd("/") -and $_.ClientId -ne $ClientId }
         }
         else
         {
-            $AlyaConnection = Connect-PnPOnline -Url $Url -ReturnConnection -Interactive
+            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -ne $Url.TrimEnd("/") }
         }
+        $AlyaConnection = $null
     }
+
+    if ($AlyaConnection -eq $null)
+    {
+        if ($ClientId -and $Thumbprint)
+        {
+            $AlyaConnection = Connect-PnPOnline -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName
+        }
+        else
+        {
+            $AlyaConnection = Connect-PnPOnline -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -Interactive
+        }
+        $CreatedConnection = $true
+    }
+
     $AlyaContext = $null
-    try { $AlyaContext = Get-PnPContext -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
+    try { $AlyaContext = Get-PnPContext -Connection $AlyaConnection -ErrorAction SilentlyContinue } catch [System.InvalidOperationException] {}
     if (-Not $AlyaContext)
     {
-        Write-Error "Not logged in to SharePointPnPPowerShellOnline!" -ErrorAction Continue
-        Exit 1
+        throw "Not logged in to SharePointPnPPowerShellOnline!"
     }
+
+    if ($CreatedConnection)
+    {
+        $Global:AlyaPnpConnections += $AlyaConnection
+    }
+
     return $AlyaConnection
 }
 
 function LoginTo-PowerApps()
 {
     Write-Host "Login to PowerApps" -ForegroundColor $CommandInfo
-    Add-PowerAppsAccount
+    $AlyaConnection = $null
+    try { $AlyaConnection = Get-PowerAppConnection -ErrorAction SilentlyContinue } catch [System.Management.Automation.MethodInvocationException] {}
+    if (-Not $AlyaConnection)
+    {
+        Add-PowerAppsAccount
+    }
+    $AlyaConnection = $null
+    try { $AlyaConnection = Get-PowerAppConnection -ErrorAction SilentlyContinue } catch [System.Management.Automation.MethodInvocationException] {}
+    if (-Not $AlyaConnection)
+    {
+        Write-Error "Not logged in to PowerApps!" -ErrorAction Continue
+        Exit 1
+    }
 }
 
 function LoginTo-AADRM()
@@ -1329,8 +1399,7 @@ function LoginTo-AADRM()
     try { $ServiceDetail = Get-Aadrm -ErrorAction SilentlyContinue } catch [Microsoft.RightsManagementServices.Online.Admin.PowerShell.AdminClientException] {}
     if (-Not $ServiceDetail)
     {
-        Write-Error "Not logged in to AADRM!" -ErrorAction Continue
-        Exit 1
+        throw "Not logged in to AADRM!"
     }
 }
 
@@ -1346,8 +1415,7 @@ function LoginTo-AIP()
     try { $ServiceDetail = Get-AipService -ErrorAction SilentlyContinue } catch [Microsoft.RightsManagementServices.Online.Admin.PowerShell.AdminClientException] {}
     if (-Not $ServiceDetail)
     {
-        Write-Error "Not logged in to AIP!" -ErrorAction Continue
-        Exit 1
+        throw "Not logged in to AIP!"
     }
 }
 
@@ -1867,6 +1935,8 @@ function CheckNetworkToNetwork ([int64]$un1, [int64]$un2)
 }
 function CheckSubnetInSubnet ([string]$isAddr, [string]$withinAddr)
 {
+    if ($isAddr.IndexOf("/") -eq -1) { $isAddr += "/32" }
+    if ($withinAddr.IndexOf("/") -eq -1) { $withinAddr += "/32" }
     $network1, [int]$subnetlen1 = $isAddr.Split('/')
     $network2, [int]$subnetlen2 = $withinAddr.Split('/')
     $network1addr = [Net.IPAddress]::Parse($network1)
@@ -1883,7 +1953,8 @@ function CheckSubnetInSubnet ([string]$isAddr, [string]$withinAddr)
 #CheckSubnetInSubnet "172.16.72.1" "172.16.0.0/16" true
 #CheckSubnetInSubnet "172.16.0.0/28" "172.16.72.0/24" false
 #CheckSubnetInSubnet "172.16.72.0/24" "172.16.0.0/28" false
-#CheckSubnetInSubnet "172.16.72.0" "172.16.0.0/28" fals
+#CheckSubnetInSubnet "172.16.72.0" "172.16.0.0/28" false TODO!!
+#CheckSubnetInSubnet "10.249.14.0/23" "10.249.0.0/20" true
 
 # Checking custom properties
 if ($AlyaNamingPrefix.Length -gt 8)

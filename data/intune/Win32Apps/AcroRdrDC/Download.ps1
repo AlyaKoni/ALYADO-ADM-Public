@@ -12,7 +12,7 @@ Write-Host "`n`n"
 Write-Host "We launch now a browser with the Adobe Reader setup download page."
 Write-Host " - Select 'Windows 10'"
 Write-Host " - Select 'All LAnguages (MUI)'"
-Write-Host " - Select 'Latest release'"
+Write-Host " - Select 'Latest 32bit' <--***"
 Write-Host " - Choose 'Download now / Jetzt herunterladen'"
 Write-Host "`n"
 pause

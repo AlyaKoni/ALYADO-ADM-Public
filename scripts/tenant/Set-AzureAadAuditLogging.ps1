@@ -166,18 +166,17 @@ $body = @"
 {
   "name": "$($DiagnosticRuleName)",
   "properties": {
-    "logs": [
-      {
-        "category": "AuditLogs",
-        "enabled": true,
-        "retentionPolicy": {
+        "logs": [{
+                "category": "AuditLogs",
+                "enabled": true,
+                "retentionPolicy": {
                     "enabled": false,
                     "days": 0
-        }
+                }
             }, {
-        "category": "SignInLogs",
-        "enabled": true,
-        "retentionPolicy": {
+                "category": "SignInLogs",
+                "enabled": true,
+                "retentionPolicy": {
                     "enabled": false,
                     "days": 0
                 }
@@ -208,9 +207,58 @@ $body = @"
                 "retentionPolicy": {
                     "enabled": false,
                     "days": 0
-        }
-      }
-    ],
+                }
+            }, {
+                "category": "ADFSSignInLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "RiskyUsers",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "UserRiskEvents",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "NetworkAccessTrafficLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "RiskyServicePrincipals",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "ServicePrincipalRiskEvents",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "B2CRequestLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }
+        ],
     "metrics": [],
     "storageAccountId": "$($StrgAccount.Id)",
     "workspaceId": "$($LogAnaWrkspc.ResourceId)"

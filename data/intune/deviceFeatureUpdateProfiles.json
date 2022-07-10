@@ -6,7 +6,7 @@
         "@odata.type": "#microsoft.graph.windowsFeatureUpdateProfile",
 		"displayName": "Win10 Feature Configuration",
         "description": "Configures features on win10 devices",
-        "featureUpdateVersion": "21H1",
+        "featureUpdateVersion": "21H2",
         "roleScopeTagIds": ["0"],
         "deployableContentDisplayName": null,
         "endOfSupportDate": "2022-12-13T00:00:00Z"

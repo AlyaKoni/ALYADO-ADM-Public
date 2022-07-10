@@ -1,0 +1,98 @@
+﻿{
+    "@odata.type":  "#microsoft.graph.win32LobApp",
+    "displayName":  "Win10 BIMxDesktop",
+    "description":  "Installs BIMx-2020.3.3231-1.1.exe",
+    "publisher":  "graphisoft.com",
+    "largeIcon":  {
+                      "value":  "/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAoGBxMTExYTExQWGBYYGBgYGRgZFhoYFhYaGBYZGBYaGBgaHysiGiApHRkWIzQjKCwuMTExGSE3PDcvOyswMS4BCwsLDw4PHBERHTAoIig0MDkzNDAwOTAuNjAxMzAxOTAuMDAuMjkuMjAuLjAxOTkwMDA2MDwwMDkwMDkwOzAwLv/AABEIAOEA4AMBIgACEQEDEQH/xAAcAAAABwEBAAAAAAAAAAAAAAAAAgMEBQYHCAH/xABQEAACAQICBgQICAkLBAMBAAABAgMAEQQhBQYSMUFRBxMiYTJCUnGBkaGxFCNicpKTs9EzQ1NUY3OywdIIFSQ0NXSCg+Hi8BaiwtMlZKNE/8QAGwEBAAIDAQEAAAAAAAAAAAAAAAQFAgMGAQf/xAAqEQACAQMCBQMEAwAAAAAAAAAAAQIDBBEhMQUSQVFhE3HhIpGhsTKB0f/aAAwDAQACEQMRAD8A2ahQpKeZUUu7BVUEsxNgoAuSSdwoBWqlrZ0kYDAEpJJtyj8VFZ3B5PnspwyYg91Zv0k9L8kzNh9Hs0cQuGmGUkvDsHei9/hHu3HKi18zf10BqmmOnnFOSMNh4o1zzkLSN3HLZA81jVYxvSnpaTfi2UckREt6VW/tqpXHL20Ljl7aAmJdcNIN4WNxRv8A/Ykt6tq1N21jxh34rEfXSfxVH3HL20Ljl7aAfvp/F3P9Jn+uf+Kh/P8Ai/zmf66T76YuRc5cedeXHL20A/8A5/xf5zP9c/30Z9P4vL+kz7h+Nf8AiqOy5e2pjB6rYya3V4aUiwzKlV+k1hWMpxisyaS86HqTewgdO4uwticR9a/Pz15/PmM/OcR9a/31YsJ0X6RcZpHH86Vc/oFqer0QY4/jsP8ATk/9dRXxC1Tw6kfuZKnPsVD+fMZ+c4j61/vofz7jPzjEfWv99XA9D2P/AC2H+sk/9dMsV0W6TTwUR/myqP2ytI8RtW8KpH7h05roV2TT2LBP9Jn3n8a/8VB9PYsf/wBM+4fjX5fOpxpLVTGwkmTDSqM8whZfpLce2oh7ewe6pUZwmsxaa8PJi01uPk0/i8/6TPu/KvzHyqEen8Xf+sz7j+OfkflUxTcfN+8V5EM/QfcayPCQXWDGjdicR9dJ99OItbtIr4ONxQt+nkt6tq1Q22eZ9dDbPM+ugLdgulDS8ZyxTsOToj39LLf21aND9O2KT+s4eKRbgXQtE3ec9oHzWFZTtnmfXRiSVN+Y9xoDpvVLpHwGPISOXq5T+Klsrk8kz2X3HJST3CrbXG8Rtc8gPeK1Po26X5IWXD6QZpIjYLMc5IuHbO917/CHfuAG60KSglV1DowZWAKsDcEEXBBG8UrQArDOmnX4zSSaPw7WhjylYH8K48TLxFO/mw5AX0fpS1mOAwEkqG0r/Fxcw7g9ofNUM3nA51zLGSQxPLfQCNChQoAUKFCgPa8pfB4V5XWONSzMbKoFyT3CtL1V6M0S0mN7TZERKeyvz2HheYZd5qNc3lK2jmo/ZdWZwpym9Ch6F1dxGLYiCJmANi25F87HLvtvq/aF6KYls2KlLnyI+yvmLnM+gCrzHsRqERVVVFgqgKoHIAZCmuLx1hvrnLjjFes+Wl9K/JLhQjHfUSwWjMJhR8TDGhAttbN39Ltdj66M+mRffUJLipJ5FhhUu7GwA9pJ4AcTWhaA1TihgaOQCR5BaVjx+SnFQDuO+4vyst+HVLjMpv8At6nk6qhoiDwukweNSEWIvVV1l0XLo+UXJaFz2JDwO/YfgG94FxxAGD1nw4yaeJT3yoPeag3HDKkJNJGyFVNFwWWlVeq9BrFhWNhiYCeQlQn1bVSeHxStmrBvMQfdVdUtpw3TRsTTJEGovS2reExIPXQRuSLbWzZ/Q62YeuniS0srVrjOpTfNFtPxoGk9zNtOdD8Zu2ElKHyJO0nmDgXX0hqzzT2r2KwbbM8WyCSA9gUbf4LDI5cN/dXRtExECSKUdVdGFmVgGVhyIORq5tOPV6WlX6l+fv8A6aJ28Xtocw9Z3L9EUOs7l+iK1fXDooRry4EhGzJhY9hvmOfBPccu8VlmMwjxO0cqMrqbMrCzA94rq7S9o3Mc037rqiJOEovUS2+5foih1h5L6hQtQtUswCsx5D0CiAUpahagNS6E9fjDIuj8Q3xMjEQsT+CcnJM/FY7uTHvNt1rjlsibc/31010W6zHH4CORzeWP4uXmXQDtH5ylW85PKgM2/lF6U28TBh79mOMyNn40jWtbmFjH0jWWxtcN5qtXTDi+s0tijfJWVB3bEaqfaD66q0S5NztQCNCjbJ5GvNk8jQAqT1e0FNi5RHEt+LMclUc2P7t5oavaFlxcqxRjfmzHwUUb2P8AzM2radCaIhwkQiiGW9mPhO3FmP8Ay1VvEeIK2jiOsn+PLN1Kk5vL2G+rGrUOBTZjG1IR25CO03cPJXuHpvUnJNSUs1R2OxwUEkgAZknICuUl6lefNN5bJySisIcYvG2qAxGLeaVYIhtSObKo3nmTyA4ncKgsZp+bFSjDYJC7ubBrZd5F9wHFjlWrah6oR4CMknrMRIB1spzJ+Sl9yD27zwAvrLhWMSnp46kapXW0R/qjq0mETg8zj4yT/wAV5KPbvPdY46bpTiOr2MVFYRFbyIaV0bFiInhmQPG4sytuPEeYg2IIzBAIrnLpH1Cl0ZLcXfDOT1Ulswd/VvbcwHHcwFxxA6aplpbR0WIieGZA8bjZZTuI8+8EGxBGYIBFZHhyKFpWF2U7SEqeakg+sVaOkXUOXRkvF8O5+Ll4g79iS2QcD0MBccQKsppgE5o3XXHwW2MQzAcJLOD3dq5HoIq5aF6XLHZxUNs7bcW7fa5Rj7mPmrM6PMBtN5z76hV+HW1ZfXBZ7rR/g2RqzjszorQuncPik24JVccQDZl+chzX0ipCuZ8HinicSROyOu5lYqw9IrS9TulW5WLHWF7ATqLD/MUbvnLl3DfXNX3AKlJOdF5Xbr8kmFwnpLQ001Ba3apQY+O0g2ZAOxKo7a9x8pfkn0WOdTcUisAykMpAIINwQdxBG8Ua1UdKrUoTU4PDRIaUlhnOWsmr02ClMUy2O9WGaOvlKf3bxxqMtXR2smgYcbCYZly3qw8KNuDKf3cd1YNrJoCbBzNDKMxmrAHZkQ7mX7uBuK7jhfFI3ceWWkl+fKIFWk4vK2Iq1C1KdWeR9VARnkfVVsaROQZnzn31qH8nXShTFT4YnsyRiQZ+NG1sh3rIfo1mksZucjvPDvqz9EmIMWlsKcwGZ4z3h43Ue23qoCG13l2tIYxr3JxM9u4CVgPZUPGxG425mpDWfPGYk/p5j/8Aq1RxPqoAxnbnS+EjkkdY0BZ2IVVG8k7hTYZef3VpfRXq7sIcZIO011iBG5dzP6dw7gedRru5jb0nUf8AXlmdODnLBZtVtApgoRGLNI1jI/lNyHyRuHpPGn0stGmeo3HYkKCSbAAkk7gBvJrjW515uctWyySUVhCWlNJLGrMzBVUXJP8Az2VneO0liNJTLBArWZrKg8a3jOdwA38hXmlcdNpHELBApYFrIoy2ubtyFue4Vr2omqEWj4rCzzOPjJLb/kpyUe3ee7qLCwVJKUl9X6INWrzaLYX1C1Oi0fFwedwOsktv+QnJR7d57rVHSEdLx1ZmgcJTiOm6U4joBahQoUAy0to6LERPDMgeNxssp494O8EGxBGYIBFc8dIWpM+jZcmZ8NIfipL5jj1cnAOBfPcwFxxA6UpnpXR0eIieCZA0bizKePIg7wQbEEZggGgOVEeXym+l/rSg67ym+kPvqx9IGqeI0XLvL4dz8XKR6erktkHA8wYC44gV5NKScx7fvoDy03Nvpj768aObm30h99LjSsnd7fvofzpJ3e376AnNSNcJ8C2w4L4cntLtAslzmyZ5cyu49xzrZcDjY5Y1liYMjC6sOP3EbiOFc9yaQc55X55/f3CrLqnrW+j8QyyEnDOV2lzOwxVe2g7srjiO+1UPFuEqunVpL6uq7/JIo1uXR7GzGoTXLVxcbCUvsyLdo38lrbjzU7iPMd4FTMUgZQykFWAIINwQRcEHiLUauPpVZ0KilF4aJrSksM5wxbzRO0T7SujFXBtcMMiKKMXIBcse4ZZ9/mrSemHVgEDHRrmtlmA8ZdyOfMbA9xHKswF2PMn/AJ6BX0Oxu43NFVI79V2ZWzg4ywHGJkOW0fZUpqjjnGPwh2jYYmC5yzBmQH2XqJewyHpPP/Snuri2xOGY/l4bd/xq+ypZgMdZD/S8R+ul+0amAFs/V99SWsKr8KxFz+Olyt+kamBVfKPqoB/q1olsViI4RftHtHyVGbn1Xt32rcVjVFVEAVVAVQNwAFgB6KpPRHogLHJiT456tDbPZXNj6W2R/hNXOZq5TjFx6lb01tH9k63hiOe4jM9Z90haaJPwaM8jIRy3qv7z6KuOnNILBC8rblF7czuUek2FZHiJBIzO7ksxLMdk5k5mpHCLXml6stlt7/B5cVMLlXU1XoC0YkkGJkCjrBIihjvK7F9m/AXzrQwpGRyIqmfycQPg+Ktn8an2daXjcEHzHhe/uNdGQiOjpeOkVFsjS0dAOEpxHTdKcR0AtQoUKAFChWZ9K/SUMIGwmFYHEkWdxmMOCPa55cN54CgFukjXLDmaLRQVJmnlijnvmsSPIoIvwkscrZrkd9qy7pB1Il0ZLxfDyH4qX29XJbIOB6GAuOIENq018bhWLFmOJhJJvckyqSSSczXUWl9GRYmF4ZkDxuLMp9hB3gg2IIzBAIoDlRTRwKsmvuosmjZe07NBIx6uTYv39XJY2DgX7mAuOIEFHHF+VP1f+6gECKeacQmZhv8ABAHnUZD0mh1EP5Y/VH+Kn2KbDuzP1xBaw/BsbAKFNvPbfQFv6I9ZrH4BK1yAWhJPLN4weNs2H+IbgK0mufYuridJYp2DowdT1bCxU3FbpoDSqYqCPEJudb28lhky+hgR6K43j1kqVRVoLR7+/wAk23nlcr6DrEwLIjRuoZHUqyncVYWIPorn7WPRLYPES4c3Oy2THe6HOM+lbX7wRwroWs76Z9DBkixY3p8W9hmysbx3PCzbQ/xVr4Dd+nX9J7S/Z7cQzHPYzFIxbaO7gPKPLzczTnQtzicOf00W7ulXcOVNySx3dwA9gAp9ofs4nDgb+ui2j/mr2R3czx82/tiCRWsn9bxH6+X7RqYipHWBb4vEZH8NLu/WNTnVjR3W4rDxncZFv3gHaP8A2g1jOahFyfRZPUsvBr+gcB8Hw0UVrFI12reWe05+kWo8xp5OaYzVwXM6k3J7vUtEsLBQek7SH4OAH5be1UH7R9Aqk2qW1sxXW4uVuAbYHmQbOXpBPpqMIrtrOl6dCMfGX7srqsuabZtP8m/+r4r9an2daxWS/wAnRrYfFfrU+zrWQakmsb4rDbWY8L30zQWqVpDEQbWY3++gEEpxHTdBTiOgFqFCs26VekkYUNhMIwOJIO2wzEAtf0uRuHDeeAIBOlfpLGEDYTCMDiSLO4zGHBHtktuHDeeArDDdiWYkkkkkm5JOZJJ3mlJlJa7EkmzEk3JJFySTvJJvehs0A51eyxeG/Xw/arXV0TVyjoT+s4f9dF9qtdUQvQCel9GRYmF4ZkDxuLMp48QQd4INiCMwQCK551/1Jl0ZLY3fDuT1Uvt6uS2QcD0MBccQvSYNMtMaMixMTwzIHjcWZT7CDvBBsQRmCARQHLSGjgVPa/alS6Mlsbvh3J6uW3p6uS2QcD0MBccQtfRqADLWh9C2lbddhWP6WP02WQD/ALD6TVAtUrqRjupx+He9gX6tvNINjP0sp9FQeI0PWtpw64yvda/Bspy5Zpm61G606M+E4SaG2bxts/PA2oz9ILUlQr57Sm6c1Nbp5+xYtZWDnGJtlcvCIzPkg+KO/mfRzp3oKK+IgJNgJos+Z61bAf8AMqW1h0cIsZiIzkiSub/Jc7SADibMKT0W+1iMPlYCaKw5DrV9Z5mvptOSlBSWzSf3KtrDwRmnz/S8Rvt10t7b/wAI1T/RfH1mOjJ8RJHt/h2B+1Vf1h/rWJ/XS/aNVo6HF/pkndA32kf+tR794tpvwzKn/JGnTVH4x9lS3IE+oXqRmFQ2sbEYecjeIpCPRG1cZbx5ppdyybwjHHYsxY7zmfOczXhFKOO0fR7hRWFd6tiqNe/k9tbD4r9an2davE9ZL0AtaDE/rU+zrUonr0D+vaSielaATkjvnxoqUtVQ6V9PS4LR7zQECQssYYi5TbuCyjygN16AhelfpKGEDYTCsDiSLM4zEAI9rkbhw3ngDiGGBZ2ZiSSHJJNySVJJJO8340VZQxLMu0xJJJZiSSbkk3zJNOI5lF7IAbEX2mNrgjdfvoDzELmPmp+wKTIpxjB2h8yP9haRIoA+iP6zh/10X2i11DC9cv6OyxEJ/Sx/aLXTET0BKxNSlNIHp0DQDLTGjIsTE8MyB43FmU+wg7wQbEEZggEVz5r5qVLoyWxu+Hcnq5bb+PVyWyDgehgLjiF6RpjpjRkWJieCZA8bizKfWCDvBBsQRmCAaA5fQ0WVyvbG9SGHnU3HtFONJ4ZYcTPh1JIimkjBa20VjkZFJtlewF7UlKtxXj2B0NBLtqrDcyhvWL0eo7Vdy2DwzHe0EJPnMSk1JWr5jWg4VJR7NlqnlGL9KkOzpGTk6RyenZ2D+xUXoZdjEQX8MyxZeQDIu/5Xu8+6y9LoC46N/GMCW5C0sna7zmLVWdBRFsTCeUsRJO4fGLvPMnLvJr6Fw95tab8L8FdUWJsi9PlfhWIuv46Xxv0jd1Wfoft8MksLXw7cb7pI/wDWqxp9P6TiN34aXiPyjd9T/RVLsY9FPjxyIMxvA2//ABNZX6zbT9mKX8katMKhNZEvhpwN5ikHrjap6ZaYYyHaVl8oEesWribafLNPsWLWVgxNJVOZT/u/0o90PiHcfHPAE8qSjhIyNrjI9pd4yPGlViN+G5vGXyT319BRVGn9BbjqcTYW+NTjf8XWmxPWW9CGUOJ/WpxB8TurS4noCTienSmo2J6eRPQDiqB08NbRhP6aL3mr8DVA6eh/8Wf10XvNAYlhsYApOzuIG8cb/J7qcLpP9H7V/gplh4TsHwd6+MvJu+lBhzzX6affQDjr43YlozexN9u3gqSBYL3WpMyxfkj9Yf4aNhsObnNfBfx0/Jt30U4c81+mn8VAEgkTrYiEI+Mj8cnxx3V0dE9c2rEQ6Hs5Oh8JTuYd9dFxPQErA9PYmqKgen8D0A6oV4K9oDk/XWQrpPGkb/heI+2ejYOcSDkRvH3d1J68/wBpY3+94j7d6joHKkEZEUBOl5NwdwBuAdgB5s6f6MMnVYhttyVWMi7sbXe3Oo3C4gOO/iKm9CxFoMSBbwIt5sB8ZckngLVhyR7Ah0jaRu0xOVyzEnZHEknhn7eZp3o1x8Iw6rkomi87HrF7Td/dwHpJSncW2E8Hidxc8zyHIfvNOdCxBZ4GYXJli2V/zF7Z7uQ4+bfmCC0//WcR+ul+1anWqWL6nGYaQ7hIoPmclW9jGm2nv6ziP10v2rU0cZC3f6M6xqRU4OL6pr7nqeHk6JmSmUq0fQWOGIw0U3lorHua1nHoYMPRSkqV87adObjLdaFonlZMS1owfU4uZOG2XHmftD9q3opnGM/Q37Jq5dK2jdl4sQBkfi384uyezb9Qqn4YZ/4W/YNd5Y1vVoRn4191oV1SPLNo0PoVa0WJH6VP2K0iJ6570LpabCTCaE2IyZT4LrxVhy7+FbTqtrDFjIhLEbEZOh8KNuR/ceNSjWWaJ6eRPUZE9OonoCUieqJ09/2Wf10XvNXOJ6Za0wrLhyjqGViAykXBBvcEUBzLhz2D85fc9KLU7rpqi+CJkju2HdhY7zEc+w55Z5Nx3HPfARNQDnCjM/Nk+zaiEUthN5+ZJ9m1EtQDYjtL84e8V0LE+dc/zR3FX/UbXWz/AAXEtntFYpDxzsI3PPgG47jna4GnQPT+B6ioHp9A9ASkTUpTWB6c0Byfrx/aWN/veI+3eo6LZ7/ZUjrv/aWN/veI+3eo+KQ/8AoBzAyg3G3f0Va9ETxPhsVsbYbYi2g2zb8IM1tnbz1VEUMLgWIzI4EcSPup/ot9lJT3Lle1+1uPdQD2OMKNtxfyV8rvPyQfWRbmQrogM+JhOZYyxk+YOpPmAA9AFNopWmbddjlYZDLcBwAA9QFP9GsFnhRDf42LbYeMRIuQ+SPbv5WAr+nXPwnEbvw0vAflW7qbsxsN3HxRz81L6dH9JxH66X7VqQYZL6feaA07oa0ttwy4Vj2o220GWaOe0AO58/8AGKvEqVhWqmmTg8VFPnsqdmQDijZP6t471Fb5kyhlIKsAQRuIIuCPRXF8btnRuPUW0v31/wBJ9vPmjjsQGsWiRiIJITYFh2SRcK4zQ+sCsdwxdXKMoDL1isCq3DKrAg5cCK3mSOs66SNXij/DIx2WBWUDg2yVR/MfBPeF51K4HeqMnRk9Ht7/ACY3FPK5l0KUXPJfoJ91LaH0zNhZRNCQCMmWwCuvFWsN3upBDQda6ohG5as6wRYuLrIjmDsuh8KNuR/ceIqcieufdG6VmwmIM0BsQzBlPgyLtG6sP38K2fVbWKHGRCWI2IydD4UbeS37jxoCzxPRdKm8VvlD99IxPSmIN1t3igIqXBpIrI6hkYFWUi4YHeCKyLXrU+TAP1sY2sMxsrFVJiJ3I5I3cm47jnv21IqPNgkkRo5FDo4KsrC6sDvBFAc64HFG/i+C/iJ+TbupRcQeSfVx/wANT2veo0mjpOtiu+FfaCtvMRZWAjkPLk3Hcc99Zhe9AOWlPJPq4/4aJpNTtyCy+Gw8BfKPdRhTjHp8bJ89/wBo0Bbej3Xk3XC4ps8ljlPjco5Dz4BuO452vpsD1ztPh71ofR7rvbq8LimzItFKx8LtFRHIeeQAY79xztcDVIHp7E1RcD0/gegOV9eP7Sxv97xH271Gx1Ja8f2ljf73iPtnqNjoBzA+yQeRvUlhorCdR8kD6dhUfhUuwB3bz3Ab6kMI5KTtzAPrbP30AVX2MlOZyZh+yO7nz82+X1eUGaF2yAljAA3s22uQ7hxPDzkVEYeMeE3gj1k8h3+73v8AREhbEQfrYgANwHWLkKAjdPovwrE5n8PNw/St30gVWy9o8fF7/PTzW6PZx2LXliZ/V1z29lqYNuXzH3mgDGNfKP0f9a1Loj1jEkRwUjXeIXjJy2o+K78yp9hHKsrAp1o/FSQsJo22ZI3VlPIi+/mCLgjiCRUO/tI3VF03vun2Zspz5JZOhJI6aYvCK6sjqGVgVZTuIIsQaR1U1hjx0CzJk3gyJe5jcbx3g7weII7xUoyV8/nGdCo4S0aLFNNZRh2turhwMtiWMLkmN7Xy8hjfwh7RnztOalan9Zs4icHYyMcbLYtydh5PIcd+7fpOP0fHKuxIiutwdlgCLqbg2PfXvVZ1dy43UnRVPaXV+DQreKlnoYXNGhd7ufCbxPlH5VLaG0k+DmE8EhuMmUr2ZF4qw2vUeBomj4w06qRcGUAjmDJYinWJxK3IMENgSMgynI81auwWxBNh1X1hixkIliPc6Hwkbkw9x3Gp6LPKsD0VpY4WVJ4dqM7NmW+3G67bXVwbHgSDe4radTdOw4xOsha9hZ18ZG5MPceIr0E0kVLpFSqRUqBQDbFYJJUaORQ6OpVlYXVgd4IrCukHUNtHSdbGWbCu1la20Yid0bm/qbjuOe/f6QxmFSVGikUOjgqysLqwO8EUBzPB1Z8c/Q/3VI4uOMySfGN4b/i7+MflVI9IGosmjpOsj2nwrmyNvMRO6OQ/stx3HPfDTn4x/nv+0aAO2Hi/KN9X/upLSOCjKp2z4B8Tf8Y/yqUC0ti4+zF+rP2slAW7o716AKYTFSEnJYpWFtrgschv4XAMd+QOdr6fA9c4YnDXrTdQ9dgGTB4lztbKCOVtxuikI7E3LG+TEC+452JAyHXb+0cb/esR9s9MYlHlew0+1zP/AMjjf71iPtnppCy8vZ/uoBYPlZRYceZ8/d3U+0cBsS33WXdv8LhTaKSPl/2/76kYgvUyFRa4HC17MPlGgGpfatlYDIAcPvNSuguxiYFHhmaIE+SDIoKjv5n0c6jk7Hz/ANn/AHe7z7pTVHDF8XhhuHXw3P8Amqbec2P/AAUATpTwZj0rixY9p1cZb9uNG95NQBQ2XI7jw7zWidP+jmjxkM4uFli2Tby4mz9aun0azwyNZczuPE8zQHioeR9VLJGdhsjvXh56TEreUfWaWSVthu0d68T30A71a09NgZxKgJG6SM5K6cjyI3g8D3Eg7po3GrNFHKgYLIoYBlKsARfMH/nLKs46PNSDIVxWKv1e+KJj+E5PID4vJeO/dv0+9cZx6tRqVUoLMlu+nt5wTrdNLXY9IrzYr29eg1QRi8rQkMwTRMZ+EJkfwy8P0opSeFtpuyfCbgeZr3RkjDEINprdcotc2/CijTYh9pu23hHxjzPfX1GOyKkJiMM2ynZPgngfyj0TBSYiBi8EksTEbJaMspIvextvzp1LiH2Y+23gnxj+Ufvogmfy2+kfvr0DLF64aVjazY3EjkesYA+akP8ArvSn59ifrW++pXEYfrYXVyT247EkkqdmXMXqtYnAsh2TvGYPBh3d9ASH/XelPz7E/Wt99D/rvSn59ifrW++ohI/cfcaGxQEnidc9IyI0cmLndGBDK0hZWB3gg76e6Kx/XE3HxlySAN+dyVFV/YpZCyPtIxVlJsQbEeY0Bblw7eS3qNOcTh22Yuy34M8D+VkqO0Tpp5RYyMHG8bTZ94z9lS+JxEmzF23/AAZ8Y/lZO+gGD4VvJb1GvdNYX40gjxIvsI6cfCJPLf6R++l9NLeUk/k4fsI6Ap+m9FsS0y3YklnuSWJOZa5zJ4mouKrts0z1j1UaIJJHmz9Z1kYH4PYCsd3INduXoNAQOGjvmclG8/uHeaksJMSsp3WVLDgo2srVHbe4DcPaedPtHrdJRuyXf86gCwR342AzJ5fee6rR0cxdbpLDKBZVdnt8xGa57yQKrBfgNw9p5n/mVaL0I6L2sTLOfEjAAtuMpyJPzUbLke8UBculfVo43AuEF5Yj1sY4sVB20HzkLADnaueieyvmPvNda1hfS/qZ8Fl+FRITBIxLBTYRSMbkEWyVjcg8CbcqAz4Uug7Dedf/ACogZPJP0v8AbTiNk2W7J3r43n+TQCGfM+s0rhoyW3nwX4ngjGvVdPIb6f8AtpzhHTa8BvBfx/kN8mseWIGYjPM+s0oqHmfWaXV4/Ib6f+2jh4/Ib6wfwU5Ygc4RbYlf16/a0lP4bfOb3mnuHeP4SvYa/XDPbyv1u+2z7KRmkj2m7DeEfxg5/MrIBZfBj+aftHoopzJJHsp2G8E/jB+Uf5FeLJF+Tb6wfwUB7F+Cf58f7MtITwBxY+cHiDzFP4pI+rf4tvDj/GDyZPkeeiLJF+Tb6wfwUBXsdo5o2BI7LqzKeBsCGA8x4cLimYjq+4WKGeCWJkb4tXlXtgkHYKPY7OW9Dbuqpz4YIbFT3Ha3+ygI/q6Uli7Tec++nOyvkn6X+lKzou03ZPhHxu/zUAwjUggjIjcas2D0gJVjU5OqWI4H4xzcevdUNsL5J+l/pSpAGwQCDa47W7tN3UBObNO9MD43/Lh+wjppgMfE4s0bbY3/ABgAPeOxUvjIFMrSOD1SpFlfN2MEZWMHnzPAAnlQDPDr1KiZvDb8EDw4GUjuPg8znwpNtIt1PVAZlmLPe7MG2SV7gSoJ52FJ4vENIxdt54DIADIBRwAGQFNzQENpPR1rugy4ry7xSeB/By+Zf2qmjSI0f8XPIgBChCy+dt47r7xQEbFZRtHfvAP7R7u7j5t+99GWgDhcGvWC0sx62S+8FgNlT3hQL996zvom1QbFTDFzD4mNrrcZSyLuA5qpzPeAOdbdQApDGYVJUaORQ6OCrKwurA5EEUvQoDDNd+iuTClpcOxfD77WLSQjk1s2UeVwG/majDgkKm06W7JvnYWv99dQ1TNaejLB4u7oDBKTtF4wArNzePwWPeLHvoDEl0fH+cR+o05h0dGjZ4iPcRaxv2lIHvqz4/ojx8F2iMU9vB2W2G7yUfs+YbR/ca/PqfpBD8ZhZxvJYRmQcybpe/o30AlHomMgn4TFYWubHK+Qo40VF+dReo00xOFlHZ6mVVHBo2BJ4s1xv926gvxQufDOYB8QcGPyuQ4b+VATuH0MDN1izxnZlR2WzXG1ICAeR4VHYjCptt8fHvY7pN993gU71ScHrjfcI2PHJX2j7AaZyxYfaa+JQdo5dW+WZ7qAVbDRlV/pEdwpFtmXftM3kd9eRYRDvnjGQPgy7+XgURYsP+cp9XJ91HWHD/nKfVyfdQDgQRhGUTxkkow7Mtjs7YI8Df2hQOCjAuMREe7Zlz//ADpMQ4f85T6uT7qOsOH/ADlPq5PuoCQ0JhU63Z6+M7avHYCS7dZGVyugAsSN/Kj4jVhCimTExKGCspIbxhcEXtypvotIFmiYYlTaRDbq5BezDK9uNOdauy8KX8GGMW9LDIegUBCT6DRW2fhEZ5EA9rlb7q8m0bGWY9fHmxPHnTqbYUFSRtneb/g/kj5XM8N3OmUeHGZYgKN558lXv92+gD/zUlr9fHa9r2O+jHRqNsgTJe1txzO0T++kXkDEWtyVQd3cOf76VayDZBG0cmN/B5qO/mfRzuB4NHIDcYhAR56tMWIgnRBI8QKKEF2dQ1lUFgBxyF/RVWhw1xtG+yOW8nyR3+73nGDmcgrFIeACoxsOAFhQFmGAwpIAeIk7gJJKTbB4X8pD9ZJSOE1fxjDZTDTbRyZihUW8lWawtzPHdu3y2i+jXFuQZtiJeILbT+gJce2gIx8BhgAS8Vjex6yTO2+rLqzqQsqMXGzDIF8EvtSBW2strcDz78udWHQuouGgYSOOtkFrM47CW3BI9wtwvc99WegEMJhkiRY41CooCqqiwUDcAKXoUKAFChQoAUKFCgBQoUKAFJPXtCgCii0KFAChQoUAK9oUKAFenfQoUB5QoUKAAoChQoA60pQoUAKFChQAoUKFAChQoUB//9k=",
+                      "type":  "image/jpg",
+                      "@odata.type":  "#microsoft.graph.mimeContent"
+                  },
+    "isFeatured":  true,
+    "privacyInformationUrl":  "https://graphisoft.com/de/rechtliches/impressum",
+    "informationUrl":  "https://graphisoft.com/de/downloads/bimx/bimx_desktop",
+    "owner":  "",
+    "developer":  null,
+    "notes":  "",
+    "roleScopeTagIds":  [
+
+                        ],
+    "fileName":  "BIMx-2020.3.3231-1.1.intunewin",
+    "installCommandLine":  "Install.cmd",
+    "uninstallCommandLine":  "Uninstall.cmd",
+    "applicableArchitectures":  "x64",
+    "minimumFreeDiskSpaceInMB":  60,
+    "minimumMemoryInMB":  100,
+    "minimumNumberOfProcessors":  1,
+    "minimumCpuSpeedInMHz":  1,
+    "msiInformation":  null,
+    "setupFilePath":  "BIMx-2020.3.3231-1.1.exe",
+    "minimumSupportedWindowsRelease":  "1607",
+    "minimumSupportedOperatingSystem":  {
+                                            "v8_0":  false,
+                                            "v8_1":  false,
+                                            "v10_0":  false,
+                                            "v10_1607":  true,
+                                            "v10_1703":  false,
+                                            "v10_1709":  false,
+                                            "v10_1803":  false,
+                                            "v10_1809":  false,
+                                            "v10_1903":  false
+                                        },
+    "detectionRules":  [
+                           {
+                               "@odata.type":  "#microsoft.graph.win32LobAppFileSystemDetection",
+                               "path":  "%programfiles%\\GRAPHISOFT\\BIMx Desktop Viewer",
+                               "fileOrFolderName":  "BIMx.exe",
+                               "check32BitOn64System":  false,
+                               "detectionType":  "version",
+                               "operator":  "greaterThanOrEqual",
+                               "detectionValue":  "2020.3231.0"
+                           }
+                       ],
+    "requirementRules":  [
+
+                         ],
+    "rules":  [
+                  {
+                      "@odata.type":  "#microsoft.graph.win32LobAppFileSystemRule",
+                      "ruleType":  "detection",
+                      "path":  "%programfiles%\\GRAPHISOFT\\BIMx Desktop Viewer",
+                      "fileOrFolderName":  "BIMx.exe",
+                      "check32BitOn64System":  false,
+                      "operationType":  "version",
+                      "operator":  "greaterThanOrEqual",
+                      "comparisonValue":  "2020.3231.0"
+                  }
+              ],
+    "installExperience":  {
+                              "runAsAccount":  "system",
+                              "deviceRestartBehavior":  "suppress"
+                          },
+    "returnCodes":  [
+                        {
+                            "returnCode":  -1,
+                            "type":  "failed"
+                        },
+                        {
+                            "returnCode":  0,
+                            "type":  "success"
+                        },
+                        {
+                            "returnCode":  1707,
+                            "type":  "success"
+                        },
+                        {
+                            "returnCode":  3010,
+                            "type":  "softReboot"
+                        },
+                        {
+                            "returnCode":  1641,
+                            "type":  "hardReboot"
+                        },
+                        {
+                            "returnCode":  1618,
+                            "type":  "retry"
+                        }
+                    ]
+}

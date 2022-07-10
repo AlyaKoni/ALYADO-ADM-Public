@@ -1,7 +1,7 @@
 #Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     27.02.2020 Konrad Brunner       Initial Version
+    10.07.2022 Konrad Brunner       Added AlyaSsprEnabledGroup
 
 #>
 
@@ -79,9 +80,18 @@ if ($AlyaPasswordResetEnabled)
     Write-Host "Enabling password reset options" -ForegroundColor $CommandInfo
     Write-Host "You have now to configure password reset options. Pleas browse to"
     Write-Host "  https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
-    Write-Host "and allow password reset for all users. Also configure reset options."
-    pause
+    if ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName))
+    {
+        Write-Host "and allow password reset for all users."
+    }
+    else
+    {
+        Write-Host "and allow password reset for group $AlyaSsprEnabledGroupName. Also configure reset options."
+    }
+    Write-Host "Also configure reset options."
     start https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset
+    pause
 }
+
 #Stopping Transscript
 Stop-Transcript

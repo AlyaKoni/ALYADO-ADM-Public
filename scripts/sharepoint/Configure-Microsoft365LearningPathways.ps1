@@ -59,11 +59,11 @@ LoginTo-SPO
 # Constants
 if ($siteLocale -eq "de-CH")
 {
-    $learningPathwaysTitle = "M365Training"
+    $learningPathwaysTitle = "M365LearningPathways"
 }
 else
 {
-    $learningPathwaysTitle = "M365Training"
+    $learningPathwaysTitle = "M365LearningPathways"
 }
 
 if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
@@ -99,7 +99,6 @@ if (-Not $admHubSite)
 }
 
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-$adminCnt = Get-PnPContext
 
 # Checking learning pathways site collection
 Write-Host "Checking learning pathways site collection" -ForegroundColor $CommandInfo
@@ -109,7 +108,7 @@ try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$learningPathwa
 if (-Not $site)
 {
     Write-Warning "Learning pathways site not found. Creating now learning pathways site $learningPathwaysSiteName"
-    $site = New-PnPSite -Type "CommunicationSite" -Title $learningPathwaysSiteName -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Description "Learning Pathways" -Wait
+    $site = New-PnPSite -Connection $adminCon -Type "CommunicationSite" -Title $learningPathwaysSiteName -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Description "Microsoft 365 Learning Pathways" -Wait
     do {
         Start-Sleep -Seconds 15
         $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Detailed
@@ -121,11 +120,10 @@ if (-Not $site)
 
     # Login to learning pathways
     Write-Host "Login to learning pathways" -ForegroundColor $CommandInfo
-	$null = Set-PnPContext -Context $adminCnt
 	$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
     # Multilanguage settings
-    $Web = Get-PnpWeb -Includes Language, SupportedUILanguageIds
+    $Web = Get-PnpWeb -Connection $siteCon -Includes Language, SupportedUILanguageIds
     $Web.IsMultilingual = $true
     foreach($id in @(1031,1033,1040,1036))
     {
@@ -135,61 +133,74 @@ if (-Not $site)
         }
     }
     $Web.Update()
-    Invoke-PnPQuery
-    Enable-PnPFeature -Identity "24611c05-ee19-45da-955f-6602264abaf8" -Force
+    Invoke-PnPQuery -Connection $siteCon
+    Enable-PnPFeature -Connection $siteCon -Identity "24611c05-ee19-45da-955f-6602264abaf8" -Force
 
     # Setting site design
     Write-Host "Setting site design" -ForegroundColor $CommandInfo
     if ($hubSiteDef.subSiteScript)
     {
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) SubSite Team Site "+$siteLocale
-        $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
-        if (-Not $SubSiteDesignTeam)
+        $SubSiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) SubSite Communication Site "+$siteLocale
+        $SubSiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameComm"}
+        if (-Not $SubSiteDesignComm)
         {
-            Write-Error "Site design $SubSiteDesignNameTeam not found. Please crate it first"
+            Write-Error "Site design $SubSiteDesignNameComm not found. Please crate it first"
         }
-        Invoke-SPOSiteDesign -Identity $SubSiteDesignTeam.Id -WebUrl "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
+        Invoke-SPOSiteDesign -Identity $SubSiteDesignComm.Id -WebUrl "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
     }
     else
     {
-		$SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) HubSite Team Site "+$siteLocale
-        $SiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameTeam"}
-        if (-Not $SiteDesignTeam)
+		$SiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) HubSite Communication Site "+$siteLocale
+        $SiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameComm"}
+        if (-Not $SiteDesignComm)
         {
-            Write-Error "Site design $SiteDesignNameTeam not found. Please crate it first"
+            Write-Error "Site design $SiteDesignNameComm not found. Please crate it first"
         }
-        Invoke-SPOSiteDesign -Identity $SiteDesignTeam.Id -WebUrl "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
+        Invoke-SPOSiteDesign -Identity $SiteDesignComm.Id -WebUrl "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
     }
 
     # Configuring access to learningPathways site
     Write-Host "Configuring access to learningPathways site" -ForegroundColor $CommandInfo
-    $vgroup = Get-PnPGroup -AssociatedVisitorGroup
+    $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
     Add-SPOUser -Site $site -Group $vgroup.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
 
     # Configuring permissions
     Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
-    $mgroup = Get-PnPGroup -AssociatedMemberGroup
-    $aRoles = Get-PnPRoleDefinition
+    $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
+    $aRoles = Get-PnPRoleDefinition -Connection $siteCon
     $eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
     $cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
     $temp = Set-SPOSiteGroup -Site $site -Identity $mgroup.Title -PermissionLevelsToAdd $cRole.Name -PermissionLevelsToRemove $eRole.Name
 
     # Configuring site logo
     Write-Host "Configuring site logo" -ForegroundColor $CommandInfo
-    $web = Get-PnPWeb -Includes SiteLogoUrl
+    $web = Get-PnPWeb -Connection $siteCon -Includes SiteLogoUrl
     if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
     {
         $web.SiteLogoUrl = $AlyaLogoUrlQuad
         $web.Update()
-        Invoke-PnPQuery
+        Invoke-PnPQuery -Connection $siteCon
     }
 
+    # Configuring permissions
+    $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Detailed
+    foreach ($usrEmail in $AlyaSharePointNewSiteCollectionAdmins)
+    {
+        $tmp = Set-SPOUser -Site $Site -LoginName $usrEmail -IsSiteCollectionAdmin $True
+    }
+    $tmp = Set-SPOUser -Site $Site -LoginName $AlyaSharePointNewSiteOwner -IsSiteCollectionAdmin $True
+    $tmp = Set-SPOSite -Identity $Site -Owner $AlyaSharePointNewSiteOwner
 }
 
 # Checking app catalog
 Write-Host "Checking app catalog" -ForegroundColor $CommandInfo
-$null = Set-PnPContext -Context $adminCnt
-$appCatalogUrl = Get-PnPTenantAppCatalogUrl
+$appCatalogUrl = Get-PnPTenantAppCatalogUrl -Connection $adminCon
+if (-Not $appCatalogUrl)
+{
+    $apiCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
+    $res = Invoke-PnPSPRestMethod -Connection $apiCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current"
+    $appCatalogUrl = $res.CorporateCatalogUrl
+}
 if (-Not $appCatalogUrl)
 {
     throw "There is no app catalog site registered! Please create it with the script Configure-AppCatalogSite.ps1"
@@ -213,13 +224,12 @@ Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/pnp/custom-learning-
 
 # Login to app catalog
 Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
-$null = Set-PnPContext -Context $adminCnt
-$siteCon = LoginTo-PnP -Url $appCatalogUrl
+$appSiteCon = LoginTo-PnP -Url $appCatalogUrl
 
 # Deploying app package
 Write-Host "Deploying app package" -ForegroundColor $CommandInfo
-$app = Add-PnPApp -Path "$AlyaTemp\LearningPathways\customlearning.sppkg" -Scope Tenant -Overwrite -Publish
-$app = Get-PnPApp -Identity $app.Id -Scope "Tenant"
+$app = Add-PnPApp -Connection $appSiteCon -Path "$AlyaTemp\LearningPathways\customlearning.sppkg" -Scope "Tenant" -Overwrite -Publish
+$app = Get-PnPApp -Connection $appSiteCon -Identity $app.Id -Scope "Tenant"
 if (-Not $app.Deployed)
 {
     throw "Error deploying the app package"
@@ -227,40 +237,88 @@ if (-Not $app.Deployed)
 
 # Login to learning pathways
 Write-Host "Login to learning pathways" -ForegroundColor $CommandInfo
-$null = Set-PnPContext -Context $adminCnt
 $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
 # Installing app package
 Write-Host "Installing app package" -ForegroundColor $CommandInfo
-Install-PnPApp -Identity $app.Id -Scope "Tenant"
+Install-PnPApp -Connection $siteCon -Identity $app.Id -Scope "Tenant" -Wait
 #TODO Update
 
-#
-# TODO Some modules needs to be unloaded to make next script working!
-# Until resolved, just run next commands in a new session
-#
-<#
-$newProcess = New-Object System.Diagnostics.ProcessStartInfo "Powershell";
-$newProcess.Arguments = "& '" + "$AlyaTemp\LearningPathways\M365lpConfiguration.ps1" + "' -TenantName $AlyaTenantNameId -SiteCollectionName $learningPathwaysSiteName"
-$newProcess.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Normal
-$newProcess.LoadUserProfile = $true
-$process = [System.Diagnostics.Process]::Start($newProcess)
-$process.WaitForExit()
-#>
+#Configuring learning setting
+#LogoutAllFrom-PnP
+$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
-# Running M365lpConfiguration.ps1
-Write-Host "Running M365lpConfiguration.ps1" -ForegroundColor $CommandInfo
-& "$AlyaTemp\LearningPathways\M365lpConfiguration.ps1" -TenantName $AlyaTenantNameId -SiteCollectionName $learningPathwaysSiteName
+#Remove-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn
+$ent = Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn -Value $false -Description "Microsoft 365 learning pathways Telemetry Setting"
+Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn
+Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningCdn -Value "https://pnp.github.io/custom-learning-office-365/learningpathways/" -Description "Microsoft 365 learning pathways CDN source" -ErrorAction Stop 
+Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningCdn
+Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningSite -Value "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Description "Microsoft 365 learning pathways Site Collection"
+Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningSite
 
-# Running TelemetryOptOut.ps1
-Write-Host "Running TelemetryOptOut.ps1" -ForegroundColor $CommandInfo
-& "$AlyaTemp\LearningPathways\TelemetryOptOut.ps1" -TenantName $AlyaTenantNameId -SiteCollectionName $learningPathwaysSiteName
+$sitePagesList = Get-PnPList -Connection $siteCon -Identity "SitePages"
+if($null -ne $sitePagesList) {    
+    $clv = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningViewer.aspx</Value></Eq></Where></Query></View>"
+    if ($null -ne $clv) {
+        Write-Host "Found an existing CustomLearningViewer.aspx page. Deleting it."
+        Set-PnPListItem -Connection $siteCon -List $sitePagesList -Identity $clv.Id -Values @{"FileLeafRef" = "CustomLearningViewer$((Get-Date).Minute)$((Get-date).second).aspx" }
+        Move-PnPListItemToRecycleBin -Connection $siteCon -List $sitePagesList -Identity $clv.Id -Force
+    }
+    $clvPage = Add-PnPPage -Connection $siteCon -Name "CustomLearningViewer"
+    $clvSection = Add-PnPPageSection -Connection $siteCon -Page $clvPage -SectionTemplate OneColumn -Order 1
+    $timeout = New-TimeSpan -Minutes 1 # wait for a minute then time out
+    $stopwatch = [diagnostics.stopwatch]::StartNew()
+    Write-Host "." -NoNewline
+    $WebPartsFound = $false
+    while ($stopwatch.elapsed -lt $timeout) {
+        $comps = Get-PnPPageComponent -Connection $siteCon -page CustomLearningViewer.aspx 
+        if ($comps | where { $_.Name -eq "Microsoft 365 learning pathways administration"} ) {
+            Write-Host "Microsoft 365 learning pathways web parts found"
+            $WebPartsFound = $true
+            break
+        }
+        Write-Host "." -NoNewline
+        Start-Sleep -Seconds 10
+    }
+    if ($WebPartsFound -eq $false) {
+        Write-Warning "Could not find Microsoft 365 learning pathways Web Parts."
+        Write-Warning "Please verify the Microsoft 365 learning pathways Package is installed and run this installation script again."
+        break 
+    }
+    Add-PnPPageWebPart -Connection $siteCon -Page $clvPage -Component "Microsoft 365 learning pathways"
+    Set-PnPPage -Connection $siteCon -Identity $clvPage -Publish
+    $clv = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningViewer.aspx</Value></Eq></Where></Query></View>"
+    $clv["PageLayoutType"] = "SingleWebPartAppPage"
+    $clv.Update()
+    Invoke-PnPQuery -Connection $siteCon
+    Set-PnPPage -Connection $siteCon -Identity $clvPage -Publish
+
+    $cla = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningAdmin.aspx</Value></Eq></Where></Query></View>"
+    if ($null -ne $cla) {
+        Write-Host "Found an existing CustomLearningAdmin.aspx page. Deleting it."
+        Set-PnPListItem -Connection $siteCon -List $sitePagesList -Identity $cla.Id -Values @{"FileLeafRef" = "CustomLearningAdmin$((Get-Date).Minute)$((Get-date).second).aspx" }
+        Move-PnPListItemToRecycleBin -Connection $siteCon -List $sitePagesList -Identity $cla.Id -Force    
+    }
+    $claPage = Add-PnPPage -Connection $siteCon "CustomLearningAdmin" -Publish
+    $claSection = Add-PnPPageSection -Connection $siteCon -Page $claPage -SectionTemplate OneColumn -Order 1
+    Add-PnPPageWebPart -Connection $siteCon -Page $claPage -Component "Microsoft 365 learning pathways administration"
+    Set-PnPPage -Connection $siteCon -Identity $claPage -Publish
+    $cla = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningAdmin.aspx</Value></Eq></Where></Query></View>"
+    $cla["PageLayoutType"] = "SingleWebPartAppPage"
+    $cla.Update()
+    Invoke-PnPQuery -Connection $siteCon
+    Set-PnPPage -Connection $siteCon -Identity $claPage -Publish
+
+}
+else { 
+    Write-Warning "Could not find `"Site Pages`" library. Please make sure you are running this on a Modern SharePoint site"
+    return
+}
 
 # Setting homepage
 Write-Host "Setting homepage" -ForegroundColor $CommandInfo
-$null = Set-PnPContext -Context $adminCnt
 $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
-Set-PnPHomePage -RootFolderRelativeUrl "SitePages/CustomLearningViewer.aspx"
+Set-PnPHomePage -Connection $siteCon -RootFolderRelativeUrl "SitePages/CustomLearningViewer.aspx"
 
 # Launching custom configuration
 Write-Host "Launching custom configuration" -ForegroundColor $CommandInfo

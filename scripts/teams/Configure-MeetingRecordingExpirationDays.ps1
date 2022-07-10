@@ -60,7 +60,7 @@ Write-Host "Teams | Configure-MeetingRecordingExpirationDays | CsOnline" -Foregr
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-Set-CsTeamsMeetingPolicy -Identity Global -MeetingRecordingExpirationDays $MeetingRecordingExpirationDays
+Set-CsTeamsMeetingPolicy -Identity Global -NewMeetingRecordingExpirationDays $MeetingRecordingExpirationDays
 
 #Stopping Transscript
 Stop-Transcript

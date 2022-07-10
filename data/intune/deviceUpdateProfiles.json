@@ -59,18 +59,6 @@
 		"displayName":  "iOS Update Policy",
 		"description":  "Updates iOS devices to the latest update",
         "roleScopeTagIds": ["0"],
-		"supportsScopeTags":  true,
-		"deviceManagementApplicabilityRuleOsEdition":  null,
-		"deviceManagementApplicabilityRuleOsVersion":  null,
-		"deviceManagementApplicabilityRuleDeviceMode":  null,
-		"isEnabled":  false,
-		"activeHoursStart":  "00:00:00.0000000",
-		"activeHoursEnd":  "00:00:00.0000000",
-		"desiredOsVersion":  null,
-		"scheduledInstallDays":  [],
-		"utcTimeOffsetInMinutes":  null,
-		"enforcedSoftwareUpdateDelayInDays":  null,
-		"updateScheduleType":  "alwaysUpdate",
-		"customUpdateTimeWindows":  []
+		"updateScheduleType":  "alwaysUpdate"
 	}
 ]

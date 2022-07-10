@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2022
@@ -26,13 +26,10 @@
     Siehe die GNU General Public License fuer weitere Details:
 	https://www.gnu.org/licenses/gpl-3.0.txt
 
-    To design your own SharePoint Theme use the UI Fabric Theme Designer
-    https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
-
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    04.03.2022 Konrad Brunner       Initial Version
+    08.07.2022 Konrad Brunner       Initial Version
 
 #>
 
@@ -44,39 +41,36 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-CoreLoopSharingCapability-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-LobbyForExternals-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
 
-# Logging in
-LoginTo-SPO
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-CoreLoopSharingCapability | O365" -ForegroundColor $CommandInfo
+Write-Host "Teams | Configure-LobbyForExternals | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Setting sharing capability
-Write-Host "Setting core loop sharing capability" -ForegroundColor $CommandInfo
-
-# TODO
-Write-Host "Never tested. Please check and update this script!"
-exit
-
-$TenantConfig = Get-SPOTenant
-if ($TenantConfig.CoreLoopSharingCapability -ne "ExternalUserAndGuestSharing")
+# Checking external content sharing control
+Write-Host "external content sharing control" -ForegroundColor $CommandInfo
+$Policy = Get-CsTeamsMeetingPolicy -Identity Global
+if ($Policy.AutoAdmittedUsers -ne "EveryoneInCompanyExcludingGuests")
 {
-    Write-Warning "sharing capability was set to $($TenantConfig.CoreLoopSharingCapability). Setting now sharing capability to 'ExternalUserAndGuestSharing'"
-    Set-SPOTenant -CoreLoopSharingCapability "ExternalUserAndGuestSharing"
+    Write-Warning "AutoAdmittedUsers was set to '$($Policy.AutoAdmittedUsers)'. Setting now to 'EveryoneInCompanyExcludingGuests'."
+    Set-CsTeamsMeetingPolicy -Identity Global -AutoAdmittedUsers "EveryoneInCompanyExcludingGuests"
 }
 else
 {
-    Write-Host "Sharing capability was already set to 'ExternalUserAndGuestSharing'" -ForegroundColor $CommandSuccess
+    Write-Host "AutoAdmittedUsers was already set to 'EveryoneInCompanyExcludingGuests'."
 }
 
 #Stopping Transscript

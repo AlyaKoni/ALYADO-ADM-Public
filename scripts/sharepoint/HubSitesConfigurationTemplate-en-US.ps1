@@ -962,3 +962,7 @@ $hubSites = @(
         homePageTemplate = $homePageTemplateColHubTeamSite
     }
 )
+$rootSiteHeaderLayout = "Compact"   # Standard, Compact (others not yet supported by MS)
+$rootSiteHeaderEmphasis = "None"  # None, Neutral, Soft, Strong
+$rootSiteSiteLogoUrl = $AlyaLogoUrlQuad
+$rootSiteQuickLaunchEnabled = $false
