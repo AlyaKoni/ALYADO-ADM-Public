@@ -241,8 +241,15 @@ $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteNa
 
 # Installing app package
 Write-Host "Installing app package" -ForegroundColor $CommandInfo
-Install-PnPApp -Connection $siteCon -Identity $app.Id -Scope "Tenant" -Wait
-#TODO Update
+$sapp = Get-PnPApp -Connection $siteCon -Identity $app.Id
+if (-Not $sapp)
+{
+    Install-PnPApp -Connection $siteCon -Identity $app.Id -Scope "Tenant" -Wait
+}
+else
+{
+    #TODO Update
+}
 
 #Configuring learning setting
 #LogoutAllFrom-PnP
@@ -266,12 +273,12 @@ if($null -ne $sitePagesList) {
     }
     $clvPage = Add-PnPPage -Connection $siteCon -Name "CustomLearningViewer"
     $clvSection = Add-PnPPageSection -Connection $siteCon -Page $clvPage -SectionTemplate OneColumn -Order 1
-    $timeout = New-TimeSpan -Minutes 1 # wait for a minute then time out
+    $timeout = New-TimeSpan -Minutes 3 # wait for 3 minutes then time out
     $stopwatch = [diagnostics.stopwatch]::StartNew()
     Write-Host "." -NoNewline
     $WebPartsFound = $false
     while ($stopwatch.elapsed -lt $timeout) {
-        $comps = Get-PnPPageComponent -Connection $siteCon -page CustomLearningViewer.aspx 
+        $comps = Get-PnPPageComponent -Connection $siteCon -page CustomLearningViewer.aspx -ListAvailable
         if ($comps | where { $_.Name -eq "Microsoft 365 learning pathways administration"} ) {
             Write-Host "Microsoft 365 learning pathways web parts found"
             $WebPartsFound = $true
@@ -286,12 +293,11 @@ if($null -ne $sitePagesList) {
         break 
     }
     Add-PnPPageWebPart -Connection $siteCon -Page $clvPage -Component "Microsoft 365 learning pathways"
-    Set-PnPPage -Connection $siteCon -Identity $clvPage -Publish
     $clv = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningViewer.aspx</Value></Eq></Where></Query></View>"
     $clv["PageLayoutType"] = "SingleWebPartAppPage"
     $clv.Update()
+    $clv.File.Publish("Updated by Alya cloud configuration")
     Invoke-PnPQuery -Connection $siteCon
-    Set-PnPPage -Connection $siteCon -Identity $clvPage -Publish
 
     $cla = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningAdmin.aspx</Value></Eq></Where></Query></View>"
     if ($null -ne $cla) {
@@ -302,12 +308,11 @@ if($null -ne $sitePagesList) {
     $claPage = Add-PnPPage -Connection $siteCon "CustomLearningAdmin" -Publish
     $claSection = Add-PnPPageSection -Connection $siteCon -Page $claPage -SectionTemplate OneColumn -Order 1
     Add-PnPPageWebPart -Connection $siteCon -Page $claPage -Component "Microsoft 365 learning pathways administration"
-    Set-PnPPage -Connection $siteCon -Identity $claPage -Publish
     $cla = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningAdmin.aspx</Value></Eq></Where></Query></View>"
     $cla["PageLayoutType"] = "SingleWebPartAppPage"
     $cla.Update()
+    $cla.File.Publish("Updated by Alya cloud configuration")
     Invoke-PnPQuery -Connection $siteCon
-    Set-PnPPage -Connection $siteCon -Identity $claPage -Publish
 
 }
 else { 

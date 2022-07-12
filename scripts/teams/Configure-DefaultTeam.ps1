@@ -54,10 +54,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeam-$($Alya
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 LoginTo-Teams
 
 # =============================================================

@@ -208,7 +208,7 @@ if (-Not $JumpHostVm)
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
     $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
     $JumpHostVm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName
-    $tmp = Set-AzResource -ResourceId $JumpHostVm.Id -Tag @{displayName="Jump Host";ownerEmail=$Context.Account.Id} -Force
+    $tmp = Set-AzResource -ResourceId $JumpHostVm.Id -Tag @{displayName="Jump Host";ownerEmail=$Context.Account.Id} -ApiVersion "2022-03-01" -Force
 }
 
 # Checking anti malware vm extension
@@ -279,7 +279,7 @@ if (-Not [string]::IsNullOrEmpty($AlyaJumpHostStopTime))
     $tags += @{stopTime=$AlyaJumpHostStopTime}
 }
 $tags += @{ownerEmail=$Context.Account.Id}
-$tmp = Set-AzResource -ResourceId $vm.Id -Tag $tags -Force
+$tmp = Set-AzResource -ResourceId $vm.Id -Tag $tags -ApiVersion "2022-03-01" -Force
 
 #TODO Domain Join
 

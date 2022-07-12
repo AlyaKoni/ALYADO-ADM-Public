@@ -177,7 +177,7 @@ if (-Not $ImageHostVm)
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
     $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig -DisableBginfoExtension
     $ImageHostVm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName
-    $tmp = Set-AzResource -ResourceId $ImageHostVm.Id -Tag @{displayName="Image Host Server";ownerEmail=$Context.Account.Id;stopTime=$AlyaWvdStopTime} -Force
+    $tmp = Set-AzResource -ResourceId $ImageHostVm.Id -Tag @{displayName="Image Host Server";ownerEmail=$Context.Account.Id;stopTime=$AlyaWvdStopTime} -ApiVersion "2022-03-01" -Force
 }
 
 # Checking anti malware vm extension

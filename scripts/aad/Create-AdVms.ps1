@@ -226,7 +226,7 @@ if (-Not $AdVm1)
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
     $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
     $AdVm1 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName1
-    $tmp = Set-AzResource -ResourceId $AdVm1.Id -Tag @{displayName="Active Directory First";ownerEmail=$Context.Account.Id} -Force
+    $tmp = Set-AzResource -ResourceId $AdVm1.Id -Tag @{displayName="Active Directory First";ownerEmail=$Context.Account.Id} -ApiVersion "2022-03-01" -Force
 }
 
 # Checking ad vm 2
@@ -248,7 +248,7 @@ if (-Not $AdVm2)
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
     $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
     $AdVm2 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName2
-    $tmp = Set-AzResource -ResourceId $AdVm2.Id -Tag @{displayName="Active Directory Second";ownerEmail=$Context.Account.Id} -Force
+    $tmp = Set-AzResource -ResourceId $AdVm2.Id -Tag @{displayName="Active Directory Second";ownerEmail=$Context.Account.Id} -ApiVersion "2022-03-01" -Force
 }
 
 # Checking anti malware vm 1 extension

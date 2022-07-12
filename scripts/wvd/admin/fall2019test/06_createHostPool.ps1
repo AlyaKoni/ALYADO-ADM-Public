@@ -389,7 +389,7 @@ if($resourceGroup)
     $tags = @{}
     $tags += @{displayName="WVD $($HostPoolName)"}
     $tags += @{ownerEmail=$Context.Account.Id}
-    Set-AzResource -ResourceId $resourceGroup.ResourceId -Tag $tags -Force
+    Set-AzResource -ResourceId $resourceGroup.ResourceId -Tag $tags -ApiVersion "2022-03-01" -Force
 }
 
 Write-Host "Setting tags on vms" -ForegroundColor $CommandInfo
@@ -403,7 +403,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     $tags += @{displayName="WVD Host $($HostPoolName)"}
     $tags += @{stopTime=$AlyaWvdStopTime}
     $tags += @{ownerEmail=$Context.Account.Id}
-    $tmp = Set-AzResource -ResourceId $vm.Id -Tag $tags -Force
+    $tmp = Set-AzResource -ResourceId $vm.Id -Tag $tags -ApiVersion "2022-03-01" -Force
 }
 
 #Stopping Transscript

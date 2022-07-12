@@ -232,13 +232,13 @@ if (-Not $tags)
     $tags += @{stopTime=$AlyaWvdStopTime}
     $tags += @{ownerEmail=$Context.Account.Id}
 }
-Set-AzResource -ResourceGroupName $VmResourceGroupName -Name $VmToImage -ResourceType "Microsoft.Compute/VirtualMachines" -Tag $tags -Force
+Set-AzResource -ResourceGroupName $VmResourceGroupName -Name $VmToImage -ResourceType "Microsoft.Compute/VirtualMachines" -Tag $tags -ApiVersion "2022-03-01" -Force
 
 $tags = (Get-AzResource -ResourceGroupName $ImageResourceGroupName -Name $ImageName -ErrorAction SilentlyContinue).Tags
 $tags += @{displayName="AVD Image"}
 $tags += @{ownerEmail=$Context.Account.Id}
-Set-AzResource -ResourceGroupName $ImageResourceGroupName -Name $ImageName -ResourceType "Microsoft.Compute/images" -Tag $tags -Force
-Set-AzResource -ResourceGroupName $ImageResourceGroupName -Name ($ImageName+$DateString) -ResourceType "Microsoft.Compute/images" -Tag $tags -Force
+Set-AzResource -ResourceGroupName $ImageResourceGroupName -Name $ImageName -ResourceType "Microsoft.Compute/images" -Tag $tags -ApiVersion "2022-03-01" -Force
+Set-AzResource -ResourceGroupName $ImageResourceGroupName -Name ($ImageName+$DateString) -ResourceType "Microsoft.Compute/images" -Tag $tags -ApiVersion "2022-03-01" -Force
 
 # Stopping VM
 Write-Host "Stopping VM" -ForegroundColor $CommandInfo

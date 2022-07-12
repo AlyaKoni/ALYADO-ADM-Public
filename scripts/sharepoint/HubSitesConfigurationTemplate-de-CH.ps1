@@ -375,7 +375,7 @@ $homePageTemplateGenHubTeamSite = @"
 					&quot;searchablePlainTexts&quot;:{
 					
 						&quot;title&quot;:&quot;Featured&quot;,
-						&quot;items[0].title&quot;:&quot;Alya Support&quot;
+						&quot;items[0].title&quot;:&quot;Support&quot;
 						
 					},
 					&quot;imageSources&quot;:{},
@@ -676,7 +676,7 @@ $homePageTemplateColHubTeamSite = @"
 					&quot;searchablePlainTexts&quot;:{
 					
 						&quot;title&quot;:&quot;Quicklinks&quot;,
-						&quot;items[0].title&quot;:&quot;Alya Support&quot;
+						&quot;items[0].title&quot;:&quot;Support&quot;
 					
 					},
 					&quot;imageSources&quot;:{},
@@ -790,9 +790,9 @@ $homePageTemplateRootTeamSite = @"
 					&quot;items[0].title&quot;:&quot;Ich bin ein $($AlyaCompanyName) Mitarbeiter&quot;,&quot;items[1].title&quot;:&quot;Ich bin KEIN $($AlyaCompanyName) Mitarbeiter&quot;},
 					&quot;imageSources&quot;:{&quot;items[1].rawPreviewImageUrl&quot;:&quot;{site}_api{site}v2.1{site}sites{site}alyaconsulting031.sharepoint.com,0ea97c04-97f2-4c4b-9506-d823c3b6bd5a,d587f72d-9c8f-4de7-9d86-61c0a6912374{site}items{site}af646fff-dcb1-4cbd-8d5b-23b36dc6a23a{site}driveItem{site}thumbnails{site}0{site}c400x99999{site}content?preferNoRedirect=true&quot;},
 					
-					&quot;links&quot;:{&quot;baseUrl&quot;:&quot;{hosturl}&quot;,&quot;
-						items[0].sourceItem.url&quot;:&quot;{site}_layouts{site}15{site}sharepoint.aspx&quot;,&quot;
-						items[1].sourceItem.url&quot;:&quot;{hosturl}{site}sites{site}$($prefix)-COL-Hub&quot;},
+					&quot;links&quot;:{&quot;baseUrl&quot;:&quot;{hosturl}&quot;,
+						&quot;items[0].sourceItem.url&quot;:&quot;{hosturl}/_layouts/15/sharepoint.aspx&quot;,
+						&quot;items[1].sourceItem.url&quot;:&quot;{hosturl}/sites/$($prefix)-COL-Hub&quot;},
 					
 					&quot;componentDependencies&quot;:{&quot;layoutComponentId&quot;:&quot;706e33c8-af37-4e7b-9d22-6e5694d92a6f&quot;}}, &quot;dynamicDataPaths&quot;: {}, 
 					&quot;dynamicDataValues&quot;: {}}" ControlId="c70391ea-0b10-4ee9-b2b4-006d3fcad0cd" Order="2" Column="1" />
@@ -851,8 +851,8 @@ $homePageTemplateRootTeamSite = @"
 					&quot;imageSources&quot;:{&quot;items[1].rawPreviewImageUrl&quot;:&quot;{site}_api{site}v2.1{site}sites{site}alyaconsulting031.sharepoint.com,0ea97c04-97f2-4c4b-9506-d823c3b6bd5a,d587f72d-9c8f-4de7-9d86-61c0a6912374{site}items{site}af646fff-dcb1-4cbd-8d5b-23b36dc6a23a{site}driveItem{site}thumbnails{site}0{site}c400x99999{site}content?preferNoRedirect=true&quot;},
 					
 					&quot;links&quot;:{&quot;baseUrl&quot;:&quot;{hosturl}&quot;,
-						&quot;items[0].sourceItem.url&quot;:&quot;{site}_layouts{site}15{site}sharepoint.aspx&quot;,
-						&quot;items[1].sourceItem.url&quot;:&quot;{hosturl}{site}sites{site}$($prefix)-COL-Hub&quot;},
+						&quot;items[0].sourceItem.url&quot;:&quot;{hosturl}/_layouts/15/sharepoint.aspx&quot;,
+						&quot;items[1].sourceItem.url&quot;:&quot;{hosturl}/sites/$($prefix)-COL-Hub&quot;},
 					
 					&quot;componentDependencies&quot;:{&quot;layoutComponentId&quot;:&quot;706e33c8-af37-4e7b-9d22-6e5694d92a6f&quot;}}, 
 					&quot;dynamicDataPaths&quot;: {}, &quot;dynamicDataValues&quot;: {}}" ControlId="c70391ea-0b10-4ee9-b2b4-006d3fcad0cd" Order="4" Column="1" />

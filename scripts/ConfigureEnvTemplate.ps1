@@ -182,7 +182,7 @@ $AlyaSharePointAdminUrl = "https://$($AlyaTenantNameId)-admin.sharepoint.com"
 $AlyaSharePointNewSiteOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
 $AlyaSharePointNewSiteAdditionalOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
 $AlyaSharePointNewSiteCollectionAdmins = @( $AlyaSharePointNewSiteOwner, $AlyaSharePointNewSiteAdditionalOwner )
-#https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
+#https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/7.0/theming-designer/index.html
 $AlyaSpThemeDef = @{ 
     "themePrimary" = "#000000";
     "themeLighterAlt" = "#898989";

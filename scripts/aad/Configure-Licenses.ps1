@@ -200,7 +200,7 @@ foreach ($group in $byGroup.Keys)
                 }
                 else
                 {
-                    Add-AzureADGroupMember  -ObjectId $byGroup[$group].Id -RefObjectId $adUser.ObjectId
+                    Add-AzureADGroupMember -ObjectId $byGroup[$group].Id -RefObjectId $adUser.ObjectId
                 }
             }
         }
