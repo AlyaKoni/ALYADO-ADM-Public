@@ -60,14 +60,17 @@ Write-Host "PSTN | List-User | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-Write-Host "CsOnlineUsers:" -ForegroundColor $CommandInfo
-Get-CsOnlineUser
-
-Write-Host "CsOnlineVoiceUsers:" -ForegroundColor $CommandInfo
-Get-CsOnlineVoiceUser
+Write-Host "CsOnlineUser account:" -ForegroundColor $CommandInfo
+Get-CsOnlineUser | select -Property AccountType, UserPrincipalName, AccountEnabled, AssignedPlan | ft
 
 Write-Host "CsOnlineUser lines:" -ForegroundColor $CommandInfo
-Get-CsOnlineUser | select -Property UserPrincipalName, LineURI, OnPremLineURI
+Get-CsOnlineUser | select -Property UserPrincipalName, LineURI, OnPremLineURI | ft
+
+Write-Host "CsOnlineVoiceUsers:" -ForegroundColor $CommandInfo | ft
+Get-CsOnlineVoiceUser | select -Property Name, EnterpriseVoiceEnabled, Number, PstnConnectivity | ft
+
+Write-Host "CsOnlineApplicationInstance:" -ForegroundColor $CommandInfo | ft
+Get-CsOnlineApplicationInstance | select -Property UserPrincipalName, DisplayName, PhoneNumber | ft
 
 #Stopping Transscript
 Stop-Transcript

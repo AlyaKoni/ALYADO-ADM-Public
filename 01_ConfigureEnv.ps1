@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+Ôªø#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021
@@ -42,6 +42,8 @@
     12.04.2021 Konrad Brunner       Added DevOps login
     12.07.2021 Konrad Brunner       Added own module path
     04.10.2021 Konrad Brunner       Proxy default credentials
+    04.08.2022 Konrad Brunner       Added simple password generator
+    18.08.2022 Konrad Brunner       SelectItem
 
 #>
 
@@ -132,6 +134,7 @@ if ($AlyaModulePath -ne $AlyaDefaultModulePath)
         $env:PSModulePath = "$($AlyaModulePath);"+$env:PSModulePath
     }
 }
+$AlyaPsEdition = ($PSVersionTable).PSEdition
 
 <# CLIENT SETTINGS #>
 $AlyaOfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE") #WINPROJ.EXE, VISIO.EXE, ONENOTE.EXE, MSPUB.EXE, MSACCESS.EXE
@@ -315,6 +318,26 @@ function Increase-ConsoleWidth(
     } catch {
         Write-Error $_.Exception -ErrorAction Continue
     }
+}
+
+function Get-Password(
+    [int] [Parameter(Mandatory = $true)] $length)
+{
+    $allPwdChars = @(
+        "QWERTYUIOPASDFGHJKLZXCVBNM",
+        "qwertyuiopasdfghjklzxcvbnm",
+        "0123456789",
+        "!@#$%()-_=+"
+    )
+    $rnd = [System.Random]::new()
+    $pwd = ""
+    for ($n=0; $n -lt $length; $n++)
+    {
+        $row = ($n % 4)
+        $chars = $allPwdChars[$row].ToCharArray()
+        $pwd += $chars[$rnd.Next(0, $chars.Length - 1)];
+    }
+    return $pwd
 }
 
 function Wait-UntilProcessEnds(
@@ -528,7 +551,8 @@ function Install-ModuleIfNotInstalled (
     [string] [Parameter(Mandatory = $true)] $moduleName,
     [Version] $minimalVersion = "0.0.0.0",
     [Version] $exactVersion = "0.0.0.0",
-    [bool] $autoUpdate = $true
+    [bool] $autoUpdate = $true,
+    [bool]$AllowPrerelease = $false
 )
 {
     if (-Not (Is-InternetConnected))
@@ -565,7 +589,7 @@ function Install-ModuleIfNotInstalled (
         Install-ModuleIfNotInstalled "PowerShellGet"
         throw "PowerShellGet updated! Please restart your powershell session"
     }
-    if ((Get-PackageProvider -Name NuGet -Force).Version -lt '2.8.5.201')
+    if ((Get-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue).Version -lt '2.8.5.201')
     {
         Write-Warning "Installing nuget"
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
@@ -659,22 +683,22 @@ function Install-ModuleIfNotInstalled (
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
 	        {
-	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose -AcceptLicense
+	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
 	        }
 	        else
 	        {
-                Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -Force -Verbose -AcceptLicense
+                Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
 	        }
         }
         else
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
 	        {
-	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose
+	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose
 	        }
 	        else
 	        {
-                Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -Force -Verbose
+                Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose
 	        }
         }
         $module = Get-Module -Name $moduleName -ListAvailable |`
@@ -854,6 +878,9 @@ function LoginTo-Az(
     [string] [Parameter(Mandatory = $false)] $AuthScope = $null)
 {
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
+
+    Update-AzConfig -Scope Process -DisplaySurveyMessage $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+    Update-AzConfig -Scope Process -EnableDataCollection $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
 
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     if ($AlyaContext)
@@ -1721,10 +1748,10 @@ function Patch-MsGraph
 }
 
 <# NETWORKING FUNCTIONS #>
-$AlyaWOctet†=†16777216
-$AlyaXOctet†=†65536
-$AlyaYOctet†=†256
-$AlyaZOctet†=†1
+$AlyaWOctet = 16777216
+$AlyaXOctet = 65536
+$AlyaYOctet = 256
+$AlyaZOctet = 1
 function IP-toINT64()
 {
     param ($ip)
@@ -1832,9 +1859,9 @@ function Get-GatewayNetworkAddress()
     {
         $g = $gwcidr
     }
-    for†($i†=†$n†+†1;†$i†-lt†$g†+†1;†$i++)†
-    {†
-        $ipi†=†$ipi†+†[math]::pow(2,†32†-†$i)†
+    for¬†($i¬†=¬†$n¬†+¬†1;¬†$i¬†-lt¬†$g¬†+¬†1;¬†$i++)¬†
+    {¬†
+        $ipi¬†=¬†$ipi¬†+¬†[math]::pow(2,¬†32¬†-¬†$i)¬†
     }
     INT64-toIP($ipi)
 }
@@ -1863,11 +1890,11 @@ function Split-NetworkAddressWithGateway()
     $networks += (INT64-toIP -int $NextIp) + "/$cidr"
     while($true)
     {
-        $NextIp = $NextIp + [math]::pow(2,†32†-†$cidr)
+        $NextIp = $NextIp + [math]::pow(2,¬†32¬†-¬†$cidr)
         if ($NextIp -ge $GwIp) { break }
         if ((IP-toINT64(Get-BroadcastAddress -netw $NextIp -cidr $cidr)) -gt $GwIp)
         { 
-            $NextIp = $NextIp - [math]::pow(2,†32†-†($cidr + 1))
+            $NextIp = $NextIp - [math]::pow(2,¬†32¬†-¬†($cidr + 1))
             $cidr = $cidr + 1
             continue
         }
@@ -1875,6 +1902,36 @@ function Split-NetworkAddressWithGateway()
     }
     $networks += (INT64-toIP -int $GwIp) + "/$gwcidr"
     return $networks
+}
+function Get-FirstIpInNetwork()
+{
+    param ($netw, $netwandcidr)
+    if ($netwandcidr)
+    {
+        $parts = $netwandcidr.Split("/")
+        $netw = $parts[0]
+    }
+    $StartIp = IP-toINT64($netw)
+    $StartIp++
+    return (INT64-toIP -int $StartIp)
+}
+function Get-LastIpInNetwork()
+{
+    param ($netw, $nwmask, [int]$nwcidr, $netwandcidr)
+    if ($netwandcidr)
+    {
+        $parts = $netwandcidr.Split("/")
+        $netw = $parts[0]
+        $nwcidr = [int]$parts[1]
+    }
+    if ($nwmask -and -not $nwcidr)
+    {
+        $nwcidr = Mask-toCIDR -mask $nwmask
+    }
+    $EndIp = IP-toINT64($netw)
+    $EndIp += [math]::pow(2,¬†32¬†-¬†$nwcidr)
+    $EndIp--
+    return (INT64-toIP -int $EndIp)
 }
 function Split-NetworkAddressWithoutGateway()
 {
@@ -1897,11 +1954,11 @@ function Split-NetworkAddressWithoutGateway()
     $networks += (INT64-toIP -int $NextIp) + "/$cidr"
     while($true)
     {
-        $NextIp = $NextIp + [math]::pow(2,†32†-†$cidr)
+        $NextIp = $NextIp + [math]::pow(2,¬†32¬†-¬†$cidr)
         if ($NextIp -ge $GwIp) { break }
         if ((IP-toINT64(Get-BroadcastAddress -netw $NextIp -cidr $cidr)) -gt $GwIp)
         { 
-            $NextIp = $NextIp - [math]::pow(2,†32†-†($cidr + 1))
+            $NextIp = $NextIp - [math]::pow(2,¬†32¬†-¬†($cidr + 1))
             $cidr = $cidr + 1
             continue
         }
@@ -1983,3 +2040,16 @@ if ($AlyaAzureNetwork -and $AlyaTestNetwork -and $AlyaAzureNetwork -ne "PleaseSp
         exit
     }
 }
+
+function SelectItem()
+{
+    Param(
+        $list,
+        $message = "Please select an item",
+        [ValidateSet(‚ÄúSingle‚Äù,‚ÄùMultiple‚Äù,‚ÄùNone‚Äù)]
+        $outputMode = "Single"
+    )
+    $sel = $list | Out-GridView -Title $message -OutputMode $outputMode
+    return $sel
+}
+

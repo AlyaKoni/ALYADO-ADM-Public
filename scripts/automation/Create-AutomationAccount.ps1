@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021
@@ -63,7 +63,10 @@ if ($AlyaSubscriptionNameTest -and $AlyaSubscriptionNameTest -ne $AlyaSubscripti
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.KeyVault"
+Install-ModuleIfNotInstalled "Az.Automation"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 
 # Logins
@@ -86,6 +89,48 @@ if (-Not $Context)
     Exit 1
 }
 
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.KeyVault" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.KeyVault" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Write-Warning "Resource provider Microsoft.KeyVault not registered. Registering now resource provider Microsoft.KeyVault"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.KeyVault" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.KeyVault" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
+}
+
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.Automation" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Automation" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Write-Warning "Resource provider Microsoft.Automation not registered. Registering now resource provider Microsoft.Automation"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.Automation" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Automation" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
+}
+
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.Insights" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Write-Warning "Resource provider Microsoft.Insights not registered. Registering now resource provider Microsoft.Insights"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.Insights" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
+}
+
 # Checking subscriptions
 Write-Host "Checking subscriptions" -ForegroundColor $CommandInfo
 $Subscriptions = ""
@@ -105,8 +150,8 @@ if (-Not $ResGrp)
     $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Automation";ownerEmail=$Context.Account.Id}
 }
 
-# Checking ressource group
-Write-Host "Checking ressource group for keyvault" -ForegroundColor $CommandInfo
+# Checking KeyVault ressource group
+Write-Host "Checking KeyVault ressource group for keyvault" -ForegroundColor $CommandInfo
 $ResGrpKeyVault = Get-AzResourceGroup -Name $KeyVaultResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrpKeyVault)
 {
@@ -128,11 +173,24 @@ if (-Not $KeyVault)
     }
 }
 
+# Setting own key vault access
+Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
+$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All"
+    
 # Checking azure key vault certificate
 Write-Host "Checking azure key vault certificate" -ForegroundColor $CommandInfo
 $AzureCertifcateAssetName = "AzureRunAsCertificate"
 $AzureCertificateName = $AutomationAccountName + $AzureCertifcateAssetName
 $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -ErrorAction SilentlyContinue
+if ($AzureKeyVaultCertificate)
+{
+    if ($AzureKeyVaultCertificate.Expires -lt (Get-Date).AddHours(-1))
+    {
+        Write-Host "  Certificate in key vault has expired. Updating"
+        $AzureKeyVaultCertificate = $null
+    }
+}
 if (-Not $AzureKeyVaultCertificate)
 {
     Write-Warning "Key Vault certificate not found. Creating the certificate $AzureCertificateName"
@@ -169,12 +227,14 @@ try
     $ProtectedCertificateBytes = $CertCollection.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, $PfxCertPlainPasswordForRunAsAccount)
     [System.IO.File]::WriteAllBytes($PfxCertPathForRunAsAccount, $ProtectedCertificateBytes)
     #Export the .cer file 
-    $CertificateRetrieved = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName
-    $CertificateBytes = $CertificateRetrieved.Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
-    [System.IO.File]::WriteAllBytes($CerCertPathForRunAsAccount, $CertificateBytes)
+    #$CertificateRetrieved = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName
+    #$CertificateBytes = $CertificateRetrieved.Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+    #[System.IO.File]::WriteAllBytes($CerCertPathForRunAsAccount, $CertificateBytes)
     #Read the .pfx file 
     $PfxCert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($PfxCertPathForRunAsAccount, $PfxCertPlainPasswordForRunAsAccount)
     $KeyValue = [System.Convert]::ToBase64String($PfxCert.GetRawCertData())
+    $CerThumbprint = [System.Convert]::ToBase64String($PfxCert.GetCertHash())
+    $CerThumbprintString = $PfxCert.Thumbprint
     $startDate = $PfxCert.NotBefore
     $endDate = $PfxCert.NotAfter
 
@@ -197,42 +257,37 @@ try
         #Creating application and service principal
         $KeyId = [Guid]::NewGuid()
         $HomePageUrl = "https://management.azure.com/subscriptions/$($Context.Subscription.Id)/resourceGroups/$($ResourceGroupName)/providers/Microsoft.Automation/automationAccounts/$($AutomationAccountName)"
-        $AzureAdApplication = New-AzADApplication -DisplayName $AutomationAccountName -HomePage $HomePageUrl -IdentifierUris ("http://" + $KeyId)
-        $AzureAdServicePrincipal = New-AzADServicePrincipal -ApplicationId $AzureAdApplication.ApplicationId
+        $AzureAdApplication = New-AzADApplication -DisplayName $AutomationAccountName -HomePage $HomePageUrl -IdentifierUris ("http://$AlyaDomainName/$KeyId")
+        $AzureAdServicePrincipal = New-AzADServicePrincipal -ApplicationId $AzureAdApplication.AppId
 
         #Create credential 
-        $AzureAdApplicationCredential = New-AzADAppCredential -ApplicationId $AzureAdApplication.ApplicationId -CertValue $KeyValue -StartDate $startDate -EndDate $endDate 
+        $AzureAdApplicationCredential = New-AzADAppCredential -ApplicationId $AzureAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $KeyValue -StartDate $startDate -EndDate $endDate 
 
         #Application access rights
         $RoleAssignment = $null
         $Retries = 0;
         While ($RoleAssignment -eq $null -and $Retries -le 6)
         {
-            $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName Contributor -ServicePrincipalName $AzureAdApplication.ApplicationId -scope ("/subscriptions/" + $Context.Subscription.Id) -ErrorAction SilentlyContinue
+            $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName Contributor -ServicePrincipalName $AzureAdApplication.AppId -scope ("/subscriptions/" + $Context.Subscription.Id) -ErrorAction SilentlyContinue
             Start-Sleep -s 10
-            $RoleAssignment = Get-AzRoleAssignment -ServicePrincipalName $AzureAdApplication.ApplicationId -ErrorAction SilentlyContinue
+            $RoleAssignment = Get-AzRoleAssignment -ServicePrincipalName $AzureAdApplication.AppId -ErrorAction SilentlyContinue
             $Retries++;
         }
 
         #Setting its own as owner (required for automated cert updates)
-        $AdAzureAdApplication = Get-AzureADApplication -Filter "AppId eq '$($AzureAdApplication.ApplicationId)'"
-        $AdAzureAdServicePrincipal = Get-AzureADServicePrincipal -Filter "AppId eq '$($AzureAdApplication.ApplicationId)'"
+        $AdAzureAdApplication = Get-AzureADApplication -Filter "AppId eq '$($AzureAdApplication.AppId)'"
+        $AdAzureAdServicePrincipal = Get-AzureADServicePrincipal -Filter "AppId eq '$($AzureAdApplication.AppId)'"
         Add-AzureADApplicationOwner -ObjectId $AdAzureAdApplication.ObjectId -RefObjectId $AdAzureAdServicePrincipal.ObjectId
 
         #Granting permissions
-        $AppPermissionAdGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "824c81eb-e3f8-4ee6-8f6d-de7f50d565b7","Role"
-        $RequiredResourceAccessAdGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
-        $RequiredResourceAccessAdGraph.ResourceAppId = "00000002-0000-0000-c000-000000000000"
-        $RequiredResourceAccessAdGraph.ResourceAccess = $AppPermissionAdGraph
-
         $AppPermissionMsGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "18a4783c-866b-4cc7-a460-3d5e5662c884","Role"
         $RequiredResourceAccessMsGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
         $RequiredResourceAccessMsGraph.ResourceAppId = "00000003-0000-0000-c000-000000000000"
         $RequiredResourceAccessMsGraph.ResourceAccess = $AppPermissionMsGraph
 
-        Set-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId -RequiredResourceAccess $RequiredResourceAccessAdGraph, $RequiredResourceAccessMsGraph
+        Set-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId -RequiredResourceAccess $RequiredResourceAccessMsGraph
         $tmp = Get-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId
-        while ($tmp.RequiredResourceAccess.Count -lt 2)
+        while ($tmp.RequiredResourceAccess.Count -lt 1)
         {
             Start-Sleep -Seconds 10
             $tmp = Get-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId
@@ -258,7 +313,7 @@ try
         else
         {
             $header = @{'Authorization'='Bearer '+$apiToken;'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-            $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$($AzureAdApplication.ApplicationId)/Consent?onBehalfOfAll=true"
+            $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$($AzureAdApplication.AppId)/Consent?onBehalfOfAll=true"
             Invoke-RestMethod -Uri $url -Headers $header -Method POST -ErrorAction Stop
             #TODO consent was working?
             Write-Warning "Please check in portal if admin consent was working"
@@ -269,14 +324,43 @@ try
         $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AutomationAccountName
     }
 
+    # Checking application credential
+    Write-Host "Checking application credential" -ForegroundColor $CommandInfo
+    $AppCredential = Get-AzADAppCredential -ApplicationId $AzureAdApplication.AppId -ErrorAction SilentlyContinue
+    if (-Not $AppCredential)
+    {
+        Write-Host "  Not found" -ForegroundColor $CommandWarning
+        $AzureAdApplicationCredential = New-AzADAppCredential -ApplicationId $AzureAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $CerKeyValue -StartDate $CerStartDate -EndDate $CerEndDate 
+    }
+    else
+    {
+        if ([System.Convert]::ToBase64String($AppCredential.CustomKeyIdentifier) -ne $CerThumbprint)
+        {
+            Write-Host "  Updating"
+            Remove-AzADAppCredential -ObjectId $AzureAdApplication.Id -KeyId $AppCredential.KeyId
+            $AzureAdApplicationCredential = New-AzADAppCredential -ApplicationId $AzureAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $CerKeyValue -StartDate $CerStartDate -EndDate $CerEndDate 
+        }
+    }
+    #Remove-AzAutomationCertificate -ResourceGroupName -ResourceGroupName $AlyaAutomationResourceGroupName -AutomationAccountName $AlyaAutomationAccountName -Name $AzureCertifcateAssetName -ErrorAction SilentlyContinue
+
     # Checking automation certificate asset
     Write-Host "Checking automation certificate asset" -ForegroundColor $CommandInfo
     $AutomationCertificate = Get-AzAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $AzureCertifcateAssetName -ErrorAction SilentlyContinue
+    $CertPassword = ConvertTo-SecureString $PfxCertPlainPasswordForRunAsAccount -AsPlainText -Force
     if (-Not $AutomationCertificate)
     {
         Write-Warning "Automation Certificate not found. Creating the Automation Certificate $AzureCertifcateAssetName"
-        $CertPassword = ConvertTo-SecureString $PfxCertPlainPasswordForRunAsAccount -AsPlainText -Force
-        New-AzAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $AzureCertifcateAssetName -Path $PfxCertPathForRunAsAccount -Password $CertPassword -Exportable
+        New-AzAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $AzureCertifcateAssetName -Path $PfxCertPathForRunAsAccount -Password $CertPassword -Exportable:$true
+    }
+    else
+    {
+        if ($AutomationCertificate.Thumbprint -ne $CerThumbprintString)
+        {
+            Write-Host "  Updating"
+	        Set-AzAutomationCertificate -ResourceGroupName $ResourceGroupName `
+                -AutomationAccountName $AutomationAccountName -Name $AzureCertifcateAssetName `
+                -Path $PfxCertPathForRunAsAccount -Password $CertPassword -Exportable:$true
+        }
     }
     #Remove-AzAutomationCertificate -ResourceGroupName -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $AzureCertificateName -ErrorAction SilentlyContinue
 
@@ -285,13 +369,55 @@ finally
 {
     #Removing exported certificate
     Remove-Item -Path $PfxCertPathForRunAsAccount -Force | Out-Null
-    Remove-Item -Path $CerCertPathForRunAsAccount -Force | Out-Null
+    #Remove-Item -Path $CerCertPathForRunAsAccount -Force | Out-Null
 }
+
+<#
+# Checking app management group access
+Write-Host "Checking app management group access" -ForegroundColor $CommandInfo
+$mgrp = $null
+$mgrpRets = Get-AzManagementGroup
+foreach($mgrpRet in $mgrpRets)
+{
+    if ($mgrpRet.DisplayName -eq $AlyaAutomationManagementGroupName)
+    {
+        $mgrp = $mgrpRet
+        break
+    }
+    $mgrpSRets = Get-AzManagementGroup -GroupName $mgrpRet.DisplayName -Expand
+    foreach($mgrpSRet in $mgrpSRets)
+    {
+        if ($mgrpSRet.DisplayName -eq $AlyaAutomationManagementGroupName)
+        {
+            $mgrp = $mgrpSRet
+            break
+        }
+    }
+    if ($mgrp)
+    {
+        break
+    }
+}
+if (-Not $mgrp) { throw "Management group '$AlyaAutomationManagementGroupName' not found" }
+$RoleAssignment = $null
+$Retries = 0;
+While ($RoleAssignment -eq $null -and $Retries -le 6)
+{
+    $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName Contributor -ServicePrincipalName $AzureAdServicePrincipal.AppId -scope ("/providers/Microsoft.Management/managementGroups/" + $AlyaAutomationManagementGroupName) -ErrorAction SilentlyContinue
+    Start-Sleep -s 10
+    $RoleAssignment = Get-AzRoleAssignment -ServicePrincipalName $AzureAdServicePrincipal.AppId -ErrorAction SilentlyContinue
+    $Retries++;
+}
+#>
+
+# Checking app key vault access
+Write-Host "Checking app key vault access" -ForegroundColor $CommandInfo
+Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $AzureAdServicePrincipal.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" # -PermissionsToKeys <keys-permissions>
 
 # Populate the ConnectionFieldValues
 $ConnectionTypeName = "AzureServicePrincipal"
 $ConnectionAssetName = "AzureRunAsConnection"
-$ConnectionFieldValues = @{"ApplicationId" = $AzureAdApplication.ApplicationId; "TenantId" = $Context.Tenant.Id; "CertificateThumbprint" = $PfxCert.Thumbprint; "SubscriptionId" = $Context.Subscription.Id} 
+$ConnectionFieldValues = @{"ApplicationId" = $AzureAdApplication.AppId; "TenantId" = $Context.Tenant.Id; "CertificateThumbprint" = $CerThumbprintString; "SubscriptionId" = $Context.Subscription.Id} 
 
 # Create an Automation connection asset named AzureRunAsConnection in the Automation account. This connection uses the service principal.
 Write-Host "Checking automation connection asset" -ForegroundColor $CommandInfo
@@ -300,6 +426,18 @@ if (-Not $AutomationConnection)
 {
     Write-Warning "Automation Connection not found. Creating the Automation Connection $ConnectionAssetName"
     New-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $ConnectionAssetName -ConnectionTypeName $ConnectionTypeName -ConnectionFieldValues $ConnectionFieldValues 
+}
+else
+{
+    if ($AutomationConnection.FieldDefinitionValues.SubscriptionId -ne $ConnectionFieldValues.SubscriptionId -or `
+        $AutomationConnection.FieldDefinitionValues.ApplicationId -ne $ConnectionFieldValues.ApplicationId -or `
+        $AutomationConnection.FieldDefinitionValues.CertificateThumbprint -ne $ConnectionFieldValues.CertificateThumbprint -or `
+        $AutomationConnection.FieldDefinitionValues.TenantId -ne $ConnectionFieldValues.TenantId)
+    {
+        Write-Host "  Updating"
+	    Remove-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $ConnectionAssetName -Force
+        New-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $ConnectionAssetName -ConnectionTypeName $ConnectionTypeName -ConnectionFieldValues $ConnectionFieldValues 
+    } 
 }
 #Remove-AzAutomationConnection -ResourceGroupName $ResourceGroupOMS -automationAccountName $AutomationAccountName -Name $connectionAssetName -Force -ErrorAction SilentlyContinue
 
@@ -351,9 +489,13 @@ if ($AlyaWvdTenantNameProd)
 }
 
 # Publish runbooks
-Write-Host "Checking automation runbooks" -ForegroundColor $CommandInfo
-$runbookPath = "$SolutionDataRoot\$($AutomationAccountName)rb01.ps1"
-if (-Not (Test-Path $runbookPath))
+if (-Not (Test-Path "$SolutionDataRoot\$($AlyaAutomationAccountName)"))
+{
+    New-Item -Path "$SolutionDataRoot\$($AlyaAutomationAccountName)" -ItemType Directory -Force
+}
+Write-Host "Checking automation runbook 01" -ForegroundColor $CommandInfo
+$runbookPath = "$SolutionDataRoot\$($AlyaAutomationAccountName)\$($AutomationAccountName)rb01.ps1"
+if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
 {
     $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook01.ps1" -Raw -Encoding UTF8
     $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
@@ -386,10 +528,12 @@ else
         $tmp = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb01")
     }
 }
-$runbookPath = "$SolutionDataRoot\$($AutomationAccountName)rb02.ps1"
-if (-Not (Test-Path $runbookPath))
+Write-Host "Checking automation runbook 02" -ForegroundColor $CommandInfo
+$runbookPath = "$SolutionDataRoot\$($AlyaAutomationAccountName)\$($AutomationAccountName)rb02.ps1"
+if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
 {
     $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook02.ps1" -Raw -Encoding UTF8
+    $rbContent = $rbContent.Replace("##AlyaModules##", "@{Name=`"Az.Accounts`"; Version=`$null}, @{Name=`"Az.Automation`"; Version=`$null}, @{Name=`"Az.Storage`"; Version=`$null}, @{Name=`"Az.Compute`"; Version=`$null}, @{Name=`"Az.Resources`"; Version=`$null}")
     $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
 }
 $Runnbook = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02") -ErrorAction SilentlyContinue
@@ -420,8 +564,9 @@ else
         $tmp = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02")
     }
 }
-$runbookPath = "$SolutionDataRoot\$($AutomationAccountName)rb03.ps1"
-if (-Not (Test-Path $runbookPath))
+Write-Host "Checking automation runbook 03" -ForegroundColor $CommandInfo
+$runbookPath = "$SolutionDataRoot\$($AlyaAutomationAccountName)\$($AutomationAccountName)rb03.ps1"
+if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
 {
     $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook03.ps1" -Raw -Encoding UTF8
     $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
@@ -454,10 +599,11 @@ else
         $tmp = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb03")
     }
 }
-$runbookPath = "$SolutionDataRoot\$($AutomationAccountName)rb04.ps1"
+Write-Host "Checking automation runbook 04" -ForegroundColor $CommandInfo
+$runbookPath = "$SolutionDataRoot\$($AlyaAutomationAccountName)\$($AutomationAccountName)rb04.ps1"
 if ($AlyaWvdTenantNameProd)
 {
-    if (-Not (Test-Path $runbookPath))
+    if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     {
         $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04wvd.ps1" -Raw -Encoding UTF8
         $rbContent = $rbContent.Replace("##AlyaTenantId##", $AlyaTenantId)
@@ -473,7 +619,7 @@ if ($AlyaWvdTenantNameProd)
 }
 else
 {
-    if (-Not (Test-Path $runbookPath))
+    if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     {
         $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04.ps1" -Raw -Encoding UTF8
         $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
@@ -508,6 +654,49 @@ else
     }
 }
 
+<#
+Write-Host "      Checking webhook rb05wh02"
+$webHookName = "$($AlyaAutomationAccountName+"rb05")wh02"
+$webhook = Get-AzAutomationWebhook -ResourceGroupName $AlyaAutomationResourceGroupName -AutomationAccountName $AlyaAutomationAccountName `
+                -Name $webHookName -ErrorAction SilentlyContinue
+if (-Not $webhook)
+{
+    Write-Host "        Creating webhook"
+    $expiryTime = [DateTimeOffset]((Get-Date).AddYears(1).AddDays(-1))
+    $WebhookParams = @{
+        SubscriptionId = $Context.Subscription.Id
+        ResourceGroupName = "xxx"
+        VmName = "xxx"
+        Action = "xxx"
+        AzureEnvironment = "AzureCloud"
+    }
+    $webhook = New-AzAutomationWebhook -ResourceGroupName $AlyaAutomationResourceGroupName -AutomationAccountName $AlyaAutomationAccountName `
+                -Name $webHookName -RunbookName ($AlyaAutomationAccountName+"rb05") `
+                -IsEnabled $true -ExpiryTime $expiryTime -Parameters $WebhookParams -Force
+    if ([string]::IsNullOrEmpty($webhook.WebhookURI))
+    {
+        Write-Error "Could not create webhook!" -ErrorAction Continue
+    }
+    else
+    {
+        # Checking azure key vault secret
+        Write-Host "        Checking azure key vault secret"
+        $AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $webHookName -ErrorAction SilentlyContinue
+        $WebhookURISave = ConvertTo-SecureString $webhook.WebhookURI -AsPlainText -Force
+        if (-Not $AzureKeyVaultSecret)
+        {
+            Write-Warning "        Key Vault secret not found. Creating the secret $webHookName"
+            $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $webHookName -SecretValue $WebhookURISave
+        }
+        else
+        {
+            Write-Warning "        Key Vault secret found. Updating the secret $webHookName"
+            $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $webHookName -SecretValue $WebhookURISave
+        }
+    }
+}
+#>
+
 # ===============================================
 # Starting runbooks
 # ===============================================
@@ -519,7 +708,7 @@ Write-Host "=======================================`n" -ForegroundColor $Command
 #Running runbooks 01 and 02
 Write-Host "Starting module update" -ForegroundColor $CommandInfo
 Write-Host "  Please wait..."
-$JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureModuleClass"="AzureRm";"AzureEnvironment"="AzureCloud"}
+$JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureModuleClass"="Az";"AzureEnvironment"="AzureCloud"}
 $Job = Start-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb01") -Parameters $JobParams
 $doLoop = $true
 While ($doLoop) {

@@ -44,6 +44,16 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
+# Check pause during certificate update
+if ( (Get-Date).Day -eq 1 )
+{
+    if ( (Get-Date).Hour -ge 1 -and (Get-Date).Hour -le 7 )
+    {
+        Write-Output "Stopping execution to prevent errors during certificate update."
+        Exit
+    }
+}
+
 # Constants
 $RunAsConnectionName = "AzureRunAsConnection"
 $RunAsCertificateName = "AzureRunAsCertificate"
@@ -78,7 +88,7 @@ try {
 	foreach($sub in $subs)
 	{
 		"Processing subscription: $($sub)"
-		Select-AzSubscription -SubscriptionId $sub | Out-Null
+        $null = Set-AzContext -Subscription $sub
 
 		Get-AzResourceGroup | foreach {
 			$ResGName = $_.ResourceGroupName
@@ -113,32 +123,64 @@ try {
 	            {
 	                if ($stopTime)
 	                {
-		                if ($runTime -lt $stopTime -and $runTime -gt $startTime)
-		                {
-						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-						    foreach ($VMStatus in $VMDetail.Statuses)
-						    {
-							    "- VM Status: $($VMStatus.Code)"
-							    if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
-							    {
-								    "- Starting VM"
-								    Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
-							    }
-		                    }
-		                }
-                        else
-		                {
-						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-						    foreach ($VMStatus in $VMDetail.Statuses)
-						    {
-							    "- VM Status: $($VMStatus.Code)"
-							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
-							    {
-								    "- Stopping VM"
-								    Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
-							    }
-		                    }
-		                }
+						if ($startTime -lt $stopTime)
+						{
+							if ($runTime -lt $stopTime -and $runTime -gt $startTime)
+							{
+								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+								foreach ($VMStatus in $VMDetail.Statuses)
+								{
+									"- VM Status: $($VMStatus.Code)"
+									if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
+									{
+										"- Starting VM"
+										Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
+									}
+								}
+							}
+							else
+							{
+								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+								foreach ($VMStatus in $VMDetail.Statuses)
+								{
+									"- VM Status: $($VMStatus.Code)"
+									if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+									{
+										"- Stopping VM"
+										Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+									}
+								}
+							}
+						}
+						else
+						{
+							if ($runTime -lt $startTime -and $runTime -gt $stopTime)
+							{
+								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+								foreach ($VMStatus in $VMDetail.Statuses)
+								{
+									"- VM Status: $($VMStatus.Code)"
+									if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+									{
+										"- Stopping VM"
+										Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+									}
+								}
+							}
+							else
+							{
+								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+								foreach ($VMStatus in $VMDetail.Statuses)
+								{
+									"- VM Status: $($VMStatus.Code)"
+									if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
+									{
+										"- Starting VM"
+										Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
+									}
+								}
+							}
+						}
 	                }
 		            else
 		            {
@@ -161,20 +203,7 @@ try {
 	            {
 	                if ($stopTime)
 	                {
-		                if ($runTime -gt $stopTime)
-		                {
-						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-						    foreach ($VMStatus in $VMDetail.Statuses)
-						    {
-							    "- VM Status: $($VMStatus.Code)"
-							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
-							    {
-								    "- Stopping VM"
-								    Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
-							    }
-		                    }
-		                }
-		                if ($runTime.Hour -eq 0 -and $stopTime.Hour -eq 23)
+		                if ($runTime -gt $stopTime -or ($runTime.Hour -eq 0 -and $stopTime.Hour -eq 23))
 		                {
 						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 						    foreach ($VMStatus in $VMDetail.Statuses)

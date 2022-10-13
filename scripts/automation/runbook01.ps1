@@ -166,6 +166,7 @@ function Login-AzureAutomation([bool] $AzModuleOnly) {
                 -TenantId $RunAsConnection.TenantId `
                 -ApplicationId $RunAsConnection.ApplicationId `
                 -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
+                -Subscription $RunAsConnection.SubscriptionID `
                 -Environment $AzureEnvironment
             Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID | Write-Verbose
         } else {
@@ -181,6 +182,7 @@ function Login-AzureAutomation([bool] $AzModuleOnly) {
         }
     } catch {
 		if (!$RunAsConnection) {
+			Write-Output $RunAsConnectionName
 			try { Write-Output ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
 			Write-Output "Connection 'AzureRunAsConnection' not found."
 		}
@@ -527,6 +529,7 @@ function Import-ModulesInAutomationAccordingToDependency([string[][]] $ModuleImp
 }
 
 function Update-ProfileAndAutomationVersionToLatest([string] $AutomationModuleName) {
+
     # Get the latest azure automation module version 
     $VersionAndDependencies = Get-ModuleDependencyAndLatestVersion $AutomationModuleName
 

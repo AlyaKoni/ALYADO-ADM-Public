@@ -35,12 +35,12 @@
 
 [CmdletBinding()]
 Param(
-    [string]$mailboxUpn = "info@swissshooting.ch" #$null
+    [string[]]$mailboxUpns = $null
 )
 
-if (-Not $mailboxUpn)
+if (-Not $mailboxUpns)
 {
-    throw "Please specify the mailboxUpn"
+    throw "Please specify the mailboxUpns"
 }
 
 #Reading configuration
@@ -67,36 +67,41 @@ try
     Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
     LoginTo-EXO
 
-    $mbx = Get-Mailbox $mailboxUpn
+    foreach($mailboxUpn in $mailboxUpns)
+    {
 
-    if (-Not $mbx.MessageCopyForSendOnBehalfEnabled)
-    {
-        Write-Warning "MessageCopyForSendOnBehalfEnabled was not enabled. Enabling it now"
-        Set-Mailbox $mailboxUpn -MessageCopyForSendOnBehalfEnabled $True
-    }
-    else
-    {
-        Write-Host "MessageCopyForSendOnBehalfEnabled was already enabled."
-    }
+        Write-Host "Mailbox: $mailboxUpn" -ForegroundColor $CommandInfo
+        $mbx = Get-Mailbox $mailboxUpn
 
-    if (-Not $mbx.MessageCopyForSentAsEnabled)
-    {
-        Write-Warning "MessageCopyForSentAsEnabled was not enabled. Enabling it now"
-        Set-Mailbox $mailboxUpn -MessageCopyForSentAsEnabled $True
-    }
-    else
-    {
-        Write-Host "MessageCopyForSentAsEnabled was already enabled."
-    }
+        if (-Not $mbx.MessageCopyForSendOnBehalfEnabled)
+        {
+            Write-Warning "MessageCopyForSendOnBehalfEnabled was not enabled. Enabling it now"
+            Set-Mailbox $mailboxUpn -MessageCopyForSendOnBehalfEnabled $True
+        }
+        else
+        {
+            Write-Host "MessageCopyForSendOnBehalfEnabled was already enabled."
+        }
 
-    if (-Not $mbx.MessageCopyForSMTPClientSubmissionEnabled)
-    {
-        Write-Warning "MessageCopyForSMTPClientSubmissionEnabled was not enabled. Enabling it now"
-        Set-Mailbox $mailboxUpn -MessageCopyForSMTPClientSubmissionEnabled $True
-    }
-    else
-    {
-        Write-Host "MessageCopyForSMTPClientSubmissionEnabled was already enabled."
+        if (-Not $mbx.MessageCopyForSentAsEnabled)
+        {
+            Write-Warning "MessageCopyForSentAsEnabled was not enabled. Enabling it now"
+            Set-Mailbox $mailboxUpn -MessageCopyForSentAsEnabled $True
+        }
+        else
+        {
+            Write-Host "MessageCopyForSentAsEnabled was already enabled."
+        }
+
+        if (-Not $mbx.MessageCopyForSMTPClientSubmissionEnabled)
+        {
+            Write-Warning "MessageCopyForSMTPClientSubmissionEnabled was not enabled. Enabling it now"
+            Set-Mailbox $mailboxUpn -MessageCopyForSMTPClientSubmissionEnabled $True
+        }
+        else
+        {
+            Write-Host "MessageCopyForSMTPClientSubmissionEnabled was already enabled."
+        }
     }
     
 }

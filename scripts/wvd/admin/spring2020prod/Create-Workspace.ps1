@@ -37,7 +37,7 @@
 Param(
     [string]$ResourceGroupName = "alyapinfresg040",
     [string]$WorkspaceName = "alyapinfavdw001",
-    [string]$WorkspaceDescription = "Stellt VMs für Data Sience zur Verfügung",
+    [string]$WorkspaceDescription = "Stellt VMs fÃ¼r Data Sience zur VerfÃ¼gung",
     [string]$WorkspaceFriendlyName = "ALYA Data Sience"
 )
 
@@ -51,7 +51,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\spring2020prod\Create-Wor
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.DesktopVirtualization"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

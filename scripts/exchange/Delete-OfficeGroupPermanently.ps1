@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -45,7 +45,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Delete-OfficeGroupPermanen
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 
 # Logins

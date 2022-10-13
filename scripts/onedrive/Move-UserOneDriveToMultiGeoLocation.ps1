@@ -57,7 +57,8 @@ $allSites += $centralSite.ToUpper()
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
@@ -78,6 +79,10 @@ Write-Host "=====================================================`n" -Foreground
 # Getting users prefered data location
 Write-Host "Getting users prefered data location" -ForegroundColor $CommandInfo
 $res = Invoke-AzRestMethod -Method Get -Uri "https://graph.microsoft.com/beta/users/$($userUpn)?`$select=preferredDataLocation"
+if ($res.StatusCode -ge 400)
+{
+	throw "$($result.StatusCode): $($result.Content)"
+}
 $resObj = $res.Content | ConvertFrom-Json
 $preferredDatalocation = $resObj.preferredDatalocation
 if ($resObj.error)

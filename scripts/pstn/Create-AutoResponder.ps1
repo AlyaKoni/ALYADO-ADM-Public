@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     03.04.2022 Konrad Brunner       Initial Version
+    16.08.2022 Konrad Brunner       External redirect and options
 
 #>
 
@@ -43,11 +44,59 @@ Param(
     $attendantNumber = "+41625620460",
     [ValidateNotNullOrEmpty()]
     $callGroupUserUpns = @("konrad.brunner@alyaconsulting.ch"),
-    $setCallerIdToAutoResponder = $false
+    $redirectToExternalNumber = $null,
+    $redirectToExternalNumberByMenu = $null,
+    $setCallerIdToAutoResponder = $false,
+    [ValidateNotNullOrEmpty()]
+    $officeHourMorningStart = "08:00",
+    [ValidateNotNullOrEmpty()]
+    $officeHourMorningEnd = "12:00",
+    [ValidateNotNullOrEmpty()]
+    $officeHourAfternoonStart = "13:00",
+    [ValidateNotNullOrEmpty()]
+    $officeHourAfternoonEnd = "17:00",
+    $redirectToNextAgentAfterSeconds = 60,
+    $keepCallInQueueForSeconds = 120,
+    $presenceBasedRouting = $true,
+    $allLinesBusyTextToSpeechPrompt = "Leider sind aktuell alle unsere Leitung besetzt. Bitte hinterlassen Sie uns eine Nachricht oder versuchen Sie es später noch einmal.", #Only used if $redirectToExternalNumber $null
+    $pleaseWaitTextToSpeechPrompt = "Willkommen bei Alya Consulting! Der nächste freie Mitarbeiter kümmert sich gleich um Ihr Anliegen. Bitte haben Sie einen Moment Geduld.",
+    $outOfOfficeTimeTextToSpeechPrompt = "Willkommen bei Alya Consulting! Leider erreichen Sie uns ausserhalb unserer Öffnungszeiten. Bitte hinterlassen Sie uns eine Nachricht oder rufen Sie uns von Montag bis Freitag von 8 bis 12 Uhr oder von 13 bis 17 Uhr an.",
+    $allowSharedVoicemail = $true,
+    $afterHoursMenuTextToSpeechPrompt = "Drücken Sie 1 um uns eine Nachricht zu hinterlassen.",
+    $languageId = "de-DE",
+    $timeZoneId = "W. Europe Standard Time",
+    [ValidateSet(“Female”,”Male”)]
+    $voiceId = "Female",
+    $allowOptOut = $true,
+    $redirectAlways = $false `
 )
 if ($attendantNumber.StartsWith("tel:"))
 {
-    Write-Error "The number must not start with 'tel:'" -ErrorAction Continue
+    Write-Error "The attendantNumber must not start with 'tel:'" -ErrorAction Continue
+    exit
+}
+if ($redirectToExternalNumber -ne $null -and $redirectToExternalNumber.StartsWith("tel:"))
+{
+    Write-Error "The redirectToExternalNumber must not start with 'tel:'" -ErrorAction Continue
+    exit
+}
+if ($redirectToExternalNumber -ne $null -and $allowSharedVoicemail)
+{
+    Write-Warning "If you redirectToExternalNumber the allowSharedVoicemail will be ignored!" -ErrorAction Continue
+}
+if ($redirectToExternalNumberByMenu -ne $null -and $redirectToExternalNumberByMenu.StartsWith("tel:"))
+{
+    Write-Error "The redirectToExternalNumberByMenu must not start with 'tel:'" -ErrorAction Continue
+    exit
+}
+if ($redirectToNextAgentAfterSeconds -lt 15 -or $redirectToNextAgentAfterSeconds -gt 180)
+{
+    Write-Error "redirectToNextAgentAfterSeconds needs to be between 15 and 180" -ErrorAction Continue
+    exit
+}
+if ($keepCallInQueueForSeconds -lt 0 -or $keepCallInQueueForSeconds -gt 2700)
+{
+    Write-Error "keepCallInQueueForSeconds needs to be between 0 and 2700" -ErrorAction Continue
     exit
 }
 
@@ -75,14 +124,17 @@ Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 try
 {
     LoginTo-EXO
+
+    #Distribution Group
     $dGrp = Get-DistributionGroup -Identity $callGroupName -ErrorAction SilentlyContinue
     if (-Not $dGrp)
     {
         $grpAlias = $callGroupUpn.Replace("@$AlyaDomainName", "")
         Write-Warning "  Distribution group '$callGroupName' does not exist. Creating it now"
-        $dGrp = New-DistributionGroup -Name $callGroupName -Alias $grpAlias -PrimarySmtpAddress $callGroupUpn -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
+        $dGrp = New-DistributionGroup -Name $callGroupName -Alias $grpAlias -PrimarySmtpAddress $callGroupUpn -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false -ModerationEnabled $false
     }
-    $null = $dGrp | Set-DistributionGroup -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
+    $null = Set-DistributionGroup -Identity $dGrp.Identity -MemberJoinRestriction Closed -MemberDepartRestriction Closed -PrimarySmtpAddress $callGroupUpn -ModerationEnabled $false -RequireSenderAuthenticationEnabled $false
+    
     Write-Host "  checking members"
     $membs = Get-DistributionGroupMember -Identity $callGroupName
     foreach($callGroupUserUpn in $callGroupUserUpns)
@@ -115,7 +167,6 @@ if (-Not $appInstance)
 {
     Write-Warning "Application Instance $attendantUpn not found! Creating it now."
     $appinstanceAppId = "ce933385-9390-45d1-9512-c8d228074e07"
-    if ($attendantType -eq "CallQueue") { $appinstanceAppId = "11cd3e2e-fccb-42ad-ad00-878b93575e07" }
     $appInstance = New-CsOnlineApplicationInstance -UserPrincipalName $attendantUpn -ApplicationId $appinstanceAppId -DisplayName $attendantName -Force
     Start-Sleep -Seconds 10
 }
@@ -142,7 +193,9 @@ Write-Host "Checking phone number $attendantNumber for $attendantUpn" -Foregroun
 if ($appInstance.PhoneNumber -ne "tel:$attendantNumber")
 {
     Write-Warning "Changing phone number from '$($appInstance.PhoneNumber)' to '$attendantNumber'."
-    $null = Set-CsOnlineApplicationInstance -Identity $attendantUpn -OnpremPhoneNumber $attendantNumber -Force
+    $numberType = (Get-CsPhoneNumberAssignment -TelephoneNumber $appInstance.PhoneNumber.Replace("tel:","")).NumberType
+    Remove-CsPhoneNumberAssignment -Identity $attendantUpn -PhoneNumber $appInstance.PhoneNumber.Replace("tel:","") -PhoneNumberType $numberType
+    Set-CsPhoneNumberAssignment -Identity $attendantUpn -PhoneNumber $attendantNumber -PhoneNumberType $numberType
     Start-Sleep -Seconds 10
 }
 $appInstance = Get-CsOnlineApplicationInstance -Identity $attendantUpn
@@ -157,11 +210,29 @@ if (-Not $callQueue)
 }
 
 #OverflowThreshold Maximum calls in the queue
-#TimeoutThreshold Maximum wait time
-$null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId "de-DE" -RoutingMethod "Attendant" -PresenceBasedRouting $true `
-    -Users $null -AllowOptOut $true -AgentAlertTime 20 -UseDefaultMusicOnHold $true -ConferenceMode $true `
-    -OverflowThreshold 2 -OverflowAction SharedVoicemail -OverflowActionTarget $dGrp.ExternalDirectoryObjectId -EnableOverflowSharedVoicemailTranscription $true `    -OverflowSharedVoicemailTextToSpeechPrompt "Leider sind aktuell alle unsere Leitung besetzt. Bitte hinterlassen Sie uns eine Nachricht oder versuchen Sie es später noch einmal." `
-    -TimeoutThreshold 120 -TimeoutAction SharedVoicemail -TimeoutActionTarget $dGrp.ExternalDirectoryObjectId -EnableTimeoutSharedVoicemailTranscription $true `    -TimeoutSharedVoicemailTextToSpeechPrompt "Leider sind aktuell alle unsere Leitung besetzt. Bitte hinterlassen Sie uns eine Nachricht oder versuchen Sie es später noch einmal." `    -DistributionLists $dGrp.ExternalDirectoryObjectId
+#TimeoutThreshold Maximum wait time until TimeoutAction
+if ($redirectToExternalNumber -ne $null)
+{
+	$null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
+	    -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
+	    -OverflowThreshold 5 -OverflowAction Forward -OverflowActionTarget "tel:$redirectToExternalNumber" `	    -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction Forward -TimeoutActionTarget "tel:$redirectToExternalNumber" `	    -DistributionLists $dGrp.ExternalDirectoryObjectId
+}
+else
+{
+    if ($allowSharedVoicemail)
+    {
+	    $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
+	        -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
+	        -OverflowThreshold 5 -OverflowAction SharedVoicemail -OverflowActionTarget $dGrp.ExternalDirectoryObjectId -EnableOverflowSharedVoicemailTranscription $true `	        -OverflowSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `
+	        -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction SharedVoicemail -TimeoutActionTarget $dGrp.ExternalDirectoryObjectId -EnableTimeoutSharedVoicemailTranscription $true `	        -TimeoutSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `	        -DistributionLists $dGrp.ExternalDirectoryObjectId
+    }
+    else
+    {
+	    $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
+	        -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
+	        -OverflowThreshold 5 -OverflowAction DisconnectWithBusy -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction DisconnectWithBusy `	        -DistributionLists $dGrp.ExternalDirectoryObjectId
+    }
+}
 
 $queueInstanceAssoc = $null
 try
@@ -175,32 +246,107 @@ if (-Not $queueInstanceAssoc)
 }
 
 Write-Host "Checking auto attendant $callQueueName" -ForegroundColor $CommandInfo
-$autoAttendant = Get-CsAutoAttendant -NameFilter $attendantName
-if (-Not $autoAttendant)
+if ($redirectAlways)
 {
-    Write-Warning "Auto attendant '$attendantName' not found! Creating it now."
+    $externalNumberEntity = New-CsAutoAttendantCallableEntity -Identity $redirectToExternalNumber -Type ExternalPstn
+    $defaultOption = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Automatic -CallTarget $externalNumberEntity
+    $defaultMenu = New-CsAutoAttendantMenu -Name "Default Menu" -MenuOptions @($defaultOption) -DirectorySearchMethod None
+    $defaultCallFlow = New-CsAutoAttendantCallFlow -Name "Default call flow" -Menu $defaultMenu
 
+    $appInstanceEntity = New-CsAutoAttendantCallableEntity -Identity $appInstance.ObjectId -Type ApplicationEndpoint
+    $autoAttendant = Get-CsAutoAttendant -NameFilter $attendantName -ErrorAction SilentlyContinue
+    if (-Not $autoAttendant)
+    {
+        Write-Warning "Auto attendant '$attendantName' not found! Creating it now."
+        $null = New-CsAutoAttendant -Name $attendantName -LanguageId $languageId -VoiceId $voiceId -TimeZoneId $timeZoneId `
+            -Operator $appInstanceEntity -DefaultCallFlow $defaultCallFlow
+    }
+    else
+    {
+        Write-Warning "Updating '$attendantName'."
+        $autoAttendant.DefaultCallFlow = $defaultCallFlow
+        $autoAttendant.CallFlows = $null
+        $autoAttendant.CallHandlingAssociations = $null
+        $autoAttendant.LanguageId = $languageId
+        $autoAttendant.VoiceId = $voiceId
+        $autoAttendant.TimeZoneId = $timeZoneId
+        $autoAttendant.Operator = $appInstanceEntity
+        Set-CsAutoAttendant -Instance $autoAttendant -Force
+    }
+    $autoAttendant = Get-CsAutoAttendant -NameFilter $attendantName
+}
+else
+{
     $queueInstanceEntity = New-CsAutoAttendantCallableEntity -Identity $queueInstance.ObjectId -Type ApplicationEndpoint
     $defaultOption = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Automatic -CallTarget $queueInstanceEntity
     $defaultMenu = New-CsAutoAttendantMenu -Name "Default Menu" -MenuOptions @($defaultOption) -DirectorySearchMethod None
-    $greetingPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt "Willkommen bei der Schreinerei Dubs! Der nächste freie Mitarbeiter kümmert sich gleich um Ihr Anliegen. Bitte haben Sie einen Moment Geduld."
+    $greetingPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $pleaseWaitTextToSpeechPrompt
     $defaultCallFlow = New-CsAutoAttendantCallFlow -Name "Default call flow" -Greetings @($greetingPrompt) -Menu $defaultMenu
-
-    $sharedVoicemailEntity = New-CsAutoAttendantCallableEntity -Identity $dGrp.ExternalDirectoryObjectId -Type SharedVoiceMail -EnableTranscription -EnableSharedVoicemailSystemPromptSuppression
-    $afterHoursGreetingPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt "Willkommen bei der Schreinerei Dubs! Leider erreichen Sie uns ausserhalb unserer Öffnungszeiten. Bitte hinterlassen Sie uns eine Nachricht oder rufen Sie uns von Montag bis Freitag von 8 bis 12 Uhr oder von 13 bis 17 Uhr an."
-    $afterHoursMenuOptionOne = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Tone1 -CallTarget $sharedVoicemailEntity
-    $afterHoursMenuPromptOne = New-CsAutoAttendantPrompt -TextToSpeechPrompt "Drücken Sie 1 um uns eine Nachricht zu hinterlassen."
-    $afterHoursMenu = New-CsAutoAttendantMenu -Name "After Hours menu" -MenuOptions @($afterHoursMenuOptionOne) -Prompts @($afterHoursMenuPromptOne)
-    $afterHoursCallFlow = New-CsAutoAttendantCallFlow -Name "After Hours call flow" -Greetings @($afterHoursGreetingPrompt) -Menu $afterHoursMenu
-    $timerange1 = New-CsOnlineTimeRange -Start 08:00 -end 12:00
-    $timerange2 = New-CsOnlineTimeRange -Start 13:00 -end 17:00
+    $afterHoursGreetingPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $outOfOfficeTimeTextToSpeechPrompt
+    if ($allowSharedVoicemail)
+    {
+        if ($redirectToExternalNumberByMenu -ne $null)
+        {
+            $sharedVoicemailEntity = New-CsAutoAttendantCallableEntity -Identity $dGrp.ExternalDirectoryObjectId -Type SharedVoiceMail -EnableTranscription -EnableSharedVoicemailSystemPromptSuppression
+            $externalNumberEntity = New-CsAutoAttendantCallableEntity -Identity $redirectToExternalNumberByMenu -Type ExternalPstn
+            $afterHoursMenuPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $afterHoursMenuTextToSpeechPrompt
+            $afterHoursMenuOptionOne = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Tone1 -CallTarget $sharedVoicemailEntity
+            $afterHoursMenuOptionTwo = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Tone2 -CallTarget $externalNumberEntity
+            $afterHoursMenu = New-CsAutoAttendantMenu -Name "After Hours menu" -MenuOptions @($afterHoursMenuOptionOne,$afterHoursMenuOptionTwo) -Prompts @($afterHoursMenuPrompt)
+            $afterHoursCallFlow = New-CsAutoAttendantCallFlow -Name "After Hours call flow" -Greetings @($afterHoursGreetingPrompt) -Menu $afterHoursMenu
+        }
+        else
+        {
+            $sharedVoicemailEntity = New-CsAutoAttendantCallableEntity -Identity $dGrp.ExternalDirectoryObjectId -Type SharedVoiceMail -EnableTranscription -EnableSharedVoicemailSystemPromptSuppression
+            $afterHoursMenuPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $afterHoursMenuTextToSpeechPrompt
+            $afterHoursMenuOptionOne = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Tone1 -CallTarget $sharedVoicemailEntity
+            $afterHoursMenu = New-CsAutoAttendantMenu -Name "After Hours menu" -MenuOptions @($afterHoursMenuOptionOne) -Prompts @($afterHoursMenuPrompt)
+            $afterHoursCallFlow = New-CsAutoAttendantCallFlow -Name "After Hours call flow" -Greetings @($afterHoursGreetingPrompt) -Menu $afterHoursMenu
+        }
+    }
+    else
+    {
+        if ($redirectToExternalNumberByMenu -ne $null)
+        {
+            $externalNumberEntity = New-CsAutoAttendantCallableEntity -Identity $redirectToExternalNumberByMenu -Type ExternalPstn
+            $afterHoursMenuPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $afterHoursMenuTextToSpeechPrompt
+            $afterHoursMenuOptionOne = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Tone1 -CallTarget $externalNumberEntity
+            $afterHoursMenu = New-CsAutoAttendantMenu -Name "After Hours menu" -MenuOptions @($afterHoursMenuOptionOne) -Prompts @($afterHoursMenuPrompt)
+            $afterHoursCallFlow = New-CsAutoAttendantCallFlow -Name "After Hours call flow" -Greetings @($afterHoursGreetingPrompt) -Menu $afterHoursMenu
+        }
+        else
+        {
+            $afterHoursMenuOptionOne = New-CsAutoAttendantMenuOption -Action Disconnect -DtmfResponse Automatic
+            $Menu = New-CsAutoAttendantMenu -Name “After Hours menu” -MenuOptions @($afterHoursMenuOptionOne)
+            $afterHoursCallFlow = New-CsAutoAttendantCallFlow -Name "After Hours call flow" -Greetings @($afterHoursGreetingPrompt) -Menu $afterHoursMenu
+        }
+    }
+    $timerange1 = New-CsOnlineTimeRange -Start $officeHourMorningStart -end $officeHourMorningEnd
+    $timerange2 = New-CsOnlineTimeRange -Start $officeHourAfternoonStart -end $officeHourAfternoonEnd
     $afterHoursSchedule = New-CsOnlineSchedule -Name "After Hours schedule" -WeeklyRecurrentSchedule -MondayHours @($timerange1, $timerange2) -TuesdayHours @($timerange1, $timerange2) -WednesdayHours @($timerange1, $timerange2) -ThursdayHours @($timerange1, $timerange2) -FridayHours @($timerange1, $timerange2) -Complement
     $afterHoursCallHandlingAssociation = New-CsAutoAttendantCallHandlingAssociation -Type AfterHours -ScheduleId $afterHoursSchedule.Id -CallFlowId $afterHoursCallFlow.Id
 
     $appInstanceEntity = New-CsAutoAttendantCallableEntity -Identity $appInstance.ObjectId -Type ApplicationEndpoint
-    $null = New-CsAutoAttendant -Name $attendantName -LanguageId "de-DE" -VoiceId "Female" -TimeZoneId "W. Europe Standard Time" `
-        -EnableVoiceResponse -Operator $appInstanceEntity -DefaultCallFlow $defaultCallFlow `
-        -CallFlows @($afterHoursCallFlow) -CallHandlingAssociations @($afterHoursCallHandlingAssociation)
+    $autoAttendant = Get-CsAutoAttendant -NameFilter $attendantName -ErrorAction SilentlyContinue
+    if (-Not $autoAttendant)
+    {
+        Write-Warning "Auto attendant '$attendantName' not found! Creating it now."
+        $null = New-CsAutoAttendant -Name $attendantName -LanguageId $languageId -VoiceId $voiceId -TimeZoneId $timeZoneId `
+            -EnableVoiceResponse -Operator $appInstanceEntity -DefaultCallFlow $defaultCallFlow `
+            -CallFlows @($afterHoursCallFlow) -CallHandlingAssociations @($afterHoursCallHandlingAssociation)
+    }
+    else
+    {
+        Write-Warning "Updating '$attendantName'."
+        $autoAttendant.DefaultCallFlow = $defaultCallFlow
+        $autoAttendant.CallFlows = @($afterHoursCallFlow)
+        $autoAttendant.CallHandlingAssociations = @($afterHoursCallHandlingAssociation)
+        $autoAttendant.LanguageId = $languageId
+        $autoAttendant.VoiceId = $voiceId
+        $autoAttendant.TimeZoneId = $timeZoneId
+        $autoAttendant.Operator = $appInstanceEntity
+        Set-CsAutoAttendant -Instance $autoAttendant -Force
+    }
     $autoAttendant = Get-CsAutoAttendant -NameFilter $attendantName
 }
 
@@ -215,7 +361,7 @@ if (-Not $appInstanceAssoc)
     $null = New-CsOnlineApplicationInstanceAssociation -Identities @($appInstance.ObjectId) -ConfigurationId $autoAttendant.Identity -ConfigurationType "AutoAttendant"
 }
 
-if ($setCallerIdToAutoResponder)
+if ($setCallerIdToAutoResponder -eq $true)
 {
     Set-CsCallingLineIdentity -Identity "Global" -CallingIDSubstitute Resource -EnableUserOverride $false -ResourceAccount $appInstance.ObjectId -CompanyName $attendantName
 }

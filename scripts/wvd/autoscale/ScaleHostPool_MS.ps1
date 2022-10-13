@@ -57,7 +57,9 @@ $ActualDate = Get-Date
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Compute"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo

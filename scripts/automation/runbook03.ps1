@@ -53,8 +53,8 @@ $ErrorActionPreference = "Stop"
     1. Add the RunAs service principal as an owner of the application created during Automation Account creation. You can get the application
     id from the RunAs page in the Automation account and run the following commands locally after installly the AzureAD module from the PowerShellGallery.
     Connect-AzureAD
-    $Application = Get-AzureADApplication -Filter "AppId eq '123456789'"
-    $ServicePrincipal = Get-AzureADServicePrincipal -Filter "AppId eq '123456789'"
+    $Application = Get-AzADApplication -Filter "AppId eq '123456789'"
+    $ServicePrincipal = Get-AzADServicePrincipal -Filter "AppId eq '123456789'"
     Add-AzureADApplicationOwner -ObjectId $Application.ObjectId -RefObjectId $ServicePrincipal.ObjectId
     2. Grant permissions to the Application to be able to update itself. Go to Azure AD in the portal and search for the RunAs application
     in the App Registrations page (select all apps). 
@@ -160,7 +160,11 @@ try {
 }]
 }
 "@
-	Invoke-AzRestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$($Application.Id)" -Method PATCH -Payload $payload
+	$result = Invoke-AzRestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$($Application.Id)" -Method PATCH -Payload $payload
+	if ($result.StatusCode -ge 400)
+	{
+		throw "$($result.StatusCode): $($result.Content)"
+	}
 
 	Write-Output ("RunAs certificate credentials have been updated")
 } catch {

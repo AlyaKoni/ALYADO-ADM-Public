@@ -47,7 +47,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-AppCatalogSite
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
@@ -140,7 +141,7 @@ if (-Not $site)
     # Setting site design
     <#
 
-    Getting error: Die Website lässt keine Websitedesigns zu
+    Getting error: Die Website lï¿½sst keine Websitedesigns zu
 
     Write-Host "Setting site design" -ForegroundColor $CommandInfo
     if ($hubSiteDef.subSiteScript)

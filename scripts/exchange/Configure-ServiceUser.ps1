@@ -50,7 +50,9 @@ $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.KeyVault"
 Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in
@@ -151,6 +153,11 @@ if (-Not $KeyVault)
         Exit 1
     }
 }
+
+# Setting own key vault access
+Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
+$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All"
 
 # Checking azure key vault secret
 Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo

@@ -30,6 +30,8 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     27.06.2022 Konrad Brunner       Initial Version
+    16.09.2022 Konrad Brunner       More stable error handling
+    20.09.2022 Konrad Brunner       New handling by parsing error message
 
 #>
 
@@ -49,7 +51,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Add-AllAppsToConditionalAc
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
     
 # Logins
@@ -76,67 +79,200 @@ if (-Not $Context)
 Write-Host "Getting all applications from tenant" -ForegroundColor $CommandInfo
 $allApps = Get-AzADApplication
 $allApps += Get-AzADServicePrincipal
+$appsWithErrorExcluded = @()
+$appsWithErrorIncluded = @()
+#($allApps | where { $_.DisplayName -like "*Azure*" }).DisplayName
+#($allApps | where { $_.DisplayName -like "*Admin*" }).DisplayName
+#($allApps | where { $_.AppId -eq "0c1307d4-29d6-4389-a11c-5cbe7f65d7fa" }).DisplayName
+#($allApps | where { $_.Id -eq "0c1307d4-29d6-4389-a11c-5cbe7f65d7fa" }).DisplayName
 
 # Getting conditional access policy
 Write-Host "Getting conditional access policy" -ForegroundColor $CommandInfo
-$policy = Get-AzureADMSConditionalAccessPolicy | where { $_.displayName -eq $condAccessRuleName }
+$policies = (Invoke-AzRestMethod -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies").Content | ConvertFrom-Json
+$policyId = ($policies.value | where { $_.displayName -eq $condAccessRuleName }).id
+if (-Not $policyId)
+{
+	throw "Policy $condAccessRuleName not found"
+}
+$policy = Get-AzureADMSConditionalAccessPolicy -PolicyId $policyId
+if (-Not $policy.Conditions)
+{
+	throw "Not yet implemented: empty `$policy.Conditions"
+}
 if (-Not $policy.Conditions.Applications)
 {
     $policy.Conditions.Applications = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessApplicationCondition
-    $apps = @()
-}
-else
-{
-    $apps = $policy.Conditions.Applications.IncludeApplications
-}
-
-# Removing unwanted apps
-Write-Host "Removing unwanted apps" -ForegroundColor $CommandInfo
-$dirty = $false
-foreach ($app in $appIdsToExclude)
-{
-    if ($apps.Contains($app))
-    {
-   		Write-Host "  Removing $app"
-		$apps = $apps | where { $_ -ne $app }
-        $apps.Remove($app)
-        $dirty = $true
-    }
-}
-if ($dirty)
-{
-    $policy.Conditions.Applications.IncludeApplications = $apps
+    $policy.Conditions.Applications.IncludeApplications = @('none')
+    $policy.Conditions.Applications.ExcludeApplications = @()
     Set-AzureADMSConditionalAccessPolicy -PolicyId $policy.id -Conditions $policy.Conditions
+    $policy = Get-AzureADMSConditionalAccessPolicy -PolicyId $policy.id
 }
 
-# Adding apps
-Write-Host "Adding apps" -ForegroundColor $CommandInfo
-foreach($app in $allApps)
+# Setting excluded apps
+Write-Host "Setting excluded apps" -ForegroundColor $CommandInfo
+$dirty = $true
+$appsEx = $appIdsToExclude
+$unSupportedFirstyPartyApplications = @()
+while ($true)
 {
-    if ($appIdsToExclude -contains $app.AppId)
+    foreach ($app in $unSupportedFirstyPartyApplications)
     {
-        Write-Host "Excluded $($app.DisplayName)" -ForegroundColor Yellow
-        continue
+        if ($appsEx -contains $app)
+        {
+		    $appsEx = $appsEx | where { $_ -ne $app }
+            $dirty = $true
+        }
     }
-    if (-Not $apps.Contains($app.AppId))
+    if ($dirty)
     {
-        #Start-Sleep -Seconds 10
-        $appBkp = $apps
-        $apps += $app.AppId
+        $dirty = $false
+        $policy.Conditions.Applications.ExcludeApplications = $appsEx
+        $retries = 10
+        $wTime = 2
         try
         {
-            $policy.Conditions.Applications.IncludeApplications = $apps
+            Write-Host "  Saving ExcludeApplications"
             Set-AzureADMSConditionalAccessPolicy -PolicyId $policy.id -Conditions $policy.Conditions
-            Write-Host "Added $($app.DisplayName)" -ForegroundColor Green
+            break
         }
         catch
         {
-            Write-Host "Can't add $($app.DisplayName)" -ForegroundColor Red
-            $apps = $appBkp
+            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*")
+            {
+                $retries = $retries - 1
+                Write-Host "  TooManyRequests, retrying." -ForegroundColor $CommandError
+                if ($retries -lt 0)
+                {
+                    throw
+                }
+                Start-Sleep -Seconds $wTime
+                $wTime = $wTime * 2
+            }
+            else
+            {
+                if ($_.Exception.ToString() -like "*HttpStatusCode: InternalServerError*")
+                {
+                    $retries = $retries - 1
+                    Write-Host "  InternalServerError, retrying." -ForegroundColor $CommandError
+                    if ($retries -lt 0)
+                    {
+                        throw
+                    }
+                    Start-Sleep -Seconds $wTime
+				    $wTime = $wTime * 2
+                }
+                else
+                {
+                    $errorMsg = $_.Exception.ToString()
+                    $chk = "Policy contains invalid applications: "
+                    if ($errorMsg.IndexOf($chk) -gt -1)
+                    {
+                        $errorMsg = $errorMsg.Substring($errorMsg.IndexOf($chk) + $chk.Length)
+                        $errorMsg = $errorMsg.Substring(0, $errorMsg.IndexOf("}")+1)
+   		                Write-Host "  Removing UnSupportedFirstyParty apps from ExcludeApplications: $errorMsg" -ForegroundColor $CommandWarning
+                        $errs = $errorMsg | ConvertFrom-Json
+                        foreach($app in (Get-Member -InputObject $errs -MemberType NoteProperty))
+                        {
+                            $unSupportedFirstyPartyApplications += $app.Name
+                        }
+                    }
+                    else
+                    {
+                        throw
+                    }
+                }
+            }
         }
     }
 }
-Write-Host "Policy has now $($apps.Count) apps assigned" -ForegroundColor $CommandInfo
+
+# Setting icluded apps
+Write-Host "Setting icluded apps" -ForegroundColor $CommandInfo
+$dirty = $true
+$appsIn = $allApps.AppId | Select -Unique
+$unSupportedFirstyPartyApplications = @()
+while ($true)
+{
+    foreach ($app in $appIdsToExclude)
+    {
+        if ($appsIn -contains $app)
+        {
+   		    Write-Host "  Removing excluded app $app from IncludeApplications" -ForegroundColor $CommandWarning
+		    $appsIn = $appsIn | where { $_ -ne $app }
+            $dirty = $true
+        }
+    }
+    foreach ($app in $unSupportedFirstyPartyApplications)
+    {
+        if ($appsIn -contains $app)
+        {
+		    $appsIn = $appsIn | where { $_ -ne $app }
+            $dirty = $true
+        }
+    }
+    if ($dirty)
+    {
+        $dirty = $false
+        $policy.Conditions.Applications.IncludeApplications = $appsIn
+        $retries = 10
+        $wTime = 2
+        try
+        {
+            Write-Host "  Saving IncludeApplications"
+            Set-AzureADMSConditionalAccessPolicy -PolicyId $policy.id -Conditions $policy.Conditions
+            break
+        }
+        catch
+        {
+            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*")
+            {
+                $retries = $retries - 1
+                Write-Host "  TooManyRequests, retrying." -ForegroundColor $CommandError
+                if ($retries -lt 0)
+                {
+                    throw
+                }
+                Start-Sleep -Seconds $wTime
+                $wTime = $wTime * 2
+            }
+            else
+            {
+                if ($_.Exception.ToString() -like "*HttpStatusCode: InternalServerError*")
+                {
+                    $retries = $retries - 1
+                    Write-Host "  InternalServerError, retrying." -ForegroundColor $CommandError
+                    if ($retries -lt 0)
+                    {
+                        throw
+                    }
+                    Start-Sleep -Seconds $wTime
+				    $wTime = $wTime * 2
+                }
+                else
+                {
+                    $errorMsg = $_.Exception.ToString()
+                    $chk = "Policy contains invalid applications: "
+                    if ($errorMsg.IndexOf($chk) -gt -1)
+                    {
+                        $errorMsg = $errorMsg.Substring($errorMsg.IndexOf($chk) + $chk.Length)
+                        $errorMsg = $errorMsg.Substring(0, $errorMsg.IndexOf("}")+1)
+   		                Write-Host "  Removing UnSupportedFirstyParty apps from IncludeApplications: $errorMsg" -ForegroundColor $CommandWarning
+                        $errs = $errorMsg | ConvertFrom-Json
+                        foreach($app in (Get-Member -InputObject $errs -MemberType NoteProperty))
+                        {
+                            $unSupportedFirstyPartyApplications += $app.Name
+                        }
+                    }
+                    else
+                    {
+                        throw
+                    }
+                }
+            }
+        }
+    }
+}
+Write-Host "Policy has now $($appsIn.Count) included and $($appsEx.Count) excluded apps assigned" -ForegroundColor $CommandInfo
 
 #Stopping Transscript
 Stop-Transcript

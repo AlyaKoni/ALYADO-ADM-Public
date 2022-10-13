@@ -45,7 +45,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Clean-DeletedSites-$($Al
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 

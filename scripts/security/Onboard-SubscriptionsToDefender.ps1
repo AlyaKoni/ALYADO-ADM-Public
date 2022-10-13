@@ -56,7 +56,11 @@ $DefenderOnboardedPolicies = @(
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.Storage"
+Install-ModuleIfNotInstalled "Az.OperationalInsights"
+Install-ModuleIfNotInstalled "Az.Security"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

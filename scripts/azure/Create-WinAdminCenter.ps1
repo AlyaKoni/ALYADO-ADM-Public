@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -74,7 +74,12 @@ $DomJoinOption = 0x00000003
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Compute"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.Network"
+Install-ModuleIfNotInstalled "Az.Storage"
+Install-ModuleIfNotInstalled "Az.KeyVault"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -182,6 +187,11 @@ if (-Not $KeyVault.EnabledForDeployment)
     Write-Warning "Key Vault not enabled for deployments. Enabling it now"
     Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ResourceGroupName $ResourceGroupName -EnabledForDeployment
 }
+
+# Setting own key vault access
+Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
+$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All"
 
 # Checking azure key vault secret
 Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo
@@ -574,7 +584,7 @@ $hasCert = Invoke-AzVMCommand -Name $VMName -ResourceGroupName $ResourceGroupNam
 if (-Not $hasCert)
 {
     Write-Warning "Adding certificate to VM"
-    $certURL = (Get-AzureKeyVaultSecret -VaultName $KeyVaultName -Name $AzureCertificateName).id
+    $certURL = (Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AzureCertificateName).id
     $Vm = Add-AzVMSecret -VM $Vm -SourceVaultId $KeyVault.ResourceId -CertificateStore "My" -CertificateUrl $certURL
     $result = Update-AzVM -ResourceGroupName $ResourceGroupName -VM $Vm
     if (-not $result.IsSuccessStatusCode)

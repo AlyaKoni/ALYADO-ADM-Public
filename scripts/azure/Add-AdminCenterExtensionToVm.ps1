@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -52,7 +52,11 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Add-AdminCenterExtensionToVm-
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.KeyVault"
+Install-ModuleIfNotInstalled "Az.Compute"
+Install-ModuleIfNotInstalled "Az.Network"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -94,6 +98,11 @@ if (-Not $KeyVault)
         Exit 1
     }
 }
+
+# Setting own key vault access
+Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
+$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All"
 
 # Checking azure key vault secret
 Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo

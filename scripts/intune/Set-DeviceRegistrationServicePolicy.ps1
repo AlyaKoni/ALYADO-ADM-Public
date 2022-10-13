@@ -45,7 +45,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServic
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-#Install-ModuleIfNotInstalled "Az"
+#Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 #Install-ModuleIfNotInstalled "AzureADPreview"
 Install-ModuleIfNotInstalled "MSOnline"
 

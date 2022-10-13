@@ -45,7 +45,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\groups\Find-InactiveGroups-$($AlyaT
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 Install-ModuleIfNotInstalled "Microsoft.Online.SharePoint.PowerShell"
 Install-ModuleIfNotInstalled "AzureAdPreview"

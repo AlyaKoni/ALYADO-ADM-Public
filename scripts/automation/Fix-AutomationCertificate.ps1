@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2022
@@ -53,7 +53,9 @@ $AutomationAccountName = "$($AlyaNamingPrefix)aacc$($AlyaResIdAutomationAccount)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.Automation"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -127,7 +129,11 @@ $payload = @"
   }]
 }
 "@
-Invoke-AzRestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$($Application.Id)" -Method PATCH -Payload $payload
+$result = Invoke-AzRestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$($Application.Id)" -Method PATCH -Payload $payload
+if ($result.StatusCode -ge 400)
+{
+	throw "$($result.StatusCode): $($result.Content)"
+}
 
 #Stopping Transscript
 Stop-Transcript

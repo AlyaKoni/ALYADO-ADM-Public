@@ -57,7 +57,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Rename-SharePointDomainN
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
     

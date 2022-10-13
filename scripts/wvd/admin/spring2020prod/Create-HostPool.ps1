@@ -38,7 +38,7 @@ Param(
     [string]$ResourceGroupName = "alyapinfresg040",
     [string]$HostPoolName = "alyapinfavdh001",
     [string]$HostPoolType = "Pooled",
-    [string]$HostPoolDescription = "Stellt die VMs für Data Sience zur Verfügung",
+    [string]$HostPoolDescription = "Stellt die VMs fÃ¼r Data Sience zur VerfÃ¼gung",
     [string]$HostPoolFriendlyName = "ALYA Data Sience",
     [string]$HostPoolLoadBalancerType = "DepthFirst",
     [string]$HostPoolPreferedAppGroupType = "Desktop",
@@ -56,7 +56,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\spring2020prod\Create-Hos
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.DesktopVirtualization"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

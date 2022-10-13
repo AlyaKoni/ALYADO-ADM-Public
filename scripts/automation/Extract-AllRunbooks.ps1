@@ -1,4 +1,4 @@
-﻿#Requires -Version 5.1
+#Requires -Version 5.1
 
 <#
     Copyright (c) Alya Consulting, 2021-2022
@@ -49,7 +49,9 @@ $SolutionDataRoot = "$($AlyaData)\automation"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Automation"
+Install-ModuleIfNotInstalled "Az.Resources"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

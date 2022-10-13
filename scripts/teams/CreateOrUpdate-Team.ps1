@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -62,7 +62,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\CreateOrUpdate-Team-$($AlyaTi
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 
 # Logins
@@ -112,19 +113,17 @@ foreach($memb in $Owners)
         $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
         if (-Not $user)
         {
-            $group = $allGroups | where { $_.MailNickname -eq $memb }
+            $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
             if (-Not $group)
             {
                 throw "Can't find a user or group with email $memb"
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id
-                foreach($amemb in $allMembers)
-                {
-                    if ($amemb.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $amemb.UserPrincipalName)
+                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
-                        $NewOwners += $amemb.UserPrincipalName
+                        $NewOwners += $_.UserPrincipalName
                     }
                 }
             }
@@ -150,12 +149,10 @@ foreach($memb in $Owners)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id
-                foreach($amemb in $allMembers)
-                {
-                    if ($amemb.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $amemb.UserPrincipalName)
+                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
-                        $NewOwners += $amemb.UserPrincipalName
+                        $NewOwners += $_.UserPrincipalName
                     }
                 }
             }
@@ -210,19 +207,17 @@ foreach($memb in $Members)
         $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
         if (-Not $user)
         {
-            $group = $allGroups | where { $_.MailNickname -eq $memb }
+            $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
             if (-Not $group)
             {
                 throw "Can't find a user or group with email $memb"
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id
-                foreach($amemb in $allMembers)
-                {
-                    if ($amemb.UserPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $amemb.UserPrincipalName)
+                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
-                        $NewMembers += $amemb.UserPrincipalName
+                        $NewMembers += $_.UserPrincipalName
                     }
                 }
             }
@@ -248,12 +243,10 @@ foreach($memb in $Members)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id
-                foreach($amemb in $allMembers)
-                {
-                    if ($amemb.UserPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $amemb.UserPrincipalName)
+                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
-                        $NewMembers += $amemb.UserPrincipalName
+                        $NewMembers += $_.UserPrincipalName
                     }
                 }
             }
@@ -311,19 +304,17 @@ foreach($memb in $Guests)
         $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
         if (-Not $user)
         {
-            $group = $allGroups | where { $_.MailNickname -eq $memb }
+            $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
             if (-Not $group)
             {
                 throw "Can't find a user or group with email $memb"
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id
-                foreach($amemb in $allMembers)
-                {
-                    if ($NewGuests -notcontains $amemb.Mail)
+                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
-                        $NewGuests += $amemb.Mail
+                        $NewGuests += $_.UserPrincipalName
                     }
                 }
             }
@@ -349,12 +340,10 @@ foreach($memb in $Guests)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id
-                foreach($amemb in $allMembers)
-                {
-                    if ($NewGuests -notcontains $amemb.Mail)
+                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
-                        $NewGuests += $amemb.Mail
+                        $NewGuests += $_.UserPrincipalName
                     }
                 }
             }

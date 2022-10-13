@@ -48,7 +48,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-PasswordReset-$($AlyaTim
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in

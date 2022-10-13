@@ -53,7 +53,8 @@ if (-Not $outputFile)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ImportExcel"
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in
@@ -124,10 +125,12 @@ foreach($user in $users)
         if (-Not $psProp)
         {
             Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ""
+            continue
         }
         if ($prop -eq "ObjectId")
         {
             Add-Member -InputObject $psuser -MemberType NoteProperty -Name "SID" -Value (Convert-ObjectIdToSid -ObjectId $user."$prop")
+            continue
         }
         switch ($psProp.TypeNameOfValue)
         {

@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2022
@@ -53,7 +53,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeam-$($Alya
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 
@@ -116,19 +117,17 @@ foreach($memb in $Owners)
         $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
         if (-Not $user)
         {
-            $group = $allGroups | where { $_.MailNickname -eq $memb }
+            $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
             if (-Not $group)
             {
                 throw "Can't find a user or group with email $memb"
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id
-                foreach($amemb in $allMembers)
-                {
-                    if ($amemb.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $amemb.UserPrincipalName)
+                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
-                        $NewOwners += $amemb.UserPrincipalName
+                        $NewOwners += $_.UserPrincipalName
                     }
                 }
             }
@@ -154,12 +153,10 @@ foreach($memb in $Owners)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id
-                foreach($amemb in $allMembers)
-                {
-                    if ($amemb.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $amemb.UserPrincipalName)
+                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
-                        $NewOwners += $amemb.UserPrincipalName
+                        $NewOwners += $_.UserPrincipalName
                     }
                 }
             }

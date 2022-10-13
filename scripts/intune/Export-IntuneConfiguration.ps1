@@ -56,7 +56,8 @@ Write-Host "Exporting Intune data to $DataRoot"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureADPreview"
 
 # Logins
@@ -615,25 +616,25 @@ foreach($policy in $policies)
     try {
         #TODO
         $uri = "https://graph.microsoft.com/beta/deviceAppManagement/androidManagedAppProtections('$($policy.id)')?`$expand=apps"
-        $policy = Get-MsGraphObject -AccessToken $token -Uri $uri
+        $policy = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400
         $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_android.json")) -Force
     } catch {}
     try {
         #TODO
         $uri = "https://graph.microsoft.com/beta/deviceAppManagement/iosManagedAppProtections('$($policy.id)')?`$expand=apps"
-        $policy = Get-MsGraphObject -AccessToken $token -Uri $uri
+        $policy = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400
         $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_ios.json")) -Force
     } catch {}
     try {
         #TODO
         $uri = "https://graph.microsoft.com/beta/deviceAppManagement/windowsInformationProtectionPolicies('$($policy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
-        $policy = Get-MsGraphObject -AccessToken $token -Uri $uri
+        $policy = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400
         $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_windows.json")) -Force
     } catch {}
     try {
         #TODO
         $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mdmWindowsInformationProtectionPolicies('$($policy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
-        $policy = Get-MsGraphObject -AccessToken $token -Uri $uri
+        $policy = Get-MsGraphObject -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400
         $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_mdm.json")) -Force
     } catch {}
 }

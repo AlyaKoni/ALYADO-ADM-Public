@@ -62,13 +62,17 @@ Write-Host '  - Wait until the vm has stopped state'
 <#
 Bei Fehler Logdatei untersuchen:
 %WINDIR%\System32\Sysprep\Panther\setupact.log
-Unter Umständen müssen Packages entfernt werden. Siehe hierzu cleanImage.ps1
+Unter UmstÃ¤nden mÃ¼ssen Packages entfernt werden. Siehe hierzu cleanImage.ps1
 #>
 pause
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.Compute"
+Install-ModuleIfNotInstalled "Az.KeyVault"
+Install-ModuleIfNotInstalled "Az.Network"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -175,6 +179,11 @@ if (-Not $KeyVault)
         Exit 1
     }
 }
+
+# Setting own key vault access
+Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
+$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All"
 
 # Checking azure key vault secret
 Write-Host "Checking azure key vault secret" -ForegroundColor $CommandInfo

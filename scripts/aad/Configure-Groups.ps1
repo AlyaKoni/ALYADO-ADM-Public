@@ -54,7 +54,8 @@ if (-Not $inputFile)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Uninstall-ModuleIfInstalled "AzureAd"
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 Install-ModuleIfNotInstalled "ImportExcel"
@@ -156,7 +157,7 @@ foreach ($secGroup in $SecurityGroup)
     }
     else
     {
-        Write-Host "   - Group doesn't exists! Creating."
+        Write-Host "   - Group doesn't exists! Creating." -ForegroundColor $CommandSuccess
         if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
         {
             if ([string]::IsNullOrEmpty($secGroup.Alias))
@@ -312,7 +313,7 @@ foreach ($secGroup in $M365Group)
     }
     else
     {
-        Write-Host "   - Group doesn't exists! Creating."
+        Write-Host "   - Group doesn't exists! Creating." -ForegroundColor $CommandSuccess
         if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
         {
             $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "Unified" -Visibility $secGroup.Visibility

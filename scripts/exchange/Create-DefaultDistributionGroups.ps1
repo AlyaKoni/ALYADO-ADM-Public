@@ -46,7 +46,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Create-DefaultDistribution
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

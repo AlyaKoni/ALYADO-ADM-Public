@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -46,7 +46,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\Get-VmAgentState-$($AlyaTi
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Compute"
+Install-ModuleIfNotInstalled "Az.Resources"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

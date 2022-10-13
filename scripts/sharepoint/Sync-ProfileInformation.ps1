@@ -45,7 +45,8 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Sync-ProfileInformation-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 Install-ModuleIfNotInstalled "MSOnline"

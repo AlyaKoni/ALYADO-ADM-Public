@@ -49,7 +49,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserPasswordNeverExpire-$($
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 
 # Logging in

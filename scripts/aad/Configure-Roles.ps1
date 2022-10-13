@@ -57,7 +57,8 @@ if (-Not $inputFile)
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Uninstall-ModuleIfInstalled "AzureAD"
 Install-ModuleIfNotInstalled "ImportExcel"
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureADPreview"
 Install-ModuleIfNotInstalled "MSOnline"
 
@@ -361,7 +362,7 @@ foreach($roleName in $allRoles.Keys)
             {
                 if ($_.Exception.ToString() -like "*AadPremiumLicenseRequired*")
                 {
-                    Write-Host "No PIM license available! Can¨t configure PIM roles."
+                    Write-Host "No PIM license available! Canï¿½t configure PIM roles."
                     $configurePIM = $false
                 }
                 else

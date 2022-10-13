@@ -54,7 +54,8 @@ Write-Host "Exporting Intune data to $DataRoot"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

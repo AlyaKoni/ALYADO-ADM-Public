@@ -71,7 +71,7 @@ Write-Host "Atcual DenyAddAndCustomizePages setting: $($Site.DenyAddAndCustomize
 
 if ($Site.DenyAddAndCustomizePages)
 {
-    Set-SPOSite -Identity $siteUrl -DenyAddAndCustomizePages $false
+    Set-SPOSite -Identity $Url -DenyAddAndCustomizePages $false
     $Site = Get-SPOSite -Identity $Url
     Write-Host "New DenyAddAndCustomizePages setting: $($Site.DenyAddAndCustomizePages)"
 }

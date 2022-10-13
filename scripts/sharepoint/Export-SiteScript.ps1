@@ -53,8 +53,8 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 $siteCon = LoginTo-PnP -Url $SiteUrl
 
 # Export site script
-$site = Get-PnPWeb
-$lists = Get-PnPList -Includes RootFolder.ServerRelativeUrl
+$site = Get-PnPWeb -Connection $siteCon
+$lists = Get-PnPList -Connection $siteCon -Includes RootFolder.ServerRelativeUrl
 $expLists = @()
 foreach($list in $lists)
 {

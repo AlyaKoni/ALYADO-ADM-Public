@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+ï»¿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2022
@@ -47,7 +47,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Prepare-GuestUsers-$($AlyaTimeS
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in
@@ -104,25 +105,32 @@ function Main
                 $comp += " " + (Make-PascalCase($domainParts[$domainParts.Length-3]))
             }
         }
-        if ($comp -eq "Outlook" -or `            $comp -eq "Gmx" -or `            $comp -eq "Hotmail" -or `            $comp -eq "Hispeed" -or `            $comp -eq "Gmail" -or `            $comp -eq "Bluewin" -or `            $comp -eq "Bluemail")
+        if ($comp -eq "Outlook" -or `
+            $comp -eq "Gmx" -or `
+            $comp -eq "Hotmail" -or `
+            $comp -eq "Hispeed" -or `
+            $comp -eq "Gmail" -or `
+            $comp -eq "Bluewin" -or `
+            $comp -eq "Bluemail")
         {
             #$comp = "Extern"
             $comp = $domain.ToLower()
         }
 
-        if (-Not [String]::IsNullOrEmpty($oldUser.first) -And `            -Not [String]::IsNullOrEmpty($oldUser.last))
+        if (-Not [String]::IsNullOrEmpty($oldUser.first) -And `
+            -Not [String]::IsNullOrEmpty($oldUser.last))
         {
             $first = $oldUser.first
             $last = $oldUser.last
         }
-        else
+        else 
         {
             if ($oldUser.first) {$first = $oldUser.first.ToLower()} else {$first = ""}
             if ($oldUser.last) {$last = $oldUser.last.ToLower()} else {$last = ""}
             if ($oldUser.disp) {$disp = $oldUser.disp.ToLower()} else {$disp = ""}
-            $first = $first.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
-            $last = $last.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
-            $disp = $disp.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
+            $first = $first.Replace("Ã¤","ae").Replace("Ã¼","ue").Replace("Ã¶","oe").Replace("Ã©","e").Replace("Ã¨","e").Replace("Ã ","a")
+            $last = $last.Replace("Ã¤","ae").Replace("Ã¼","ue").Replace("Ã¶","oe").Replace("Ã©","e").Replace("Ã¨","e").Replace("Ã ","a")
+            $disp = $disp.Replace("Ã¤","ae").Replace("Ã¼","ue").Replace("Ã¶","oe").Replace("Ã©","e").Replace("Ã¨","e").Replace("Ã ","a")
 
             $dispFirstLast = $disp.Split()
             if ($first -eq "")
@@ -168,7 +176,9 @@ function Main
                         }
 					    else
                         {
-                            if (-Not ($first -eq $namePrts[0] -and $last -eq "" -or `                                $last -eq $namePrts[0] -and $first -eq "" -or `                                $last -ne "" -and $first -ne ""))
+                            if (-Not ($first -eq $namePrts[0] -and $last -eq "" -or `
+                                $last -eq $namePrts[0] -and $first -eq "" -or `
+                                $last -ne "" -and $first -ne ""))
                             {
                                 $fndName = $false
                                 foreach($nachname in $nachnamen)
@@ -501,12 +511,12 @@ function Main
             }
             $first = Make-PascalCase -string $first
             $last = Make-PascalCase -string $last
-            $firstChk = $first.Replace("ae","ä").Replace("ue","ü").Replace("oe","ö")
+            $firstChk = $first.Replace("ae","Ã¤").Replace("ue","Ã¼").Replace("oe","Ã¶")
             if ($oldUser.disp.Contains($firstChk))
             {
                 $first = $firstChk
             }
-            $lastChk = $last.Replace("ae","ä").Replace("ue","ü").Replace("oe","ö")
+            $lastChk = $last.Replace("ae","Ã¤").Replace("ue","Ã¼").Replace("oe","Ã¶")
             if ($oldUser.disp.Contains($lastChk))
             {
                 $last = $lastChk
@@ -520,12 +530,6 @@ function Main
         if ($first -eq "") {$first = $null}
         if ($last -eq "") {$last = $null}
         $newUser = @{disp=$disp;first=$first;last=$last}
-        #if ($oldUser.first) {$first = $oldUser.first.ToLower()} else {$first = ""}
-        #if ($oldUser.last) {$last = $oldUser.last.ToLower()} else {$last = ""}
-        #if ($oldUser.disp) {$disp = $oldUser.disp.ToLower()} else {$disp = ""}
-        #$first = $first.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
-        #$last = $last.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
-        #$disp = $disp.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
 
         if (($oldUser | ConvertTo-Json -Compress) -ne ($newUser | ConvertTo-Json -Compress))
         {

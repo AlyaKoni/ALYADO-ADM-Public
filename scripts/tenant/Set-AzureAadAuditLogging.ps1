@@ -53,7 +53,10 @@ $DiagnosticRuleName = "Diag-Aad-$($AlyaSubscriptionName)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.Storage"
+Install-ModuleIfNotInstalled "Az.OperationalInsights"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

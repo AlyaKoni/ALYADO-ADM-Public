@@ -48,7 +48,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Import-AndSyncAadUser-$(
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Check-Module ActiveDirectory
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in

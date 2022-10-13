@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -97,7 +97,11 @@ $StorageAccountNameFiles = $StorageAccountName + $suffix
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.Network"
+Install-ModuleIfNotInstalled "Az.Storage"
+Install-ModuleIfNotInstalled "Az.PrivateDns"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -477,17 +481,8 @@ if (-Not $admGrp -And -not $WithADIntegration)
     Write-Warning "Admin Security group  not found. Creating it now"
     $admGrp = New-AzAdGroup -DisplayName $admGrpName -MailNickname $admGrpName -Description "Group to assign admin access to share '$ShareName' on storage '$StorageAccountNameFiles'"
 }
-$admGrpMembs = Get-AzADGroupMember -GroupObjectId $admGrp.Id
-$fnd = $false
-foreach($admGrpMemb in $admGrpMembs)
-{
-    if ($admGrpMemb.UserPrincipalName -eq $context.Account.Id)
-    {
-        $fnd = $true
-        break
-    }
-}
-if (-Not $fnd)
+$admGrpMemb = Get-AzADGroupMember -GroupObjectId $admGrp.Id | where { $_.UserPrincipalName -eq $context.Account.Id }
+if (-Not $admGrpMemb)
 {
     Add-AzADGroupMember -TargetGroupObjectId $admGrp.Id -MemberUserPrincipalName $context.Account.Id
 }

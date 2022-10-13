@@ -50,7 +50,8 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-TermGroup-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.dll"

@@ -39,7 +39,7 @@ Param(
     [string]$HostPoolName = "alyapinfavdh001",
     [string]$WorkspaceName = "alyapinfavdw001",
     [string]$AppGroupName = "alyapinfavda001",
-    [string]$AppGroupDescription = "Stellt den Data Sience Desktop zur Verfügung",
+    [string]$AppGroupDescription = "Stellt den Data Sience Desktop zur VerfÃ¼gung",
     [string]$AppGroupFriendlyName = "ALYA Data Sience Desktop",
     [string]$AppGroupType = "Desktop"
 )
@@ -54,7 +54,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\spring2020prod\Create-App
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.DesktopVirtualization"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName

@@ -46,13 +46,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Export-AllApps-$($AlyaTimeStrin
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
 
 # =============================================================
 # Azure stuff
@@ -63,11 +62,11 @@ Write-Host "AAD | Export-AllApps | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Retrieving Application objects. Please wait..." -ForegroundColor $CommandInfo
-$applications = Get-AzureADApplication -All $true 
+$applications = Get-AzADApplication
 $applications | ConvertTo-Json -Depth 100 | Set-Content -Path "$($AlyaData)\aad\AllApplications.json" -Force -Encoding UTF8
 
 Write-Host "Retrieving Service Principal objects. Please wait..." -ForegroundColor $CommandInfo
-$servicePrincipals = Get-AzureADServicePrincipal -All $true 
+$servicePrincipals = Get-AzADServicePrincipal
 $servicePrincipals | ConvertTo-Json -Depth 100 | Set-Content -Path "$($AlyaData)\aad\AllServicePrincipals.json" -Force -Encoding UTF8
 
 #Stopping Transscript

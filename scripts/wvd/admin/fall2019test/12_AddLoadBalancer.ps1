@@ -68,7 +68,9 @@ $RuleNameOut = $LoadBalancerName+"or"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Network"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Microsoft.RDInfra.RDPowershell"
 
 # Logins

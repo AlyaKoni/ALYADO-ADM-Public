@@ -70,7 +70,8 @@ if (-Not (Test-Path $ExportDir))
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureADPreview"
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 Install-ModuleIfNotInstalled "MSOnline"

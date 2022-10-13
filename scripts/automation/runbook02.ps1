@@ -50,7 +50,7 @@ $ErrorActionPreference = "Stop"
 
 # Constants
 $RunAsConnectionName = "AzureRunAsConnection"
-$ModulesToInstall = @( @{Name="Microsoft.RDInfra.RDPowershell"; Version=$null}, @{Name="Az.Accounts"; Version=$null}, @{Name="Az.Automation"; Version=$null}, @{Name="Az.Storage"; Version=$null}, @{Name="Az.Compute"; Version=$null}, @{Name="Az.Resources"; Version=$null} ) #Version $null means latest
+$ModulesToInstall = @( ##AlyaModules## ) #Version $null means latest
 
 # Functions
 Function GetModuleContentUrl
@@ -132,7 +132,11 @@ function Update-ProfileAndAutomationVersionToLatest
 }
 try
 {
-	#Update-ProfileAndAutomationVersionToLatest
+	$Cmd = Get-Command -Name Get-AzAutomationModule -ErrorAction SilentlyContinue
+	if (-Not $Cmd)
+	{
+		Update-ProfileAndAutomationVersionToLatest
+	}
 } catch {
 	Write-Warning $_.Exception
 }
