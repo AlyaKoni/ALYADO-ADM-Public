@@ -1,4 +1,4 @@
-# Constants
+﻿# Constants
 $lastDcFqdn = "server.domain.local"
 $addDnsServer = @()
 $titleColor = "Cyan"

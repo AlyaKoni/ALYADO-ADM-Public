@@ -1,4 +1,4 @@
-$pageUrl = "https://tortoisegit.org/download/"
+﻿$pageUrl = "https://tortoisegit.org/download/"
 
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"

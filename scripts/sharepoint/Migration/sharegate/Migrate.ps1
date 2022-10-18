@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 #Requires -Modules Sharegate
 
 Start-Transcript -Path "$PSScriptRoot\..\logs\Migrate-$(get-date -Format 'yyyyMMddhhmmss').txt"

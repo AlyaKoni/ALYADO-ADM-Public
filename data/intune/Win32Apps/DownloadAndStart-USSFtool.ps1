@@ -1,4 +1,4 @@
-$pageUrl = "https://deployhappiness.com/resources/tool-downloads/"
+﻿$pageUrl = "https://deployhappiness.com/resources/tool-downloads/"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*ussf.zip"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value

@@ -1,4 +1,4 @@
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+﻿. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 & "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "LocalPrinters"
 & "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "LocalPrinters"

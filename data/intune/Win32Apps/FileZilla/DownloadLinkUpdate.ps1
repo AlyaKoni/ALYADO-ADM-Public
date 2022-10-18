@@ -1,4 +1,4 @@
-$pageUrl = "https://filezilla-project.org/download.php?show_all=1"
+﻿$pageUrl = "https://filezilla-project.org/download.php?show_all=1"
 $headers = @{
     "accept" = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
     "accept-encoding" = "gzip, deflate, br"

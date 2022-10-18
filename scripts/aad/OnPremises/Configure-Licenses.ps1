@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -118,7 +118,7 @@ $adUsers | foreach {
         {
             Write-Host "Checking license from '$($adUser.UserPrincipalName)'"
             Write-Host " - In AD was the license '$($adUser.extensionAttribute1)' configured, removed"
-            Set-ADUser �Identity $adUser -Clear "extensionAttribute1"
+            Set-ADUser –Identity $adUser -Clear "extensionAttribute1"
         }
     }
     else

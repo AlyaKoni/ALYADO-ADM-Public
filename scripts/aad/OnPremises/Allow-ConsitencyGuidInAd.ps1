@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+ï»¿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021
@@ -58,7 +58,7 @@ Write-Host "AD | Allow-ConsitencyGuidInAd | ONPREMISES" -ForegroundColor $Comman
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main
-$cmd = "dsacls ‘$($DN)‘ /I:S /G ‘`"$($Account)`":RPWP;`"mS-DS-ConsistencyGuid`";user’"
+$cmd = "dsacls â€˜$($DN)â€˜ /I:S /G â€˜`"$($Account)`":RPWP;`"mS-DS-ConsistencyGuid`";userâ€™"
 Invoke-Expression $cmd
 
 #Stopping Transscript

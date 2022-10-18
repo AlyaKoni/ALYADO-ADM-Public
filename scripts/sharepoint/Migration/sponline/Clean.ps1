@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 #Requires -Modules Microsoft.Online.Sharepoint.PowerShell, SharePointPnPPowerShellOnline
 
 Write-Output "Enviroment setup"

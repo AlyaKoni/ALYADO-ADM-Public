@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -48,13 +48,11 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-Microsoft365Le
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
 LoginTo-SPO
 
 # Constants
@@ -229,11 +227,15 @@ $appSiteCon = LoginTo-PnP -Url $appCatalogUrl
 
 # Deploying app package
 Write-Host "Deploying app package" -ForegroundColor $CommandInfo
-$app = Add-PnPApp -Connection $appSiteCon -Path "$AlyaTemp\LearningPathways\customlearning.sppkg" -Scope "Tenant" -Overwrite -Publish
-$app = Get-PnPApp -Connection $appSiteCon -Identity $app.Id -Scope "Tenant"
-if (-Not $app.Deployed)
+$app = Get-PnPApp -Connection $appSiteCon -Identity "Microsoft 365 learning pathways" -Scope "Tenant"
+if (-Not $app)
 {
-    throw "Error deploying the app package"
+    $app = Add-PnPApp -Connection $appSiteCon -Path "$AlyaTemp\LearningPathways\customlearning.sppkg" -Scope "Tenant" -Overwrite -Publish
+    $app = Get-PnPApp -Connection $appSiteCon -Identity $app.Id -Scope "Tenant"
+    if (-Not $app.Deployed)
+    {
+        throw "Error deploying the app package"
+    }
 }
 
 # Login to learning pathways
@@ -242,15 +244,21 @@ $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteNa
 
 # Installing app package
 Write-Host "Installing app package" -ForegroundColor $CommandInfo
-$sapp = Get-PnPApp -Connection $siteCon -Identity $app.Id
-if (-Not $sapp)
+do
 {
-    Install-PnPApp -Connection $siteCon -Identity $app.Id -Scope "Tenant" -Wait
+    $sapp = Get-PnPApp -Connection $siteCon -Identity $app.Id -ErrorAction SilentlyContinue
+    if (-Not $sapp -or -Not $sapp.Deployed)
+    {
+        Install-PnPApp -Connection $siteCon -Identity $app.Id -Scope "Tenant" -Wait
+        $sapp = Get-PnPApp -Connection $siteCon -Identity $app.Id -ErrorAction SilentlyContinue
+    }
+    else
+    {
+        #TODO Update
+    }
+    if (-Not $sapp.Deployed) { Start-Sleep -Seconds 60 }
 }
-else
-{
-    #TODO Update
-}
+while ($sapp.Deployed)
 
 #Configuring learning setting
 #LogoutAllFrom-PnP
@@ -286,7 +294,6 @@ if($null -ne $sitePagesList) {
             break
         }
         Write-Host "." -NoNewline
-        Start-Sleep -Seconds 10
     }
     if ($WebPartsFound -eq $false) {
         Write-Warning "Could not find Microsoft 365 learning pathways Web Parts."
@@ -328,6 +335,7 @@ Set-PnPHomePage -Connection $siteCon -RootFolderRelativeUrl "SitePages/CustomLea
 
 # Launching custom configuration
 Write-Host "Launching custom configuration" -ForegroundColor $CommandInfo
+Write-Host "  $($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
 start "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
 
 #Stopping Transscript

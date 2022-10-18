@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -38,7 +38,7 @@ Param(
     [Parameter(Mandatory=$false)]
     [string]$MessageBody = "Dies ist ein Test. Bitte schreibe ein E-Mail an konrad.brunner@alyaconsulting.ch, dass Du dieses Fesnter gesehen hast. Danke."
 )
-#$MessageBody = "Bitte vor dem nach Hause gehen alles speichern. Wir müssen heute Abend die Hosts neu starten. Nicht gespeicherte Arbeit geht verloren!"
+#$MessageBody = "Bitte vor dem nach Hause gehen alles speichern. Wir mÃ¼ssen heute Abend die Hosts neu starten. Nicht gespeicherte Arbeit geht verloren!"
 
 #Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1

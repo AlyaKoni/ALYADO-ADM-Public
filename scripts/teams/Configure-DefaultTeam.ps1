@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2022
@@ -45,7 +45,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeam-$($Alya
 
 # Constants
 [string]$TitleAndGroupName = "$($AlyaCompanyNameShortM365.ToUpper())TM"
-[string]$Description = "Haupt Team für alle Benutzer. Intern und Extern."
+[string]$Description = "Haupt Team fÃ¼r alle Benutzer. Intern und Extern."
 [string]$Visibility = "Private"
 [string[]]$Owners = @()
 [string]$TeamPicturePath = $AlyaLogoUrlQuad
@@ -55,8 +55,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeam-$($Alya
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Teams"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -101,6 +105,26 @@ if ($TeamPicturePath)
         $null = Set-TeamPicture -GroupId $Team.GroupId -ImagePath $TeamPicturePath
     }
 }
+
+# Setting team access
+Write-Host "Setting team access" -ForegroundColor $CommandInfo
+Set-Team -GroupId $Team.GroupId `
+    -AllowAddRemoveApps $false `
+    -AllowChannelMentions $false `
+    -AllowCreatePrivateChannels $false `
+    -AllowCreateUpdateChannels $false `
+    -AllowCreateUpdateRemoveConnectors $false `
+    -AllowCreateUpdateRemoveTabs $false `
+    -AllowCustomMemes $false `
+    -AllowDeleteChannels $false `
+    -AllowGiphy $false `
+    -AllowGuestCreateUpdateChannels $false `
+    -AllowGuestDeleteChannels $false `
+    -AllowOwnerDeleteMessages $true `
+    -AllowStickersAndMemes $false `
+    -AllowTeamMentions $false `
+    -AllowUserDeleteMessages $false `
+    -AllowUserEditMessages $false
 
 # Getting groups
 Write-Host "Getting groups" -ForegroundColor $CommandInfo
@@ -196,6 +220,57 @@ $tmp = Set-AzureADMSGroup -Id $Team.GroupId -GroupTypes "DynamicMembership", "Un
         -Description $grp.Description -DisplayName $grp.DisplayName -MailEnabled $grp.MailEnabled -MailNickname $grp.MailNickName `
         -SecurityEnabled $grp.SecurityEnabled
 
+# Posting welcome message
+Write-Host "Posting welcome message" -ForegroundColor $CommandInfo
+$postMessageDE = "<h1>Willkommen</h1>"
+$postMessageDE += "<p>Willkommen im Teams von $($AlyaCompanyNameFull). Teams ist unsere Kommunikationsplatform. Unsere Dokumentenablage befindet sich grundsätzlich in SharePoint ($($AlyaSharePointUrl)). Teams verwenden wir für befristete Ablagen sowie für die Kommunikation nach Aussen.</p>"
+$postMessageDE += "<p>Falls Sie gerne ein Teams für Ihr Projekt oder die Kommunikation mit Externen hätten, können Sie mit einer E-Mail an $($AlyaSupportEmail) Ihr eigenes Team bestellen.</p>"
+$postMessageEN = "<h1>Welcome</h1>"
+$postMessageEN += "<p>Welcome to Teams from $($AlyaCompanyNameFull). Teams is our communication platform. In general we use SharePoint ($($AlyaSharePointUrl)) as our document repository. We use Teams for short term repositories or our external communicaion.</p>"
+$postMessageEN += "<p>Please write an email to $($AlyaSupportEmail), if you like to get your own team to use it in your project or to communicate with externals.</p>"
+$scopes = @(
+    "Group.ReadWrite.All",
+    "GroupMember.ReadWrite.All",
+    "TeamsApp.ReadWrite.All",
+    "TeamsAppInstallation.ReadWriteForTeam",
+    "TeamsAppInstallation.ReadWriteSelfForTeam",
+    "TeamSettings.ReadWrite.All",
+    "TeamsTab.ReadWrite.All",
+    "TeamMember.ReadWrite.All",
+    "ChannelMessage.Send"
+)
+Connect-MgGraph -Scopes $scopes
+Select-MgProfile -Name "beta"
+$bodyDE = @{
+    body = @{
+        contentType = "html"
+        content = "$postMessageDE"
+    }
+}
+$bodyEN = @{
+    body = @{
+        contentType = "html"
+        content = "$postMessageEN"
+    }
+}
+$Channel = Get-TeamChannel -GroupId $Team.GroupId
+$message = New-MgTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyDE
+$message = New-MgTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyEN
+
+Write-Host "Please pin now the created messages and" -ForegroundColor $CommandWarning
+Write-Host "set channel to allow only owners posting messages" -ForegroundColor $CommandWarning
+$teamLink = "https://teams.microsoft.com/_?tenantId=$((Get-AzContext).Tenant.Id)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)2&ctx=channel"
+Write-Host "  $teamLink"
+start $teamLink
+pause
+
+# Setting SharePoint access
+Write-Host "Setting SharePoint access" -ForegroundColor $CommandInfo
+$mgChannelFolder = Get-MgTeamChannelFileFolder -TeamId $Team.GroupId -ChannelId $Channel.Id
+$mgChannelFolder = (Split-Path -Path (Split-Path -Path $mgChannelFolder.WebUrl -Parent) -Parent) -replace "\\", "/"
+$siteCon = LoginTo-PnP -Url $mgChannelFolder
+$mg = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
+Set-PnPGroupPermissions -Connection $siteCon -Identity $mg -RemoveRole @("Contributor","Editor") -ErrorAction SilentlyContinue
 
 #Stopping Transscript
 Stop-Transcript

@@ -215,7 +215,9 @@ if ($redirectToExternalNumber -ne $null)
 {
 	$null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
 	    -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-	    -OverflowThreshold 5 -OverflowAction Forward -OverflowActionTarget "tel:$redirectToExternalNumber" `	    -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction Forward -TimeoutActionTarget "tel:$redirectToExternalNumber" `	    -DistributionLists $dGrp.ExternalDirectoryObjectId
+	    -OverflowThreshold 5 -OverflowAction Forward -OverflowActionTarget "tel:$redirectToExternalNumber" `
+	    -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction Forward -TimeoutActionTarget "tel:$redirectToExternalNumber" `
+	    -DistributionLists $dGrp.ExternalDirectoryObjectId
 }
 else
 {
@@ -223,14 +225,18 @@ else
     {
 	    $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
 	        -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-	        -OverflowThreshold 5 -OverflowAction SharedVoicemail -OverflowActionTarget $dGrp.ExternalDirectoryObjectId -EnableOverflowSharedVoicemailTranscription $true `	        -OverflowSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `
-	        -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction SharedVoicemail -TimeoutActionTarget $dGrp.ExternalDirectoryObjectId -EnableTimeoutSharedVoicemailTranscription $true `	        -TimeoutSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `	        -DistributionLists $dGrp.ExternalDirectoryObjectId
+	        -OverflowThreshold 5 -OverflowAction SharedVoicemail -OverflowActionTarget $dGrp.ExternalDirectoryObjectId -EnableOverflowSharedVoicemailTranscription $true `
+	        -OverflowSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `
+	        -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction SharedVoicemail -TimeoutActionTarget $dGrp.ExternalDirectoryObjectId -EnableTimeoutSharedVoicemailTranscription $true `
+	        -TimeoutSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `
+	        -DistributionLists $dGrp.ExternalDirectoryObjectId
     }
     else
     {
 	    $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
 	        -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-	        -OverflowThreshold 5 -OverflowAction DisconnectWithBusy -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction DisconnectWithBusy `	        -DistributionLists $dGrp.ExternalDirectoryObjectId
+	        -OverflowThreshold 5 -OverflowAction DisconnectWithBusy -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction DisconnectWithBusy `
+	        -DistributionLists $dGrp.ExternalDirectoryObjectId
     }
 }
 

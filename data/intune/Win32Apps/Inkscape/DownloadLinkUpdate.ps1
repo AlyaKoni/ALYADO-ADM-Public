@@ -1,4 +1,4 @@
-$pageUrl = "https://inkscape.org/release"
+﻿$pageUrl = "https://inkscape.org/release"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*/release[^`"]*windows/[^`"]*"
 $newUrl = "https://inkscape.org"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)

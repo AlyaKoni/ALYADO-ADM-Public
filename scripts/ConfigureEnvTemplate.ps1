@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2022
@@ -45,7 +45,7 @@ $AlyaTenantName = "PleaseSpecify" #Example:"$($AlyaTenantNameId).onmicrosoft.com
 $AlyaCompanyName = "PleaseSpecify" #Example:"AlyaConsulting"
 $AlyaCompanyNameFull = "PleaseSpecify" #Example:"Alya Consulting Inh. Konrad Brunner"
 $AlyaCompanyNameShort = "PleaseSpecify" #Example:"alya"
-$AlyaCompanyNameShortM365 = $AlyaCompanyNameShort
+$AlyaCompanyNameShortM365 = $AlyaCompanyNameShort.ToUpper()
 $AlyaDomainName = "PleaseSpecify" #Example:"alyaconsulting.ch"
 $AlyaAdditionalDomainNames = @()
 $AlyaLocalDomainName = "PleaseSpecify" #Example:"alyaconsulting.ch"
@@ -79,7 +79,8 @@ $AlyaServerOuTest = $null #Example:"OU=TEST,OU=WVD,OU=SERVERS,OU=CLOUD,DC=ALYACO
 
 <# LOGOS #>
 $AlyaLogoUrlQuad = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzQuadrat_256x248_wbg.png"
-$AlyaLogoUrlRect = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzMittel_640x240.png"
+$AlyaLogoUrlRect = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzRechteck_640x240.png"
+$AlyaLogoUrlLong = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzLang_640x240.png"
 
 <# RESOURCE IDS #>
 $AlyaResIdMainNetwork = "PleaseSpecify" #Example:"000"
@@ -120,8 +121,9 @@ $AlyaResIdWvdHostSNet = "PleaseSpecify" #Example:"01"
 $AlyaResIdOrdCatFuncApp = "PleaseSpecify" #Example:"016"
 
 <# SHARING SETTINGS #>
-$AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" # AdminOnly, KnownAccountsOnly, ByLink
+$AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" #  # None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)
 $AlyaOnlyEmailVerifiedUsers = "PleaseSpecify" #Example:$true
+$AlyaFullTrustCrossTenantDirectConnectAccess = $null #@(@{Name = "Alya Consulting";Id = "5757de31-29c4-4f39-9bd1-478cec348035"})
 
 <# APPLICATION SETTINGS #>
 $AlyaAllowUsersToCreateLOBApps = "PleaseSpecify" #Example:$false
@@ -137,7 +139,7 @@ $AlyaJumpHostBackupPolicy = "PleaseSpecify" #Example:"NightlyPolicy"
 
 <# GROUP SETTINGS #>
 $AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-MFADISABLED"
-$AlyaMfaEnabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-MFAENABLED"
+$AlyaMfaEnabledGroupName = $null #Example:"ALYASG-ADM-MFAENABLED"
 $AlyaSsprEnabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-SSPRENABLED"
 $AlyaPwdResetDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-PWDCHNGDISABLED"
 $AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("ALYAMG-ADM-AlleExternen")
@@ -213,7 +215,7 @@ $AlyaTeamsNewTeamOwner = $AlyaSharePointNewSiteOwner
 $AlyaTeamsNewTeamAdditionalOwner = $AlyaSharePointNewSiteOwner
 
 <# OFFICE GROUP SETTINGS #>
-$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-O365GROUPMANAGERS" # Only members can create groups
+$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-M365GROUPMANAGERS" # Only members can create groups
 #TODO $AlyaGroupManagerMembers = @()
 $AlyaOfficeGroupsNewGroupOwner = $AlyaSharePointNewSiteOwner
 $AlyaOfficeGroupsNewGroupAdditionalOwner = $AlyaSharePointNewSiteOwner

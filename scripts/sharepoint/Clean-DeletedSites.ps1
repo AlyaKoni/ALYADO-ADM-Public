@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021
@@ -54,9 +54,9 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-$adminCnt = Get-PnPContext
+$adminCnt = Get-PnPContext -Connection $adminCon
 
-$RecycleBinItems = Get-PnPTenantRecycleBinItem
+$RecycleBinItems = Get-PnPTenantRecycleBinItem -Connection $adminCon
 if ($RecycleBinItems -and $RecycleBinItems.Count -gt 0)
 {
     Write-Host "Following sites will be deleted permanently:" -ForegroundColor $CommandInfo
@@ -68,7 +68,7 @@ if ($RecycleBinItems -and $RecycleBinItems.Count -gt 0)
     foreach ($RecycleBinItem in $RecycleBinItems)
     {
         Write-Host "Cleaning site: $($RecycleBinItem.Url)"
-        Clear-PnPTenantRecycleBinItem -Url $RecycleBinItem.Url -Wait -Force
+        Clear-PnPTenantRecycleBinItem -Connection $adminCon -Url $RecycleBinItem.Url -Wait -Force
     }
 
     if (-Not $AlyaComingFromGroup)

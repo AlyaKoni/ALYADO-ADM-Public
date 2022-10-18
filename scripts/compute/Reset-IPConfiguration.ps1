@@ -1,4 +1,4 @@
-# Run following script from portal on the vm
+﻿# Run following script from portal on the vm
 $wmi = Get-WmiObject win32_networkadapterconfiguration -filter "ipenabled ='true'";
 $wmi.EnableDHCP();
 $wmi.SetDNSServerSearchOrder();

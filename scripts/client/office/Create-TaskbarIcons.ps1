@@ -1,4 +1,4 @@
-#Requires -Version 3.0
+﻿#Requires -Version 3.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021

@@ -1,4 +1,4 @@
-if(-not [Windows.Foundation.Metadata.ApiInformation,Windows,ContentType=WindowsRuntime]::IsMethodPresent("Windows.Security.Authentication.Web.Core.WebAuthenticationCoreManager", "FindAllAccountsAsync"))
+Ôªøif(-not [Windows.Foundation.Metadata.ApiInformation,Windows,ContentType=WindowsRuntime]::IsMethodPresent("Windows.Security.Authentication.Web.Core.WebAuthenticationCoreManager", "FindAllAccountsAsync"))
 {
     throw "This script is not supported on this Windows version. Please, use CleanupWPJ.cmd."
 }
@@ -23,5 +23,5 @@ $provider = Await ([Windows.Security.Authentication.Web.Core.WebAuthenticationCo
 
 $accounts = Await ([Windows.Security.Authentication.Web.Core.WebAuthenticationCoreManager,Windows,ContentType=WindowsRuntime]::FindAllAccountsAsync($provider, "d3590ed6-52b3-4102-aeff-aad2292ab01c")) ([Windows.Security.Authentication.Web.Core.FindAllAccountsResult,Windows,ContentType=WindowsRuntime])
 
-$accounts.Accounts | % { AwaitAction ($_.SignOutAsync(ìd3590ed6-52b3-4102-aeff-aad2292ab01cî)) }
+$accounts.Accounts | % { AwaitAction ($_.SignOutAsync(‚Äúd3590ed6-52b3-4102-aeff-aad2292ab01c‚Äù)) }
 

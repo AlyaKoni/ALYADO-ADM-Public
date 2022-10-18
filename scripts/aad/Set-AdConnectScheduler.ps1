@@ -1,1 +1,1 @@
-Set-ADSyncScheduler -CustomizedSyncCycleInterval 00:15:00
+﻿Set-ADSyncScheduler -CustomizedSyncCycleInterval 00:15:00

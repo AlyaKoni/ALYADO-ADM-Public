@@ -1,4 +1,4 @@
-Write-Host "    Preparing version"
+﻿Write-Host "    Preparing version"
 $packageRoot = "$PSScriptRoot"
 $versionFile = Join-Path $packageRoot "version.json"
 if ((Test-Path $versionFile))

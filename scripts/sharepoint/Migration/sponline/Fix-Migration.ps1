@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 #Requires -Modules Microsoft.Online.Sharepoint.PowerShell, SharePointPnPPowerShellOnline
 
 Start-Transcript -Path "$PSScriptRoot\..\logs\Fix-Migration-$(get-date -Format 'yyyyMMddhhmmss').txt"

@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021
@@ -168,7 +168,7 @@ powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -File "$userConfi
         $taskName = "LXP-UserSession-Config-$languageTag"
         $action = New-ScheduledTaskAction -Execute "$userConfigScriptHiddenStarterPath"
         $trigger = New-ScheduledTaskTrigger -AtLogOn # TODO: Once?
-        $principal = New-ScheduledTaskPrincipal -UserId (Get-CimInstance �ClassName Win32_ComputerSystem | Select-Object -expand UserName)
+        $principal = New-ScheduledTaskPrincipal -UserId (Get-CimInstance –ClassName Win32_ComputerSystem | Select-Object -expand UserName)
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries
         $task = New-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -Settings $settings
         Register-ScheduledTask $taskName -InputObject $task

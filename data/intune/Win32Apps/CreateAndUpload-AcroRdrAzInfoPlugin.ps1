@@ -1,4 +1,4 @@
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+﻿. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 Write-Host "This package has a dependency to Acrobat Reader DC and AZ Info Protection"
 Write-Host "Please Update first AAcrobat Reader DC and AZ Info Protection"

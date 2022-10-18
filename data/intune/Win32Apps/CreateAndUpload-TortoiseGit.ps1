@@ -1,4 +1,4 @@
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+﻿. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 Write-Host "This package has a dependency to Git"
 Write-Host "Please Update first Git"

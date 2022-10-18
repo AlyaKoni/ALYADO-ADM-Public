@@ -1,4 +1,4 @@
-$driverVersion = $null
+﻿$driverVersion = $null
 $windowsArchitecture = "64bit"
 $windowsVersion1 = "win10-win11"
 $windowsVersion2 = "win10"

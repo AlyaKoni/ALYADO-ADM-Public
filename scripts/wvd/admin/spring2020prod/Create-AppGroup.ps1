@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -39,7 +39,7 @@ Param(
     [string]$HostPoolName = "alyapinfavdh001",
     [string]$WorkspaceName = "alyapinfavdw001",
     [string]$AppGroupName = "alyapinfavda001",
-    [string]$AppGroupDescription = "Stellt den Data Sience Desktop zur Verfügung",
+    [string]$AppGroupDescription = "Stellt den Data Sience Desktop zur VerfÃ¼gung",
     [string]$AppGroupFriendlyName = "ALYA Data Sience Desktop",
     [string]$AppGroupType = "Desktop"
 )

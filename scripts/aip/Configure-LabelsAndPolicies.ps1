@@ -1,4 +1,4 @@
-#Requires -Version 5.0
+﻿#Requires -Version 5.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -405,7 +405,8 @@ $actTemplates = Get-AipServiceTemplate
 foreach ($actTemplate in $actTemplates)
 {
     #$actTemplate = $actTemplates[1]
-    if (($actTemplate.Names | where { $_.Key -eq 1033 }).Value.StartsWith("Highly Confidential") -or `        ($actTemplate.Names | where { $_.Key -eq 1033 }).Value.StartsWith("Confidential"))
+    if (($actTemplate.Names | where { $_.Key -eq 1033 }).Value.StartsWith("Highly Confidential") -or `
+        ($actTemplate.Names | where { $_.Key -eq 1033 }).Value.StartsWith("Confidential"))
     {
         Remove-AipServiceTemplate -TemplateId $actTemplate.TemplateId
     }

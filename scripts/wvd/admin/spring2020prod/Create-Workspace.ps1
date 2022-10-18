@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -37,7 +37,7 @@
 Param(
     [string]$ResourceGroupName = "alyapinfresg040",
     [string]$WorkspaceName = "alyapinfavdw001",
-    [string]$WorkspaceDescription = "Stellt VMs für Data Sience zur Verfügung",
+    [string]$WorkspaceDescription = "Stellt VMs fÃ¼r Data Sience zur VerfÃ¼gung",
     [string]$WorkspaceFriendlyName = "ALYA Data Sience"
 )
 

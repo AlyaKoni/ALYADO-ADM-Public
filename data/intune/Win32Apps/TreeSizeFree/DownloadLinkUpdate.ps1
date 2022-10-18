@@ -1,4 +1,4 @@
-$pageUrl = "https://www.jam-software.de/treesize_free"
+﻿$pageUrl = "https://www.jam-software.de/treesize_free"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "<a\s*href=`"([^`"]*)`"\s*class=`"button`"\s*>\s*Download\s*</a>"
 $matches = [regex]::Matches($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant')

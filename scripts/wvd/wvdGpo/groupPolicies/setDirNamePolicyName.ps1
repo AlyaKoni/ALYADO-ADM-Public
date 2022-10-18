@@ -1,4 +1,4 @@
-if (-Not $PSScriptRoot)
+﻿if (-Not $PSScriptRoot)
 {
 	$PSScriptRoot = Split-Path -Parent -Path $MyInvocation.MyCommand.Definition
 }

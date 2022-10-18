@@ -1,1 +1,1 @@
-. $PSScriptRoot\..\..\inntune\Get-AutopilotDeviceInfos.ps1
+﻿. $PSScriptRoot\..\..\inntune\Get-AutopilotDeviceInfos.ps1

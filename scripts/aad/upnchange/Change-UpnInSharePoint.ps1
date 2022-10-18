@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+ï»¿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -94,7 +94,7 @@ $webApplications | foreach {
                 Write-Host "    Moving old to new UPN"
                 Write-Host "     from: $($oldUser.UserLogin)"
                 Write-Host "       to: $($newAlias)"
-                Move-SPUser –Identity $user –NewAlias $newAlias -IgnoreSID -Confirm:$false
+                Move-SPUser â€“Identity $user â€“NewAlias $newAlias -IgnoreSID -Confirm:$false
             }
             if ($newUser)
             {

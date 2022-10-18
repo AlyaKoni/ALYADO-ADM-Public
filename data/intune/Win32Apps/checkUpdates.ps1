@@ -1,4 +1,4 @@
-$rootDir = $PSScriptRoot
+﻿$rootDir = $PSScriptRoot
 $dirs = Get-ChildItem -Path $rootDir -Directory
 foreach ($dir in $dirs)
 {

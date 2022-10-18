@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2022
@@ -45,7 +45,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-CloudConfigTeam-$($
 
 # Constants
 [string]$TitleAndGroupName = "$($AlyaCompanyNameShortM365.ToUpper())TM-ADM-CloudConfiguration"
-[string]$Description = "Team für die Dokumentation der Cloud Konfiguration."
+[string]$Description = "Team fÃ¼r die Dokumentation der Cloud Konfiguration."
 [string]$Visibility = "Private"
 [string[]]$Owners = @()
 [string]$TeamPicturePath = $AlyaLogoUrlQuad

@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+ï»¿#Requires -Version 2.0
 #Requires -Modules Microsoft.Online.Sharepoint.PowerShell
 
 Start-Transcript -Path "$PSScriptRoot\..\logs\Fix-UnrefWebParts-$(get-date -Format 'yyyyMMddhhmmss').txt"
@@ -29,7 +29,7 @@ function DownloadAndInstallCSOM($dir, $nuget, $nuvrs)
 
 function PrepareCSOM($dir, $nuget)
 {
-    $resp = Invoke-WebRequest –Uri "https://www.nuget.org/packages/$nuget"
+    $resp = Invoke-WebRequest â€“Uri "https://www.nuget.org/packages/$nuget"
     $nusrc = ($resp).Links | where { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$PSScriptRoot\$dir\lib\net45"))
@@ -54,7 +54,7 @@ if (-not $global:credLS4D) { $global:credLS4D = Get-Credential -Message "Enter S
 PrepareCSOM -dir "_csomOnline" -nuget "Microsoft.SharePointOnline.CSOM"
 Add-Type -Path "$PSScriptRoot\_csomOnline\lib\net45\Microsoft.SharePoint.Client.dll"
 Add-Type -Path "$PSScriptRoot\_csomOnline\lib\net45\Microsoft.SharePoint.Client.Runtime.dll"
-$creds = New-Object Microsoft.SharePoint.Client.SharePointOnlineCredentials($global:credLS4D.UserName, $global:credLS4D.Password)
+$credsÂ = New-ObjectÂ Microsoft.SharePoint.Client.SharePointOnlineCredentials($global:credLS4D.UserName, $global:credLS4D.Password)
 
 $migSites = Import-Csv -Delimiter "," -encoding UTF8 $PSScriptRoot\..\setupSites.csv
 if ([string]::IsNullOrEmpty($migSites[0].DstCol))
@@ -169,8 +169,8 @@ $migSites | where { $migrateAll -or ($_.Command.ToLower() -eq "copy" -and $_.Web
 	$fullSrcUrl = "https://$($webApplication).alyaconsulting.ch$($_.SrcUrl)"
 
     Write-Host "Site: $($fullDstUrl)"
-    $ctx = New-Object Microsoft.SharePoint.Client.ClientContext($fullDstUrl)
-    $ctx.credentials = $creds
+    $ctxÂ =Â New-ObjectÂ Microsoft.SharePoint.Client.ClientContext($fullDstUrl)
+    $ctx.credentialsÂ =Â $creds
     $ctx.load($ctx.Web)
     $ctx.executeQuery()
     RunWeb -web $ctx.Web -serverUrl $fullDstUrl

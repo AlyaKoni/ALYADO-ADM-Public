@@ -1,4 +1,4 @@
-$pageUrl = "https://www.videolan.org/vlc/download-windows.html"
+﻿$pageUrl = "https://www.videolan.org/vlc/download-windows.html"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*VLC[^`"]*win64.exe"
 $newUrl = "https:"+[regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value

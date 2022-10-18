@@ -1,4 +1,4 @@
-$pageUrl = "https://www.7-zip.org/download.html"
+﻿$pageUrl = "https://www.7-zip.org/download.html"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*7z[^`"]*x64[^`"]*.msi"
 $newUrl = "https://www.7-zip.org/"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)

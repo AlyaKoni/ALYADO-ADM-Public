@@ -1,4 +1,4 @@
-<#
+﻿<#
 Version: 1.0
 Author:  Oliver Kieselbach
 Script:  Get-DecryptInfoFromSideCarLogFiles.ps1

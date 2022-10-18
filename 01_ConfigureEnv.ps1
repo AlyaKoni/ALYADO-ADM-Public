@@ -44,6 +44,7 @@
     04.10.2021 Konrad Brunner       Proxy default credentials
     04.08.2022 Konrad Brunner       Added simple password generator
     18.08.2022 Konrad Brunner       SelectItem
+    18.10.2022 Konrad Brunner       LoginTo-MgGraph
 
 #>
 
@@ -886,6 +887,10 @@ function LoginTo-Az(
     if ($AlyaContext)
     {
         Write-Host "  checking existing context"
+        if ($AlyaContext.Count -gt 1)
+        {
+            $AlyaContext = SelectItem -message "Please select an existing context" -list $AlyaContext
+        }
         if ($AlyaContext.Tenant.Id -ne $AlyaTenantId)
         {
             Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
@@ -999,6 +1004,45 @@ function LoginTo-Az(
 }
 #LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
+function LoginTo-MgGraph(
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
+    [string[]] [Parameter(Mandatory = $false)] $Scopes = $null,
+    [string] [Parameter(Mandatory = $false)] [ValidateSet("beta","v1.0")] $Profile = "beta")
+{
+    Write-Host "Login to Graph" -ForegroundColor $CommandInfo
+
+    if ((Get-MgProfile).Name -ne $Profile)
+    {
+        Select-MgProfile -Name $Profile
+    }
+
+    $mgContext = Get-MgContext | where { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+    if ($mgContext)
+    {
+        Write-Host "  checking existing context"
+        foreach($Scope in $Scopes)
+        {
+            if ($mgContext.Scopes -notcontains $Scope)
+            {
+                $mgContext = $null
+                break
+            }
+        }
+    }
+
+    if (-Not $mgContext)
+    {
+        Connect-MGGraph -Scopes $Scopes -TenantId $AlyaTenantId
+        $mgContext = Get-MgContext | where { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+    }
+
+    if (-Not $mgContext)
+    {
+        Write-Error "Not logged in to Graph!" -ErrorAction Continue
+        Exit 1
+    }
+}
 
 function Get-AzAccessToken(
     [string] [Parameter(Mandatory = $false)] $audience = "74658136-14ec-4630-ad9b-26e160ff0fc6",

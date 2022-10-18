@@ -1,11 +1,11 @@
-#Requires -Version 2.0
+ï»¿#Requires -Version 2.0
 Add-PSSnapin Microsoft.SharePoint.PowerShell -ErrorAction Stop
 
-$siteUrl = “http://site1internal.alyaconsulting.ch”
+$siteUrl = â€œhttp://site1internal.alyaconsulting.châ€
 $sesstion = Get-SPTaxonomySession -Site $siteUrl
-$termStore = $session.TermStores[“Managed Metadata Service Site1”]
+$termStore = $session.TermStores[â€œManaged Metadata Service Site1â€]
 $systemGroup = $termStore.SystemGroup
-$termSet = $systemGroup.TermSets[“Orphaned Terms”]
+$termSet = $systemGroup.TermSets[â€œOrphaned Termsâ€]
 $terms = $termSet.Terms
 $terms | % { $_.Delete() }
 $termStore.CommitAll();

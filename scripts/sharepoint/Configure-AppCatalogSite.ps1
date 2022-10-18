@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -141,7 +141,7 @@ if (-Not $site)
     # Setting site design
     <#
 
-    Getting error: Die Website l�sst keine Websitedesigns zu
+    Getting error: Die Website lï¿½sst keine Websitedesigns zu
 
     Write-Host "Setting site design" -ForegroundColor $CommandInfo
     if ($hubSiteDef.subSiteScript)

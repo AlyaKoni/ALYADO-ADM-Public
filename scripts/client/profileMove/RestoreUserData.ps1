@@ -1,4 +1,4 @@
-#Preparation
+﻿#Preparation
 $userName = $env:USERNAME
 $hostName = $env:COMPUTERNAME
 $localAppData = $env:LOCALAPPDATA

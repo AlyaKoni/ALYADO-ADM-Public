@@ -1,1 +1,1 @@
-Set-WinHomeLocation -GeoId 223
+﻿Set-WinHomeLocation -GeoId 223

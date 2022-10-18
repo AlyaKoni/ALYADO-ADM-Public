@@ -1,4 +1,4 @@
-$pageUrl = "https://mremoteng.org/download"
+﻿$pageUrl = "https://mremoteng.org/download"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"']*mRemoteNG-Installer[^`"']*.msi"
 $newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)

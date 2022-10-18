@@ -1,4 +1,4 @@
-#Requires -Version 3.0
+ï»¿#Requires -Version 3.0
 Start-Transcript -Path "FindUserDocuments.log" -Force -Confirm:$false
 
 $siteUrls = @(
@@ -37,7 +37,7 @@ function DownloadAndInstallCSOM()
     [System.IO.Compression.ZipFile]::ExtractToDirectory($fileName, "$PSScriptRoot\_csom")
     Remove-Item $fileName
 }
-$resp = Invoke-WebRequest –Uri "https://www.nuget.org/packages/Microsoft.SharePoint2016.CSOM"
+$resp = Invoke-WebRequest â€“Uri "https://www.nuget.org/packages/Microsoft.SharePoint2016.CSOM"
 $nusrc = ($resp).Links | where { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
 $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
 if (-not (Test-Path "$PSScriptRoot\_csom\lib\net45"))
@@ -141,7 +141,7 @@ foreach($siteUrl in $siteUrls)
 
     # Login
     Write-Host "Site: $($siteUrl)"
-    $ctx = New-Object Microsoft.SharePoint.Client.ClientContext($siteUrl)
+    $ctxÂ =Â New-ObjectÂ Microsoft.SharePoint.Client.ClientContext($siteUrl)
     $ctx.Credentials = New-Object System.Net.NetworkCredential($loginname, $global:pwd)
     $ctx.load($ctx.Web)
     $ctx.executeQuery()

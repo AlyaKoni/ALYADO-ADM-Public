@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 Add-PSSnapin Microsoft.SharePoint.PowerShell -ErrorAction Stop
 
 $userOrGroup = "alyaconsulting\konradbrunner" 

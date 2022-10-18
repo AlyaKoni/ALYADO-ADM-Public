@@ -1,4 +1,4 @@
-$pageUrl = "https://www.gimp.org/downloads/"
+﻿$pageUrl = "https://www.gimp.org/downloads/"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*gimp[^`"]*setup[^`"]*.exe"
 $newUrl = "https:"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)

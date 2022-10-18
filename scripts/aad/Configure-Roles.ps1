@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2022
@@ -362,7 +362,7 @@ foreach($roleName in $allRoles.Keys)
             {
                 if ($_.Exception.ToString() -like "*AadPremiumLicenseRequired*")
                 {
-                    Write-Host "No PIM license available! Can�t configure PIM roles."
+                    Write-Host "No PIM license available! Canï¿½t configure PIM roles."
                     $configurePIM = $false
                 }
                 else

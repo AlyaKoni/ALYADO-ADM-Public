@@ -1,4 +1,4 @@
-#Preparation
+﻿#Preparation
 $clientHasOndeDriveBackup = $false
 $userName = $env:USERNAME
 $hostName = $env:COMPUTERNAME

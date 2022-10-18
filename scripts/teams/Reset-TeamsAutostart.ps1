@@ -1,4 +1,4 @@
-<#
+﻿<#
 FROM: https://docs.microsoft.com/en-us/microsoftteams/scripts/powershell-script-teams-reset-autostart
 .SYNOPSIS
 This script allows you to reset all autostart settings to the default settings for Teams.

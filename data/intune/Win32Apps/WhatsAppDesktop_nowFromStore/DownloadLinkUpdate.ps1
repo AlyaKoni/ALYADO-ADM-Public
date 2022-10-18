@@ -1,4 +1,4 @@
-$pageUrl = "https://www.whatsapp.com/download?lang=de"
+﻿$pageUrl = "https://www.whatsapp.com/download?lang=de"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*desktop[^`"]*x64[^`"]*.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value

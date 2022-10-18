@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+ï»¿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -46,21 +46,21 @@ $migBatchName = "PublicFolderToUnifiedGroupBatch"
 $migMapping = @(
     @{
         publicFolder="Beispiel1";
-        parentPath="\Öffent. Kalender";
+        parentPath="\Ã–ffent. Kalender";
         m365Group="ALYAOG-PUB-Beispiel1";
         m365GroupAddress="ALYAOG-PUB-Beispiel1@groups.alyaconsulting.ch";
         access="Public"
      },
     @{
         publicFolder="Beispiel2";
-        parentPath="\Öffent. Kalender";
+        parentPath="\Ã–ffent. Kalender";
         m365Group="ALYAOG-PUB-Beispiel2";
         m365GroupAddress="ALYAOG-PUB-Beispiel2@groups.alyaconsulting.ch";
         access="Public"
      },
     @{
         publicFolder="Beispiel3";
-        parentPath="\Öffent. Kalender";
+        parentPath="\Ã–ffent. Kalender";
         m365Group="ALYAOG-PUB-Beispiel3";
         m365GroupAddress="ALYAOG-PUB-Beispiel3@groups.alyaconsulting.ch";
         access="Private"

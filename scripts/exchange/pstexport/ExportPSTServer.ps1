@@ -1,4 +1,4 @@
-$ExportUsers = @(
+ï»¿$ExportUsers = @(
     "cloud.test@alyaconsulting.ch",
     "first.last@alyaconsulting.ch"
 )
@@ -15,7 +15,7 @@ if (-Not $Cmd)
     else
     {
         $usr = [Environment]::UserName.ToLower()
-        New-ManagementRoleAssignment –Role "Mailbox Import Export" –User $usr
+        New-ManagementRoleAssignment â€“Role "Mailbox Import Export" â€“User $usr
         Write-Host "We had to add your account to the export role in exchange. Please close and restart session to make your role active." -ForegroundColor Red
         Return
     }

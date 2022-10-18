@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -38,7 +38,7 @@ Param(
     [string]$ResourceGroupName = "alyapinfresg040",
     [string]$HostPoolName = "alyapinfavdh001",
     [string]$HostPoolType = "Pooled",
-    [string]$HostPoolDescription = "Stellt die VMs für Data Sience zur Verfügung",
+    [string]$HostPoolDescription = "Stellt die VMs fÃ¼r Data Sience zur VerfÃ¼gung",
     [string]$HostPoolFriendlyName = "ALYA Data Sience",
     [string]$HostPoolLoadBalancerType = "DepthFirst",
     [string]$HostPoolPreferedAppGroupType = "Desktop",

@@ -1,4 +1,4 @@
-Start-Transcript -Path "\\server\ExchangeExport\Logs\$([Guid]::NewGuid()).log" -Force
+﻿Start-Transcript -Path "\\server\ExchangeExport\Logs\$([Guid]::NewGuid()).log" -Force
 Add-Type -assembly system.web.extensions
 $jsonSerializer = new-object system.web.script.serialization.javascriptSerializer
 $usr = [Environment]::UserName.ToLower()

@@ -1,4 +1,4 @@
-$pageUrl = "https://camstudio.org/"
+﻿$pageUrl = "https://camstudio.org/"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*camstudio[^`"]*.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value

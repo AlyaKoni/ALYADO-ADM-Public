@@ -1,4 +1,4 @@
-Get-ADDomain
+﻿Get-ADDomain
 Set-ADAccountPassword -Identity cloud.test -Reset -NewPassword (ConvertTo-SecureString -AsPlainText "XXXX" -Force)
 Get-ADGroup  -Filter "samAccountName -like '*XXXXX*'" -Properties *
 (Get-ADGroup XXXX -Properties *).Members

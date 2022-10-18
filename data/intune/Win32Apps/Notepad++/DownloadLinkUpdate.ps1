@@ -1,4 +1,4 @@
-$pageUrl = "https://notepad-plus-plus.org/downloads/"
+﻿$pageUrl = "https://notepad-plus-plus.org/downloads/"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*/downloads/v[^`"]*"
 $newUrl = "https://notepad-plus-plus.org"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)

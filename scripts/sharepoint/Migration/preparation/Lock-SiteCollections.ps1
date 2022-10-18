@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 Add-PSSnapin Microsoft.SharePoint.PowerShell -ErrorAction Stop
 
 $site = Get-SPSite -Identity "https://site1internal.alyaconsulting.ch/sites/mgmt-report-fm"

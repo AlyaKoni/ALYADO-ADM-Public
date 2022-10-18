@@ -1,4 +1,4 @@
-<#
+﻿<#
 FROM: https://www.alkanesolutions.co.uk/2021/01/16/launch-microsoft-teams-minimised-in-the-system-tray/
 #>
 

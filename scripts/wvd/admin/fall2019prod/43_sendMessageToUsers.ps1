@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -36,11 +36,11 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-    [string]$MessageBody = "Die Server müssen neu gestartet werden. Bitte alles speichern und ausloggen! Danke. LG Koni"
+    [string]$MessageBody = "Die Server mÃ¼ssen neu gestartet werden. Bitte alles speichern und ausloggen! Danke. LG Koni"
     #[string]$MessageBody = "Um 22:00 Uhr wird der Server fuer Maintenance gestoppt. Bitte alles speichern und ausloggen! Danke. LG Koni"
     #[string]$MessageBody = "Server rebootet in 10 Minuten (22:10). Bitte alles speichern!"
     #[string]$MessageBody = "Dies ist ein Test. Bitte schreibe ein E-Mail an konrad.brunner@alyaconsulting.ch, dass Du dieses Fesnter gesehen hast. Danke."
-    #[string]$MessageBody = "Bitte vor dem nach Hause gehen alles speichern. Wir müssen heute Abend die Hosts neu starten. Nicht gespeicherte Arbeit geht verloren!"
+    #[string]$MessageBody = "Bitte vor dem nach Hause gehen alles speichern. Wir mÃ¼ssen heute Abend die Hosts neu starten. Nicht gespeicherte Arbeit geht verloren!"
 )
 
 #Reading configuration

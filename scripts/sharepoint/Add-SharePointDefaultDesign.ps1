@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+ï»¿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -91,7 +91,7 @@ $SiteScript = Get-SPOSiteScript | where { $_.Title -eq "$SiteScriptName"}
 if (-Not $SiteScript)
 {
     Write-Warning "Site script not found. Creating now site script $SiteScriptName"
-    $SiteScript = Add-SPOSiteScript -Title $SiteScriptName -Content $SiteScriptDef -Description "Fügt das AlyaConsulting Design hinzu"
+    $SiteScript = Add-SPOSiteScript -Title $SiteScriptName -Content $SiteScriptDef -Description "FÃ¼gt das AlyaConsulting Design hinzu"
 }
 
 # Checking site design
@@ -100,7 +100,7 @@ $SiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameTeam"
 if (-Not $SiteDesignTeam)
 {
     Write-Warning "Team site design not found. Creating now team site design $SiteDesignNameTeam"
-    $SiteDesignTeam = Add-SPOSiteDesign -Title $SiteDesignNameTeam -WebTemplate "64" -SiteScripts $SiteScript.Id -Description "Fügt das AlyaConsulting Design hinzu"
+    $SiteDesignTeam = Add-SPOSiteDesign -Title $SiteDesignNameTeam -WebTemplate "64" -SiteScripts $SiteScript.Id -Description "FÃ¼gt das AlyaConsulting Design hinzu"
 }
 
 # Checking site design
@@ -109,7 +109,7 @@ $SiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameComm"
 if (-Not $SiteDesignComm)
 {
     Write-Warning "Communication site design not found. Creating now Communication site design $SiteDesignNameComm"
-    $SiteDesignComm = Add-SPOSiteDesign -Title $SiteDesignNameComm -WebTemplate "68" -SiteScripts $SiteScript.Id -Description "Fügt das AlyaConsulting Design hinzu"
+    $SiteDesignComm = Add-SPOSiteDesign -Title $SiteDesignNameComm -WebTemplate "68" -SiteScripts $SiteScript.Id -Description "FÃ¼gt das AlyaConsulting Design hinzu"
 }
 
 #Stopping Transscript

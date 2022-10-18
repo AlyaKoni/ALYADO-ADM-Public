@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021
@@ -72,7 +72,7 @@ foreach ($dom in $domains)
     Write-Host "Type:  TXT"
     Write-Host "Name:  @"
     Write-Host "Value: v=spf1 include:spf.protection.outlook.com -all"
-    # if sendgrid: v=spf1 include:sendgrid.net include:spf.protection.outlook.com �all
+    # if sendgrid: v=spf1 include:sendgrid.net include:spf.protection.outlook.com –all
     Write-Host "TTL:   1 hour"
 
     Write-Host "`nDMARC" -ForegroundColor $CommandInfo

@@ -1,4 +1,4 @@
-$rootDir = $PSScriptRoot
+﻿$rootDir = $PSScriptRoot
 
 function Remove-OneDriveItemRecursive
 {

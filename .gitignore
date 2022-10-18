@@ -342,4 +342,4 @@ ASALocalRun/
 /desktop.ini
 /80_UpdateAzModules.ps1
 /81_UpdateExpandArchiveCommand.ps1
-/50_InitialSetup.ps1
+/82_UpdateEncoding.ps1

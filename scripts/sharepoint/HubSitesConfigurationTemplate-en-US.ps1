@@ -1,4 +1,4 @@
-# Constants
+Ôªø# Constants
 $prefix = "$($AlyaCompanyNameShortM365.ToUpper())SP"
 $ThemeName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Theme"
 $defaultSiteScript = @"
@@ -153,7 +153,7 @@ $cusSubSiteScript = @"
         },
         {
           "verb": "setDescription",
-          "description": "Erfasste Aufw‰nde f¸r ein Projekt"
+          "description": "Erfasste Aufw√§nde f√ºr ein Projekt"
         },
         {
           "verb": "setTitle",
@@ -318,7 +318,7 @@ $prtSubSiteScript = @"
         },
         {
           "verb": "setDescription",
-          "description": "Erfasste Aufw‰nde f¸r ein Projekt"
+          "description": "Erfasste Aufw√§nde f√ºr ein Projekt"
         },
         {
           "verb": "setTitle",
@@ -546,7 +546,7 @@ $homePageTemplateColHubTeamSite = @"
                 <pnp:CanvasControl WebPartType="Text" ControlId="e99e59fa-fa55-4177-a21d-8e900060b080" Order="1" Column="1">
                   <pnp:CanvasControlProperties>
 				  
-                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Willkommen auf der Informationsseite f¸r Kunden und Partner der $($AlyaCompanyNameFull)&lt;/h2&gt;&lt;p&gt;Auf dieser Seite findest Du alle Informationen, die Dir von uns zur Verf¸gung gestellt werden.&amp;nbsp;&lt;/p&gt;" />
+                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Willkommen auf der Informationsseite f√ºr Kunden und Partner der $($AlyaCompanyNameFull)&lt;/h2&gt;&lt;p&gt;Auf dieser Seite findest Du alle Informationen, die Dir von uns zur Verf√ºgung gestellt werden.&amp;nbsp;&lt;/p&gt;" />
                   
 				  </pnp:CanvasControlProperties>
                 </pnp:CanvasControl>
@@ -589,10 +589,10 @@ $homePageTemplateColHubTeamSite = @"
 					&quot;sources&quot;:[&quot;Title&quot;],
 					&quot;linkUrls&quot;:[&quot;WebPath&quot;],
 					&quot;width&quot;:250},
-					&quot;column3&quot;:{&quot;heading&quot;:&quot;Ge‰ndert&quot;,
+					&quot;column3&quot;:{&quot;heading&quot;:&quot;Ge√§ndert&quot;,
 					&quot;sources&quot;:[&quot;ModifiedDate&quot;],
 					&quot;width&quot;:100},
-					&quot;column4&quot;:{&quot;heading&quot;:&quot;Ge‰ndert von&quot;,
+					&quot;column4&quot;:{&quot;heading&quot;:&quot;Ge√§ndert von&quot;,
 					&quot;sources&quot;:[&quot;Name&quot;],
 					&quot;width&quot;:150}},
 					&quot;3&quot;:{&quot;id&quot;:{&quot;sources&quot;:[&quot;UniqueID&quot;]},
@@ -746,7 +746,7 @@ $homePageTemplateRootTeamSite = @"
                 <pnp:CanvasControl WebPartType="Text" ControlId="afca2a68-4c3c-418f-b19b-c4a1b519d99b" Order="1" Column="1">
                   <pnp:CanvasControlProperties>
 				  
-                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Willkommen bei $($AlyaCompanyNameFull)&lt;/h2&gt;&lt;p&gt;Wir heissen Dich herzlich willkommen auf der SharePoint Seite von $($AlyaCompanyNameFull). Bitte w‰hle unten eine Option, um Deine Inhalte mˆglichst einfach zu finden.&lt;/p&gt;" />
+                    <pnp:CanvasControlProperty Key="Text" Value="&lt;h2&gt;Willkommen bei $($AlyaCompanyNameFull)&lt;/h2&gt;&lt;p&gt;Wir heissen Dich herzlich willkommen auf der SharePoint Seite von $($AlyaCompanyNameFull). Bitte w√§hle unten eine Option, um Deine Inhalte m√∂glichst einfach zu finden.&lt;/p&gt;" />
                   
 				  </pnp:CanvasControlProperties>
                 </pnp:CanvasControl>
@@ -786,7 +786,7 @@ $homePageTemplateRootTeamSite = @"
 					&quot;siteId&quot;:&quot;{sitecollectionid}&quot;,
 					&quot;pane_link_button&quot;:0}, 
 					&quot;serverProcessedContent&quot;: {&quot;htmlStrings&quot;:{},
-					&quot;searchablePlainTexts&quot;:{&quot;title&quot;:&quot;Bitte w‰hle eine Option&quot;,
+					&quot;searchablePlainTexts&quot;:{&quot;title&quot;:&quot;Bitte w√§hle eine Option&quot;,
 					&quot;items[0].title&quot;:&quot;Ich bin ein $($AlyaCompanyName) Mitarbeiter&quot;,&quot;items[1].title&quot;:&quot;Ich bin KEIN $($AlyaCompanyName) Mitarbeiter&quot;},
 					&quot;imageSources&quot;:{&quot;items[1].rawPreviewImageUrl&quot;:&quot;{site}_api{site}v2.1{site}sites{site}alyaconsulting031.sharepoint.com,0ea97c04-97f2-4c4b-9506-d823c3b6bd5a,d587f72d-9c8f-4de7-9d86-61c0a6912374{site}items{site}af646fff-dcb1-4cbd-8d5b-23b36dc6a23a{site}driveItem{site}thumbnails{site}0{site}c400x99999{site}content?preferNoRedirect=true&quot;},
 					
@@ -861,7 +861,7 @@ $homePageTemplateRootTeamSite = @"
 				
 					&quot;instanceId&quot;: &quot;ad97f067-5c9a-48f7-a839-4c63fd16942b&quot;, 
 					&quot;title&quot;: &quot;Link&quot;, 
-					&quot;description&quot;: &quot;Hinzuf¸gen eines Links und seiner Vorschau f¸r eine Seite, ein Video oder Bild.&quot;, 
+					&quot;description&quot;: &quot;Hinzuf√ºgen eines Links und seiner Vorschau f√ºr eine Seite, ein Video oder Bild.&quot;, 
 					&quot;dataVersion&quot;: &quot;1.0&quot;, 
 					&quot;properties&quot;: {&quot;linkPreviewComponentMode&quot;:2,
 					&quot;previewContent&quot;:{},

@@ -1,4 +1,4 @@
-$pageUrl = "https://www.mythicsoft.com/agentransack/download/"
+﻿$pageUrl = "https://www.mythicsoft.com/agentransack/download/"
 $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*agentransack[^`"]*x64[^`"]*msi[^`"]*.zip"
 $newUrl = "https:"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)

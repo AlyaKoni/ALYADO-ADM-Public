@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -73,7 +73,7 @@ if ($softDeletedGroups -and $softDeletedGroups.Count -gt 0)
     foreach($softDeletedGroup in $softDeletedGroups)
     {
         Write-Host "Removing $($softDeletedGroup.DisplayName)"
-        Remove-AzureADMSDeletedDirectoryObject –Id $softDeletedGroup.Id
+        Remove-AzureADMSDeletedDirectoryObject -Id $softDeletedGroup.Id
     }
 
     $AlyaComingFromGroup = $true

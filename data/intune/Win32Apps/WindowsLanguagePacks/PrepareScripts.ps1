@@ -1,4 +1,4 @@
-$deviceKeyboard = "00000807"
+ï»¿$deviceKeyboard = "00000807"
 $packageRoot = "$PSScriptRoot"
 if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
 {
@@ -70,8 +70,8 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
 
     #Getting fr-FR
     Write-Host "Getting Local Experience Pack fr-FR"
-    $pck = $apps | where { $_.ProductTitle.StartsWith("Module d'expérience locale français (France)") }
-    if (-Not $pck) { throw "Can't find local experience pack 'Module d'expérience locale français (France)' in your store!" }
+    $pck = $apps | where { $_.ProductTitle.StartsWith("Module d'expÃ©rience locale franÃ§ais (France)") }
+    if (-Not $pck) { throw "Can't find local experience pack 'Module d'expÃ©rience locale franÃ§ais (France)' in your store!" }
     $req = Invoke-WebRequest -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
     $languagesToInstall += @{
         "Locale" = "fr-FR"

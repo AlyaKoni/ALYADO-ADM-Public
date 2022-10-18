@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2022
@@ -43,13 +43,6 @@ Param(
 
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-ConditionalAccessPolicies-$($AlyaTimeString).log" | Out-Null
-
-# Constants
-$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
-$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
-$CompName = Make-PascalCase($AlyaCompanyNameShort)
-$ConditionalAccessAppName = "$($CompName)ConditionalAccessApp"
-$ExternalGroupsToExclude = $AlyaMfaDisabledForGroups
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -178,7 +171,7 @@ else
 # Checking external groups to exclude
 Write-Host "Checking external groups to exclude" -ForegroundColor $CommandInfo
 $ExcludeGroupIds = @()
-foreach($groupName in $ExternalGroupsToExclude)
+foreach($groupName in $AlyaMfaDisabledForGroups)
 {
     $GrpRslt = Get-AzureADMSGroup -SearchString $NoMfaGroupName
     $ExcludeGroupIds += $GrpRslt.Id

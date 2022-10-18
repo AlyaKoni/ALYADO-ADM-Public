@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -435,18 +435,7 @@ Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllInternals@$AlyaD
 Add-SPOUser -Site $site -Group $group.Title -LoginName "$AlyaAllExternals@$AlyaDomainName"
 
 ###Processing Hub Site Start Pages
-
-#ATTENTION: Invoke-PnPSiteTemplate runs into an error if this code runs from start
-#           Looks like dll hell. Some dll is loaded which has a missing function
-#           Still trying to unload that dll
-try { $null = Disconnect-SPOService -ErrorAction SilentlyContinue } catch{}
-try { $null = Disconnect-AzureAD } catch{}
-LogoutFrom-Az
-Remove-Module Microsoft.Online.SharePoint.PowerShell -Force -ErrorAction SilentlyContinue
-Remove-Module AzureADPreview -Force -ErrorAction SilentlyContinue
-Remove-Module Az.Resources -Force -ErrorAction SilentlyContinue
-Remove-Module Az.Accounts -Force -ErrorAction SilentlyContinue
-
+Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
 if ($overwritePages)
 {
 

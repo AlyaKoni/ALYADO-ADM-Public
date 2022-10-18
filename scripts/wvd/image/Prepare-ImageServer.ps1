@@ -1,4 +1,4 @@
-#Requires -Version 2.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -62,7 +62,7 @@ Write-Host '  - Wait until the vm has stopped state'
 <#
 Bei Fehler Logdatei untersuchen:
 %WINDIR%\System32\Sysprep\Panther\setupact.log
-Unter Umständen müssen Packages entfernt werden. Siehe hierzu cleanImage.ps1
+Unter UmstÃ¤nden mÃ¼ssen Packages entfernt werden. Siehe hierzu cleanImage.ps1
 #>
 pause
 
