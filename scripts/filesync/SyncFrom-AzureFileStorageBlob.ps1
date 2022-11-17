@@ -97,7 +97,8 @@ if (-Not $StrgAccount)
 {
     throw "Storage account not found. Please create the storage account $StorageAccountName"
 }
-$StrgContext = New-AzStorageContext -StorageAccountName $StorageAccountName
+$StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName
+$StrgContext = New-AzStorageContext -StorageAccountName $StorageAccountName -StorageAccountKey $StrgKeys[0].Value
 
 # Checking alyaconsulting Blob
 Write-Host "Checking blob container" -ForegroundColor $CommandInfo

@@ -1,7 +1,7 @@
 ﻿#Requires -Version 5.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     24.09.2020 Konrad Brunner       Initial Version
+    16.11.2022 Konrad Brunner       Added site and group definitions
 
 #>
 
@@ -137,6 +138,26 @@ try
                 @{key="de-ch";Value=$labelDef.CommentDE;})}
             Set-Label -Identity $labelName -Priority $priority -LocaleSettings (ConvertTo-Json $DisplayNameLocaleSettings -Depth 3 -Compress),(ConvertTo-Json $TooltipLocaleSettings -Depth 3 -Compress)
 
+            $AllowGuests = $labelDef.AllowGuests -eq "On"
+            $Privacy = "Private"
+            if ($labelDef.NameEN.Contains("Public"))
+            {
+                $Privacy = "Public"
+            }
+            $SharingOption = "ExternalUserAndGuestSharing"
+            if ($AlyaSharingPolicy -eq "KnownAccountsOnly")
+            {
+                $SharingOption = "ExternalUserSharingOnly"
+            }
+            if ($AlyaSharingPolicy -eq "AdminOnly")
+            {
+                $SharingOption = "ExistingExternalUserSharingOnly"
+            }
+            if ($AlyaSharingPolicy -eq "None")
+            {
+                $SharingOption = "Disabled"
+            }
+
             if ($labelDef.Encryption -eq "On")
             {
                 $encryptionProtectionType = "Template"
@@ -182,14 +203,36 @@ try
                 {
                     throw "TODO" #TODO
                 }
-                Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
-                    -EncryptionPromptUser $encryptionPromptUser -EncryptionDoNotForward $false `
-                    -EncryptionContentExpiredOnDateInDaysOrNever $encryptionContentExpiredOnDateInDaysOrNever `
-                    -EncryptionOfflineAccessDays $encryptionOfflineAccessDays -EncryptionRightsDefinitions $encryptionRightsDefinitions
+                if (-Not $labelDef.SiteAndGroupProtection -or $labelDef.SiteAndGroupProtection -eq "Off")
+                {
+                    Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
+                        -EncryptionPromptUser $encryptionPromptUser -EncryptionDoNotForward $false `
+                        -EncryptionContentExpiredOnDateInDaysOrNever $encryptionContentExpiredOnDateInDaysOrNever `
+                        -EncryptionOfflineAccessDays $encryptionOfflineAccessDays -EncryptionRightsDefinitions $encryptionRightsDefinitions `
+                        -SiteAndGroupProtectionEnabled $false
+                }
+                else
+                {
+                    Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
+                        -EncryptionPromptUser $encryptionPromptUser -EncryptionDoNotForward $false `
+                        -EncryptionContentExpiredOnDateInDaysOrNever $encryptionContentExpiredOnDateInDaysOrNever `
+                        -EncryptionOfflineAccessDays $encryptionOfflineAccessDays -EncryptionRightsDefinitions $encryptionRightsDefinitions `
+                        -SiteAndGroupProtectionEnabled $true -SiteAndGroupProtectionAllowAccessToGuestUsers $AllowGuests `                        -SiteAndGroupProtectionAllowEmailFromGuestUsers $AllowGuests -SiteAndGroupProtectionAllowFullAccess $AllowGuests `
+                        -SiteAndGroupProtectionAllowLimitedAccess $AllowGuests -SiteAndGroupProtectionBlockAccess $false `                        -SiteAndGroupProtectionPrivacy $Privacy -SiteExternalSharingControlType $SharingOption
+                }
             }
             else
             {
-                Set-Label -Identity $labelName -EncryptionEnabled $false
+                if (-Not $labelDef.SiteAndGroupProtection -or $labelDef.SiteAndGroupProtection -eq "Off")
+                {
+                    Set-Label -Identity $labelName -EncryptionEnabled $false -SiteAndGroupProtectionEnabled $false
+                }
+                else
+                {
+                    Set-Label -Identity $labelName -EncryptionEnabled $false `
+                        -SiteAndGroupProtectionEnabled $true -SiteAndGroupProtectionAllowAccessToGuestUsers $AllowGuests `                        -SiteAndGroupProtectionAllowEmailFromGuestUsers $AllowGuests -SiteAndGroupProtectionAllowFullAccess $AllowGuests `
+                        -SiteAndGroupProtectionAllowLimitedAccess $AllowGuests -SiteAndGroupProtectionBlockAccess $false `                        -SiteAndGroupProtectionPrivacy $Privacy -SiteExternalSharingControlType $SharingOption
+                }
             }
 
             #TODO advanced settings
@@ -233,6 +276,7 @@ try
     Write-Host "Correcting label priority"
     do
     {
+        #TODO use before and after label
         $changedSomePrio = $false
         $priority = -1
         foreach($labelDef in $labelDefs)
@@ -310,50 +354,51 @@ try
                     $labelsToAdd = $lbl
                 }
             }
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AddLabels $labelsToAdd -RemoveLabels $labelsToRemove -Comment $publishDef.Description -AddExchangeLocation $publishDef.ExchangeLoc -AddSharePointLocation $publishDef.SharePointLoc -AddModernGroupLocation $publishDef.ModernGrpLoc
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AddLabels $labelsToAdd -RemoveLabels $labelsToRemove -Comment $publishDef.Description -AddExchangeLocation $publishDef.ExchangeLoc -AddSharePointLocation $publishDef.SharePointLoc -AddOneDriveLocation $publishDef.OneDriveLoc -AddModernGroupLocation $publishDef.ModernGrpLoc
             
             #Advanced settings
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{RequireDowngradeJustification=$false}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnablebarHiding=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{DisableDnf=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{Mandatory=$false}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{SiteAndGroupMandatory=$false}
-            #https://docs.microsoft.com/en-us/azure/information-protection/rms-client/clientv2-admin-guide-customizations
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissions=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{HideBarByDefault=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{DisableMandatoryInOutlook=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookRecommendationEnabled=$false}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableContainerSupport=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookDefaultLabel="None"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{PFileSupportedExtensions="*"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{AdditionalPPrefixExtensions="*"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{PostponeMandatoryBeforeSave=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissions=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableCustomPermissionsForCustomProtectedFiles=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{AttachmentAction="Automatic"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{ReportAnIssueLink="mailto:konrad.brunner@alyaconsulting.ch"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookWarnUntrustedCollaborationLabel=$null}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookJustifyUntrustedCollaborationLabel=$null}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookBlockUntrustedCollaborationLabel=$null}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookBlockTrustedDomains=$null}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookJustifyTrustedDomains=$null}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookUnlabeledCollaborationAction="Off"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookOverrideUnlabeledCollaborationExtensions=$null}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookUnlabeledCollaborationActionOverrideMailBodyBehavior="Off"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableOutlookDistributionListExpansion=$false}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookGetEmailAddressesTimeOutMSProperty="3000"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableAudit=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{LogMatchedContent=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableLabelByMailHeader=$null}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableLabelBySharePointProperties=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{RunPolicyInBackground=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{JustificationTextForUserText=$null}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{SharepointWebRequestTimeout="00:05:00"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{SharepointFileWebRequestTimeout="00:15:00"}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OutlookSkipSmimeOnReadingPaneEnabled=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableTrackAndRevoke=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{EnableRevokeGuiSupport=$true}
-            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{OfficeContentExtractionTimeout="00:00:15"}
+            Set-LabelPolicy -Identity $publishDef.ProfileName -AdvancedSettings @{
+                RequireDowngradeJustification=$false
+                EnablebarHiding=$true
+                DisableDnf=$true
+                Mandatory=$false
+                SiteAndGroupMandatory=$false
+                #https://docs.microsoft.com/en-us/azure/information-protection/rms-client/clientv2-admin-guide-customizations
+                EnableCustomPermissions=$true
+                HideBarByDefault=$true
+                DisableMandatoryInOutlook=$true
+                OutlookRecommendationEnabled=$false
+                EnableContainerSupport=$true
+                OutlookDefaultLabel="None"
+                PFileSupportedExtensions="*"
+                AdditionalPPrefixExtensions="*"
+                PostponeMandatoryBeforeSave=$true
+                EnableCustomPermissionsForCustomProtectedFiles=$true
+                AttachmentAction="Automatic"
+                ReportAnIssueLink="mailto:$AlyaSupportEmail"
+                OutlookWarnUntrustedCollaborationLabel=$null
+                OutlookJustifyUntrustedCollaborationLabel=$null
+                OutlookBlockUntrustedCollaborationLabel=$null
+                OutlookBlockTrustedDomains=$null
+                OutlookJustifyTrustedDomains=$null
+                OutlookUnlabeledCollaborationAction="Off"
+                OutlookOverrideUnlabeledCollaborationExtensions=$null
+                OutlookUnlabeledCollaborationActionOverrideMailBodyBehavior="Off"
+                EnableOutlookDistributionListExpansion=$false
+                OutlookGetEmailAddressesTimeOutMSProperty="3000"
+                EnableAudit=$true
+                LogMatchedContent=$true
+                EnableLabelByMailHeader=$null
+                EnableLabelBySharePointProperties=$true
+                RunPolicyInBackground=$true
+                JustificationTextForUserText=$null
+                SharepointWebRequestTimeout="00:05:00"
+                SharepointFileWebRequestTimeout="00:15:00"
+                OutlookSkipSmimeOnReadingPaneEnabled=$true
+                EnableTrackAndRevoke=$true
+                EnableRevokeGuiSupport=$true
+                OfficeContentExtractionTimeout="00:00:15"
+            }
             if ($publishDef.DefaultLabel -and -Not [string]::IsNullOrEmpty($publishDef.DefaultLabel.Trim()))
             {
                 $deflabel = Get-Label -Identity $publishDef.DefaultLabel -ErrorAction SilentlyContinue

@@ -75,6 +75,7 @@ try {
     $RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
     Write-Output "Logging in to Az ($AzureEnvironment)..."
     Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
+    Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
     Add-AzAccount `
         -ServicePrincipal `
         -TenantId $RunAsConnection.TenantId `

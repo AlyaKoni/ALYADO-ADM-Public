@@ -55,7 +55,7 @@
                                "check32BitOn64System":  true,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "1.19.1"
+                               "detectionValue":  "1.26.1"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  true,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "1.19.1"
+                      "comparisonValue":  "1.26.1"
                   }
               ],
     "installExperience":  {

@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2021
@@ -54,7 +54,6 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-$adminCnt = Get-PnPContext -Connection $adminCon
 
 $RecycleBinItems = Get-PnPTenantRecycleBinItem -Connection $adminCon
 if ($RecycleBinItems -and $RecycleBinItems.Count -gt 0)

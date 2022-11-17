@@ -340,6 +340,3 @@ ASALocalRun/
 /scripts/solutions/orderCatalog/FunctionSource/alyainfpfapp016/Properties/ServiceDependencies/alyainfpfapp016 - ZIP Deploy
 /scripts/solutions/orderCatalog/FunctionSource/alyainfpfapp016/Properties/serviceDependencies.alyainfpfapp016 - ZIP Deploy.json
 /desktop.ini
-/80_UpdateAzModules.ps1
-/81_UpdateExpandArchiveCommand.ps1
-/82_UpdateEncoding.ps1

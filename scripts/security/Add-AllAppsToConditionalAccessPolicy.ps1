@@ -137,7 +137,7 @@ while ($true)
         }
         catch
         {
-            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*")
+            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*" -or $_.Exception.ToString() -like "*HttpStatusCode: 503*")
             {
                 $retries = $retries - 1
                 Write-Host "  TooManyRequests, retrying." -ForegroundColor $CommandError
@@ -224,7 +224,7 @@ while ($true)
         }
         catch
         {
-            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*")
+            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*" -or $_.Exception.ToString() -like "*HttpStatusCode: 503*")
             {
                 $retries = $retries - 1
                 Write-Host "  TooManyRequests, retrying." -ForegroundColor $CommandError

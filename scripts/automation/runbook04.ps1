@@ -63,6 +63,7 @@ $ConnectionTypeName = "AzureServicePrincipal"
 try {
 	$RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
 	Write-Output "Logging in to Az ($AzureEnvironment)..."
+    Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
 	$tmp = Add-AzAccount `
 		-ServicePrincipal `
 		-TenantId $RunAsConnection.TenantId `

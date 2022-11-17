@@ -880,8 +880,8 @@ function LoginTo-Az(
 {
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
 
-    Update-AzConfig -Scope Process -DisplaySurveyMessage $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-    Update-AzConfig -Scope Process -EnableDataCollection $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+    try { Update-AzConfig -Scope Process -DisplaySurveyMessage $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
+    try { Update-AzConfig -Scope Process -EnableDataCollection $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
 
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     if ($AlyaContext)
@@ -965,6 +965,7 @@ function LoginTo-Az(
             Write-Host "  within DevOps"
             $DEVOPS_CLIENT_SECRET_SEC = ConvertTo-SecureString $DEVOPS_CLIENT_SECRET -AsPlainText -Force
             $DEVOPS_CREDS = New-Object -TypeName System.Management.Automation.PSCredential($DEVOPS_CLIENT_ID, $DEVOPS_CLIENT_SECRET_SEC)
+            Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
             Connect-AzAccount -ServicePrincipal -Credential $DEVOPS_CREDS -Tenant $DEVOPS_TENANT_ID
         }    
         $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
@@ -1589,7 +1590,7 @@ function Get-MsGraphCollection
                 $StatusCode = $Results.StatusCode
             } catch {
                 $StatusCode = $_.Exception.Response.StatusCode.value__
-                if ($StatusCode -eq 429) {
+                if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
                     Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
                     Start-Sleep -Seconds 45
                 }
@@ -1601,7 +1602,7 @@ function Get-MsGraphCollection
                     }
                 }
             }
-        } while ($StatusCode -eq 429)
+        } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
         if ($Results.value) {
             $QueryResults += $Results.value
         }

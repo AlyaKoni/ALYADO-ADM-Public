@@ -17,7 +17,7 @@
     "roleScopeTagIds":  [
 
                         ],
-    "fileName":  "AIPPlugin2100520048_Rdr_DC.intunewin",
+    "fileName":  "AIPPlugin2100720091_Rdr_DC.intunewin",
     "installCommandLine":  "Install.cmd",
     "uninstallCommandLine":  "Uninstall.cmd",
     "applicableArchitectures":  "x64",
@@ -34,7 +34,7 @@
                            "productName":  "Adobe Acrobat Reader DC MUI",
                            "packageType":  "PerMachine"
                        },
-    "setupFilePath":  "AIPPlugin2100520048_Rdr_DC.msi",
+    "setupFilePath":  "AIPPlugin2100720091_Rdr_DC.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -51,11 +51,11 @@
                            {
                                "@odata.type":  "#microsoft.graph.win32LobAppRegistryDetection",
                                "check32BitOn64System":  true,
-                               "keyPath":  "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{AC76BA86-B4BD-4570-AF82-0C15054E5000}",
+                               "keyPath":  "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{AC76BA86-B4BD-4570-AF82-0C15074E7B00}",
                                "valueName":  "DisplayVersion",
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "21.005.20048"
+                               "detectionValue":  "21.007.20091"
                            }
                        ],
     "requirementRules":  [
@@ -66,11 +66,11 @@
                       "@odata.type":  "#microsoft.graph.win32LobAppRegistryRule",
                       "ruleType":  "detection",
                       "check32BitOn64System":  true,
-                      "keyPath":  "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{AC76BA86-B4BD-4570-AF82-0C15054E5000}",
+                      "keyPath":  "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{AC76BA86-B4BD-4570-AF82-0C15074E7B00}",
                       "valueName":  "DisplayVersion",
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "21.005.20048"
+                      "comparisonValue":  "21.007.20091"
                   }
               ],
     "installExperience":  {

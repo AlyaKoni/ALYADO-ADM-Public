@@ -202,7 +202,7 @@ foreach($packageDir in $packages)
                 {
                     $toInstall = $toInstall[0]
                 }
-                if ($toInstall.VersionInfo.FileVersion)
+                if ($toInstall.VersionInfo.FileVersion -And -Not [string]::IsNullOrEmpty($toInstall.VersionInfo.FileVersion.Trim()))
                 {
                     $version = $toInstall.VersionInfo.FileVersion
                 }
@@ -367,7 +367,7 @@ foreach($packageDir in $packages)
                         $StatusCode = $response.StatusCode
                     } catch {
                         $StatusCode = $_.Exception.Response.StatusCode.value__
-                        if ($StatusCode -eq 429) {
+                        if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
                             Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
                             Start-Sleep -Seconds 45
                         }
@@ -376,7 +376,7 @@ foreach($packageDir in $packages)
                             throw
                         }
                     }
-                } while ($StatusCode -eq 429)
+                } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
                 $Global:attempts = -1
             } catch {
                 Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
@@ -434,7 +434,7 @@ foreach($packageDir in $packages)
             $StatusCode = $response.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
-            if ($StatusCode -eq 429) {
+            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
                 Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
                 Start-Sleep -Seconds 45
             }
@@ -443,7 +443,7 @@ foreach($packageDir in $packages)
                 throw
             }
         }
-    } while ($StatusCode -eq 429)
+    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
 
     # Committing the file
     Write-Host "  Committing the file"

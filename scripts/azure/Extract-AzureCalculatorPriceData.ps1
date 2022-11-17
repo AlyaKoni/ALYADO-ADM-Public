@@ -35,6 +35,7 @@
 
 [CmdletBinding()]
 Param(
+    $exportCurrency = "chf"
 )
 
 #Reading configuration
@@ -51,29 +52,30 @@ Install-ModuleIfNotInstalled "ImportExcel"
 # Main
 Write-Host "Getting actual configuration"
 $resp = Invoke-WebRequest -UseBasicParsing -Method GET -Uri "https://azure.microsoft.com/en-us/pricing/calculator/"
-$mtch = $resp.Content -match "var resolvedCurrencyList = (.*);"
-$currencyList = ConvertFrom-Json -InputObject $Matches[1]
-$mtch = $resp.Content -match "global.rawCurrencyData = (.*);"
-$currencyData = ConvertFrom-Json -InputObject $Matches[1]
+$mtch = $resp.Content -match "global.currencyData = (.*);"
+$exportCurrencyData = ConvertFrom-Json -InputObject $Matches[1]
 $mtch = $resp.Content -match "name=`"awa-stv`" content=`"(.*)`""
 $version = $Matches[1]
 $culture = "en-us"
 $discount = "mosp"
-$currency = "chf"
 $csvDelemiter = ";"
 $query = "?culture=$culture&discount=$discount&v=$version"
-$currency = $currencyData."$currency"
+$exportCurrency = $exportCurrencyData."$exportCurrency"
 
 Write-Host "Getting data"
 $support = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/support/calculator/$query"
+$categories = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/categories/calculator/$query"
 $regions = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/calculator/regions/$query"
 $resources = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/calculator/resources/$query"
-$solutionarchitectures = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/solution-architectures/calculator/$query"
-$categories = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/categories/calculator/$query"
-$bandwidth = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/bandwidth/calculator/$query"
+$currencies = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/currencies/$query"
+$config = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/calculator/config/$query"
 $manageddisks = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/managed-disks/calculator/$query"
+$storage = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/storage/calculator/$query"
+$bandwidth = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/bandwidth/calculator/$query"
 $virtualmachines = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/virtual-machines/calculator/$query"
 $postgresql = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/postgresql/calculator/$query"
+
+$computeWinBenchmarks = Invoke-WebRequest -UseBasicParsing -Method GET -Uri "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/compute-benchmark-scores"
 
 Write-Host "Building products table" -ForegroundColor $CommandInfo
 $productsCsv = [System.Collections.ArrayList]@()
@@ -96,11 +98,11 @@ foreach ($categorySlug in $categories.slug)
         if ($url -eq "#") { $url = "" }
         if ($slaUrl -eq "#") { $slaUrl = "" }
         if ($roadmapUrl -eq "#") { $roadmapUrl = "" }
-        if ($pricingUrl.StartsWith("/")) { $pricingUrl = "https://azure.microsoft.com"+$pricingUrl }
-        if ($documentationUrl.StartsWith("/")) { $documentationUrl = "https://azure.microsoft.com"+$documentationUrl }
-        if ($url.StartsWith("/")) { $url = "https://azure.microsoft.com"+$url }
-        if ($slaUrl.StartsWith("/")) { $slaUrl = "https://azure.microsoft.com"+$slaUrl }
-        if ($roadmapUrl.StartsWith("/")) { $roadmapUrl = "https://azure.microsoft.com"+$roadmapUrl }
+        if ($pricingUrl -and $pricingUrl.StartsWith("/")) { $pricingUrl = "https://azure.microsoft.com"+$pricingUrl }
+        if ($documentationUrl -and $documentationUrl.StartsWith("/")) { $documentationUrl = "https://azure.microsoft.com"+$documentationUrl }
+        if ($url -and $url.StartsWith("/")) { $url = "https://azure.microsoft.com"+$url }
+        if ($slaUrl -and $slaUrl.StartsWith("/")) { $slaUrl = "https://azure.microsoft.com"+$slaUrl }
+        if ($roadmapUrl -and $roadmapUrl.StartsWith("/")) { $roadmapUrl = "https://azure.microsoft.com"+$roadmapUrl }
 
         $obj = [pscustomobject]@{
             category = $category.displayName
@@ -116,6 +118,10 @@ foreach ($categorySlug in $categories.slug)
         $productsCsv.Add($obj) | Out-Null
     }
 }
+Write-Host "Exporting Excel - Sheet PricesProducts" -ForegroundColor $CommandInfo
+$excel = $productsCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesProducts" -TableName "PricesProducts" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
+Close-ExcelPackage $excel
+Clear-Variable -Name "productsCsv" -Force -ErrorAction SilentlyContinue
 
 Write-Host "Building postgresql table" -ForegroundColor $CommandInfo
 $postgresqlCsv = [System.Collections.ArrayList]@()
@@ -257,7 +263,7 @@ foreach ($region in $postgresql.regions)
                                         $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
                                         if ($memb)
                                         {
-                                            $price += $prices."$($region.slug)".value * $currency.conversion
+                                            $price += $prices."$($region.slug)".value * $exportCurrency.conversion
                                             $onePriceFound = $true
                                         }
                                         $offerName = $offer.Substring(0, $offer.LastIndexOf("-") - 1)
@@ -294,6 +300,10 @@ foreach ($region in $postgresql.regions)
         }
     }
 }
+Write-Host "Exporting Excel - Sheet PricesPostgreSql" -ForegroundColor $CommandInfo
+$excel = $postgresqlCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesPostgreSql" -TableName "PricesPostgreSql" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
+Close-ExcelPackage $excel
+Clear-Variable -Name "postgresqlCsv" -Force -ErrorAction SilentlyContinue
 
 Write-Host "Building disk table" -ForegroundColor $CommandInfo
 $diskCsv = [System.Collections.ArrayList]@()
@@ -345,7 +355,7 @@ foreach ($region in $manageddisks.regions)
                         $memb = Get-Member -InputObject $offer.prices -Name $region.slug -ErrorAction SilentlyContinue
                         if ($memb)
                         {
-                            $price = $offer.prices."$($region.slug)".value * $currency.conversion
+                            $price = $offer.prices."$($region.slug)".value * $exportCurrency.conversion
                             $obj = [pscustomobject]@{
                                 tier = $tierName
                                 sizeName = $sizeName
@@ -368,6 +378,10 @@ foreach ($region in $manageddisks.regions)
         }
     }
 }
+Write-Host "Exporting Excel - Sheet PricesDisks" -ForegroundColor $CommandInfo
+$excel = $diskCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesDisks" -TableName "PricesDisks" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
+Close-ExcelPackage $excel
+Clear-Variable -Name "diskCsv" -Force -ErrorAction SilentlyContinue
 
 Write-Host "Building compute table" -ForegroundColor $CommandInfo
 $computeCsv = [System.Collections.ArrayList]@()
@@ -406,6 +420,9 @@ foreach ($offerName in (Get-Member -InputObject $virtualmachines.offers))
         }
     }
 }
+$slugCount = $virtualmachines.tiers.Count * $virtualmachines.regions.Count * $virtualmachines.dropdown.slug.Count
+$slugsDone = 0
+Write-Host "  Processing $($slugCount) items"
 foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -Property "displayName" -Descending))
 {
     #$operatingSystem = $virtualmachines.operatingSystems | where { $_.slug -eq "windows" }
@@ -420,6 +437,8 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
             #Write-Host "    Region: $($region.displayName)"
             foreach ($groupSlug in ($virtualmachines.dropdown.slug | Sort-Object))
             {
+                $slugsDone++
+                if (($slugsDone % 50) -eq 0) { Write-Host "$($slugsDone)..." -NoNewLine }
                 $group = $virtualmachines.dropdown | Where { $_.slug -eq $groupSlug }
                 $groupName = $group.displayName
                 if ([string]::IsNullOrEmpty($groupName)) { $groupName = $groupSlug }
@@ -495,7 +514,7 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
                                             $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
                                             if ($memb)
                                             {
-                                                $price += $prices."$($region.slug)".value * $currency.conversion
+                                                $price += $prices."$($region.slug)".value * $exportCurrency.conversion
                                                 $onePriceFound = $true
                                             }
                                         }
@@ -524,19 +543,68 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
         }
     }
 }
+Write-Host "Exporting Excel - Sheet PricesVMs" -ForegroundColor $CommandInfo
+$excel = $computeCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesVMs" -TableName "PricesVMs" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
+Close-ExcelPackage $excel
+Clear-Variable -Name "computeCsv" -Force -ErrorAction SilentlyContinue
 
-Write-Host "Exporting Excel" -ForegroundColor $CommandInfo
-$excel = $computeCsv | Export-Excel -Path "$AlyaData\azure\Prices.xlsx" -WorksheetName "PricesVMs" -TableName "PricesVMs" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
-Close-ExcelPackage $excel
-$excel = $diskCsv | Export-Excel -Path "$AlyaData\azure\Prices.xlsx" -WorksheetName "PricesDisks" -TableName "PricesDisks" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
-Close-ExcelPackage $excel
-$excel = $postgresqlCsv | Export-Excel -Path "$AlyaData\azure\Prices.xlsx" -WorksheetName "PricesPostgreSql" -TableName "PricesPostgreSql" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
-Close-ExcelPackage $excel
-$excel = $productsCsv | Export-Excel -Path "$AlyaData\azure\Prices.xlsx" -WorksheetName "PricesProducts" -TableName "PricesProducts" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
+Write-Host "Building compute benchmark table" -ForegroundColor $CommandInfo
+$benchmarksCsv = [System.Collections.ArrayList]@()
+$benchmarks = @(
+    @{
+        OS = "Windows"
+        URL = "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/compute-benchmark-scores"
+    },
+    @{
+        OS = "Linux"
+        URL = "https://learn.microsoft.com/en-us/azure/virtual-machines/linux/compute-benchmark-scores"
+    }
+)
+foreach($benchmark in $benchmarks)
+{
+    Write-Host "  $($benchmark.OS): $($benchmark.URL)"
+    $computeWinBenchmarks = Invoke-WebRequest -UseBasicParsing -Method GET -Uri $benchmark.URL
+    $tables = ([regex]::Matches($computeWinBenchmarks.Content, "<table>(\n|.)*?</table>", [System.Text.RegularExpressions.RegExOptions]::Multiline -bor [System.Text.RegularExpressions.RegExOptions]::IgnoreCase)).Value
+    foreach($table in $tables)
+    {
+        $xtable = [xml]$table
+        if ($xtable.table.thead.tr.th[0] -ne "VM Size") { continue }
+        $cols = @()
+        for ($c=0; $c -lt $xtable.table.thead.tr.th.Count; $c++)
+        {
+            if (-Not [string]::IsNullOrEmpty($xtable.table.thead.tr.th[$c].'#text'))
+            {
+                $cols += $xtable.table.thead.tr.th[$c].'#text'
+            }
+            else
+            {
+                $cols += $xtable.table.thead.tr.th[$c]
+            }
+        }
+        foreach($row in $xtable.table.tbody.tr)
+        {
+            $obj = [pscustomobject]@{
+                os = $benchmark.OS
+            }
+            for ($c=0; $c -lt $cols.Count; $c++)
+            {
+                if (-Not [string]::IsNullOrEmpty($row.td[$c].'#text'))
+                {
+                    Add-Member -InputObject $obj -MemberType NoteProperty -Name $cols[$c] -Value $row.td[$c].'#text'
+                }
+                else
+                {
+                    Add-Member -InputObject $obj -MemberType NoteProperty -Name $cols[$c] -Value $row.td[$c]
+                }
+            }
+            $benchmarksCsv.Add($obj) | Out-Null
+        }
+    }
+}
+Write-Host "Exporting Excel - Sheet BenchmarkVMs" -ForegroundColor $CommandInfo
+$excel = $benchmarksCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "BenchmarkVMs" -TableName "BenchmarkVMs" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
 Close-ExcelPackage $excel -Show
-#$computeCsv | Export-Csv -NoTypeInformation -Path "$AlyaData\azure\PricesVMs.csv" -Encoding UTF8 -Delimiter $csvDelemiter -Force
-#$diskCsv | Export-Csv -NoTypeInformation -Path "$AlyaData\azure\PricesDisks.csv" -Encoding UTF8 -Delimiter $csvDelemiter -Force
-#$productsCsv | Export-Csv -NoTypeInformation -Path "$AlyaData\azure\PricesProducts.csv" -Encoding UTF8 -Delimiter $csvDelemiter -Force
+Clear-Variable -Name "benchmarksCsv" -Force -ErrorAction SilentlyContinue
 
 #Stopping Transscript
 Stop-Transcript

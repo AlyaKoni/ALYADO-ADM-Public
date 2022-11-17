@@ -17,7 +17,7 @@
     "roleScopeTagIds":  [
 
                         ],
-    "fileName":  "pdf24-creator-10.6.3.intunewin",
+    "fileName":  "pdf24-creator-11.6.0.intunewin",
     "installCommandLine":  "Install.cmd",
     "uninstallCommandLine":  "Uninstall.cmd",
     "applicableArchitectures":  "x64",
@@ -27,14 +27,14 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "10.6.3",
+                           "productVersion":  "11.6.0",
                            "publisher":  "geek software GmbH",
-                           "productCode":  "{FFA513F0-339A-48DB-A573-718C40037C72}",
+                           "productCode":  "{373BBB48-71F2-4203-B52F-34E2F0A749FE}",
                            "upgradeCode":  "{8D2DF301-CE53-4939-81C2-D659E7B857BE}",
                            "productName":  "PDF24 Creator",
                            "packageType":  "PerMachine"
                        },
-    "setupFilePath":  "pdf24-creator-10.6.3.msi",
+    "setupFilePath":  "pdf24-creator-11.6.0.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -55,7 +55,7 @@
                                "check32BitOn64System":  false,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "10.6.3"
+                               "detectionValue":  "11.6.0"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  false,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "10.6.3"
+                      "comparisonValue":  "11.6.0"
                   }
               ],
     "installExperience":  {

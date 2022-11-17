@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2022
@@ -112,6 +112,11 @@ foreach($tenant in $AlyaFullTrustCrossTenantDirectConnectAccess)
 			    )
 		    }
 	    }
+        InboundTrust = @{
+            IsMfaAccepted = $true
+            IsCompliantDeviceAccepted = $false
+            IsHybridAzureADJoinedDeviceAccepted = $false
+        }
     }
     if (-Not $partner)
     {

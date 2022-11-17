@@ -109,7 +109,8 @@ if (-Not $StrgAccount)
         Exit 1
     }
 }
-$StrgContext = New-AzStorageContext -StorageAccountName $StorageAccountName
+$StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName
+$StrgContext = New-AzStorageContext -StorageAccountName $StorageAccountName -StorageAccountKey $StrgKeys[0].Value
 
 # Checking CORS rules
 Write-Host "Checking CORS rules" -ForegroundColor $CommandInfo
@@ -117,14 +118,27 @@ $StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob -
 if (-Not $StrgCorsRules)
 {
     Write-Warning "No CORS rules found. Creating the CORS rules."
-    Start-Sleep -Seconds 60
-    $CorsRules = (@{
-        AllowedHeaders=@("x-ms-blob-content-type","x-ms-blob-content-disposition");
-        AllowedOrigins=@("$($AlyaSharePointUrl)", "$($AlyaWebPage)");
-        MaxAgeInSeconds=30;
-        AllowedMethods=@("Get","Connect")})
-    $StrgCorsRules = Set-AzStorageCORSRule -Context $StrgContext -ServiceType Blob -CorsRules $CorsRules
-    $StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob
+    $retries = 20
+    do
+    {
+        Start-Sleep -Seconds 10
+        $CorsRules = (@{
+            AllowedHeaders=@("x-ms-blob-content-type","x-ms-blob-content-disposition");
+            AllowedOrigins=@("$($AlyaSharePointUrl)", "$($AlyaWebPage)");
+            MaxAgeInSeconds=30;
+            AllowedMethods=@("Get","Connect")})
+        try
+        {
+            $StrgCorsRules = Set-AzStorageCORSRule -Context $StrgContext -ServiceType Blob -CorsRules $CorsRules
+        } catch {}
+        $StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob
+        $retries--
+        if ($retries -lt 0)
+        {
+            throw "CORS rules creation failed. Please fix and start over again"
+        }
+    }
+    while (-Not $StrgCorsRules)
     if (-Not $StrgCorsRules)
     {
         Write-Error "CORS rules creation failed. Please fix and start over again" -ErrorAction Continue
@@ -143,13 +157,27 @@ else
     }
     if (-Not $ruleFound)
     {
-        $CorsRules = (@{
-            AllowedHeaders=@("x-ms-blob-content-type","x-ms-blob-content-disposition");
-            AllowedOrigins=@("$($AlyaSharePointUrl)", "$($AlyaWebPage)");
-            MaxAgeInSeconds=30;
-            AllowedMethods=@("Get","Connect")})
-        $StrgCorsRules = Set-AzStorageCORSRule -Context $StrgContext -ServiceType Blob -CorsRules $CorsRules
-        $StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob
+        $retries = 20
+        do
+        {
+            Start-Sleep -Seconds 10
+            $CorsRules = (@{
+                AllowedHeaders=@("x-ms-blob-content-type","x-ms-blob-content-disposition");
+                AllowedOrigins=@("$($AlyaSharePointUrl)", "$($AlyaWebPage)");
+                MaxAgeInSeconds=30;
+                AllowedMethods=@("Get","Connect")})
+            try
+            {
+                $StrgCorsRules = Set-AzStorageCORSRule -Context $StrgContext -ServiceType Blob -CorsRules $CorsRules
+            } catch {}
+            $StrgCorsRules = Get-AzStorageCORSRule -Context $StrgContext -ServiceType Blob
+            $retries--
+            if ($retries -lt 0)
+            {
+                throw "CORS rules creation failed. Please fix and start over again"
+            }
+        }
+        while (-Not $StrgCorsRules)
         if (-Not $StrgCorsRules)
         {
             Write-Error "CORS rules creation failed. Please fix and start over again" -ErrorAction Continue

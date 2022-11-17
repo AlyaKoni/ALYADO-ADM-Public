@@ -198,6 +198,7 @@ if ($sCreds -contains $AADApplicationId)
     # Authenticating to Azure
     Write-Host "Authenticating to Azure" -ForegroundColor $CommandInfo
     try {
+		Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
         $aadAuthentication = Add-AzAccount -ContextName "ServicePrincipal ($($AADTenantId))" -SubscriptionId $currentAzureSubscriptionId -TenantId $AADTenantId -Credential $azureCreds -ServicePrincipal -Force
         $Obj = $aadAuthentication | Out-String
         Write-Host "Authenticating as service principal account for AD. Result: `n$obj"
