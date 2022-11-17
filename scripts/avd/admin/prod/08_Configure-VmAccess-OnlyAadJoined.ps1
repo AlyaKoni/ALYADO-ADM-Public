@@ -29,7 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    18.10.2020 Konrad Brunner       Initial Version
+    16.11.2022 Konrad Brunner       Initial Version
 
 #>
 
@@ -38,99 +38,73 @@ Param(
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-CrossTenantAccessSettings-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\prod\Configure-VmAccess-$($AlyaTimeString).log" | Out-Null
+
+# Constants
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAvdSessionHostsResGrp)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Reports"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
-    
+
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.CrossTenantAccess")
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-CrossTenantAccessSettings | AZURE" -ForegroundColor $CommandInfo
+Write-Host "AVD | Configure-VmAccess | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$policies = Get-MgPolicyCrossTenantAccessPolicy
-$partners = Get-MgPolicyCrossTenantAccessPolicyPartner
-
-foreach($tenant in $AlyaFullTrustCrossTenantDirectConnectAccess)
+# Getting context
+$Context = Get-AzContext
+if (-Not $Context)
 {
-    Write-Host "Tenant '$($tenant.Name)' $($tenant.Id)" -ForegroundColor $CommandInfo
-    $partner = $partners | where { $_.TenantId -eq $tenant.Id }
-    $params = @{
-	    TenantId = $tenant.Id
-	    B2bDirectConnectOutbound = @{
-		    UsersAndGroups = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllUsers"
-					    TargetType = "user"
-				    }
-			    )
-		    }
-		    Applications = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllApplications"
-					    TargetType = "application"
-				    }
-			    )
-		    }
-	    }
-	    B2bDirectConnectInbound = @{
-		    UsersAndGroups = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllUsers"
-					    TargetType = "user"
-				    }
-			    )
-		    }
-		    Applications = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllApplications"
-					    TargetType = "application"
-				    }
-			    )
-		    }
-	    }
-        InboundTrust = @{
-            IsMfaAccepted = $true
-            IsCompliantDeviceAccepted = $false
-            IsHybridAzureADJoinedDeviceAccepted = $false
-        }
-    }
-    if (-Not $partner)
-    {
-        Write-Host "  Creating policy"
-        New-MgPolicyCrossTenantAccessPolicyPartner -BodyParameter $params
-    }
-    else
-    {
-        Write-Host "  Updating policy"
-        Update-MgPolicyCrossTenantAccessPolicyPartner -CrossTenantAccessPolicyConfigurationPartnerTenantId $tenant.Id -BodyParameter $params
-    }
-
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
 }
 
+# Checking ressource group
+Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $ResGrp)
+{
+    throw "Ressource Group not found. Please create the Ressource Group $ResourceGroupName"
+}
+
+# Checking role assignment Virtual Machine User Login
+Write-Host "Checking role assignment Virtual Machine User Login" -ForegroundColor $CommandInfo
+$groups = @( $AlyaAllInternals, $AlyaAllExternals )
+foreach($group in $groups)
+{
+    $obj = Get-AzADGroup -DisplayName $group
+    if (-Not $obj)
+    {
+        throw "Group not found: $group"
+    }
+    $ra = Get-AzRoleAssignment -ResourceGroupName $ResourceGroupName -RoleDefinitionName "Virtual Machine User Login" -ObjectId $obj.Id -ErrorAction SilentlyContinue
+    if (-Not $ra)
+    {
+        Write-Warning "  Role assigment on $($ResourceGroupName) not found. Adding it now..."
+        $ra = New-AzRoleAssignment -RoleDefinitionName "Virtual Machine User Login" -ObjectId $obj.Id -ResourceGroupName $ResourceGroupName
+    }
+}
+
+# Checking role assignment Virtual Machine Administrator Login
+Write-Host "Checking role assignment Virtual Machine Administrator Login" -ForegroundColor $CommandInfo
+$obj = Get-AzADUser -UserPrincipalName $Context.Account.Id
+$ra = Get-AzRoleAssignment -ResourceGroupName $ResourceGroupName -RoleDefinitionName "Virtual Machine Administrator Login" -ObjectId $obj.Id -ErrorAction SilentlyContinue
+if (-Not $ra)
+{
+    Write-Warning "  Role assigment on $($ResourceGroupName) not found. Adding it now..."
+    $ra = New-AzRoleAssignment -RoleDefinitionName "Virtual Machine Administrator Login" -ObjectId $obj.Id -ResourceGroupName $ResourceGroupName
+}
 
 #Stopping Transscript
 Stop-Transcript

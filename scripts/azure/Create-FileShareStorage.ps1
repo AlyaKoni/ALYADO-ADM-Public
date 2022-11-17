@@ -521,9 +521,9 @@ Get-AzRoleAssignment -Scope $scope -RoleDefinitionName $FileShareReaderRole.Name
 Get-AzRoleAssignment -Scope $scope -RoleDefinitionName $FileShareContributorRole.Name
 Get-AzRoleAssignment -Scope $scope -RoleDefinitionName $FileShareElevatedRole.Name
 
-#Remove-AzRoleAssignment -RoleDefinitionName $FileShareReaderRole.Name -Scope $scope -SignInName "k.brunner@hundegger.com"
-#Remove-AzRoleAssignment -RoleDefinitionName $FileShareContributorRole.Name -Scope $scope -SignInName "k.brunner@hundegger.com"
-#Remove-AzRoleAssignment -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope -SignInName "k.brunner@hundegger.com"
+#Remove-AzRoleAssignment -RoleDefinitionName $FileShareReaderRole.Name -Scope $scope -SignInName "k.brunner@alyaconsulting.ch"
+#Remove-AzRoleAssignment -RoleDefinitionName $FileShareContributorRole.Name -Scope $scope -SignInName "k.brunner@alyaconsulting.ch"
+#Remove-AzRoleAssignment -RoleDefinitionName $FileShareElevatedRole.Name -Scope $scope -SignInName "k.brunner@alyaconsulting.ch"
 
 if ($WithADIntegration)
 {

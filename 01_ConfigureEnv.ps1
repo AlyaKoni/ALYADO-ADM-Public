@@ -739,7 +739,8 @@ function Install-ModuleIfNotInstalled (
     }
 }
 #Install-ModuleIfNotInstalled "PowerShellGet"
-#Install-ModuleIfNotInstalled "Az"
+#Install-ModuleIfNotInstalled "Az.Accounts"
+#Install-ModuleIfNotInstalled "Az.Resources"
 #Get-Module -Name Az
 #Get-InstalledModule -Name Az
 
@@ -1904,9 +1905,9 @@ function Get-GatewayNetworkAddress()
     {
         $g = $gwcidr
     }
-    for ($i = $n + 1; $i -lt $g + 1; $i++) 
-    { 
-        $ipi = $ipi + [math]::pow(2, 32 - $i) 
+    forÂ ($iÂ =Â $nÂ +Â 1;Â $iÂ -ltÂ $gÂ +Â 1;Â $i++)Â 
+    {Â 
+        $ipiÂ =Â $ipiÂ +Â [math]::pow(2,Â 32Â -Â $i)Â 
     }
     INT64-toIP($ipi)
 }
@@ -1935,11 +1936,11 @@ function Split-NetworkAddressWithGateway()
     $networks += (INT64-toIP -int $NextIp) + "/$cidr"
     while($true)
     {
-        $NextIp = $NextIp + [math]::pow(2, 32 - $cidr)
+        $NextIp = $NextIp + [math]::pow(2,Â 32Â -Â $cidr)
         if ($NextIp -ge $GwIp) { break }
         if ((IP-toINT64(Get-BroadcastAddress -netw $NextIp -cidr $cidr)) -gt $GwIp)
         { 
-            $NextIp = $NextIp - [math]::pow(2, 32 - ($cidr + 1))
+            $NextIp = $NextIp - [math]::pow(2,Â 32Â -Â ($cidr + 1))
             $cidr = $cidr + 1
             continue
         }
@@ -1974,7 +1975,7 @@ function Get-LastIpInNetwork()
         $nwcidr = Mask-toCIDR -mask $nwmask
     }
     $EndIp = IP-toINT64($netw)
-    $EndIp += [math]::pow(2, 32 - $nwcidr)
+    $EndIp += [math]::pow(2,Â 32Â -Â $nwcidr)
     $EndIp--
     return (INT64-toIP -int $EndIp)
 }
@@ -1999,11 +2000,11 @@ function Split-NetworkAddressWithoutGateway()
     $networks += (INT64-toIP -int $NextIp) + "/$cidr"
     while($true)
     {
-        $NextIp = $NextIp + [math]::pow(2, 32 - $cidr)
+        $NextIp = $NextIp + [math]::pow(2,Â 32Â -Â $cidr)
         if ($NextIp -ge $GwIp) { break }
         if ((IP-toINT64(Get-BroadcastAddress -netw $NextIp -cidr $cidr)) -gt $GwIp)
         { 
-            $NextIp = $NextIp - [math]::pow(2, 32 - ($cidr + 1))
+            $NextIp = $NextIp - [math]::pow(2,Â 32Â -Â ($cidr + 1))
             $cidr = $cidr + 1
             continue
         }
@@ -2091,10 +2092,9 @@ function SelectItem()
     Param(
         $list,
         $message = "Please select an item",
-        [ValidateSet(“Single”,”Multiple”,”None”)]
+        [ValidateSet(â€œSingleâ€,â€Multipleâ€,â€Noneâ€)]
         $outputMode = "Single"
     )
     $sel = $list | Out-GridView -Title $message -OutputMode $outputMode
     return $sel
 }
-

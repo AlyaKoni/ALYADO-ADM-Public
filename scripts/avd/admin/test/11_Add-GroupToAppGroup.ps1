@@ -29,82 +29,73 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.11.2022 Konrad Brunner       Initial Version
+    16.11.2022 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$ServicePrincipalName = $null,
-    [string]$ServicePrincipalId = $null,
-    [string]$UserUpn = $null
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Remove-ApplicationUserConsent-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\test\Add-GroupToAppGroup-$($AlyaTimeString).log" | Out-Null
+
+# Constants
+$ResourceGroupName = "$($AlyaNamingPrefixTest)resg$($AlyaResIdAvdManagementResGrp)"
+$AppGroupName = "$($AlyaNamingPrefixTest)avdg$($AlyaResIdAvdAppGroup)"
+$AdGroupName = "$($AlyaAvdDesktopAccessGroupTest)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureADPreview"
 
-# Logging in
-Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-AD
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "ENTAPPS | Remove-ApplicationUserConsent | AZURE" -ForegroundColor $CommandInfo
+Write-Host "AVD | Add-GroupToAppGroup | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Getting ServicePrincipal" -ForegroundColor $CommandInfo
-$App = $null
-if ($ServicePrincipalName)
+# Getting context
+$Context = Get-AzContext
+if (-Not $Context)
 {
-    $App = Get-AzureADServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalName)'"
-    if (-Not $App)
-    {
-        throw "ServicePrincipal with name '$($ServicePrincipalName)' not found"
-    }
-}
-if ($ServicePrincipalId)
-{
-    $App = Get-AzureADServicePrincipal -Filter "AppId eq '$($ServicePrincipalId)'"
-    if (-Not $App)
-    {
-        throw "ServicePrincipal with id '$($ServicePrincipalId)' not found"
-    }
-}
-if (-not $App)
-{
-    throw "Please provide ServicePrincipalName or ServicePrincipalId"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
 }
 
-Write-Host "Getting User" -ForegroundColor $CommandInfo
-$User = $null
-if ($UserUpn)
+# Checking app group
+Write-Host "Checking app group" -ForegroundColor $CommandInfo
+$AppGrp = Get-AzWvdApplicationGroup -Name $AppGroupName -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $AppGrp)
 {
-    $User = Get-AzureADUser -ObjectId $UserUpn
-    if (-Not $User)
-    {
-        throw "User with name '$($UserUpn)' not found"
-    }
+    throw "App group not found. Please create the app group $AppGroupName with the script Create-AppGroup.ps1"
 }
 
-Write-Host "Getting Grants" -ForegroundColor $CommandInfo
-$grants = Get-AzureADOAuth2PermissionGrant -All $true | Where-Object { $_.clientId -eq $App.ObjectId -and $_.PrincipalId -eq $User.ObjectId }
-$grants | fl
+# Checking ad group
+Write-Host "Checking ad group" -ForegroundColor $CommandInfo
+$AdGrp = Get-AzADGroup -DisplayName $AdGroupName
+if (-Not $AdGrp)
+{
+    throw "AD group not found. Please create the ad group $AdGroupName"
+}
 
-Write-Host "Deleting Grants" -ForegroundColor $CommandInfo
-$grants | Remove-AzureADOAuth2PermissionGrant
+# Checking ad group role assignment
+Write-Host "Checking ad group role assignment" -ForegroundColor $CommandInfo
+$Assgnmnt = Get-AzRoleAssignment -ObjectId $AdGrp.Id -RoleDefinitionName "Desktop Virtualization User" -ResourceName $AppGroupName -ResourceGroupName $ResourceGroupName -ResourceType "Microsoft.DesktopVirtualization/applicationGroups"
+if (-Not $Assgnmnt)
+{
+    Write-Warning "AD group role assignment not found. Creating the ad group role assignment"
+    $Assgnmnt = New-AzRoleAssignment -ObjectId $AdGrp.Id -RoleDefinitionName "Desktop Virtualization User" -ResourceName $AppGroupName -ResourceGroupName $ResourceGroupName -ResourceType "Microsoft.DesktopVirtualization/applicationGroups"
+}
 
 #Stopping Transscript
 Stop-Transcript

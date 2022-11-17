@@ -29,82 +29,71 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.11.2022 Konrad Brunner       Initial Version
+    16.11.2022 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$ServicePrincipalName = $null,
-    [string]$ServicePrincipalId = $null,
-    [string]$UserUpn = $null
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Remove-ApplicationUserConsent-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\test\Create-Workspace-$($AlyaTimeString).log" | Out-Null
+
+# Constants
+$ResourceGroupName = "$($AlyaNamingPrefixTest)resg$($AlyaResIdAvdManagementResGrp)"
+$WorkspaceName = "$($AlyaNamingPrefixTest)avdw$($AlyaResIdAvdWorkspace)"
+$WorkspaceDescription = "Stellt Desktops zur Verfï¿½gung"
+$WorkspaceFriendlyName = "$($AlyaCompanyNameShortM365) Desktop Test"
+$AvdLocation = $AlyaLocation
+if ($AlyaLocation -eq "switzerlandnorth") { $AvdLocation = "westeurope" }
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureADPreview"
 
-# Logging in
-Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-AD
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameTest
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "ENTAPPS | Remove-ApplicationUserConsent | AZURE" -ForegroundColor $CommandInfo
+Write-Host "AVD | Create-Workspace | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Getting ServicePrincipal" -ForegroundColor $CommandInfo
-$App = $null
-if ($ServicePrincipalName)
+# Getting context
+$Context = Get-AzContext
+if (-Not $Context)
 {
-    $App = Get-AzureADServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalName)'"
-    if (-Not $App)
-    {
-        throw "ServicePrincipal with name '$($ServicePrincipalName)' not found"
-    }
-}
-if ($ServicePrincipalId)
-{
-    $App = Get-AzureADServicePrincipal -Filter "AppId eq '$($ServicePrincipalId)'"
-    if (-Not $App)
-    {
-        throw "ServicePrincipal with id '$($ServicePrincipalId)' not found"
-    }
-}
-if (-not $App)
-{
-    throw "Please provide ServicePrincipalName or ServicePrincipalId"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
 }
 
-Write-Host "Getting User" -ForegroundColor $CommandInfo
-$User = $null
-if ($UserUpn)
+# Checking ressource group
+Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $ResGrp)
 {
-    $User = Get-AzureADUser -ObjectId $UserUpn
-    if (-Not $User)
-    {
-        throw "User with name '$($UserUpn)' not found"
-    }
+    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
+    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AvdLocation -Tag @{displayName="AVD Management";ownerEmail=$Context.Account.Id}
 }
 
-Write-Host "Getting Grants" -ForegroundColor $CommandInfo
-$grants = Get-AzureADOAuth2PermissionGrant -All $true | Where-Object { $_.clientId -eq $App.ObjectId -and $_.PrincipalId -eq $User.ObjectId }
-$grants | fl
-
-Write-Host "Deleting Grants" -ForegroundColor $CommandInfo
-$grants | Remove-AzureADOAuth2PermissionGrant
+# Checking workspace
+Write-Host "Checking workspace" -ForegroundColor $CommandInfo
+$WrkSpc = Get-AzWvdWorkspace -Name $WorkspaceName -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $WrkSpc)
+{
+    Write-Warning "Workspace not found. Creating the workspace $WorkspaceName"
+    $WrkSpc = New-AzWvdWorkspace -Name $WorkspaceName -ResourceGroupName $ResourceGroupName `
+        -Description $WorkspaceDescription -FriendlyName $WorkspaceFriendlyName -Location $AvdLocation `
+        -Tag @{displayName=$WorkspaceFriendlyName;ownerEmail=$Context.Account.Id}
+}
 
 #Stopping Transscript
 Stop-Transcript

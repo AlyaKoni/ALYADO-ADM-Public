@@ -1,4 +1,4 @@
-Write-Host "    Preparing version"
+﻿Write-Host "    Preparing version"
 $settings = Invoke-RestMethod -Method Get -Uri "https://ghostscript.com/json/settings.json"
 $packageRoot = "$PSScriptRoot"
 $versionFile = Join-Path $packageRoot "version.json"

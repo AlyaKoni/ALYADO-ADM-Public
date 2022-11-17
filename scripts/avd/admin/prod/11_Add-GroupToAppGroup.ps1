@@ -29,7 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    18.10.2020 Konrad Brunner       Initial Version
+    16.11.2022 Konrad Brunner       Initial Version
 
 #>
 
@@ -38,99 +38,64 @@ Param(
 )
 
 #Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-CrossTenantAccessSettings-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\prod\Add-GroupToAppGroup-$($AlyaTimeString).log" | Out-Null
+
+# Constants
+$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAvdManagementResGrp)"
+$AppGroupName = "$($AlyaNamingPrefix)avdg$($AlyaResIdAvdAppGroup)"
+$AdGroupName = $AlyaAvdDesktopAccessGroup
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Reports"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
-    
+
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.CrossTenantAccess")
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-CrossTenantAccessSettings | AZURE" -ForegroundColor $CommandInfo
+Write-Host "AVD | Add-GroupToAppGroup | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$policies = Get-MgPolicyCrossTenantAccessPolicy
-$partners = Get-MgPolicyCrossTenantAccessPolicyPartner
-
-foreach($tenant in $AlyaFullTrustCrossTenantDirectConnectAccess)
+# Getting context
+$Context = Get-AzContext
+if (-Not $Context)
 {
-    Write-Host "Tenant '$($tenant.Name)' $($tenant.Id)" -ForegroundColor $CommandInfo
-    $partner = $partners | where { $_.TenantId -eq $tenant.Id }
-    $params = @{
-	    TenantId = $tenant.Id
-	    B2bDirectConnectOutbound = @{
-		    UsersAndGroups = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllUsers"
-					    TargetType = "user"
-				    }
-			    )
-		    }
-		    Applications = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllApplications"
-					    TargetType = "application"
-				    }
-			    )
-		    }
-	    }
-	    B2bDirectConnectInbound = @{
-		    UsersAndGroups = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllUsers"
-					    TargetType = "user"
-				    }
-			    )
-		    }
-		    Applications = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllApplications"
-					    TargetType = "application"
-				    }
-			    )
-		    }
-	    }
-        InboundTrust = @{
-            IsMfaAccepted = $true
-            IsCompliantDeviceAccepted = $false
-            IsHybridAzureADJoinedDeviceAccepted = $false
-        }
-    }
-    if (-Not $partner)
-    {
-        Write-Host "  Creating policy"
-        New-MgPolicyCrossTenantAccessPolicyPartner -BodyParameter $params
-    }
-    else
-    {
-        Write-Host "  Updating policy"
-        Update-MgPolicyCrossTenantAccessPolicyPartner -CrossTenantAccessPolicyConfigurationPartnerTenantId $tenant.Id -BodyParameter $params
-    }
-
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
 }
 
+# Checking app group
+Write-Host "Checking app group" -ForegroundColor $CommandInfo
+$AppGrp = Get-AzWvdApplicationGroup -Name $AppGroupName -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $AppGrp)
+{
+    throw "App group not found. Please create the app group $AppGroupName with the script Create-AppGroup.ps1"
+}
+
+# Checking ad group
+Write-Host "Checking ad group" -ForegroundColor $CommandInfo
+$AdGrp = Get-AzADGroup -DisplayName $AdGroupName
+if (-Not $AdGrp)
+{
+    throw "AD group not found. Please create the ad group $AdGroupName"
+}
+
+# Checking ad group role assignment
+Write-Host "Checking ad group role assignment" -ForegroundColor $CommandInfo
+$Assgnmnt = Get-AzRoleAssignment -ObjectId $AdGrp.Id -RoleDefinitionName "Desktop Virtualization User" -ResourceName $AppGroupName -ResourceGroupName $ResourceGroupName -ResourceType "Microsoft.DesktopVirtualization/applicationGroups"
+if (-Not $Assgnmnt)
+{
+    Write-Warning "AD group role assignment not found. Creating the ad group role assignment"
+    $Assgnmnt = New-AzRoleAssignment -ObjectId $AdGrp.Id -RoleDefinitionName "Desktop Virtualization User" -ResourceName $AppGroupName -ResourceGroupName $ResourceGroupName -ResourceType "Microsoft.DesktopVirtualization/applicationGroups"
+}
 
 #Stopping Transscript
 Stop-Transcript
