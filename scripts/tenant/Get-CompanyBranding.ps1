@@ -26,13 +26,10 @@
     Siehe die GNU General Public License fuer weitere Details:
 	https://www.gnu.org/licenses/gpl-3.0.txt
 
-    To design your own SharePoint Theme use the UI Fabric Theme Designer
-    https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
-
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    07.07.2022 Konrad Brunner       Initial Version
+    25.11.2022 Konrad Brunner       Initial Version
 
 #>
 
@@ -44,19 +41,35 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-ClassicSettings-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Get-CompanyBranding-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+    
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 # =============================================================
-# O365 stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-ClassicSettings | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Get-CompanyBranding | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Warning "Please check the classic settings in the admin center."
-Write-Host "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
-start "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
+$uri = "https://graph.microsoft.com/beta/organization/$AlyaTenantId"
+$org = (Invoke-AzRestMethod -Uri $uri -Method GET).Content | ConvertFrom-Json
+$org | fl
+
+$token = Get-AzAccessToken -Audience "https://graph.microsoft.com"
+$headers = @{
+    "Accept-Language" = 0
+    "Authorization" = "Bearer $token"
+}
+$uri = "https://graph.microsoft.com/beta/organization('$AlyaTenantId')/branding"
+$branding = Invoke-RestMethod -Uri $uri -Method GET -UseBasicParsing -Headers $headers
 
 #Stopping Transscript
 Stop-Transcript

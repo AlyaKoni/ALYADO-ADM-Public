@@ -62,10 +62,9 @@ try
     $protAlerts = Get-ProtectionAlert
     foreach($protAlert in $protAlerts)
     {
+        #$protAlert = $protAlerts[9]
         Write-Host "Checking alert $($protAlert.Name)" -ForegroundColor $CommandInfo
-        #$protAlert = $protAlerts[0]
-        #$protAlert = $protAlerts[1]
-        $actUsers = ([string[]]$protAlert.NotifyUser) | foreach { $_.toLower() }
+        $actUsers = @(([string[]]$protAlert.NotifyUser) | foreach { $_.toLower() })
         if ($actUsers -notcontains $emailAddress.ToLower())
         {
             Write-Host "Adding $($emailAddress)"

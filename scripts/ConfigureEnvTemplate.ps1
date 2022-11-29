@@ -66,6 +66,8 @@ $AlyaPrivacyEmail = "PleaseSpecify" #Example:"datenschutz@$($AlyaDomainName)"
 $AlyaSecurityEmail = "PleaseSpecify" #Example:"security@$($AlyaDomainName)"
 $AlyaGeneralInformEmail = "PleaseSpecify" #Example:"cloud@$($AlyaDomainName)"
 $AlyaSupportEmail = "PleaseSpecify" #Example:"support@$($AlyaDomainName)"
+$AlyaGeneralPhoneNumber = "PleaseSpecify" #Example:"+41625620462"
+$AlyaSecurityPhoneNumber = $AlyaGeneralPhoneNumber
 $AlyaTimeZone = "PleaseSpecify" #Example:"W. Europe Standard Time"
 $AlyaGeoId = "PleaseSpecify" #Example:223
 $AlyaDefaultUsageLocation = "PleaseSpecify" #Example:"CH"
@@ -81,6 +83,34 @@ $AlyaServerOuTest = $null #Example:"OU=TEST,OU=WVD,OU=SERVERS,OU=CLOUD,DC=ALYACO
 $AlyaLogoUrlQuad = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzQuadrat_256x248_wbg.png"
 $AlyaLogoUrlRect = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzRechteck_640x240.png"
 $AlyaLogoUrlLong = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzLang_640x240.png"
+
+<# SUPPORT #>
+$AlyaSupportTitle = "Alya Support"
+$AlyaSupportTel = "+41625620463"
+$AlyaSupportMail = "support@alyaconsulting.ch"
+$AlyaSupportUrl = "https://alya.consulting/Home/Support"
+
+<# BRANDING #>
+$AlyaAzureBrandingBackgroundColor = "#FFFFFF"
+$AlyaAzureBrandingSignInPageTextDe = "Willkommen in der Microsoft Cloud von '$AlyaCompanyNameFull'"
+$AlyaAzureBrandingSignInPageTextEn = "Welcome to the Microsoft Cloud from '$AlyaCompanyNameFull'"
+$AlyaAzureBrandingSignInPageTextFr = "Bienvenue dans le cloud Microsoft de '$AlyaCompanyNameFull'"
+$AlyaAzureBrandingSignInPageTextIt = "Benvenuti nel cloud Microsoft da '$AlyaCompanyNameFull'"
+$AlyaAzureBrandingSignInPageTextDefault = @"
+$AlyaAzureBrandingSignInPageTextDe
+
+$AlyaAzureBrandingSignInPageTextEn
+"@
+$AlyaAzureBrandingUsernameHintTextDe = "vorname.nachname@$AlyaDomainName"
+$AlyaAzureBrandingUsernameHintTextEn = "first.last@$AlyaDomainName"
+$AlyaAzureBrandingUsernameHintTextFr = "prénom.nomDeFamille@$AlyaDomainName"
+$AlyaAzureBrandingUsernameHintTextIt = "nome.cognome@$AlyaDomainName"
+$AlyaAzureBrandingUsernameHintTextDefault = "vorname.nachname@$AlyaDomainName"
+$AlyaAzureBrandingBackgroundImage = "PleaseSpecify" # exact 1920×1080 and max 300 KB; local file path or url
+$AlyaAzureBrandingFavicon = "PleaseSpecify" # exact 32x32 and max 5KB; local file path or url
+$AlyaAzureBrandingSquareLogo = $AlyaLogoUrlQuad # exact 240x240 and max 50KB; local file path or url
+$AlyaAzureBrandingSquareLogoDark = $AlyaLogoUrlQuad # exact 240x240 and max 50KB; local file path or url
+$AlyaAzureBrandingBannerLogo = $AlyaLogoUrlLong # max 280×60 and max 10KB; local file path or url
 
 <# RESOURCE IDS #>
 $AlyaResIdMainNetwork = "PleaseSpecify" #Example:"000"
@@ -138,13 +168,13 @@ $AlyaJumpHostStopTime = "PleaseSpecify" #Example:"20:00"
 $AlyaJumpHostBackupPolicy = "PleaseSpecify" #Example:"NightlyPolicy"
 
 <# GROUP SETTINGS #>
-$AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-MFADISABLED"
-$AlyaMfaEnabledGroupName = $null #Example:"ALYASG-ADM-MFAENABLED"
-$AlyaSsprEnabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-SSPRENABLED"
-$AlyaPwdResetDisabledGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-PWDCHNGDISABLED"
-$AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("ALYAMG-ADM-AlleExternen")
-$AlyaAllInternals = "PleaseSpecify" #Example:"ALYAMG-ADM-AlleInternen"
-$AlyaAllExternals = "PleaseSpecify" #Example:"ALYAMG-ADM-AlleExternen"
+$AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFADISABLED"
+$AlyaMfaEnabledGroupName = $null #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFAENABLED"
+$AlyaSsprEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-SSPRENABLED"
+$AlyaPwdResetDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-PWDCHNGDISABLED"
+$AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen")
+$AlyaAllInternals = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)MG-ADM-AlleInternen"
+$AlyaAllExternals = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen"
 
 <# NETWORK SETTINGS #>
 $AlyaAzureNetwork = "PleaseSpecify" #Example:"172.16.0.0/16"
@@ -159,8 +189,8 @@ $AlyaDeployGateway = "PleaseSpecify" #Example:$false
 $AlyaWvdRDBroker = "PleaseSpecify" #Example:"https://rdbroker.wvd.microsoft.com"
 $AlyaWvdShareServer = "PleaseSpecify" # TODO from vars
 $AlyaWvdShareRoot = "PleaseSpecify"
-$AlyaWvdTenantNameProd = "PleaseSpecify" #Example:"ALYA Prod"
-$AlyaWvdTenantNameTest = "PleaseSpecify" #Example:"ALYA Test"
+$AlyaWvdTenantNameProd = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365) Prod"
+$AlyaWvdTenantNameTest = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365) Test"
 $AlyaWvdAzureServicePrincipalName = "PleaseSpecify" #Example:"AlyaWvdAzureApp"
 $AlyaWvdServicePrincipalNameProd = "PleaseSpecify" #Example:"AlyaWvdProdApp"
 $AlyaWvdServicePrincipalNameTest = "PleaseSpecify" #Example:"AlyaWvdTestApp"
@@ -215,7 +245,7 @@ $AlyaTeamsNewTeamOwner = $AlyaSharePointNewSiteOwner
 $AlyaTeamsNewTeamAdditionalOwner = $AlyaSharePointNewSiteOwner
 
 <# OFFICE GROUP SETTINGS #>
-$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"ALYASG-ADM-M365GROUPMANAGERS" # Only members can create groups
+$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERS" # Only members can create groups
 #TODO $AlyaGroupManagerMembers = @()
 $AlyaOfficeGroupsNewGroupOwner = $AlyaSharePointNewSiteOwner
 $AlyaOfficeGroupsNewGroupAdditionalOwner = $AlyaSharePointNewSiteOwner

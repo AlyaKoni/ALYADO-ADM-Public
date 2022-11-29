@@ -350,7 +350,16 @@ foreach($hubSite in $hubSites)
 Write-Host "Processing SharePoint Home Featured Links" -ForegroundColor $TitleColor
 $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
 $list = Get-PnPList -Connection $siteCon -Identity "SharePointHomeOrgLinks"
-$items = Get-PnPListItem -Connection $siteCon -List $list -Fields "Title","Url"
+if (-Not $list)
+{
+    Write-Warning "Looks like noone has started once the SharePoint start page."
+    Write-Warning "The links list will only be created after first access."
+    Write-Warning "Please access once the start page: $($AlyaSharePointUrl)"
+    start "$($AlyaSharePointUrl)"
+    pause
+    $list = Get-PnPList -Connection $siteCon -Identity "SharePointHomeOrgLinks"
+}
+$items = Get-PnPListItem -Connection $siteCon -List $list -Fields "Title","Url","Priority","GUID"
 foreach($hubSite in $hubSites)
 {
     $fnd = $false
@@ -441,7 +450,6 @@ if ($overwritePages)
 
     #Set-PnPTraceLog -On -WriteToConsole -Level Debug
     #To export it: Export-PnPClientSidePage -Force -Identity Home.aspx -Out $tempFile
-    Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
     foreach($hubSite in $hubSites)
     {
         #$hubSite = $hubSites[0]

@@ -55,6 +55,7 @@ Write-Host "SharePoint | Set-DefaultTimeZone | O365" -ForegroundColor $CommandIn
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Warning "So far there is no option to set the default time zone by script. Please set it in the admin center."
+Write-Host "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/settings/SiteCreation"
 start "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/settings/SiteCreation"
 
 #Stopping Transscript

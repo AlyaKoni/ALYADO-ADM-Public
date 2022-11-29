@@ -227,38 +227,54 @@ $appSiteCon = LoginTo-PnP -Url $appCatalogUrl
 
 # Deploying app package
 Write-Host "Deploying app package" -ForegroundColor $CommandInfo
-$app = Get-PnPApp -Connection $appSiteCon -Identity "Microsoft 365 learning pathways" -Scope "Tenant"
-if (-Not $app)
+$app = Add-PnPApp -Connection $appSiteCon -Path "$AlyaTemp\LearningPathways\customlearning.sppkg" -Scope "Tenant" -Overwrite -Publish
+$appId = $app.Id
+$retries = 20
+$app = $null
+do
 {
-    $app = Add-PnPApp -Connection $appSiteCon -Path "$AlyaTemp\LearningPathways\customlearning.sppkg" -Scope "Tenant" -Overwrite -Publish
-    $app = Get-PnPApp -Connection $appSiteCon -Identity $app.Id -Scope "Tenant"
-    if (-Not $app.Deployed)
+    Start-Sleep -Seconds 10
+    try
     {
-        throw "Error deploying the app package"
-    }
+        $app = Get-PnPApp -Connection $appSiteCon -Scope "Tenant" | where { $_.Id -eq $appId }
+    } catch {}
+    $retries--
+    if ($retries -lt 0) { break }
+} while (-Not $app -or -Not $app.Deployed)
+if (-Not $app -or -Not $app.Deployed)
+{
+    throw "App package is not deployed!"
 }
 
 # Login to learning pathways
 Write-Host "Login to learning pathways" -ForegroundColor $CommandInfo
 $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
-# Installing app package
-Write-Host "Installing app package" -ForegroundColor $CommandInfo
+# Installing app package on site
+Write-Host "Installing app package on site" -ForegroundColor $CommandInfo
+$retries = 20
 do
 {
-    $sapp = Get-PnPApp -Connection $siteCon -Identity $app.Id -ErrorAction SilentlyContinue
-    if (-Not $sapp -or -Not $sapp.Deployed)
+    $web = Get-PnPweb -Connection $siteCon –Includes AppTiles
+    $appTiles = $web.AppTiles
+    Invoke-PnPQuery -Connection $siteCon
+    $sapp = $appTiles | where { $_.Title -eq "Microsoft 365 learning pathways" }
+    if (-Not $sapp)
     {
-        Install-PnPApp -Connection $siteCon -Identity $app.Id -Scope "Tenant" -Wait
-        $sapp = Get-PnPApp -Connection $siteCon -Identity $app.Id -ErrorAction SilentlyContinue
+        Install-PnPApp -Connection $siteCon -Identity $appId -Scope "Tenant" -Wait
     }
     else
     {
-        #TODO Update
+        Start-Sleep -Seconds 10
     }
-    if (-Not $sapp.Deployed) { Start-Sleep -Seconds 60 }
+    $retries--
+    if ($retries -lt 0) { break }
+} while (-Not $sapp.AppStatus -eq "Installed")
+if (-Not $sapp -or $sapp.AppStatus -ne "Installed")
+{
+    throw "Not able to deploy app package on site!"
 }
-while ($sapp.Deployed)
+Update-PnPApp -Connection $siteCon -Identity $appId -Scope "Tenant"
 
 #Configuring learning setting
 #LogoutAllFrom-PnP

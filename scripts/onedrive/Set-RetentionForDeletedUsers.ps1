@@ -55,6 +55,7 @@ Write-Host "OneDrive | Set-RetentionForDeletedUsers | O365" -ForegroundColor $Co
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Warning "So far there is no option to set the retention by script. Please set it in the admin center."
+Write-Host "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/settings/OrphanedPersonalSitesRetentionPeriod"
 start "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/settings/OrphanedPersonalSitesRetentionPeriod"
 
 #Stopping Transscript

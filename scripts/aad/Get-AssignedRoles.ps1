@@ -79,8 +79,14 @@ foreach ($role in $allBuiltinMsolRoles)
         Write-Host "Role: $($role.Name)"
         foreach ($actMemb in $actMembs)
         {
-            $user = Get-AzureADUser -ObjectId $actMemb.ObjectId
-            Write-Host "  Member: $($user.UserPrincipalName)"
+            try
+            {
+                $user = Get-AzureADUser -ObjectId $actMemb.ObjectId
+                Write-Host "  Member: $($user.UserPrincipalName)"
+            } catch
+            {
+                Write-Warning $_.Exception
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -89,8 +89,15 @@ foreach($subscriptionName in ($AlyaAllSubscriptions | Sort-Object -Unique))
         {
             Write-Host "Exporting ressource group $($grp.ResourceId) from subscription $($subscriptionName)"
             $fileName = ($grp.ResourceId -replace "/", "_") + ".json"
-            Export-AzResourceGroup -ResourceGroupName $grp.ResourceGroupName -Path . -IncludeParameterDefaultValue -IncludeComments -Pre -Force
-            Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($subscriptionName + "_" + $grp.ResourceGroupName + ".json") -Force
+            try
+            {
+                Export-AzResourceGroup -ResourceGroupName $grp.ResourceGroupName -Path . -IncludeParameterDefaultValue -IncludeComments -Pre -Force
+                Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($subscriptionName + "_" + $grp.ResourceGroupName + ".json") -Force
+            }
+            catch
+            {
+                Write-Error $_.Exception -ErrorAction SilentlyContinue
+            }
         }
     } else
     {
