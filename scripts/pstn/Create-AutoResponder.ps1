@@ -235,7 +235,7 @@ else
     {
 	    $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
 	        -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-	        -OverflowThreshold 5 -OverflowAction DisconnectWithBusy -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction DisconnectWithBusy `
+	        -OverflowThreshold 5 -OverflowAction Disconnect -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction Disconnect `
 	        -DistributionLists $dGrp.ExternalDirectoryObjectId
     }
 }
@@ -323,7 +323,7 @@ else
         else
         {
             $afterHoursMenuOptionOne = New-CsAutoAttendantMenuOption -Action Disconnect -DtmfResponse Automatic
-            $Menu = New-CsAutoAttendantMenu -Name “After Hours menu” -MenuOptions @($afterHoursMenuOptionOne)
+            $afterHoursMenu = New-CsAutoAttendantMenu -Name “After Hours menu” -MenuOptions @($afterHoursMenuOptionOne)
             $afterHoursCallFlow = New-CsAutoAttendantCallFlow -Name "After Hours call flow" -Greetings @($afterHoursGreetingPrompt) -Menu $afterHoursMenu
         }
     }

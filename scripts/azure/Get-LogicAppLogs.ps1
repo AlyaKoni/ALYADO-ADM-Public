@@ -71,13 +71,56 @@ if (-Not $Context)
     Exit 1
 }
 
-# Exporting all logic apps
-Write-Host "Exporting all logic app logs" -ForegroundColor $CommandInfo
+# Exporting all logic app runs
+Write-Host "Exporting all logic app runs" -ForegroundColor $CommandInfo
 $LogicApp = Get-AzLogicApp -Name $logicAppName
 $ResGrp = $LogicApp.Id.Split("/")[4]
 $Runs = Get-AzLogicAppRunHistory -Name $logicAppName -ResourceGroupName $ResGrp -FollowNextPageLink
 
-$Runs | Select Name, StartTime, Status
+# Exporting all logic app triggers
+Write-Host "Exporting all logic app triggers" -ForegroundColor $CommandInfo
+$Trigg = Get-AzLogicAppTrigger -Name $logicAppName -ResourceGroupName $ResGrp
+$TriggHistsAll = Get-AzLogicAppTriggerHistory -Name $logicAppName -ResourceGroupName $ResGrp -TriggerName $Trigg.Name -FollowNextPageLink -MaximumFollowNextPageLink 1000
+$TriggHists = $TriggHistsAll | where {$_.Status -ne "Skipped" -and $_.Fired -eq $true}
+
+# Logic app runs
+Write-Host "Logic apps runs" -ForegroundColor $CommandInfo
+$Runs | Select Name, StartTime, EndTime, Status
+
+# Fired logic app trigger outputs
+Write-Host "Fired logic app trigger outputs" -ForegroundColor $CommandInfo
+$TriggHistOutps = @()
+foreach($TriggHist in $TriggHists)
+{
+    $TriggOutp = Invoke-RestMethod -Uri $TriggHist.OutputsLink.Uri
+    $TriggHistOutps += $TriggOutp.Body
+}
+$TriggHistOutps | ft
+
+# Logic app runs with status 
+Write-Host "Logic apps runs with status Cancelled" -ForegroundColor $CommandInfo
+$Errs = $Runs | where {$_.Status -eq "Cancelled"}
+$Errs | Select Name, StartTime, EndTime
+
+# Logic app runs with status Failed
+Write-Host "Logic apps runs with status Failed" -ForegroundColor $CommandInfo
+$Errs = $Runs | where {$_.Status -eq "Failed"}
+$Errs | Select Name, StartTime, EndTime
+
+# Failed actions from failed logic app runs
+Write-Host "Failed actions from failed logic app runs" -ForegroundColor $CommandInfo
+foreach($Err in $Errs)
+{
+    #$Err = $Errs[0]
+    Write-Host "`nRun: $($Err.Name)"
+    Write-Host "Actions:"
+    $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Err.Name
+    $ActsFailed = $Acts | where {$_.Status -eq "Failed"}
+    foreach($ActFailed in $ActsFailed)
+    {
+        Write-Host "  $($ActFailed.Name) $($ActFailed.Code) $($ActFailed.StartTime)"
+    }
+}
 
 #Stopping Transscript
 Stop-Transcript

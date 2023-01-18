@@ -46,9 +46,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Set-DataGatewayInsta
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "DataGateway"
+Install-ModuleIfNotInstalled "MSAL.PS"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 
 # Logins
-$connection = Connect-DataGatewayServiceAccount
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+$dgwCon = LoginTo-DataGateway
 
 # =============================================================
 # PowerPlatform stuff
@@ -59,9 +63,9 @@ Write-Host "OnPremisesDataGateways | Set-DataGatewayInstallationRestricted | Pow
 Write-Host "=====================================================`n`n" -ForegroundColor $CommandInfo
 
 $pol = Get-DataGatewayTenantPolicy
-if ($pol.Policy -ne "Restricted")
+if ($pol.Policy -ne "Restricted" -and $pol.Policy -ne "EnterpriseInstallRestricted")
 {
-    Write-Warning "Policy was set to $(). Setting it now to Restricted"
+    Write-Warning "Policy was set to $($pol.Policy). Setting it now to Restricted"
     Set-DataGatewayTenantPolicy -ResourceGatewayInstallPolicy Restricted
     Write-Host "Add allowed gateway installers with Set-DataGatewayInstaller" -ForegroundColor $CommandWarning
 }

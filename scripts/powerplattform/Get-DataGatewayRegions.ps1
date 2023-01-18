@@ -46,9 +46,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Get-DataGatewayRegio
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "DataGateway"
+Install-ModuleIfNotInstalled "MSAL.PS"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
 
 # Logins
-$connection = Connect-DataGatewayServiceAccount
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+$dgwCon = LoginTo-DataGateway
 
 # =============================================================
 # PowerPlatform stuff
@@ -58,7 +62,28 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "OnPremisesDataGateways | Get-DataGatewayRegions | PowerPlatform" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n`n" -ForegroundColor $CommandInfo
 
-Get-DataGatewayRegion
+Write-Host "All regions:`n" -ForegroundColor $CommandWarning
+$regs = Get-DataGatewayRegion
+foreach($reg in $regs)
+{
+    Write-Host "RegionKey : $($reg.RegionKey)"
+    Write-Host "Region    : $($reg.Region)"
+    Write-Host "BackendUri: $($reg.BackendUri)"
+    Write-Host ""
+}
+Write-Host ""
+
+Write-Host "Default regions:`n" -ForegroundColor $CommandWarning
+$regs = Get-DataGatewayRegion | where { $_.IsDefaultPowerBIRegion -eq $true }
+foreach($reg in $regs)
+{
+    Write-Host "RegionKey : $($reg.RegionKey)"
+    Write-Host "Region    : $($reg.Region)"
+    Write-Host "BackendUri: $($reg.BackendUri)"
+    Write-Host ""
+}
+Write-Host ""
+Write-Host ""
 
 #Stopping Transscript
 Stop-Transcript

@@ -253,15 +253,14 @@ $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteNa
 # Installing app package on site
 Write-Host "Installing app package on site" -ForegroundColor $CommandInfo
 $retries = 20
+$hasInstalled = $false
 do
 {
-    $web = Get-PnPweb -Connection $siteCon –Includes AppTiles
-    $appTiles = $web.AppTiles
-    Invoke-PnPQuery -Connection $siteCon
-    $sapp = $appTiles | where { $_.Title -eq "Microsoft 365 learning pathways" }
-    if (-Not $sapp)
+    $sapp = Get-PnPApp -Connection $siteCon | where { $_.Title -eq "Microsoft 365 learning pathways" }
+    if (-Not $sapp.InstalledVersion -And -Not $hasInstalled)
     {
         Install-PnPApp -Connection $siteCon -Identity $appId -Scope "Tenant" -Wait
+        $hasInstalled = $true
     }
     else
     {
@@ -269,19 +268,24 @@ do
     }
     $retries--
     if ($retries -lt 0) { break }
-} while (-Not $sapp.AppStatus -eq "Installed")
-if (-Not $sapp -or $sapp.AppStatus -ne "Installed")
+} while (-Not $sapp.InstalledVersion)
+if (-Not $sapp.InstalledVersion)
 {
     throw "Not able to deploy app package on site!"
 }
-Update-PnPApp -Connection $siteCon -Identity $appId -Scope "Tenant"
+$sapp = Get-PnPApp -Connection $siteCon | where { $_.Title -eq "Microsoft 365 learning pathways" }
+if ($sapp.AppCatalogVersion -ne $sapp.InstalledVersion)
+{
+    Update-PnPApp -Connection $siteCon -Identity $appId -Scope "Tenant"
+}
 
 #Configuring learning setting
 #LogoutAllFrom-PnP
 $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
 #Remove-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn
-$ent = Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn -Value $false -Description "Microsoft 365 learning pathways Telemetry Setting"
+Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn -Value $false -Description "Microsoft 365 learning pathways Telemetry Setting"
+Start-Sleep -Seconds 10
 Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn
 Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningCdn -Value "https://pnp.github.io/custom-learning-office-365/learningpathways/" -Description "Microsoft 365 learning pathways CDN source" -ErrorAction Stop 
 Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningCdn

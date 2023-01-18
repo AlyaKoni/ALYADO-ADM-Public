@@ -35,6 +35,7 @@
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory = $true)]
     [string]$GroupToAllowExternalGuests
 )
 

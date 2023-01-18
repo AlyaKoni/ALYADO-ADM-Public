@@ -88,7 +88,7 @@ $AlyaLogoUrlLong = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.w
 $AlyaSupportTitle = "Alya Support"
 $AlyaSupportTel = "+41625620463"
 $AlyaSupportMail = "support@alyaconsulting.ch"
-$AlyaSupportUrl = "https://alya.consulting/Home/Support"
+$AlyaSupportUrl = "https://alyaconsulting.ch/Home/Support"
 
 <# BRANDING #>
 $AlyaAzureBrandingBackgroundColor = "#FFFFFF"

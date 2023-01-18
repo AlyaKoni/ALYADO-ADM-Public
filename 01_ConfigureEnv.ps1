@@ -45,6 +45,7 @@
     04.08.2022 Konrad Brunner       Added simple password generator
     18.08.2022 Konrad Brunner       SelectItem
     18.10.2022 Konrad Brunner       LoginTo-MgGraph
+    20.12.2022 Konrad Brunner       LoginTo-DataGateway
 
 #>
 
@@ -252,12 +253,24 @@ function Remove-OneDriveItemRecursive
 }
 function Is-InternetConnected()
 {
-    $ret = Test-NetConnection -ComputerName 8.8.8.8 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
-    if (-Not $ret)
+    $var = Get-Variable -Name "AlyaIsInternetConnected" -Scope "Global" -ErrorAction SilentlyContinue
+    if (-Not $var)
     {
-        $ret = Test-NetConnection -ComputerName 1.1.1.1 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
+        $ret = Test-NetConnection -ComputerName 8.8.8.8 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
+        if (-Not $ret)
+        {
+            $ret = Test-NetConnection -ComputerName 1.1.1.1 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
+        }
+        if ($ret)
+        {
+            $Global:AlyaIsInternetConnected = $ret
+        }
+        else
+        {
+            $Global:AlyaIsInternetConnected = $false
+        }
     }
-    return $ret
+    return $Global:AlyaIsInternetConnected
 }
 
 function Reset-ConsoleWidth()
@@ -1046,6 +1059,25 @@ function LoginTo-MgGraph(
     }
 }
 
+function LoginTo-DataGateway()
+{
+    Write-Host "Login to DataGateway" -ForegroundColor $CommandInfo
+
+    $isLoggedIn = $false
+    try
+    {
+        Get-DataGatewayAccessToken
+        $isLoggedIn = $true
+    }
+    catch { }
+    if (-Not $isLoggedIn)
+    {
+        $creds = Get-Credential -Message "Please provide DataGatewayApp credentials. User is the AppId. Password is the the client secret."
+        return Connect-DataGatewayServiceAccount -ApplicationId $creds.UserName -ClientSecret $creds.Password -Tenant $AlyaTenantId
+    }
+    return $null
+}
+
 function Get-AzAccessToken(
     [string] [Parameter(Mandatory = $false)] $audience = "74658136-14ec-4630-ad9b-26e160ff0fc6",
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
@@ -1598,7 +1630,7 @@ function Get-MsGraphCollection
                 else {
                     if (-Not $DontThrowIfStatusEquals -or $StatusCode -ne $DontThrowIfStatusEquals)
                     {
-                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                         throw
                     }
                 }
@@ -1650,7 +1682,7 @@ function Get-MsGraphObject
             else {
                 if (-Not $DontThrowIfStatusEquals -or $StatusCode -ne $DontThrowIfStatusEquals)
                 {
-                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                     throw
                 }
             }
@@ -1691,7 +1723,7 @@ function Delete-MsGraphObject
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
@@ -1733,7 +1765,7 @@ function Post-MsGraph
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
@@ -1780,7 +1812,7 @@ function Patch-MsGraph
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }

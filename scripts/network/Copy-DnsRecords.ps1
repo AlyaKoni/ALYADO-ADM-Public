@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     01.12.2020 Konrad Brunner       Initial version
+    24.12.2022 Konrad Brunner       Added cname and more additionalCopies 
 
 #>
 
@@ -46,7 +47,44 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\network\Copy-DnsRecords-$($AlyaTime
 
 # Constants
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
-$additionalCopies = @("_autodiscover._tcp","_caldav._tcp","_caldavs._tcp","_carddav._tcp","_carddavs._tcp","_ischedule._tcp","_xmpp-client._tcp","_xmpp-server._tcp","autodiscover","ftp","imap","mail","pop","smtp","www","xas","xwa")
+$additionalCopies = @(
+    "_autodiscover._tcp",
+    "_caldav._tcp",
+    "_caldavs._tcp",
+    "_carddav._tcp",
+    "_carddavs._tcp",
+    "_ischedule._tcp",
+    "_xmpp-client._tcp",
+    "_xmpp-server._tcp",
+    "autodiscover",
+    "ftp",
+    "imap",
+    "imap4",
+    "mail",
+    "pop",
+    "pop3",
+    "smtp",
+    "www",
+    "xas",
+    "xwa",
+    "_dmarc",
+    "default._domainkey",
+    "selector1._domainkey",
+    "selector2._domainkey",
+    "_msradc",
+    "_sipfederationtls._tcp",
+    "_sip._tls",
+    "alt",
+    "enterpriseenrollment",
+    "enterpriseregistration",
+    "hosting",
+    "lyncdiscover",
+    "shop",
+    "sip",
+    "spf",
+    "webmail",
+    "wvd"
+)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -133,127 +171,155 @@ function CopyDomain
     }
     foreach($record in $allRecords)
     {
-        Write-Host "Record $($record.Type) Name:$($record.Name)"
-        switch($record.Type)
+        Write-Host "Record $($record.Type) Name:$($record.Name)" -ForegroundColor $CommandInfo
+        try
         {
-            "SOA" {
-                $fromRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Type -eq "SOA" }
-                $toRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $toServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Type -eq "SOA" }
-                Write-Warning "  We do not update SOA records. Please check difference and update by hand!"
-                Write-Warning "  From record:"
-                Write-Host (($fromRecord | fl | Out-String).Trim())
-                Write-Warning "  To record:"
-                Write-Host (($toRecord | fl | Out-String).Trim())
-            }
-            "MX" {
-                $fromRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                $toRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
-                if (-Not $toRecord)
-                {
-                    Write-Host "  Creating MX record"
-                    New-AzDnsRecordSet -Name "@" -RecordType MX -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Exchange $fromRecord.NameExchange -Preference $fromRecord.Preference)
+            switch($record.Type)
+            {
+                "SOA" {
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Type -eq "SOA" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $toServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Type -eq "SOA" }
+                    Write-Warning "  We do not update SOA records. Please check difference and update by hand!"
+                    Write-Warning "  From record:"
+                    Write-Host (($fromRecord | fl | Out-String).Trim())
+                    Write-Warning "  To record:"
+                    Write-Host (($toRecord | fl | Out-String).Trim())
                 }
-                else
-                {
-                    Write-Host "  Updating MX record"
-                    $recSet = Get-AzDnsRecordSet -Name "@" -RecordType MX -ZoneName $domainName -ResourceGroupName $ResourceGroupName
-                    $recSet.Records[0].Exchange = $fromRecord.NameExchange
-                    $recSet.Records[0].Preference = $fromRecord.Preference
-                    $recSet.Ttl = $fromRecord.TTL
-                    Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
-                }
-            }
-            "TXT" {
-                $fromRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                $toRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
-                $recordName = $record.Name -replace ("."+$domainName), ""
-                if ($record.Name -eq $domainName)
-                {
-                    $recordName = "@"
-                }
-                $value = New-Object System.Collections.ArrayList
-                $ttl = 3600
-                foreach($from in $fromRecord)
-                {
-                    $value.Add((New-AzDnsRecordConfig -Value $from.Strings.Trim())) | Out-Null
-                    $ttl = $from.TTL
-                }
-                if (-Not $toRecord)
-                {
-                    Write-Host "  Creating TXT record"
-                    New-AzDnsRecordSet -Name $recordName -RecordType TXT -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $ttl -DnsRecords $value
-                }
-                else
-                {
-                    Write-Host "  Updating TXT record"
-                    $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType TXT -ZoneName $domainName -ResourceGroupName $ResourceGroupName
-                    $recSet.Records.Clear()
-                    foreach($txt in $value)
+                "MX" {
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    if (-Not $toRecord)
                     {
-                        $recSet.Records.Add($txt) | Out-Null
+                        Write-Host "  Creating MX record"
+                        New-AzDnsRecordSet -Name "@" -RecordType MX -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Exchange $fromRecord.NameExchange -Preference $fromRecord.Preference)
                     }
-                    $recSet.Ttl = $ttl
-                    Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
+                    else
+                    {
+                        Write-Host "  Updating MX record"
+                        $recSet = Get-AzDnsRecordSet -Name "@" -RecordType MX -ZoneName $domainName -ResourceGroupName $ResourceGroupName
+                        $recSet.Records[0].Exchange = $fromRecord.NameExchange
+                        $recSet.Records[0].Preference = $fromRecord.Preference
+                        $recSet.Ttl = $fromRecord.TTL
+                        Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
+                    }
                 }
-            }
-            "A" {
-                $fromRecord = Resolve-DnsName -Name $record.Name -Type A -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                $toRecord = Resolve-DnsName -Name $record.Name -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
-                if (-Not $toRecord)
-                {
-                    $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                "TXT" {
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    $recordName = $record.Name -replace ("."+$domainName), ""
+                    if ($record.Name -eq $domainName)
+                    {
+                        $recordName = "@"
+                    }
+                    $value = New-Object System.Collections.ArrayList
+                    $ttl = 3600
+                    foreach($from in $fromRecord)
+                    {
+                        $value.Add((New-AzDnsRecordConfig -Value $from.Strings.Trim())) | Out-Null
+                        $ttl = $from.TTL
+                    }
+                    if (-Not $toRecord)
+                    {
+                        Write-Host "  Creating TXT record"
+                        New-AzDnsRecordSet -Name $recordName -RecordType TXT -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $ttl -DnsRecords $value
+                    }
+                    else
+                    {
+                        Write-Host "  Updating TXT record"
+                        $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType TXT -ZoneName $domainName -ResourceGroupName $ResourceGroupName
+                        $recSet.Records.Clear()
+                        foreach($txt in $value)
+                        {
+                            $recSet.Records.Add($txt) | Out-Null
+                        }
+                        $recSet.Ttl = $ttl
+                        Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
+                    }
                 }
-                $recordName = $record.Name -replace ("."+$domainName), ""
-                if ($record.Name -eq $domainName)
-                {
-                    $recordName = "@"
+                "A" {
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type A -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    if (-Not $toRecord)
+                    {
+                        $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    }
+                    $recordName = $record.Name -replace ("."+$domainName), ""
+                    if ($record.Name -eq $domainName)
+                    {
+                        $recordName = "@"
+                    }
+                    if (-Not $toRecord)
+                    {
+                        Write-Host "  Creating A record"
+                        New-AzDnsRecordSet -Name $recordName -RecordType A -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Ipv4Address $fromRecord.IpAddress )
+                    }
+                    else
+                    {
+                        Write-Host "  Updating A record"
+                        $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType A -ZoneName $domainName -ResourceGroupName $ResourceGroupName
+                        $recSet.Records[0].Ipv4Address = $fromRecord.IpAddress
+                        $recSet.Ttl = $fromRecord.TTL
+                        Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
+                    }
                 }
-                if (-Not $toRecord)
-                {
-                    Write-Host "  Creating A record"
-                    New-AzDnsRecordSet -Name $recordName -RecordType A -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Ipv4Address $fromRecord.IpAddress )
+                "CNAME" {
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    $recordName = $record.Name -replace ("."+$domainName), ""
+                    if ($record.Name -eq $domainName)
+                    {
+                        $recordName = "@"
+                    }
+                    if (-Not $toRecord)
+                    {
+                        Write-Host "  Creating CNAME record"
+                        New-AzDnsRecordSet -Name $recordName -RecordType CNAME -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Cname $fromRecord.NameHost )
+                    }
+                    else
+                    {
+                        Write-Host "  Updating CNAME record"
+                        $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType CNAME -ZoneName $domainName -ResourceGroupName $ResourceGroupName
+                        $recSet.Records[0].Cname = $fromRecord.NameHost
+                        $recSet.Ttl = $fromRecord.TTL
+                        Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
+                    }
                 }
-                else
-                {
-                    Write-Host "  Updating A record"
-                    $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType A -ZoneName $domainName -ResourceGroupName $ResourceGroupName
-                    $recSet.Records[0].Ipv4Address = $fromRecord.IpAddress
-                    $recSet.Ttl = $fromRecord.TTL
-                    Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
+                "SRV" {
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    $recordName = $record.Name -replace ("."+$domainName), ""
+                    if ($record.Name -eq $domainName)
+                    {
+                        $recordName = "@"
+                    }
+                    if (-Not $toRecord)
+                    {
+                        Write-Host "  Creating SRV record"
+                        New-AzDnsRecordSet -Name $recordName -RecordType SRV -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Target $fromRecord.NameTarget -Priority $fromRecord.Priority -Weight $fromRecord.Weight -Port $fromRecord.Port )
+                    }
+                    else
+                    {
+                        Write-Host "  Updating SRV record"
+                        $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType SRV -ZoneName $domainName -ResourceGroupName $ResourceGroupName
+                        $recSet.Records[0].Target = $fromRecord.NameTarget
+                        $recSet.Records[0].Priority = $fromRecord.Priority
+                        $recSet.Records[0].Weight = $fromRecord.Weight
+                        $recSet.Records[0].Port = $fromRecord.Port
+                        $recSet.Ttl = $fromRecord.TTL
+                        Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
+                    }
                 }
-            }
-            "SRV" {
-                $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
-                $recordName = $record.Name -replace ("."+$domainName), ""
-                if ($record.Name -eq $domainName)
-                {
-                    $recordName = "@"
+                "NS" {
                 }
-                if (-Not $toRecord)
-                {
-                    Write-Host "  Creating SRV record"
-                    New-AzDnsRecordSet -Name $recordName -RecordType SRV -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Target $fromRecord.NameTarget -Priority $fromRecord.Priority -Weight $fromRecord.Weight -Port $fromRecord.Port )
+                default {
+                    Write-Error "Record type $($record.Type) is not yet implemented!"
                 }
-                else
-                {
-                    Write-Host "  Updating SRV record"
-                    $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType SRV -ZoneName $domainName -ResourceGroupName $ResourceGroupName
-                    $recSet.Records[0].Target = $fromRecord.NameTarget
-                    $recSet.Records[0].Priority = $fromRecord.Priority
-                    $recSet.Records[0].Weight = $fromRecord.Weight
-                    $recSet.Records[0].Port = $fromRecord.Port
-                    $recSet.Ttl = $fromRecord.TTL
-                    Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
-                }
-            }
-            "NS" {
-            }
-            default {
-                Write-Error "Record type $($record.Type) is not yet implemented!"
             }
         }
-
+        catch
+        {
+            Write-Error $_.Exception -ErrorAction Continue
+        }
     }
 }
 
@@ -270,6 +336,8 @@ foreach($zone in $AlyaAdditionalDomainNames)
     $toDnsServer = $addDnsZone.NameServers[0]
     CopyDomain -domainName $zone -fromServer $fromDnsServer -toServer $toDnsServer
 }
+
+Write-Host "`n`nMore information about the domain: https://dnsdumpster.com/`n`n" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript

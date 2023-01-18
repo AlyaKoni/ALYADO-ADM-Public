@@ -94,8 +94,6 @@ Write-Host "Getting role assignments" -ForegroundColor $CommandInfo
 $roleDefs = @{
     "Global Administrator"=$null
     "Privileged Role Administrator"=$null
-    "Global Reader"=$null
-    "Service Support Administrator"=$null
     "Application Administrator"=$null
     "Azure AD Joined Device Local Administrator"=$null
     "Azure DevOps Administrator"=$null

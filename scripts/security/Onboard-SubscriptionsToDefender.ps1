@@ -208,7 +208,7 @@ foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | select -Unique))
         $Policy = Get-AzPolicySetDefinition | where {$_.Properties.displayName -eq $enabledPolicy.Policy}
         $assignmentName = "DFC '$($enabledPolicy.Name)' on '$($AlyaSubscriptionName)'"
         $assignmentDisplayName = "DFC '$($enabledPolicy.Name)' on '$($AlyaSubscriptionName)' <$($sub.Id)>"
-        $assignmentName = $assignmentName.Replace("%", "-").Replace("&", "-").Replace("\", "-").Replace("?", "-").Replace("/", "-").Replace(":", "-").Replace("<", "-").Replace(">", "-")
+        $assignmentName = $assignmentName.Replace("%", "-").Replace("&", "-").Replace("\", "-").Replace("?", "-").Replace("/", "-").Replace(":", "-").Replace("<", "-").Replace(">", "-").Replace(" ", "-")
         $pa = Get-AzPolicyAssignment -Name $assignmentName -Scope "/subscriptions/$($sub.Id)" -PolicyDefinitionId $Policy.PolicySetDefinitionId -ErrorAction SilentlyContinue
         if (-Not $pa)
         {

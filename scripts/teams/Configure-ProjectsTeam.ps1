@@ -44,8 +44,8 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-ProjectsTeam-$($AlyaTimeString).log" | Out-Null
 
 # Constants
-[string]$TitleAndGroupName = "$($AlyaCompanyNameShortM365.ToUpper())TM-PRJ-Projekte"
-[string]$Description = "Projekt Team für interne Benutzer."
+[string]$TitleAndGroupName = "$($AlyaCompanyNameShortM365.ToUpper())TM-PRJ-ProjekteIntern"
+[string]$Description = "Projekt Team fuer interne Benutzer."
 [string]$Visibility = "Private"
 [string[]]$Owners = @()
 [string]$TeamPicturePath = $AlyaLogoUrlQuad
@@ -78,11 +78,13 @@ Write-Host "=====================================================`n" -Foreground
 # Checking team
 Write-Host "Checking team" -ForegroundColor $CommandInfo
 $Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+$TeamHasBeenCreated = $false
 if (-Not $Team)
 {
     Write-Warning "Team $TitleAndGroupName does not exist. Creating it now."
     $Team = New-Team -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
     Start-Sleep -Seconds 60
+    $TeamHasBeenCreated = $true
 }
 else
 {
@@ -221,46 +223,66 @@ $tmp = Set-AzureADMSGroup -Id $Team.GroupId -GroupTypes "DynamicMembership", "Un
         -SecurityEnabled $grp.SecurityEnabled
 
 # Posting welcome messages
-Write-Host "Posting welcome messages" -ForegroundColor $CommandInfo
-$postMessageDE = "<h1>Willkommen</h1>"
-$postMessageDE += "<p>Willkommen im Projekt-Team von $($AlyaCompanyNameFull). In diesem Team verwalten wir unsere aktuellen Projekte.</p>"
-$postMessageEN = "<h1>Welcome</h1>"
-$postMessageEN += "<p>Welcome to the Project-Team from $($AlyaCompanyNameFull). In this team we manage our actual projects.</p>"
-$scopes = @(
-    "Group.ReadWrite.All",
-    "GroupMember.ReadWrite.All",
-    "TeamsApp.ReadWrite.All",
-    "TeamsAppInstallation.ReadWriteForTeam",
-    "TeamsAppInstallation.ReadWriteSelfForTeam",
-    "TeamSettings.ReadWrite.All",
-    "TeamsTab.ReadWrite.All",
-    "TeamMember.ReadWrite.All",
-    "ChannelMessage.Send"
-)
-Connect-MgGraph -Scopes $scopes
-Select-MgProfile -Name "beta"
-$bodyDE = @{
-    body = @{
-        contentType = "html"
-        content = "$postMessageDE"
+if ($TeamHasBeenCreated)
+{
+    Write-Host "Posting welcome messages" -ForegroundColor $CommandInfo
+    $postMessageDE = "<h1>Willkommen</h1>"
+    $postMessageDE += "<p>Willkommen im Projekt-Team von $($AlyaCompanyNameFull). In diesem Team verwalten wir unsere aktuellen internen Projekte. Dieses Team kann nicht mit externen geteilt werden!</p>"
+    $postMessageEN = "<h1>Welcome</h1>"
+    $postMessageEN += "<p>Welcome to the Project-Team from $($AlyaCompanyNameFull). In this team we manage our actual internal projects. This team can't be shared with externals!</p>"
+    $scopes = @(
+        "Group.ReadWrite.All",
+        "GroupMember.ReadWrite.All",
+        "TeamsApp.ReadWrite.All",
+        "TeamsAppInstallation.ReadWriteForTeam",
+        "TeamsAppInstallation.ReadWriteSelfForTeam",
+        "TeamSettings.ReadWrite.All",
+        "TeamsTab.ReadWrite.All",
+        "TeamMember.ReadWrite.All",
+        "ChannelMessage.Send"
+    )
+    Connect-MgGraph -Scopes $scopes
+    Select-MgProfile -Name "beta"
+    $bodyDE = @{
+        body = @{
+            contentType = "html"
+            content = "$postMessageDE"
+        }
     }
-}
-$bodyEN = @{
-    body = @{
-        contentType = "html"
-        content = "$postMessageEN"
+    $bodyEN = @{
+        body = @{
+            contentType = "html"
+            content = "$postMessageEN"
+        }
     }
-}
-$Channel = Get-TeamChannel -GroupId $Team.GroupId
-$message = New-MgTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyDE
-$message = New-MgTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyEN
+    $Channel = Get-TeamChannel -GroupId $Team.GroupId
+    $message = New-MgTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyDE
+    $message = New-MgTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyEN
 
-Write-Host "Please pin now the created messages and" -ForegroundColor $CommandWarning
-Write-Host "set channel to allow only owners posting messages" -ForegroundColor $CommandWarning
-$teamLink = "https://teams.microsoft.com/_?tenantId=$((Get-AzContext).Tenant.Id)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)2&ctx=channel"
-Write-Host "  $teamLink"
-start $teamLink
-pause
+    Write-Host "Please pin now the created messages and" -ForegroundColor $CommandWarning
+    Write-Host "set channel to allow only owners posting messages" -ForegroundColor $CommandWarning
+    $teamLink = "https://teams.microsoft.com/_?tenantId=$((Get-AzContext).Tenant.Id)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)2&ctx=channel"
+    Write-Host "  $teamLink"
+    start $teamLink
+    pause
+}
+
+Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
+$settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
+if (-Not $settings)
+{
+    Write-Warning "Created new team guest settings to disable Guests"
+    $template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "Group.Unified.Guest"}
+    $settingsCopy = $template.CreateDirectorySetting()
+    $settingsCopy["AllowToAddGuests"] = $false
+    $settings = New-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -DirectorySetting $settingsCopy
+}
+if ($settings["AllowToAddGuests"] -eq $true)
+{
+    Write-Warning "Existing team guest settings changed to disable Guests"
+    $settings["AllowToAddGuests"] = $false
+    $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -Id $settings.Id -DirectorySetting $settings
+}
 
 #Stopping Transscript
 Stop-Transcript

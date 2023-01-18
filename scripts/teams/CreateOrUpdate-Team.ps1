@@ -37,8 +37,8 @@
 Param(
     [Parameter(Mandatory=$true)]
     [string]$TitleAndGroupName,
-    [Parameter(Mandatory=$true)]
-    [string]$Description,
+    [Parameter(Mandatory=$false)]
+    [string]$Description = "",
     [Parameter(Mandatory=$false)]
     [ValidateSet('Private','Public','HiddenMembership')]
     [string]$Visibility = "Private",
@@ -49,9 +49,13 @@ Param(
     [Parameter(Mandatory=$false)]
     [string[]]$Guests = @(),
     [Parameter(Mandatory=$false)]
+    [object[]]$AddChannels = @(),
+    [Parameter(Mandatory=$false)]
     [switch]$OwerwriteMembersOwnersGuests = $false,
     [Parameter(Mandatory=$false)]
-    [string]$TeamPicturePath = $null
+    [string]$TeamPicturePath = $null,
+    [Parameter(Mandatory=$false)]
+    [bool]$AllowToAddGuests = $true
 )
 
 #Reading configuration
@@ -64,10 +68,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\CreateOrUpdate-Team-$($AlyaTi
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Ad
 LoginTo-Teams
 
 # =============================================================
@@ -81,21 +87,75 @@ Write-Host "=====================================================`n" -Foreground
 # Checking team
 Write-Host "Checking team" -ForegroundColor $CommandInfo
 $Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+$TeamCreated = $false
 if (-Not $Team)
 {
     Write-Warning "Team $TitleAndGroupName does not exist. Creating it now."
-    $Team = New-Team -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
-    Start-Sleep -Seconds 60
+    $TeamCreated = $true
+    if ([string]::IsNullOrEmpty($Description))
+    {
+        $Team = New-Team -DisplayName $TitleAndGroupName -Visibility $Visibility
+    }
+    else
+    {
+        $Team = New-Team -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
+    }
+    $retry = 30
+    do
+    {
+        Start-Sleep -Seconds 10
+        $Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+        $retry--
+        if ($retry -lt 0)
+        {
+            throw "Not able to create team $TitleAndGroupName"
+        }
+    } while (-Not $Team)
 }
 else
 {
     Write-Host "Team $TitleAndGroupName already exist. Updating."
-    $null = Set-Team -GroupId $Team.GroupId -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
+    if ([string]::IsNullOrEmpty($Description))
+    {
+        $null = Set-Team -GroupId $Team.GroupId -DisplayName $TitleAndGroupName -Visibility $Visibility
+    }
+    else
+    {
+        $null = Set-Team -GroupId $Team.GroupId -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
+    }
 }
-$Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
-if ($TeamPicturePath)
+
+# Checking channels
+Write-Host "Checking channels" -ForegroundColor $CommandInfo
+$TeamChannels = Get-TeamChannel -GroupId $Team.GroupId
+foreach($AddChannel in $AddChannels)
 {
-    $null = Set-TeamPicture -GroupId $Team.GroupId -ImagePath $TeamPicturePath
+    Write-Host "Channel $($AddChannel.DisplayName)"
+    $TeamChannel = $TeamChannels | where { $_.DisplayName -eq $AddChannel.DisplayName }
+    if (-Not $TeamChannel)
+    {
+        Write-Warning "Channel does not exist. Creating it now."
+        if ([string]::IsNullOrEmpty($AddChannel.Description))
+        {
+            $TeamChannel = New-TeamChannel -GroupId $Team.GroupId -DisplayName $AddChannel.DisplayName
+        }
+        else
+        {
+            $TeamChannel = New-TeamChannel -GroupId $Team.GroupId -DisplayName $AddChannel.DisplayName -Description $AddChannel.Description
+        }
+    }
+    else
+    {
+        Write-Host "Channel already exist. Updating."
+        if ([string]::IsNullOrEmpty($AddChannel.Description))
+        {
+            #$TeamChannel = Set-TeamChannel -GroupId $Team.GroupId -CurrentDisplayName $AddChannel.DisplayName
+        }
+        else
+        {
+            $TeamChannel = Set-TeamChannel -GroupId $Team.GroupId -CurrentDisplayName $AddChannel.DisplayName -Description $AddChannel.Description
+        }
+    }
 }
 
 # Getting groups
@@ -294,96 +354,78 @@ if ($OwerwriteMembersOwnersGuests)
 }
 
 # Checking team guests
-Write-Host "Checking team guests" -ForegroundColor $CommandInfo
-$NewGuests = @()
-foreach($memb in $Guests)
+if ($AllowToAddGuests)
 {
-    if ($memb.IndexOf("@") -gt -1)
+    Write-Host "Checking team guests" -ForegroundColor $CommandInfo
+    $NewGuests = @()
+    foreach($memb in $Guests)
     {
-        # is email
-        $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
-        if (-Not $user)
+        if ($memb.IndexOf("@") -gt -1)
         {
-            $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
-            if (-Not $group)
+            # is email
+            $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
+            if (-Not $user)
             {
-                throw "Can't find a user or group with email $memb"
+                $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
+                if (-Not $group)
+                {
+                    throw "Can't find a user or group with email $memb"
+                }
+                else
+                {
+                    $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                        if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                        {
+                            $NewGuests += $_.UserPrincipalName
+                        }
+                    }
+                }
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
-                    {
-                        $NewGuests += $_.UserPrincipalName
-                    }
+                if ($NewGuests -notcontains $user.Mail)
+                {
+                    $NewGuests += $user.Mail
                 }
             }
         }
         else
         {
-            if ($NewGuests -notcontains $user.Mail)
+            # is guid
+            $user = Get-AzADUser -ObjectId $memb -ErrorAction SilentlyContinue
+            if (-Not $user)
             {
-                $NewGuests += $user.Mail
-            }
-        }
-    }
-    else
-    {
-        # is guid
-        $user = Get-AzADUser -ObjectId $memb -ErrorAction SilentlyContinue
-        if (-Not $user)
-        {
-            $group = $allGroups | where { $_.Id -eq $memb }
-            if (-Not $group)
-            {
-                throw "Can't find a user or group with id $memb"
-            }
-            else
-            {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
-                    {
-                        $NewGuests += $_.UserPrincipalName
+                $group = $allGroups | where { $_.Id -eq $memb }
+                if (-Not $group)
+                {
+                    throw "Can't find a user or group with id $memb"
+                }
+                else
+                {
+                    $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                        if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                        {
+                            $NewGuests += $_.UserPrincipalName
+                        }
                     }
                 }
             }
-        }
-        else
-        {
-            if ($NewGuests -notcontains $user.Mail)
+            else
             {
-                $NewGuests += $user.Mail
+                if ($NewGuests -notcontains $user.Mail)
+                {
+                    $NewGuests += $user.Mail
+                }
             }
         }
     }
-}
-$TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Guest
-foreach($memb in $NewGuests)
-{
-    $fnd = $false
-    foreach($tmemb in $TMembers)
-    {
-        if ($tmemb.User -like "$($memb.Replace("@","_"))#*" )
-        {
-            $fnd = $true
-            break
-        }
-    }
-    if (-Not $fnd)
-    {
-        Write-Warning "Adding guest $memb to team."
-        Add-TeamUser -GroupId $Team.GroupId -User $memb
-    }
-}
-if ($OwerwriteMembersOwnersGuests)
-{
     $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Guest
-    foreach($tmemb in $TMembers)
+    foreach($memb in $NewGuests)
     {
         $fnd = $false
-        foreach($guest in $NewGuests)
+        foreach($tmemb in $TMembers)
         {
-            if ($tmemb.User -like "$($guest.Replace("@","_"))#*" )
+            if ($tmemb.User -like "$($memb.Replace("@","_"))#*" )
             {
                 $fnd = $true
                 break
@@ -391,11 +433,71 @@ if ($OwerwriteMembersOwnersGuests)
         }
         if (-Not $fnd)
         {
-            Write-Warning "Removing guest $memb from team."
-            Remove-TeamUser -GroupId $Team.GroupId -User $tmemb.User
+            Write-Warning "Adding guest $memb to team."
+            Add-TeamUser -GroupId $Team.GroupId -User $memb
+        }
+    }
+    if ($OwerwriteMembersOwnersGuests)
+    {
+        $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Guest
+        foreach($tmemb in $TMembers)
+        {
+            $fnd = $false
+            foreach($guest in $NewGuests)
+            {
+                if ($tmemb.User -like "$($guest.Replace("@","_"))#*" )
+                {
+                    $fnd = $true
+                    break
+                }
+            }
+            if (-Not $fnd)
+            {
+                Write-Warning "Removing guest $memb from team."
+                Remove-TeamUser -GroupId $Team.GroupId -User $tmemb.User
+            }
+        }
+    }
+
+    Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
+    $settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
+    if ($settings)
+    {
+        if ($settings["AllowToAddGuests"] -eq $false)
+        {
+            Write-Warning "Existing team guest settings changed to allow Guests"
+            $settings["AllowToAddGuests"] = $true
+            $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -Id $settings.Id -DirectorySetting $settings
         }
     }
 }
+else
+{
+    Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
+    $settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
+    if (-Not $settings)
+    {
+        Write-Warning "Created new team guest settings to disable Guests"
+        $template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "Group.Unified.Guest"}
+        $settingsCopy = $template.CreateDirectorySetting()
+        $settingsCopy["AllowToAddGuests"] = $false
+        $settings = New-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -DirectorySetting $settingsCopy
+    }
+    if ($settings["AllowToAddGuests"] -eq $true)
+    {
+        Write-Warning "Existing team guest settings changed to disable Guests"
+        $settings["AllowToAddGuests"] = $false
+        $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -Id $settings.Id -DirectorySetting $settings
+    }
+}
 
-#Stopping Transscript
+# Setting logo
+Write-Host "Setting logo" -ForegroundColor $CommandInfo
+if ($TeamPicturePath)
+{
+    if ($TeamCreated) { Start-Sleep -Seconds 60}
+    $null = Set-TeamPicture -GroupId $Team.GroupId -ImagePath $TeamPicturePath
+}
+
+# Stopping Transscript
 Stop-Transcript

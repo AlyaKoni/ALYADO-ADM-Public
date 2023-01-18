@@ -53,6 +53,8 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-MgGraph -Scopes @("Organization.ReadWrite.All")
+Disconnect-MgGraph # Required after first login with consent dialog
+LoginTo-MgGraph -Scopes @("Organization.ReadWrite.All")
 
 # =============================================================
 # Azure stuff
@@ -67,11 +69,6 @@ Write-Host "Getting organisation" -ForegroundColor $CommandInfo
 $org = Get-MgOrganization -OrganizationId $AlyaTenantId
 $org | fl
 
-# Getting act azure branding
-Write-Host "Getting act branding" -ForegroundColor $CommandInfo
-$branding = Get-MgOrganizationBranding -OrganizationId $AlyaTenantId
-$branding | fl
-
 # Setting organisation info
 Write-Host "Setting organisation info" -ForegroundColor $CommandInfo
 Update-MgOrganization -OrganizationId $AlyaTenantId `
@@ -80,8 +77,24 @@ Update-MgOrganization -OrganizationId $AlyaTenantId `
         contactEmail = $AlyaPrivacyEmail
         statementUrl = $AlyaPrivacyUrl
     } `
-    -SecurityComplianceNotificationMails @($AlyaSecurityEmail) `
     -TechnicalNotificationMails @($AlyaSupportEmail)
+
+# Getting act azure branding
+Write-Host "Getting act branding" -ForegroundColor $CommandInfo
+$branding = $null
+try
+{
+    $branding = Get-MgOrganizationBranding -OrganizationId $AlyaTenantId
+} catch
+{
+    #TODO fix this
+    Write-Warning "Branding does not exists, creating"
+    Write-Warning "Please create default branding on the following page"
+    Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+    start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+    pause
+    $branding = Get-MgOrganizationBranding -OrganizationId $AlyaTenantId
+}
 
 # Setting azure branding
 Write-Host "Setting branding" -ForegroundColor $CommandInfo
@@ -171,11 +184,17 @@ else
     }
     try
     {
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BackgroundImageInputFile $uplFile
+        $params = @{  
+            BackgroundImageInputFile = $uplFile
+        }  
+        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update backgroundImage by hand"
+        Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        pause
     }
     if ($uplFile -ne $AlyaAzureBrandingBackgroundImage) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
 }
@@ -198,11 +217,17 @@ else
     }
     try
     {
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -SquareLogoInputFile $uplFile
+        $params = @{  
+            BackgroundImageInputFile = $uplFile
+        }  
+        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update squareLogo by hand"
+        Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        pause
     }
     if ($uplFile -ne $AlyaAzureBrandingSquareLogo) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
 }
@@ -225,11 +250,17 @@ else
     }
     try
     {
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -SquareLogoDarkInputFile $uplFile
+        $params = @{  
+            BackgroundImageInputFile = $uplFile
+        }  
+        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update squareLogoDark by hand"
+        Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        pause
     }
     if ($uplFile -ne $AlyaAzureBrandingSquareLogoDark) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
 }
@@ -256,11 +287,17 @@ else
     #Get-MgOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -OutFile $uplFile
     try
     {
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BannerLogoInputFile $uplFile
+        $params = @{  
+            BackgroundImageInputFile = $uplFile
+        }  
+        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update bannerLogo by hand"
+        Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        pause
     }
     if ($uplFile -ne $AlyaAzureBrandingBannerLogo) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
 }
@@ -283,22 +320,29 @@ else
     }
     try
     {
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -FaviconInputFile $uplFile
+        $params = @{  
+            BackgroundImageInputFile = $uplFile
+        }  
+        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update favicon by hand"
+        Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        pause
     }
     if ($uplFile -ne $AlyaAzureBrandingFavicon) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
 }
 
 Write-Host "Finish configuration of CI/CD: O365Admin->Settings->Organisation"
-Write-Host $AlyaLogoUrlLong
+Write-Host "Logo: $AlyaLogoUrlLong"
+Write-Host "Color Akcent: $($AlyaSpThemeDef.themePrimary)"
+Write-Host "Color Nav: $($AlyaSpThemeDef.white)"
+Write-Host "Color Text: $($AlyaSpThemeDef.neutralPrimary)"
+Write-Host "Click Url: https://portal.office.com"
+Write-Host "https://admin.microsoft.com/Adminportal/Home?source=applauncher#/Settings/OrganizationProfile/:/Settings/L1/CustomThemes"
 start "https://admin.microsoft.com/Adminportal/Home?source=applauncher#/Settings/OrganizationProfile/:/Settings/L1/CustomThemes"
-pause
-
-Write-Host "Finish configuration of CI/CD: Azure->AAD->CompanyBranding"
-start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
 pause
 
 #Stopping Transscript

@@ -36,18 +36,18 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$true)]
-    [string]$title = "PFAGSG-ADM-Bekleidung",
+    [string]$title,
     [Parameter(Mandatory=$true)]
-    [string]$hub = "ADM",
+    [string]$hub,
     [Parameter(Mandatory=$true)]
-    [string]$siteDesignName = "PFAGSP ADM SubSite Team Site de-CH",
+    [string]$siteDesignName,
     [Parameter(Mandatory=$true)]
-    [string]$siteTemplate = "TeamSite",
+    [string]$siteTemplate,
     [Parameter(Mandatory=$true)]
-    [string]$siteLocale = "de-CH",
+    [string]$siteLocale,
     [Parameter(Mandatory=$true)]
     [ValidateSet("None","AdminOnly","KnownAccountsOnly","ByLink")]
-    [string]$externalSharing = "none",
+    [string]$externalSharing,
     [string]$homePageTemplate = $null,
     [string]$description = "",
     [string]$siteLogoUrl = $null,
@@ -190,6 +190,44 @@ switch($externalSharing)
     }
 }
 
+# M365 Group Sharing Capability
+if ($siteTemplate -eq "TeamSite")
+{
+    Write-Host "Setting M365 Group sharing capability " -ForegroundColor $CommandInfo
+    $m365GroupId = $site.GroupId.Guid
+    if ($externalSharing -ne "None")
+    {
+        $settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
+        if ($settings)
+        {
+            if ($settings["AllowToAddGuests"] -eq $false)
+            {
+                Write-Warning "Existing team guest settings changed to allow Guests"
+                $settings["AllowToAddGuests"] = $true
+                $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -Id $settings.Id -DirectorySetting $settings
+            }
+        }
+    }
+    else
+    {
+        $settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
+        if (-Not $settings)
+        {
+            Write-Warning "Created new team guest settings to disable Guests"
+            $template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "Group.Unified.Guest"}
+            $settingsCopy = $template.CreateDirectorySetting()
+            $settingsCopy["AllowToAddGuests"] = $false
+            $settings = New-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -DirectorySetting $settingsCopy
+        }
+        if ($settings["AllowToAddGuests"] -eq $true)
+        {
+            Write-Warning "Existing team guest settings changed to disable Guests"
+            $settings["AllowToAddGuests"] = $false
+            $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -Id $settings.Id -DirectorySetting $settings
+        }
+    }
+}
+
 #Processing Home Page
 Write-Host "Processing Home Page" -ForegroundColor $CommandInfo
 if ($overwritePages -and $homePageTemplate)
@@ -200,6 +238,20 @@ if ($overwritePages -and $homePageTemplate)
     $tmp = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
     Remove-Item -Path $tempFile
 }
+
+# OneDrive Sync Url
+Write-Host "OneDrive Sync Url" -ForegroundColor $CommandInfo
+$site = Get-PnPSite -Connection $siteCon -Includes "ID"
+$web = Get-PnPWeb -Connection $siteCon -Includes "ID","Title"
+$list = Get-PnPList -Connection $siteCon | where { $_.Title -eq "Dokumente" -or $_.Title -eq "Freigegebene Dokumente" -or $_.Title -eq "Documents" -or $_.Title -eq "Shared Documents" }
+$WebURL = [System.Web.HttpUtility]::UrlEncode("$($AlyaSharePointUrl)/sites/$title/")
+$SiteID = [System.Web.HttpUtility]::UrlEncode("{$($site.Id.Guid)}")
+$WebID = [System.Web.HttpUtility]::UrlEncode("{$($web.Id.Guid)}")
+$ListID = [System.Web.HttpUtility]::UrlEncode("{$($list.Id.Guid)}")
+$WebTitle = [System.Web.HttpUtility]::UrlEncode($web.Title)
+$ListTitle = [System.Web.HttpUtility]::UrlEncode($list.Title)
+$UserName = [System.Web.HttpUtility]::UrlEncode("xxxxxxxxxx@$AlyaDomainName")
+Write-Host "odopen://sync?siteId=$SiteID&webId=$WebID&listId=$ListID&userEmail=$UserName&webUrl=$WebURL&webTitle=$WebTitle&listTitle=$ListTitle&scope=OPENLIST" -ForegroundColor DarkGreen
 
 LogoutAllFrom-PnP
 

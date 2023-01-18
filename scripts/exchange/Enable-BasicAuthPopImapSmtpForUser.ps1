@@ -91,7 +91,7 @@ try
     $user = Get-User | where { $_.RecipientType -eq "UserMailbox" -and $_.UserPrincipalName -eq "$userUpn" }
     if ($user.AuthenticationPolicy -ne "EnableBasicAuthPopImapSmtp")
     {
-        Set-User -Identity $user.UserPrincipalName -AuthenticationPolicy "EnableBasicAuthPopImapSmtp"
+        Set-User -Identity $user.UserPrincipalName -AuthenticationPolicy "EnableBasicAuthPopImapSmtp" -Force
         #Set-CasMailbox <mailbox account> -SmtpClientAuthenticationDisabled $False
     }
 
