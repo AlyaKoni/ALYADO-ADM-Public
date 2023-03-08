@@ -107,7 +107,6 @@ if (-Not $WrkSpc)
 
 # Removing session hosts
 Write-Host "Removing session hosts" -ForegroundColor $CommandInfo
-
 $sessionHosts = Get-AzVM -ResourceGroupName $ShResourceGroupName
 foreach($sessionHost in $sessionHosts)
 {

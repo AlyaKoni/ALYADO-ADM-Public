@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     12.07.2021 Konrad Brunner       Initial Version
+    25.01.2023 Konrad Brunner       Action inputs and outputs
 
 #>
 
@@ -37,7 +38,10 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory = $true)]
-    [string]$logicAppName
+    [string]$logicAppName,
+    [Parameter(Mandatory = $false)]
+    [string]$exportInputsAndOutputs = $false,
+    [string[]]$skipExportInputsAndOutputsForActions = @()
 )
 
 # Loading configuration
@@ -80,45 +84,145 @@ $Runs = Get-AzLogicAppRunHistory -Name $logicAppName -ResourceGroupName $ResGrp 
 # Exporting all logic app triggers
 Write-Host "Exporting all logic app triggers" -ForegroundColor $CommandInfo
 $Trigg = Get-AzLogicAppTrigger -Name $logicAppName -ResourceGroupName $ResGrp
-$TriggHistsAll = Get-AzLogicAppTriggerHistory -Name $logicAppName -ResourceGroupName $ResGrp -TriggerName $Trigg.Name -FollowNextPageLink -MaximumFollowNextPageLink 1000
+$TriggHistsAll = Get-AzLogicAppTriggerHistory -Name $logicAppName -ResourceGroupName $ResGrp -TriggerName $Trigg.Name -FollowNextPageLink #-MaximumFollowNextPageLink 2000
 $TriggHists = $TriggHistsAll | where {$_.Status -ne "Skipped" -and $_.Fired -eq $true}
 
-# Logic app runs
-Write-Host "Logic apps runs" -ForegroundColor $CommandInfo
-$Runs | Select Name, StartTime, EndTime, Status
-
 # Fired logic app trigger outputs
+Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Fired logic app trigger outputs" -ForegroundColor $CommandInfo
 $TriggHistOutps = @()
 foreach($TriggHist in $TriggHists)
 {
     $TriggOutp = Invoke-RestMethod -Uri $TriggHist.OutputsLink.Uri
-    $TriggHistOutps += $TriggOutp.Body
+    $obj = $TriggOutp.Body
+    Add-Member -InputObject $obj -MemberType NoteProperty -Name "Run" -Value $TriggHist.Run.Name
+    Add-Member -InputObject $obj -MemberType NoteProperty -Name "StartTime" -Value $TriggHist.StartTime
+    $TriggHistOutps += $obj
 }
-$TriggHistOutps | ft
+$TriggHistOutps | Select Run, Name, StartTime, LastModified | Format-Table | Out-String | % {Write-Host $_}
 
-# Logic app runs with status 
+# Logic app runs
+Write-Host "`n==============================================" -ForegroundColor $CommandInfo
+Write-Host "Logic apps runs" -ForegroundColor $CommandInfo
+$Runs | Select Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+
+# Logic app runs with status Succeeded
+Write-Host "`n==============================================" -ForegroundColor $CommandInfo
+Write-Host "Logic apps runs with status Succeeded" -ForegroundColor $CommandInfo
+$SRuns = $Runs | where {$_.Status -eq "Succeeded"}
+$SRuns | Select Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+
+# Actions from succeeded logic app runs
+Write-Host "`nActions from succeeded logic app runs" -ForegroundColor $CommandInfo
+$regexOpts = [Text.RegularExpressions.RegexOptions]::None
+$regexOpts = $regexOpts -bor [Text.RegularExpressions.RegexOptions]::IgnoreCase
+$regexOpts = $regexOpts -bor [Text.RegularExpressions.RegexOptions]::Multiline
+$regexOpts = $regexOpts -bor [Text.RegularExpressions.RegexOptions]::Compiled
+foreach($Run in $SRuns)
+{
+    Write-Host "`nSucceeded run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
+    Write-Host "`nActions:"
+    $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
+    $Acts | Select Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    if ($exportInputsAndOutputs)
+    {
+        Write-Host "`nInputs and Outputs:"
+        foreach($Act in $Acts)
+        {
+            Start-Sleep -Milliseconds 500 #{"error":{"code":"WorkflowRequestsThrottled","message":"Number of read requests for workflow 'XXXXX' exceeded the limit of '1086' over time window of '00:05:00'."}}
+            Write-Host "Action $($Act.Status), $($Act.Name), $($Act.EndTime), $($Act.Code), $($Act.StartTime):"
+            if ($skipExportInputsAndOutputsForActions -contains $Act.Name) { continue }
+            if ($Act.InputsLink)
+            {
+                $ActInp = Invoke-RestMethod -Method Get -Uri $Act.InputsLink.Uri -UseBasicParsing
+                $Inp = $ActInp | ConvertTo-Json -Depth 2 -Compress
+                Write-Host "  Inputs: $([Regex]::Replace($Inp, '"\$content":"[^"]*"', '"$content":"TRUNCATED"', $regexOpts))"
+            }
+            if ($Act.OutputsLink)
+            {
+                $ActOut = Invoke-RestMethod -Method Get -Uri $Act.OutputsLink.Uri -UseBasicParsing
+                $Out = $ActOut | ConvertTo-Json -Depth 2 -Compress
+                Write-Host "  Outputs: $([Regex]::Replace($Out, '"\$content":"[^"]*"', '"$content":"TRUNCATED"', $regexOpts))"
+            }
+        }
+    }
+}
+
+# Logic app runs with status Cancelled
+Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs with status Cancelled" -ForegroundColor $CommandInfo
-$Errs = $Runs | where {$_.Status -eq "Cancelled"}
-$Errs | Select Name, StartTime, EndTime
+$SRuns = $Runs | where {$_.Status -eq "Cancelled"}
+$SRuns | Select Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
 
-# Logic app runs with status Failed
-Write-Host "Logic apps runs with status Failed" -ForegroundColor $CommandInfo
-$Errs = $Runs | where {$_.Status -eq "Failed"}
-$Errs | Select Name, StartTime, EndTime
-
-# Failed actions from failed logic app runs
-Write-Host "Failed actions from failed logic app runs" -ForegroundColor $CommandInfo
-foreach($Err in $Errs)
+# Actions from cancelled logic app runs
+Write-Host "`nActions from cancelled logic app runs" -ForegroundColor $CommandInfo
+foreach($Run in $SRuns)
 {
     #$Err = $Errs[0]
-    Write-Host "`nRun: $($Err.Name)"
+    Write-Host "`nCancelled run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
     Write-Host "Actions:"
-    $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Err.Name
-    $ActsFailed = $Acts | where {$_.Status -eq "Failed"}
-    foreach($ActFailed in $ActsFailed)
+    $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
+    $Acts | Select Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    if ($exportInputsAndOutputs)
     {
-        Write-Host "  $($ActFailed.Name) $($ActFailed.Code) $($ActFailed.StartTime)"
+        Write-Host "`nInputs and Outputs:"
+        foreach($Act in $Acts)
+        {
+            Write-Host "Action $($Act.Status), $($Act.Name), $($Act.EndTime), $($Act.Code), $($Act.StartTime):"
+            Start-Sleep -Milliseconds 500 #{"error":{"code":"WorkflowRequestsThrottled","message":"Number of read requests for workflow 'XXXXX' exceeded the limit of '1086' over time window of '00:05:00'."}}
+            if ($skipExportInputsAndOutputsForActions -contains $Act.Name) { continue }
+            if ($Act.InputsLink)
+            {
+                $ActInp = Invoke-RestMethod -Method Get -Uri $Act.InputsLink.Uri -UseBasicParsing
+                $Inp = $ActInp | ConvertTo-Json -Depth 2 -Compress
+                Write-Host "  Inputs: $([Regex]::Replace($Inp, '"\$content":"[^"]*"', '"$content":"TRUNCATED"', $regexOpts))"
+            }
+            if ($Act.OutputsLink)
+            {
+                $ActOut = Invoke-RestMethod -Method Get -Uri $Act.OutputsLink.Uri -UseBasicParsing
+                $Out = $ActOut | ConvertTo-Json -Depth 2 -Compress
+                Write-Host "  Outputs: $([Regex]::Replace($Out, '"\$content":"[^"]*"', '"$content":"TRUNCATED"', $regexOpts))"
+            }
+        }
+    }
+}
+
+# Logic app runs with status Failed
+Write-Host "`n==============================================" -ForegroundColor $CommandInfo
+Write-Host "Logic apps runs with status Failed" -ForegroundColor $CommandInfo
+$SRuns = $Runs | where {$_.Status -eq "Failed"}
+$SRuns | Select Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+
+# Actions from failed logic app runs
+Write-Host "`nActions from failed logic app runs" -ForegroundColor $CommandInfo
+foreach($Run in $SRuns)
+{
+    #$Err = $Errs[0]
+    Write-Host "`nFailed run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
+    Write-Host "Actions:"
+    $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
+    $Acts | Select Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    if ($exportInputsAndOutputs)
+    {
+        Write-Host "`nInputs and Outputs:"
+        foreach($Act in $Acts)
+        {
+            Write-Host "Action $($Act.Status), $($Act.Name), $($Act.EndTime), $($Act.Code), $($Act.StartTime):"
+            Start-Sleep -Milliseconds 500 #{"error":{"code":"WorkflowRequestsThrottled","message":"Number of read requests for workflow 'XXXXX' exceeded the limit of '1086' over time window of '00:05:00'."}}
+            if ($skipExportInputsAndOutputsForActions -contains $Act.Name) { continue }
+            if ($Act.InputsLink)
+            {
+                $ActInp = Invoke-RestMethod -Method Get -Uri $Act.InputsLink.Uri -UseBasicParsing
+                $Inp = $ActInp | ConvertTo-Json -Depth 2 -Compress
+                Write-Host "  Inputs: $([Regex]::Replace($Inp, '"\$content":"[^"]*"', '"$content":"TRUNCATED"', $regexOpts))"
+            }
+            if ($Act.OutputsLink)
+            {
+                $ActOut = Invoke-RestMethod -Method Get -Uri $Act.OutputsLink.Uri -UseBasicParsing
+                $Out = $ActOut | ConvertTo-Json -Depth 2 -Compress
+                Write-Host "  Outputs: $([Regex]::Replace($Out, '"\$content":"[^"]*"', '"$content":"TRUNCATED"', $regexOpts))"
+            }
+        }
     }
 }
 

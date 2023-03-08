@@ -158,26 +158,31 @@ foreach ($secGroup in $SecurityGroup)
     else
     {
         Write-Host "   - Group doesn't exists! Creating." -ForegroundColor $CommandSuccess
+        $isAssignableToRole = $false
+        if ($secGroup.AllowAzureAdRoles -ne $null)
+        {
+            $isAssignableToRole = $secGroup.AllowAzureAdRoles
+        }
         if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
         {
             if ([string]::IsNullOrEmpty($secGroup.Alias))
             {
-                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.DisplayName -SecurityEnabled $True -Visibility $secGroup.Visibility
+                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.DisplayName -SecurityEnabled $True -Visibility $secGroup.Visibility -IsAssignableToRole $isAssignableToRole
             }
             else
             {
-                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -Visibility $secGroup.Visibility
+                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -Visibility $secGroup.Visibility -IsAssignableToRole $isAssignableToRole
             }
         }
         else
         {
             if ([string]::IsNullOrEmpty($secGroup.Alias))
             {
-                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.DisplayName -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.DisplayName -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility -IsAssignableToRole $isAssignableToRole
             }
             else
             {
-                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility -IsAssignableToRole $isAssignableToRole
             }
         }
     }

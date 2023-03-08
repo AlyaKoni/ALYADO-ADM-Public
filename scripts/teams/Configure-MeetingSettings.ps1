@@ -61,8 +61,8 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Teams | Configure-MeetingSettings | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking external content sharing control
-Write-Host "external content sharing control" -ForegroundColor $CommandInfo
+# Checking MeetingSettings
+Write-Host "Checking MeetingSettings" -ForegroundColor $CommandInfo
 $Configuration = Get-CsTeamsMeetingConfiguration
 Set-CsTeamsMeetingConfiguration -LogoURL $AlyaLogoUrlRect -LegalURL $AlyaPrivacyUrl
 

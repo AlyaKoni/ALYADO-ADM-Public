@@ -17,7 +17,7 @@
     "roleScopeTagIds":  [
 
                         ],
-    "fileName":  "MobaXterm_installer_22.3.intunewin",
+    "fileName":  "MobaXterm_installer_23.0.intunewin",
     "installCommandLine":  "Install.cmd",
     "uninstallCommandLine":  "Uninstall.cmd",
     "applicableArchitectures":  "x64",
@@ -27,14 +27,14 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "22.3.0.5024",
+                           "productVersion":  "23.0.0.5042",
                            "publisher":  "Mobatek",
-                           "productCode":  "{0222FB41-6AD8-4179-96FA-BA015D3B8DEF}",
+                           "productCode":  "{5D049EF0-F163-4D5A-A229-708AAA5FB847}",
                            "upgradeCode":  "{745A604F-05A1-4867-8881-59888EC8B806}",
                            "productName":  "MobaXterm",
                            "packageType":  "PerMachine"
                        },
-    "setupFilePath":  "MobaXterm_installer_22.3.msi",
+    "setupFilePath":  "MobaXterm_installer_23.0.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -55,7 +55,7 @@
                                "check32BitOn64System":  true,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "22.3.0.5024"
+                               "detectionValue":  "23.0.0.5042"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  true,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "22.3.0.5024"
+                      "comparisonValue":  "23.0.0.5042"
                   }
               ],
     "installExperience":  {

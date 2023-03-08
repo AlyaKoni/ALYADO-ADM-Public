@@ -61,8 +61,8 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Teams | Configure-LobbyForExternals | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking external content sharing control
-Write-Host "external content sharing control" -ForegroundColor $CommandInfo
+# Checking LobbyForExternals
+Write-Host "Checking LobbyForExternals" -ForegroundColor $CommandInfo
 $Policy = Get-CsTeamsMeetingPolicy -Identity Global
 if ($Policy.AutoAdmittedUsers -ne "EveryoneInCompanyExcludingGuests")
 {

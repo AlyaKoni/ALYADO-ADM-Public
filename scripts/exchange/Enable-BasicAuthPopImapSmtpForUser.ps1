@@ -73,7 +73,7 @@ try
     if (-Not $pol)
     {
         Write-Warning "Authentication policy EnableBasicAuthPopImapSmtp not found. Creating it now"
-        $pol = New-AuthenticationPolicy -Name "EnableBasicAuthPopImapSmtp" -AllowBasicAuthSmtp -AllowBasicAuthPop -AllowBasicAuthImap
+        $pol = New-AuthenticationPolicy -Name "EnableBasicAuthPopImapSmtp" -AllowBasicAuthSmtp -AllowBasicAuthPop -AllowBasicAuthImap -Confirm:$false
     }
     else
     {
@@ -83,7 +83,7 @@ try
     if (-Not $pol.AllowBasicAuthImap -or -Not $pol.AllowBasicAuthSmtp -or -Not $pol.AllowBasicAuthPop)
     {
         Write-Warning "One of pop, imap or smtp was disabled. Enabling them now all"
-        Set-AuthenticationPolicy -Name "EnableBasicAuthPopImapSmtp" -AllowBasicAuthSmtp -AllowBasicAuthPop -AllowBasicAuthImap
+        Set-AuthenticationPolicy -Name "EnableBasicAuthPopImapSmtp" -AllowBasicAuthSmtp -AllowBasicAuthPop -AllowBasicAuthImap -Confirm:$false
     }
 
     # Setting authentication policy for user
@@ -91,7 +91,7 @@ try
     $user = Get-User | where { $_.RecipientType -eq "UserMailbox" -and $_.UserPrincipalName -eq "$userUpn" }
     if ($user.AuthenticationPolicy -ne "EnableBasicAuthPopImapSmtp")
     {
-        Set-User -Identity $user.UserPrincipalName -AuthenticationPolicy "EnableBasicAuthPopImapSmtp" -Force
+        Set-User -Identity $user.UserPrincipalName -AuthenticationPolicy "EnableBasicAuthPopImapSmtp" -Force -Confirm:$false
         #Set-CasMailbox <mailbox account> -SmtpClientAuthenticationDisabled $False
     }
 

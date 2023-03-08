@@ -37,10 +37,11 @@
 Param(
     [Parameter(Mandatory=$true)]
     [string]$title,
+    [string]$siteUrl = $null,
     [Parameter(Mandatory=$true)]
     [string]$hub,
-    [Parameter(Mandatory=$true)]
-    [string]$siteDesignName,
+    [Parameter(Mandatory=$false)]
+    [string]$siteDesignName = $null,
     [Parameter(Mandatory=$true)]
     [string]$siteTemplate,
     [Parameter(Mandatory=$true)]
@@ -51,7 +52,8 @@ Param(
     [string]$homePageTemplate = $null,
     [string]$description = "",
     [string]$siteLogoUrl = $null,
-    [bool]$overwritePages = $true
+    [bool]$overwritePages = $true,
+    [string]$hubSitesConfigurationFile = $null
 )
 
 #Reading configuration
@@ -72,17 +74,32 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-SPO
 
 # Constants
-if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
+if ($hubSitesConfigurationFile)
 {
-    Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
-    . $AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1
+    if ((Test-Path $hubSitesConfigurationFile))
+    {
+        Write-Host "Using hub site configuration from: $($hubSitesConfigurationFile)"
+        . $hubSitesConfigurationFile
+    }
+    else
+    {
+        throw "Provided hub site configuration file $($hubSitesConfigurationFile) not found!"
+    }
 }
 else
 {
-    Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
-    Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
-    pause
-    . $AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1
+    if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
+    {
+        Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
+        . $AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1
+    }
+    else
+    {
+        Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
+        Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
+        pause
+        . $AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1
+    }
 }
 
 # =============================================================
@@ -103,16 +120,9 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Create-Site | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Getting hub definition
-$hubSite = $hubSites | where { $_.short -eq $hub }
-if (-Not $hubSite)
-{
-    throw "Hub site $($hub) not found"
-}
-
 #Creating site
 Write-Host "Creating site $($title)" -ForegroundColor $CommandInfo
-$siteUrl = BuildUrlFromTitle -title $title
+if (-Not $siteUrl) { $siteUrl = BuildUrlFromTitle -title $title }
 $site = $null
 try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($siteUrl)" -Detailed -ErrorAction SilentlyContinue } catch {}
 if (-Not $site)
@@ -132,6 +142,27 @@ if (-Not $site)
         try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($siteUrl)" -Detailed -ErrorAction SilentlyContinue } catch {}
     } while (-Not $site)
     Start-Sleep -Seconds 60
+}
+
+#Assigning site to hub
+if ($hub)
+{
+    Write-Host "Assigning site to hub $($hub)" -ForegroundColor $CommandInfo
+    $hubSite = $hubSites | where { $_.short -eq $hub }
+    if (-Not $hubSite)
+    {
+        throw "Hub site $($hub) not found"
+    }
+    $hubSiteObj = Get-PnPHubSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+    if (-Not $hubSiteObj)
+    {
+        throw "Hub site $($hub) not found"
+    }
+    $hubCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+    $hubSite = Get-PnPSite -Connection $hubCon
+    $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($siteUrl)"
+    $siteSite = Get-PnPSite -Connection $siteCon
+    Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
 }
 
 #Updating site logo
@@ -168,6 +199,32 @@ $tmp = Set-SPOSite -Identity $Site -Owner $AlyaSharePointNewSiteOwner
     
 #Processing site design
 Write-Host "Processing site design" -ForegroundColor $CommandInfo
+if (-Not $siteDesignName)
+{
+    $hubSiteDef = $hubSites | where { $_.short -eq $hub }
+    if ($siteTemplate -eq "TeamSite")
+    {
+        if ($hubSiteDef.subSiteScript)
+        {
+            $siteDesignName = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) SubSite Team Site "+$siteLocale
+        }
+        else
+        {
+		    $siteDesignName = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) HubSite Team Site "+$siteLocale
+        }
+    }
+    else
+    {
+        if ($hubSiteDef.subSiteScript)
+        {
+            $siteDesignName = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) SubSite Communication Site "+$siteLocale
+        }
+        else
+        {
+		    $siteDesignName = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) HubSite Communication Site "+$siteLocale
+        }
+    }
+}
 $siteDesign = Get-SPOSiteDesign | where { $_.Title -eq $siteDesignName }
 Invoke-SPOSiteDesign -Identity $siteDesign.Id -WebUrl "$($AlyaSharePointUrl)/sites/$($siteUrl)"
 

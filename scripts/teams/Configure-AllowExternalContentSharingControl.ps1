@@ -61,8 +61,8 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Teams | Configure-AllowExternalContentSharingControl | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking external content sharing control
-Write-Host "external content sharing control" -ForegroundColor $CommandInfo
+# Checking AllowExternalContentSharingControl
+Write-Host "Checking AllowExternalContentSharingControl" -ForegroundColor $CommandInfo
 $Policy = Get-CsTeamsMeetingPolicy -Identity Global
 if (-Not $Policy.AllowExternalParticipantGiveRequestControl)
 {

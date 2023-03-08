@@ -49,6 +49,11 @@ if (-Not $outputFile)
 {
     $outputFile = "$AlyaData\aad\Users.xlsx"
 }
+$outputDirectory = Split-Path $outputFile -Parent
+if (-Not (Test-Path $outputDirectory))
+{
+    New-Item -Path $outputDirectory -ItemType Directory -Force
+}
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -186,7 +191,7 @@ do
     {
         if ($_.Exception.Message.Contains("Could not open Excel Package"))
         {
-            Write-Host "Please close excel sheet"
+            Write-Host "Please close excel sheet $outputFile"
             pause
         }
         else

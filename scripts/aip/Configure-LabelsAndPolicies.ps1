@@ -427,7 +427,7 @@ try
     Get-Label | Format-Table -Property DisplayName, IsValid, Disabled
 
     Write-Host "Actually configured policies"
-    Get-LabelPolicy | Format-Table -Property DisplayName, Name, Guid
+    Get-LabelPolicy | Format-Table -Property DisplayName, Name, DistributionStatus, Guid
 }
 catch
 {

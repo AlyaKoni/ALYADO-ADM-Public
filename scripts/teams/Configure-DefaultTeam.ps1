@@ -91,7 +91,12 @@ else
     Write-Host "Team $TitleAndGroupName already exist. Updating."
     $null = Set-Team -GroupId $Team.GroupId -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
 }
-$Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+do
+{
+    $Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+    if (-Not $Team -or -Not $Team.GroupId) { Start-Sleep -Seconds 2 }
+}
+while (-Not $Team -or -Not $Team.GroupId)
 if ($TeamPicturePath)
 {
     if ($TeamPicturePath.StartsWith("http"))

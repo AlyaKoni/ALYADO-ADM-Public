@@ -111,10 +111,10 @@ function Main
             $comp -eq "Hispeed" -or `
             $comp -eq "Gmail" -or `
             $comp -eq "Bluewin" -or `
-            $comp -eq "Bluemail")
+            $comp -eq "Bluemail" -or `
+            $comp -eq "Sunrise")
         {
-            #$comp = "Extern"
-            $comp = $domain.ToLower()
+            $comp = "Extern $($domain.ToLower())"
         }
 
         if (-Not [String]::IsNullOrEmpty($oldUser.first) -And `

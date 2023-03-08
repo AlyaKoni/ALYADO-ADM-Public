@@ -136,6 +136,13 @@ else
     }
 }
 
+# Checking azure ad join rights
+Write-Host "Checking azure ad join rights" -ForegroundColor $CommandInfo
+Write-Host "Please allow only group $AlyaAllowDeviceRegistration to join devices"
+Write-Host "https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
+start "https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
+pause
+
 Write-Host "Getting new DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
 Get-MsolDeviceRegistrationServicePolicy -ErrorAction SilentlyContinue
 

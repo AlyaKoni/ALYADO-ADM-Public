@@ -17,7 +17,7 @@
     "roleScopeTagIds":  [
 
                         ],
-    "fileName":  "pdf24-creator-11.9.0.intunewin",
+    "fileName":  "pdf24-creator-11.10.2.intunewin",
     "installCommandLine":  "Install.cmd",
     "uninstallCommandLine":  "Uninstall.cmd",
     "applicableArchitectures":  "x64",
@@ -27,14 +27,14 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "11.9.0",
+                           "productVersion":  "11.10.2",
                            "publisher":  "geek software GmbH",
-                           "productCode":  "{B85F8898-9148-4A99-855E-85D7FEEDFECF}",
+                           "productCode":  "{481632FD-98D5-420A-83C6-089E55F19309}",
                            "upgradeCode":  "{8D2DF301-CE53-4939-81C2-D659E7B857BE}",
                            "productName":  "PDF24 Creator",
                            "packageType":  "PerMachine"
                        },
-    "setupFilePath":  "pdf24-creator-11.9.0.msi",
+    "setupFilePath":  "pdf24-creator-11.10.2.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -55,7 +55,7 @@
                                "check32BitOn64System":  false,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "11.9.0"
+                               "detectionValue":  "11.10.2"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  false,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "11.9.0"
+                      "comparisonValue":  "11.10.2"
                   }
               ],
     "installExperience":  {

@@ -68,7 +68,7 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 Connect-AzureAD
 #Connect-AzureAD #TODO: Only works this way. Permission by token does not work
 Connect-MsolService
-#Connect-MsolService #TODO: Only works this way. Permission by token does not work
+#LoginTo-MSOL #TODO: Only works this way. Permission by token does not work
 
 # =============================================================
 # Azure stuff
@@ -87,7 +87,7 @@ if (-Not (Test-Path $inputFile))
 $roleDefs = Import-Excel $inputFile -ErrorAction Stop
 
 # Configured roles
-Write-Host "Configured roles:" -ForegroundColor $CommandInfo
+Write-Host "Configured roles:"
 $lastRole = $null
 $allRoles = @{}
 $eligibleRoles = @{}
@@ -112,12 +112,21 @@ foreach ($roleDef in $roleDefs)
         $allRoles.$roleName = $false
     }
 
+    $principal = $null
     if (-Not [string]::IsNullOrEmpty($roleDef.Eligible))
     {
         if ($roleDef.Eligible -like "##*") {
             continue
         }
-        $principal = Get-AzureADUser -objectId $roleDef.Eligible
+        try { $principal = Get-AzureADUser -objectId $roleDef.Eligible -ErrorAction SilentlyContinue } catch {}
+        if (-Not $principal)
+        {
+            $principal = Get-AzureADGroup -SearchString $roleDef.Eligible -ErrorAction SilentlyContinue
+        }
+        if (-Not $principal)
+        {
+            throw "Not able to find user or group $($roleDef.Eligible)"
+        }
         if ($eligibleRoles.ContainsKey($roleName))
         {
             $eligibleRoles.$roleName += $principal
@@ -134,7 +143,15 @@ foreach ($roleDef in $roleDefs)
             $allRoles.$roleName = $true
             continue
         }
-        $principal = Get-AzureADUser -objectId $roleDef.PermanentPIM
+        try { $principal = Get-AzureADUser -objectId $roleDef.PermanentPIM -ErrorAction SilentlyContinue } catch {}
+        if (-Not $principal)
+        {
+            $principal = Get-AzureADGroup -SearchString $roleDef.PermanentPIM -ErrorAction SilentlyContinue
+        }
+        if (-Not $principal)
+        {
+            throw "Not able to find user or group $($roleDef.PermanentPIM)"
+        }
         if ($permanentPIMRoles.ContainsKey($roleName))
         {
             $permanentPIMRoles.$roleName += $principal
@@ -151,7 +168,15 @@ foreach ($roleDef in $roleDefs)
             $allRoles.$roleName = $true
             continue
         }
-        $principal = Get-AzureADUser -objectId $roleDef.PermanentMSOL
+        try { $principal = Get-AzureADUser -objectId $roleDef.PermanentMSOL -ErrorAction SilentlyContinue } catch {}
+        if (-Not $principal)
+        {
+            $principal = Get-AzureADGroup -SearchString $roleDef.PermanentMSOL -ErrorAction SilentlyContinue
+        }
+        if (-Not $principal)
+        {
+            throw "Not able to find user or group $($roleDef.PermanentMSOL)"
+        }
         if ($permanentMSOLRoles.ContainsKey($roleName))
         {
             $permanentMSOLRoles.$roleName += $principal
@@ -162,8 +187,6 @@ foreach ($roleDef in $roleDefs)
         }
     }
 }
-
-Write-Host "Configured roles:"
 foreach($key in $allRoles.Keys) { Write-Host "  $key" }
 
 # Checking built in roles
@@ -362,7 +385,7 @@ foreach($roleName in $allRoles.Keys)
             {
                 if ($_.Exception.ToString() -like "*AadPremiumLicenseRequired*")
                 {
-                    Write-Host "No PIM license available! Canï¿½t configure PIM roles."
+                    Write-Host "No PIM license available! Can't configure PIM roles."
                     $configurePIM = $false
                 }
                 else

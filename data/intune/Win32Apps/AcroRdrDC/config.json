@@ -55,7 +55,7 @@
                                "check32BitOn64System":  true,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "22.3.20282"
+                               "detectionValue":  "22.3.20322"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  true,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "22.3.20282"
+                      "comparisonValue":  "22.3.20322"
                   }
               ],
     "installExperience":  {

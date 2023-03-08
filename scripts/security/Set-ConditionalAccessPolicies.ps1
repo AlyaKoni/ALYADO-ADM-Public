@@ -97,7 +97,6 @@ $roleDefs = @{
     "Application Administrator"=$null
     "Azure AD Joined Device Local Administrator"=$null
     "Azure DevOps Administrator"=$null
-    "Billing Administrator"=$null
     "Compliance Administrator"=$null
     "Conditional Access Administrator"=$null
     "Dynamics 365 Administrator"=$null

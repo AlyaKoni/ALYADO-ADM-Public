@@ -26,15 +26,15 @@
     "minimumCpuSpeedInMHz":  1,
     "msiInformation":  {
                            "requiresReboot":  "false",
-                           "productVersion":  "2022.3.27.0",
+                           "productVersion":  "2022.3.35.0",
                            "publisher":  "Devolutions inc.",
-                           "productCode":  "{3F53C6AB-A2B4-41D8-9A45-5E0DB8CE2560}",
+                           "productCode":  "{DD44A271-60DC-4457-B180-BC54C74059BA}",
                            "upgradeCode":  "{2707F3BF-4D7B-40C2-882F-14B0ED869EE8}",
                            "productName":  "Remote Desktop Manager",
                            "packageType":  "PerMachine"
                        },
-    "fileName":  "Setup.RemoteDesktopManager.2022.3.27.0.intunewin",
-    "setupFilePath":  "Setup.RemoteDesktopManager.2022.3.27.0.msi",
+    "fileName":  "Setup.RemoteDesktopManager.2022.3.35.0.intunewin",
+    "setupFilePath":  "Setup.RemoteDesktopManager.2022.3.35.0.msi",
     "minimumSupportedWindowsRelease":  "1607",
     "minimumSupportedOperatingSystem":  {
                                             "v8_0":  false,
@@ -55,7 +55,7 @@
                                "check32BitOn64System":  true,
                                "detectionType":  "version",
                                "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "2022.3.27.0"
+                               "detectionValue":  "2022.3.35.0"
                            }
                        ],
     "requirementRules":  [
@@ -70,7 +70,7 @@
                       "check32BitOn64System":  true,
                       "operationType":  "version",
                       "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "2022.3.27.0"
+                      "comparisonValue":  "2022.3.35.0"
                   }
               ],
     "installExperience":  {

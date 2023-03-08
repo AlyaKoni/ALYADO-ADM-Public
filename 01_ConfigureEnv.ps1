@@ -1738,8 +1738,8 @@ function Post-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $true)]
-        $Body
+        [parameter(Mandatory = $false)]
+        $Body = $null
     )
     if ($AccessToken) {
         $HeaderParams = @{
@@ -1756,7 +1756,14 @@ function Post-MsGraph
     $StatusCode = ""
     do {
         try {
-            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json; charset=UTF-8" -Body $Body
+            if ($Body -ne $null)
+            {
+                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json; charset=UTF-8" -Body $Body
+            }
+            else
+            {
+                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json; charset=UTF-8"
+            }
             $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__

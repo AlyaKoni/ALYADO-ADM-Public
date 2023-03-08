@@ -1,4 +1,9 @@
-﻿. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+﻿[CmdletBinding()]
+Param(
+    [bool]$reuseExistingPackages = $false
+)
+
+. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 & "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguagePacks"
 & "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguageDeDeKeybDeCh"

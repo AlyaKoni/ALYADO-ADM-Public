@@ -355,6 +355,7 @@ foreach($packageDir in $packages)
 	        "x-ms-blob-type" = "BlockBlob"
         }
 		$currentChunk = $chunk + 1
+        Write-Host "    Uploading chunk $currentChunk of $chunks ($([int]$sasRenewalTimer.Elapsed.TotalSeconds)sec)"
         Write-Progress -Activity "    Uploading intunewin from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
         $curi = "$($file.azureStorageUri)&comp=block&blockid=$id"
         $Global:attempts = 10
@@ -388,18 +389,17 @@ foreach($packageDir in $packages)
         }
 		if ($currentChunk -lt $chunks -and $sasRenewalTimer.ElapsedMilliseconds -ge 450000)
         {
+            Write-Host "    Upload renewal"
 	        $renewalUri = "$uri/renewUpload"
-	        $rewnewUriResult = Post-MsGraph -AccessToken $token -Uri $uri -Body "{}"	
+	        $rewnewUriResult = Post-MsGraph -AccessToken $token -Uri $renewalUri	
             $stage = "AzureStorageUriRenewal"
 	        $successState = "$($stage)Success"
 	        $pendingState = "$($stage)Pending"
-	        $failedState = "$($stage)Failed"
-	        $timedOutState = "$($stage)TimedOut"
-	        $Global:attempts = 100
+	        $Global:attempts = 10
 	        while ($Global:attempts -gt 0)
 	        {
 		        Start-Sleep -Seconds 3
-		        $file = Get-MsGraphObject -Uri $uri
+		        $file = Get-MsGraphObject -AccessToken $token -Uri $uri
 		        if ($file.uploadState -eq $successState)
 		        {
 			        break
