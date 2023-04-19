@@ -61,7 +61,7 @@ Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
-Install-ModuleIfNotInstalled "PnP.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell" -exactVersion 1.12.0
 
 # Logging in
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -108,7 +108,6 @@ Write-Host "Getting users actual onedrive location" -ForegroundColor $CommandInf
 $mySite = null
 foreach($site in $allSites)
 {
-    $adminUrl = $AlyaSharePointAdminUrl
     if ($site -ne $centralSite.ToUpper())
     {
         $adminUrl = $AlyaSharePointAdminUrl.Replace("-admin", $site+"-admin")

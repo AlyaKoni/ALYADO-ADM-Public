@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,8 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     03.10.2021 Konrad Brunner       Initial Version
+    25.03.2023 Konrad Brunner       Fixed issues with parameters, just trying for now different once, TODO
+    19.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules, TODO test with UseAppAuthentication = true
 
 #>
 
@@ -48,14 +50,41 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-PnPTemplate-$($Al
 # Checking modules
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-# Logins
+# Logging in
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 $siteCon = LoginTo-PnP -Url $SiteUrl
 
 # Export site template
+Write-Host "Exporting site template" -ForegroundColor $CommandInfo
 $outfile = "$AlyaData\sharepoint\PnPTemplate_" + $SiteUrl.Replace("https://", "").Replace("/", "_") + ".xml"
-Get-PnPSiteTemplate -Out $outfile -IncludeAllTermGroups -IncludeSiteCollectionTermGroup -IncludeSiteGroups `
-    -IncludeTermGroupsSecurity -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
-    -PersistBrandingFiles -PersistPublishingFiles -PersistMultiLanguageResources -Encoding ([System.Text.Encoding]::UTF8) -Force
+try
+{
+    Get-PnPSiteTemplate -Connection $adminCon -Out $outfile -IncludeAllTermGroups -IncludeSiteCollectionTermGroup -IncludeSiteGroups `
+        -IncludeTermGroupsSecurity -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
+        -PersistBrandingFiles -PersistPublishingFiles -PersistMultiLanguageResources -Encoding ([System.Text.Encoding]::UTF8) -Force
+}
+catch
+{
+    try
+    {
+        Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeAllTermGroups -IncludeSiteCollectionTermGroup -IncludeSiteGroups `
+            -IncludeTermGroupsSecurity -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
+            -PersistBrandingFiles -PersistPublishingFiles -PersistMultiLanguageResources -Encoding ([System.Text.Encoding]::UTF8) -Force
+    }
+    catch
+    {
+        try
+        {
+            Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeSiteGroups `
+                -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
+                -PersistBrandingFiles -PersistPublishingFiles -PersistMultiLanguageResources -Encoding ([System.Text.Encoding]::UTF8) -Force
+        }
+        catch
+        {
+            Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeAllPages -Encoding ([System.Text.Encoding]::UTF8) -Force
+        }
+    }
+}
 
 Write-Host "Template exported to $outfile" -ForegroundColor $CommandSuccess
 

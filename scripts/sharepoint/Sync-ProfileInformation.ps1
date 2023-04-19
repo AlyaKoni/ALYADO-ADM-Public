@@ -48,7 +48,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Sync-ProfileInformation-
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "PnP.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell" -exactVersion 1.12.0
 Install-ModuleIfNotInstalled "MSOnline"
 Install-ModuleIfNotInstalled "Microsoft.Online.SharePoint.PowerShell"
 Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"

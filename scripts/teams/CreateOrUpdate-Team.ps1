@@ -275,7 +275,7 @@ foreach($memb in $Members)
             else
             {
                 $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.UserPrincipalName)
                     {
                         $NewMembers += $_.UserPrincipalName
                     }
@@ -304,7 +304,7 @@ foreach($memb in $Members)
             else
             {
                 $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.UserPrincipalName)
                     {
                         $NewMembers += $_.UserPrincipalName
                     }
@@ -323,7 +323,7 @@ foreach($memb in $Members)
 $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Member
 foreach($memb in $NewMembers)
 {
-    if ($NewOwners -notcontains $memb)
+    if ($NewMembers -notcontains $memb)
     {
         $fnd = $false
         foreach($tmemb in $TMembers)
@@ -374,9 +374,9 @@ if ($AllowToAddGuests)
                 else
                 {
                     $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                        if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                        if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.UserPrincipalName)
                         {
-                            $NewGuests += $_.UserPrincipalName
+                            $NewGuests += $_.Mail
                         }
                     }
                 }
@@ -403,9 +403,9 @@ if ($AllowToAddGuests)
                 else
                 {
                     $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                        if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                        if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.UserPrincipalName)
                         {
-                            $NewGuests += $_.UserPrincipalName
+                            $NewGuests += $_.Mail
                         }
                     }
                 }

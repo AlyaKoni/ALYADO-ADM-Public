@@ -1,7 +1,7 @@
-﻿#Requires -Version 7.0
+﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,53 +29,29 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    03.12.2019 Konrad Brunner       Initial Version
-    20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
+    14.03.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
-Param(
+param(
+    [Parameter(Mandatory = $true)]
+    [string]$fileNameAndPath
 )
 
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+$objShell = New-Object -ComObject Shell.Application
+$objFile = $objShell.namespace($fileNameAndPath)
+$objFolder = $objFile.ParentFolder
+$objFolderFile = $objFolder.Items() | where { $_.Path -eq $fileNameAndPath }
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Clean-DeletedSites-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
-
-# Logins
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-
-$RecycleBinItems = Get-PnPTenantRecycleBinItem -Connection $adminCon
-if ($RecycleBinItems -and $RecycleBinItems.Count -gt 0)
-{
-    Write-Host "Following sites will be deleted permanently:" -ForegroundColor $CommandInfo
-    foreach ($RecycleBinItem in $RecycleBinItems)
+Write-Host "$($fileNameAndPath)" -ForegroundColor Cyan
+for ($a = 0 ; $a  -le 400; $a++)
+{ 
+    if($objFolder.getDetailsOf($fileNameAndPath, $a))
     {
-        Write-Host " - $($RecycleBinItem.Url)"
-    }
-    pause
-    foreach ($RecycleBinItem in $RecycleBinItems)
-    {
-        Write-Host "Cleaning site: $($RecycleBinItem.Url)"
-        Clear-PnPTenantRecycleBinItem -Connection $adminCon -Url $RecycleBinItem.Url -Wait -Force
-    }
-
-    if (-Not $AlyaComingFromGroup)
-    {
-        Write-Host "Running $($AlyaScripts)\exchange\Delete-OfficeGroupPermanently.ps1"
-        & "$($AlyaScripts)\exchange\Delete-OfficeGroupPermanently.ps1"
+        New-Object -TypeName PSCustomObject -Property @{
+            Value = $objFolder.getDetailsOf($objFolderFile, $a)
+            Name = $objFolder.getDetailsOf($objFile, $a)
+        }
     }
 }
-else
-{
-    Write-Host "No sites to be deleted found"
-}
-
-#Stopping Transscript
-Stop-Transcript | Out-Null

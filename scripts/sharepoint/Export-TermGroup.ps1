@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -57,7 +57,6 @@ Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.dll"
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.Runtime.dll"
 Add-Type -Path "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM\lib\net45\Microsoft.SharePoint.Client.Taxonomy.dll"
-Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Members
 [Byte[]]$amp = 0xEF,0xBC,0x86
@@ -65,10 +64,6 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Ad
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-$adminCnt = Get-PnPContext
-$ctx= Get-PnPContext
-$ctx.ExecuteQuery()
 
 $mms = [Microsoft.SharePoint.Client.Taxonomy.TaxonomySession]::GetTaxonomySession($ctx)
 $ctx.Load($mms)

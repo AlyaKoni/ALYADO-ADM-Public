@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     10.08.2021 Konrad Brunner       Initial Version
+    19.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules, TODO test with UseAppAuthentication = true
 
 #>
 
@@ -46,7 +47,6 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-SiteScript-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logins
@@ -64,11 +64,8 @@ foreach($list in $lists)
     }
 }
 
-# Logins
-LoginTo-SPO
-
 # Export
-$extracted = Get-SPOSiteScriptFromWeb -WebUrl $SiteUrl -IncludedLists $expLists -IncludeBranding -IncludeTheme -IncludeRegionalSettings -IncludeSiteExternalSharingCapability -IncludeLinksToExportedItems
+$extracted = Get-PnPSiteScriptFromWeb -Connection $siteCon -IncludeAll
 $scriptFile = "$AlyaData\sharepoint\SiteScript_" + $SiteUrl.Replace("https://", "").Replace("/", "_") + ".json"
 Set-Content -Path $scriptFile -Value $extracted
 

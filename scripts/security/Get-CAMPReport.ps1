@@ -1,7 +1,7 @@
-﻿#Requires -Version 7.0
+﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,52 +29,44 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    06.03.2020 Konrad Brunner       Initial Version
-    11.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
+    27.02.2020 Konrad Brunner       Initial Version
+    30.06.2022 Konrad Brunner       Change from REST to AzureAdPreview
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string] [Parameter(Mandatory=$true)]
-    $Url,
-    [string] [Parameter(Mandatory=$true)]
-    $LogoUrl
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-SiteLogo-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\security\Get-CAMPReport-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
-
-# Login
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+Install-Module "CAMP" -Scope CurrentUser
 
 # =============================================================
-# O365 stuff
+# Purview stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-SiteLogo | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Get-CAMPReport | Purview" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking site
-Write-Host "Checking site" -ForegroundColor $CommandInfo
-$Site = Get-PnPTenantSite -Connection $adminCon -Url $Url -ErrorAction SilentlyContinue
-if (-Not $Site)
+# Getting context
+$Context = Get-AzContext
+if (-Not $Context)
 {
-    throw "Site not found on url $($Url)!"
+    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
+    Exit 1
 }
 
-# Setting theme
-$siteCon = LoginTo-PnP -Url $Url
-$Site = Get-PnPSite -Connection $siteCon
-Set-PnpWeb -Connection $siteCon -Web $Site.RootWeb -SiteLogoUrl $LogoUrl
+# Getting CAMP report
+Write-Host "Getting CAMP report" -ForegroundColor $CommandInfo
+Get-CAMPReport
 
 #Stopping Transscript
 Stop-Transcript

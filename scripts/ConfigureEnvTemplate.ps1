@@ -92,6 +92,8 @@ $AlyaSupportUrl = "https://alyaconsulting.ch/Home/Support"
 
 <# BRANDING #>
 $AlyaAzureBrandingBackgroundColor = "#FFFFFF"
+$AlyaAzureBrandingTextColor = "#000000"
+$AlyaAzureBrandingPrimaryColor = "#0000FF"
 $AlyaAzureBrandingSignInPageTextDe = "Willkommen in der Microsoft Cloud von '$AlyaCompanyNameFull'"
 $AlyaAzureBrandingSignInPageTextEn = "Welcome to the Microsoft Cloud from '$AlyaCompanyNameFull'"
 $AlyaAzureBrandingSignInPageTextFr = "Bienvenue dans le cloud Microsoft de '$AlyaCompanyNameFull'"

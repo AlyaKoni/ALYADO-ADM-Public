@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.03.2020 Konrad Brunner       Initial Version
+    11.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
 
 #>
 
@@ -49,16 +50,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-SiteTheme-$($AlyaTim
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-LoginTo-SPO
+# Login
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
 # O365 stuff
@@ -70,7 +65,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking theme
 Write-Host "Checking theme" -ForegroundColor $CommandInfo
-try { $ThemeObj = Get-SPOTheme -Name $ThemeName -ErrorAction SilentlyContinue } catch {}
+$ThemeObj = Get-PnPTenantTheme -Connection $adminCon -Name $Theme -ErrorAction SilentlyContinue
 if (-Not $ThemeObj)
 {
     throw "Theme not found!"
@@ -78,7 +73,7 @@ if (-Not $ThemeObj)
 
 # Checking site
 Write-Host "Checking site" -ForegroundColor $CommandInfo
-$Site = Get-SPOSite -Identity $Url -ErrorAction SilentlyContinue
+$site = Get-PnPTenantSite -Connection $adminCon -Url $Url -ErrorAction SilentlyContinue
 if (-Not $Site)
 {
     throw "Site not found on url $($Url)!"
@@ -86,8 +81,8 @@ if (-Not $Site)
 
 # Setting theme
 $siteCon = LoginTo-PnP -Url $Url
-$Site = Get-PnPSite
-Set-PnPWebTheme -Web $Site.RootWeb -Theme $Theme
+$Site = Get-PnPSite -Connection $siteCon
+Set-PnPWebTheme -Connection -Web $Site.RootWeb -Theme $Theme
 
 #Stopping Transscript
 Stop-Transcript

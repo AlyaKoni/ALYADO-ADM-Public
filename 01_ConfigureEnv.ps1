@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -46,6 +46,8 @@
     18.08.2022 Konrad Brunner       SelectItem
     18.10.2022 Konrad Brunner       LoginTo-MgGraph
     20.12.2022 Konrad Brunner       LoginTo-DataGateway
+    22.03.2023 Konrad Brunner       Check for existing PowerShell Modules in default module path
+    10.04.2023 Konrad Brunner       Reuse connection in PnP Powershell
 
 #>
 
@@ -88,6 +90,7 @@ $AlyaData = "$AlyaRoot\data"
 $AlyaScripts = "$AlyaRoot\scripts"
 $AlyaTools = "$AlyaRoot\tools"
 $AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Modules"
+$AlyaDefaultModulePathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Modules"
 if (-Not $AlyaModulePath)
 {
     $AlyaModulePath = $AlyaDefaultModulePath
@@ -125,8 +128,17 @@ if ((Test-Path $AlyaLocal\ConfigureEnv.ps1))
     Write-Host "Loading local configuration" -ForegroundColor Cyan
     . $AlyaLocal\ConfigureEnv.ps1
 }
-if ($AlyaModulePath -ne $AlyaDefaultModulePath)
+if ($AlyaModulePath -ne $AlyaDefaultModulePath -and $AlyaModulePath -ne $AlyaDefaultModulePathCore)
 {
+    if (((Test-Path $AlyaDefaultModulePath) -or (Test-Path $AlyaDefaultModulePathCore)) -and -not $Global:AlyaDefaultModulePathWarningDone)
+    {
+        $Global:AlyaDefaultModulePathWarningDone = $true
+        Write-Host "You have specified the variable AlyaModulePath and modules are present in the default module path:"  -ForegroundColor Red
+        Write-Host "$AlyaDefaultModulePath"  -ForegroundColor Red
+        Write-Host "$AlyaDefaultModulePathCore"  -ForegroundColor Red
+        Write-Host "This can lead to unexpected behaviour!"  -ForegroundColor Red
+        Write-Host "We suggest you rename default module path to prevent from issues and rerun this powershell session."  -ForegroundColor Red
+    }
     if (-Not (Test-Path $AlyaModulePath))
     {
         New-Item -Path $AlyaModulePath -ItemType Directory -Force
@@ -688,31 +700,62 @@ function Install-ModuleIfNotInstalled (
         {
             throw "Please install the powershell package management"
         }
+        $installModuleHasPrerelease = $null -ne ((Get-Command Install-Module).Parameters.GetEnumerator() | where { $_.Key -eq "AllowPrerelease" })
+        $installModuleHasAcceptLicense = $null -ne ((Get-Command Install-Module).Parameters.GetEnumerator() | where { $_.Key -eq "AcceptLicense" })
+        $saveModuleHasPrerelease = $null -ne ((Get-Command Save-Module).Parameters.GetEnumerator() | where { $_.Key -eq "AllowPrerelease" })
         $optionalArgs = New-Object -TypeName Hashtable
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
         #TODO Unload module
-        $paramIM = (Get-Command Install-Module).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
-        if ($paramIM)
+        $installModuleHasAcceptLicense = (Get-Command Install-Module).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
+        if ($installModuleHasAcceptLicense)
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
 	        {
-	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+	            if ($installModuleHasPrerelease)
+	            {
+	                Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+	            }
+	            else
+	            {
+	                Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose -AcceptLicense
+	            }
 	        }
 	        else
 	        {
-                Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+	            if ($saveModuleHasPrerelease)
+	            {
+                    Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+	            }
+	            else
+	            {
+                    Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -Force -Verbose -AcceptLicense
+	            }
 	        }
         }
         else
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
 	        {
-	            Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose
+	            if ($installModuleHasPrerelease)
+	            {
+	                Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose
+	            }
+	            else
+	            {
+	                Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose
+	            }
 	        }
 	        else
 	        {
-                Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose
+	            if ($saveModuleHasPrerelease)
+	            {
+                    Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose
+	            }
+	            else
+	            {
+                    Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -Force -Verbose
+	            }
 	        }
         }
         $module = Get-Module -Name $moduleName -ListAvailable |`
@@ -749,6 +792,10 @@ function Install-ModuleIfNotInstalled (
             Remove-Module -Name $moduleName
         }
         Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking
+    }
+    if ($PSVersionTable.PSVersion.Major -ge 7 -and $moduleName -in @("Microsoft.Online.Sharepoint.PowerShell"))
+    {
+        Import-Module -Name $moduleName -NoClobber -SkipEditionCheck -Force
     }
 }
 #Install-ModuleIfNotInstalled "PowerShellGet"
@@ -1223,7 +1270,11 @@ function LoginTo-MSStore()
 function LoginTo-Teams()
 {
     Write-Host "Login to Teams" -ForegroundColor $CommandInfo
-    try { $TenantDetail = Get-CsTenant -ErrorAction SilentlyContinue } catch {}
+    try { $TenantDetail = Get-CsTeamsAcsFederationConfiguration } catch {} # Get-CsTenant directly needs very long time!
+    if ($TenantDetail)
+    {
+        $TenantDetail = Get-CsTenant -ErrorAction SilentlyContinue
+    }
     if ($TenantDetail -and $TenantDetail.TenantId -ne $AlyaTenantId)
     {
         Write-Warning "Logged in to wrong teams tenant! Logging out now"
@@ -1373,8 +1424,7 @@ function ReloginTo-PnP(
     return LoginTo-PnP -Url $Url -ClientId $ClientId -Thumbprint $Thumbprint -Relogin $true
 }
 
-function LogoutAllFrom-PnP(
-    )
+function LogoutAllFrom-PnP()
 {
     foreach($Connection in $Global:AlyaPnpConnections)
     {
@@ -1383,6 +1433,7 @@ function LogoutAllFrom-PnP(
             LogoutFrom-PnP -Connection $Connection
         }
     }
+    $Global:AlyaPnpAdminConnection = $null
     $Global:AlyaPnpConnections = @()
 }
 
@@ -1409,15 +1460,20 @@ if (-Not $AlyaPnpConnectionsDefined) { $Global:AlyaPnpConnections = @() }
 function LoginTo-PnP(
     [string] [Parameter(Mandatory = $true)] $Url,
     [string] [Parameter(Mandatory = $false)] $TenantAdminUrl = $null,
+    [object] [Parameter(Mandatory = $false)] $Connection = $null,
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
     [string] [Parameter(Mandatory = $false)] $Thumbprint = $null,
     [bool] [Parameter(Mandatory = $false)] $Relogin = $false
     )
 {
     Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
-    if ($TenantAdminUrl -eq $null)
+    if ([string]::IsNullOrEmpty($TenantAdminUrl))
     {
         $TenantAdminUrl = $AlyaSharePointAdminUrl
+    }
+    if ($null -eq $Connection -and $null -ne $Global:AlyaPnpAdminConnection)
+    {
+        $Connection = $Global:AlyaPnpAdminConnection
     }
     $env:PNPPOWERSHELL_DISABLETELEMETRY = "true"
 
@@ -1432,7 +1488,7 @@ function LoginTo-PnP(
         $AlyaConnection = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") }
     }
 
-    if ($AlyaConnection -ne $null -and $Relogin)
+    if ($null -ne $AlyaConnection -and $Relogin)
     {
         $null = Disconnect-PnPOnline -Connection $AlyaConnection
         if ($ClientId -and $Thumbprint)
@@ -1446,7 +1502,7 @@ function LoginTo-PnP(
         $AlyaConnection = $null
     }
 
-    if ($AlyaConnection -eq $null)
+    if ($null -eq $AlyaConnection)
     {
         if ($ClientId -and $Thumbprint)
         {
@@ -1454,7 +1510,13 @@ function LoginTo-PnP(
         }
         else
         {
-            $AlyaConnection = Connect-PnPOnline -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -Interactive
+            if (-Not $Global:AlyaPnpAdminConnection) {
+                $AlyaConnection = Connect-PnPOnline -Url $TenantAdminUrl -ReturnConnection -Interactive
+                $Global:AlyaPnpAdminConnection = $AlyaConnection
+            }
+            if ($Url -ne $TenantAdminUrl) {
+                $AlyaConnection = Connect-PnPOnline -Url $Url -Connection $Connection -ReturnConnection -Interactive
+            }
         }
         $CreatedConnection = $true
     }
@@ -1738,8 +1800,8 @@ function Post-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $false)]
-        $Body = $null
+        [parameter(Mandatory = $true)]
+        $Body
     )
     if ($AccessToken) {
         $HeaderParams = @{
@@ -1756,14 +1818,7 @@ function Post-MsGraph
     $StatusCode = ""
     do {
         try {
-            if ($Body -ne $null)
-            {
-                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json; charset=UTF-8" -Body $Body
-            }
-            else
-            {
-                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json; charset=UTF-8"
-            }
+            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json; charset=UTF-8" -Body $Body
             $StatusCode = $Results.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__

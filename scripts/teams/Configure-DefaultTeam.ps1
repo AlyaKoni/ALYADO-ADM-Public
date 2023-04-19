@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2022-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,11 +30,13 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     08.07.2022 Konrad Brunner       Initial Version
+    25.03.2023 Konrad Brunner       Added assignedGroups parameter
 
 #>
 
 [CmdletBinding()]
 Param(
+    [bool]$assignedGroups = $false
 )
 
 #Reading configuration
@@ -47,7 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeam-$($Alya
 [string]$TitleAndGroupName = "$($AlyaCompanyNameShortM365.ToUpper())TM"
 [string]$Description = "Haupt Team fuer alle Benutzer. Intern und Extern."
 [string]$Visibility = "Private"
-[string[]]$Owners = @()
+[string[]]$Owners = @($AlyaTeamsNewTeamOwner,$AlyaTeamsNewTeamAdditionalOwner)
 [string]$TeamPicturePath = $AlyaLogoUrlQuad
 [string]$DynamicMembershipRule = "(user.accountEnabled -eq true)"
 
@@ -201,13 +203,13 @@ foreach($memb in $Owners)
         }
     }
 }
-$TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Owner
-foreach($memb in $NewOwners)
+$TOwners = Get-TeamUser -GroupId $Team.GroupId -Role Owner
+foreach($own in $NewOwners)
 {
     $fnd = $false
-    foreach($tmemb in $TMembers)
+    foreach($town in $TOwners)
     {
-        if ($memb -eq $tmemb.User)
+        if ($own -eq $town.User)
         {
             $fnd = $true
             break
@@ -215,17 +217,109 @@ foreach($memb in $NewOwners)
     }
     if (-Not $fnd)
     {
-        Write-Warning "Adding owner $memb to team."
-        Add-TeamUser -GroupId $Team.GroupId -Role Owner -User $memb
+        Write-Warning "Adding owner $own to team."
+        Add-TeamUser -GroupId $Team.GroupId -Role Owner -User $own
     }
 }
 
-# Setting DynamicMembershipRule
-Write-Host "Setting DynamicMembershipRule" -ForegroundColor $CommandInfo
-$grp = Get-AzureADGroup -ObjectId $Team.GroupId
-$tmp = Set-AzureADMSGroup -Id $Team.GroupId -GroupTypes "DynamicMembership", "Unified" -MembershipRule $DynamicMembershipRule -MembershipRuleProcessingState "On" `
-        -Description $grp.Description -DisplayName $grp.DisplayName -MailEnabled $grp.MailEnabled -MailNickname $grp.MailNickName `
-        -SecurityEnabled $grp.SecurityEnabled
+Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
+$settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
+if (-Not $settings)
+{
+    Write-Warning "Created new team guest settings to disable Guests"
+    $template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "Group.Unified.Guest"}
+    $settingsCopy = $template.CreateDirectorySetting()
+    $settingsCopy["AllowToAddGuests"] = $true
+    $settings = New-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -DirectorySetting $settingsCopy
+}
+if ($settings["AllowToAddGuests"] -eq $false)
+{
+    Write-Warning "Existing team guest settings changed to disable Guests"
+    $settings["AllowToAddGuests"] = $true
+    $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -Id $settings.Id -DirectorySetting $settings
+}
+
+if (-Not $assignedGroups)
+{
+    # Setting DynamicMembershipRule
+    Write-Host "Setting DynamicMembershipRule" -ForegroundColor $CommandInfo
+    $grp = Get-AzureADGroup -ObjectId $Team.GroupId
+    $tmp = Set-AzureADMSGroup -Id $Team.GroupId -GroupTypes "DynamicMembership", "Unified" -MembershipRule $DynamicMembershipRule -MembershipRuleProcessingState "On" `
+            -Description $grp.Description -DisplayName $grp.DisplayName -MailEnabled $grp.MailEnabled -MailNickname $grp.MailNickName `
+            -SecurityEnabled $grp.SecurityEnabled
+}
+else
+{
+    $group = $allGroups | where { $_.DisplayName -eq $AlyaAllInternals }
+    if (-Not $group)
+    {
+        throw "Can't find a user or group $AlyaAllInternals"
+    }
+    else
+    {
+        $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Member
+        $NewMembers = @()
+        $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+            $user = Get-AzADUser -ObjectId $_.Id
+            if ($user.UserPrincipalName -notlike "*#EXT#*")
+            {
+                $NewMembers += $user.UserPrincipalName
+            }
+        }
+        foreach($memb in $NewMembers)
+        {
+            $fnd = $false
+            foreach($tmemb in $TMembers)
+            {
+                if ($memb -eq $tmemb.User)
+                {
+                    $fnd = $true
+                    break
+                }
+            }
+            if (-Not $fnd)
+            {
+                Write-Warning "Adding member $memb to team."
+                Add-TeamUser -GroupId $Team.GroupId -Role Member -User $memb
+            }
+        }
+    }
+    $group = $allGroups | where { $_.DisplayName -eq $AlyaAllExternals }
+    if (-Not $group)
+    {
+        throw "Can't find a user or group $AlyaAllExternals"
+    }
+    else
+    {
+        $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Guest
+        $NewGuests = @()
+        $allGuests = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+            $user = Get-AzADUser -ObjectId $_.Id
+            if ($user.UserPrincipalName -like "*#EXT#*")
+            {
+                $NewGuests += $user.Mail
+            }
+        }
+        $TGuests = Get-TeamUser -GroupId $Team.GroupId -Role Guest
+        foreach($guest in $NewGuests)
+        {
+            $fnd = $false
+            foreach($tguest in $TGuests)
+            {
+                if ($tguest.User -like "$($guest.Replace("@","_"))#*" )
+                {
+                    $fnd = $true
+                    break
+                }
+            }
+            if (-Not $fnd)
+            {
+                Write-Warning "Adding guest $guest to team."
+                Add-TeamUser -GroupId $Team.GroupId -User $guest
+            }
+        }
+    }
+}
 
 # Posting welcome message
 if ($TeamHasBeenCreated)
@@ -276,28 +370,12 @@ if ($TeamHasBeenCreated)
 
 # Setting SharePoint access
 Write-Host "Setting SharePoint access" -ForegroundColor $CommandInfo
+$Channel = Get-TeamChannel -GroupId $Team.GroupId
 $mgChannelFolder = Get-MgTeamChannelFileFolder -TeamId $Team.GroupId -ChannelId $Channel.Id
 $mgChannelFolder = (Split-Path -Path (Split-Path -Path $mgChannelFolder.WebUrl -Parent) -Parent) -replace "\\", "/"
 $siteCon = LoginTo-PnP -Url $mgChannelFolder
 $mg = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
 Set-PnPGroupPermissions -Connection $siteCon -Identity $mg -RemoveRole @("Contributor","Editor") -ErrorAction SilentlyContinue
-
-Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-$settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
-if (-Not $settings)
-{
-    Write-Warning "Created new team guest settings to disable Guests"
-    $template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "Group.Unified.Guest"}
-    $settingsCopy = $template.CreateDirectorySetting()
-    $settingsCopy["AllowToAddGuests"] = $true
-    $settings = New-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -DirectorySetting $settingsCopy
-}
-if ($settings["AllowToAddGuests"] -eq $false)
-{
-    Write-Warning "Existing team guest settings changed to disable Guests"
-    $settings["AllowToAddGuests"] = $true
-    $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -Id $settings.Id -DirectorySetting $settings
-}
 
 #Stopping Transscript
 Stop-Transcript

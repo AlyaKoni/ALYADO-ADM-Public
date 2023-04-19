@@ -1,5 +1,5 @@
 ﻿#Preparation
-$clientHasOndeDriveBackup = $false
+$clientHasOneDriveBackup = $false
 $userName = $env:USERNAME
 $hostName = $env:COMPUTERNAME
 $localAppData = $env:LOCALAPPDATA
@@ -69,7 +69,7 @@ else
 #$dcumentsPath = Get-ItemPropertyValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "Personal"
 #$picturesPath = Get-ItemPropertyValue -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -Name "My Pictures"
 
-if (-Not $clientHasOndeDriveBackup)
+if (-Not $clientHasOneDriveBackup)
 {
 
     #Backup Desktop

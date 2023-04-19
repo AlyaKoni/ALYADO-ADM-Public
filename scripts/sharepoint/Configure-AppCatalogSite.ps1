@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -31,12 +31,14 @@
     ---------- -------------------- ----------------------------
     25.03.2021 Konrad Brunner       Initial Version
     07.07.2022 Konrad Brunner       New PnP Login and some fixes
+    20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
 
 #>
 
 [CmdletBinding()]
 Param(
-    $siteLocale = "de-CH"
+    [string]$siteLocale = "de-CH",
+    [string]$hubSitesConfigurationFile = $null
 )
 
 #Reading configuration
@@ -47,16 +49,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-AppCatalogSite
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # Constants
 if ($siteLocale -eq "de-CH")
@@ -68,18 +64,34 @@ else
     $catalogTitle = "AppCatalog"
 }
 
-if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
+if ($hubSitesConfigurationFile)
 {
-    Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
-    . $AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1
+    if ((Test-Path $hubSitesConfigurationFile))
+    {
+        Write-Host "Using hub site configuration from: $($hubSitesConfigurationFile)"
+    }
+    else
+    {
+        throw "Provided hub site configuration file $($hubSitesConfigurationFile) not found!"
+    }
 }
 else
 {
-    Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
-    Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
-    pause
-    . $PSScriptRoot\HubSitesConfigurationTemplate-$siteLocale.ps1
+    if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
+    {
+        Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
+        $hubSitesConfigurationFile = "$AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1"
+    }
+    else
+    {
+        Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
+        Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
+        pause
+        $hubSitesConfigurationFile = "$AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1"
+    }
 }
+. $hubSitesConfigurationFile
+
 
 # =============================================================
 # O365 stuff
@@ -93,20 +105,18 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Checking ADM hub site" -ForegroundColor $CommandInfo
 $hubSiteDef = $hubSites | where { $_.short -eq "ADM" }
 $hubSiteName = $hubSiteDef.title
-$admHubSite = $null
-try { $admHubSite = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$hubSiteName" -Detailed -ErrorAction SilentlyContinue } catch {}
+$admHubSite = Get-PnPHubSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$hubSiteName" -ErrorAction SilentlyContinue
 if (-Not $admHubSite)
 {
     Write-Error "ADM Hub site $hubSiteName not found. Please crate it first"
 }
-
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$hubCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$hubSiteName"
 
 # Checking app catalog site collection
 Write-Host "Checking app catalog site collection" -ForegroundColor $CommandInfo
 $catalogSiteName = "$prefix-ADM-$catalogTitle"
 $site = $null
-try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Detailed -ErrorAction SilentlyContinue } catch {}
+$site = Get-PnPTenantSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Detailed -ErrorAction SilentlyContinue
 if (-Not $site)
 {
     Write-Warning "Checking existance of other App Catalog site"
@@ -127,70 +137,46 @@ if (-Not $site)
 
     do {
         Start-Sleep -Seconds 15
-        $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Detailed
+        $site = Get-PnPTenantSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Detailed -ErrorAction SilentlyContinue
     } while (-Not $site)
-
-    # Adding site to hub
-    Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
-    Add-SPOHubSiteAssociation -Site $site -HubSite $admHubSite
 
     # Login to app catalog
     Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
 	$siteCon = LoginTo-PnP "$($AlyaSharePointUrl)/sites/$catalogSiteName"
 
-    # Setting site design
-    <#
+    # Adding site to hub
+    Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
+    $hubSite = Get-PnPSite -Connection $hubCon
+    $siteSite = Get-PnPSite -Connection $siteCon
+    Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
 
-    Getting error: Die Website lï¿½sst keine Websitedesigns zu
-
-    Write-Host "Setting site design" -ForegroundColor $CommandInfo
-    if ($hubSiteDef.subSiteScript)
-    {
-        $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) SubSite Team Site "+$siteLocale
-        $SubSiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameTeam"}
-        if (-Not $SubSiteDesignTeam)
-        {
-            Write-Error "Site design $SubSiteDesignNameTeam not found. Please crate it first"
-        }
-        Invoke-SPOSiteDesign -Identity $SubSiteDesignTeam.Id -WebUrl "$($AlyaSharePointUrl)/sites/$catalogSiteName"
-    }
-    else
-    {
-		$SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) HubSite Team Site "+$siteLocale
-        $SiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameTeam"}
-        if (-Not $SiteDesignTeam)
-        {
-            Write-Error "Site design $SiteDesignNameTeam not found. Please crate it first"
-        }
-        Invoke-SPOSiteDesign -Identity $SiteDesignTeam.Id -WebUrl "$($AlyaSharePointUrl)/sites/$catalogSiteName"
-    }
-    #>
-
-    # Configuring permissions
-    $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Detailed
-    foreach ($usrEmail in $AlyaSharePointNewSiteCollectionAdmins)
-    {
-        $tmp = Set-SPOUser -Site $Site -LoginName $usrEmail -IsSiteCollectionAdmin $True
-    }
-    $tmp = Set-SPOUser -Site $Site -LoginName $AlyaSharePointNewSiteOwner -IsSiteCollectionAdmin $True
-    $tmp = Set-SPOSite -Identity $Site -Owner $AlyaSharePointNewSiteOwner
+    # Setting admin access
+    Write-Host "Setting admin access" -ForegroundColor $CommandInfo
+    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owners $AlyaSharePointNewSiteCollectionAdmins
+    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteName" -PrimarySiteCollectionAdmin $AlyaSharePointNewSiteOwner
     
     # Configuring access to catalog site for internals
     Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
     $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
-    Add-SPOUser -Site $site -Group $mgroup.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
+    Add-PnPGroupMember -Connection $siteCon -Group $mgroup -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
+    $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
+    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllExternals@$AlyaDomainName" -SendEmail:$false
 
     # Configuring permissions
     Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
+    $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
     $aRoles = Get-PnPRoleDefinition -Connection $siteCon
     $eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
     $cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
-    $temp = Set-SPOSiteGroup -Site $site -Identity $mgroup.Title -PermissionLevelsToAdd $cRole.Name -PermissionLevelsToRemove $eRole.Name
-
-    # Configuring access to catalog site
-    Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
-    $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
-    Add-SPOUser -Site $site -Group $mgroup.Title -LoginName "$AlyaAllExternals@$AlyaDomainName"
+    $perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
+    if (-Not ($perms | where { $_.Id -eq $cRole.Id }))
+    {
+        Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
+    }
+    if (($perms | where { $_.Id -eq $eRole.Id }))
+    {
+        Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
+    }
 
     # Configuring site logo
     Write-Host "Configuring site logo" -ForegroundColor $CommandInfo
@@ -207,8 +193,6 @@ if (-Not $site)
     Write-Host "Configuring site title" -ForegroundColor $CommandInfo
 	Set-PnPWeb -Connection $siteCon -Title "$catalogSiteName"
 }
-
-#TODO Logo
 
 #Stopping Transscript
 Stop-Transcript

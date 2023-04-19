@@ -1,7 +1,7 @@
 ﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,52 +29,49 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    06.03.2020 Konrad Brunner       Initial Version
-    11.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
+    12.04.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string] [Parameter(Mandatory=$true)]
-    $Url,
-    [string] [Parameter(Mandatory=$true)]
-    $LogoUrl
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-SiteLogo-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
-
-# Login
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-TeamsBackgrounds-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
-# O365 stuff
+# Teams stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-SiteLogo | O365" -ForegroundColor $CommandInfo
+Write-Host "Teams | Configure-TeamsBackgrounds | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking site
-Write-Host "Checking site" -ForegroundColor $CommandInfo
-$Site = Get-PnPTenantSite -Connection $adminCon -Url $Url -ErrorAction SilentlyContinue
-if (-Not $Site)
+$BgSrc = "$($AlyaData)\teams\backgrounds"
+$teamsDir = "$env:APPDATA\Microsoft\Teams"
+$BgDst = "$teamsDir\Backgrounds\Uploads"
+
+if (-Not (Test-Path $BgSrc))
 {
-    throw "Site not found on url $($Url)!"
+    New-Item -Path $BgSrc -ItemType Directory -Force
+    Write-Warning "Please copy your backgrounds to $BgSrc and restart this script"
+    exit
+}
+if (-Not (Test-Path $teamsDir))
+{
+    Write-Warning "Teams directory $teamsDir not found. Is Teams installed?"
+    exit
+}
+if (-Not (Test-Path $BgDst))
+{
+    New-Item -Path $BgDst -ItemType Directory -Force
 }
 
-# Setting theme
-$siteCon = LoginTo-PnP -Url $Url
-$Site = Get-PnPSite -Connection $siteCon
-Set-PnpWeb -Connection $siteCon -Web $Site.RootWeb -SiteLogoUrl $LogoUrl
+Copy-Item -Path "$BgSrc\*.*" -Destination $BgDst -Recurse -Force
 
 #Stopping Transscript
 Stop-Transcript

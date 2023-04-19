@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2022-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,11 +30,13 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     18.10.2022 Konrad Brunner       Initial Version
+    25.03.2023 Konrad Brunner       Added assignedGroups parameter
 
 #>
 
 [CmdletBinding()]
 Param(
+    [bool]$assignedGroups = $false
 )
 
 #Reading configuration
@@ -47,7 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-ProjectsTeam-$($Aly
 [string]$TitleAndGroupName = "$($AlyaCompanyNameShortM365.ToUpper())TM-PRJ-ProjekteIntern"
 [string]$Description = "Projekt Team fuer interne Benutzer."
 [string]$Visibility = "Private"
-[string[]]$Owners = @()
+[string[]]$Owners = @($AlyaTeamsNewTeamOwner,$AlyaTeamsNewTeamAdditionalOwner)
 [string]$TeamPicturePath = $AlyaLogoUrlQuad
 [string]$DynamicMembershipRule = "(user.userType -eq `"Member`")"
 
@@ -60,7 +62,6 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Teams"
 Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
-Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -220,12 +221,52 @@ foreach($memb in $NewOwners)
     }
 }
 
-# Setting DynamicMembershipRule
-Write-Host "Setting DynamicMembershipRule" -ForegroundColor $CommandInfo
-$grp = Get-AzureADGroup -ObjectId $Team.GroupId
-$tmp = Set-AzureADMSGroup -Id $Team.GroupId -GroupTypes "DynamicMembership", "Unified" -MembershipRule $DynamicMembershipRule -MembershipRuleProcessingState "On" `
-        -Description $grp.Description -DisplayName $grp.DisplayName -MailEnabled $grp.MailEnabled -MailNickname $grp.MailNickName `
-        -SecurityEnabled $grp.SecurityEnabled
+if (-Not $assignedGroups)
+{
+    # Setting DynamicMembershipRule
+    Write-Host "Setting DynamicMembershipRule" -ForegroundColor $CommandInfo
+    $grp = Get-AzureADGroup -ObjectId $Team.GroupId
+    $tmp = Set-AzureADMSGroup -Id $Team.GroupId -GroupTypes "DynamicMembership", "Unified" -MembershipRule $DynamicMembershipRule -MembershipRuleProcessingState "On" `
+            -Description $grp.Description -DisplayName $grp.DisplayName -MailEnabled $grp.MailEnabled -MailNickname $grp.MailNickName `
+            -SecurityEnabled $grp.SecurityEnabled
+}
+else
+{
+    $group = $allGroups | where { $_.DisplayName -eq $AlyaAllInternals }
+    if (-Not $group)
+    {
+        throw "Can't find a user or group $AlyaAllInternals"
+    }
+    else
+    {
+        $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Member
+        $NewMembers = @()
+        $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+            $user = Get-AzADUser -ObjectId $_.Id
+            if ($user.UserPrincipalName -notlike "*#EXT#*")
+            {
+                $NewMembers += $user.UserPrincipalName
+            }
+        }
+        foreach($memb in $NewMembers)
+        {
+            $fnd = $false
+            foreach($tmemb in $TMembers)
+            {
+                if ($memb -eq $tmemb.User)
+                {
+                    $fnd = $true
+                    break
+                }
+            }
+            if (-Not $fnd)
+            {
+                Write-Warning "Adding member $memb to team."
+                Add-TeamUser -GroupId $Team.GroupId -Role Member -User $memb
+            }
+        }
+    }
+}
 
 # Posting welcome messages
 if ($TeamHasBeenCreated)

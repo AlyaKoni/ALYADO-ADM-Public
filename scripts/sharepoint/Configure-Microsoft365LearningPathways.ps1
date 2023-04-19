@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2021
@@ -30,12 +30,14 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     25.03.2021 Konrad Brunner       Initial Version
+    20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
 
 #>
 
 [CmdletBinding()]
 Param(
-    $siteLocale = "de-CH"
+    [string]$siteLocale = "de-CH",
+    [string]$hubSitesConfigurationFile = $null
 )
 
 #Reading configuration
@@ -46,14 +48,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-Microsoft365Le
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # Constants
 if ($siteLocale -eq "de-CH")
@@ -65,18 +63,34 @@ else
     $learningPathwaysTitle = "M365LearningPathways"
 }
 
-if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
+if ($hubSitesConfigurationFile)
 {
-    Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
-    . $AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1
+    if ((Test-Path $hubSitesConfigurationFile))
+    {
+        Write-Host "Using hub site configuration from: $($hubSitesConfigurationFile)"
+    }
+    else
+    {
+        throw "Provided hub site configuration file $($hubSitesConfigurationFile) not found!"
+    }
 }
 else
 {
-    Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
-    Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
-    pause
-    . $PSScriptRoot\HubSitesConfigurationTemplate-$siteLocale.ps1
+    if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
+    {
+        Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
+        $hubSitesConfigurationFile = "$AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1"
+    }
+    else
+    {
+        Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
+        Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
+        pause
+        $hubSitesConfigurationFile = "$AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1"
+    }
 }
+. $hubSitesConfigurationFile
+
 
 # =============================================================
 # O365 stuff
@@ -90,36 +104,37 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Checking ADM hub site" -ForegroundColor $CommandInfo
 $hubSiteDef = $hubSites | where { $_.short -eq "ADM" }
 $hubSiteName = $hubSiteDef.title
-$admHubSite = $null
-try { $admHubSite = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$hubSiteName" -Detailed -ErrorAction SilentlyContinue } catch {}
+$admHubSite = Get-PnPHubSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$hubSiteName" -ErrorAction SilentlyContinue
 if (-Not $admHubSite)
 {
     Write-Error "ADM Hub site $hubSiteName not found. Please crate it first"
 }
-
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$hubCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$hubSiteName"
 
 # Checking learning pathways site collection
 Write-Host "Checking learning pathways site collection" -ForegroundColor $CommandInfo
 $learningPathwaysSiteName = "$prefix-ADM-$learningPathwaysTitle"
 $site = $null
-try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Detailed -ErrorAction SilentlyContinue } catch {}
+$site = Get-PnPTenantSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Detailed -ErrorAction SilentlyContinue
 if (-Not $site)
 {
     Write-Warning "Learning pathways site not found. Creating now learning pathways site $learningPathwaysSiteName"
     $site = New-PnPSite -Connection $adminCon -Type "CommunicationSite" -Title $learningPathwaysSiteName -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Description "Microsoft 365 Learning Pathways" -Wait
     do {
         Start-Sleep -Seconds 15
-        $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Detailed
+        $site = Get-PnPTenantSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Detailed -ErrorAction SilentlyContinue
     } while (-Not $site)
-
-    # Adding site to hub
-    Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
-    Add-SPOHubSiteAssociation -Site $site -HubSite $admHubSite
+    Start-Sleep -Seconds 60
 
     # Login to learning pathways
     Write-Host "Login to learning pathways" -ForegroundColor $CommandInfo
 	$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
+
+    # Adding site to hub
+    Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
+    $hubSite = Get-PnPSite -Connection $hubCon
+    $siteSite = Get-PnPSite -Connection $siteCon
+    Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
 
     # Multilanguage settings
     $Web = Get-PnpWeb -Connection $siteCon -Includes Language, SupportedUILanguageIds
@@ -140,28 +155,20 @@ if (-Not $site)
     if ($hubSiteDef.subSiteScript)
     {
         $SubSiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) SubSite Communication Site "+$siteLocale
-        $SubSiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SubSiteDesignNameComm"}
-        if (-Not $SubSiteDesignComm)
-        {
-            Write-Error "Site design $SubSiteDesignNameComm not found. Please crate it first"
-        }
-        Invoke-SPOSiteDesign -Identity $SubSiteDesignComm.Id -WebUrl "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
+        $siteDesign = Get-PnPSiteDesign -Connection $adminCon -Identity $SubSiteDesignNameComm
+        Invoke-PnPSiteDesign -Connection $adminCon -Identity $siteDesign -WebUrl "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
     }
     else
     {
 		$SiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSiteDef.short) HubSite Communication Site "+$siteLocale
-        $SiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameComm"}
-        if (-Not $SiteDesignComm)
-        {
-            Write-Error "Site design $SiteDesignNameComm not found. Please crate it first"
-        }
-        Invoke-SPOSiteDesign -Identity $SiteDesignComm.Id -WebUrl "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
+        $siteDesign = Get-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignNameComm
+        Invoke-PnPSiteDesign -Connection $adminCon -Identity $siteDesign -WebUrl "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
     }
 
     # Configuring access to learningPathways site
     Write-Host "Configuring access to learningPathways site" -ForegroundColor $CommandInfo
     $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
-    Add-SPOUser -Site $site -Group $vgroup.Title -LoginName "$AlyaAllInternals@$AlyaDomainName"
+    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
 
     # Configuring permissions
     Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
@@ -169,7 +176,15 @@ if (-Not $site)
     $aRoles = Get-PnPRoleDefinition -Connection $siteCon
     $eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
     $cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
-    $temp = Set-SPOSiteGroup -Site $site -Identity $mgroup.Title -PermissionLevelsToAdd $cRole.Name -PermissionLevelsToRemove $eRole.Name
+    $perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
+    if (-Not ($perms | where { $_.Id -eq $cRole.Id }))
+    {
+        Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
+    }
+    if (($perms | where { $_.Id -eq $eRole.Id }))
+    {
+        Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
+    }
 
     # Configuring site logo
     Write-Host "Configuring site logo" -ForegroundColor $CommandInfo
@@ -181,14 +196,10 @@ if (-Not $site)
         Invoke-PnPQuery -Connection $siteCon
     }
 
-    # Configuring permissions
-    $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Detailed
-    foreach ($usrEmail in $AlyaSharePointNewSiteCollectionAdmins)
-    {
-        $tmp = Set-SPOUser -Site $Site -LoginName $usrEmail -IsSiteCollectionAdmin $True
-    }
-    $tmp = Set-SPOUser -Site $Site -LoginName $AlyaSharePointNewSiteOwner -IsSiteCollectionAdmin $True
-    $tmp = Set-SPOSite -Identity $Site -Owner $AlyaSharePointNewSiteOwner
+    # Setting admin access
+    Write-Host "Setting admin access" -ForegroundColor $CommandInfo
+    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Owners $AlyaSharePointNewSiteCollectionAdmins
+    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -PrimarySiteCollectionAdmin $AlyaSharePointNewSiteOwner
 }
 
 # Checking app catalog
@@ -280,17 +291,32 @@ if ($sapp.AppCatalogVersion -ne $sapp.InstalledVersion)
 }
 
 #Configuring learning setting
-#LogoutAllFrom-PnP
 $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
 #Remove-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn
 Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn -Value $false -Description "Microsoft 365 learning pathways Telemetry Setting"
-Start-Sleep -Seconds 10
-Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn
-Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningCdn -Value "https://pnp.github.io/custom-learning-office-365/learningpathways/" -Description "Microsoft 365 learning pathways CDN source" -ErrorAction Stop 
-Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningCdn
-Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningSite -Value "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Description "Microsoft 365 learning pathways Site Collection"
-Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningSite
+$retry = 10
+do
+{
+    try
+    {
+        Start-Sleep -Seconds 10
+        Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn -Value $false -Description "Microsoft 365 learning pathways Telemetry Setting" -ErrorAction Stop
+        Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn
+        Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningCdn -Value "https://pnp.github.io/custom-learning-office-365/learningpathways/" -Description "Microsoft 365 learning pathways CDN source" -ErrorAction Stop
+        Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningCdn
+        Set-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningSite -Value "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Description "Microsoft 365 learning pathways Site Collection" -ErrorAction Stop
+        Get-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningSite
+        break
+    }
+    catch{
+        $retry--
+        if ($retry -lt 0)
+        {
+            throw $_.Exception
+        }
+    }
+} while ($true)
 
 $sitePagesList = Get-PnPList -Connection $siteCon -Identity "SitePages"
 if($null -ne $sitePagesList) {    

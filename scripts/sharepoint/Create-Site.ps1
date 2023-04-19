@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2022-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,8 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     17.10.2022 Konrad Brunner       Initial Version
+    25.03.2023 Konrad Brunner       Permissions added
+    06.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
 
 #>
 
@@ -40,7 +42,6 @@ Param(
     [string]$siteUrl = $null,
     [Parameter(Mandatory=$true)]
     [string]$hub,
-    [Parameter(Mandatory=$false)]
     [string]$siteDesignName = $null,
     [Parameter(Mandatory=$true)]
     [string]$siteTemplate,
@@ -53,7 +54,12 @@ Param(
     [string]$description = "",
     [string]$siteLogoUrl = $null,
     [bool]$overwritePages = $true,
-    [string]$hubSitesConfigurationFile = $null
+    [string]$hubSitesConfigurationFile = $null,
+    [string[]]$groupOwners = $null,
+    [string[]]$groupMembers = $null,
+    [string[]]$siteOwners = $null,
+    [string[]]$siteMembers = $null,
+    [string[]]$siteReaders = $null
 )
 
 #Reading configuration
@@ -64,14 +70,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Create-Site-$($AlyaTimeS
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-# Logging in
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-SPO
+# Login
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # Constants
 if ($hubSitesConfigurationFile)
@@ -79,7 +81,6 @@ if ($hubSitesConfigurationFile)
     if ((Test-Path $hubSitesConfigurationFile))
     {
         Write-Host "Using hub site configuration from: $($hubSitesConfigurationFile)"
-        . $hubSitesConfigurationFile
     }
     else
     {
@@ -91,16 +92,17 @@ else
     if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
     {
         Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
-        . $AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1
+        $hubSitesConfigurationFile = "$AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1"
     }
     else
     {
         Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
         Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
         pause
-        . $AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1
+        $hubSitesConfigurationFile = "$AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1"
     }
 }
+. $hubSitesConfigurationFile
 
 # =============================================================
 # Functions
@@ -120,31 +122,31 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Create-Site | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Creating site
+# Creating site
 Write-Host "Creating site $($title)" -ForegroundColor $CommandInfo
 if (-Not $siteUrl) { $siteUrl = BuildUrlFromTitle -title $title }
-$site = $null
-try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($siteUrl)" -Detailed -ErrorAction SilentlyContinue } catch {}
+$absSiteUrl = "$($AlyaSharePointUrl)/sites/$($siteUrl)"
+
+$site = Get-PnPTenantSite -Connection $adminCon -Url $absSiteUrl -ErrorAction SilentlyContinue
 if (-Not $site)
 {
     Write-Warning "Site not found. Creating now site $($title)"
-    $adminCon = LoginTo-PnP -Url "$AlyaSharePointAdminUrl"
     if ($siteTemplate -eq "TeamSite")
     {
         $site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -Description $description -Wait
     }
     else
     {
-        $site = New-PnPSite -Connection $adminCon -Type $siteTemplate -Title $title -Url "$($AlyaSharePointUrl)/sites/$($siteUrl)" -Description $description -Wait
+        $site = New-PnPSite -Connection $adminCon -Type $siteTemplate -Title $title -Url $absSiteUrl -Description $description -Wait
     }
     do {
         Start-Sleep -Seconds 15
-        try { $site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($siteUrl)" -Detailed -ErrorAction SilentlyContinue } catch {}
+        $site = Get-PnPTenantSite -Connection $adminCon -Url $absSiteUrl -ErrorAction SilentlyContinue
     } while (-Not $site)
     Start-Sleep -Seconds 60
 }
 
-#Assigning site to hub
+# Assigning site to hub
 if ($hub)
 {
     Write-Host "Assigning site to hub $($hub)" -ForegroundColor $CommandInfo
@@ -153,21 +155,25 @@ if ($hub)
     {
         throw "Hub site $($hub) not found"
     }
-    $hubSiteObj = Get-PnPHubSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+    $hubSiteUrl = "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+    $hubSiteObj = Get-PnPHubSite -Connection $adminCon -Identity $hubSiteUrl
     if (-Not $hubSiteObj)
     {
         throw "Hub site $($hub) not found"
     }
-    $hubCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
+    $hubCon = LoginTo-PnP -Url $hubSiteUrl
     $hubSite = Get-PnPSite -Connection $hubCon
-    $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($siteUrl)"
+    $siteCon = LoginTo-PnP -Url $absSiteUrl
     $siteSite = Get-PnPSite -Connection $siteCon
     Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
 }
 
-#Updating site logo
+# Updating site logo
 Write-Host "Updating site logo" -ForegroundColor $CommandInfo
-$siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($siteUrl)"
+if (-Not $siteCon)
+{
+    $siteCon = LoginTo-PnP -Url $absSiteUrl
+}
 $web = Get-PnPWeb -Connection $siteCon -Includes HeaderEmphasis,HeaderLayout,SiteLogoUrl,QuickLaunchEnabled
 if ([string]::IsNullOrEmpty($web.SiteLogoUrl) -and $siteLogoUrl)
 {
@@ -187,16 +193,11 @@ if ([string]::IsNullOrEmpty($web.SiteLogoUrl) -and $siteLogoUrl)
     }
 }
 
-#Setting access
-Write-Host "Setting access" -ForegroundColor $CommandInfo
-$site = Get-SPOSite -Identity "$($AlyaSharePointUrl)/sites/$($siteUrl)" -Detailed
-foreach ($usrEmail in $AlyaSharePointNewSiteCollectionAdmins)
-{
-    $tmp = Set-SPOUser -Site $Site -LoginName $usrEmail -IsSiteCollectionAdmin $True
-}
-$tmp = Set-SPOUser -Site $Site -LoginName $AlyaSharePointNewSiteOwner -IsSiteCollectionAdmin $True
-$tmp = Set-SPOSite -Identity $Site -Owner $AlyaSharePointNewSiteOwner
-    
+# Setting admin access
+Write-Host "Setting admin access" -ForegroundColor $CommandInfo
+Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -Owners $AlyaSharePointNewSiteCollectionAdmins
+Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -PrimarySiteCollectionAdmin $AlyaSharePointNewSiteOwner
+
 #Processing site design
 Write-Host "Processing site design" -ForegroundColor $CommandInfo
 if (-Not $siteDesignName)
@@ -225,67 +226,97 @@ if (-Not $siteDesignName)
         }
     }
 }
-$siteDesign = Get-SPOSiteDesign | where { $_.Title -eq $siteDesignName }
-Invoke-SPOSiteDesign -Identity $siteDesign.Id -WebUrl "$($AlyaSharePointUrl)/sites/$($siteUrl)"
+$siteDesign = Get-PnPSiteDesign -Connection $adminCon -Identity $siteDesignName
+Invoke-PnPSiteDesign -Connection $adminCon -Identity $siteDesign -WebUrl $absSiteUrl
 
-#Processing external sharing
+# Processing external sharing
 Write-Host "Processing external sharing" -ForegroundColor $CommandInfo
 # None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)
 switch($externalSharing)
 {
     "None" {
-        Set-SPOSite -Identity $Site -SharingCapability Disabled
+        Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -SharingCapability Disabled
     }
     "AdminOnly" {
-        Set-SPOSite -Identity $Site -SharingCapability ExistingExternalUserSharingOnly
+        Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -SharingCapability  ExistingExternalUserSharingOnly
     }
     "KnownAccountsOnly" {
-        Set-SPOSite -Identity $Site -SharingCapability ExternalUserSharingOnly
+        Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -SharingCapability  ExternalUserSharingOnly
     }
     "ByLink" {
-        Set-SPOSite -Identity $Site -SharingCapability ExternalUserAndGuestSharing
+        Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -SharingCapability  ExternalUserAndGuestSharing
     }
 }
+
+# Setting siteOwners access
+Write-Host "Setting siteOwners access" -ForegroundColor $CommandInfo
+$siteCon = LoginTo-PnP -Url $absSiteUrl
+$mgroup = Get-PnPGroup -Connection $siteCon -AssociatedOwnerGroup
+foreach ($usrEmail in $siteOwners)
+{
+    Add-PnPGroupMember -Connection $siteCon -Group $mgroup -EmailAddress $usrEmail -SendEmail:$false
+}
+
+# Setting siteMembers access
+Write-Host "Setting siteMembers access" -ForegroundColor $CommandInfo
+$mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
+foreach ($usrEmail in $siteMembers)
+{
+    Add-PnPGroupMember -Connection $siteCon -Group $mgroup -EmailAddress $usrEmail -SendEmail:$false
+}
+
+# Configuring member permissions
+Write-Host "Configuring member permissions" -ForegroundColor $CommandInfo
+$aRoles = Get-PnPRoleDefinition -Connection $siteCon
+$eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
+$cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
+$perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
+if (-Not ($perms | where { $_.Id -eq $cRole.Id }))
+{
+    Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
+}
+if (($perms | where { $_.Id -eq $eRole.Id }))
+{
+    Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
+}
+
+# Setting siteReaders access
+Write-Host "Setting siteReaders access" -ForegroundColor $CommandInfo
+$mgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
+foreach ($usrEmail in $siteReaders)
+{
+    Add-PnPGroupMember -Connection $siteCon -Group $mgroup -EmailAddress $usrEmail -SendEmail:$false
+}
+
+<# TODO
+    [string[]]$groupOwners = $null,
+    [string[]]$groupMembers = $null,
+#>
 
 # M365 Group Sharing Capability
 if ($siteTemplate -eq "TeamSite")
 {
     Write-Host "Setting M365 Group sharing capability " -ForegroundColor $CommandInfo
     $m365GroupId = $site.GroupId.Guid
-    if ($externalSharing -ne "None")
+    $settingsValue = "true"
+    if ($externalSharing -eq "None")
     {
-        $settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
-        if ($settings)
-        {
-            if ($settings["AllowToAddGuests"] -eq $false)
-            {
-                Write-Warning "Existing team guest settings changed to allow Guests"
-                $settings["AllowToAddGuests"] = $true
-                $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -Id $settings.Id -DirectorySetting $settings
-            }
-        }
+        $settingsValue = "false"
     }
-    else
+    $settings = Get-PnPMicrosoft365GroupSettings -Identity $m365GroupId
+    if (-Not $settings)
     {
-        $settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
-        if (-Not $settings)
-        {
-            Write-Warning "Created new team guest settings to disable Guests"
-            $template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "Group.Unified.Guest"}
-            $settingsCopy = $template.CreateDirectorySetting()
-            $settingsCopy["AllowToAddGuests"] = $false
-            $settings = New-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -DirectorySetting $settingsCopy
-        }
-        if ($settings["AllowToAddGuests"] -eq $true)
-        {
-            Write-Warning "Existing team guest settings changed to disable Guests"
-            $settings["AllowToAddGuests"] = $false
-            $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $m365GroupId -Id $settings.Id -DirectorySetting $settings
-        }
+        Write-Warning "Created new team guest settings to disable Guests"
+        $settings = New-PnPMicrosoft365GroupSettings -Identity $m365GroupId -DisplayName "Group.Unified.Guest" -TemplateId "08d542b9-071f-4e16-94b0-74abb372e3d9" -Values @{"AllowToAddGuests"=$settingsValue}
+    }
+    if ($settings["AllowToAddGuests"].ToString() -ne $settingsValue)
+    {
+        Write-Warning "Existing team guest settings changed to disable Guests"
+        $settings = Set-PnPMicrosoft365GroupSettings -Identity $settings.ID -Group $m365GroupId -Values @{"AllowToAddGuests"=$settingsValue}
     }
 }
 
-#Processing Home Page
+# Processing Home Page
 Write-Host "Processing Home Page" -ForegroundColor $CommandInfo
 if ($overwritePages -and $homePageTemplate)
 {
@@ -305,12 +336,10 @@ $WebURL = [System.Web.HttpUtility]::UrlEncode("$($AlyaSharePointUrl)/sites/$titl
 $SiteID = [System.Web.HttpUtility]::UrlEncode("{$($site.Id.Guid)}")
 $WebID = [System.Web.HttpUtility]::UrlEncode("{$($web.Id.Guid)}")
 $ListID = [System.Web.HttpUtility]::UrlEncode("{$($list.Id.Guid)}")
-$WebTitle = [System.Web.HttpUtility]::UrlEncode($web.Title)
-$ListTitle = [System.Web.HttpUtility]::UrlEncode($list.Title)
+$WebTitle = [System.Web.HttpUtility]::UrlEncode("$($web.Title)")
+$ListTitle = [System.Web.HttpUtility]::UrlEncode("$($list.Title)")
 $UserName = [System.Web.HttpUtility]::UrlEncode("xxxxxxxxxx@$AlyaDomainName")
 Write-Host "odopen://sync?siteId=$SiteID&webId=$WebID&listId=$ListID&userEmail=$UserName&webUrl=$WebURL&webTitle=$WebTitle&listTitle=$ListTitle&scope=OPENLIST" -ForegroundColor DarkGreen
 
-LogoutAllFrom-PnP
-
-#Stopping Transscript
+# Stopping Transscript
 Stop-Transcript

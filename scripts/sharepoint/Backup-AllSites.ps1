@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 #Requires -RunAsAdministrator
 
 <#
@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     22.09.2020 Konrad Brunner       Initial Version
+    20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
 
 #>
 
@@ -49,14 +50,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Backup-AllSites-$($AlyaT
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # Constants
 if (-Not $backupLocation)
@@ -126,7 +123,7 @@ function Get-ExportObject(
             {
                 try
                 {
-                    $tmp = Get-PnPProperty -ClientObject $obj -Property $prop.Name
+                    $tmp = Get-PnPProperty -Connection $siteCon -ClientObject $obj -Property $prop.Name
                 } catch {}
             }
         }
@@ -213,7 +210,7 @@ function Download-FolderRecursive($folderObj, $webUrl, $parentDir)
     {
         try
         {
-            $items = @(Get-PnPFolderItem -FolderSiteRelativeUrl $url)
+            $items = @(Get-PnPFolderItem -Connection $siteCon -FolderSiteRelativeUrl $url)
             break
         }
         catch
@@ -252,8 +249,8 @@ function Download-FolderRecursive($folderObj, $webUrl, $parentDir)
                 {
                     try
                     {
-                        Get-PnPFile -Url $item.ServerRelativeUrl -Path $folderPath -AsFile -Force # Latest version
-                        $ctx= Get-PnPContext
+                        Get-PnPFile -Connection $siteCon -Url $item.ServerRelativeUrl -Path $folderPath -AsFile -Force # Latest version
+                        $ctx= Get-PnPContext -Connection $siteCon
                         $ctx.Load($item.Versions)
                         $ctx.ExecuteQuery()
                         foreach ($version in $item.Versions)
@@ -295,7 +292,6 @@ do
     try
     {
         $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
-		$adminCnt = Get-PnPContext
         break
     }
     catch
@@ -315,7 +311,7 @@ do
 {
     try
     {
-        $sites = Get-PnPTenantSite -Detailed
+        $sites = Get-PnPTenantSite -Connection $adminCon -Detailed
         break
     }
     catch
@@ -340,7 +336,6 @@ foreach($site in $sites)
         {
             try
             {
-				$null = Set-PnPContext -Context $adminCnt
                 $siteCon = LoginTo-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
                 break
             }
@@ -360,12 +355,12 @@ foreach($site in $sites)
             {
                 if ($exportMode -eq "Detailed")
                 {
-                    $site = Get-PnPSite
+                    $site = Get-PnPSite -Connection $siteCon
                     $expSite = Get-ExportObject -obj $site -level 0 -maxlevel 2
                 }
                 else
                 {
-                    $expSite = Invoke-PnPSPRestMethod -Url "/_api/site"
+                    $expSite = Invoke-PnPSPRestMethod -Connection $siteCon -Url "/_api/site"
                 }
                 break
             }
@@ -391,7 +386,7 @@ foreach($site in $sites)
                 }
                 else
                 {
-                    $expWeb = Invoke-PnPSPRestMethod -Url "/_api/web"
+                    $expWeb = Invoke-PnPSPRestMethod -Connection $siteCon -Url "/_api/web"
                 }
                 break
             }
@@ -423,7 +418,7 @@ foreach($site in $sites)
             {
                 try
                 {
-                    $lists = Get-PnpList -Includes @("ID", "Fields", "RootFolder")
+                    $lists = Get-PnpList -Connection $siteCon -Includes @("ID", "Fields", "RootFolder")
                     break
                 }
                 catch
@@ -463,7 +458,7 @@ foreach($site in $sites)
                             }
                             else
                             {
-                                $expList = Invoke-PnPSPRestMethod -Url ("/_api/web/lists(guid'$($list.Id.Guid)')")
+                                $expList = Invoke-PnPSPRestMethod -Connection $siteCon -Url ("/_api/web/lists(guid'$($list.Id.Guid)')")
                             }
                             break
                         }
@@ -493,7 +488,7 @@ foreach($site in $sites)
                             }
                             else
                             {
-                                $allItems = Invoke-PnPSPRestMethod -Url ("/_api/web/lists(guid'$($list.Id.Guid)')/items")
+                                $allItems = Invoke-PnPSPRestMethod -Connection $siteCon -Url ("/_api/web/lists(guid'$($list.Id.Guid)')/items")
                             }
                             break
                         }

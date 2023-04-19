@@ -1,7 +1,8 @@
-﻿#Requires -Version 7.0
+﻿#Requires -Version 2.0
+#Requires -RunAsAdministrator
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -26,55 +27,42 @@
     Siehe die GNU General Public License fuer weitere Details:
 	https://www.gnu.org/licenses/gpl-3.0.txt
 
+    To design your own SharePoint Theme use the UI Fabric Theme Designer
+    https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
+
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    06.03.2020 Konrad Brunner       Initial Version
-    11.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
+    11.04.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string] [Parameter(Mandatory=$true)]
-    $Url,
-    [string] [Parameter(Mandatory=$true)]
-    $LogoUrl
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-SiteLogo-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
-
-# Login
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+Start-Transcript -Path "$($AlyaLogs)\scripts\onedrive\Fix-RegistryIfDisabled-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-SiteLogo | O365" -ForegroundColor $CommandInfo
+Write-Host "OneDrive | Fix-RegistryIfDisabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking site
-Write-Host "Checking site" -ForegroundColor $CommandInfo
-$Site = Get-PnPTenantSite -Connection $adminCon -Url $Url -ErrorAction SilentlyContinue
-if (-Not $Site)
+$item = Get-ItemProperty HKLM:\Software\Policies\Microsoft\Windows\OneDrive -ErrorAction SilentlyContinue
+if ($item)
 {
-    throw "Site not found on url $($Url)!"
+    if ($item.DisableFileSyncNGSC -eq 1)
+    {
+        Set-ItemProperty -Path HKLM:\Software\Policies\Microsoft\Windows\OneDrive -Name "DisableFileSyncNGSC" -Value 0
+    }
 }
-
-# Setting theme
-$siteCon = LoginTo-PnP -Url $Url
-$Site = Get-PnPSite -Connection $siteCon
-Set-PnpWeb -Connection $siteCon -Web $Site.RootWeb -SiteLogoUrl $LogoUrl
 
 #Stopping Transscript
 Stop-Transcript

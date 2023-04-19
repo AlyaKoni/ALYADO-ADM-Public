@@ -36,7 +36,8 @@
 
 [CmdletBinding()]
 Param(
-    [bool]$lastNameFirst = $false
+    [bool]$lastNameFirst = $false,
+    [string]$ExternalMarker = "Ext"
 )
 
 #Reading configuration
@@ -82,13 +83,17 @@ function Main
         Write-Host "OLD: $($oldUser | ConvertTo-Json -Compress)"
         #$newUser | ConvertTo-Json
 
+        $first = $null
+        $last = $null
+        $disp = $null
+
         if ($user.UserPrincipalName.Contains("#"))
         {
             $email = $user.UserPrincipalName.Split("#")[0]
             $name = $email.Substring(0, $email.LastIndexOf("_"))
             $domain = $email.Substring($email.LastIndexOf("_")+1)
             $domainParts = $domain.Split(".")
-            $comp = Make-PascalCase($domainParts[$domainParts.Length-2])
+            $comp = "$ExternalMarker " + (Make-PascalCase($domainParts[$domainParts.Length-2]))
             if ($domainParts.Length -gt 2)
             {
                 $comp += " " + (Make-PascalCase($domainParts[$domainParts.Length-3]))
@@ -105,16 +110,16 @@ function Main
                 $comp += " " + (Make-PascalCase($domainParts[$domainParts.Length-3]))
             }
         }
-        if ($comp -eq "Outlook" -or `
-            $comp -eq "Gmx" -or `
-            $comp -eq "Hotmail" -or `
-            $comp -eq "Hispeed" -or `
-            $comp -eq "Gmail" -or `
-            $comp -eq "Bluewin" -or `
-            $comp -eq "Bluemail" -or `
-            $comp -eq "Sunrise")
+        if ($comp -eq "$ExternalMarker Outlook" -or `
+            $comp -eq "$ExternalMarker Gmx" -or `
+            $comp -eq "$ExternalMarker Hotmail" -or `
+            $comp -eq "$ExternalMarker Hispeed" -or `
+            $comp -eq "$ExternalMarker Gmail" -or `
+            $comp -eq "$ExternalMarker Bluewin" -or `
+            $comp -eq "$ExternalMarker Bluemail" -or `
+            $comp -eq "$ExternalMarker Sunrise")
         {
-            $comp = "Extern $($domain.ToLower())"
+            $comp = "$ExternalMarker $($domain.ToLower())"
         }
 
         if (-Not [String]::IsNullOrEmpty($oldUser.first) -And `
@@ -127,30 +132,62 @@ function Main
         {
             if ($oldUser.first) {$first = $oldUser.first.ToLower()} else {$first = ""}
             if ($oldUser.last) {$last = $oldUser.last.ToLower()} else {$last = ""}
-            if ($oldUser.disp) {$disp = $oldUser.disp.ToLower()} else {$disp = ""}
+            if ($oldUser.disp -eq ($name+"@"+$domain) -or $oldUser.disp -eq $name)
+            {
+                $disp = ""
+            }
+            else
+            {
+                if ($oldUser.disp) {$disp = $oldUser.disp.ToLower()} else {$disp = ""}
+            }
             $first = $first.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
             $last = $last.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
             $disp = $disp.Replace("ä","ae").Replace("ü","ue").Replace("ö","oe").Replace("é","e").Replace("è","e").Replace("à","a")
 
-            $dispFirstLast = $disp.Split()
-            if ($first -eq "")
+            $dispFirstLastTmp = $disp.Split()
+            $dispFirstLast = @()
+            $stopAdding = $false
+            foreach($dispPrt in $dispFirstLastTmp)
             {
-                $first = $dispFirstLast[0]
+                if (-Not $stopAdding -And -Not $dispPrt.StartsWith($CompStart))
+                {
+                    if ($dispFirstLast -notcontains $dispPrt)
+                    {
+                        $dispFirstLast += $dispPrt
+                    }
+                }
+                else
+                {
+                    $stopAdding = $true
+                }
             }
             if ($last -eq "")
             {
                 switch($dispFirstLast.Length)
                 {
                     1 {
-                        $last = $dispFirstLast[0]
+                        if ($first -ne $dispFirstLast[0])
+                        {
+                            $last = $dispFirstLast[0]
+                        }
                       }
                     2 {
-                        $last = $dispFirstLast[1]
+                        if ($first -ne $dispFirstLast[1])
+                        {
+                            $last = $dispFirstLast[1]
+                        }
                       }
                     3 {
-                        $last = $dispFirstLast[2]
+                        if ($first -ne $dispFirstLast[2])
+                        {
+                            $last = $dispFirstLast[2]
+                        }
                       }
                 }
+            }
+            if ($first -eq "" -and $last -ne $dispFirstLast[0])
+            {
+                $first = $dispFirstLast[0]
             }
 
             if ($name.IndexOf(".") -gt -1)
@@ -535,10 +572,24 @@ function Main
         {
             Write-Host "NEW: $($newUser | ConvertTo-Json -Compress)"
         
-            $decision = $Host.UI.PromptForChoice("Confirm", "Update?", @("&Yes", "&No", "&Stop"), 1)
-            if ($decision -eq 2)
+            $decision = $Host.UI.PromptForChoice("Confirm", "Update?", @("&Yes", "&SwapFirstLast", "&No", "&Stop"), 1)
+            if ($decision -eq 3)
             {
                 Return
+            }
+            if ($decision -eq 1)
+            {
+                $tmp = $first
+                $first = $last
+                $last = $tmp
+                $disp = ($first + " " + $last).Trim() + " " + $CompStart + $comp + $CompEnd
+                if ($lastNameFirst)
+                {
+                    $disp = ($last + " " + $first).Trim() + " " + $CompStart + $comp + $CompEnd
+                }
+                $newUser = @{disp=$disp;first=$first;last=$last}
+                Write-Host "SWAPPED: $($newUser | ConvertTo-Json -Compress)"
+                Set-MsolUser -ObjectId $user.ObjectId -FirstName $newUser.first -LastName $newUser.last -DisplayName $newUser.disp
             }
             if ($decision -eq 0)
             {
@@ -60112,9 +60163,9 @@ zyparth
 zypprecht
 "@ | ConvertFrom-Csv).Nachname
 
+#info
 $vornamen = (@"
 Vorname
-info
 donotreply
 aaban
 aabed

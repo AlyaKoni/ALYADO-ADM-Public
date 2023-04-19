@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2020-2021
@@ -30,11 +30,13 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     02.12.2020 Konrad Brunner       Initial Version
+    11.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules, TODO test with UseAppAuthentication = true
 
 #>
 
 [CmdletBinding()]
 Param(
+    [bool]$UseAppAuthentication = $false
 )
 
 #Reading configuration
@@ -44,66 +46,35 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-UsersAccessPerSite-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "PnP.PowerShell"
-
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-
-# Getting app information
-Write-Host "Getting SharePoint app information" -ForegroundColor $CommandInfo
-if ((-Not $AlyaSharePointAppId) -or (-Not $AlyaSharePointAppCertificate))
-{
-    . $AlyaScripts\sharepoint\Configure-ServiceApplication.ps1
-}
-
-# Checking app certificate
-Write-Host "Checking app certificate" -ForegroundColor $CommandInfo
-$cert = Get-ChildItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Thumbprint -eq $AlyaSharePointAppCertificate }
-if (-Not $cert)
-{
-    Write-Warning "Please install the app certificate by running following script in a admin powershell"
-    Write-Warning "$PSScriptRoot\Install-ServiceApplicationCertificate.ps1"
-    throw "App certificate not found"
-}
-
-#Login to Az
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
 
 # Getting site collections
 Write-Host "Getting site collections" -ForegroundColor $CommandInfo
-$retries = 10
-do
+if ($UseAppAuthentication)
 {
-    try
+    # Checking app
+    if ((-Not $AlyaSharePointAppId) -or (-Not $AlyaSharePointAppCertificate))
     {
-        $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
-		$adminCnt = Get-PnPContext
-        $sitesToProcess = Get-PnPTenantSite -Detailed -IncludeOneDriveSites | where { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
-        try { $AlyaConnection = Disconnect-PnPOnline } catch {}
-        break
+        . $AlyaScripts\sharepoint\Configure-ServiceApplication.ps1
     }
-    catch
+
+    # Checking app certificate
+    Write-Host "Checking app certificate" -ForegroundColor $CommandInfo
+    $cert = Get-ChildItem -Path "Cert:\LocalMachine\My" | Where-Object { $_.Thumbprint -eq $AlyaSharePointAppCertificate }
+    if (-Not $cert)
     {
-        Write-Error $_.Exception -ErrorAction Continue
-        Write-Warning "Retrying $retries times"
-        Start-Sleep -Seconds 15
-        $retries--
-        if ($retries -lt 0) { throw }
+        Write-Warning "Please install the app certificate by running following script in a admin powershell"
+        Write-Warning "$PSScriptRoot\Install-ServiceApplicationCertificate.ps1"
+        exit
     }
-} while ($true)
+
+	$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+}
+else
+{
+    $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+}
+$sitesToProcess = Get-PnPTenantSite -Connection $adminCon -Detailed -IncludeOneDriveSites | where { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
 
 # Function definitions
 function Process-Member
@@ -113,14 +84,15 @@ function Process-Member
         $userOrGroup,
         $rolebindings,
         $access,
-        $siteAcc
+        $siteAcc,
+        $siteCon
     )
     if ($access)
     {
         $rolebindings = @((New-Object PSObject -Property @{"Name" = $access}))
     }
-    $loginName = Get-PnPProperty -ClientObject $userOrGroup -Property "LoginName"
-    $principalType = Get-PnPProperty -ClientObject $userOrGroup -Property "PrincipalType"
+    $loginName = Get-PnPProperty -Connection $siteCon -ClientObject $userOrGroup -Property "LoginName"
+    $principalType = Get-PnPProperty -Connection $siteCon -ClientObject $userOrGroup -Property "PrincipalType"
     if ($principalType -eq "SharePointGroup")
     {
         foreach($rolebinding in $rolebindings)
@@ -135,7 +107,7 @@ function Process-Member
 		    }
             $siteAcc.Add($obj) | Out-Null
 		}
-        $members = Get-PnPGroupMembers -Web $web -Identity $loginName
+        $members = Get-PnPGroupMember -Connection $siteCon -Identity $loginName #TODO does this work for sub webs?
         foreach($member in $members)
         {
             if ($member.LoginName -like "*|federateddirectoryclaimprovider|*" -or $member.LoginName -like "*|tenant|*")
@@ -146,7 +118,7 @@ function Process-Member
                     $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
                 }
                 $oGroup = $null
-                try { $oGroup = Get-AzureADMSGroup -Id $oGroupId -ErrorAction SilentlyContinue } catch {}
+                $oGroup = Get-PnPAzureADGroup -Connection $adminCon -Identity $oGroupId -ErrorAction SilentlyContinue
                 if ($oGroup)
                 {
                     $grpType = "AadSecurityGroup"
@@ -157,12 +129,12 @@ function Process-Member
                     $dispName = $oGroup.DisplayName
                     if ($member.LoginName.EndsWith("_o"))
                     {
-                        $ogMembers = Get-AzureADGroupOwner -ObjectId $oGroupId
+                        $ogMembers = Get-PnPAzureADGroupOwner -Connection $adminCon -Identity $oGroupId
                         $dispName += " Owners"
                     }
                     else
                     {
-                        $ogMembers = Get-AzureADGroupMember -ObjectId $oGroupId
+                        $ogMembers = Get-PnPAzureADGroupMember -Connection $adminCon -Identity $oGroupId
                         $dispName += " Members"
                     }
                     foreach($rolebinding in $rolebindings)
@@ -179,7 +151,11 @@ function Process-Member
                     }
                     foreach($ogMember in $ogMembers)
                     {
-                        $ogUser = Get-AzureADUser -ObjectId $ogMember.ObjectId
+                        $ogUser = Get-PnPAzureADUser -Connection $adminCon -Identity $ogMember.Id -ErrorAction SilentlyContinue
+                        if (-not $ogUser)
+                        {
+                            Write-Warning "User $($ogMember.Id) not found"
+                        }
                         $userType = "AadUser"
                         $dispName = $ogUser.Mail
                         if ($ogUser.UserPrincipalName -like "*#EXT#*")
@@ -237,7 +213,11 @@ function Process-Member
                     $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
                 }
                 $ogUser = $null
-                try { $ogUser = Get-AzureADUser -ObjectId $dispName -ErrorAction SilentlyContinue } catch {}
+                $ogUser = Get-PnPAzureADUser -Connection $adminCon -Identity $dispName -ErrorAction SilentlyContinue
+                if (-not $ogUser)
+                {
+                    Write-Warning "User $($dispName) not found"
+                }
                 if ($dispName -like "*#EXT#*")
                 {
                     if ($ogUser)
@@ -290,7 +270,7 @@ function Process-Member
                 {
                     $oUserId = $oUserId.Substring(0, $oUserId.LastIndexOf("_"))
                 }
-                $oUser = Get-AzureADUser -Id $oUserId -ErrorAction SilentlyContinue
+                $oUser = Get-PnPAzureADUser -Connection $adminCon -Identity $oUserId -ErrorAction SilentlyContinue
                 if ($oUser)
                 {
                     foreach($rolebinding in $rolebindings)
@@ -319,7 +299,7 @@ function Process-Member
                     $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
                 }
                 $oGroup = $null
-                try { $oGroup = Get-AzureADMSGroup -Id $oGroupId -ErrorAction SilentlyContinue } catch {}
+                $oGroup = Get-PnPAzureADGroup -Connection $adminCon -Identity $oGroupId -ErrorAction SilentlyContinue
                 if ($oGroup)
                 {
                     $grpType = "Security"
@@ -330,12 +310,12 @@ function Process-Member
                     $dispName = $oGroup.DisplayName
                     if ($loginName.EndsWith("_o"))
                     {
-                        $ogMembers = Get-AzureADGroupOwner -ObjectId $oGroupId
+                        $ogMembers = Get-PnPAzureADGroupOwner -Connection $adminCon -Identity $oGroupId
                         $dispName += " Owners"
                     }
                     else
                     {
-                        $ogMembers = Get-AzureADGroupMember -ObjectId $oGroupId
+                        $ogMembers = Get-PnPAzureADGroupMember -Connection $adminCon -Identity $oGroupId
                         $dispName += " Members"
                     }
                     foreach($rolebinding in $rolebindings)
@@ -352,7 +332,11 @@ function Process-Member
                     }
                     foreach($ogMember in $ogMembers)
                     {
-                        $ogUser = Get-AzureADUser -ObjectId $ogMember.ObjectId
+                        $ogUser = Get-PnPAzureADUser -Connection $adminCon -Identity $ogMember.Id -ErrorAction SilentlyContinue
+                        if (-not $ogUser)
+                        {
+                            Write-Warning "User $($ogMember.Id) not found"
+                        }
                         $userType = "AadUser"
                         if ($loginName -like "*#EXT#*")
                         {
@@ -411,7 +395,11 @@ function Process-Member
                 $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
             }
             $ogUser = $null
-            try { $ogUser = Get-AzureADUser -ObjectId $dispName -ErrorAction SilentlyContinue } catch {}
+            $ogUser = Get-PnPAzureADUser -Connection $adminCon -Identity $dispName -ErrorAction SilentlyContinue
+            if (-not $ogUser)
+            {
+                Write-Warning "User $($dispName) not found)"
+            }
             if ($dispName -like "*#EXT#*")
             {
                 if ($ogUser)
@@ -457,20 +445,23 @@ function Process-Member
 function Get-WebAccess
 {
     param(
+        $siteCon,
         $web
     )
+    Write-Host "Web $($web.ServerRelativeUrl)"
     $siteAcc = New-Object System.Collections.ArrayList
-    $web = Get-PnPWeb -Identity $web.ServerRelativeUrl -Includes "RoleAssignments"
-    foreach($ra in $web.RoleAssignments)
+    $roleAssignments = Get-PnPProperty -Connection $siteCon -ClientObject $web -Property "RoleAssignments"
+    foreach($ra in $roleAssignments)
     {
-        $rolebindings = Get-PnPProperty -ClientObject $ra -Property "RoleDefinitionBindings"
-        Process-Member -web $web -userOrGroup $ra.Member -rolebindings $rolebindings -siteAcc $siteAcc
+        $rolebindings = Get-PnPProperty -Connection $siteCon -ClientObject $ra -Property "RoleDefinitionBindings"
+        Process-Member -siteCon $siteCon -web $web -userOrGroup $ra.Member -rolebindings $rolebindings -siteAcc $siteAcc
     }
 
-    $subWebs = Get-PnPSubWebs -Web $web
+    $subWebs = Get-PnPSubWeb -Recurse -Connection $siteCon
     foreach($sWeb in $subWebs)
     {
-        $subSiteAcc = Get-WebAccess $sWeb
+        #TODO required? $siteCon = LoginTo-PnP -Url $siteUrl
+        $subSiteAcc = Get-WebAccess -siteCon $siteCon -web $sWeb
         if ($subSiteAcc -and $subSiteAcc.Count -gt 0)
         {
             $siteAcc.AddRange($subSiteAcc)
@@ -487,21 +478,28 @@ foreach($site in $sitesToProcess)
 {
     $siteUrl = $site.Url
     Write-Host "Site $siteUrl"
+    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $AlyaSharePointNewSiteCollectionAdmins
 
     $retries = 10
     do
     {
         try
         {
-			$null = Set-PnPContext -Context $adminCnt
-			$siteCon = LoginTo-PnP-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
-            $web = Get-PnPWeb
-            $admins = Get-PnPSiteCollectionAdmin
+            if ($UseAppAuthentication)
+            {
+                $siteCon = LoginTo-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+            }
+            else
+            {
+                $siteCon = LoginTo-PnP -Url $siteUrl
+            }
+            $web = Get-PnPWeb -Connection $siteCon
+            $admins = Get-PnPSiteCollectionAdmin -Connection $siteCon
             foreach($admin in $admins)
             {
-                Process-Member -web $web -userOrGroup $admin -access "SiteColAdmin" -siteAcc $allSiteAcc
+                Process-Member -siteCon $siteCon -web $web -userOrGroup $admin -access "SiteColAdmin" -siteAcc $allSiteAcc
             }
-            $siteAcc = Get-WebAccess $web
+            $siteAcc = Get-WebAccess -siteCon $siteCon -web $web
             if ($siteAcc -and $siteAcc.Count -gt 0)
             {
                 $allSiteAcc.AddRange($siteAcc)
