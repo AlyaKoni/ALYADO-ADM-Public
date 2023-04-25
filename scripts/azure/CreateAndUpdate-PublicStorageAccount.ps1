@@ -31,6 +31,7 @@
     ---------- -------------------- ----------------------------
     27.02.2020 Konrad Brunner       Initial Version
 	16.08.2021 Konrad Brunner		Added provider registration
+	20.04.2023 Konrad Brunner		Changed Mime Mapping function for PS7
 
 #>
 
@@ -215,15 +216,13 @@ foreach($container in $containers)
     Write-Host "  from $BlobContainerRoot"
     $UploadItems = Get-ChildItem -Path $BlobContainerRoot -Recurse -Force -File
     $md5 = New-Object -TypeName System.Security.Cryptography.MD5CryptoServiceProvider
-    Add-Type -AssemblyName "System.Web"
     foreach($SourceFile in $UploadItems)
     {
         #$SourceFile = $UploadItems[0]
         $relPath = $SourceFile.FullName.Replace($BlobContainerRoot, "")
         Write-Host "  - $relPath"
-        $mime = [System.Web.MimeMapping]::GetMimeMapping($SourceFile.FullName)
-        if ($SourceFile.FullName.EndsWith(".json")) { $mime = "application/json" }
-		if ($SourceFile.FullName.EndsWith(".svg")) { $mime = "image/svg+xml" }
+        $mime = Get-MimeType -Extension (Get-Item $SourceFile.FullName).Extension -ErrorAction SilentlyContinue
+        if ($null -eq $mime) { $mime = "application/octet-stream" }
         $BlobName = $relPath.Substring(1)
         $DestinationBlob = Get-AzStorageBlob -Context $StrgContext -Container $StorageContainerName -Blob $BlobName -ErrorAction SilentlyContinue
         if ($DestinationBlob)

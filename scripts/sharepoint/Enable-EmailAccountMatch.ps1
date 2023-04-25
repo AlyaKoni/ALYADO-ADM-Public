@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -33,6 +33,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.03.2020 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -48,30 +49,32 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Enable-EmailAccountMatch
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logging in
-LoginTo-SPO
+LoginTo-MgGraph -Scopes "SharePointTenantSettings.ReadWrite.All"
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Enable-EmailAccountMatch | O365" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Enable-EmailAccountMatch | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Enabling require account match invited email
 Write-Host "Enabling require account match invited email" -ForegroundColor $CommandInfo
-$TenantConfig = Get-SPOTenant
-if (-Not $TenantConfig.RequireAcceptingAccountMatchInvitedAccount)
-{
-    Write-Warning "Require account match invited email was not enabled. Enabling now require account match invited email"
-    Set-SPOTenant -RequireAcceptingAccountMatchInvitedAccount $true
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+
+if ($setting.isRequireAcceptingUserToMatchInvitedUserEnabled -ne $true){
+    Write-Warning "Require account match was set to '$($setting.isRequireAcceptingUserToMatchInvitedUserEnabled)', setting to '$true'"
+    $newSettings = @{
+        "isRequireAcceptingUserToMatchInvitedUserEnabled" = $true
+    }
+    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
-else
-{
-    Write-Host "Require account match invited email was already enabled." -ForegroundColor $CommandSuccess
+else {
+    Write-host "Require account match was alreadyset to '$true'"
 }
 
 #Stopping Transscript

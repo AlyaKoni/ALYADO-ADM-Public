@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -51,11 +52,12 @@ $brandingLogoLandingPage = "$($AlyaData)\intune\brandingLogoLandingPage.png"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes @(
+    "Organization.ReadWrite.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -65,21 +67,17 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Set-IntuneBranding | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
-# Main
-
 # Reading branding configuration
 Write-Host "Reading branding configuration" -ForegroundColor $CommandInfo
 Write-Host "  from $brandingJson"
-$brandingConfig = Get-Content -Path $brandingJson -Raw -Encoding UTF8 | ConvertFrom-Json
+$brandingConfig = Get-Content -Path $brandingJson -Raw -Encoding UTF8
+$brandingConfig = $brandingConfig.Replace("##AlyaCompanyNameFull##", $AlyaCompanyNameFull)
+$brandingConfig = $brandingConfig.Replace("##AlyaSupportTitle##", $AlyaSupportTitle)
+$brandingConfig = $brandingConfig.Replace("##AlyaSupportTel##", $AlyaSupportTel)
+$brandingConfig = $brandingConfig.Replace("##AlyaSupportMail##", $AlyaSupportMail)
+$brandingConfig = $brandingConfig.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
+$brandingConfig = $brandingConfig.Replace("##AlyaPrivacyUrl##", $AlyaPrivacyUrl)
+$brandingConfig = $brandingConfig | ConvertFrom-Json
 
 Add-Type -AssemblyName System.Drawing
 
@@ -102,8 +100,8 @@ if ($logo)
         }
         else
         {
-            $iconResponse = Invoke-WebRequest "$($brandingLogoLight)"
-            $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
+            $iconResponse = [System.IO.File]::ReadAllBytes("$($brandingLogoLight)")
+            $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoLight)).replace(".","")
             $iconType = "image/$iconExt"
             $brandingConfig.intuneBrand.lightBackgroundLogo = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
@@ -137,8 +135,8 @@ if ($logo)
         }
         else
         {
-            $iconResponse = Invoke-WebRequest "$($brandingLogoDark)"
-            $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
+            $iconResponse = [System.IO.File]::ReadAllBytes("$($brandingLogoDark)")
+            $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoDark)).replace(".","")
             $iconType = "image/$iconExt"
             $brandingConfig.intuneBrand.darkBackgroundLogo = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
@@ -172,8 +170,8 @@ if ($logo)
         }
         else
         {
-            $iconResponse = Invoke-WebRequest "$($brandingLogoLandingPage)"
-            $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
+            $iconResponse = [System.IO.File]::ReadAllBytes("$($brandingLogoLandingPage)")
+            $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoLandingPage)).replace(".","")
             $iconType = "image/$iconExt"
             $brandingConfig.intuneBrand.landingPageCustomizedImage = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
@@ -189,8 +187,8 @@ else
 }
 
 Write-Host "Configuring branding" -ForegroundColor $CommandInfo
-$uri = "https://graph.microsoft.com/beta/deviceManagement"
-$intuneBrand = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($brandingConfig | ConvertTo-Json -Depth 50)
+$uri = "/beta/deviceManagement"
+$intuneBrand = Patch-MsGraph -Uri $uri -Body ($brandingConfig | ConvertTo-Json -Depth 50)
 
 #Stopping Transscript
 Stop-Transcript

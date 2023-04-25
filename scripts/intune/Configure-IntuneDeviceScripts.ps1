@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     20.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -52,11 +53,15 @@ if (-Not $ScriptDir)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes @(
+    "DeviceManagementServiceConfig.ReadWrite.All",
+    "DeviceManagementConfiguration.ReadWrite.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "Directory.Read.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -66,31 +71,25 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Configure-IntuneDeviceScripts | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
 # Main
 $scripts = Get-ChildItem -Path $ScriptDir -Filter "*.ps1"
 
 # Processing scripts
+$hadError = $false
 foreach($script in $scripts)
 {
     if ($script.Name.IndexOf("_unused") -gt -1) { continue }
-    Write-Host "Configuring script $($script.Name)" -ForegroundColor $CommandInfo
+    Write-Host "Configuring script '$($script.Name)'" -ForegroundColor $CommandInfo
 
-    # Loading script
-    Write-Host "  Loading script"
-    $scriptResponse = Invoke-WebRequest "$($script.FullName)"
-    $base64script = [System.Convert]::ToBase64String($scriptResponse.Content)
-    #TODO Description out of the script?
-    $scriptName = "Win10 $($script.BaseName)"
-    $body = @"
+    try {
+        
+        # Loading script
+        Write-Host "  Loading script"
+        $scriptResponse = [System.IO.File]::ReadAllBytes("$($brandingLogoLight)")
+        $base64script = [System.Convert]::ToBase64String($scriptResponse)
+        #TODO Description out of the script?
+        $scriptName = "WIN $($script.BaseName)"
+        $body = @"
 {
     "@odata.type": "#microsoft.graph.deviceManagementScript",
     "displayName": "$scriptName",
@@ -105,22 +104,31 @@ foreach($script in $scripts)
 }
 "@
 
-    # Checking if script exists
-    Write-Host "  Checking if script exists"
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts"
-    $actScript = (Get-MsGraphObject -AccessToken $token -Uri $uri).value | where { $_.displayName -eq $scriptName}
-    if (-Not $actScript.id)
-    {
-        # Creating the script
-        Write-Host "    Script does not exist, creating"
-        $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts"
-        $actScript = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
+        # Checking if script exists
+        Write-Host "  Checking if script exists"
+        $uri = "/beta/deviceManagement/deviceManagementScripts"
+        $actScript = (Get-MsGraphObject -Uri $uri).value | where { $_.displayName -eq $scriptName}
+        if (-Not $actScript.id)
+        {
+            # Creating the script
+            Write-Host "    Script does not exist, creating"
+            $uri = "/beta/deviceManagement/deviceManagementScripts"
+            $actScript = Post-MsGraph -Uri $uri -Body $body
+        }
+
+        # Updating the script
+        Write-Host "    Updating the script"
+        $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)"
+        $actScript = Patch-MsGraph -Uri $uri -Body $body
+    }
+    catch {
+        $hadError = $true
     }
 
-    # Updating the script
-    Write-Host "    Updating the script"
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceManagementScripts/$($actScript.id)"
-    $actScript = Patch-MsGraph -AccessToken $token -Uri $uri -Body $body
+}
+if ($hadError)
+{
+    Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
 #Stopping Transscript

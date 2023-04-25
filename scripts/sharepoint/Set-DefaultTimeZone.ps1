@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -33,6 +33,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     22.10.2021 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -46,17 +47,44 @@ Param(
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-DefaultTimeZone-$($AlyaTimeString).log" | Out-Null
 
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+
+# Logging in
+LoginTo-MgGraph -Scopes "SharePointTenantSettings.ReadWrite.All"
+
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-DefaultTimeZone | O365" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Set-DefaultTimeZone | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Warning "So far there is no option to set the default time zone by script. Please set it in the admin center."
-Write-Host "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/settings/SiteCreation"
-start "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/settings/SiteCreation"
+# Configuring default time zone
+Write-Host "Configuring default time zone" -ForegroundColor $CommandInfo
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+$timeZoneEn = "(UTC) Dublin, Edinburgh, Lisbon, London"
+$timeZoneDe = "(UTC) Dublin, Edinburgh, Lisbon, London"
+switch ($AlyaTimeZone)
+{
+    "W. Europe Standard Time" {
+        $timeZoneEn = "(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna"
+        $timeZoneDe = "(UTC+01:00) Amsterdam, Berlin, Bern, Rom, Stockholm, Wien"
+    }
+}
+
+if ($setting.tenantDefaultTimezone -ne $timeZoneEn -and $setting.tenantDefaultTimezone -ne $timeZoneDe){
+    Write-Warning "Default TimeZone was set to '$($setting.tenantDefaultTimezone)', setting to '$timeZoneEn'"
+    $newSettings = @{
+        "tenantDefaultTimezone" = $AlyaTimeZone
+    }
+    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+}
+else {
+    Write-host "Default TimeZone was alreadyset to '$timeZoneEn'"
+}
 
 #Stopping Transscript
 Stop-Transcript

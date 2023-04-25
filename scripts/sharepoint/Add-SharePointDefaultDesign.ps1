@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.03.2020 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
 
 #>
 
@@ -45,20 +46,19 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-SharePointDesign-$($
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # Constants
-
 $ThemeName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Theme"
 $SiteScriptName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Script"
 $SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Team Site"
 $SiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Communication Site"
 $SiteScriptDef = @"
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
+  "`$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
   "actions": [
     {
       "verb": "applyTheme",
@@ -74,43 +74,61 @@ $SiteScriptDef = @"
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Add-SharePointDesign | O365" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Add-SharePointDesign | PnP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting theme
 Write-Host "Getting theme" -ForegroundColor $CommandInfo
-try { $Theme = Get-SPOTheme -Name $ThemeName -ErrorAction SilentlyContinue } catch {}
+$Theme = Get-PnPTenantTheme -Connection $adminCon -Name $ThemeName -ErrorAction SilentlyContinue
 if (-Not $Theme)
 {
-    throw "Theme does not exist. Please create it first"
+    throw "Theme does not exist. Please create it first with the script Add-SharePointDefaultTheme.ps1"
 }
 
 # Checking site script
 Write-Host "Checking site script" -ForegroundColor $CommandInfo
-$SiteScript = Get-SPOSiteScript | where { $_.Title -eq "$SiteScriptName"}
+$SiteScript = Get-PnPSiteScript -Connection $adminCon | where { $_.Title -eq "$SiteScriptName"}
 if (-Not $SiteScript)
 {
     Write-Warning "Site script not found. Creating now site script $SiteScriptName"
-    $SiteScript = Add-SPOSiteScript -Title $SiteScriptName -Content $SiteScriptDef -Description "Fügt das AlyaConsulting Design hinzu"
+    $SiteScript = Add-PnPSiteScript -Connection $adminCon -Title $SiteScriptName -Content $SiteScriptDef -Description "Fügt das $AlyaCompanyName Design hinzu"
 }
+else
+{
+    Write-Host "Updating site script $SiteScriptName"
+    $SiteScript = Set-PnPSiteScript -Connection $adminCon -Identity $SiteScript -Title $SiteScriptName -Content $SiteScriptDef -Description "Fügt das $AlyaCompanyName Design hinzu"
+}
+$SiteScript = Get-PnPSiteScript -Connection $adminCon | where { $_.Title -eq "$SiteScriptName"}
 
-# Checking site design
+# Checking team site design
 Write-Host "Checking team site design" -ForegroundColor $CommandInfo
-$SiteDesignTeam = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameTeam"}
+$SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameTeam"}
 if (-Not $SiteDesignTeam)
 {
     Write-Warning "Team site design not found. Creating now team site design $SiteDesignNameTeam"
-    $SiteDesignTeam = Add-SPOSiteDesign -Title $SiteDesignNameTeam -WebTemplate "64" -SiteScripts $SiteScript.Id -Description "Fügt das AlyaConsulting Design hinzu"
+    $SiteDesignTeam = Add-PnPSiteDesign -Connection $adminCon -Title $SiteDesignNameTeam -WebTemplate "64" -SiteScript $SiteScript -Description "Fügt das $AlyaCompanyName Design hinzu"
 }
+else
+{
+    Write-Host "Updating Team site design $SiteDesignNameTeam"
+    $SiteDesignTeam = Set-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignTeam.Id -Title $SiteDesignNameTeam -WebTemplate "64" -SiteScriptIds $SiteScript.Id -Description "Fügt das $AlyaCompanyName Design hinzu"
+}
+$SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameTeam"}
 
-# Checking site design
+# Checking communication site design
 Write-Host "Checking communication site design" -ForegroundColor $CommandInfo
-$SiteDesignComm = Get-SPOSiteDesign | where { $_.Title -eq "$SiteDesignNameComm"}
+$SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameComm"}
 if (-Not $SiteDesignComm)
 {
     Write-Warning "Communication site design not found. Creating now Communication site design $SiteDesignNameComm"
-    $SiteDesignComm = Add-SPOSiteDesign -Title $SiteDesignNameComm -WebTemplate "68" -SiteScripts $SiteScript.Id -Description "Fügt das AlyaConsulting Design hinzu"
+    $SiteDesignComm = Add-PnPSiteDesign -Connection $adminCon -Title $SiteDesignNameComm -WebTemplate "68" -SiteScript $SiteScript -Description "Fügt das $AlyaCompanyName Design hinzu"
 }
+else
+{
+    Write-Host "Updating Communication site design $SiteDesignNameComm"
+    $SiteDesignComm = Set-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignComm.Id -Title $SiteDesignNameComm -WebTemplate "68" -SiteScriptIds $SiteScript.Id -Description "Fügt das $AlyaCompanyName Design hinzu"
+}
+$SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameComm"}
 
 #Stopping Transscript
 Stop-Transcript

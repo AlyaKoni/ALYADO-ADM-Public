@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
     The Alya Base Configuration is free software: you can redistribute it
@@ -29,6 +29,7 @@
     ---------- -------------------- ----------------------------
     30.09.2020 Konrad Brunner       Initial Version
     23.10.2021 Konrad Brunner       Added apps path
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -46,7 +47,12 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-IntuneWin32Packages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = "Win10 "
+if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
+    $AppPrefix = "$AlyaAppPrefix "
+}
+else {
+    $AppPrefix = "Win10 "
+}
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
 if (-Not (Test-Path $DataRoot))
 {
@@ -55,13 +61,16 @@ if (-Not (Test-Path $DataRoot))
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @(
+    "Directory.Read.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "DeviceManagementServiceConfig.Read.All",
+    "DeviceManagementConfiguration.Read.All",
+    "DeviceManagementApps.ReadWrite.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -70,15 +79,6 @@ LoginTo-Ad
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Intune | Upload-IntuneWin32Packages | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
 
 # Main
 $packages = Get-ChildItem -Path $DataRoot -Directory
@@ -252,8 +252,8 @@ foreach($packageDir in $packages)
     $logo = Get-ChildItem -Path $packageDir.FullName -Filter "Logo.*"
     if ($logo)
     {
-        $iconResponse = Invoke-WebRequest "$($logo.FullName)"
-        $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
+        $iconResponse = [System.IO.File]::ReadAllBytes("$($logo.FullName)")
+        $base64icon = [System.Convert]::ToBase64String($iconResponse)
         $iconExt = ([System.IO.Path]::GetExtension($logo.FullName)).replace(".","")
         $iconType = "image/$iconExt"
         $appConfig.largeIcon = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
@@ -267,14 +267,14 @@ foreach($packageDir in $packages)
     # Checking if app exists
     Write-Host "  Checking if app exists"
     $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
-    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-    $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+    $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+    $app = (Get-MsGraphObject -Uri $uri).value
     if (-Not $app.id)
     {
         # Creating app
         Write-Host "  Creating app"
-        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps"
-        $app = Post-MsGraph -AccessToken $token -Uri $uri -Body $appConfigJson
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $app = Post-MsGraph -Uri $uri -Body $appConfigJson
     }
 
     # Extracting intunewin file
@@ -290,8 +290,8 @@ foreach($packageDir in $packages)
     Write-Host "  Creating Content Version"
 	$appId = $app.id
     Write-Host "    appId: $($app.id)"
-	$uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions"
-	$contentVersion = Post-MsGraph -AccessToken $token -Uri $uri -Body "{}"
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions"
+	$contentVersion = Post-MsGraph -Uri $uri -Body "{}"
     Write-Host "    contentVersion: $($contentVersion.id)"
 
     # Creating Content Version file
@@ -302,12 +302,12 @@ foreach($packageDir in $packages)
 	$fileBody.sizeEncrypted = [long]$bytes.Length
 	$fileBody.manifest = $null
     $fileBody.isDependency = $false
-	$uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files"
-	$file = Post-MsGraph -AccessToken $token -Uri $uri -Body ($fileBody | ConvertTo-Json -Depth 50)
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files"
+	$file = Post-MsGraph -Uri $uri -Body ($fileBody | ConvertTo-Json -Depth 50)
 
     # Waiting for file uri
     Write-Host "  Waiting for file uri"
-    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
+    $uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
     $stage = "AzureStorageUriRequest"
 	$successState = "$($stage)Success"
 	$pendingState = "$($stage)Pending"
@@ -317,7 +317,7 @@ foreach($packageDir in $packages)
 	while ($Global:attempts -gt 0)
 	{
 		Start-Sleep -Seconds 3
-		$file = Get-MsGraphObject -AccessToken $token -Uri $uri
+		$file = Get-MsGraphObject -Uri $uri
 		if ($file.uploadState -eq $successState)
 		{
 			break
@@ -391,7 +391,7 @@ foreach($packageDir in $packages)
         {
             Write-Host "    Upload renewal"
 	        $renewalUri = "$uri/renewUpload"
-	        $rewnewUriResult = Post-MsGraph -AccessToken $token -Uri $renewalUri	
+	        $rewnewUriResult = Post-MsGraph -Uri $renewalUri	
             $stage = "AzureStorageUriRenewal"
 	        $successState = "$($stage)Success"
 	        $pendingState = "$($stage)Pending"
@@ -399,7 +399,7 @@ foreach($packageDir in $packages)
 	        while ($Global:attempts -gt 0)
 	        {
 		        Start-Sleep -Seconds 3
-		        $file = Get-MsGraphObject -AccessToken $token -Uri $uri
+		        $file = Get-MsGraphObject -Uri $uri
 		        if ($file.uploadState -eq $successState)
 		        {
 			        break
@@ -457,8 +457,8 @@ foreach($packageDir in $packages)
         fileDigest           = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigest
         fileDigestAlgorithm  = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigestAlgorithm
     }
-    $curi = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
-	$file = Post-MsGraph -AccessToken $token -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json -Depth 50)
+    $curi = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
+	$file = Post-MsGraph -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json -Depth 50)
 
     # Waiting for file commit
     Write-Host "  Waiting for file commit"
@@ -471,7 +471,7 @@ foreach($packageDir in $packages)
 	while ($Global:attempts -gt 0)
 	{
 		Start-Sleep -Seconds 3
-		$file = Get-MsGraphObject -AccessToken $token -Uri $uri
+		$file = Get-MsGraphObject -Uri $uri
 		if ($file.uploadState -eq $successState)
 		{
 			break
@@ -490,8 +490,8 @@ foreach($packageDir in $packages)
     # Committing the app
     Write-Host "  Committing the app"
     Add-Member -InputObject $appConfig -MemberType NoteProperty -Name "committedContentVersion" -Value $contentVersion.id
-    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId"
-    $appP = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($appConfig | ConvertTo-Json -Depth 50)
+    $uri = "/beta/deviceAppManagement/mobileApps/$appId"
+    $appP = Patch-MsGraph -Uri $uri -Body ($appConfig | ConvertTo-Json -Depth 50)
 }
 
 #Stopping Transscript

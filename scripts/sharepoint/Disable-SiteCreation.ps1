@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -33,6 +33,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.03.2020 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Added Graph options
 
 #>
 
@@ -49,9 +50,11 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Disable-SiteCreation-$($
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logging in
 LoginTo-SPO
+LoginTo-MgGraph -Scopes "SharePointTenantSettings.ReadWrite.All"
 
 # =============================================================
 # O365 stuff
@@ -63,6 +66,44 @@ Write-Host "=====================================================`n" -Foreground
 
 # Disabling site creation
 Write-Host "Disabling site creation" -ForegroundColor $CommandInfo
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+
+# Checking site creation value
+if ($setting.isSiteCreationUIEnabled -ne $false){
+    Write-Warning "Site creation UI was set to '$($setting.isSiteCreationUIEnabled)', setting to '$false'"
+    $newSettings = @{
+        "isSiteCreationUIEnabled" = $false
+    }
+    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+}
+else {
+    Write-host "Site creation UI was alreadyset to '$false'"
+}
+
+# Checking site creation value
+if ($setting.isSiteCreationEnabled -ne $false){
+    Write-Warning "Site creation was set to '$($setting.isSiteCreationEnabled)', setting to '$false'"
+    $newSettings = @{
+        "isSiteCreationEnabled" = $false
+    }
+    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+}
+else {
+    Write-host "Site creation was alreadyset to '$false'"
+}
+
+# Checking site page creation value
+if ($setting.isSitePagesCreationEnabled -ne $false){
+    Write-Warning "Site page creation was set to '$($setting.isSitePagesCreationEnabled)', setting to '$false'"
+    $newSettings = @{
+        "isSitePagesCreationEnabled" = $false
+    }
+    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+}
+else {
+    Write-host "Site page creation was alreadyset to '$false'"
+}
+
 $TenantConfig = Get-SPOTenant
 if ($TenantConfig.DisplayStartASiteOption)
 {

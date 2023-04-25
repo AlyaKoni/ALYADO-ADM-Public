@@ -3,22 +3,14 @@
         "Comment2": "General Profiles",
         "Comment3": "================================================="
     }, {
-        "@odata.type": "#microsoft.graph.windowsHealthMonitoringConfiguration",
-        "displayName": "Intune Device Monitoring_unused",
-        "description": "Configures intune device monitoring capabilities",
-        "roleScopeTagIds": ["0"],
-        "allowDeviceHealthMonitoring": "enabled",
-        "configDeviceHealthMonitoringScope": "bootPerformance",
-        "configDeviceHealthMonitoringCustomScope": null
-    }, {
         "Comment1": "=================================================",
-        "Comment2": "WIN10 Profiles",
+        "Comment2": "WIN Profiles",
         "Comment3": "================================================="
     }, {
         "@odata.type": "#microsoft.graph.windows10GeneralConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures device restrictions on win10 devices",
-        "displayName": "Win10 Device Restrictions",
+        "description": "Configures device restrictions on windows devices",
+        "displayName": "WIN Device Restrictions",
         "taskManagerBlockEndTask": false,
         "energySaverOnBatteryThresholdPercentage": null,
         "energySaverPluggedInThresholdPercentage": 10,
@@ -322,8 +314,8 @@
     }, {
         "@odata.type": "#microsoft.graph.windows10EndpointProtectionConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures endpoint protection on win10 devices",
-        "displayName": "Win10 Endpoint Protection",
+        "description": "Configures endpoint protection on windows devices",
+        "displayName": "WIN Endpoint Protection",
         "dmaGuardDeviceEnumerationPolicy": "deviceDefault",
         "xboxServicesEnableXboxGameSaveTask": false,
         "xboxServicesAccessoryManagementServiceStartupMode": "manual",
@@ -737,8 +729,8 @@
     }, {
         "@odata.type": "#microsoft.graph.windowsIdentityProtectionConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures identity protection on win10 devices",
-        "displayName": "Win10 Identity Protection",
+        "description": "Configures identity protection on windows devices",
+        "displayName": "WIN Identity Protection",
         "useSecurityKeyForSignin": false,
         "enhancedAntiSpoofingForFacialFeaturesEnabled": true,
         "pinMinimumLength": 8,
@@ -756,12 +748,12 @@
     }, {
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Allows the PIN Reset service on win10 devices",
-        "displayName": "Win10 PIN Reset",
+        "description": "Allows the PIN Reset service on windows devices",
+        "displayName": "WIN PIN Reset",
         "omaSettings": [{
                 "@odata.type": "#microsoft.graph.omaSettingBoolean",
                 "displayName": "PIN Reset",
-                "description": "Allows the PIN reset service on win10 devices",
+                "description": "Allows the PIN reset service on windows devices",
                 "omaUri": "./Device/Vendor/MSFT/PassportForWork/##AlyaTenantId##/Policies/EnablePinRecovery",
                 "value": true
             }
@@ -770,7 +762,7 @@
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Injects outlook admx and sets some settings",
-        "displayName": "Win10 Outlook Settings",
+        "displayName": "WIN Outlook Settings",
         "omaSettings": [{
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "Inject ADMX",
@@ -787,21 +779,29 @@
         ]
     }, {
         "@odata.type": "#microsoft.graph.windowsHealthMonitoringConfiguration",
+        "displayName": "WIN Intune Device Monitoring",
+        "description": "Configures intune device monitoring capabilities",
         "roleScopeTagIds": ["0"],
-        "description": "Configures intune data collection on win10 devices",
-        "displayName": "Win10 Intune Data Collection",
+        "allowDeviceHealthMonitoring": "enabled",
+        "configDeviceHealthMonitoringScope": "bootPerformance",
+        "configDeviceHealthMonitoringCustomScope": null
+    }, {
+        "@odata.type": "#microsoft.graph.windowsHealthMonitoringConfiguration",
+        "roleScopeTagIds": ["0"],
+        "description": "Configures intune data collection on windows devices",
+        "displayName": "WIN Intune Data Collection",
         "allowDeviceHealthMonitoring": "enabled",
         "configDeviceHealthMonitoringScope": "bootPerformance,windowsUpdates",
         "configDeviceHealthMonitoringCustomScope": null
     }, {
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures local groups on win10 devices",
-        "displayName": "Win10 Local Group Configuration",
+        "description": "Configures local groups on windows devices",
+        "displayName": "WIN Local Group Configuration",
         "omaSettings": [{
                 "@odata.type": "#microsoft.graph.omaSettingStringXml",
-                "displayName": "Win10 Local Group Configuration",
-                "description": "Configures local groups on win10 devices",
+                "displayName": "WIN Local Group Configuration",
+                "description": "Configures local groups on windows devices",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/RestrictedGroups/ConfigureGroupMembership",
                 "fileName": "LocalGroupConfiguration.xml",
                 "value": "##<accessgroup desc=\"Administrators\"><member name=\"Administrator\" /><member name=\"$AlyaDeviceAdminsGroupSid\" /></accessgroup>##"
@@ -810,8 +810,8 @@
     }, {
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures power settings on win10 devices",
-        "displayName": "Win10 Power Settings",
+        "description": "Configures power settings on windows devices",
+        "displayName": "WIN Power Settings",
         "omaSettings": [{
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "DisplayOffTimeoutOnBattery",
@@ -880,8 +880,8 @@
     }, {
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures brwoser settings on win10 devices",
-        "displayName": "Win10 Browser Settings",
+        "description": "Configures brwoser settings on windows devices",
+        "displayName": "WIN Browser Settings",
         "omaSettings": [{
                 "@odata.type": "#microsoft.graph.omaSettingString",
                 "displayName": "Microsoft Edge ADMX ingestion",
@@ -917,15 +917,16 @@
     }, {
         "@odata.type": "#microsoft.graph.windowsDefenderAdvancedThreatProtectionConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures Windows Defender ATP on Win10 Devices",
-        "displayName": "Win10 Defender ATP",
+        "description": "Configures Windows Defender ATP on windows Devices",
+        "displayName": "WIN Defender ATP",
         "allowSampleSharing": false,
-        "enableExpeditedTelemetryReporting": false
+        "enableExpeditedTelemetryReporting": false,
+        "advancedThreatProtectionAutoPopulateOnboardingBlob": true
     }, {
         "@odata.type": "#microsoft.graph.windows10DeviceFirmwareConfigurationInterface",
         "roleScopeTagIds": ["0"],
-        "description": "Configures device firmware on win10 devices",
-        "displayName": "Win10 Device Firmware",
+        "description": "Configures device firmware on windows devices",
+        "displayName": "WIN Device Firmware",
         "changeUefiSettingsPermission": "none",
         "virtualizationOfCpuAndIO": "notConfigured",
         "cameras": "enabled",
@@ -936,8 +937,8 @@
     }, {
         "@odata.type": "#microsoft.graph.windowsDeliveryOptimizationConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures delivery optimization on win10 devices",
-        "displayName": "Win10 Delivery Optimization",
+        "description": "Configures delivery optimization on windows devices",
+        "displayName": "WIN Delivery Optimization",
         "deliveryOptimizationMode": "userDefined",
         "restrictPeerSelectionBy": "notConfigured",
         "groupIdSource": null,
@@ -958,8 +959,8 @@
     }, {
         "@odata.type": "#microsoft.graph.windows10TeamGeneralConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures Win10Team device restrictions on win10 devices",
-        "displayName": "Win10 Device Restrictions Win10Team",
+        "description": "Configures Win10Team device restrictions on windows devices",
+        "displayName": "WIN Device Restrictions Win10Team",
         "azureOperationalInsightsBlockTelemetry": true,
         "azureOperationalInsightsWorkspaceId": null,
         "azureOperationalInsightsWorkspaceKey": null,
@@ -983,8 +984,8 @@
     }, {
         "@odata.type": "#microsoft.graph.editionUpgradeConfiguration",
         "roleScopeTagIds": ["0"],
-        "description": "Configures edition upgrade on win10 devices",
-        "displayName": "Win10 Edition Upgrade",
+        "description": "Configures edition upgrade on windows devices",
+        "displayName": "WIN Edition Upgrade",
         "licenseType": "notConfigured",
         "targetEdition": "notConfigured",
         "license": null,
@@ -998,7 +999,7 @@
         "@odata.type": "#microsoft.graph.macOSGeneralDeviceConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Congigures device restrictions on mac devices",
-        "displayName": "Mac Device Restrictions",
+        "displayName": "MAC Device Restrictions",
         "compliantAppListType": "none",
         "emailInDomainSuffixes": [
             "##AlyaDomainName##"
@@ -1055,7 +1056,7 @@
         "@odata.type": "#microsoft.graph.macOSEndpointProtectionConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Configures endpoint protection on mac devices",
-        "displayName": "Mac Endpoint Protection",
+        "displayName": "MAC Endpoint Protection",
         "gatekeeperAllowedAppSource": "macAppStoreAndIdentifiedDevelopers",
         "gatekeeperBlockOverride": false,
         "firewallEnabled": true,
@@ -1084,7 +1085,7 @@
         "@odata.type": "#microsoft.graph.macOSDeviceFeaturesConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Congigures device features on mac devices",
-        "displayName": "Mac Device Features",
+        "displayName": "MAC Device Features",
         "adminShowHostInfo": false,
         "loginWindowText": "Welcome to ##AlyaCompanyName##. Use your corporate login to access this device. Any non permitted use is prohibited.",
         "authorizedUsersListHidden": true,
@@ -1134,7 +1135,7 @@
         "@odata.type": "#microsoft.graph.androidEasEmailProfileConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Configures email settings on android administrative manageded devices",
-        "displayName": "Android Admin Email Configuration",
+        "displayName": "AND Admin Email Configuration",
         "accountName": "##AlyaCompanyName##",
         "authenticationMethod": "usernameAndPassword",
         "syncCalendar": true,
@@ -1154,7 +1155,7 @@
         "@odata.type": "#microsoft.graph.androidWorkProfileGmailEasConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Configures email settings on android enterprise company owned manageded devices",
-        "displayName": "Android Enterprise Owned Email Configuration",
+        "displayName": "AND Enterprise Owned Email Configuration",
         "authenticationMethod": "usernameAndPassword",
         "durationOfEmailToSync": "oneMonth",
         "emailAddressSource": "primarySmtpAddress",
@@ -1165,7 +1166,7 @@
         "@odata.type": "#microsoft.graph.androidWorkProfileGmailEasConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Configures email settings on android enterprise personal manageded devices",
-        "displayName": "Android Enterprise Personal Email Configuration",
+        "displayName": "AND Enterprise Personal Email Configuration",
         "authenticationMethod": "usernameAndPassword",
         "durationOfEmailToSync": "oneMonth",
         "emailAddressSource": "primarySmtpAddress",
@@ -1176,7 +1177,7 @@
         "@odata.type": "#microsoft.graph.androidGeneralDeviceConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Congigures device restrictions on administrative managed android devices",
-        "displayName": "Android Admin Device Restrictions",
+        "displayName": "AND Admin Device Restrictions",
         "appsBlockClipboardSharing": false,
         "appsBlockCopyPaste": false,
         "appsBlockYouTube": false,
@@ -1231,7 +1232,7 @@
         "@odata.type": "#microsoft.graph.androidDeviceOwnerGeneralDeviceConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Congigures device restrictions on enterprise managed company owned android devices",
-        "displayName": "Android Enterprise Owned Restrictions",
+        "displayName": "AND Enterprise Owned Restrictions",
         "accountsBlockModification": null,
         "appsAllowInstallFromUnknownSources": null,
         "appsAutoUpdatePolicy": "always",
@@ -1339,7 +1340,7 @@
         "@odata.type": "#microsoft.graph.androidWorkProfileGeneralDeviceConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Congigures device restrictions on enterprise managed personal android devices",
-        "displayName": "Android Enterprise Personal Restrictions",
+        "displayName": "AND Enterprise Personal Restrictions",
         "passwordBlockFaceUnlock": false,
         "passwordBlockFingerprintUnlock": false,
         "passwordBlockIrisUnlock": false,
@@ -1390,7 +1391,7 @@
         "@odata.type": "#microsoft.graph.iosEasEmailProfileConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Configures email settings on ios devices",
-        "displayName": "iOS Email Configuration",
+        "displayName": "IOS Email Configuration",
         "usernameSource": "userPrincipalName",
         "usernameAADSource": "userPrincipalName",
         "userDomainNameSource": null,
@@ -1422,7 +1423,7 @@
         "@odata.type": "#microsoft.graph.iosDeviceFeaturesConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Configures device features on ios devices",
-        "displayName": "iOS Device Features",
+        "displayName": "IOS Device Features",
         "assetTagTemplate": null,
         "contentFilterSettings": null,
         "lockScreenFootnote": "##AlyaDomainName##",
@@ -1439,7 +1440,7 @@
         "@odata.type": "#microsoft.graph.iosGeneralDeviceConfiguration",
         "roleScopeTagIds": ["0"],
         "description": "Congigures device restrictions on ios devices",
-        "displayName": "iOS Device Restrictions",
+        "displayName": "IOS Device Restrictions",
         "accountBlockModification": false,
         "activationLockAllowWhenSupervised": false,
         "airDropBlocked": false,

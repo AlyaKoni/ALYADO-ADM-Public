@@ -51,10 +51,10 @@ try {
     Set-Location "$($almRootDir)"
     $ErrorActionPreference = 'SilentlyContinue'
     Write-Host "git pull" -ForegroundColor $CommandInfo
-    & "$($AlyaGitRoot)\cmd\git.exe" pull
+    cmd /c "$($AlyaGitRoot)\cmd\git.exe" pull
     Wait-UntilProcessEnds -processName "git"
     Write-Host "git push" -ForegroundColor $CommandInfo
-    & "$($AlyaGitRoot)\cmd\git.exe" push
+    cmd /c "$($AlyaGitRoot)\cmd\git.exe" push
     Wait-UntilProcessEnds -processName "git"
 }
 finally {

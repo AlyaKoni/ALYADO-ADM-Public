@@ -52,7 +52,7 @@ if (-Not (Test-Path "$AlyaGitRoot"))
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\PortableGit64bit.exe"
     Write-Host "Installing git"
-    & ".\PortableGit64bit.exe" "-o`"$AlyaGitRoot`"".Split(" ") -y
+    cmd /c  ".\PortableGit64bit.exe" -o"$AlyaGitRoot" -y
     do
     {
         Start-Sleep -Seconds 5
@@ -99,7 +99,7 @@ if ([string]::IsNullOrEmpty($AlyaLocalConfig.user.ssh))
     }
     if (-Not (Test-Path "$($AlyaRoot)\_local\ssh\id_rsa"))
     {
-        & "$AlyaGitRoot\usr\bin\ssh-keygen.exe" "-q -t rsa -b 1024 -f `"$($AlyaRoot)\_local\ssh\id_rsa`" -N `"`" -C `"$($AlyaLocalConfig.user.email)`"".Split(" ")
+        cmd /c "$AlyaGitRoot\usr\bin\ssh-keygen.exe" -q -t rsa -b 1024 -f "$($AlyaRoot)\_local\ssh\id_rsa" -N "" -C "$($AlyaLocalConfig.user.email)"
         if (-Not (Test-Path "$($AlyaRoot)\_local\ssh\id_rsa"))
         {
             Write-Error "Error generating id_rsa" -ErrorAction Continue
@@ -200,28 +200,28 @@ $ErrorActionPreference = 'SilentlyContinue'
 try {
     Set-Location "$($AlyaRoot)"
     Write-Host "connecting actual directory to git repository"
-    $check = (& "$AlyaGitRoot\cmd\git.exe" status)
+    $check = (cmd /c "$AlyaGitRoot\cmd\git.exe" status)
     if ($check -like "*On branch *") {
-        & "$AlyaGitRoot\cmd\git.exe" status
+        cmd /c "$AlyaGitRoot\cmd\git.exe" status
         Write-Host "Repository is already connected!" -ForegroundColor $CommandSuccess
         Write-Host "Fetching changes"
-        & "$AlyaGitRoot\cmd\git.exe" fetch
+        cmd /c "$AlyaGitRoot\cmd\git.exe" fetch
         Wait-UntilProcessEnds -processName "git"
     }
     else {
         Write-Host "Repository is not yet connected. Connecting..."
-        & "$AlyaGitRoot\cmd\git.exe" init
+        cmd /c "$AlyaGitRoot\cmd\git.exe" init
         Wait-UntilProcessEnds -processName "git"
         Write-Host "To: $($AlyaGlobalConfig.source.devops)"
-        & "$AlyaGitRoot\cmd\git.exe" "remote add origin $($AlyaGlobalConfig.source.devops)".Split(" ")
+        cmd /c "$AlyaGitRoot\cmd\git.exe" "remote add origin $($AlyaGlobalConfig.source.devops)".Split(" ")
         Wait-UntilProcessEnds -processName "git"
         Write-Host "Fetching changes"
-        & "$AlyaGitRoot\cmd\git.exe" fetch
+        cmd /c "$AlyaGitRoot\cmd\git.exe" fetch
         Wait-UntilProcessEnds -processName "git"
         Write-Host "Checking out"
-        & "$AlyaGitRoot\cmd\git.exe" "checkout -t origin/master --force".Split(" ")
+        cmd /c "$AlyaGitRoot\cmd\git.exe" "checkout -t origin/master --force".Split(" ")
         Wait-UntilProcessEnds -processName "git"
-        & "$AlyaGitRoot\cmd\git.exe" status
+        cmd /c "$AlyaGitRoot\cmd\git.exe" status
         Write-Host "Repository now connected!" -ForegroundColor $CommandSuccess
     }
 }

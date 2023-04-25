@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     23.11.2021 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -53,12 +54,15 @@ $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-$token = Get-AdalAccessToken
+LoginTo-MgGraph -Scopes @(
+    "DeviceManagementServiceConfig.ReadWrite.All",
+    "DeviceManagementConfiguration.ReadWrite.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "Directory.Read.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -67,15 +71,6 @@ $token = Get-AdalAccessToken
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Intune | Configure-IntuneDeviceGroupPolicyProfiles | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
 
 # Main
 $definedProfilesStr = Get-Content -Path $definedProfileFile -Raw -Encoding UTF8
@@ -98,107 +93,119 @@ if ($definedProfilesStr.IndexOf("##Alya") -gt -1)
 $definedProfiles = $definedProfilesStr | ConvertFrom-Json
 
 # Processing defined profiles
+$hadError = $false
 foreach($definedProfile in $definedProfiles)
 {
     if ($definedProfile.Comment1 -and $definedProfile.Comment2 -and $definedProfile.Comment3) { continue }
     if ($definedProfile.displayName.EndsWith("_unused")) { continue }
-    Write-Host "GroupPolicy profile $($definedProfile.displayName)" -ForegroundColor $CommandInfo
+    Write-Host "GroupPolicy profile '$($definedProfile.displayName)'" -ForegroundColor $CommandInfo
 
-    # Checking if profile exists
-    Write-Host "  Checking if profile exists"
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($definedProfile.displayName)
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations?`$filter=displayName eq '$searchValue'"
-    $extProfile = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
-    $mprofile = $definedProfile | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
-    $mprofile.PSObject.properties.remove("definitionValues")
-    if (-Not $extProfile.id)
-    {
-        # Creating the profile
-        Write-Host "    Profile does not exist, creating"
-        $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations"
-        $extProfile = Post-MsGraph -AccessToken $token -Uri $uri -Body ($mprofile | ConvertTo-Json -Depth 50)
-    }
-
-    # Updating the profile
-    Write-Host "    Updating the profile"
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)"
-    $extProfile = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($mprofile | ConvertTo-Json -Depth 50)
-
-    # Updating profile values
-    Write-Host "    Updating profile values"
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions"
-    $groupPolicyDefinitions = Get-MsGraphCollection -AccessToken $token -Uri $uri
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues?`$expand=definition"
-    $extDefinitionValues = Get-MsGraphCollection -AccessToken $token -Uri $uri
-    foreach ($definedDefinitionValue in $definedProfile.definitionValues)
-    {
-        #$definedDefinitionValue = $definedProfile.definitionValues[0]
-        Write-Host "      $($definedDefinitionValue.definition.displayName)"
-        $extDefinitionValue = $extDefinitionValues | where { $_.definition.classType -eq $definedDefinitionValue.definition.classType -and $_.definition.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.definition.displayName -eq $definedDefinitionValue.definition.displayName }
-        if (-Not $extDefinitionValue)
+    try {
+        
+        # Checking if profile exists
+        Write-Host "  Checking if profile exists"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($definedProfile.displayName)
+        $uri = "/beta/deviceManagement/groupPolicyConfigurations?`$filter=displayName eq '$searchValue'"
+        $extProfile = (Get-MsGraphObject -Uri $uri).value
+        $mprofile = $definedProfile | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
+        $mprofile.PSObject.properties.remove("definitionValues")
+        if (-Not $extProfile.id)
         {
-            $groupPolicyDefinition = $groupPolicyDefinitions | where { $_.classType -eq $definedDefinitionValue.definition.classType -and $_.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.displayName -eq $definedDefinitionValue.definition.displayName } 
-            if (-Not $groupPolicyDefinition)
-            {
-                throw "Was not able to find the right definition"
-            }
-            $mvalue = $definedDefinitionValue | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
-            $mvalue.PSObject.properties.remove("definition")
-            $mvalue.PSObject.properties.remove("definition@odata.bind")
-            $mvalue | Add-Member -MemberType NoteProperty -Name "definition@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')" -Force
-            $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations"
-            $presentations = Get-MsGraphCollection -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-            foreach($pvalue in $mvalue.presentationValues)
-            {
-                $presentation = $presentations | where { $_.label -eq $pvalue.presentation.label } 
-                $pvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
-                $pvalue.PSObject.properties.remove("definition")
-                $pvalue.PSObject.properties.remove("definitionNext")
-                $pvalue.PSObject.properties.remove("definitionPrev")
-                $pvalue.PSObject.properties.remove("categories")
-                $pvalue.PSObject.properties.remove("files")
-                $pvalue.PSObject.properties.remove("presentations")
-                $pvalue.PSObject.properties.remove("presentation")
-            }
-            if (-Not $mvalue.presentationValues) { $mvalue.PSObject.properties.remove("presentationValues") }
-            $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues"
-            $extDefinitionValue = Post-MsGraph -AccessToken $token -Uri $uri -Body ($mvalue | ConvertTo-Json -Depth 50)
+            # Creating the profile
+            Write-Host "    Profile does not exist, creating"
+            $uri = "/beta/deviceManagement/groupPolicyConfigurations"
+            $extProfile = Post-MsGraph -Uri $uri -Body ($mprofile | ConvertTo-Json -Depth 50)
         }
-        if ($definedDefinitionValue.presentationValues -and $definedDefinitionValue.presentationValues.Count -gt 0)
+
+        # Updating the profile
+        Write-Host "    Updating the profile"
+        $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)"
+        $extProfile = Patch-MsGraph -Uri $uri -Body ($mprofile | ConvertTo-Json -Depth 50)
+
+        # Updating profile values
+        Write-Host "    Updating profile values"
+        $uri = "/beta/deviceManagement/groupPolicyDefinitions"
+        $groupPolicyDefinitions = Get-MsGraphCollection -Uri $uri
+        $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues?`$expand=definition"
+        $extDefinitionValues = Get-MsGraphCollection -Uri $uri
+        foreach ($definedDefinitionValue in $definedProfile.definitionValues)
         {
-            $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues/$($extDefinitionValue.id)/presentationValues?`$expand=presentation"
-            $presentationValues = Get-MsGraphCollection -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-            $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations"
-            $presentations = Get-MsGraphCollection -AccessToken $token -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-            foreach ($pvalue in $definedDefinitionValue.presentationValues)
+            #$definedDefinitionValue = $definedProfile.definitionValues[0]
+            Write-Host "      $($definedDefinitionValue.definition.displayName)"
+            $extDefinitionValue = $extDefinitionValues | where { $_.definition.classType -eq $definedDefinitionValue.definition.classType -and $_.definition.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.definition.displayName -eq $definedDefinitionValue.definition.displayName }
+            if (-Not $extDefinitionValue)
             {
-                #$pvalue = $definedDefinitionValue.presentationValues[0]
-                $mvalue = $pvalue | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
+                $groupPolicyDefinition = $groupPolicyDefinitions | where { $_.classType -eq $definedDefinitionValue.definition.classType -and $_.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.displayName -eq $definedDefinitionValue.definition.displayName } 
+                if (-Not $groupPolicyDefinition)
+                {
+                    throw "Was not able to find the right definition"
+                }
+                $mvalue = $definedDefinitionValue | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
                 $mvalue.PSObject.properties.remove("definition")
-                $mvalue.PSObject.properties.remove("definitionNext")
-                $mvalue.PSObject.properties.remove("definitionPrev")
-                $mvalue.PSObject.properties.remove("categories")
-                $mvalue.PSObject.properties.remove("files")
-                $mvalue.PSObject.properties.remove("presentations")
-                $mvalue.PSObject.properties.remove("presentation")
-                $mvalue.PSObject.properties.remove("presentation@odata.bind")
-                $presentation = $presentations | where { $_.label -eq $pvalue.presentation.label } 
-                $mvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
-                $presentationValue = $presentationValues | where { $_.presentation.label -eq $pvalue.presentation.label }
-                if (-Not $presentationValue)
+                $mvalue.PSObject.properties.remove("definition@odata.bind")
+                $mvalue | Add-Member -MemberType NoteProperty -Name "definition@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')" -Force
+                $uri = "/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations"
+                $presentations = Get-MsGraphCollection -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                foreach($pvalue in $mvalue.presentationValues)
                 {
-                    $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues/$($extDefinitionValue.id)/presentationValues"
-                    $presentationValue = Post-MsGraph -AccessToken $token -Uri $uri -Body ($mvalue | ConvertTo-Json -Depth 50)
+                    $presentation = $presentations | where { $_.label -eq $pvalue.presentation.label } 
+                    $pvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
+                    $pvalue.PSObject.properties.remove("definition")
+                    $pvalue.PSObject.properties.remove("definitionNext")
+                    $pvalue.PSObject.properties.remove("definitionPrev")
+                    $pvalue.PSObject.properties.remove("categories")
+                    $pvalue.PSObject.properties.remove("files")
+                    $pvalue.PSObject.properties.remove("presentations")
+                    $pvalue.PSObject.properties.remove("presentation")
                 }
-                else
+                if (-Not $mvalue.presentationValues) { $mvalue.PSObject.properties.remove("presentationValues") }
+                $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues"
+                $extDefinitionValue = Post-MsGraph -Uri $uri -Body ($mvalue | ConvertTo-Json -Depth 50)
+            }
+            if ($definedDefinitionValue.presentationValues -and $definedDefinitionValue.presentationValues.Count -gt 0)
+            {
+                $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues/$($extDefinitionValue.id)/presentationValues?`$expand=presentation"
+                $presentationValues = Get-MsGraphCollection -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                $uri = "/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations"
+                $presentations = Get-MsGraphCollection -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+                foreach ($pvalue in $definedDefinitionValue.presentationValues)
                 {
-                    $uri = "https://graph.microsoft.com/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues/$($extDefinitionValue.id)/presentationValues/$($presentationValue.id)"
-                    $presentationValue = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($mvalue | ConvertTo-Json -Depth 50)
+                    #$pvalue = $definedDefinitionValue.presentationValues[0]
+                    $mvalue = $pvalue | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
+                    $mvalue.PSObject.properties.remove("definition")
+                    $mvalue.PSObject.properties.remove("definitionNext")
+                    $mvalue.PSObject.properties.remove("definitionPrev")
+                    $mvalue.PSObject.properties.remove("categories")
+                    $mvalue.PSObject.properties.remove("files")
+                    $mvalue.PSObject.properties.remove("presentations")
+                    $mvalue.PSObject.properties.remove("presentation")
+                    $mvalue.PSObject.properties.remove("presentation@odata.bind")
+                    $presentation = $presentations | where { $_.label -eq $pvalue.presentation.label } 
+                    $mvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
+                    $presentationValue = $presentationValues | where { $_.presentation.label -eq $pvalue.presentation.label }
+                    if (-Not $presentationValue)
+                    {
+                        $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues/$($extDefinitionValue.id)/presentationValues"
+                        $presentationValue = Post-MsGraph -Uri $uri -Body ($mvalue | ConvertTo-Json -Depth 50)
+                    }
+                    else
+                    {
+                        $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues/$($extDefinitionValue.id)/presentationValues/$($presentationValue.id)"
+                        $presentationValue = Patch-MsGraph -Uri $uri -Body ($mvalue | ConvertTo-Json -Depth 50)
+                    }
                 }
             }
         }
+
+    }
+    catch {
+        $hadError = $true
     }
 
+}
+if ($hadError)
+{
+    Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
 #Stopping Transscript

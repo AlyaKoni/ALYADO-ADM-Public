@@ -68,24 +68,24 @@ foreach ($dom in $domains)
     Write-Host "DNS config for domain $dom" -ForegroundColor $CommandSuccess
 
     # SPF generator https://dmarcly.com/tools/spf-record-generator
-    Write-Host "SPF" -ForegroundColor $CommandInfo
-    Write-Host "Type:  TXT"
-    Write-Host "Name:  @"
-    Write-Host "Value: v=spf1 include:spf.protection.outlook.com -all"
+    Write-Output "SPF"
+    Write-Output "Type:  TXT"
+    Write-Output "Name:  @"
+    Write-Output "Value: v=spf1 include:spf.protection.outlook.com -all"
     # if sendgrid: v=spf1 include:sendgrid.net include:spf.protection.outlook.com –all
-    Write-Host "TTL:   1 hour"
+    Write-Output "TTL:   1 hour"
 
-    Write-Host "`nDMARC" -ForegroundColor $CommandInfo
-    Write-Host "Type:  TXT"
-    Write-Host "Name:  _dmarc"
-    Write-Host "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; rf=afrf; fo=0:s; aspf=r; adkim=r; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
-    Write-Host "TTL:   1 hour"
+    Write-Output "`nDMARC"
+    Write-Output "Type:  TXT"
+    Write-Output "Name:  _dmarc"
+    Write-Output "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; rf=afrf; fo=0:s; aspf=r; adkim=r; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
+    Write-Output "TTL:   1 hour"
 
-    Write-Host "`nDMARC Reports" -ForegroundColor $CommandInfo
-    Write-Host "Type:  TXT"
-    Write-Host "Name:  $($dom)._report._dmarc"
-    Write-Host "Value: v=DMARC1"
-    Write-Host "TTL:   1 hour"
+    Write-Output "`nDMARC Reports"
+    Write-Output "Type:  TXT"
+    Write-Output "Name:  $($dom)._report._dmarc"
+    Write-Output "Value: v=DMARC1"
+    Write-Output "TTL:   1 hour"
 
     try
     {
@@ -94,17 +94,17 @@ foreach ($dom in $domains)
         $Selector1CNAME = $cfg.Selector1CNAME
         $Selector2CNAME = $cfg.Selector2CNAME
 
-        Write-Host "`nDKIM 1" -ForegroundColor $CommandInfo
-        Write-Host "Type:  CNAME"
-        Write-Host "Name:  selector1._domainkey"
-        Write-Host "Value: $Selector1CNAME"
-        Write-Host "TTL:   1 hour"
+        Write-Output "`nDKIM 1"
+        Write-Output "Type:  CNAME"
+        Write-Output "Name:  selector1._domainkey"
+        Write-Output "Value: $Selector1CNAME"
+        Write-Output "TTL:   1 hour"
 
-        Write-Host "`nDKIM 2" -ForegroundColor $CommandInfo
-        Write-Host "Type:  CNAME"
-        Write-Host "Name:  selector2._domainkey"
-        Write-Host "Value: $Selector2CNAME"
-        Write-Host "TTL:   1 hour"
+        Write-Output "`nDKIM 2"
+        Write-Output "Type:  CNAME"
+        Write-Output "Name:  selector2._domainkey"
+        Write-Output "Value: $Selector2CNAME"
+        Write-Output "TTL:   1 hour"
 
     }
     catch

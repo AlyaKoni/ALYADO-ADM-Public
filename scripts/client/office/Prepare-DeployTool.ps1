@@ -50,7 +50,7 @@ if (-Not (Test-Path "$AlyaDeployToolRoot"))
     [regex]$regex = "[^`"]*officedeploymenttool_[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\officedeploymenttool.exe"
-    &(".\officedeploymenttool.exe") /extract:"$AlyaDeployToolRoot" /quiet
+    cmd /c".\officedeploymenttool.exe" /extract:"$AlyaDeployToolRoot" /quiet
     do
     {
         Start-Sleep -Seconds 5

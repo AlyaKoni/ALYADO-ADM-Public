@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -45,11 +46,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-IntuneAsMdmAuthority-$($
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes @(
+    "Directory.ReadWrite.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -59,29 +61,22 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Set-IntuneAsMdmAuthority | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
 # Getting actual authority
 Write-Host "Getting actual authority" -ForegroundColor $CommandInfo
-$uri = "https://graph.microsoft.com/beta/organization('$AlyaTenantId')?`$select=mobiledevicemanagementauthority"
-$MDMAuthority = (Get-MsGraphObject -AccessToken $token -Uri $uri).mobileDeviceManagementAuthority
+$uri = "/beta/organization('$AlyaTenantId')?`$select=mobiledevicemanagementauthority"
+$MDMAuthority = (Get-MsGraphObject -Uri $uri).mobileDeviceManagementAuthority
 Write-Host "  Actual authority: $MDMAuthority"
 
+# Checking authority
+Write-Host "Checking authority" -ForegroundColor $CommandInfo
 if($MDMAuthority -notlike "intune")
 {
     try
     {
         # Setting intune as authority
         Write-Host "Setting intune as authority" -ForegroundColor $CommandInfo
-        $uri = "https://graph.microsoft.com/beta/organization/$AlyaTenantId/setMobileDeviceManagementAuthority"
-        $ret = Post-MsGraph -AccessToken $token -Uri $uri -Body "{}"
+        $uri = "/beta/organization/$AlyaTenantId/setMobileDeviceManagementAuthority"
+        $ret = Post-MsGraph -Uri $uri -Body "{}"
     }
     catch
     {
@@ -90,9 +85,12 @@ if($MDMAuthority -notlike "intune")
         Write-Host " - Select 'Microsoft Intune'"
         Write-Host " - Set for MDM and MAM 'All'"
         Write-Host " - Save"
-        start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility
+        start "https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
         pause
     }
+}
+else {
+    Write-Host "Authority is already set to intune"
 }
 
 #Stopping Transscript

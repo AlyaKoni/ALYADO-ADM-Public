@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     20.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -53,12 +54,15 @@ $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-$token = Get-AdalAccessToken
+LoginTo-MgGraph -Scopes @(
+    "DeviceManagementServiceConfig.ReadWrite.All",
+    "DeviceManagementConfiguration.ReadWrite.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "Directory.Read.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -67,15 +71,6 @@ $token = Get-AdalAccessToken
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Intune | Configure-IntunedeviceConfigurations | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
 
 # Main
 $profiles = Get-Content -Path $ProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -176,18 +171,15 @@ function Replace-AlyaStrings($obj, $depth)
     }
 }
 
-#$uri = "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations"
-#$actProfile = Get-MsGraphCollection -AccessToken $token -Uri $uri
-#$actProfile | ConvertTo-Json -Depth 50 | Set-Content -Path ($ProfileFile+".txt") -Encoding UTF8
-
 # Getting iOS configuration
 Write-Host "Getting iOS configuration" -ForegroundColor $CommandInfo
 $appleConfigured = $false
-$uri = "https://graph.microsoft.com/beta/devicemanagement/applePushNotificationCertificate"
-$appleConfiguration = Get-MsGraphObject -AccessToken $token -Uri $uri
+$uri = "/beta/devicemanagement/applePushNotificationCertificate"
+$appleConfiguration = Get-MsGraphObject -Uri $uri
 $appleConfigured = $false
 if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
 {
+    Write-Host "  Apple token is configured"
     $appleConfigured = $true
 }
 else
@@ -195,6 +187,7 @@ else
     $appleConfiguration = $appleConfiguration.value
     if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
     {
+        Write-Host "  Apple token is configured"
         $appleConfigured = $true
     }
 }
@@ -202,15 +195,17 @@ else
 # Getting Android configuration
 Write-Host "Getting Android configuration" -ForegroundColor $CommandInfo
 $androidConfigured = $false
-$uri = "https://graph.microsoft.com/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
-$androidConfiguration = Get-MsGraphObject -AccessToken $token -Uri $uri
+$uri = "/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
+$androidConfiguration = Get-MsGraphObject -Uri $uri
 $androidConfigured = $false
 if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
 {
+    Write-Host "  Android token is configured"
     $androidConfigured = $true
 }
 else
 {
+    Write-Host "  Android token is configured"
     $androidConfigured = $androidConfigured.Value
     if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
     {
@@ -219,11 +214,12 @@ else
 }
 
 # Processing defined profiles
+$hadError = $false
 foreach($profile in $profiles)
 {
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
-    Write-Host "Configuring profile $($profile.displayName)" -ForegroundColor $CommandInfo
+    Write-Host "Configuring profile '$($profile.displayName)'" -ForegroundColor $CommandInfo
 
     # Checking if poliy is applicable
     Write-Host "  Checking if profile is applicable"
@@ -244,8 +240,8 @@ foreach($profile in $profiles)
     # Special handling per profile
     if ($profile.displayName.Contains("PIN Reset"))
     {
-        $AzureAdServicePrincipalC = Get-AzADServicePrincipal -DisplayName "Microsoft Pin Reset Client Production" -ErrorAction SilentlyContinue
-        $AzureAdServicePrincipalS = Get-AzADServicePrincipal -DisplayName "Microsoft Pin Reset Service Production" -ErrorAction SilentlyContinue
+        $AzureAdServicePrincipalC = Get-MgServicePrincipal -Filter "DisplayName eq 'Microsoft Pin Reset Client Production'"
+        $AzureAdServicePrincipalS = Get-MgServicePrincipal -Filter "DisplayName eq 'Microsoft Pin Reset Service Production'"
         if ((-Not $AzureAdServicePrincipalC) -or (-Not $AzureAdServicePrincipalS))
         {
             #TODO script admin consent
@@ -262,7 +258,7 @@ foreach($profile in $profiles)
         $AlyaDeviceAdminsGroupSid = $null
         if ($AlyaDeviceAdminsGroupName -and -Not [string]::IsNullOrEmpty($AlyaDeviceAdminsGroupName))
         {
-            $Uri = "https://graph.microsoft.com/beta/groups?`$filter=displayName eq '$AlyaDeviceAdminsGroupName'"
+            $Uri = "/beta/groups?`$filter=displayName eq '$AlyaDeviceAdminsGroupName'"
             $GrpRslt = Get-MsGraph -AccessToken $token -Uri $Uri
             $AlyaDeviceAdminsGroupSid = $GrpRslt.securityIdentifier
         }
@@ -289,24 +285,36 @@ foreach($profile in $profiles)
         throw "Some replacement did not work!"
     }
     
-    # Checking if profile exists
-    Write-Host "  Checking if profile exists"
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations?`$filter=displayName eq '$searchValue'"
-    $actProfile = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
-    if (-Not $actProfile.id)
-    {
-        # Creating the profile
-        Write-Host "    Profile does not exist, creating"
-        Add-Member -InputObject $profile -MemberType NoteProperty -Name "id" -Value "00000000-0000-0000-0000-000000000000"
-        $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations"
-        $actProfile = Post-MsGraph -AccessToken $token -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+    try {
+        
+        # Checking if profile exists
+        Write-Host "  Checking if profile exists"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
+        $uri = "/beta/deviceManagement/deviceConfigurations?`$filter=displayName eq '$searchValue'"
+        $actProfile = (Get-MsGraphObject -Uri $uri).value
+        if (-Not $actProfile.id)
+        {
+            # Creating the profile
+            Write-Host "    Profile does not exist, creating"
+            Add-Member -InputObject $profile -MemberType NoteProperty -Name "id" -Value "00000000-0000-0000-0000-000000000000"
+            $uri = "/beta/deviceManagement/deviceConfigurations"
+            $actProfile = Post-MsGraph -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+        }
+
+        # Updating the profile
+        Write-Host "    Updating the profile"
+        $uri = "/beta/deviceManagement/deviceConfigurations/$($actProfile.id)"
+        $actProfile = Patch-MsGraph -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+
+    }
+    catch {
+        $hadError = $true
     }
 
-    # Updating the profile
-    Write-Host "    Updating the profile"
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceConfigurations/$($actProfile.id)"
-    $actProfile = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+}
+if ($hadError)
+{
+    Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
 #Stopping Transscript

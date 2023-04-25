@@ -63,7 +63,7 @@ Write-Host '      Set-TimeZone -Id "UTC"'
 #Write-Host '      Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation -Name RealTimeIsUniversal -Value 1 -Type DWord -Force'
 #Write-Host '      Set-Service -Name w32time -StartupType Automatic'
 #Write-Host '      Remove-Item -Path C:\Windows\Panther -Recurse -Force'
-Write-Host '      & "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
+Write-Host '      cmd /c "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
 Write-Host '  - Wait until the vm has stopped state'
 Write-Host '  - In case of troubles, follow this guide: https://learn.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image'
 <#

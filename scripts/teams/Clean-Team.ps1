@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.08.2021 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Teams module only, removed others
 
 #>
 
@@ -47,12 +48,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Clean-Team-$($AlyaTimeString)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Teams
 
 # =============================================================

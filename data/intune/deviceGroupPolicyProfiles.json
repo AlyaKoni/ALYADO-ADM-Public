@@ -1,7 +1,7 @@
 ﻿[{
         "@odata.type": "#microsoft.graph.groupPolicyConfiguration",
-        "displayName": "Win10 System Admin Templates",
-        "description": "Configures System policies for win10 devices",
+        "displayName": "WIN System Admin Templates",
+        "description": "Configures System policies for windows devices",
         "roleScopeTagIds": ["0"],
         "definitionValues": {
             "@odata.type": "#microsoft.graph.groupPolicyDefinitionValue",
@@ -39,8 +39,8 @@
         }
     }, {
         "@odata.type": "#microsoft.graph.groupPolicyConfiguration",
-        "displayName": "Win10 OneDrive Admin Templates",
-        "description": "Configures OneDrive policies for win10 devices",
+        "displayName": "WIN OneDrive Admin Templates",
+        "description": "Configures OneDrive policies for windows devices",
         "roleScopeTagIds": ["0"],
         "definitionValues": [{
                 "@odata.type": "#microsoft.graph.groupPolicyDefinitionValue",
@@ -292,8 +292,8 @@
         ]
     }, {
         "@odata.type": "#microsoft.graph.groupPolicyConfiguration",
-        "displayName": "Win10 Outlook Admin Templates",
-        "description": "Configures Outlook policies for win10 devices",
+        "displayName": "WIN Outlook Admin Templates",
+        "description": "Configures Outlook policies for windows devices",
         "roleScopeTagIds": ["0"],
         "definitionValues": [{
                 "@odata.type": "#microsoft.graph.groupPolicyDefinitionValue",
@@ -568,8 +568,8 @@
         ]
     }, {
         "@odata.type": "#microsoft.graph.groupPolicyConfiguration",
-        "displayName": "Win10 Office Admin Templates",
-        "description": "Configures Office policies for win10 devices",
+        "displayName": "WIN Office Admin Templates",
+        "description": "Configures Office policies for windows devices",
         "roleScopeTagIds": ["0"],
         "definitionValues": [{
                 "@odata.type": "#microsoft.graph.groupPolicyDefinitionValue",
@@ -739,8 +739,8 @@
         ]
     }, {
         "@odata.type": "#microsoft.graph.groupPolicyConfiguration",
-        "displayName": "Win10 Edge Admin Templates",
-        "description": "Configures Office policies for win10 devices",
+        "displayName": "WIN Edge Admin Templates",
+        "description": "Configures Office policies for windows devices",
         "roleScopeTagIds": ["0"],
         "definitionValues": [{
                 "@odata.type": "#microsoft.graph.groupPolicyDefinitionValue",

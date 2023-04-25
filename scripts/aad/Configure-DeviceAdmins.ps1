@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     07.03.2023 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -45,17 +46,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-DeviceAdmins-$($AlyaT
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-Connect-MsolService
-#LoginTo-MSOL #TODO: Only works this way. Permission by token does not work
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # Azure stuff
@@ -67,7 +65,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting group
 Write-Host "Getting group" -ForegroundColor $CommandInfo
-$devAdmGrp = Get-AzureADMSGroup -SearchString $AlyaDeviceAdminsGroupName
+$devAdmGrp = Get-MgGroup -Filter "DisplayName eq '$($AlyaDeviceAdminsGroupName)'"
 if (-Not $devAdmGrp)
 {
     Write-Host "Device admin group $AlyaDeviceAdminsGroupName not found. Please create it first!" -ForegroundColor $CommandError
@@ -76,20 +74,13 @@ if (-Not $devAdmGrp)
 
 # Checking role assignment
 Write-Host "Checking role assignment" -ForegroundColor $CommandInfo
-$role = Get-AzureADMSPrivilegedRoleDefinition -ProviderId "aadRoles" -ResourceId $AlyaTenantId -Filter "DisplayName eq 'Azure AD Joined Device Local Administrator'"
-$actMembs = Get-AzureADMSRoleAssignment -Filter "RoleDefinitionId eq '$($role.Id)'"
-$found = $false
-$actMembs | foreach {
-    $actMemb = $_
-    if ($devAdmGrp.ObjectId -eq $actMemb.PrincipalId)
-    {
-        $found = $true
-    }
-}
-if (-Not $found)
+$role = Get-MgRoleManagementDirectoryRoleDefinition -Filter "DisplayName eq 'Azure AD Joined Device Local Administrator'"
+$actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
+$memb = $actMembs | where { $_.PrincipalId -eq $devAdmGrp.Id }
+if (-Not $memb)
 {
-    Write-Host "    adding group $($newMemb.UserPrincipalName) to role 'Azure AD Joined Device Local Administrator'" -ForegroundColor $CommandWarning
-    New-AzureADMSRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $devAdmGrp.ObjectId -DirectoryScopeId '/'
+    Write-Host "    adding group $($AlyaDeviceAdminsGroupName) to role 'Azure AD Joined Device Local Administrator'" -ForegroundColor $CommandWarning
+    $memb = New-MgRoleManagementDirectoryRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $devAdmGrp.Id -DirectoryScopeId "/"
 }
 
 #Stopping Transscript

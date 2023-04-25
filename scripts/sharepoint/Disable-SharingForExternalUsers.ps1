@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -26,11 +26,13 @@
     Siehe die GNU General Public License fuer weitere Details:
 	https://www.gnu.org/licenses/gpl-3.0.txt
 
+    To design your own SharePoint Theme use the UI Fabric Theme Designer
+    https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/master/theming-designer/index.html
+
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    19.10.2021 Konrad Brunner       Initial Version
-    22.04.2023 Konrad Brunner       Switched to Graph
+    23.04.2023 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,52 +44,37 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-UserGroupCreationDisabled-$($AlyaTimeString).log" | Out-Null
-
-# Constants
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Disable-SharingForExternalUsers-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
 
 # Logging in
-Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
+LoginTo-MgGraph -Scopes "SharePointTenantSettings.ReadWrite.All"
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-UserGroupCreationDisabled | Graph" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Disable-SharingForExternalUsers | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Configuring settings template
-Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
-if (-Not $Setting)
-{
-    Write-Warning "Setting not yet created. Creating one based on template."
-    $Values = @()
-    foreach($dval in $SettingTemplate.Values) {
-	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+# Disable sharing for external users
+Write-Host "Disable sharing for external users" -ForegroundColor $CommandInfo
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+
+if ($setting.isResharingByExternalUsersEnabled -ne $false){
+    Write-Warning "Sharing for external users was set to '$($setting.isResharingByExternalUsersEnabled)', setting to '$false'"
+    $newSettings = @{
+        "isResharingByExternalUsersEnabled" = $false
     }
-    $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
-
-$Value = $Setting.Values | where { $_.Name -eq "EnableGroupCreation" }
-if ($Value.Value -eq $false) {
-    Write-Host "Setting 'EnableGroupCreation' was already set to '$false'"
-} 
 else {
-    Write-Warning "Setting 'EnableGroupCreation' was set to '$($Value.Value)' updating to '$false'"
-    ($Setting.Values | where { $_.Name -eq "EnableGroupCreation" }).Value = $false
+    Write-host "Sharing for external users was alreadyset to '$false'"
 }
-
-Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 #Stopping Transscript
 Stop-Transcript

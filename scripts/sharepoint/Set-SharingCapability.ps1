@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -33,6 +33,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.03.2020 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -48,45 +49,48 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-SharingCapability-$(
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logging in
-LoginTo-SPO
+LoginTo-MgGraph -Scopes "SharePointTenantSettings.ReadWrite.All"
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-SharingCapability | O365" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Set-SharingCapability | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+# Configuring sharing capability
+Write-Host "Configuring sharing capability" -ForegroundColor $CommandInfo
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+
 # Checking sharing capability
-$SharingOption = "ExternalUserAndGuestSharing"
+$SharingOption = "externalUserAndGuestSharing"
 if ($AlyaSharingPolicy -eq "KnownAccountsOnly")
 {
-    $SharingOption = "ExternalUserSharingOnly"
+    $SharingOption = "externalUserSharingOnly"
 }
 if ($AlyaSharingPolicy -eq "AdminOnly")
 {
-    $SharingOption = "ExistingExternalUserSharingOnly"
+    $SharingOption = "existingExternalUserSharingOnly"
 }
 if ($AlyaSharingPolicy -eq "None")
 {
-    $SharingOption = "Disabled"
+    $SharingOption = "disabled"
 }
 
-# Setting sharing capability
-Write-Host "Setting sharing capability" -ForegroundColor $CommandInfo
-$TenantConfig = Get-SPOTenant
-if ($TenantConfig.SharingCapability -ne $SharingOption)
-{
-    Write-Warning "sharing capability was set to $($TenantConfig.SharingCapability). Setting now sharing capability to $($SharingOption)"
-    Set-SPOTenant -SharingCapability $SharingOption
+# Checking sharing capability value
+if ($setting.sharingCapability -ne $SharingOption){
+    Write-Warning "Sharing capability was set to '$($setting.sharingCapability)', setting to '$SharingOption'"
+    $newSettings = @{
+        "sharingCapability" = $SharingOption
+    }
+    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
-else
-{
-    Write-Host "Sharing capability was already set to $($SharingOption)" -ForegroundColor $CommandSuccess
+else {
+    Write-host "Sharing capability was alreadyset to '$SharingOption'"
 }
 
 #Stopping Transscript

@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.03.2020 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
 
 #>
 
@@ -48,14 +49,14 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-SharePointTheme-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-SharePointDefaultTheme-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # Constants
 $ThemeName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Theme"
@@ -65,16 +66,21 @@ $ThemeName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Theme"
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Add-SharePointTheme | O365" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Add-SharePointDefaultTheme | PnP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Adding themes
-Write-Host "Adding themes" -ForegroundColor $CommandInfo
-try { $Theme = Get-SPOTheme -Name $ThemeName -ErrorAction SilentlyContinue } catch {}
+# Checking theme
+Write-Host "Checking theme" -ForegroundColor $CommandInfo
+$Theme = Get-PnPTenantTheme -Connection $adminCon -Name $ThemeName -ErrorAction SilentlyContinue
 if (-Not $Theme)
 {
     Write-Warning "Theme not found. Creating now theme $ThemeName"
-    Add-SPOTheme -Identity $ThemeName -Palette $AlyaSpThemeDef -Overwrite -IsInverted $false
+    Add-PnPTenantTheme -Connection $adminCon -Identity $ThemeName -Palette  $AlyaSpThemeDef -Overwrite -IsInverted:$false
+}
+else
+{
+    Write-Host "Theme already exists. Updating now theme $ThemeName"
+    Add-PnPTenantTheme -Connection $adminCon -Identity $ThemeName -Palette  $AlyaSpThemeDef -Overwrite -IsInverted:$false
 }
 
 #Stopping Transscript

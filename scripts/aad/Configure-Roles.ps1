@@ -1,44 +1,47 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2022
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
-	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
-	and/or modify it under the terms of the GNU General Public License as
-	published by the Free Software Foundation, either version 3 of the
-	License, or (at your option) any later version.
+    and/or modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
     Alya Base Configuration is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of 
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
-	Bedingungen der GNU General Public License, wie von der Free Software
-	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    Bedingungen der GNU General Public License, wie von der Free Software
+    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
     veroeffentlichten Version, weiter verteilen und/oder modifizieren.
     Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
-	aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
     Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
     Siehe die GNU General Public License fuer weitere Details:
-	https://www.gnu.org/licenses/gpl-3.0.txt
+    https://www.gnu.org/licenses/gpl-3.0.txt
 
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
     28.09.2020 Konrad Brunner       Initial Version
     29.06.2022 Konrad Brunner       Splittet PIM and MSOL
+    21.04.2023 Konrad Brunner       Switched to Graph, removed MSOL
 
 #>
 
 [CmdletBinding()]
 Param(
     [string]$inputFile = $null, #Defaults to "$AlyaData\aad\Rollen.xlsx"
+    [string[]]$alertingRoles = @("Global Administrator","Privileged Role Administrator","SharePoint Administrator","Teams Administrator","Security Administrator","Intune Administrator","Exchange Administrator","Conditional Access Administrator","Application Administrator"),
     [bool]$configurePIM = $true,
-    [bool]$updateRoleSettings = $false
+    [bool]$updatePIMRoleSettings = $true,
+    [bool]$askBeforeRoleRemoval = $true
 )
 
 #Reading configuration
@@ -55,20 +58,18 @@ if (-Not $inputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Uninstall-ModuleIfInstalled "AzureAD"
 Install-ModuleIfNotInstalled "ImportExcel"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureADPreview"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Applications"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.Governance"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-Connect-AzureAD
-#Connect-AzureAD #TODO: Only works this way. Permission by token does not work
-Connect-MsolService
-#LoginTo-MSOL #TODO: Only works this way. Permission by token does not work
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # Azure stuff
@@ -87,12 +88,11 @@ if (-Not (Test-Path $inputFile))
 $roleDefs = Import-Excel $inputFile -ErrorAction Stop
 
 # Configured roles
-Write-Host "Configured roles:"
+Write-Host "Configured roles:" -ForegroundColor $CommandInfo
 $lastRole = $null
 $allRoles = @{}
 $eligibleRoles = @{}
-$permanentMSOLRoles = @{}
-$permanentPIMRoles = @{}
+$permanentRoles = @{}
 foreach ($roleDef in $roleDefs)
 {
     if ([string]::IsNullOrEmpty($roleDef.Role) -and [string]::IsNullOrEmpty($roleDef.Permanent) -and [string]::IsNullOrEmpty($roleDef.PermanentPIM) -and [string]::IsNullOrEmpty($roleDef.Eligible))
@@ -118,10 +118,10 @@ foreach ($roleDef in $roleDefs)
         if ($roleDef.Eligible -like "##*") {
             continue
         }
-        try { $principal = Get-AzureADUser -objectId $roleDef.Eligible -ErrorAction SilentlyContinue } catch {}
+        try { $principal = Get-MgUser -UserId $roleDef.Eligible } catch {}
         if (-Not $principal)
         {
-            $principal = Get-AzureADGroup -SearchString $roleDef.Eligible -ErrorAction SilentlyContinue
+            $principal = Get-MgGroup -Filter "DisplayName eq '$($roleDef.Eligible)'"
         }
         if (-Not $principal)
         {
@@ -137,66 +137,59 @@ foreach ($roleDef in $roleDefs)
         }
     }
 
-    if (-Not [string]::IsNullOrEmpty($roleDef.PermanentPIM))
+    if (-Not [string]::IsNullOrEmpty($roleDef.Permanent))
     {
-        if ($roleDef.PermanentPIM -like "##*") {
+        if ($roleDef.Permanent -like "##*") {
             $allRoles.$roleName = $true
             continue
         }
-        try { $principal = Get-AzureADUser -objectId $roleDef.PermanentPIM -ErrorAction SilentlyContinue } catch {}
+        try { $principal = Get-MgUser -UserId $roleDef.Permanent } catch {}
         if (-Not $principal)
         {
-            $principal = Get-AzureADGroup -SearchString $roleDef.PermanentPIM -ErrorAction SilentlyContinue
+            $principal = Get-MgGroup -Filter "DisplayName eq '$($roleDef.Permanent)'"
         }
         if (-Not $principal)
         {
-            throw "Not able to find user or group $($roleDef.PermanentPIM)"
+            throw "Not able to find user or group $($roleDef.Permanent)"
         }
-        if ($permanentPIMRoles.ContainsKey($roleName))
+        if ($permanentRoles.ContainsKey($roleName))
         {
-            $permanentPIMRoles.$roleName += $principal
+            $permanentRoles.$roleName += $principal
         }
         else
         {
-            $permanentPIMRoles.$roleName = @($principal)
-        }
-    }
-
-    if (-Not [string]::IsNullOrEmpty($roleDef.PermanentMSOL))
-    {
-        if ($roleDef.PermanentMSOL -like "##*") {
-            $allRoles.$roleName = $true
-            continue
-        }
-        try { $principal = Get-AzureADUser -objectId $roleDef.PermanentMSOL -ErrorAction SilentlyContinue } catch {}
-        if (-Not $principal)
-        {
-            $principal = Get-AzureADGroup -SearchString $roleDef.PermanentMSOL -ErrorAction SilentlyContinue
-        }
-        if (-Not $principal)
-        {
-            throw "Not able to find user or group $($roleDef.PermanentMSOL)"
-        }
-        if ($permanentMSOLRoles.ContainsKey($roleName))
-        {
-            $permanentMSOLRoles.$roleName += $principal
-        }
-        else
-        {
-            $permanentMSOLRoles.$roleName = @($principal)
+            $permanentRoles.$roleName = @($principal)
         }
     }
 }
 foreach($key in $allRoles.Keys) { Write-Host "  $key" }
 
+# Checking  license
+Write-Host "Checking  license" -ForegroundColor $CommandInfo
+try
+{
+    $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
+}
+catch
+{
+    if ($_.Exception.ToString() -like "*AadPremiumLicenseRequired*" -or $_.Exception.ToString() -like "*AAD Premium 2*")
+    {
+        Write-Host "No  license available! Can't configure PIM roles."
+        $configurePIM = $false
+    }
+    else
+    {
+        throw $_.Exception
+    }
+}
+
 # Checking built in roles
-Write-Host "Checking built in roles:" -ForegroundColor $CommandInfo
-$allBuiltInPIMRoles = Get-AzureADMSRoleDefinition
-$allBuiltinRoles = Get-MsolRole
+Write-Host "Checking built in roles" -ForegroundColor $CommandInfo
+$allBuiltInRoles = Get-MgRoleManagementDirectoryRoleDefinition -All
 $missFound = $false
 foreach($role in $allBuiltinRoles)
 {
-    $roleName = $role.Name
+    $roleName = $role.DisplayName
     if ($roleName -eq "Company Administrator") { $roleName = "Global Administrator" }
     if (-Not $allRoles.ContainsKey($roleName))
     {
@@ -209,265 +202,374 @@ if (-Not $missFound)
     Write-Host "No missing role found in the excel sheet"
 }
 $missFound = $false
-foreach($role in $allBuiltInPIMRoles)
+
+if ($configurePIM)
 {
-    if (-Not $allRoles.ContainsKey($role.DisplayName))
-    {
-        Write-Warning "The role '$($role.DisplayName)' is not present in the excel sheet. Please update it!"
-        $missFound = $true
+  # Checking role settings
+  $assigments = Get-MgPolicyRoleManagementPolicyAssignment -Filter "scopeId eq '/' and scopeType eq 'Directory'"
+  $policies = Get-MgPolicyRoleManagementPolicy -Filter "scopeId eq '/' and scopeType eq 'Directory'"
+  if ($updatePIMRoleSettings)
+  {
+      Write-Host "Checking role settings" -ForegroundColor $CommandInfo
+
+      foreach($alertingRole in $alertingRoles)
+      {
+          Write-Host "  on $alertingRole"
+          $rol = $allBuiltInRoles | where { $_.DisplayName -eq $alertingRole }
+          $ass = $assigments | where { $_.RoleDefinitionId -eq $rol.Id }
+          $pol = $policies | where { $_.Id -eq $ass.PolicyId }
+          $rules = Get-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id
+          
+          Write-Host "    Approval_EndUser_Assignment"
+          $rul = $rules | where { $_.Id -eq "Approval_EndUser_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyApprovalRule",
+    "setting": {
+        "isApprovalRequired": false,
+        "isApprovalRequiredForExtension": false,
+        "isRequestorJustificationRequired": true,
+        "approvalMode": "SingleStage",
+        "approvalStages": [
+          {
+              "approvalStageTimeOutInDays": 1,
+              "isApproverJustificationRequired": true,
+              "escalationTimeInMinutes": 0,
+              "isEscalationEnabled": false,
+              "primaryApprovers": [],
+              "escalationApprovers": []
+          }
+        ]
     }
 }
-if (-Not $missFound)
-{
-    Write-Host "No missing role found in the excel sheet"
-}
-$missFound = $false
-foreach($role in $allRoles.Keys)
-{
-    if (-Not ($allBuiltInPIMRoles | where { $_.DisplayName -eq $role}))
-    {
-        Write-Warning "The role '$($role)' was not found as built in role. Please check it!"
-        $missFound = $true
-    }
-}
-if (-Not $missFound)
-{
-    Write-Host "No wrong role found in the excel sheet"
-}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
-# Checking role settings
-if ($updateRoleSettings)
+          Write-Host "    AuthenticationContext_EndUser_Assignment"
+          $rul = $rules | where { $_.Id -eq "AuthenticationContext_EndUser_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
 {
-    Write-Host "Checking role settings" -ForegroundColor $CommandInfo
-    $allSettings = Get-AzureADMSPrivilegedRoleSetting -ProviderId "aadRoles" -Filter "ResourceId eq '$($AlyaTenantId)'"
-    foreach($roleName in $allRoles.Keys)
-    {
-        if ($allRoles[$roleName])
-        {
-            #Don't touch
-        }
-        else
-        {
-            Write-Host "Role '$($roleName)'"
-            $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq 'Global Administrator'"
-            $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq '$roleName'"
-            $roleSetting = $allSettings | where { $_.RoleDefinitionId -eq $role.Id}
-            if ($roleSetting)
-            {
-                $settingUserMemberExpirationRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
-                $settingUserMemberExpirationRule.RuleIdentifier = "ExpirationRule"
-                $settingUserMemberExpirationRule.Setting = "{`"permanentAssignment`":true,`"maximumGrantPeriodInMinutes`":540}"
-                $settingUserMemberJustificationRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
-                $settingUserMemberJustificationRule.RuleIdentifier = "JustificationRule"
-                $settingUserMemberJustificationRule.Setting = "{`"required`":true}"
-                $settingUserMemberMfaRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
-                $settingUserMemberMfaRule.RuleIdentifier = "MfaRule"
-                $settingUserMemberMfaRule.Setting = "{`"mfaRequired`":true}"
-                $userMemberSettings = @($settingUserMemberExpirationRule, $settingUserMemberJustificationRule, $settingUserMemberMfaRule)
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyAuthenticationContextRule",
+    "isEnabled": false,
+    "claimValue": ""
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
-                $settingAdminMemberExpirationRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
-                $settingAdminMemberExpirationRule.RuleIdentifier = "ExpirationRule"
-                if ($roleName -eq "Global Administrator")
-                {
-                    $settingAdminMemberExpirationRule.Setting = "{`"permanentAssignment`":false,`"maximumGrantPeriodInMinutes`":21600}"
-                }
-                else
-                {
-                    $settingAdminMemberExpirationRule.Setting = "{`"maximumGrantPeriod`":`"180.00:00:00`",`"maximumGrantPeriodInMinutes`":259200,`"permanentAssignment`":true}"
-                }
-                $settingAdminMemberJustificationRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
-                $settingAdminMemberJustificationRule.RuleIdentifier = "JustificationRule"
-                $settingAdminMemberJustificationRule.Setting = "{`"required`":true}"
-                $settingAdminMemberMfaRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
-                $settingAdminMemberMfaRule.RuleIdentifier = "MfaRule"
-                $settingAdminMemberMfaRule.Setting = "{`"mfaRequired`":true}"
-                $adminMemberSettings = @($settingAdminMemberExpirationRule, $settingAdminMemberJustificationRule, $settingAdminMemberMfaRule)
-            
-                $settingAdminEligibleMfaRule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedRuleSetting
-                $settingAdminEligibleMfaRule.RuleIdentifier = "MfaRule"
-                $settingAdminEligibleMfaRule.Setting = "{`"mfaRequired`":true}"
-                $adminEligibleSettings = @($settingAdminEligibleMfaRule)
+          $rul = $rules | where { $_.Id -eq "Expiration_Admin_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
+    "isExpirationRequired": false,
+    "maximumDuration": "P180D"
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
-                Set-AzureADMSPrivilegedRoleSetting -ProviderId "aadRoles" -ResourceId $AlyaTenantId `
-                    -Id $roleSetting.Id `
-                    -RoleDefinitionId $role.Id `
-                    -UserMemberSettings $userMemberSettings `
-                    -AdminMemberSettings $adminMemberSettings `
-                    -AdminEligibleSettings $adminEligibleSettings
-            
-            }
-            else
-            {
-                Write-Warning "Role '$($roleName)' does not has a role setting"
-            }
-        }
-    }
+          Write-Host "    Expiration_Admin_Eligibility"
+          $rul = $rules | where { $_.Id -eq "Expiration_Admin_Eligibility" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
+    "isExpirationRequired": false,
+    "maximumDuration": "P365D"
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Expiration_EndUser_Assignment"
+          $rul = $rules | where { $_.Id -eq "Expiration_EndUser_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
+    "isExpirationRequired": true,
+    "maximumDuration": "PT8H"
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+
+          Write-Host "    Enablement_Admin_Eligibility"
+          $rul = $rules | where { $_.Id -eq "Enablement_Admin_Eligibility" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+    "enabledRules": []
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Enablement_Admin_Assignment"
+          $rul = $rules | where { $_.Id -eq "Enablement_Admin_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+    "enabledRules": [
+        "Justification"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Enablement_EndUser_Assignment"
+          $rul = $rules | where { $_.Id -eq "Enablement_EndUser_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+    "enabledRules": [
+      "MultiFactorAuthentication",
+        "Justification"
+    ]
+}
+"@
+          if ($alertingRole -eq "Privileged Role Administrator")
+          {
+              $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+    "enabledRules": [
+        "Justification"
+    ]
+}
+"@
+          }
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Admin_Admin_Eligibility"
+          $rul = $rules | where { $_.Id -eq "Notification_Admin_Admin_Eligibility" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Admin",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": [
+        "$AlyaSecurityEmail"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Admin_Admin_Assignment"
+          $rul = $rules | where { $_.Id -eq "Notification_Admin_Admin_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Admin",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": [
+        "$AlyaSecurityEmail"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Admin_EndUser_Assignment"
+          $rul = $rules | where { $_.Id -eq "Notification_Admin_EndUser_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Admin",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": [
+        "$AlyaSecurityEmail"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Approver_Admin_Eligibility"
+          $rul = $rules | where { $_.Id -eq "Notification_Approver_Admin_Eligibility" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Approver",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": [
+        "$AlyaSecurityEmail"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Approver_Admin_Assignment"
+          $rul = $rules | where { $_.Id -eq "Notification_Approver_Admin_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Approver",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": [
+        "$AlyaSecurityEmail"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Approver_EndUser_Assignment"
+          $rul = $rules | where { $_.Id -eq "Notification_Approver_EndUser_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Approver",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": []
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Requestor_Admin_Eligibility"
+          $rul = $rules | where { $_.Id -eq "Notification_Requestor_Admin_Eligibility" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Requestor",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": [
+        "$AlyaSecurityEmail"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Requestor_Admin_Assignment"
+          $rul = $rules | where { $_.Id -eq "Notification_Requestor_Admin_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Requestor",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": [
+        "$AlyaSecurityEmail"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+          Write-Host "    Notification_Requestor_EndUser_Assignment"
+          $rul = $rules | where { $_.Id -eq "Notification_Requestor_EndUser_Assignment" }
+          #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
+          $json = @"
+{
+    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "notificationType": "Email",
+    "recipientType": "Requestor",
+    "notificationLevel": "All",
+    "isDefaultRecipientsEnabled": true,
+    "notificationRecipients": [
+        "$AlyaSecurityEmail"
+    ]
+}
+"@
+          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+
+      }
+  }
 }
 
 # Adding new role members
+Write-Host "Adding new role members" -ForegroundColor $CommandInfo
 foreach($roleName in $allRoles.Keys)
 {
-    Write-Host "Role '$($roleName)'" -ForegroundColor $CommandInfo
+    Write-Host "Role '$($roleName)'"
     if ($allRoles[$roleName])
     {
         #Don't touch
     }
     else
     {
-        # Configuring permanent roles
-        Write-Host "Configuring permanent MSOL role"
-        $newUsers = $permanentMSOLRoles[$roleName]
-
-        $msolRoleName = $roleName
-        if ($msolRoleName -eq "Global Administrator") { $msolRoleName = "Company Administrator" }
-        $role = Get-MsolRole -RoleName $msolRoleName
-        $actMembs = Get-MsolRoleMember -RoleObjectId $role.ObjectId
+        Write-Host "  Configuring permanent role"
+        $newUsers = $permanentRoles[$roleName]
+        $role = $allBuiltInRoles | where { $_.DisplayName -eq $roleName }
+        $actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 
         #Adding new members
         $newUsers | foreach {
             $newMemb = $_
             if ($newMemb)
             {
-                $found = $false
-                $actMembs | foreach {
-                    $actMemb = $_
-                    if ($newMemb -eq $actMemb.EmailAddress -or $newMemb -eq $actMemb.ObjectId)
-                    {
-                        $found = $true
-                    }
-                }
-                if (-Not $found)
-                {
-                    Write-Host "    adding user $($newMemb)" -ForegroundColor $CommandWarning
-                    Add-MsolRoleMember -RoleObjectId $role.ObjectId -RoleMemberEmailAddress $newMemb
-                }
-            }
-        }
-
-        Write-Host "Configuring permanent PIM role"
-        $newUsers = $permanentPIMRoles[$roleName]
-
-        $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq '$roleName'"
-        $actMembs = Get-AzureADMSRoleAssignment -Filter "RoleDefinitionId eq '$($role.Id)'"
-
-        #Adding new members
-        $newUsers | foreach {
-            $newMemb = $_
-            if ($newMemb)
-            {
-                $found = $false
-                $actMembs | foreach {
-                    $actMemb = $_
-                    if ($newMemb.ObjectId -eq $actMemb.PrincipalId)
-                    {
-                        $found = $true
-                    }
-                }
-                if (-Not $found)
+                $actMemb = $actMembs | where { $_.PrincipalId -eq $newMemb.Id}
+                if (-Not $actMemb)
                 {
                     Write-Host "    adding user $($newMemb.UserPrincipalName)" -ForegroundColor $CommandWarning
-                    New-AzureADMSRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $newMemb.ObjectId -DirectoryScopeId '/'
+                    $actMemb = New-MgRoleManagementDirectoryRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $newMemb.Id -DirectoryScopeId "/"
                 }
             }
         }
 
         if ($configurePIM)
         {
-            # Configuring eligible role settings
-            Write-Host "Configuring eligible role settings"
+            # Configuring eligible role
+            Write-Host "  Configuring eligible role"
+            $newUsers = $eligibleRoles[$roleName]
+            $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 
-            #checking PIM license
-            try
-            {
-                $role = Get-AzureADMSPrivilegedRoleDefinition -ProviderId "aadRoles" -ResourceId $AlyaTenantId -Filter "DisplayName eq '$($roleName)'"
-            }
-            catch
-            {
-                if ($_.Exception.ToString() -like "*AadPremiumLicenseRequired*")
+            #Adding new members
+            $newUsers | foreach {
+                $newMemb = $_
+                if ($newMemb)
                 {
-                    Write-Host "No PIM license available! Can't configure PIM roles."
-                    $configurePIM = $false
-                }
-                else
-                {
-                    throw $_.Exception
-                }
-            }
-
-            if ($configurePIM)
-            {
-                $newUsers = $eligibleRoles[$roleName]
-
-                #$settings = Get-AzureADMSPrivilegedRoleSetting -ProviderId "aadRoles" -Filter "ResourceId eq '$AlyaTenantId' and RoleDefinitionId eq '$($role.Id)'"
-                Write-Host "  Please update notification settings for role '$($roleName)'"
-                Write-Host "    Additional recipients '$($AlyaSecurityEmail)'"
-                Write-Host "    MS does not allow this per PowerShell :-("
-
-                # Configuring eligible roles
-                Write-Host "Configuring eligible role"
-                $actMembs = Get-AzureADMSPrivilegedRoleAssignment -ProviderId "aadRoles" -ResourceId $AlyaTenantId -Filter "RoleDefinitionId eq '$($role.Id)' and AssignmentState eq 'Eligible'"
-
-                #Removing inactivated members
-                $actMembs | foreach {
-                    $actMemb = $_
-                    if ($actMemb)
+                    $actMemb = $actMembs | where { $_.PrincipalId -eq $newMemb.Id}
+                    if (-Not $actMemb)
                     {
-                        if ((-Not $newUsers) -or ($newUsers.ObjectId -notcontains $actMemb.SubjectId))
-                        {
-                            $principal = Get-AzureADUser -objectId $actMemb.SubjectId
-                            Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
-                            $title    = 'Role Assigments'
-                            $question = 'Are you sure you want to remove the assignment?'
-                            $choices  = '&Yes', '&No'
-                            $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
-                            if ($decision -eq 0) {
-                                Write-Host "  Please remove assigment by hand"
-                                Write-Host "    MS does not allow this per PowerShell :-("
-                                #$req = Get-AzureADMSPrivilegedRoleAssignmentRequest -ProviderId "aadRoles" -Filter "ResourceId eq '$AlyaTenantId' and RoleDefinitionId eq '$($role.Id)' and AssignmentState eq 'Eligible' and SubjectId eq '$($actMemb.SubjectId)'"
-                                #Close-AzureADMSPrivilegedRoleAssignmentRequest -ProviderId "aadRoles" -Id $req.Id
-                                #Set-AzureADMSPrivilegedRoleAssignmentRequest -ProviderId "AzureResources" -Id $req.ResourceId -Reason "{'RequestorReason':'Revoked by Alya role script','AdminReason':'Revoked by Alya role script'}" -Decision "AdminDenied"
-                            }
-                        }
+                        Write-Host "    adding user $($newMemb.UserPrincipalName)" -ForegroundColor $CommandWarning
+                        $json = @"
+{
+    "principalId": "$($newMemb.Id)",
+    "roleDefinitionId": "$($role.Id)",
+    "justification": "Add eligible assignment from Alya PowerShell",
+    "directoryScopeId": "/",
+    "action": "adminAssign",
+    "scheduleInfo": {
+        "startDateTime": "$((Get-Date).Date.ToString("o"))",
+        "expiration": {}
+    }
+}
+"@
+                      New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99) | Out-Null
                     }
                 }
-
-                #Adding new members
-                $newUsers | foreach {
-                    $newMemb = $_
-                    if ($newMemb)
-                    {
-                        $found = $false
-                        $actMembs | foreach {
-                            $actMemb = $_
-                            if ($newMemb.ObjectId -eq $actMemb.SubjectId)
-                            {
-                                $found = $true
-                            }
-                        }
-                        if (-Not $found)
-                        {
-                            Write-Host "    adding user $($newMemb.UserPrincipalName)" -ForegroundColor $CommandWarning
-                            $schedule = New-Object Microsoft.Open.MSGraph.Model.AzureADMSPrivilegedSchedule
-                            $schedule.Type = "Once"
-                            $schedule.StartDateTime = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                            $schedule.endDateTime = $null
-                            Open-AzureADMSPrivilegedRoleAssignmentRequest -ProviderId "aadRoles" -ResourceId $AlyaTenantId `
-                                -RoleDefinitionId $role.Id -SubjectId $newMemb.ObjectId -Type "adminAdd" -AssignmentState "Eligible" `
-                                -Schedule $schedule -Reason "Assigned by Alya role script"
-                        }
-                    }
-                }
-
             }
         }
-
     }
 }
 
 # Removing role members
+Write-Host "Removing old role members" -ForegroundColor $CommandInfo
 foreach($roleName in $allRoles.Keys)
 {
-    Write-Host "Role '$($roleName)'" -ForegroundColor $CommandInfo
+    Write-Host "Role '$($roleName)'"
     if ($allRoles[$roleName])
     {
         #Don't touch
@@ -475,35 +577,132 @@ foreach($roleName in $allRoles.Keys)
     else
     {
         # Configuring permanent roles
-        Write-Host "Configuring permanent role"
-        $newUsers = $permanentPIMRoles[$roleName]
+        Write-Host "  Configuring permanent role"
+        $newUsers = $permanentRoles[$roleName]
 
-        $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq '$roleName'"
-        $actMembs = Get-AzureADMSRoleAssignment -Filter "RoleDefinitionId eq '$($role.Id)'"
+        $role = $allBuiltInRoles | where { $_.DisplayName -eq $roleName }
+        $actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
+        # TODO "roleDefinitionId eq '$($role.Id)' and principalOrganizationId eq '$AlyaTenantId'" not working
+        $actMembs = $actMembs | where { $_.principalOrganizationId -eq $AlyaTenantId }
+        if ($configurePIM)
+        {
+          $actEliMembs = Get-MgRoleManagementDirectoryRoleAssignmentSchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty "*"
+        }
 
         #Removing inactivated members
         $actMembs | foreach {
             $actMemb = $_
             if ($actMemb)
             {
-                if ((-Not $newUsers) -or ($newUsers.ObjectId -notcontains $actMemb.PrincipalId))
+                if ($configurePIM)
                 {
-                    $principal = Get-AzureADUser -objectId $actMemb.PrincipalId
-                    Write-Host "    Warning: this script does not check actual PIM assignments!" #TODO
-                    Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
+                  if (($actEliMembs | where { $_.PrincipalId -eq $actMemb.PrincipalId }).AssignmentType -eq "Activated") {
+                    Write-Host "  '$($actMemb.PrincipalId)' has active assignment"
+                    # TODO remove active assignment
+                    continue
+                  }
+                }
+                if ((-Not $newUsers) -or ($newUsers.Id -notcontains $actMemb.PrincipalId))
+                {
+                    $principal = $null
+                    try {
+                      $principal = Get-MgUser -UserId $actMemb.PrincipalId
+                      Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
+                    }
+                    catch {
+                      try {
+                        $principal = Get-MgGroup -GroupId $actMemb.PrincipalId
+                        Write-Host "    removing group $($principal.DisplayName)" -ForegroundColor $CommandError
+                      }
+                      catch {
+                        try {
+                          $principal = Get-MgServicePrincipal -ServicePrincipalId $actMemb.PrincipalId
+                          Write-Host "    removing service principal $($principal.DisplayName)" -ForegroundColor $CommandError
+                        }
+                        catch {
+                          Write-Error "Not able to find principal '$($actMemb.PrincipalId)'"
+                        }
+                      }
+                    }
 
-                    if ((Get-AzContext).Account.Id -eq $principal.UserPrincipalName)
+                    if ((Get-MgContext).Account -eq $principal.UserPrincipalName)
                     {
                         Write-Host "    you can't remove yourself!!!" -ForegroundColor $CommandError
                     }
                     else
                     {
-                        $title    = 'Role Assigments'
-                        $question = 'Are you sure you want to remove the assignment?'
-                        $choices  = '&Yes', '&No'
-                        $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+                        if ($askBeforeRoleRemoval) {
+                          $title = "Role Assigments"
+                          $question = "Are you sure you want to remove the assignment?"
+                          $choices = "&Yes", "&No"
+                          $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+                        }
+                        else {
+                          $decision = 0
+                        }
                         if ($decision -eq 0) {
-                            Remove-AzureADMSRoleAssignment -Id $actMemb.Id
+                            Remove-MgRoleManagementDirectoryRoleAssignment -UnifiedRoleAssignmentId $actMemb.Id
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($configurePIM)
+        {
+            # Configuring eligible role
+            Write-Host "  Configuring eligible role"
+            $newUsers = $eligibleRoles[$roleName]
+            $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
+
+            #Adding new members
+            $actMembs | foreach {
+                $actMemb = $_
+                if ($actMemb)
+                {
+                    if ((-Not $newUsers) -or ($newUsers.Id -notcontains $actMemb.PrincipalId))
+                    {
+                        $principal = $null
+                        try {
+                          $principal = Get-MgUser -UserId $actMemb.PrincipalId
+                          Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
+                        }
+                        catch {
+                          try {
+                            $principal = Get-MgGroup -GroupId $actMemb.PrincipalId
+                            Write-Host "    removing group $($principal.DisplayName)" -ForegroundColor $CommandError
+                          }
+                          catch {
+                            try {
+                              $principal = Get-MgServicePrincipal -ServicePrincipalId $actMemb.PrincipalId
+                              Write-Host "    removing service principal $($principal.DisplayName)" -ForegroundColor $CommandError
+                            }
+                            catch {
+                              Write-Error "Not able to find principal '$($actMemb.PrincipalId)'"
+                            }
+                          }
+                        }
+
+                        if ($askBeforeRoleRemoval) {
+                          $title = "Role Assigments"
+                          $question = "Are you sure you want to remove the eligible assignment?"
+                          $choices = "&Yes", "&No"
+                          $decision = $Host.UI.PromptForChoice($title, $question, $choices, 1)
+                        }
+                        else {
+                          $decision = 0
+                        }
+                        if ($decision -eq 0) {
+                            $json = @"
+{
+    "principalId": "$($actMemb.PrincipalId)",
+    "roleDefinitionId": "$($role.Id)",
+    "justification": "Remove eligible assignment from Alya PowerShell",
+    "directoryScopeId": "/",
+    "action": "adminRemove"
+}
+"@
+                            New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99) | Out-Null
                         }
                     }
                 }

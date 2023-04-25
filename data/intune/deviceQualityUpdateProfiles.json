@@ -1,11 +1,11 @@
 ﻿[{
         "Comment1": "=================================================",
-        "Comment2": "WIN10 Update Profiles",
+        "Comment2": "WIN Update Profiles",
         "Comment3": "================================================="
     }, {
         "@odata.type": "#microsoft.graph.windowsQualityUpdateProfile",
-		"displayName": "Win10 QualityUpdate Configuration",
-        "description": "Configures quality updates on win10 devices",
+		"displayName": "WIN QualityUpdate Configuration",
+        "description": "Configures quality updates on windows devices",
         "roleScopeTagIds": ["0"],
         "releaseDateDisplayName": null,
         "deployableContentDisplayName": null,

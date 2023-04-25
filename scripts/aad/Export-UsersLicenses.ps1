@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2022-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     13.10.2022 Konrad Brunner       Initial Version
+    21.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -52,43 +53,29 @@ if (-Not $outputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ImportExcel"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes "Directory.Read.All"
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Export-UsersLicenses | MSOL" -ForegroundColor $CommandInfo
+Write-Host "AAD | Export-UsersLicenses | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting token
-$apiToken = Get-AzAccessToken
-
-# Getting licenses
-Write-Host "Getting licenses" -ForegroundColor $CommandInfo
-$header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-$url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
-$response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-$availableLics = $response | ConvertFrom-Json
-
-$licNames = @()
-foreach($availableLic in $availableLics)
-{
-    $licNames += $availableLic.accountSkuId.Split(":")[1]
-}
+# Getting available licenses
+Write-Host "Getting available licenses" -ForegroundColor $CommandInfo
+$Skus = Get-MgSubscribedSku
 
 # Getting users
 Write-Host "Getting users" -ForegroundColor $CommandInfo
-$users = Get-MsolUser -All
+$users = Get-MgUser -All
 
 # Getting user licenses
 Write-Host "Getting user licenses" -ForegroundColor $CommandInfo
@@ -98,15 +85,25 @@ foreach($user in $users)
     Write-Host "  Exporting $($user.UserPrincipalName)"
     $psuser = New-Object PSObject
     Add-Member -InputObject $psuser -MemberType NoteProperty -Name "UserPrincipalName" -Value $user.UserPrincipalName
-    foreach($licName in $licNames)
+    foreach($Sku in $Skus)
     {
-        if ($user.Licenses | where { $_.accountSkuId -like "*$licName" })
+        $assignedLicense = $user.AssignedLicenses | where { $_.SkuId -like $Sku.SkuId }
+        if ($assignedLicense)
         {
-            Add-Member -InputObject $psuser -MemberType NoteProperty -Name $licName -Value "1"
+            $DisabledPlans = ""
+            foreach($plan in $assignedLicense.DisabledPlans)
+            {
+                $planName = ($Sku.ServicePlans | where { $_.ServicePlanId -eq $plan }).ServicePlanName
+                $DisabledPlans += $planName + ","
+            }
+            $DisabledPlans = $DisabledPlans.TrimEnd(",")
+            Add-Member -InputObject $psuser -MemberType NoteProperty -Name $Sku.SkuPartNumber -Value "1"
+            Add-Member -InputObject $psuser -MemberType NoteProperty -Name ($Sku.SkuPartNumber+"-DisabledPlans") -Value $DisabledPlans
         }
         else
         {
-            Add-Member -InputObject $psuser -MemberType NoteProperty -Name $licName -Value ""
+            Add-Member -InputObject $psuser -MemberType NoteProperty -Name $Sku.SkuPartNumber -Value ""
+            Add-Member -InputObject $psuser -MemberType NoteProperty -Name ($Sku.SkuPartNumber+"-DisabledPlans") -Value ""
         }
     }
     $psusers += $psuser

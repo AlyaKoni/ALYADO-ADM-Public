@@ -57,7 +57,7 @@ $VMDiskName = "$($VmToImage)osdisk"
 
 Write-Host "Please prepare first the source host ($VmToImage) like described in PrepareVmImage.pdf"
 Write-Host '  - Start a PowerShell as Administrator'
-Write-Host '  - Run command: & "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
+Write-Host '  - Run command: cmd /c "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
 Write-Host '  - Wait until the vm has stopped state'
 <#
 Bei Fehler Logdatei untersuchen:

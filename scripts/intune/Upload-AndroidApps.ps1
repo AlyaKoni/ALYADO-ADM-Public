@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     25.08.2021 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -53,12 +54,16 @@ if (-Not $appsAndroidFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-$token = Get-AdalAccessToken
+LoginTo-MgGraph -Scopes @(
+    "Directory.Read.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "DeviceManagementServiceConfig.Read.All",
+    "DeviceManagementConfiguration.Read.All",
+    "DeviceManagementApps.ReadWrite.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -68,70 +73,73 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Upload-AndroidApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
 # Main
 $appsAndroid = Get-Content -Path $appsAndroidFile -Raw -Encoding UTF8 | ConvertFrom-Json
 
 # Processing defined appsAndroid
+$hadError = $false
 foreach($androidApp in $appsAndroid)
 {
     if ($androidApp.displayName.EndsWith("_unused")) { continue }
     Write-Host "Configuring androidApp $($androidApp.displayName)" -ForegroundColor $CommandInfo
     
-    # Getting store data
-    $storeApp = Invoke-WebRequest -Uri $androidApp.informationUrl -Method Get
-    $img = $storeApp.Images | where { $_.class -eq "T75of sHb2Xb" }
-    if (-Not $img)
-    {
-        $img = $storeApp.Images | where { $_.alt -eq "Covergestaltung" }
-    }
-    if ($img -and $img.src)
-    {
-        $iconResponse = Invoke-WebRequest $img.src
-        $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
-        $iconType = $iconResponse.Headers["Content-Type"]
-        $androidApp.largeIcon = @{
-            "@odata.type" = "#microsoft.graph.mimeContent"
-            type = $iconType
-            value = $base64icon
+    try {
+        
+        # Getting store data
+        $storeApp = Invoke-WebRequest -Uri $androidApp.informationUrl -Method Get
+        $img = $storeApp.Images | where { $_.class -eq "T75of sHb2Xb" }
+        if (-Not $img)
+        {
+            $img = $storeApp.Images | where { $_.alt -eq "Covergestaltung" }
         }
+        if ($img -and $img.src)
+        {
+            $iconResponse = Invoke-WebRequest $img.src
+            $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
+            $iconType = ($iconResponse.Headers["Content-Type"] | Out-String).Trim()
+            $androidApp.largeIcon = @{
+                "@odata.type" = "#microsoft.graph.mimeContent"
+                type = $iconType
+                value = $base64icon
+            }
+        }
+
+        # Checking if androidApp exists
+        Write-Host "  Checking if androidApp exists"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($androidApp.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $actApp = (Get-MsGraphObject -Uri $uri).value
+        if (-Not $actApp.id)
+        {
+            if ($androidApp.'@odata.type' -eq "#microsoft.graph.androidManagedStoreApp")
+            {
+                Write-Warning "Upload of managed store apps aren't supported"
+                Write-Warning "Please create the app within the portal"
+            }
+            else
+            {
+                # Creating the androidApp
+                Write-Host "    App does not exist, creating"
+                $uri = "/beta/deviceAppManagement/mobileApps"
+                $actApp = Post-MsGraph -Uri $uri -Body ($androidApp | ConvertTo-Json -Depth 50)
+            }
+        }
+
+        <#
+        # Updating the androidApp
+        Write-Host "    Updating the androidApp"
+        $uri = "/beta/deviceAppManagement/mobileApps/$($actApp.id)"
+        $actApp = Patch-MsGraph -Uri $uri -Body ($androidApp | ConvertTo-Json -Depth 50)
+        #>
+    }
+    catch {
+        $hadError = $true
     }
 
-    # Checking if androidApp exists
-    Write-Host "  Checking if androidApp exists"
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($androidApp.displayName)
-    $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-    $actApp = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
-    if (-Not $actApp.id)
-    {
-        if ($androidApp.'@odata.type' -eq "#microsoft.graph.androidManagedStoreApp")
-        {
-            Write-Warning "Upload of managed store apps aren't supported"
-            Write-Warning "Please create the app within the portal"
-        }
-        else
-        {
-            # Creating the androidApp
-            Write-Host "    App does not exist, creating"
-            $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps"
-            $actApp = Post-MsGraph -AccessToken $token -Uri $uri -Body ($androidApp | ConvertTo-Json -Depth 50)
-        }
-    }
-
-    <#
-    # Updating the androidApp
-    Write-Host "    Updating the androidApp"
-    $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($actApp.id)"
-    $actApp = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($androidApp | ConvertTo-Json -Depth 50)
-    #>
+}
+if ($hadError)
+{
+    Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
 #Stopping Transscript

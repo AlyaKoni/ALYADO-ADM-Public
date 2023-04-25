@@ -492,8 +492,8 @@ if ($mediaEdition -ne $null)
 		if ($schemaVersion -lt $requiredSchemaVersion)
 		{
 			#repadmin /syncall /AdeP
-			& "$mediaShare\support\adprep\adprep.exe" /forestprep
-			& "$mediaShare\support\adprep\adprep.exe" /domainprep
+			cmd /c "$mediaShare\support\adprep\adprep.exe" /forestprep
+			cmd /c "$mediaShare\support\adprep\adprep.exe" /domainprep
 		}
 	}
 

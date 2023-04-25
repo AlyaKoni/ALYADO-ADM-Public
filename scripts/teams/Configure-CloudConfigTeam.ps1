@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2022-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     08.07.2022 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Switched to MgGraph module
 
 #>
 
@@ -45,20 +46,33 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-CloudConfigTeam-$($
 
 # Constants
 [string]$TitleAndGroupName = "$($AlyaCompanyNameShortM365.ToUpper())TM-ADM-CloudConfiguration"
-[string]$Description = "Team fÃ¼r die Dokumentation der Cloud Konfiguration."
+[string]$Description = "Team fuer die Dokumentation der Cloud Konfiguration."
 [string]$Visibility = "Private"
-[string[]]$Owners = @()
+[string[]]$Owners = $AlyaTeamsNewAdmins
 [string]$TeamPicturePath = $AlyaLogoUrlQuad
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Teams"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Teams
+LoginTo-MgGraph -Scopes @(
+    "Directory.ReadWrite.All",
+    "Group.ReadWrite.All",
+    "GroupMember.ReadWrite.All",
+    "TeamsApp.ReadWrite.All",
+    "TeamsAppInstallation.ReadWriteForTeam",
+    "TeamsAppInstallation.ReadWriteSelfForTeam",
+    "TeamSettings.ReadWrite.All",
+    "TeamsTab.ReadWrite.All",
+    "TeamMember.ReadWrite.All",
+    "ChannelMessage.Send"
+)
 
 # =============================================================
 # O365 stuff
@@ -75,14 +89,19 @@ if (-Not $Team)
 {
     Write-Warning "Team $TitleAndGroupName does not exist. Creating it now."
     $Team = New-Team -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
-    Start-Sleep -Seconds 60
+    Start-Sleep -Seconds 10
 }
 else
 {
     Write-Host "Team $TitleAndGroupName already exist. Updating."
     $null = Set-Team -GroupId $Team.GroupId -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
 }
-$Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+do
+{
+    $Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+    if (-Not $Team -or -Not $Team.GroupId) { Start-Sleep -Seconds 2 }
+}
+while (-Not $Team -or -Not $Team.GroupId)
 if ($TeamPicturePath)
 {
     if ($TeamPicturePath.StartsWith("http"))
@@ -101,7 +120,7 @@ if ($TeamPicturePath)
 
 # Getting groups
 Write-Host "Getting groups" -ForegroundColor $CommandInfo
-$allGroups = Get-AzADGroup
+$allGroups = Get-MgGroup -All
 
 # Checking team owners
 Write-Host "Checking team owners" -ForegroundColor $CommandInfo
@@ -111,7 +130,7 @@ foreach($memb in $Owners)
     if ($memb.IndexOf("@") -gt -1)
     {
         # is email
-        $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
+        $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
@@ -121,7 +140,7 @@ foreach($memb in $Owners)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
+                Get-MgGroupMember -GroupId $group.Id | foreach {
                     if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
                     {
                         $NewOwners += $_.UserPrincipalName
@@ -167,13 +186,13 @@ foreach($memb in $Owners)
         }
     }
 }
-$TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Owner
-foreach($memb in $NewOwners)
+$TOwners = Get-TeamUser -GroupId $Team.GroupId -Role Owner
+foreach($own in $NewOwners)
 {
     $fnd = $false
-    foreach($tmemb in $TMembers)
+    foreach($town in $TOwners)
     {
-        if ($memb -eq $tmemb.User)
+        if ($own -eq $town.User)
         {
             $fnd = $true
             break
@@ -181,10 +200,34 @@ foreach($memb in $NewOwners)
     }
     if (-Not $fnd)
     {
-        Write-Warning "Adding owner $memb to team."
-        Add-TeamUser -GroupId $Team.GroupId -Role Owner -User $memb
+        Write-Warning "Adding owner $own to team."
+        Add-TeamUser -GroupId $Team.GroupId -Role Owner -User $own
     }
 }
+
+# Checking team guest settings
+Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
+$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
+$Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+if (-Not $Setting)
+{
+    Write-Warning "Setting not yet created. Creating one based on template."
+    $Values = @()
+    foreach($dval in $SettingTemplate.Values) {
+	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+    }
+    $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+}
+$Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+if ($Value.Value -eq $true) {
+    Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
+} 
+else {
+    Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
+    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+}
+Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 #Stopping Transscript
 Stop-Transcript

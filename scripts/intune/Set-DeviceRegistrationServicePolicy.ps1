@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -45,106 +46,106 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServic
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-#Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-#Install-ModuleIfNotInstalled "AzureADPreview"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-#LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-#LoginTo-AD
-Connect-MsolService
-#LoginTo-MSOL
+LoginTo-MgGraph -Scopes @(
+    "Policy.ReadWrite.DeviceConfiguration",
+    "Directory.Read.All"
+)
 
 # =============================================================
 # Intune stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Set-DeviceRegistrationServicePolicy | MsOnline" -ForegroundColor $CommandInfo
+Write-Host "Intune | Set-DeviceRegistrationServicePolicy | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
 
 # Main
 Write-Host "Getting actual DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-Get-MsolDeviceRegistrationServicePolicy -ErrorAction SilentlyContinue
+$policy = Get-MgPolicyDeviceRegistrationPolicy
+$policy | ConvertTo-Json -Depth 99
 
 Write-Host "Setting DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-if ($AlyaAllowDeviceRegistration -and $AlyaAllowDeviceRegistration -ne "None" -and $AlyaAllowDeviceRegistration -ne "All")
+$allowedGroup = Get-MgGroup -Filter "DisplayName eq '$($AlyaDeviceAdminsGroupName)'"
+try
 {
-    $AlyaAllowDeviceRegistrationOption = "Selected"
-    $AlyaAllowedGroups = Get-MsolGroup -SearchString $AlyaAllowDeviceRegistration
-    #TODO Next part does not makes sense, may set cmdlt requires the user param filled!
-    $AlyaAllowedUsers = Get-MsolUser -UserPrincipalName $Context.Account.Id
+    if ($AlyaAllowDeviceRegistration -and $AlyaAllowDeviceRegistration -ne "None" -and $AlyaAllowDeviceRegistration -ne "All")
+    {
+        $body = @"
+    {
+        "Id": "deviceRegistrationPolicy",
+        "DisplayName": "Device Registration Policy",
+        "Description": "Tenant-wide policy that manages intial provisioning controls using quota restrictions, additional authentication and authorization checks",      
+        "MultiFactorAuthConfiguration": "1",
+        "UserDeviceQuota": 50,
+        "AzureAdJoin": {
+            "AllowedGroups": [`"$($allowedGroup.Id)`"],
+            "AllowedUsers": [],
+            "AppliesTo": "2",
+            "IsAdminConfigurable": true
+        },
+        "AzureAdRegistration": {
+            "AllowedGroups": [],
+            "AllowedUsers": [],
+            "AppliesTo": "1",
+            "IsAdminConfigurable": false
+        },
+        "localAdminPassword": {
+            "isEnabled": true
+        }
+    }
+"@
+        Put-MsGraph -Uri "/beta/policies/deviceRegistrationPolicy" -Body $body
+    }
+    else
+    {
+        $body = @"
+    {
+        "Id": "deviceRegistrationPolicy",
+        "DisplayName": "Device Registration Policy",
+        "Description": "Tenant-wide policy that manages intial provisioning controls using quota restrictions, additional authentication and authorization checks",      
+        "MultiFactorAuthConfiguration": "1",
+        "UserDeviceQuota": 50,
+        "AzureAdJoin": {
+            "AllowedGroups": [],
+            "AllowedUsers": [],
+            "AppliesTo": "1",
+            "IsAdminConfigurable": true
+        },
+        "AzureAdRegistration": {
+            "AllowedGroups": [],
+            "AllowedUsers": [],
+            "AppliesTo": "1",
+            "IsAdminConfigurable": false
+        },
+        "localAdminPassword": {
+            "isEnabled": true
+        }
+    }
+"@
+        Put-MsGraph -Uri "/beta/policies/deviceRegistrationPolicy" -Body $body
+    }
 }
-else
+catch
 {
-    $AlyaAllowDeviceRegistrationOption = "All"
+    Write-Error $_.Exception -ErrorAction Continue
+    Write-Host "We have actually an issue, configuring the DeviceRegistrationOption by script."
+    Write-Host "Please go to https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
+    Write-Host " - Select Join allowed for $AlyaDeviceAdminsGroupName"
+    Write-Host " - Enable MFA"
+    Write-Host " - 50 devices per user"
+    Write-Host " - Enable LAPS"
+    Write-Host " - Save"
+    start "https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
+    pause
 }
-
-if ($AlyaAllowDeviceRegistrationOption -eq "Selected")
-{
-    try
-    {
-        $sel = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::Selected
-        $non = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::None
-        Set-MsolDeviceRegistrationServicePolicy -MaximumDevicesPerUser 50
-        Set-MsolDeviceRegistrationServicePolicy -RequireMultiFactorAuth $true
-        Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $sel -AllowedToWorkplaceJoin $non -Users $AlyaAllowedUsers -Groups $AlyaAllowedGroups
-    }
-    catch
-    {
-        Write-Error $_.Exception -ErrorAction Continue
-        Write-Host "We have actually an issue, configuring the DeviceRegistrationOption by script."
-        Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
-        Write-Host " - Select 'Microsoft Intune'"
-        Write-Host " - Set for MDM and MAM 'Selected'"
-        Write-Host " - Add group '$AlyaAllowDeviceRegistration'"
-        Write-Host " - Save"
-        start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility
-        pause
-    }
-}
-else
-{
-    try
-    {
-        $all = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::All
-        $non = [Microsoft.Online.Administration.Automation.DeviceRegistrationServicePolicy+Scope]::None
-        Set-MsolDeviceRegistrationServicePolicy -MaximumDevicesPerUser 50
-        Set-MsolDeviceRegistrationServicePolicy -RequireMultiFactorAuth $true
-        Set-MsolDeviceRegistrationServicePolicy -AllowedToAzureAdJoin $all -AllowedToWorkplaceJoin $non
-    }
-    catch
-    {
-        Write-Error $_.Exception -ErrorAction Continue
-        Write-Host "We have actually an issue, configuring the DeviceRegistrationOption by script."
-        Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
-        Write-Host " - Select 'Microsoft Intune'"
-        Write-Host " - Set for MDM and MAM 'All'"
-        Write-Host " - Save"
-        start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility
-        pause
-    }
-}
-
-# Checking azure ad join rights
-Write-Host "Checking azure ad join rights" -ForegroundColor $CommandInfo
-Write-Host "Please allow only group $AlyaAllowDeviceRegistration to join devices"
-Write-Host "https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
-start "https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
-pause
 
 Write-Host "Getting new DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-Get-MsolDeviceRegistrationServicePolicy -ErrorAction SilentlyContinue
+$policy = Get-MgPolicyDeviceRegistrationPolicy
+$policy | ConvertTo-Json -Depth 99
 
 #Stopping Transscript
 Stop-Transcript

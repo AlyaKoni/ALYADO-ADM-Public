@@ -46,6 +46,13 @@ Param(
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\onedrive\Set-RetentionForDeletedUsers-$($AlyaTimeString).log" | Out-Null
 
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+
+# Logging in
+LoginTo-SPO
+
 # =============================================================
 # O365 stuff
 # =============================================================
@@ -54,9 +61,18 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "OneDrive | Set-RetentionForDeletedUsers | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Warning "So far there is no option to set the retention by script. Please set it in the admin center."
-Write-Host "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/settings/OrphanedPersonalSitesRetentionPeriod"
-start "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/settings/OrphanedPersonalSitesRetentionPeriod"
+# Checking ODFB retention
+Write-Host "Checking ODFB retention" -ForegroundColor $CommandInfo
+$TenantConfig = Get-SPOTenant
+if ($TenantConfig.OrphanedPersonalSitesRetentionPeriod -ne 365)
+{
+    Write-Warning "OrphanedPersonalSitesRetentionPeriod was set to $($TenantConfig.OrphanedPersonalSitesRetentionPeriod). Setting it now to 365"
+    Set-SPOTenant -OrphanedPersonalSitesRetentionPeriod 365
+}
+else
+{
+    Write-Host "ShowEveryoneClaim was already set to 365 days" -ForegroundColor $CommandSuccess
+}
 
 #Stopping Transscript
 Stop-Transcript

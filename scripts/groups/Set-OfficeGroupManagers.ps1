@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     28.02.2020 Konrad Brunner       Initial Version
+    22.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -48,94 +49,94 @@ $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdPublicStorage)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
     
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-LoginTo-Msol
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Groups | Set-OfficeGroupManagers | O365" -ForegroundColor $CommandInfo
+Write-Host "Groups | Set-OfficeGroupManagers | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Check group name
-if ([string]::IsNullOrEmpty($AlyaGroupManagerGroupName))
+if ([string]::IsNullOrEmpty($AlyaGroupManagerGroupName) -or $AlyaGroupManagerGroupName -eq "PleaseSpecify")
 {
     Write-Error "AlyaGroupManagerGroupName variable is not defined in 01_ConfigureEnv.ps1. Nothing to do!" -ErrorAction Continue
     exit
 }
 
-# Preparing usage guidelines
-Write-Host "Preparing usage guidelines" -ForegroundColor $CommandInfo
+# Checking group
+Write-Host "Checking group" -ForegroundColor $CommandInfo
+$Group = Get-MgGroup -Filter "DisplayName eq '$AlyaGroupManagerGroupName'"
+if (-Not $Group)
+{
+    throw "Group '$AlyaGroupManagerGroupName' not found"
+}
+
+# Checking usage guidelines for internals
+Write-Host "Checking usage guidelines for internals" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzung.html"))
 {
-    throw "Please prepare Office Groups usage guidelines: $AlyaData\azure\publicStorage\pages\OfficeGroupsNutzung.html"
+    throw "Please prepare Office Groups usage guidelines for internals: $AlyaData\azure\publicStorage\pages\OfficeGroupsNutzung.html"
 }
-if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExterne.html"))
-{
-    throw "Please prepare Office Groups usage guidelines for externals: $AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExterne.html"
+try {
+    $resp = $null
+    ($resp = Invoke-WebRequest -Method "Get" -Uri "https://$StorageAccountName.blob.core.windows.net/pages/OfficeGroupsNutzung.html") | Out-Null
+    if (-Not $resp -or $resp.StatusCode -ne 200) { throw }
 }
-
-# Configuring group setting
-Write-Host "Configuring group setting" -ForegroundColor $CommandInfo
-$MsolCompanySettings = Get-MsolCompanyInformation
-if ($MsolCompanySettings.UsersPermissionToCreateGroupsEnabled)
-{
-    Write-Warning "UsersPermissionToCreateGroupsEnabled was enabled. Disabling it now."
-    Set-MsolCompanySettings -UsersPermissionToCreateGroupsEnabled $false
+catch {
+    throw "Checking prepare Office Groups usage guidelines for internals: $AlyaData\azure\publicStorage\pages\OfficeGroupsNutzung.html and upload it"
 }
-else
-{
-    Write-Host "UsersPermissionToCreateGroupsEnabled was already disabled." -ForegroundColor $CommandSuccess
-}
-
-#TODO $AlyaGroupManagerMembers
-
-# Preparing security group
-Write-Host "Preparing security group" -ForegroundColor $CommandInfo
-$GrpManGrp = Get-MsolGroup -SearchString $AlyaGroupManagerGroupName
-if (-Not $GrpManGrp)
-{
-    Write-Warning "GroupManager group not found. Creating the GroupManager group $AlyaGroupManagerGroupName"
-    $GrpManGrp = New-MsolGroup -DisplayName $AlyaGroupManagerGroupName -Description "Members of this group can manage O365 groups"
-}
-
-# =============================================================
-# Azure stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Groups | Set-OfficeGroupManagers | Azure" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified" }
+$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
-    $Setting = $SettingTemplate.CreateDirectorySetting()
-    $Setting["UsageGuidelinesUrl"] = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
-    $Setting["EnableGroupCreation"] = $false
-    $Setting["GroupCreationAllowedGroupId"] = $GrpManGrp.ObjectId
-    New-AzureADDirectorySetting -DirectorySetting $Setting
+    $Values = @()
+    foreach($dval in $SettingTemplate.Values) {
+	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+    }
+    $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
 }
-else
-{
-    $Setting["UsageGuidelinesUrl"] = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
-    $Setting["EnableGroupCreation"] = $false
-    $Setting["GroupCreationAllowedGroupId"] = $GrpManGrp.ObjectId
-    Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
+
+$Value = $Setting.Values | where { $_.Name -eq "UsageGuidelinesUrl" }
+if ($Value.Value -eq "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html") {
+    Write-Host "Setting 'UsageGuidelinesUrl' was already set to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html'"
+} 
+else {
+    Write-Warning "Setting 'UsageGuidelinesUrl' was set to '$($Value.Value)' updating to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html'"
+    ($Setting.Values | where { $_.Name -eq "UsageGuidelinesUrl" }).Value = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
 }
+
+$Value = $Setting.Values | where { $_.Name -eq "EnableGroupCreation" }
+if ($Value.Value -eq $false) {
+    Write-Host "Setting 'EnableGroupCreation' was already set to '$false'"
+} 
+else {
+    Write-Warning "Setting 'EnableGroupCreation' was set to '$($Value.Value)' updating to '$false'"
+    ($Setting.Values | where { $_.Name -eq "EnableGroupCreation" }).Value = $false
+}
+
+$Value = $Setting.Values | where { $_.Name -eq "GroupCreationAllowedGroupId" }
+if ($Value.Value -eq $Group.Id) {
+    Write-Host "Setting 'GroupCreationAllowedGroupId' was already set to '$($Group.Id)'"
+} 
+else {
+    Write-Warning "Setting 'GroupCreationAllowedGroupId' was set to '$($Value.Value)' updating to '$($Group.Id)'"
+    ($Setting.Values | where { $_.Name -eq "GroupCreationAllowedGroupId" }).Value = $Group.Id
+}
+
+Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 #Stopping Transscript
 Stop-Transcript

@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     21.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -52,12 +53,16 @@ if (-Not $BuiltInAppsFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-$token = Get-AdalAccessToken
+LoginTo-MgGraph -Scopes @(
+    "Directory.Read.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "DeviceManagementServiceConfig.Read.All",
+    "DeviceManagementConfiguration.Read.All",
+    "DeviceManagementApps.ReadWrite.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -67,45 +72,48 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Upload-BuiltInApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
 # Main
 $builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
 
 # Processing defined builtInApps
+$hadError = $false
 foreach($builtInApp in $builtInApps)
 {
     if (-Not $builtInApp.displayName -or $builtInApp.displayName.EndsWith("_unused")) { continue }
     Write-Host "Configuring builtInApp $($builtInApp.displayName)" -ForegroundColor $CommandInfo
     
-    # Checking if builtInApp exists
-    Write-Host "  Checking if builtInApp exists"
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
-    $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-    $actApp = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
-    if (-Not $actApp.id)
-    {
-        # Creating the builtInApp
-        Write-Host "    App does not exist, creating"
-        $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps"
-        $actApp = Post-MsGraph -AccessToken $token -Uri $uri -Body ($builtInApp | ConvertTo-Json -Depth 50)
+    try {
+        
+        # Checking if builtInApp exists
+        Write-Host "  Checking if builtInApp exists"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $actApp = (Get-MsGraphObject -Uri $uri).value
+        if (-Not $actApp.id)
+        {
+            # Creating the builtInApp
+            Write-Host "    App does not exist, creating"
+            $uri = "/beta/deviceAppManagement/mobileApps"
+            $actApp = Post-MsGraph -Uri $uri -Body ($builtInApp | ConvertTo-Json -Depth 50)
+        }
+
+        # Updating the builtInApp
+        Write-Host "    Updating the builtInApp"
+        $builtInApp.PSObject.Properties.Remove("developer")
+        $builtInApp.PSObject.Properties.Remove("publisher")
+        $builtInApp.PSObject.Properties.Remove("owner")
+        $builtInApp.PSObject.Properties.Remove("channel")
+        $uri = "/beta/deviceAppManagement/mobileApps/$($actApp.id)"
+        $actApp = Patch-MsGraph -Uri $uri -Body ($builtInApp | ConvertTo-Json -Depth 50)
+    }
+    catch {
+        $hadError = $true
     }
 
-    # Updating the builtInApp
-    Write-Host "    Updating the builtInApp"
-    $builtInApp.PSObject.Properties.Remove("developer")
-    $builtInApp.PSObject.Properties.Remove("publisher")
-    $builtInApp.PSObject.Properties.Remove("owner")
-    $builtInApp.PSObject.Properties.Remove("channel")
-    $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($actApp.id)"
-    $actApp = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($builtInApp | ConvertTo-Json -Depth 50)
+}
+if ($hadError)
+{
+    Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
 #Stopping Transscript

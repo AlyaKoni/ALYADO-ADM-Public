@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     11.10.2020 Konrad Brunner       Initial Version
+    22.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -48,62 +49,87 @@ $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdPublicStorage)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
     
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
-# Azure stuff
+# Graph stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Groups | Set-OfficeGroupExternalSharingEnabled | Azure" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-OfficeGroupExternalSharingEnabled | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Configuring settings template
-Write-Host "Configuring settings template Group.Unified" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified" }
-if (-Not $Setting)
+# Checking usage guidelines for externals
+Write-Host "Checking usage guidelines for externals" -ForegroundColor $CommandInfo
+if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExterne.html"))
 {
-    Write-Warning "Setting not yet created. Creating one based on template."
-    $Setting = $SettingTemplate.CreateDirectorySetting()
-    $Setting["GuestUsageGuidelinesUrl"] = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
-    $Setting["AllowToAddGuests"] = $true
-    $Setting["AllowGuestsToAccessGroups"] = $true
-    $Setting["AllowGuestsToBeGroupOwner"] = $true
-    New-AzureADDirectorySetting -DirectorySetting $Setting
+    throw "Please prepare Office Groups usage guidelines for externals: $AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExterne.html"
 }
-else
-{
-    $Setting["GuestUsageGuidelinesUrl"] = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
-    $Setting["AllowToAddGuests"] = $true
-    $Setting["AllowGuestsToAccessGroups"] = $true
-    $Setting["AllowGuestsToBeGroupOwner"] = $true
-    Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
+try {
+    $resp = $null
+    ($resp = Invoke-WebRequest -Method "Get" -Uri "https://$StorageAccountName.blob.core.windows.net/pages/OfficeGroupsNutzungExterne.html") | Out-Null
+    if (-Not $resp -or $resp.StatusCode -ne 200) { throw }
+}
+catch {
+    throw "Checking prepare Office Groups usage guidelines for externals: $AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExterne.html and upload it"
 }
 
-<#
-Write-Host "Configuring settings template Group.Unified.Guest" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
-$Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified.Guest" }
+# Configuring settings template
+Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
+$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
-    $Setting = $SettingTemplate.CreateDirectorySetting()
-    $Setting["AllowToAddGuests"] = $false
-    New-AzureADDirectorySetting -DirectorySetting $Setting
+    $Values = @()
+    foreach($dval in $SettingTemplate.Values) {
+	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+    }
+    $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
 }
-else
-{
-    $Setting["AllowToAddGuests"] = $false
-    Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
+
+$Value = $Setting.Values | where { $_.Name -eq "GuestUsageGuidelinesUrl" }
+if ($Value.Value -eq "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html") {
+    Write-Host "Setting 'GuestUsageGuidelinesUrl' was already set to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html'"
+} 
+else {
+    Write-Warning "Setting 'GuestUsageGuidelinesUrl' was set to '$($Value.Value)' updating to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html'"
+    ($Setting.Values | where { $_.Name -eq "GuestUsageGuidelinesUrl" }).Value = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
 }
-#>
+
+$Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+if ($Value.Value -eq $true) {
+    Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
+} 
+else {
+    Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
+    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+}
+
+$Value = $Setting.Values | where { $_.Name -eq "AllowGuestsToBeGroupOwner" }
+if ($Value.Value -eq $true) {
+    Write-Host "Setting 'AllowGuestsToBeGroupOwner' was already set to '$true'"
+} 
+else {
+    Write-Warning "Setting 'AllowGuestsToBeGroupOwner' was set to '$($Value.Value)' updating to '$true'"
+    ($Setting.Values | where { $_.Name -eq "AllowGuestsToBeGroupOwner" }).Value = $true
+}
+
+$Value = $Setting.Values | where { $_.Name -eq "AllowGuestsToAccessGroups" }
+if ($Value.Value -eq $true) {
+    Write-Host "Setting 'AllowGuestsToAccessGroups' was already set to '$true'"
+} 
+else {
+    Write-Warning "Setting 'AllowGuestsToAccessGroups' was set to '$($Value.Value)' updating to '$true'"
+    ($Setting.Values | where { $_.Name -eq "AllowGuestsToAccessGroups" }).Value = $true
+}
+
+Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 #Stopping Transscript
 Stop-Transcript

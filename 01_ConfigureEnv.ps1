@@ -48,6 +48,7 @@
     20.12.2022 Konrad Brunner       LoginTo-DataGateway
     22.03.2023 Konrad Brunner       Check for existing PowerShell Modules in default module path
     10.04.2023 Konrad Brunner       Reuse connection in PnP Powershell
+	20.04.2023 Konrad Brunner		Added Mime Mapping function for PS7
 
 #>
 
@@ -65,6 +66,15 @@ $TitleColor = "Green"
 $MenuColor = "Magenta"
 $QuestionColor = "Magenta"
 
+<# ROOT PATHS #>
+$AlyaRoot = "$PSScriptRoot"
+$AlyaLogs = "$AlyaRoot\_logs"
+$AlyaTemp = "$AlyaRoot\_temp"
+$AlyaLocal = "$AlyaRoot\_local"
+$AlyaData = "$AlyaRoot\data"
+$AlyaScripts = "$AlyaRoot\scripts"
+$AlyaTools = "$AlyaRoot\tools"
+
 # Loading custom configuration
 Write-Host "Loading configuration" -ForegroundColor Cyan
 if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
@@ -81,14 +91,7 @@ $Global:ProgressPreference = "SilentlyContinue"
 $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
 $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 
-<# PATHS #>
-$AlyaRoot = "$PSScriptRoot"
-$AlyaLogs = "$AlyaRoot\_logs"
-$AlyaTemp = "$AlyaRoot\_temp"
-$AlyaLocal = "$AlyaRoot\_local"
-$AlyaData = "$AlyaRoot\data"
-$AlyaScripts = "$AlyaRoot\scripts"
-$AlyaTools = "$AlyaRoot\tools"
+<# OTHER PATHS #>
 $AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Modules"
 $AlyaDefaultModulePathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Modules"
 if (-Not $AlyaModulePath)
@@ -433,10 +436,7 @@ function Check-Module (
                         Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
                 }
             }
-            catch
-            {
-                
-            }
+            catch { }
         }
     }
     else
@@ -563,12 +563,24 @@ function Uninstall-ModuleIfInstalled (
         if ($exactVersion -ne "0.0.0.0")
         {
             Write-Host ('Uninstalling requested version v{1} from module {0}.' -f $moduleName, $exactVersion)
-            Uninstall-Module -Name $moduleName -RequiredVersion $exactVersion -Force
+            try {
+                Uninstall-Module -Name $moduleName -RequiredVersion $exactVersion -Force
+            }
+            catch {
+                $path = Split-Path (Split-Path $module.Path -Parent) -Parent
+                Remove-Item -Path $path -Recurse -Force
+            }
         }
         else
         {
             Write-Host ('Uninstalling all versions from module {0}.' -f $moduleName)
-            Uninstall-Module -Name $moduleName -AllVersions -Force
+            try {
+                Uninstall-Module -Name $moduleName -AllVersions -Force
+            }
+            catch {
+                $path = Split-Path (Split-Path $module.Path -Parent) -Parent
+                Remove-Item -Path $path -Recurse -Force
+            }
         }
     }
 }
@@ -791,11 +803,25 @@ function Install-ModuleIfNotInstalled (
         {
             Remove-Module -Name $moduleName
         }
-        Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking
+        if ($PSVersionTable.PSVersion.Major -ge 6 -and $moduleName -in @("Microsoft.Online.Sharepoint.PowerShell"))
+        {
+            Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking -NoClobber -SkipEditionCheck -Force
+        }
+        else
+        {
+            if ($PSVersionTable.PSVersion.Major -ge 6 -and $moduleName -in @("MSOnline", "AzureADPreview"))
+            {
+                Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking -UseWindowsPowershell
+            }
+            else
+            {
+                Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking
+            }
+        }
     }
-    if ($PSVersionTable.PSVersion.Major -ge 7 -and $moduleName -in @("Microsoft.Online.Sharepoint.PowerShell"))
+    if ($PSVersionTable.PSVersion.Major -ge 6 -and $moduleName -in @("Microsoft.Online.Sharepoint.PowerShell", "MSOnline", "AzureADPreview", "AIPService"))
     {
-        Import-Module -Name $moduleName -NoClobber -SkipEditionCheck -Force
+        Import-Module -Name $moduleName -UseWindowsPowershell
     }
 }
 #Install-ModuleIfNotInstalled "PowerShellGet"
@@ -894,6 +920,24 @@ function Install-ScriptIfNotInstalled (
     }
 }
 #Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
+function Get-MimeType()
+{
+    [CmdletBinding()]
+    Param(
+        [string]$Extension = $null
+    )
+    $mimeType = $null;
+    if ( $null -ne $extension )
+    {
+        $drive = Get-PSDrive "HKCR" -ErrorAction SilentlyContinue;
+        if ( $null -eq $drive )
+        {
+            $drive = New-PSDrive -Name "HKCR" -PSProvider Registry -Root HKEY_CLASSES_ROOT
+        }
+        $mimeType = (Get-ItemProperty "HKCR:$extension")."Content Type";
+    }
+    return $mimeType;
+}
 
 <# LOGIN FUNCTIONS #>
 function LogoutAllFrom-Az()
@@ -1097,6 +1141,25 @@ function LoginTo-MgGraph(
     {
         Connect-MGGraph -Scopes $Scopes -TenantId $AlyaTenantId
         $mgContext = Get-MgContext | where { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+        if (-Not $Global:AlyaMgContext)
+        {
+            #Required after a consent, otherwise you run into a login mess
+            # TODO check bug still there, way to check if consent happended
+            $mgContext = Disconnect-MgGraph
+            Connect-MGGraph -Scopes $Scopes -TenantId $AlyaTenantId
+            $mgContext = Get-MgContext | where { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+            $Global:AlyaMgContext = $mgContext
+        }
+
+        foreach($Scope in $Scopes)
+        {
+            if ($mgContext.Scopes -notcontains $Scope)
+            {
+                Write-Error "Was not able to get required scope $Scope" -ErrorAction Continue
+                $mgContext = $null
+                break
+            }
+        }
     }
 
     if (-Not $mgContext)
@@ -1105,6 +1168,8 @@ function LoginTo-MgGraph(
         Exit 1
     }
 }
+#LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
+#Get-MgUser -UserId "any@alyaconsulting.ch"
 
 function LoginTo-DataGateway()
 {
@@ -1270,11 +1335,9 @@ function LoginTo-MSStore()
 function LoginTo-Teams()
 {
     Write-Host "Login to Teams" -ForegroundColor $CommandInfo
-    try { $TenantDetail = Get-CsTeamsAcsFederationConfiguration } catch {} # Get-CsTenant directly needs very long time!
-    if ($TenantDetail)
-    {
-        $TenantDetail = Get-CsTenant -ErrorAction SilentlyContinue
-    }
+    $mod = Get-Module -Name MicrosoftTeams
+    if (-Not $mod) { Write-Host "  loading module MicrosoftTeams..." } # import of teams module requires long time!
+    try { $TenantDetail = Get-CsTenant -ErrorAction SilentlyContinue } catch {}
     if ($TenantDetail -and $TenantDetail.TenantId -ne $AlyaTenantId)
     {
         Write-Warning "Logged in to wrong teams tenant! Logging out now"
@@ -1511,11 +1574,44 @@ function LoginTo-PnP(
         else
         {
             if (-Not $Global:AlyaPnpAdminConnection) {
-                $AlyaConnection = Connect-PnPOnline -Url $TenantAdminUrl -ReturnConnection -Interactive
+                try {
+                    $AlyaConnection = Connect-PnPOnline -Url $TenantAdminUrl -ReturnConnection -Interactive
+                }
+                catch {
+                    Register-PnPManagementShellAccess -LaunchBrowser
+                    try {
+                        $AlyaConnection = Connect-PnPOnline -Url $TenantAdminUrl -ReturnConnection -Interactive
+                    }
+                    catch {
+                        Write-Warning "Launch in browser: SharePoint, PowerApps, PowerAutomate, Teams, OneDrive"
+                        Write-Warning "Try to register the PnP app with the following url in a browser. Check error messages in url."
+                        Register-PnPManagementShellAccess -ShowConsentUrl
+                        pause
+                        $AlyaConnection = Connect-PnPOnline -Url $TenantAdminUrl -ReturnConnection -Interactive
+                    }
+                }
                 $Global:AlyaPnpAdminConnection = $AlyaConnection
+                if (-Not $Connection)
+                {
+                    $Connection = $Global:AlyaPnpAdminConnection
+                }
             }
             if ($Url -ne $TenantAdminUrl) {
-                $AlyaConnection = Connect-PnPOnline -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                try {
+                    $AlyaConnection = Connect-PnPOnline -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                }
+                catch {
+                    Register-PnPManagementShellAccess -LaunchBrowser
+                    try {
+                        $AlyaConnection = Connect-PnPOnline -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                    }
+                    catch {
+                        Write-Warning "Try to register the PnP app with the following url in a browser. Check error messages in url."
+                        Register-PnPManagementShellAccess -ShowConsentUrl
+                        pause
+                        $AlyaConnection = Connect-PnPOnline -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                    }
+                }
             }
         }
         $CreatedConnection = $true
@@ -1645,8 +1741,8 @@ function Get-MsGraphToken
 function Get-MsGraph
 {
     param (
-        [parameter(Mandatory = $true)]
-        $AccessToken,
+        [parameter(Mandatory = $false)]
+        $AccessToken = $null,
         [parameter(Mandatory = $true)]
         $Uri
     )
@@ -1669,20 +1765,20 @@ function Get-MsGraphCollection
             'Authorization' = "Bearer $AccessToken"
         }
     }
-    else {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-        }
-    }
-    $QueryResults = @()
     $NextLink = $Uri
+    $QueryResults = [System.Collections.ArrayList]@()
     do {
         $Results = ""
-        $StatusCode = ""
+        $StatusCode = 200
         do {
             try {
-                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $NextLink -UseBasicParsing -Method "GET" -ContentType "application/json"
-                $StatusCode = $Results.StatusCode
+                if ($AccessToken) {
+                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $NextLink -UseBasicParsing -Method "GET" -ContentType "application/json"
+                    $StatusCode = $Results.StatusCode
+                }
+                else{
+                    $Results = Invoke-MgGraphRequest -Method "Get" -Uri $Uri
+                }
             } catch {
                 $StatusCode = $_.Exception.Response.StatusCode.value__
                 if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
@@ -1692,7 +1788,8 @@ function Get-MsGraphCollection
                 else {
                     if (-Not $DontThrowIfStatusEquals -or $StatusCode -ne $DontThrowIfStatusEquals)
                     {
-                        try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
+                        $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                        try { Write-Host ($_ | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                         throw
                     }
                 }
@@ -1725,16 +1822,17 @@ function Get-MsGraphObject
             'Authorization' = "Bearer $AccessToken"
         }
     }
-    else {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-        }
-    }
-    $Result = ""
-    $StatusCode = 200
     do {
+        $Result = ""
+        $StatusCode = 200
         try {
-            $Result = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "GET" -ContentType "application/json"
+            if ($AccessToken) {
+                $Result = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "GET" -ContentType "application/json"
+                $StatusCode = $Results.StatusCode
+            }
+            else{
+                $Result = Invoke-MgGraphRequest -Method "Get" -Uri $Uri
+            }
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
             if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
@@ -1744,7 +1842,8 @@ function Get-MsGraphObject
             else {
                 if (-Not $DontThrowIfStatusEquals -or $StatusCode -ne $DontThrowIfStatusEquals)
                 {
-                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
+                    $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                    try { Write-Host ($_ | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                     throw
                 }
             }
@@ -1767,17 +1866,17 @@ function Delete-MsGraphObject
             'Authorization' = "Bearer $AccessToken"
         }
     }
-    else {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-        }
-    }
     $Result = ""
     $StatusCode = ""
     do {
         try {
-            $Result = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -Method "DELETE"
-            $StatusCode = $Results.StatusCode
+            if ($AccessToken) {
+                $Result = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -Method "DELETE"
+                $StatusCode = $Results.StatusCode
+            }
+            else{
+                $Result = Invoke-MgGraphRequest -Method "Delete" -Uri $Uri
+            }
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
             if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
@@ -1785,12 +1884,63 @@ function Delete-MsGraphObject
                 Start-Sleep -Seconds 45
             }
             else {
-                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
+                $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                try { Write-Host ($_ | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                 throw
             }
         }
     } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
     return $Result
+}
+
+function SendBody-MsGraph
+{
+    param (
+        [parameter(Mandatory = $true)]
+        $Uri,
+        [parameter(Mandatory = $true)]
+        $Method,
+        [parameter(Mandatory = $false)]
+        $AccessToken = $null,
+        [parameter(Mandatory = $true)]
+        $Body
+    )
+    if ($AccessToken) {
+        $HeaderParams = @{
+            'Content-Type'  = "application/json"
+            'Authorization' = "Bearer $AccessToken"
+        }
+    }
+    $Results = ""
+    $StatusCode = ""
+    do {
+        try {
+            if ($AccessToken) {
+                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
+                $StatusCode = $Results.StatusCode
+                }
+            else{
+                $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
+            }
+        } catch {
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
+                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                Start-Sleep -Seconds 45
+            }
+            else {
+                $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                try { Write-Host ($_ | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
+                throw
+            }
+        }
+    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
+    if ($Results.value) {
+        $Results.value
+    }
+    else {
+        $Results
+    }
 }
 
 function Post-MsGraph
@@ -1803,41 +1953,7 @@ function Post-MsGraph
         [parameter(Mandatory = $true)]
         $Body
     )
-    if ($AccessToken) {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-            'Authorization' = "Bearer $AccessToken"
-        }
-    }
-    else {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-        }
-    }
-    $Results = ""
-    $StatusCode = ""
-    do {
-        try {
-            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json; charset=UTF-8" -Body $Body
-            $StatusCode = $Results.StatusCode
-        } catch {
-            $StatusCode = $_.Exception.Response.StatusCode.value__
-            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
-                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                Start-Sleep -Seconds 45
-            }
-            else {
-                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
-                throw
-            }
-        }
-    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
-    if ($Results.value) {
-        $Results.value
-    }
-    else {
-        $Results
-    }
+    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Post"
 }
 
 function Patch-MsGraph
@@ -1850,42 +1966,22 @@ function Patch-MsGraph
         [parameter(Mandatory = $true)]
         $Body
     )
-    if ($AccessToken) {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-            'Authorization' = "Bearer $AccessToken"
-        }
-    }
-    else {
-        $HeaderParams = @{
-            'Content-Type'  = "application/json"
-        }
-    }
-    $Results = ""
-    $StatusCode = ""
-    do {
-        try {
-            $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "PATCH" -ContentType "application/json; charset=UTF-8" -Body $Body
-            $StatusCode = $Results.StatusCode
-        } catch {
-            $StatusCode = $_.Exception.Response.StatusCode.value__
-            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
-                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                Start-Sleep -Seconds 45
-            }
-            else {
-                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
-                throw
-            }
-        }
-    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
-    if ($Results.value) {
-        $Results.value
-    }
-    else {
-        $Results
-    }
+    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Patch"
 }
+
+function Put-MsGraph
+{
+    param (
+        [parameter(Mandatory = $true)]
+        $Uri,
+        [parameter(Mandatory = $false)]
+        $AccessToken = $null,
+        [parameter(Mandatory = $true)]
+        $Body
+    )
+    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Put"
+}
+
 
 <# NETWORKING FUNCTIONS #>
 $AlyaWOctet = 16777216
@@ -1999,9 +2095,9 @@ function Get-GatewayNetworkAddress()
     {
         $g = $gwcidr
     }
-    for ($i = $n + 1; $i -lt $g + 1; $i++) 
-    { 
-        $ipi = $ipi + [math]::pow(2, 32 - $i) 
+    for ($i = $n + 1; $i -lt $g + 1; $i++) 
+    { 
+        $ipi = $ipi + [math]::pow(2, 32 - $i) 
     }
     INT64-toIP($ipi)
 }
@@ -2030,11 +2126,11 @@ function Split-NetworkAddressWithGateway()
     $networks += (INT64-toIP -int $NextIp) + "/$cidr"
     while($true)
     {
-        $NextIp = $NextIp + [math]::pow(2, 32 - $cidr)
+        $NextIp = $NextIp + [math]::pow(2, 32 - $cidr)
         if ($NextIp -ge $GwIp) { break }
         if ((IP-toINT64(Get-BroadcastAddress -netw $NextIp -cidr $cidr)) -gt $GwIp)
         { 
-            $NextIp = $NextIp - [math]::pow(2, 32 - ($cidr + 1))
+            $NextIp = $NextIp - [math]::pow(2, 32 - ($cidr + 1))
             $cidr = $cidr + 1
             continue
         }
@@ -2069,7 +2165,7 @@ function Get-LastIpInNetwork()
         $nwcidr = Mask-toCIDR -mask $nwmask
     }
     $EndIp = IP-toINT64($netw)
-    $EndIp += [math]::pow(2, 32 - $nwcidr)
+    $EndIp += [math]::pow(2, 32 - $nwcidr)
     $EndIp--
     return (INT64-toIP -int $EndIp)
 }
@@ -2094,11 +2190,11 @@ function Split-NetworkAddressWithoutGateway()
     $networks += (INT64-toIP -int $NextIp) + "/$cidr"
     while($true)
     {
-        $NextIp = $NextIp + [math]::pow(2, 32 - $cidr)
+        $NextIp = $NextIp + [math]::pow(2, 32 - $cidr)
         if ($NextIp -ge $GwIp) { break }
         if ((IP-toINT64(Get-BroadcastAddress -netw $NextIp -cidr $cidr)) -gt $GwIp)
         { 
-            $NextIp = $NextIp - [math]::pow(2, 32 - ($cidr + 1))
+            $NextIp = $NextIp - [math]::pow(2, 32 - ($cidr + 1))
             $cidr = $cidr + 1
             continue
         }

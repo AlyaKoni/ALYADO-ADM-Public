@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -33,12 +33,15 @@
     16.12.2020 Konrad Brunner       Fixed bug, not removing users from groups
     19.10.2021 Konrad Brunner       Changed LIC group names
     15.11.2021 Konrad Brunner       Fixed not existing group
+    21.04.2023 Konrad Brunner       Switched to Graph, removed AzureAdPreview
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$inputFile = $null #Defaults to "$AlyaData\aad\Lizenzen.xlsx"
+    [string]$inputFile = $null, #Defaults to "$AlyaData\aad\Lizenzen.xlsx"
+    [bool]$useDirectAssignment = $true,
+    [string]$groupsInputFileForDirectAssignment = $null #Defaults to "$AlyaData\aad\Gruppen.xlsx"
 )
 
 #Reading configuration
@@ -52,25 +55,30 @@ if (-Not $inputFile)
 {
     $inputFile = "$AlyaData\aad\Lizenzen.xlsx"
 }
+if (-Not $groupsInputFileForDirectAssignment)
+{
+    $groupsInputFileForDirectAssignment = "$AlyaData\aad\Gruppen.xlsx"
+}
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users.Actions"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Configure-Licenses | AZURE" -ForegroundColor $CommandInfo
+Write-Host "AAD | Configure-Licenses | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Reading input file
@@ -108,18 +116,7 @@ $licDefs | foreach {
                     $byGroup.$grpName.Users = @()
                 }
                 $byGroup.$grpName.Users += $licDef.Name
-                $exGrp = Get-AzureADMSGroup -SearchString $grpName
-                if ($exGrp.Count -gt 1)
-                {
-                    foreach($grp in $exGrp)
-                    {
-                        if ($grp.DisplayName -eq $secGroup.DisplayName)
-                        {
-                            $exGrp = $grp
-                            break
-                        }
-                    }
-                }
+                $exGrp = Get-MgGroup -Filter "DisplayName eq '$grpName'"
                 if (-Not $exGrp)
                 {
                     Write-Warning "  Please add missing group $($grpName)"
@@ -140,72 +137,132 @@ for ($i = 1; $i -le 40; $i++)
         if (-Not $byGroup.$grpName) {
             $byGroup.$grpName = @{}
             $byGroup.$grpName.Users = @()
-            $exGrp = Get-AzureADMSGroup -SearchString $grpName
-            if ($exGrp.Count -gt 1)
-            {
-                foreach($grp in $exGrp)
-                {
-                    if ($grp.DisplayName -eq $secGroup.DisplayName)
-                    {
-                        $exGrp = $grp
-                        break
-                    }
-                }
-            }
+            $exGrp = Get-MgGroup -Filter "DisplayName eq '$grpName'"
             $byGroup.$grpName.Id = $exGrp.Id
         }
     }
 }
 
-if ($fndMissingGroup)
+if (-Not $useDirectAssignment -and $fndMissingGroup)
 {
     Write-Error "Found missing groups. Please add them to data\ad\Groups.xlsx and run Configure-Groups.ps1" -ErrorAction Continue
     exit
 }
 
-# Syncing licensed users with license groups
-Write-Host "Syncing licensed users with license groups" -ForegroundColor $CommandInfo
-foreach ($group in $byGroup.Keys)
+if (-Not $useDirectAssignment)
 {
-    Write-Host "  Group '$group'"
-    if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
+
+    # Syncing licensed users with license groups
+    Write-Host "Syncing licensed users with license groups" -ForegroundColor $CommandInfo
+    foreach ($group in $byGroup.Keys)
     {
-        $members = Get-AzureADGroupMember -ObjectId $byGroup[$group].Id
-        foreach ($member in $members)
+        Write-Host "  Group '$group'"
+        if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
         {
-            if (-Not $byGroup[$group].Users.Contains($member.UserPrincipalName))
-            {
-                #Remove member
-                Write-Host "    Removing member '$($member.UserPrincipalName)'"
-                Remove-AzureADGroupMember -ObjectId $byGroup[$group].Id -MemberId $member.ObjectId
-            }
-        }
-        foreach ($user in $byGroup[$group].Users)
-        {
-            $fnd = $false
+            $members = Get-MgGroupMember -GroupId $byGroup[$group].Id
             foreach ($member in $members)
             {
-                if ($member.UserPrincipalName -eq $user)
+                if (-Not $byGroup[$group].Users.Contains($member.AdditionalProperties.userPrincipalName))
                 {
-                    $fnd = $true
+                    #Remove member
+                    Write-Host "    Removing member '$($member.AdditionalProperties.userPrincipalName)'"
+                    Remove-MgGroupMemberByRef -GroupId $byGroup[$group].Id -DirectoryObjectId $member.Id
                 }
             }
-            if (-Not $fnd)
+            foreach ($user in $byGroup[$group].Users)
             {
-                #Adding member
-                Write-Host "    Adding member '$user'"
-                $adUser = Get-AzureADUser -ObjectId $user -ErrorAction SilentlyContinue
-                if (-Not $adUser)
+                $fnd = $false
+                foreach ($member in $members)
                 {
-                    Write-Warning "     Member '$user' not found in AAD"
+                    if ($member.AdditionalProperties.userPrincipalName -eq $user)
+                    {
+                        $fnd = $true
+                    }
                 }
-                else
+                if (-Not $fnd)
                 {
-                    Add-AzureADGroupMember -ObjectId $byGroup[$group].Id -RefObjectId $adUser.ObjectId
+                    #Adding member
+                    Write-Host "    Adding member '$user'"
+                    $adUser = Get-MgUser -UserId $user
+                    if (-Not $adUser)
+                    {
+                        Write-Warning "     Member '$user' not found in AAD"
+                    }
+                    else
+                    {
+                        New-MgGroupMember -GroupId $byGroup[$group].Id -DirectoryObjectId $adUser.Id
+                    }
                 }
             }
         }
     }
+
+}
+else
+{
+    
+    # Reading groups file
+    Write-Host "Reading groups file from '$groupsInputFileForDirectAssignment" -ForegroundColor $CommandInfo
+    if (-Not (Test-Path $groupsInputFileForDirectAssignment))
+    {
+        throw "Groups file '$groupsInputFileForDirectAssignment' not found!"
+    }
+    $AllGroups = Import-Excel $groupsInputFileForDirectAssignment -WorksheetName "Gruppen" -ErrorAction Stop
+
+    # Syncing licensed users with direct access
+    Write-Host "Syncing licensed users with direct access" -ForegroundColor $CommandInfo
+
+    $assignedLicenses = @{}
+    foreach ($group in $byGroup.Keys)
+    {
+        Write-Host "  Group '$group'"
+        if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
+        {
+            $groupDef = $AllGroups | where { $_.DisplayName -eq $group }
+            foreach ($user in $byGroup[$group].Users)
+            {
+                Write-Host "    User '$user'"
+                $adUser = Get-MgUser -UserId $user
+                if ($null -eq $assignedLicenses."$($user)")
+                {
+                    $assignedLicenses."$($user)" = [System.Collections.ArrayList]@()
+                }
+                $userLics = $assignedLicenses."$($user)"
+                $licDets = Get-MgUserLicenseDetail -UserId $adUser.Id
+                foreach($lic in $groupDef.Licenses)
+                {
+                    if (-Not $userLics.Contains($lic)) { $userLics.Add($lic) | Out-Null }
+                    if ($licDets.SkuPartNumber -notcontains $lic)
+                    {
+                        Write-Host "      Adding license '$lic'"
+                        $Sku = Get-MgSubscribedSku -All | where { $_.SkuPartNumber -eq $lic }
+                        Set-MgUserLicense -UserId $adUser.Id -AddLicenses @{SkuId = $Sku.SkuId} -RemoveLicenses @() | Out-Null
+                    }
+                }
+            }
+        }
+    }
+
+    # Removing not configured licenses
+    Write-Host "Removing not configured licenses" -ForegroundColor $CommandInfo
+
+    foreach ($assLic in $assignedLicenses.GetEnumerator())
+    {
+        $adUser = Get-MgUser -UserId $assLic.Name
+        Write-Host "  User '$($assLic.Name)'"
+        $userLics = $assignedLicenses."$($assLic.Name)"
+        $licDets = Get-MgUserLicenseDetail -UserId $adUser.Id
+        foreach($lic in $licDets.SkuPartNumber)
+        {
+            if (-Not $userLics.Contains($lic))
+            {
+                Write-Host "    Removing license '$lic'"
+                $Sku = Get-MgSubscribedSku -All | where { $_.SkuPartNumber -eq $lic }
+                Set-MgUserLicense -UserId $adUser.Id -AddLicenses @() -RemoveLicenses @($Sku.SkuId) | Out-Null
+            }
+        }
+    }
+
 }
 
 #Stopping Transscript

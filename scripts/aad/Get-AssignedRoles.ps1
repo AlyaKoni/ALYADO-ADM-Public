@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,11 +30,13 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     12.07.2020 Konrad Brunner       Initial Version
+    21.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
 [CmdletBinding()]
 Param(
+    [bool]$configurePIM = $true
 )
 
 #Reading configuration
@@ -45,93 +47,90 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AssignedRoles-$($AlyaTimeSt
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureADPreview"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-LoginTo-Msol
+LoginTo-MgGraph -Scopes "Directory.Read.All"
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Get-AssignedRoles | AZURE" -ForegroundColor $CommandInfo
+Write-Host "AAD | Get-AssignedRoles | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting all built in roles
 Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
-$allBuiltInPIMRoles = Get-AzureADMSRoleDefinition
-$allBuiltinMsolRoles = Get-MsolRole
+$roleDefinitions = Get-MgRoleManagementDirectoryRoleDefinition -All
 
-# Getting msol role members
-Write-Host "Getting msol role members" -ForegroundColor $CommandInfo
-foreach ($role in $allBuiltinMsolRoles)
+# Getting  permanent role members
+Write-Host "Getting  permanent role members" -ForegroundColor $CommandInfo
+$assignedRoles = Get-MgRoleManagementDirectoryRoleAssignment -All -ExpandProperty Principal
+foreach ($roleDefinition in $roleDefinitions)
 {
-    $actMembs = Get-MsolRoleMember -RoleObjectId $role.ObjectId
+    $actMembs = $assignedRoles | where { $_.RoleDefinitionId -eq $roleDefinition.Id }
     if ($actMembs -and $actMembs.Count -gt 0)
     {
-        Write-Host "Role: $($role.Name)"
+        Write-Host "Role: $($roleDefinition.DisplayName)"
         foreach ($actMemb in $actMembs)
         {
-            try
+            $memberName = $actMemb.PrincipalId
+            switch ($actMemb.Principal.AdditionalProperties.'@odata.type')
             {
-                $user = Get-AzureADUser -ObjectId $actMemb.ObjectId
-                Write-Host "  Member: $($user.UserPrincipalName)"
-            } catch
-            {
-                Write-Warning $_.Exception
+                "#microsoft.graph.user" {
+                    $memberName = "USR:"+$actMemb.Principal.AdditionalProperties.userPrincipalName
+                }
+                "#microsoft.graph.servicePrincipal" {
+                    $memberName = "APP:"+$actMemb.Principal.AdditionalProperties.appId
+                }
+                "#microsoft.graph.group" {
+                    $memberName = "GRP:"+$memberName
+                }
             }
+            Write-Host "  Member: $memberName"
         }
     }
 }
 
-# Getting pim permanent role members
-Write-Host "Getting pim permanent role members" -ForegroundColor $CommandInfo
-foreach ($role in $allBuiltInPIMRoles)
+if ($configurePIM)
 {
-    try
+
+    # Getting  eligable role members
+    Write-Host "Getting eligable role members" -ForegroundColor $CommandInfo
+    $assignedRoles = @()
+    try {
+        $assignedRoles = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
+    }
+    catch {}
+    foreach ($roleDefinition in $roleDefinitions)
     {
-        $actMembs = Get-AzureADMSRoleAssignment -Filter "RoleDefinitionId eq '$($role.Id)'"
+        $actMembs = $assignedRoles | where { $_.RoleDefinitionId -eq $roleDefinition.Id }
         if ($actMembs -and $actMembs.Count -gt 0)
         {
-            Write-Host "Role: $($role.DisplayName)"
+            Write-Host "Role: $($roleDefinition.DisplayName)"
             foreach ($actMemb in $actMembs)
             {
-                $user = Get-AzureADUser -ObjectId $actMemb.PrincipalId
-                Write-Host "  Member: $($user.UserPrincipalName)"
+                $memberName = $actMemb.PrincipalId
+                switch ($actMemb.Principal.AdditionalProperties.'@odata.type')
+                {
+                    "#microsoft.graph.user" {
+                        $memberName = "USR:"+$actMemb.Principal.AdditionalProperties.userPrincipalName
+                    }
+                    "#microsoft.graph.servicePrincipal" {
+                        $memberName = "APP:"+$actMemb.Principal.AdditionalProperties.appId
+                    }
+                    "#microsoft.graph.group" {
+                        $memberName = "GRP:"+$memberName
+                    }
+                }
+                Write-Host "  Member: $memberName"
             }
         }
-    } catch {}
-}
+    }
 
-# Getting pim eligable role members
-Write-Host "Getting pim eligable role members" -ForegroundColor $CommandInfo
-foreach ($role in $allBuiltInPIMRoles)
-{
-    try
-    {
-        $role = Get-AzureADMSPrivilegedRoleDefinition -ProviderId "aadRoles" -ResourceId $AlyaTenantId -Filter "DisplayName eq '$($role.DisplayName)'"
-    }
-    catch
-    {
-        break
-    }
-    $actMembs = Get-AzureADMSPrivilegedRoleAssignment -ProviderId "aadRoles" -ResourceId $AlyaTenantId -Filter "RoleDefinitionId eq '$($role.Id)' and AssignmentState eq 'Eligible'"
-    if ($actMembs -and $actMembs.Count -gt 0)
-    {
-        Write-Host "Role: $($role.DisplayName)"
-        foreach ($actMemb in $actMembs)
-        {
-            $user = Get-AzureADUser -ObjectId $actMemb.PrincipalId
-            Write-Host "  Member: $($user.UserPrincipalName)"
-        }
-    }
 }
 
 #Stopping Transscript

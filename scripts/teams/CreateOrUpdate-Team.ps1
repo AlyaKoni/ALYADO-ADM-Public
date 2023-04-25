@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.08.2021 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Switched to MgGraph module
 
 #>
 
@@ -66,15 +67,26 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\CreateOrUpdate-Team-$($AlyaTi
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Teams"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
 LoginTo-Teams
+LoginTo-MgGraph -Scopes @(
+    "Directory.ReadWrite.All",
+    "Group.ReadWrite.All",
+    "GroupMember.ReadWrite.All",
+    "TeamsApp.ReadWrite.All",
+    "TeamsAppInstallation.ReadWriteForTeam",
+    "TeamsAppInstallation.ReadWriteSelfForTeam",
+    "TeamSettings.ReadWrite.All",
+    "TeamsTab.ReadWrite.All",
+    "TeamMember.ReadWrite.All",
+    "ChannelMessage.Send"
+)
 
 # =============================================================
 # O365 stuff
@@ -160,7 +172,7 @@ foreach($AddChannel in $AddChannels)
 
 # Getting groups
 Write-Host "Getting groups" -ForegroundColor $CommandInfo
-$allGroups = Get-AzADGroup
+$allGroups = Get-MgGroup -All
 
 # Checking team owners
 Write-Host "Checking team owners" -ForegroundColor $CommandInfo
@@ -170,7 +182,7 @@ foreach($memb in $Owners)
     if ($memb.IndexOf("@") -gt -1)
     {
         # is email
-        $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
+        $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
@@ -180,10 +192,10 @@ foreach($memb in $Owners)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                Get-MgGroupMember -GroupId $group.Id | foreach {
+                    if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
-                        $NewOwners += $_.UserPrincipalName
+                        $NewOwners += $_.AdditionalProperties.userPrincipalName
                     }
                 }
             }
@@ -199,7 +211,7 @@ foreach($memb in $Owners)
     else
     {
         # is guid
-        $user = Get-AzADUser -ObjectId $memb -ErrorAction SilentlyContinue
+        $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | where { $_.Id -eq $memb }
@@ -209,10 +221,10 @@ foreach($memb in $Owners)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                Get-MgGroupMember -GroupId $group.Id | foreach {
+                    if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
-                        $NewOwners += $_.UserPrincipalName
+                        $NewOwners += $_.AdditionalProperties.userPrincipalName
                     }
                 }
             }
@@ -264,7 +276,7 @@ foreach($memb in $Members)
     if ($memb.IndexOf("@") -gt -1)
     {
         # is email
-        $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
+        $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
@@ -274,10 +286,10 @@ foreach($memb in $Members)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.UserPrincipalName)
+                Get-MgGroupMember -GroupId $group.Id | foreach {
+                    if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
-                        $NewMembers += $_.UserPrincipalName
+                        $NewMembers += $_.AdditionalProperties.userPrincipalName
                     }
                 }
             }
@@ -293,7 +305,7 @@ foreach($memb in $Members)
     else
     {
         # is guid
-        $user = Get-AzADUser -ObjectId $memb -ErrorAction SilentlyContinue
+        $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | where { $_.Id -eq $memb }
@@ -303,10 +315,10 @@ foreach($memb in $Members)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.UserPrincipalName)
+                Get-MgGroupMember -GroupId $group.Id | foreach {
+                    if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
-                        $NewMembers += $_.UserPrincipalName
+                        $NewMembers += $_.AdditionalProperties.userPrincipalName
                     }
                 }
             }
@@ -356,6 +368,29 @@ if ($OwerwriteMembersOwnersGuests)
 # Checking team guests
 if ($AllowToAddGuests)
 {
+    Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
+    $SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
+    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+    if (-Not $Setting)
+    {
+        Write-Warning "Setting not yet created. Creating one based on template."
+        $Values = @()
+        foreach($dval in $SettingTemplate.Values) {
+            $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+        }
+        $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+        $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+    }
+    $Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+    if ($Value.Value -eq $true) {
+        Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
+    } 
+    else {
+        Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
+        ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+    }
+    Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
+
     Write-Host "Checking team guests" -ForegroundColor $CommandInfo
     $NewGuests = @()
     foreach($memb in $Guests)
@@ -363,7 +398,7 @@ if ($AllowToAddGuests)
         if ($memb.IndexOf("@") -gt -1)
         {
             # is email
-            $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
+            $user = Get-MgUser -UserId $memb
             if (-Not $user)
             {
                 $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
@@ -373,9 +408,10 @@ if ($AllowToAddGuests)
                 }
                 else
                 {
-                    $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                        if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.UserPrincipalName)
+                    Get-MgGroupMember -GroupId $group.Id | foreach {
+                        if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.AdditionalProperties.userPrincipalName)
                         {
+                            throw "TODO"
                             $NewGuests += $_.Mail
                         }
                     }
@@ -385,6 +421,7 @@ if ($AllowToAddGuests)
             {
                 if ($NewGuests -notcontains $user.Mail)
                 {
+                    throw "TODO"
                     $NewGuests += $user.Mail
                 }
             }
@@ -392,7 +429,7 @@ if ($AllowToAddGuests)
         else
         {
             # is guid
-            $user = Get-AzADUser -ObjectId $memb -ErrorAction SilentlyContinue
+            $user = Get-MgUser -UserId $memb
             if (-Not $user)
             {
                 $group = $allGroups | where { $_.Id -eq $memb }
@@ -402,9 +439,10 @@ if ($AllowToAddGuests)
                 }
                 else
                 {
-                    $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                        if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.UserPrincipalName)
+                    Get-MgGroupMember -GroupId $group.Id | foreach {
+                        if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.AdditionalProperties.userPrincipalName)
                         {
+                            throw "TODO"
                             $NewGuests += $_.Mail
                         }
                     }
@@ -414,6 +452,7 @@ if ($AllowToAddGuests)
             {
                 if ($NewGuests -notcontains $user.Mail)
                 {
+                    throw "TODO"
                     $NewGuests += $user.Mail
                 }
             }
@@ -458,37 +497,32 @@ if ($AllowToAddGuests)
             }
         }
     }
-
-    Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-    $settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
-    if ($settings)
-    {
-        if ($settings["AllowToAddGuests"] -eq $false)
-        {
-            Write-Warning "Existing team guest settings changed to allow Guests"
-            $settings["AllowToAddGuests"] = $true
-            $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -Id $settings.Id -DirectorySetting $settings
-        }
-    }
 }
 else
 {
     Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-    $settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
-    if (-Not $settings)
+    $SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
+    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+    if (-Not $Setting)
     {
-        Write-Warning "Created new team guest settings to disable Guests"
-        $template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "Group.Unified.Guest"}
-        $settingsCopy = $template.CreateDirectorySetting()
-        $settingsCopy["AllowToAddGuests"] = $false
-        $settings = New-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -DirectorySetting $settingsCopy
+        Write-Warning "Setting not yet created. Creating one based on template."
+        $Values = @()
+        foreach($dval in $SettingTemplate.Values) {
+            $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+        }
+        $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+        $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
     }
-    if ($settings["AllowToAddGuests"] -eq $true)
-    {
-        Write-Warning "Existing team guest settings changed to disable Guests"
-        $settings["AllowToAddGuests"] = $false
-        $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -Id $settings.Id -DirectorySetting $settings
+    $Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+    if ($Value.Value -eq $false) {
+        Write-Host "Setting 'AllowToAddGuests' was already set to '$false'"
+    } 
+    else {
+        Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$false'"
+        ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $false
     }
+    Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
+
 }
 
 # Setting logo

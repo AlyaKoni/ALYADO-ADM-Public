@@ -45,12 +45,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-LobbyForExternals-$
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Teams
 
 # =============================================================

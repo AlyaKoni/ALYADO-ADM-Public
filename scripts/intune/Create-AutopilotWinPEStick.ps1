@@ -88,7 +88,7 @@ if (-Not (Test-Path "C:\AlyaADK\Assessment and Deployment Kit"))
     if (-Not (Test-Path "$($AlyaTemp)\ADKoffline"))
     {
         Write-Host "Downloading adk layout"
-        & "$($AlyaTools)\ADK\adksetup.exe" /quiet /layout "$($AlyaTemp)\ADKoffline"
+        cmd /c "$($AlyaTools)\ADK\adksetup.exe" /quiet /layout "$($AlyaTemp)\ADKoffline"
         do
         {
             Start-Sleep -Seconds 5
@@ -98,7 +98,7 @@ if (-Not (Test-Path "C:\AlyaADK\Assessment and Deployment Kit"))
 
     Write-Host "Installing ADK"
     Push-Location -Path "$($AlyaTemp)\ADKoffline"
-    & ".\adksetup.exe" /quiet /installpath "C:\AlyaADK" /features OptionId.DeploymentTools
+    cmd /c ".\adksetup.exe" /quiet /installpath "C:\AlyaADK" /features OptionId.DeploymentTools
     do
     {
         Start-Sleep -Seconds 5
@@ -126,7 +126,7 @@ if (-Not (Test-Path "C:\AlyaADK\Assessment and Deployment Kit\Windows Preinstall
     if (-Not (Test-Path "$($AlyaTemp)\ADKPEoffline"))
     {
         Write-Host "Downloading adk WinPE layout"
-        & "$($AlyaTools)\ADK\adkwinpesetup.exe" /quiet /layout "$($AlyaTemp)\ADKPEoffline"
+        cmd /c "$($AlyaTools)\ADK\adkwinpesetup.exe" /quiet /layout "$($AlyaTemp)\ADKPEoffline"
         do
         {
             Start-Sleep -Seconds 5
@@ -136,7 +136,7 @@ if (-Not (Test-Path "C:\AlyaADK\Assessment and Deployment Kit\Windows Preinstall
 
     Write-Host "Installing WinPE"
     Push-Location -Path "$($AlyaTemp)\ADKPEoffline"
-    & ".\adkwinpesetup.exe" /quiet /installpath "C:\AlyaADK" /features OptionId.WindowsPreinstallationEnvironment
+    cmd /c ".\adkwinpesetup.exe" /quiet /installpath "C:\AlyaADK" /features OptionId.WindowsPreinstallationEnvironment
     do
     {
         Start-Sleep -Seconds 5

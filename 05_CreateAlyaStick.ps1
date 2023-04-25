@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -31,6 +31,8 @@
     ---------- -------------------- ----------------------------
     24.10.2020 Konrad Brunner       Initial version
     05.10.2021 Konrad Brunner       Incorporated AlyaModulePath
+    20.04.2023 Konrad Brunner       New locations on stick to minimize space
+
 #>
 
 [CmdletBinding()]
@@ -44,9 +46,9 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\05_CreateAlyaStick-$($AlyaTimeString).log" | Out-Null
 
 #Main
-. $PSScriptRoot\04_PrepareModulesAndPackages
+. $PSScriptRoot\04_PrepareModulesAndPackages.ps1
 
-Write-Host "Select stick to be used" -ForegroundColor $CommandInfo
+#Stick selection
 $disk = $null
 $usbDisk = Get-Disk | Where-Object BusType -eq USB
 switch (($usbDisk | Measure-Object | Select-Object Count).Count)
@@ -55,25 +57,29 @@ switch (($usbDisk | Measure-Object | Select-Object Count).Count)
         $disk = $usbDisk[0]
     }
     {$_ -gt 1} {
+        Write-Host "Select stick to be used" -ForegroundColor $CommandInfo
         $disk = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to use' -OutputMode Single
     }
 }
 if ($disk)
 {
-    $vol = $disk | Get-Partition | Get-Volume
-    $alyaDir = "$($vol.DriveLetter):\Alya"
+    #Volume selection
+    $vol = $disk | Get-Partition | Get-Volume | where { -Not [string]::IsNullOrEmpty($_.DriveLetter) }
+    $alyaDir = "$($vol.DriveLetter):\Alya$AlyaCompanyNameShortM365"
     if (-Not (Test-Path $alyaDir))
     {
         New-Item -Path $alyaDir -ItemType Directory -Force | Out-Null
     }
 
+    #Copy alya dir
     cmd /c robocopy "$($AlyaRoot)" "$($alyaDir)" /MIR /XD "%SourceDir%\scripts\solutions" /XD .git /XD PublishProfiles /XD .vs /XD .vscode /XD _temp /XD _logs
 
-    if (-Not (Test-Path "$alyaDir\tools"))
+    #Copy modules
+    if (-Not (Test-Path "$($vol.DriveLetter):\Tools\WindowsPowerShell"))
     {
-        New-Item -Path "$alyaDir\tools" -ItemType Directory -Force | Out-Null
+        New-Item -Path "$($vol.DriveLetter):\Tools\WindowsPowerShell" -ItemType Directory -Force | Out-Null
     }
-    $to = "$alyaDir\tools\WindowsPowerShell"
+    $to = "$($vol.DriveLetter):\Tools\WindowsPowerShell"
 
     if ($AlyaModulePath -eq $AlyaDefaultModulePath)
     {
@@ -93,8 +99,20 @@ if ($disk)
     }
     cmd /c robocopy "$($from)" "$($to)" /MIR
     $scriptPathFrom = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Scripts"
-    $scriptPathTo = "$alyaDir\tools\WindowsPowerShell\Scripts"
+    $scriptPathTo = "$($vol.DriveLetter):\Tools\WindowsPowerShell\Scripts"
     cmd /c xcopy /d /e /v /i /h /r /k /y "$($scriptPathFrom)" "$($scriptPathTo)"
+
+    #Configure AlyaModulePath
+    $localDir = "$($vol.DriveLetter):\Alya$AlyaCompanyNameShortM365\_local"
+    if (-Not (Test-Path $localDir))
+    {
+        New-Item -Path $localDir -ItemType Directory -Force | Out-Null
+    }
+    @"
+pushd `"`$AlyaRoot\..\Tools\WindowsPowerShell\Modules`"
+`$AlyaModulePath = `$pwd
+popd
+"@ | Set-Content -Path "$($vol.DriveLetter):\Alya$AlyaCompanyNameShortM365\_local\ConfigureEnv.ps1" -Encoding UTF8
 }
 else
 {

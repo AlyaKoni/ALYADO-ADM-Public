@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2022
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,65 +29,82 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    19.10.2021 Konrad Brunner       Initial Version
-    22.04.2023 Konrad Brunner       Switched to Graph
+    03.11.2022 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$ServicePrincipalName = "Microsoft Graph PowerShell",
+    [string]$ServicePrincipalId = $null,
+    [string]$UserUpn = $null
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-UserGroupCreationDisabled-$($AlyaTimeString).log" | Out-Null
-
-# Constants
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Remove-ApplicationAdminConsent-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "AzureADPreview"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-AD
 
 # =============================================================
-# O365 stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-UserGroupCreationDisabled | Graph" -ForegroundColor $CommandInfo
+Write-Host "ENTAPPS | Remove-ApplicationAdminConsent | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Configuring settings template
-Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
-if (-Not $Setting)
+Write-Host "Getting ServicePrincipal" -ForegroundColor $CommandInfo
+$App = $null
+if ($ServicePrincipalName)
 {
-    Write-Warning "Setting not yet created. Creating one based on template."
-    $Values = @()
-    foreach($dval in $SettingTemplate.Values) {
-	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+    $App = Get-AzureADServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalName)'"
+    if (-Not $App)
+    {
+        throw "ServicePrincipal with name '$($ServicePrincipalName)' not found"
     }
-    $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+}
+if ($ServicePrincipalId)
+{
+    $App = Get-AzureADServicePrincipal -Filter "AppId eq '$($ServicePrincipalId)'"
+    if (-Not $App)
+    {
+        throw "ServicePrincipal with id '$($ServicePrincipalId)' not found"
+    }
+}
+if (-not $App)
+{
+    throw "Please provide ServicePrincipalName or ServicePrincipalId"
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "EnableGroupCreation" }
-if ($Value.Value -eq $false) {
-    Write-Host "Setting 'EnableGroupCreation' was already set to '$false'"
-} 
-else {
-    Write-Warning "Setting 'EnableGroupCreation' was set to '$($Value.Value)' updating to '$false'"
-    ($Setting.Values | where { $_.Name -eq "EnableGroupCreation" }).Value = $false
+Write-Host "Getting User" -ForegroundColor $CommandInfo
+$User = $null
+if ($UserUpn)
+{
+    $User = Get-AzureADUser -ObjectId $UserUpn
+    if (-Not $User)
+    {
+        throw "User with name '$($UserUpn)' not found"
+    }
 }
 
-Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
+Write-Host "Getting Grants" -ForegroundColor $CommandInfo
+$grants = Get-AzureADOAuth2PermissionGrant -All $true | Where-Object { $_.clientId -eq $App.ObjectId -and $_.PrincipalId -eq $User.ObjectId }
+$grants | fl
+
+Write-Host "Deleting Grants" -ForegroundColor $CommandInfo
+$grants | Remove-AzureADOAuth2PermissionGrant
 
 #Stopping Transscript
 Stop-Transcript

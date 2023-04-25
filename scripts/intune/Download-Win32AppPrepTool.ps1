@@ -70,7 +70,7 @@ if (-Not (Test-Path "$AlyaGitRoot"))
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\PortableGit64bit.exe"
     Write-Host "Installing git"
-    & ".\PortableGit64bit.exe" "-o`"$AlyaGitRoot`"".Split(" ") -y
+    cmd /c ".\PortableGit64bit.exe" -o"$AlyaGitRoot" -y
     do
     {
         Start-Sleep -Seconds 5
@@ -110,7 +110,7 @@ $RepRoot = Join-Path $AlyaTools "IntuneWinAppUtil"
 if (-Not (Test-Path $RepRoot))
 {
     $tmp = New-Item -Path $RepRoot -ItemType Directory -Force
-    & "$AlyaGitRoot\cmd\git.exe" clone "$AlyaIntuneWinAppUtilDownload" "$RepRoot" -q
+    cmd /c "$AlyaGitRoot\cmd\git.exe" clone "$AlyaIntuneWinAppUtilDownload" "$RepRoot" -q
     Wait-UntilProcessEnds -processName "git"
 }
 

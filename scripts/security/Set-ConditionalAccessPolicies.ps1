@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2022
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -31,11 +31,13 @@
     ---------- -------------------- ----------------------------
     27.02.2020 Konrad Brunner       Initial Version
     30.06.2022 Konrad Brunner       Change from REST to AzureAdPreview
+    24.04.2023 Konrad Brunner       Switched to Graph, removed MSOL
 
 #>
 
 [CmdletBinding()]
 Param(
+    [bool]$ReportOnly = $false
 )
 
 #Reading configuration
@@ -46,29 +48,22 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-ConditionalAccessPolic
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-    
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
+
+
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All","Policy.ReadWrite.ConditionalAccess","Policy.Read.All"
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-ConditionalAccessPolicies | AZURE" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-ConditionalAccessPolicies | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
 
 # Checking no mfa group
 Write-Host "Checking MFA exclude group" -ForegroundColor $CommandInfo
@@ -81,193 +76,263 @@ else
 {
     $NoMfaGroupName = $AlyaMfaDisabledGroupName
 }
-$GrpRslt = Get-AzureADMSGroup -SearchString $NoMfaGroupName
-$ExcludeGroupId = $GrpRslt.Id
-if (-Not $ExcludeGroupId)
+
+$GrpRslt = Get-MgGroup -Filter "DisplayName eq '$($NoMfaGroupName)'"
+if (-Not $GrpRslt)
 {
     Write-Host "No MFA group not found. Creating the No MFA group $NoMfaGroupName" -ForegroundColor $CommandError
     exit 2
 }
+$ExcludeGroupId = $GrpRslt.Id
 
 # Getting role assignments
 Write-Host "Getting role assignments" -ForegroundColor $CommandInfo
-$roleDefs = @{
-    "Global Administrator"=$null
-    "Privileged Role Administrator"=$null
-    "Application Administrator"=$null
-    "Azure AD Joined Device Local Administrator"=$null
-    "Azure DevOps Administrator"=$null
-    "Compliance Administrator"=$null
-    "Conditional Access Administrator"=$null
-    "Dynamics 365 Administrator"=$null
-    "Exchange Administrator"=$null
-    "Intune Administrator"=$null
-    "Windows 365 Administrator"=$null
-    "Edge Administrator"=$null
-    "Kaizala Administrator"=$null
-    "License Administrator"=$null
-    "Groups Administrator"=$null
-    "Office Apps Administrator"=$null
-    "Power BI Administrator"=$null
-    "Power Platform Administrator"=$null
-    "Printer Administrator"=$null
-    "Privileged Authentication Administrator"=$null
-    "Search Administrator"=$null
-    "Security Administrator"=$null
-    "Skype for Business Administrator"=$null
-    "SharePoint Administrator"=$null
-    "Teams Administrator"=$null
-    "User Administrator"=$null
-    "Application Developer"=$null
-    "Attack Payload Author"=$null
-    "Attack Simulation Administrator"=$null
-    "Authentication Policy Administrator"=$null
-    "Authentication Administrator"=$null
-    "Azure Information Protection Administrator"=$null
-}
-$roleDefKeys = ($roleDefs.Clone()).Keys
+$roleDefs = @(
+    "Global Administrator",
+    "Privileged Role Administrator",
+    "Application Administrator",
+    "Azure AD Joined Device Local Administrator",
+    "Azure DevOps Administrator",
+    "Compliance Administrator",
+    "Conditional Access Administrator",
+    "Dynamics 365 Administrator",
+    "Exchange Administrator",
+    "Intune Administrator",
+    "Windows 365 Administrator",
+    "Edge Administrator",
+    "Kaizala Administrator",
+    "License Administrator",
+    "Groups Administrator",
+    "Office Apps Administrator",
+    "Power BI Administrator",
+    "Power Platform Administrator",
+    "Printer Administrator",
+    "Privileged Authentication Administrator",
+    "Search Administrator",
+    "Security Administrator",
+    "Skype for Business Administrator",
+    "SharePoint Administrator",
+    "Teams Administrator",
+    "User Administrator",
+    "Application Developer",
+    "Attack Payload Author",
+    "Attack Simulation Administrator",
+    "Authentication Policy Administrator",
+    "Authentication Administrator",
+    "Azure Information Protection Administrator"
+)
 $IncludeRoleIds = @()
 $ExcludeRoleIds = @()
-foreach($roleName in $roleDefKeys)
+$allRoles = Get-MgRoleManagementDirectoryRoleDefinition -All
+foreach($roleName in $roleDefs)
 {
-    $role = Get-AzureADMSRoleDefinition -Filter "DisplayName eq '$roleName'"
-    $roleDefs[$roleName] = Get-AzureADMSRoleAssignment -Filter "RoleDefinitionId eq '$($role.Id)'"
+    $role = $allRoles | where { $_.Displayname -eq $roleName }
+    if (-Not $role)
+    {
+        throw "Role $roleName not found!"
+    }
     $IncludeRoleIds += $role.Id
 }
 $ExcludeRoleIds = $IncludeRoleIds
-$syncrole = Get-AzureADMSRoleDefinition -Filter "DisplayName eq 'Directory Synchronization Accounts'"
+$syncrole = $allRoles | where { $_.Displayname -eq "Directory Synchronization Accounts" }
 $ExcludeRoleIds += $syncrole.Id
 
 # Getting actual access policies
 Write-Host "Getting actual access policies" -ForegroundColor $CommandInfo
-$ActPolicies = Get-AzureADMSConditionalAccessPolicy
+$ActPolicies = Get-MgIdentityConditionalAccessPolicy -All
+
+# Specifying processing state
+$procState = "Enabled"
+if ($ReportOnly) { $procState = "EnabledForReportingButNotEnforced" }
 
 # Checking all admins access policy
 Write-Host "Checking all admins access policy" -ForegroundColor $CommandInfo
-$conditions = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessConditionSet
-$conditions.Applications = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessApplicationCondition
-$conditions.Applications.IncludeApplications = "All"
-$conditions.Users = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessUserCondition
-$conditions.Users.IncludeRoles = $IncludeRoleIds
-$conditions.Users.ExcludeGroups = @("$ExcludeGroupId")
-$controls = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessGrantControls
-$controls._Operator = "OR"
-$controls.BuiltInControls = "mfa"
-$policyObj = $ActPolicies | where { $_.displayName -eq "MFA: Required for all admins" }
+$conditions = @{ 
+    Applications = @{
+        includeApplications = "All"
+    }
+    Users = @{
+        includeRoles = $IncludeRoleIds
+        excludeGroups = @("$ExcludeGroupId")
+    }
+}
+$grantcontrols  = @{
+    BuiltInControls = @("mfa")
+    Operator = "OR"
+}
+$policyObj = $ActPolicies | where { $_.DisplayName -eq "MFA: Required for all admins" }
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'MFA: Required for all admins'"
-    $policyObj = New-AzureADMSConditionalAccessPolicy -DisplayName "MFA: Required for all admins" -State "Enabled" -Conditions $conditions -GrantControls $controls
+    $policyObj = New-MgIdentityConditionalAccessPolicy `
+        -DisplayName "MFA: Required for all admins" `
+        -State $procState `
+        -Conditions $conditions `
+        -GrantControls $grantcontrols
 }
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Set-AzureADMSConditionalAccessPolicy -PolicyId $policyObj.id -State "Enabled" -Conditions $conditions -GrantControls $controls
+    $policyObj = Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+        -DisplayName "MFA: Required for all admins" `
+        -State $procState `
+        -Conditions $conditions `
+        -GrantControls $grantcontrols
 }
 
-# Checking external groups to exclude
-Write-Host "Checking external groups to exclude" -ForegroundColor $CommandInfo
+# Checking groups to exclude
+Write-Host "Checking groups to exclude" -ForegroundColor $CommandInfo
 $ExcludeGroupIds = @()
 foreach($groupName in $AlyaMfaDisabledForGroups)
 {
-    $GrpRslt = Get-AzureADMSGroup -SearchString $NoMfaGroupName
+    if ($groupName -eq "PleaseSpecify") { continue }
+    $GrpRslt = Get-MgGroup -Filter "DisplayName eq '$($groupName)'"
+    if (-Not $GrpRslt)
+    {
+        throw "Group $groupName not found!"
+    }
     $ExcludeGroupIds += $GrpRslt.Id
 }
 $ExcludeGroupIds += $ExcludeGroupId #NOMFAGroup
 
 # Checking all users access policy
 Write-Host "Checking all users access policy" -ForegroundColor $CommandInfo
-$conditions = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessConditionSet
-$conditions.Applications = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessApplicationCondition
-$conditions.Applications.IncludeApplications = "All"
-$conditions.Users = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessUserCondition
-if ([string]::IsNullOrEmpty($AlyaMfaEnabledGroupName))
+if ([string]::IsNullOrEmpty($AlyaMfaEnabledGroupName) -or $AlyaMfaEnabledGroupName -eq "PleaseSpecify")
 {
-    $conditions.Users.IncludeUsers = "All"
-}
+    $conditions = @{ 
+        Applications = @{
+            includeApplications = "All"
+        }
+        Users = @{
+            includeUsers = "All"
+            excludeRoles = $ExcludeRoleIds
+            excludeGroups = $ExcludeGroupIds
+        }
+    }
+    }
 else
 {
     $IncludeGroupIds = @()
-    $GrpRslt = Get-AzureADMSGroup -SearchString $AlyaMfaEnabledGroupName
+    $GrpRslt = Get-MgGroup -Filter "DisplayName eq '$($AlyaMfaEnabledGroupName)'"
     $IncludeGroupIds += $GrpRslt.Id
-    $conditions.Users.IncludeGroups = $IncludeGroupIds
+    $conditions = @{ 
+        Applications = @{
+            includeApplications = "All"
+        }
+        Users = @{
+            includeGroups = $IncludeGroupIds
+            excludeRoles = $ExcludeRoleIds
+            excludeGroups = $ExcludeGroupIds
+        }
+    }
 }
-$conditions.Users.ExcludeRoles = $ExcludeRoleIds
-$conditions.Users.ExcludeGroups = $ExcludeGroupIds
-$controls = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessGrantControls
-$controls._Operator = "OR"
-$controls.BuiltInControls = "mfa"
-$policyObj = $ActPolicies | where { $_.displayName -eq "MFA: Required for all users" }
+$grantcontrols  = @{
+    BuiltInControls = @("mfa")
+    Operator = "OR"
+}
+$policyObj = $ActPolicies | where { $_.DisplayName -eq "MFA: Required for all users" }
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'MFA: Required for all users'"
-    $policyObj = New-AzureADMSConditionalAccessPolicy -DisplayName "MFA: Required for all users" -State "Enabled" -Conditions $conditions -GrantControls $controls
+    $policyObj = New-MgIdentityConditionalAccessPolicy `
+        -DisplayName "MFA: Required for all users" `
+        -State $procState `
+        -Conditions $conditions `
+        -GrantControls $grantcontrols
 }
 else
 {
-    Write-Host "Updating policy 'MFA: Required for all users'"
-    $policyObj = Set-AzureADMSConditionalAccessPolicy -PolicyId $policyObj.id -State "Enabled" -Conditions $conditions -GrantControls $controls
+    Write-Host "Updating policy $PolicyName"
+    $policyObj = Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+        -DisplayName "MFA: Required for all users" `
+        -State $procState `
+        -Conditions $conditions `
+        -GrantControls $grantcontrols
 }
 
 # Checking all admins session policy
 Write-Host "Checking all admins session policy" -ForegroundColor $CommandInfo
-$conditions = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessConditionSet
-$conditions.Applications = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessApplicationCondition
-$conditions.Applications.IncludeApplications = "All"
-$conditions.Users = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessUserCondition
-$conditions.Users.IncludeRoles = $IncludeRoleIds
-$conditions.Users.ExcludeGroups = @("$ExcludeGroupId")
-$controls = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessSessionControls
-$sessioncontrols = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessSignInFrequency
-$sessioncontrols.IsEnabled = $true
-$sessioncontrols.Type = "days"
-$sessioncontrols.Value = 1
-$persistent = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessPersistentBrowser
-$persistent.IsEnabled = $true
-$persistent.Mode = [Microsoft.Open.MSGraph.Model.ConditionalAccessPersistentBrowser+ModeEnum]::Always
-$controls.PersistentBrowser = $persistent
-$controls.SignInFrequency = $sessioncontrols
-$policyObj = $ActPolicies | where { $_.displayName -eq "SESSION: For all admins" }
+$conditions = @{ 
+    Applications = @{
+        includeApplications = "All"
+    }
+    Users = @{
+        includeRoles = $IncludeRoleIds
+        excludeGroups = @("$ExcludeGroupId")
+    }
+}
+$sessioncontrols  = @{
+    SignInFrequency = @{
+        isEnabled = $true
+        type = "days"
+        value = "1"
+    }
+    PersistentBrowser = @{
+        isEnabled = $true
+        mode = "Always"
+    }
+}
+$policyObj = $ActPolicies | where { $_.DisplayName -eq "SESSION: For all admins" }
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: For all admins'"
-    $policyObj = New-AzureADMSConditionalAccessPolicy -DisplayName "SESSION: For all admins" -State "Enabled" -Conditions $conditions -SessionControls $controls
+    $policyObj = New-MgIdentityConditionalAccessPolicy `
+        -DisplayName "SESSION: For all admins" `
+        -State $procState `
+        -Conditions $conditions `
+        -SessionControls $sessioncontrols
 }
 else
 {
-    Write-Host "Updating policy 'SESSION: For all admins'"
-    $policyObj = Set-AzureADMSConditionalAccessPolicy -PolicyId $policyObj.id -State "Enabled" -Conditions $conditions -SessionControls $controls
+    Write-Host "Updating policy $PolicyName"
+    $policyObj = Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+        -DisplayName "SESSION: For all admins" `
+        -State $procState `
+        -Conditions $conditions `
+        -SessionControls $sessioncontrols
 }
 
 # Checking all users session policy
 Write-Host "Checking all users session policy" -ForegroundColor $CommandInfo
-$conditions = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessConditionSet
-$conditions.Applications = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessApplicationCondition
-$conditions.Applications.IncludeApplications = "All"
-$conditions.Users = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessUserCondition
-$conditions.Users.IncludeUsers = "All"
-$conditions.Users.ExcludeRoles = $ExcludeRoleIds
-$conditions.Users.ExcludeGroups = $ExcludeGroupIds
-$controls = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessSessionControls
-$sessioncontrols = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessSignInFrequency
-$sessioncontrols.IsEnabled = $true
-$sessioncontrols.Type = "days"
-$sessioncontrols.Value = 30
-$persistent = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessPersistentBrowser
-$persistent.IsEnabled = $true
-$persistent.Mode = [Microsoft.Open.MSGraph.Model.ConditionalAccessPersistentBrowser+ModeEnum]::Always
-$controls.PersistentBrowser = $persistent
-$controls.SignInFrequency = $sessioncontrols
-$policyObj = $ActPolicies | where { $_.displayName -eq "SESSION: For all users" }
+$conditions = @{ 
+    Applications = @{
+        includeApplications = "All"
+    }
+    Users = @{
+        includeUsers = "All"
+        excludeRoles = $ExcludeRoleIds
+        excludeGroups = $ExcludeGroupIds
+    }
+}
+$sessioncontrols  = @{
+    SignInFrequency = @{
+        isEnabled = $true
+        type = "days"
+        value = "30"
+    }
+    PersistentBrowser = @{
+        isEnabled = $true
+        mode = "Always"
+    }
+}
+$policyObj = $ActPolicies | where { $_.DisplayName -eq "SESSION: For all users" }
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: For all users'"
-    $policyObj = New-AzureADMSConditionalAccessPolicy -DisplayName "SESSION: For all users" -State "Enabled" -Conditions $conditions -SessionControls $controls
+    $policyObj = New-MgIdentityConditionalAccessPolicy `
+        -DisplayName "SESSION: For all users" `
+        -State $procState `
+        -Conditions $conditions `
+        -SessionControls $sessioncontrols
 }
 else
 {
-    Write-Host "Updating policy 'SESSION: For all users'"
-    $policyObj = Set-AzureADMSConditionalAccessPolicy -PolicyId $policyObj.id -State "Enabled" -Conditions $conditions -SessionControls $controls
+    Write-Host "Updating policy $PolicyName"
+    $policyObj = Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+        -DisplayName "SESSION: For all users" `
+        -State $procState `
+        -Conditions $conditions `
+        -SessionControls $sessioncontrols
 }
 
 # Disabling security defaults

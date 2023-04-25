@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     05.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -46,7 +47,6 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-IntuneWebApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = ""
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "WebApps"
 if (-Not (Test-Path $DataRoot))
 {
@@ -55,11 +55,16 @@ if (-Not (Test-Path $DataRoot))
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes @(
+    "Directory.Read.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "DeviceManagementServiceConfig.Read.All",
+    "DeviceManagementConfiguration.Read.All",
+    "DeviceManagementApps.ReadWrite.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -69,18 +74,110 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Upload-IntuneWebApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
+# Functions
+function Replace-AlyaString($str)
 {
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
+    $str =  $str.Replace("##AlyaDomainName##", $AlyaDomainName)
+    $str =  $str.Replace("##AlyaDesktopBackgroundUrl##", $AlyaDesktopBackgroundUrl)
+    $str =  $str.Replace("##AlyaLockScreenBackgroundUrl##", $AlyaLockScreenBackgroundUrl)
+    $str =  $str.Replace("##AlyaWelcomeScreenBackgroundUrl##", $AlyaWelcomeScreenBackgroundUrl)
+    $str =  $str.Replace("##AlyaWebPage##", $AlyaWebPage)
+    $str =  $str.Replace("##AlyaCompanyNameShort##", $AlyaCompanyNameShort)
+    $str =  $str.Replace("##AlyaCompanyName##", $AlyaCompanyName)
+    $str =  $str.Replace("##AlyaTenantId##", $AlyaTenantId)
+    $str =  $str.Replace("##AlyaKeyVaultName##", $KeyVaultName)
+    $str =  $str.Replace("##AlyaSupportTitle##", $AlyaSupportTitle)
+    $str =  $str.Replace("##AlyaSupportTel##", $AlyaSupportTel)
+    $str =  $str.Replace("##AlyaSupportMail##", $AlyaSupportMail)
+    $str =  $str.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
+    $domPrts = $AlyaWebPage.Split("./")
+    $AlyaWebDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
+    $str =  $str.Replace("##AlyaWebDomains##", $AlyaWebDomains)
+    return $str
 }
-$token = Get-AdalAccessToken
+
+function Replace-AlyaStrings($obj, $depth)
+{
+    if ($depth -gt 3) { return }
+    foreach($prop in $obj.PSObject.Properties)
+    {
+        if ($prop.Value)
+        {
+            if ($prop.Value.GetType().Name -eq "String")
+            {
+                if ($prop.Value.Contains("##Alya"))
+                {
+                    $prop.Value = Replace-AlyaString -str $prop.Value
+                }
+            }
+            else
+            {
+                if (-Not ($prop.Value.GetType().IsValueType))
+                {
+                    $cnt = 1
+                    $cntMem = Get-Member -InputObject $prop.Value -Name Count
+                    if ($cntMem)
+                    {
+                        $cnt = $prop.Value.Count
+                    }
+                    else
+                    {
+                        $cntMem = Get-Member -InputObject $prop.Value -Name Length
+                        if ($cntMem)
+                        {
+                            $cnt = $prop.Value.Length
+                        }
+                        else
+                        {
+                            $cnt = ($prop.Value | Measure-Object | Select-Object Count).Count
+                        }
+                    }
+                    if ($cnt -gt 1)
+                    {
+                        foreach($sobj in $prop.Value)
+                        {
+                            if ($sobj.GetType().Name -eq "String")
+                            {
+                                if ($sobj.Contains("##Alya"))
+                                {
+                                    #TODO will this work?
+                                    $sobj = Replace-AlyaString -str $sobj
+                                }
+                            }
+                            elseif (-Not ($sobj.GetType().IsValueType))
+                            {
+                                Replace-AlyaStrings -obj $sobj -depth ($depth+1)
+                            }
+                        }
+                    }
+                    else
+                    {
+                        $sobj = $prop.Value | select -First 1
+                        if ($sobj.GetType().Name -eq "String")
+                        {
+                            if ($sobj.Contains("##Alya"))
+                            {
+                                $prop.Value[0] = Replace-AlyaString -str $sobj
+                            }
+                        }
+                        else
+                        {
+                            if (-Not ($sobj.GetType().IsValueType))
+                            {   
+                                Replace-AlyaStrings -obj $sobj -depth ($depth+1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 # Main
 $packages = Get-ChildItem -Path $DataRoot -Directory
 $continue = $true
+$hadError = $false
 foreach($packageDir in $packages)
 {
     if ($ContinueAtAppWithName -and $packageDir.Name -eq $ContinueAtAppWithName) { $continue = $false }
@@ -88,7 +185,7 @@ foreach($packageDir in $packages)
     if ($UploadOnlyAppWithName -and $packageDir.Name -ne $UploadOnlyAppWithName) { continue }
     if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
 
-    Write-Host "Uploading web app $($packageDir.Name)" -ForegroundColor $CommandInfo
+    Write-Host "Uploading web app '$($packageDir.Name)'" -ForegroundColor $CommandInfo
     $configPath = Join-Path $packageDir.FullName "config.json"
 
     # Reading and preparing app configuration
@@ -96,15 +193,19 @@ foreach($packageDir in $packages)
     $appConfig = Get-Content -Path $configPath -Raw -Encoding UTF8
     $appConfig = $appConfig | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty isAssigned,dependentAppCount,supersedingAppCount,supersededAppCount,committedContentVersion,size,id,createdDateTime,lastModifiedDateTime,version,'@odata.context',uploadState,packageId,appIdentifier,publishingState,usedLicenseCount,totalLicenseCount,productKey,licenseType,packageIdentityName
 
-    $appConfig.displayName = "$AppPrefix" + $packageDir.Name
-    Write-Host "    displayName: $($appConfig.displayName)"
-    $appConfig.description = "Installs the " + $packageDir.Name + " web link"
+    # Replacing constants
+    Replace-AlyaStrings -obj $appConfig -depth 1
+    if (($appConfig | ConvertTo-Json -Depth 50).IndexOf("##Alya") -gt -1)
+    {
+        ($appConfig | ConvertTo-Json -Depth 50)
+        throw "Some replacement did not work!"
+    }
 
     $logo = Get-ChildItem -Path $packageDir.FullName -Filter "Logo.*"
     if ($logo)
     {
-        $iconResponse = Invoke-WebRequest "$($logo.FullName)"
-        $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
+        $iconResponse = [System.IO.File]::ReadAllBytes("$($logo.FullName)")
+        $base64icon = [System.Convert]::ToBase64String($iconResponse)
         $iconExt = ([System.IO.Path]::GetExtension($logo.FullName)).replace(".","")
         $iconType = "image/$iconExt"
         $appConfig.largeIcon = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
@@ -115,24 +216,35 @@ foreach($packageDir in $packages)
     $appConfigJson = $appConfig | ConvertTo-Json -Depth 50
     $appConfigJson | Set-Content -Path $configPath -Encoding UTF8
 
-    # Checking if app exists
-    Write-Host "  Checking if app exists"
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
-    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-    $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
-    if (-Not $app.id)
-    {
-        # Creating app
-        Write-Host "  Creating app"
-        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps"
-        $app = Post-MsGraph -AccessToken $token -Uri $uri -Body $appConfigJson
+    try {
+        
+        # Checking if app exists
+        Write-Host "  Checking if app exists"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $app = (Get-MsGraphObject -Uri $uri).value
+        if (-Not $app.id)
+        {
+            # Creating app
+            Write-Host "  Creating app"
+            $uri = "/beta/deviceAppManagement/mobileApps"
+            $app = Post-MsGraph -Uri $uri -Body $appConfigJson
+        }
+
+        # Committing the app
+        Write-Host "  Committing the app"
+        $appConfig.PSObject.Properties.Remove('appUrl')
+        $uri = "/beta/deviceAppManagement/mobileApps/$($app.id)"
+        $appP = Patch-MsGraph -Uri $uri -Body ($appConfig | ConvertTo-Json)
+    }
+    catch {
+        $hadError = $true
     }
 
-    # Committing the app
-    Write-Host "  Committing the app"
-    $appConfig.PSObject.Properties.Remove('appUrl')
-    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$($app.id)"
-    $appP = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($appConfig | ConvertTo-Json)
+}
+if ($hadError)
+{
+    Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
 #Stopping Transscript

@@ -1,7 +1,7 @@
 ﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -291,6 +291,7 @@ if ($sapp.AppCatalogVersion -ne $sapp.InstalledVersion)
 }
 
 #Configuring learning setting
+Write-Host "Configuring learning setting" -ForegroundColor $CommandInfo
 $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName"
 
 #Remove-PnPStorageEntity -Connection $siteCon -Key MicrosoftCustomLearningTelemetryOn
@@ -318,7 +319,12 @@ do
     }
 } while ($true)
 
-$sitePagesList = Get-PnPList -Connection $siteCon -Identity "SitePages"
+#Configuring start page
+Write-Host "Configuring start page" -ForegroundColor $CommandInfo
+$sitePagesList = Get-PnPList -Connection $siteCon -Identity "SitePages" -ErrorAction SilentlyContinue
+if($null -eq $sitePagesList) {    
+    $sitePagesList = Get-PnPList -Connection $siteCon -Identity "Websiteseiten" -ErrorAction SilentlyContinue
+}
 if($null -ne $sitePagesList) {    
     $clv = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningViewer.aspx</Value></Eq></Where></Query></View>"
     if ($null -ne $clv) {

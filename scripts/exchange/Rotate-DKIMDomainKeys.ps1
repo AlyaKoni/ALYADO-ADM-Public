@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,65 +29,69 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    19.10.2021 Konrad Brunner       Initial Version
-    22.04.2023 Konrad Brunner       Switched to Graph
+    24.04.2023 Konrad Brunner       Initial Creation
 
 #>
 
 [CmdletBinding()]
 Param(
+    [int]$keySize = 1024
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-UserGroupCreationDisabled-$($AlyaTimeString).log" | Out-Null
-
-# Constants
+Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Rotate-DKIMDomainKeys-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
-
-# Logging in
-Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
+Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 
 # =============================================================
-# O365 stuff
+# Exchange stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-UserGroupCreationDisabled | Graph" -ForegroundColor $CommandInfo
+Write-Host "EXCHANGE | Rotate-DKIMDomainKeys | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Configuring settings template
-Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
-if (-Not $Setting)
+$domains = @()
+
+$domains += $AlyaDomainName
+foreach ($dom in $AlyaAdditionalDomainNames)
 {
-    Write-Warning "Setting not yet created. Creating one based on template."
-    $Values = @()
-    foreach($dval in $SettingTemplate.Values) {
-	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+    $domains += $dom
+}
+
+try
+{
+    LoginTo-EXO
+    foreach ($dom in $domains)
+    {
+        Write-Host "Checking domain $dom"
+        $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
+        if (-Not $conf) {
+            Write-Warning "No DKIM config found to rotate in domain $dom"
+        }
+        else {
+            if (-Not (Get-Command "Rotate-DkimSigningConfig"))
+            {
+                Write-Error "Command Rotate-DkimSigningConfig not found! Do you have the right access active?" -ErrorAction Continue
+            }
+            Rotate-DkimSigningConfig -KeySize $keySize -Identity $dom
+        }
     }
-    $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
 }
-
-$Value = $Setting.Values | where { $_.Name -eq "EnableGroupCreation" }
-if ($Value.Value -eq $false) {
-    Write-Host "Setting 'EnableGroupCreation' was already set to '$false'"
-} 
-else {
-    Write-Warning "Setting 'EnableGroupCreation' was set to '$($Value.Value)' updating to '$false'"
-    ($Setting.Values | where { $_.Name -eq "EnableGroupCreation" }).Value = $false
+catch
+{
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+	Write-Error ($_.Exception) -ErrorAction Continue
 }
-
-Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
+finally
+{
+    DisconnectFrom-EXOandIPPS
+}
 
 #Stopping Transscript
 Stop-Transcript

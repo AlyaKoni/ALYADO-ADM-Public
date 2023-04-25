@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     05.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -46,7 +47,6 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneWebApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = "Win10"
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "WebApps"
 if (-Not (Test-Path $DataRoot))
 {
@@ -55,11 +55,16 @@ if (-Not (Test-Path $DataRoot))
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes @(
+    "Directory.Read.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "DeviceManagementServiceConfig.Read.All",
+    "DeviceManagementConfiguration.Read.All",
+    "DeviceManagementApps.ReadWrite.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -69,18 +74,10 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Configure-IntuneWebApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
 # Main
 $packages = Get-ChildItem -Path $DataRoot -Directory
 $continue = $true
+$hadError = $false
 foreach($packageDir in $packages)
 {
     if ($ContinueAtAppWithName -and $packageDir.Name -eq $ContinueAtAppWithName) { $continue = $false }
@@ -102,89 +99,101 @@ foreach($packageDir in $packages)
     $category = Get-Content -Path $categoryPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json
     $assignments = Get-Content -Path $assignmentsPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json
 
-    # Checking if app exists
-    Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($config.displayName)
-    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-    $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
-    if (-Not $app.id)
-    {
-        Write-Error "The app with name $($config.displayName) does not exist. Please create it first." -ErrorAction Continue
-        continue
-    }
-    $appId = $app.id
-    Write-Host "    appId: $appId"
-
-    # Configuring category
-    Write-Host "  Configuring category" -ForegroundColor $CommandInfo
-    if ($category)
-    {
-        # Checking if category exists
-        Write-Host "    Checking if category exists"
-	    $caturi = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileAppCategories/$($category.id)"
-	    $defCategory = Get-MsGraphObject -AccessToken $token -Uri $caturi
-        if (-Not $defCategory)
+    try {
+        
+        # Checking if app exists
+        Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($config.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $app = (Get-MsGraphObject -Uri $uri).value
+        if (-Not $app.id)
         {
-            Write-Error "Can't find the category $($category.displayName)." -ErrorAction Continue
+            Write-Error "The app with name $($config.displayName) does not exist. Please create it first." -ErrorAction Continue
+            $hadError = $true
             continue
         }
+        $appId = $app.id
+        Write-Host "    appId: $appId"
 
-        # Getting existing categories
-        Write-Host "    Getting existing categories"
-	    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/categories"
-	    $actCategories = Get-MsGraphCollection -AccessToken $token -Uri $uri
-        $isPresent = $actCategories | where { $_.id -eq $category.id }
-        if (-Not $isPresent)
+        # Configuring category
+        Write-Host "  Configuring category" -ForegroundColor $CommandInfo
+        if ($category)
         {
-            # Adding category
-            Write-Host "    Adding category $($defCategory.displayName)"
-	        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
-            $body = "{ `"@odata.id`": `"$caturi`" }"
-	        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
-        }
-        else
-        {
-            Write-Host "    Category $($defCategory.displayName) already exists"
-        }
-    }
-
-    # Configuring assignments
-    Write-Host "  Configuring assignments" -ForegroundColor $CommandInfo
-
-    # Getting existing assignments
-    Write-Host "    Getting existing assignments"
-	$uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/assignments"
-	$actAssignments = Get-MsGraphCollection -AccessToken $token -Uri $uri
-    $cnt = 0
-    foreach ($assignment in $assignments)
-    {
-        $cnt++
-        Write-Host "      Assignment $cnt with target $($assignment.target)"
-        $fnd = $null
-        foreach ($actAssignment in $actAssignments)
-        {
-            #TODO better handling here
-            if ($actAssignment.target."@odata.type" -eq $assignment.target."@odata.type")
+            # Checking if category exists
+            Write-Host "    Checking if category exists"
+            $caturi = "/beta/deviceAppManagement/mobileAppCategories/$($category.id)"
+            $defCategory = Get-MsGraphObject -Uri $caturi
+            if (-Not $defCategory)
             {
-                $fnd = $actAssignment
-                break
+                Write-Error "Can't find the category $($category.displayName)." -ErrorAction Continue
+                continue
+            }
+
+            # Getting existing categories
+            Write-Host "    Getting existing categories"
+            $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories"
+            $actCategories = Get-MsGraphCollection -Uri $uri
+            $isPresent = $actCategories | where { $_.id -eq $category.id }
+            if (-Not $isPresent)
+            {
+                # Adding category
+                Write-Host "    Adding category $($defCategory.displayName)"
+                $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
+                $body = "{ `"@odata.id`": `"https://graph.microsoft.com$caturi`" }"
+                $appCat = Post-MsGraph -Uri $uri -Body $body
+            }
+            else
+            {
+                Write-Host "    Category $($defCategory.displayName) already exists"
             }
         }
-        if (-Not $fnd)
+
+        # Configuring assignments
+        Write-Host "  Configuring assignments" -ForegroundColor $CommandInfo
+
+        # Getting existing assignments
+        Write-Host "    Getting existing assignments"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
+        $actAssignments = Get-MsGraphCollection -Uri $uri
+        $cnt = 0
+        foreach ($assignment in $assignments)
         {
-            Write-Host "      Assignment not found. Creating"
-            # Adding assignment
-            Write-Host "        Adding assignment $($assignment.target."@odata.type")"
-	        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/assignments"
-            $body = $assignment | ConvertTo-Json -Depth 50
-	        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
+            $cnt++
+            Write-Host "      Assignment $cnt with target $($assignment.target)"
+            $fnd = $null
+            foreach ($actAssignment in $actAssignments)
+            {
+                #TODO better handling here
+                if ($actAssignment.target."@odata.type" -eq $assignment.target."@odata.type")
+                {
+                    $fnd = $actAssignment
+                    break
+                }
+            }
+            if (-Not $fnd)
+            {
+                Write-Host "      Assignment not found. Creating"
+                # Adding assignment
+                Write-Host "        Adding assignment $($assignment.target."@odata.type")"
+                $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
+                $body = $assignment | ConvertTo-Json -Depth 50
+                $appCat = Post-MsGraph -Uri $uri -Body $body
+            }
+            else
+            {
+                Write-Host "      Found existing assignment"
+            }
+            #TODO Update
         }
-        else
-        {
-            Write-Host "      Found existing assignment"
-        }
-        #TODO Update
     }
+    catch {
+        $hadError = $true
+    }
+
+}
+if ($hadError)
+{
+    Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
 #Stopping Transscript

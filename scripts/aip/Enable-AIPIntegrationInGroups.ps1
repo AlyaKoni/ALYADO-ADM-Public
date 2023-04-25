@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     25.03.2021 Konrad Brunner       Initial Version
+    22.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -45,45 +46,46 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Enable-AIPIntegrationInGroups-$
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
     
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Enable-AIPIntegrationInGroups | O365" -ForegroundColor $CommandInfo
+Write-Host "AIP | Enable-AIPIntegrationInGroups | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Enabling AIP integration
 Write-Host "Enabling AIP integration in AAD" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified" }
+$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
-    $Setting = $SettingTemplate.CreateDirectorySetting()
-    $Setting["EnableMIPLabels"] = $true
-    New-AzureADDirectorySetting -DirectorySetting $Setting
+    $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id
+    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
 }
-else
-{
-    $Setting["EnableMIPLabels"] = $true
-    Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
+
+$Value = $Setting.Values | where { $_.Name -eq "EnableMIPLabels" }
+if ($Value.Value -eq $true) {
+    Write-Host "Setting 'EnableMIPLabels' was already set to '$true'"
+} 
+else {
+    Write-Warning "Setting 'EnableMIPLabels' was set to '$($Value.Value)' updating to '$true'"
+    ($Setting.Values | where { $_.Name -eq "EnableMIPLabels" }).Value = $true
 }
-$Setting.Values
 
+Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
-# Syncing labels
-Write-Host "Syncing labels" -ForegroundColor $CommandInfo
-LoginTo-IPPS
-Execute-AzureADLabelSync
+# TODO Syncing labels
+#Write-Host "Syncing labels" -ForegroundColor $CommandInfo
+#LoginTo-IPPS
+#Execute-AzureADLabelSync
 
 #Stopping Transscript
 Stop-Transcript

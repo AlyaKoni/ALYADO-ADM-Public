@@ -35,6 +35,7 @@
 
 [CmdletBinding()]
 Param(
+    [int]$keySize = 1024
 )
 
 #Reading configuration
@@ -73,7 +74,11 @@ try
         if (-Not $conf)
         {
             Write-Warning "Creating DKIM config for domain $dom"
-            New-DkimSigningConfig -DomainName $dom -Enabled $false
+            if (-Not (Get-Command "New-DkimSigningConfig"))
+            {
+                Write-Error "Command New-DkimSigningConfig not found! Do you have the right access active?" -ErrorAction Continue
+            }
+            New-DkimSigningConfig -DomainName $dom -KeySize $keySize -Enabled $false
         }
     }
 }

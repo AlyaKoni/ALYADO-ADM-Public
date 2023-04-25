@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -31,6 +31,7 @@
     ---------- -------------------- ----------------------------
     04.03.2020 Konrad Brunner       Initial Version
     25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
+    21.04.2023 Konrad Brunner       Switched to Graph and added guest access
 
 #>
 
@@ -53,24 +54,21 @@ if (-Not $inputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Uninstall-ModuleIfInstalled "AzureAd"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All","RoleManagement.ReadWrite.Directory"
 
 # =============================================================
-# AD stuff
+# AAD stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Configure-Groups | LOCAL" -ForegroundColor $CommandInfo
+Write-Host "AAD | Configure-Groups | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Reading input file
@@ -79,336 +77,160 @@ if (-Not (Test-Path $inputFile))
 {
     throw "Input file '$inputFile' not found!"
 }
-$groupDefs = Import-Excel $inputFile -WorksheetName "Gruppen" -ErrorAction Stop
+$AllGroups = Import-Excel $inputFile -WorksheetName "Gruppen" -ErrorAction Stop
 
 Write-Host "Configured groups" -ForegroundColor $CommandInfo
-$groupDefs | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
-$SecurityGroup = @()
-$M365Group = @()
-$GroupToDisable = @()
-foreach ($groupDef in $groupDefs)
+$AllGroups | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
+$GroupsToDisable = $AllGroups | where { $_.Activ -ne "yes" }
+
+Write-Host "Groups to create" -ForegroundColor $CommandInfo
+$AllGroups = $AllGroups | where { $_.Activ -eq "yes" }
+$AllGroups | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
+
+Write-Host "Checking groups" -ForegroundColor $CommandInfo
+$Skus = Get-MgSubscribedSku
+foreach ($group in $AllGroups)
 {
-    if ($groupDef.Activ -eq "yes")
-    {
-        if ($groupDef.Type -eq "M365Group" -or $groupDef.Type -eq "O365Group")
+    Write-Host "  Group '$($group.DisplayName)'"
+    try {
+        
+        # Group
+        $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+        $groupTypes = @()
+        $ruleProcessingState = "On"
+        if ($group.Type -eq "M365Group" -or $group.Type -eq "O365Group")
         {
-            $M365Group += $groupDef
+            $groupTypes = @("Unified")
+            $ruleProcessingState = "Paused"
         }
-        if ($groupDef.Type -eq "SecurityGroup")
+        if ($exGrp)
         {
-            $SecurityGroup += $groupDef
-        }
-    }
-    else
-    {
-        $GroupToDisable += $groupDef
-    }
-}
-
-# =============================================================
-# Azure stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Configure-Groups | AZURE" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-Write-Host "Checking security groups" -ForegroundColor $CommandInfo
-foreach ($secGroup in $SecurityGroup)
-{
-    Write-Host "  Group '$($secGroup.DisplayName)'"
-    $exGrp = Get-AzureADMSGroup -SearchString $secGroup.DisplayName
-    if ($exGrp.Count -gt 1)
-    {
-        foreach($grp in $exGrp)
-        {
-            if ($grp.DisplayName -eq $secGroup.DisplayName)
+            Write-Host "   - Group already exists! Updating."
+            if ([string]::IsNullOrEmpty($group.DanymicRule))
             {
-                $exGrp = $grp
-                break
-            }
-        }
-    }
-    if ($exGrp)
-    {
-        Write-Host "   - Group already exists! Updating."
-        if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
-        {
-            if ([string]::IsNullOrEmpty($secGroup.Alias))
-            {
-                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -Visibility $secGroup.Visibility
+                if ([string]::IsNullOrEmpty($group.Alias))
+                {
+                    $exGrp = Update-MgGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.DisplayName -MailEnabled:$false -Visibility $group.Visibility
+                }
+                else
+                {
+                    $exGrp = Update-MgGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.Alias -MailEnabled:$true -Visibility $group.Visibility
+                }
             }
             else
             {
-                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -MailNickname $secGroup.Alias -Visibility $secGroup.Visibility
+                $groupTypes += @("DynamicMembership")
+                if ([string]::IsNullOrEmpty($group.Alias))
+                {
+                    $exGrp = Update-MgGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.DisplayName -MailEnabled:$false -Visibility $group.Visibility
+                }
+                else
+                {
+                    $exGrp = Update-MgGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.Alias -MailEnabled:$true -Visibility $group.Visibility
+                }
             }
         }
         else
         {
-            if ([string]::IsNullOrEmpty($secGroup.Alias))
+            Write-Host "   - Group doesn't exists! Creating." -ForegroundColor $CommandSuccess
+            $isAssignableToRole = $false
+            if ($null -ne $group.AllowAzureAdRoles)
             {
-                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+                $isAssignableToRole = $group.AllowAzureAdRoles
+            }
+            if ([string]::IsNullOrEmpty($group.DanymicRule))
+            {
+                if ([string]::IsNullOrEmpty($group.Alias))
+                {
+                    $exGrp = New-MgGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.DisplayName -MailEnabled:$false -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
+                }
+                else
+                {
+                    # TODO this will not work as of documentation
+                    $exGrp = New-MgGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.Alias -MailEnabled:$true -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
+                }
             }
             else
             {
-                $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -MailNickname $secGroup.Alias -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
+                $groupTypes += @("DynamicMembership")
+                if ([string]::IsNullOrEmpty($group.Alias))
+                {
+                    $exGrp = New-MgGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.DisplayName -MailEnabled:$false -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
+                }
+                else
+                {
+                    # TODO this will not work as of documentation
+                    $exGrp = New-MgGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.Alias -MailEnabled:$true -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
+                }
             }
         }
-    }
-    else
-    {
-        Write-Host "   - Group doesn't exists! Creating." -ForegroundColor $CommandSuccess
-        $isAssignableToRole = $false
-        if ($secGroup.AllowAzureAdRoles -ne $null)
-        {
-            $isAssignableToRole = $secGroup.AllowAzureAdRoles
-        }
-        if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
-        {
-            if ([string]::IsNullOrEmpty($secGroup.Alias))
-            {
-                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.DisplayName -SecurityEnabled $True -Visibility $secGroup.Visibility -IsAssignableToRole $isAssignableToRole
-            }
-            else
-            {
-                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -Visibility $secGroup.Visibility -IsAssignableToRole $isAssignableToRole
-            }
-        }
-        else
-        {
-            if ([string]::IsNullOrEmpty($secGroup.Alias))
-            {
-                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $false -MailNickname $secGroup.DisplayName -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility -IsAssignableToRole $isAssignableToRole
-            }
-            else
-            {
-                $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "DynamicMembership" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility -IsAssignableToRole $isAssignableToRole
-            }
-        }
-    }
 
-    if (-Not [string]::IsNullOrEmpty($secGroup.Licenses))
-    {
-        $apiToken = Get-AzAccessToken
-        if (-Not $apiToken)
+        # License
+        if (-Not [string]::IsNullOrEmpty($group.Licenses))
         {
-            Write-Warning "Can't aquire an access token."
-            exit
-        }
-        $Global:retryCount = 10
-        do
-        {
-            try
+            Write-Host "   - Configuring license." -ForegroundColor $CommandSuccess
+            $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+            foreach($license in $group.Licenses.Split(","))
             {
-                $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
-                $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-                $availableLics = $response | ConvertFrom-Json
-                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)"
-                #following call shows from time to time 404. Don't know why
-                $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-                $actualLics = $response | ConvertFrom-Json
-                $Global:retryCount = -1
-            } catch {
-                Write-Host "Exception catched: $($_.Exception.Message)"
-                Write-Host "Retrying $Global:retryCount times"
-                $Global:retryCount--
-                Write-Host "Sleeping 15 seconds"
-                Start-Sleep -Seconds 15
-            }
-        } while ($Global:retryCount -gt 0)
-        foreach($license in $secGroup.Licenses.Split(","))
-        {
-            $licPresent = $false
-            $licSku = $null
-            foreach($exlic in $actualLics.licenses)
-            {
-                if ($exlic.accountSkuId -like "*:$($license)")
+                $licPresent = $exGrp.AssignedLicenses | where { $_.SkuPartNumber -like "*$($license)" }
+                $licSku = $Skus | where { $_.SkuPartNumber -eq $license }
+                if (-Not $licSku)
                 {
-                    $licPresent = $true
-                    break
+                    Write-Warning "Can't find license '$($license)' in your list of available licenses!"
+                    continue
                 }
-            }
-            foreach($exlic in $availableLics)
-            {
-                if ($exlic.accountSkuId -like "*:$($license)")
+                if (-Not $licPresent)
                 {
-                    $licSku = $exlic.accountSkuId
-                    break
+                    Write-Host "       Adding license '$($license)'"
+                    $licenseOption = @{SkuId = $licSku.SkuId <# TODO ; DisabledPlans = @()#>}
+                    Set-MgGroupLicense -GroupId $exGrp.Id -AddLicenses $licenseOption -RemoveLicenses @()
                 }
-            }
-            if (-Not $licSku)
-            {
-                Write-Warning "Can't find license '$($license)' in your list of available licenses!"
-                continue
-            }
-            if (-Not $licPresent)
-            {
-                Write-Host "       Configuring license '$($license)'"
-                $licenceAssignmentConfig = @{
-                    assignments = @(
-                        @{
-                            "objectId"       = $exGrp.Id
-                            "isUser"         = $false
-                            "addLicenses"    = @(
-                                @{
-                                "accountSkuId"         = $licSku
-                                "disabledServicePlans" = @()
-                                }
-                            )
-                            "removeLicenses" = @()
-                            "updateLicenses" = @()
-                        }
-                    )
-                }
-                $Global:retryCount = 3
-                do
-                {
-                    try
-                    {
-                        $requestBody = $licenceAssignmentConfig | ConvertTo-Json -Depth 5
-                        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/assign"
-                        $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
-                        $Global:retryCount = -1
-                    } catch {
-                        Write-Host "Exception catched: $($_.Exception.Message)"
-                        Write-Host "Retrying $Global:retryCount times"
-                        $Global:retryCount--
-                        Write-Host "Sleeping 15 seconds"
-                        Start-Sleep -Seconds 15
-                    }
-                } while ($Global:retryCount -gt 0)
             }
         }
-        try
-        {
-            $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)/Reprocess"
-            $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $null -ErrorAction SilentlyContinue
-        } catch {}
-    }
-}
 
-Write-Host "Checking M365 groups" -ForegroundColor $CommandInfo
-foreach ($secGroup in $M365Group)
-{
-    Write-Host "  Group '$($secGroup.DisplayName)'"
-    $exGrp = Get-AzureADMSGroup -SearchString $secGroup.DisplayName
-    if ($exGrp.Count -gt 1)
-    {
-        foreach($grp in $exGrp)
+        # Guest access
+        if ($null -ne $group.AllowGuests)
         {
-            if ($grp.DisplayName -eq $secGroup.DisplayName)
+            $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+            $SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
+            $Setting = Get-MgGroupSetting -GroupId $exGrp.Id | where { $_.TemplateId -eq $SettingTemplate.Id }
+            if (-Not $Setting)
             {
-                $exGrp = $grp
-                break
+                Write-Warning "Setting not yet created. Creating one based on template."
+                $Values = @()
+                foreach($dval in $SettingTemplate.Values) {
+                    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+                }
+                $Setting = New-MgGroupSetting -GroupId $exGrp.Id -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+                $Setting = Get-MgGroupSetting -GroupId $exGrp.Id | where { $_.TemplateId -eq $SettingTemplate.Id }
             }
+            if ($group.AllowGuests) {
+                $Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+                if ($Value.Value -eq $true) {
+                    Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
+                } 
+                else {
+                    Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
+                    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+                }
+            }
+            else {
+                $Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+                if ($Value.Value -eq $false) {
+                    Write-Host "Setting 'AllowToAddGuests' was already set to '$false'"
+                } 
+                else {
+                    Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$false'"
+                    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $false
+                }
+            }
+            Update-MgGroupSetting -GroupId $exGrp.Id -DirectorySettingId $Setting.Id -Values $Setting.Values
         }
-    }
-    if ($exGrp)
-    {
-        Write-Host "   - Group already exists! Updating."
-        if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
-        {
-            $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -MailNickname $secGroup.Alias -Visibility $secGroup.Visibility
-        }
-        else
-        {
-            $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $secGroup.DisplayName -MailNickname $secGroup.Alias -GroupTypes "DynamicMembership", "Unified" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "On" -Visibility $secGroup.Visibility
-        }
-    }
-    else
-    {
-        Write-Host "   - Group doesn't exists! Creating." -ForegroundColor $CommandSuccess
-        if ([string]::IsNullOrEmpty($secGroup.DanymicRule))
-        {
-            $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "Unified" -Visibility $secGroup.Visibility
-        }
-        else
-        {
-            $exGrp = New-AzureADMSGroup -DisplayName $secGroup.DisplayName -Description $secGroup.Description -MailEnabled $true -MailNickname $secGroup.Alias -SecurityEnabled $True -GroupTypes "DynamicMembership", "Unified" -MembershipRule $secGroup.DanymicRule -MembershipRuleProcessingState "Paused" -Visibility $secGroup.Visibility
-        }
-    }
 
-    if (-Not [string]::IsNullOrEmpty($secGroup.Licenses))
-    {
-        $apiToken = Get-AzAccessToken
-        if (-Not $apiToken)
-        {
-            Write-Warning "Can't aquire an access token."
-            exit
-        }
-        $Global:retryCount = 10
-        do
-        {
-            try
-            {
-                $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
-                $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-                $availableLics = $response | ConvertFrom-Json
-                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)"
-                $response = Invoke-WebRequest -Uri $url -Headers $header -Method GET -ErrorAction Stop
-                $actualLics = $response | ConvertFrom-Json
-                $Global:retryCount = -1
-            } catch {
-                Write-Host "Exception catched: $($_.Exception.Message)"
-                Write-Host "Retrying $Global:retryCount times"
-                $Global:retryCount--
-                if ($Global:retryCount -lt 0) { throw }
-                Start-Sleep -Seconds 10
-            }
-        } while ($Global:retryCount -gt 0)
-        foreach($license in $secGroup.Licenses.Split(","))
-        {
-            $licPresent = $false
-            $licSku = $null
-            foreach($exlic in $actualLics.licenses)
-            {
-                if ($exlic.accountSkuId -like "*:$($license)")
-                {
-                    $licPresent = $true
-                    break
-                }
-            }
-            foreach($exlic in $availableLics)
-            {
-                if ($exlic.accountSkuId -like "*:$($license)")
-                {
-                    $licSku = $exlic.accountSkuId
-                    break
-                }
-            }
-            if (-Not $licSku)
-            {
-                Write-Warning "       Can't find license '$($license)' in your list of available licenses!"
-                continue
-            }
-            if (-Not $licPresent)
-            {
-                Write-Host "       Configuring license '$($license)'"
-                $licenceAssignmentConfig = @{
-                    assignments = @(
-                        @{
-                            "objectId"       = $exGrp.Id
-                            "isUser"         = $false
-                            "addLicenses"    = @(
-                                @{
-                                "accountSkuId"         = $licSku
-                                "disabledServicePlans" = @()
-                                }
-                            )
-                            "removeLicenses" = @()
-                            "updateLicenses" = @()
-                        }
-                    )
-                }
-                $requestBody = $licenceAssignmentConfig | ConvertTo-Json -Depth 5
-                $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/assign"
-                $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $requestBody -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
-            }
-        }
-        $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus/Group/$($exGrp.Id)/Reprocess"
-        $response = Invoke-WebRequest -Uri $url -Headers $header -Method POST -Body $null -ErrorAction Stop
+
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
     }
 }
 
@@ -423,17 +245,17 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Configuring M365 group settings in exchange online" -ForegroundColor $CommandInfo
 try
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
     LoginTo-EXO
 
     Write-Host "Checking M365 groups" -ForegroundColor $CommandInfo
-    foreach ($grp in $M365Group)
+    foreach ($group in $AllGroups)
     {
-        Write-Host "  Group '$($grp.DisplayName)'"
+        if ($group.Type -ne "M365Group" -and $group.Type -ne "O365Group") { continue }
+        Write-Host "  Group '$($group.DisplayName)'"
         $Global:retryCount = 5
         do
         {
-            $uGrp = Get-UnifiedGroup -Identity $grp.DisplayName -ErrorAction SilentlyContinue
+            $uGrp = Get-UnifiedGroup -Identity $group.DisplayName -ErrorAction SilentlyContinue
             if ($uGrp)
             {
                 Write-Host "   - Group found! Updating."
@@ -444,14 +266,14 @@ try
                 $SubscriptionEnabled = $false
                 $ModerationEnabled = $false
                 $HiddenFromExchangeClientsEnabled = $true
-                if ($grp.O365HiddenFromAddressListsEnabled -ne $null) { $HiddenFromAddressListsEnabled = $grp.O365HiddenFromAddressListsEnabled }
-                if ($grp.O365CalendarMemberReadOnly -ne $null) { $CalendarMemberReadOnly = $grp.O365CalendarMemberReadOnly }
-                if ($grp.O365RejectMessagesFromSendersOrMembers -ne $null) { $RejectMessagesFromSendersOrMembers = $grp.O365RejectMessagesFromSendersOrMembers }
-                if ($grp.O365UnifiedGroupWelcomeMessageEnabled -ne $null) { $UnifiedGroupWelcomeMessageEnabled = $grp.O365UnifiedGroupWelcomeMessageEnabled }
-                if ($grp.O365SubscriptionEnabled -ne $null) { $SubscriptionEnabled = $grp.O365SubscriptionEnabled }
-                if ($grp.O365ModerationEnabled -ne $null) { $ModerationEnabled = $grp.O365ModerationEnabled }
-                if ($grp.O365HiddenFromExchangeClientsEnabled -ne $null) { $HiddenFromExchangeClientsEnabled = $grp.O365HiddenFromExchangeClientsEnabled }
-                Set-UnifiedGroup -Identity $grp.DisplayName -Alias $grp.Alias `
+                if ($null -ne $group.O365HiddenFromAddressListsEnabled) { $HiddenFromAddressListsEnabled = $group.O365HiddenFromAddressListsEnabled }
+                if ($null -ne $group.O365CalendarMemberReadOnly) { $CalendarMemberReadOnly = $group.O365CalendarMemberReadOnly }
+                if ($null -ne $group.O365RejectMessagesFromSendersOrMembers) { $RejectMessagesFromSendersOrMembers = $group.O365RejectMessagesFromSendersOrMembers }
+                if ($null -ne $group.O365UnifiedGroupWelcomeMessageEnabled) { $UnifiedGroupWelcomeMessageEnabled = $group.O365UnifiedGroupWelcomeMessageEnabled }
+                if ($null -ne $group.O365SubscriptionEnabled) { $SubscriptionEnabled = $group.O365SubscriptionEnabled }
+                if ($null -ne $group.O365ModerationEnabled) { $ModerationEnabled = $group.O365ModerationEnabled }
+                if ($null -ne $group.O365HiddenFromExchangeClientsEnabled) { $HiddenFromExchangeClientsEnabled = $group.O365HiddenFromExchangeClientsEnabled }
+                Set-UnifiedGroup -Identity $group.DisplayName -Alias $group.Alias `
                         -HiddenFromAddressListsEnabled:$HiddenFromAddressListsEnabled `
                         -CalendarMemberReadOnly:$CalendarMemberReadOnly `
                         -RejectMessagesFromSendersOrMembers:$RejectMessagesFromSendersOrMembers `
@@ -463,7 +285,7 @@ try
             }
             else
             {
-                Write-Host "Group $($grp.DisplayName) not found! Waiting 30 seconds and retrying"
+                Write-Host "Group $($group.DisplayName) not found! Waiting 30 seconds and retrying"
                 Start-Sleep -Seconds 30
                 $Global:retryCount--
             }
@@ -482,57 +304,33 @@ finally
 }
 
 Write-Host "Setting ProcessingState" -ForegroundColor $CommandInfo
-foreach ($secGroup in $M365Group)
+foreach ($group in $AllGroups)
 {
-    $exGrp = Get-AzureADMSGroup -SearchString $secGroup.DisplayName
-    if ($exGrp.Count -gt 1)
-    {
-        foreach($grp in $exGrp)
-        {
-            if ($grp.DisplayName -eq $secGroup.DisplayName)
-            {
-                $exGrp = $grp
-                break
-            }
-        }
-    }
+    if ($group.Type -ne "M365Group" -and $group.Type -ne "O365Group") { continue }
+    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
     if ($exGrp)
     {
-        if (-Not [string]::IsNullOrEmpty($secGroup.DanymicRule))
+        if (-Not [string]::IsNullOrEmpty($group.DanymicRule))
         {
-            Write-Host "  Group '$($secGroup.DisplayName)'"
+            Write-Host "  Group '$($group.DisplayName)'"
             Write-Host "   - Setting processing state to On"
-            $tmp = Set-AzureADMSGroup -Id $exGrp.Id -MembershipRuleProcessingState "On"
+            $exGrp = Update-MgGroup -GroupId $exGrp.Id -MembershipRuleProcessingState "On"
         }
     }
 
 }
 
 Write-Host "Checking disabled groups" -ForegroundColor $CommandInfo
-foreach ($secGroup in $GroupToDisable)
+foreach ($group in $GroupsToDisable)
 {
-    Write-Host "  Group '$($secGroup.DisplayName)'"
-    $exGrp = Get-AzureADMSGroup -SearchString $secGroup.DisplayName
-    if ($exGrp.Count -gt 1)
-    {
-        foreach($grp in $exGrp)
-        {
-            if ($grp.DisplayName -eq $secGroup.DisplayName)
-            {
-                $exGrp = $grp
-                break
-            }
-        }
-    }
+    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
     if ($exGrp)
     {
+        Write-Host "  Group '$($group.DisplayName)'"
         Write-Host "    disabling"
-        try { Set-AzureADMSGroup -Id $exGrp.Id -MailEnabled $false -ErrorAction SilentlyContinue } catch {}
-        try { Set-AzureADMSGroup -Id $exGrp.Id -SecurityEnabled $false -ErrorAction SilentlyContinue } catch {}
-        try { Set-AzureADMSGroup -Id $exGrp.Id -Visibility $false -ErrorAction SilentlyContinue } catch {}
+        $exGrp = Update-MgGroup -GroupId $exGrp.Id -MailEnabled:$false -SecurityEnabled:$false -MailEnabled:$false
     }
 }
-
 
 #Stopping Transscript
 Stop-Transcript

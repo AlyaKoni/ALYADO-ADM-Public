@@ -31,6 +31,7 @@
     ---------- -------------------- ----------------------------
     08.07.2022 Konrad Brunner       Initial Version
     25.03.2023 Konrad Brunner       Added assignedGroups parameter
+    23.04.2023 Konrad Brunner       Switched to MgGraph module
 
 #>
 
@@ -49,25 +50,34 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeam-$($Alya
 [string]$TitleAndGroupName = "$($AlyaCompanyNameShortM365.ToUpper())TM"
 [string]$Description = "Haupt Team fuer alle Benutzer. Intern und Extern."
 [string]$Visibility = "Private"
-[string[]]$Owners = @($AlyaTeamsNewTeamOwner,$AlyaTeamsNewTeamAdditionalOwner)
+[string[]]$Owners = $AlyaTeamsNewAdmins
 [string]$TeamPicturePath = $AlyaLogoUrlQuad
 [string]$DynamicMembershipRule = "(user.accountEnabled -eq true)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Teams"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-Install-ModuleIfNotInstalled "MicrosoftTeams"
-Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 LoginTo-Teams
+LoginTo-MgGraph -Scopes @(
+    "Directory.ReadWrite.All",
+    "Group.ReadWrite.All",
+    "GroupMember.ReadWrite.All",
+    "TeamsApp.ReadWrite.All",
+    "TeamsAppInstallation.ReadWriteForTeam",
+    "TeamsAppInstallation.ReadWriteSelfForTeam",
+    "TeamSettings.ReadWrite.All",
+    "TeamsTab.ReadWrite.All",
+    "TeamMember.ReadWrite.All",
+    "ChannelMessage.Send"
+)
 
 # =============================================================
 # O365 stuff
@@ -85,7 +95,7 @@ if (-Not $Team)
 {
     Write-Warning "Team $TitleAndGroupName does not exist. Creating it now."
     $Team = New-Team -DisplayName $TitleAndGroupName -Description $Description -Visibility $Visibility
-    Start-Sleep -Seconds 60
+    Start-Sleep -Seconds 10
     $TeamHasBeenCreated = $true
 }
 else
@@ -137,7 +147,7 @@ Set-Team -GroupId $Team.GroupId `
 
 # Getting groups
 Write-Host "Getting groups" -ForegroundColor $CommandInfo
-$allGroups = Get-AzADGroup
+$allGroups = Get-MgGroup -All
 
 # Checking team owners
 Write-Host "Checking team owners" -ForegroundColor $CommandInfo
@@ -147,7 +157,7 @@ foreach($memb in $Owners)
     if ($memb.IndexOf("@") -gt -1)
     {
         # is email
-        $user = Get-AzADUser -UserPrincipalName $memb -ErrorAction SilentlyContinue
+        $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
@@ -157,12 +167,12 @@ foreach($memb in $Owners)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                Get-MgGroupMember -GroupId $group.Id | foreach {
+                    if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
-                        $NewOwners += $_.UserPrincipalName
+                        $NewOwners += $_.AdditionalProperties.userPrincipalName
                     }
-                }
+				}
             }
         }
         else
@@ -176,7 +186,7 @@ foreach($memb in $Owners)
     else
     {
         # is guid
-        $user = Get-AzADUser -ObjectId $memb -ErrorAction SilentlyContinue
+        $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | where { $_.Id -eq $memb }
@@ -186,10 +196,10 @@ foreach($memb in $Owners)
             }
             else
             {
-                $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-                    if ($_.UserPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.UserPrincipalName)
+                Get-MgGroupMember -GroupId $group.Id | foreach {
+                    if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
-                        $NewOwners += $_.UserPrincipalName
+                        $NewOwners += $_.AdditionalProperties.userPrincipalName
                     }
                 }
             }
@@ -222,31 +232,38 @@ foreach($own in $NewOwners)
     }
 }
 
+# Checking team guest settings
 Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-$settings = Get-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -All $true | where { $_.DisplayName -eq "Group.Unified.Guest" }
-if (-Not $settings)
+$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
+$Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+if (-Not $Setting)
 {
-    Write-Warning "Created new team guest settings to disable Guests"
-    $template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "Group.Unified.Guest"}
-    $settingsCopy = $template.CreateDirectorySetting()
-    $settingsCopy["AllowToAddGuests"] = $true
-    $settings = New-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -DirectorySetting $settingsCopy
+    Write-Warning "Setting not yet created. Creating one based on template."
+    $Values = @()
+    foreach($dval in $SettingTemplate.Values) {
+	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+    }
+    $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
 }
-if ($settings["AllowToAddGuests"] -eq $false)
-{
-    Write-Warning "Existing team guest settings changed to disable Guests"
-    $settings["AllowToAddGuests"] = $true
-    $settings = Set-AzureADObjectSetting -TargetType "Groups" -TargetObjectId $Team.GroupId -Id $settings.Id -DirectorySetting $settings
+$Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+if ($Value.Value -eq $true) {
+    Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
+} 
+else {
+    Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
+    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
 }
+Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
 
+# Checking members
+Write-Host "Checking members" -ForegroundColor $CommandInfo
 if (-Not $assignedGroups)
 {
     # Setting DynamicMembershipRule
     Write-Host "Setting DynamicMembershipRule" -ForegroundColor $CommandInfo
-    $grp = Get-AzureADGroup -ObjectId $Team.GroupId
-    $tmp = Set-AzureADMSGroup -Id $Team.GroupId -GroupTypes "DynamicMembership", "Unified" -MembershipRule $DynamicMembershipRule -MembershipRuleProcessingState "On" `
-            -Description $grp.Description -DisplayName $grp.DisplayName -MailEnabled $grp.MailEnabled -MailNickname $grp.MailNickName `
-            -SecurityEnabled $grp.SecurityEnabled
+    $group = Update-MgGroup -GroupId $Team.GroupId -GroupTypes "DynamicMembership", "Unified" `
+        -MembershipRule $DynamicMembershipRule -MembershipRuleProcessingState "On"
 }
 else
 {
@@ -259,11 +276,10 @@ else
     {
         $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Member
         $NewMembers = @()
-        $allMembers = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-            $user = Get-AzADUser -ObjectId $_.Id
-            if ($user.UserPrincipalName -notlike "*#EXT#*")
+        Get-MgGroupMember -GroupId $group.Id | foreach {
+            if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*")
             {
-                $NewMembers += $user.UserPrincipalName
+                $NewMembers += $_.AdditionalProperties.userPrincipalName
             }
         }
         foreach($memb in $NewMembers)
@@ -293,10 +309,10 @@ else
     {
         $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Guest
         $NewGuests = @()
-        $allGuests = Get-AzADGroupMember -GroupObjectId $group.Id | foreach {
-            $user = Get-AzADUser -ObjectId $_.Id
-            if ($user.UserPrincipalName -like "*#EXT#*")
+        Get-MgGroupMember -GroupId $group.Id | foreach {
+            if ($_.AdditionalProperties.userPrincipalName -like "*#EXT#*")
             {
+                $user = Get-MgUser -UserId $_.AdditionalProperties.userPrincipalName
                 $NewGuests += $user.Mail
             }
         }
@@ -331,19 +347,6 @@ if ($TeamHasBeenCreated)
     $postMessageEN = "<h1>Welcome</h1>"
     $postMessageEN += "<p>Welcome to Teams from $($AlyaCompanyNameFull). Teams is our communication platform. In general we use SharePoint ($($AlyaSharePointUrl)) as our document repository. We use Teams for short term repositories or our external communicaion.</p>"
     $postMessageEN += "<p>Please write an email to $($AlyaSupportEmail), if you like to get your own team to use it in your project or to communicate with externals.</p>"
-    $scopes = @(
-        "Group.ReadWrite.All",
-        "GroupMember.ReadWrite.All",
-        "TeamsApp.ReadWrite.All",
-        "TeamsAppInstallation.ReadWriteForTeam",
-        "TeamsAppInstallation.ReadWriteSelfForTeam",
-        "TeamSettings.ReadWrite.All",
-        "TeamsTab.ReadWrite.All",
-        "TeamMember.ReadWrite.All",
-        "ChannelMessage.Send"
-    )
-    Connect-MgGraph -Scopes $scopes
-    Select-MgProfile -Name "beta"
     $bodyDE = @{
         body = @{
             contentType = "html"
@@ -362,7 +365,7 @@ if ($TeamHasBeenCreated)
 
     Write-Host "Please pin now the created messages and" -ForegroundColor $CommandWarning
     Write-Host "set channel to allow only owners posting messages" -ForegroundColor $CommandWarning
-    $teamLink = "https://teams.microsoft.com/_?tenantId=$((Get-AzContext).Tenant.Id)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)2&ctx=channel"
+    $teamLink = "https://teams.microsoft.com/_?tenantId=$($AlyaTenantId)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)2&ctx=channel"
     Write-Host "  $teamLink"
     start $teamLink
     pause

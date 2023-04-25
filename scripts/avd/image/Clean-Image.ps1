@@ -23,4 +23,4 @@ Get-AppxPackage -AllUsers | where {$_.PackageFullName -like "Adobe.Fresco_*" } |
 Get-AppxPackage -AllUsers | where {$_.PackageFullName -like "InputApp_*" } | Remove-AppxPackage
 Get-AppxPackage -AllUsers | where {$_.PackageFullName -like "Microsoft.PPIProjection_*" } | Remove-AppxPackage
 
-& "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown
+cmd /c "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown

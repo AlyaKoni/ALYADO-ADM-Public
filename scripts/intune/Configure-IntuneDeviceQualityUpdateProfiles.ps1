@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     26.08.2021 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -52,11 +53,16 @@ if (-Not $ProfileFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes @(
+    "DeviceManagementServiceConfig.ReadWrite.All",
+    "DeviceManagementConfiguration.ReadWrite.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "WindowsUpdates.ReadWrite.All",
+    "Directory.Read.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -65,15 +71,6 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Intune | Configure-IntuneDeviceQualityUpdateProfiles | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
 
 # Main
 $profiles = Get-Content -Path $ProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -159,18 +156,15 @@ function Replace-AlyaStrings($obj, $depth)
     }
 }
 
-#$uri = "https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles"
-#$actProfile = Get-MsGraphCollection -AccessToken $token -Uri $uri
-#$actProfile | ConvertTo-Json -Depth 50 | Set-Content -Path ($ProfileFile+".txt") -Encoding UTF8
-
 # Getting iOS configuration
 Write-Host "Getting iOS configuration" -ForegroundColor $CommandInfo
 $appleConfigured = $false
-$uri = "https://graph.microsoft.com/beta/devicemanagement/applePushNotificationCertificate"
-$appleConfiguration = Get-MsGraphObject -AccessToken $token -Uri $uri
+$uri = "/beta/devicemanagement/applePushNotificationCertificate"
+$appleConfiguration = Get-MsGraphObject -Uri $uri
 $appleConfigured = $false
 if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
 {
+    Write-Host "  Apple token is configured"
     $appleConfigured = $true
 }
 else
@@ -178,6 +172,7 @@ else
     $appleConfiguration = $appleConfiguration.value
     if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
     {
+        Write-Host "  Apple token is configured"
         $appleConfigured = $true
     }
 }
@@ -185,15 +180,17 @@ else
 # Getting Android configuration
 Write-Host "Getting Android configuration" -ForegroundColor $CommandInfo
 $androidConfigured = $false
-$uri = "https://graph.microsoft.com/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
-$androidConfiguration = Get-MsGraphObject -AccessToken $token -Uri $uri
+$uri = "/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
+$androidConfiguration = Get-MsGraphObject -Uri $uri
 $androidConfigured = $false
 if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
 {
+    Write-Host "  Android token is configured"
     $androidConfigured = $true
 }
 else
 {
+    Write-Host "  Android token is configured"
     $androidConfigured = $androidConfigured.Value
     if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
     {
@@ -201,12 +198,15 @@ else
     }
 }
 
+
 # Processing defined profiles
+$hadError = $false
+$latestQualUpdate = $null
 foreach($profile in $profiles)
 {
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
-    Write-Host "Configuring profile $($profile.displayName)" -ForegroundColor $CommandInfo
+    Write-Host "Configuring profile '$($profile.displayName)'" -ForegroundColor $CommandInfo
 
     # Checking if poliy is applicable
     Write-Host "  Checking if profile is applicable"
@@ -223,28 +223,54 @@ foreach($profile in $profiles)
 
     # Replacing constants
     Replace-AlyaStrings -obj $profile -depth 1
-
-    # Checking if profile exists
-    Write-Host "  Checking if profile exists"
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles"
-    $actProfiles = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
-    $actProfile = $actProfiles | where { $_.displayName -eq $profile.displayName }
-    if (-Not $actProfile.id)
+    if (($profile | ConvertTo-Json -Depth 50).IndexOf("##Alya") -gt -1)
     {
-        # Creating the profile
-        Write-Host "    Profile does not exist, creating"
-        Add-Member -InputObject $profile -MemberType NoteProperty -Name "id" -Value "00000000-0000-0000-0000-000000000000"
-        $uri = "https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles"
-        $actProfile = Post-MsGraph -AccessToken $token -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+        ($profile | ConvertTo-Json -Depth 50)
+        throw "Some replacement did not work!"
     }
 
-    # Updating the profile
-    Write-Host "    Updating the profile"
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/windowsQualityUpdateProfiles/$($actProfile.id)"
-    $profile.PSObject.Properties.Remove("releaseDateDisplayName")
-    $profile.PSObject.Properties.Remove("deployableContentDisplayName")
-    $actProfile = Patch-MsGraph -AccessToken $token -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+    try {
+        
+        # Getting latest windows update
+        if ($profile.'@odata.type' -eq "#microsoft.graph.windowsQualityUpdateProfile" -and $null -eq $latestQualUpdate)
+        {
+            Write-Host "  Getting latest windows update"
+            $latestQualUpdate = (Get-MsGraphObject -Uri "https://graph.microsoft.com/beta/admin/windows/updates/catalog/entries?`$top=1&`$filter=isof('microsoft.graph.windowsUpdates.qualityUpdateCatalogEntry') and microsoft.graph.windowsUpdates.qualityUpdateCatalogEntry/isExpeditable eq true&`$orderby=releaseDateTime desc").value
+        }
+        if ($profile.'@odata.type' -eq "#microsoft.graph.windowsQualityUpdateProfile")
+        {
+            $profile.expeditedUpdateSettings.qualityUpdateRelease = $latestQualUpdate.releaseDateTime
+        }
+        
+        # Checking if profile exists
+        Write-Host "  Checking if profile exists"
+        $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
+        $actProfiles = (Get-MsGraphObject -Uri $uri).value
+        $actProfile = $actProfiles | where { $_.displayName -eq $profile.displayName }
+        if (-Not $actProfile.id)
+        {
+            # Creating the profile
+            Write-Host "    Profile does not exist, creating"
+            Add-Member -InputObject $profile -MemberType NoteProperty -Name "id" -Value "00000000-0000-0000-0000-000000000000"
+            $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
+            $actProfile = Post-MsGraph -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+        }
+
+        # Updating the profile
+        Write-Host "    Updating the profile"
+        $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles/$($actProfile.id)"
+        $profile.PSObject.Properties.Remove("releaseDateDisplayName")
+        $profile.PSObject.Properties.Remove("deployableContentDisplayName")
+        $actProfile = Patch-MsGraph -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+    }
+    catch {
+        $hadError = $true
+    }
+
+}
+if ($hadError)
+{
+    Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
 #Stopping Transscript

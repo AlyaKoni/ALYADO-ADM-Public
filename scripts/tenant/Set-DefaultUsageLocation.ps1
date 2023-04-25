@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     27.02.2020 Konrad Brunner       Initial Version
+    22.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -47,28 +48,26 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-DefaultUsageLocation-$($
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-DefaultUsageLocation | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-DefaultUsageLocation | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$MsolCompanySettings = Get-MsolCompanyInformation
-if (-Not $MsolCompanySettings.DefaultUsageLocation)
+$org = Get-MgOrganization -OrganizationId $AlyaTenantId
+if ([string]::IsNullOrEmpty($org.DefaultUsageLocation))
 {
     Write-Warning "DefaultUsageLocation is not set. Setting it to $AlyaDefaultUsageLocation"
-    Set-MsolCompanySettings -DefaultUsageLocation $AlyaDefaultUsageLocation
+    Update-MgOrganization -OrganizationId $AlyaTenantId -DefaultUsageLocation $AlyaDefaultUsageLocation
 }
 else
 {

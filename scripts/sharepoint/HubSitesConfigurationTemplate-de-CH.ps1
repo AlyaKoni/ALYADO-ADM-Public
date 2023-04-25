@@ -3,7 +3,7 @@ $prefix = "$($AlyaCompanyNameShortM365.ToUpper())SP"
 $ThemeName = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Theme"
 $defaultSiteScript = @"
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
+  "`$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
   "actions": [
     {
       "verb": "applyTheme",
@@ -24,7 +24,7 @@ $defaultSiteScript = @"
 #TODO locale and timeZone from config
 $defaultSubSiteScript = @"
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
+  "`$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
   "actions": [
     {
       "verb": "applyTheme",
@@ -49,7 +49,7 @@ $defaultSubSiteScript = @"
 "@ #https://www.sitedesigner.io/#/
 $cusSubSiteScript = @"
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
+  "`$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
   "actions": [
     {
       "verb": "applyTheme",
@@ -174,7 +174,7 @@ $cusSubSiteScript = @"
 #TODO locale and timeZone from config
 $prtSubSiteScript = @"
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
+  "`$schema": "https://developer.microsoft.com/json-schemas/sp/site-design-script-actions.schema.json",
   "actions": [
     {
       "verb": "applyTheme",
@@ -382,7 +382,7 @@ $homePageTemplateGenHubTeamSite = @"
 					&quot;links&quot;:{
 					
 						&quot;baseUrl&quot;:&quot;{hosturl}{site}&quot;,
-						&quot;items[0].sourceItem.url&quot;:&quot;https://www.alyaconsulting.ch/Home/Support&quot;
+						&quot;items[0].sourceItem.url&quot;:&quot;$($AlyaSupportUrl)&quot;
 						
 					},
 					&quot;componentDependencies&quot;:{&quot;layoutComponentId&quot;:&quot;706e33c8-af37-4e7b-9d22-6e5694d92a6f&quot;}}, 
@@ -683,7 +683,7 @@ $homePageTemplateColHubTeamSite = @"
 					&quot;links&quot;:{
 					
 						&quot;baseUrl&quot;:&quot;{hosturl}{site}&quot;,
-						&quot;items[0].sourceItem.url&quot;:&quot;https://www.alyaconsulting.ch/Home/Support&quot;
+						&quot;items[0].sourceItem.url&quot;:&quot;$($AlyaSupportUrl)&quot;
 						
 					},
 					&quot;componentDependencies&quot;:{&quot;layoutComponentId&quot;:&quot;706e33c8-af37-4e7b-9d22-6e5694d92a6f&quot;}}, 

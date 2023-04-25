@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -31,6 +31,7 @@
     ---------- -------------------- ----------------------------
     04.10.2020 Konrad Brunner       Initial Version
     23.10.2021 Konrad Brunner       Added apps path
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -48,7 +49,6 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneWin32Packages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = "Win10"
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
 if (-Not (Test-Path $DataRoot))
 {
@@ -57,11 +57,16 @@ if (-Not (Test-Path $DataRoot))
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes @(
+    "Directory.Read.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "DeviceManagementServiceConfig.Read.All",
+    "DeviceManagementConfiguration.Read.All",
+    "DeviceManagementApps.ReadWrite.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -70,17 +75,6 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Intune | Configure-IntuneWin32Packages | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
-# Main
 
 # Checking dependencies
 Write-Host "Checking dependencies" -ForegroundColor $MenuColor
@@ -93,7 +87,6 @@ foreach($packageDir in $packages)
     if ($ConfigureOnlyAppWithName -and $packageDir.Name -ne $ConfigureOnlyAppWithName) { continue }
     if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
 
-    $packagePath = Join-Path $packageDir.FullName "Package"
     $dependenciesPath = Join-Path $packageDir.FullName "dependencies.json"
 
     if ((Test-Path $dependenciesPath))
@@ -107,8 +100,8 @@ foreach($packageDir in $packages)
         # Checking if app exists
         Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
         $searchValue = [System.Web.HttpUtility]::UrlEncode($config.displayName)
-        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $app = (Get-MsGraphObject -Uri $uri).value
         if (-Not $app.id)
         {
             throw "The app with name $($config.displayName) does not exist. Please create it first."
@@ -130,8 +123,8 @@ foreach($packageDir in $packages)
             Write-Host "  Checking if app $($config.displayName) exists"
             Add-Member -InputObject $dependency -MemberType NoteProperty -Name "appName" -Value $config.displayName
             $searchValue = [System.Web.HttpUtility]::UrlEncode($config.displayName)
-            $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-            $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+            $app = (Get-MsGraphObject -Uri $uri).value
             if (-Not $app.id)
             {
                 throw "The app with name $($dependency.appName) does not exist. Dependency to $($packageDir.Name) can't be built. Please create it first."
@@ -140,8 +133,8 @@ foreach($packageDir in $packages)
         }
 
         Write-Host "  Getting existing dependencies"
-	    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/relationships"
-	    $actDependencies = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+	    $uri = "/beta/deviceAppManagement/mobileApps/$appId/relationships"
+	    $actDependencies = (Get-MsGraphObject -Uri $uri).value
         $newDependencies = @()
         if ($actDependencies -and $actDependencies.Count -gt 0)
         {
@@ -179,10 +172,10 @@ foreach($packageDir in $packages)
                 $newDependencies += $newDependency
             }
         }
-        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/updateRelationships"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/updateRelationships"
         $body = @{}
         $body.relationships = $newDependencies
-        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body ($body | ConvertTo-Json -Depth 50)
+        $appCat = Post-MsGraph -Uri $uri -Body ($body | ConvertTo-Json -Depth 50)
     }
 }
 
@@ -199,7 +192,6 @@ foreach($packageDir in $packages)
 
     Write-Host "Configuring package $($packageDir.Name)" -ForegroundColor $CommandInfo
 
-    $packagePath = Join-Path $packageDir.FullName "Package"
     $configPath = Join-Path $packageDir.FullName "config.json"
     $categoryPath = Join-Path $packageDir.FullName "category.json"
     $assignmentsPath = Join-Path $packageDir.FullName "assignments.json"
@@ -215,8 +207,8 @@ foreach($packageDir in $packages)
     # Checking if app exists
     Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
     $searchValue = [System.Web.HttpUtility]::UrlEncode($config.displayName)
-    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-    $app = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+    $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+    $app = (Get-MsGraphObject -Uri $uri).value
     if (-Not $app.id)
     {
         Write-Error "The app with name $($config.displayName) does not exist. Please create it first." -ErrorAction Continue
@@ -231,8 +223,8 @@ foreach($packageDir in $packages)
     {
         # Checking if category exists
         Write-Host "    Checking if category exists"
-	    $caturi = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileAppCategories/$($category.id)"
-	    $defCategory = Get-MsGraphObject -AccessToken $token -Uri $caturi
+	    $caturi = "/beta/deviceAppManagement/mobileAppCategories/$($category.id)"
+	    $defCategory = Get-MsGraphObject -Uri $caturi
         if (-Not $defCategory)
         {
             Write-Error "Can't find the category $($category.displayName)." -ErrorAction Continue
@@ -241,16 +233,16 @@ foreach($packageDir in $packages)
 
         # Getting existing categories
         Write-Host "    Getting existing categories"
-	    $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/categories"
-	    $actCategories = Get-MsGraphCollection -AccessToken $token -Uri $uri
+	    $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories"
+	    $actCategories = Get-MsGraphCollection -Uri $uri
         $isPresent = $actCategories | where { $_.id -eq $category.id }
         if (-Not $isPresent)
         {
             # Adding category
             Write-Host "    Adding category $($defCategory.displayName)"
-	        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
-            $body = "{ `"@odata.id`": `"$caturi`" }"
-	        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
+	        $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
+            $body = "{ `"@odata.id`": `"https://graph.microsoft.com$caturi`" }"
+	        $appCat = Post-MsGraph -Uri $uri -Body $body
         }
         else
         {
@@ -263,8 +255,8 @@ foreach($packageDir in $packages)
 
     # Getting existing assignments
     Write-Host "    Getting existing assignments"
-	$uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/assignments"
-	$actAssignments = Get-MsGraphCollection -AccessToken $token -Uri $uri
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
+	$actAssignments = Get-MsGraphCollection -Uri $uri
     $cnt = 0
     foreach ($assignment in $assignments)
     {
@@ -285,9 +277,9 @@ foreach($packageDir in $packages)
             Write-Host "      Assignment not found. Creating"
             # Adding assignment
             Write-Host "        Adding assignment $($assignment.target."@odata.type")"
-	        $uri = "https://graph.microsoft.com/Beta/deviceAppManagement/mobileApps/$appId/assignments"
+	        $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
             $body = $assignment | ConvertTo-Json -Depth 50
-	        $appCat = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
+	        $appCat = Post-MsGraph -Uri $uri -Body $body
         }
         else
         {

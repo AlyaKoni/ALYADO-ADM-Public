@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2022
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,13 +30,14 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     27.02.2020 Konrad Brunner       Initial Version
-    02.02.2022 Konrad Brunner       Added lastNameFirst option
+    02.02.2022 Konrad Brunner       Added SurnameFirst option
+    23.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$lastNameFirst = $false,
+    [bool]$SurnameFirst = $false,
     [string]$ExternalMarker = "Ext"
 )
 
@@ -48,14 +49,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Prepare-GuestUsers-$($AlyaTimeS
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # Constants
 $CompStart = $AlyaB2BCompStart
@@ -66,20 +65,20 @@ $CompEnd = $AlyaB2BCompEnd
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Prepare-GuestUsers | O365" -ForegroundColor $CommandInfo
+Write-Host "AAD | Prepare-GuestUsers | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 function Main
 {
     Write-Host "Getting all guest accounts" -ForegroundColor $CommandInfo
-    $Users = Get-MsolUser -All | where { $_.UserType -eq "Guest" }
+    $Users = Get-Mguser -Filter "UserType eq 'Guest'" -All
 
     Write-Host "Checking $($Users.Count) accounts"
     foreach($User in $Users)
     {
         #$user = $users[20]
         Write-Host "=============================== $($user.AlternateEmailAddresses)"
-        $oldUser = @{disp=$User.DisplayName;first=$User.FirstName;last=$User.LastName}
+        $oldUser = @{disp=$User.DisplayName;first=$User.GivenName;last=$User.Surname}
         Write-Host "OLD: $($oldUser | ConvertTo-Json -Compress)"
         #$newUser | ConvertTo-Json
 
@@ -560,7 +559,7 @@ function Main
             }
         }
         $disp = ($first + " " + $last).Trim() + " " + $CompStart + $comp + $CompEnd
-        if ($lastNameFirst)
+        if ($SurnameFirst)
         {
             $disp = ($last + " " + $first).Trim() + " " + $CompStart + $comp + $CompEnd
         }
@@ -583,17 +582,41 @@ function Main
                 $first = $last
                 $last = $tmp
                 $disp = ($first + " " + $last).Trim() + " " + $CompStart + $comp + $CompEnd
-                if ($lastNameFirst)
+                if ($SurnameFirst)
                 {
                     $disp = ($last + " " + $first).Trim() + " " + $CompStart + $comp + $CompEnd
                 }
                 $newUser = @{disp=$disp;first=$first;last=$last}
                 Write-Host "SWAPPED: $($newUser | ConvertTo-Json -Compress)"
-                Set-MsolUser -ObjectId $user.ObjectId -FirstName $newUser.first -LastName $newUser.last -DisplayName $newUser.disp
+                if ($null -eq $newUser.last) {
+                    Update-MgUser -UserId $user.Id -GivenName $newUser.first -DisplayName $newUser.disp
+                    Invoke-MgRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{Surname = $null}
+                }
+                else {
+                    if ($null -eq $newUser.first) {
+                        Update-MgUser -UserId $user.Id -Surname $newUser.last -DisplayName $newUser.disp
+                        Invoke-MgRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{GivenName = $null}
+                    }
+                    else {
+                        Update-MgUser -UserId $user.Id -Surname $newUser.last -GivenName $newUser.first -DisplayName $newUser.disp
+                    }
+                }
             }
             if ($decision -eq 0)
             {
-                Set-MsolUser -ObjectId $user.ObjectId -FirstName $newUser.first -LastName $newUser.last -DisplayName $newUser.disp
+                if ($null -eq $newUser.last) {
+                    Update-MgUser -UserId $user.Id -GivenName $newUser.first -DisplayName $newUser.disp
+                    Invoke-MgRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{Surname = $null}
+                }
+                else {
+                    if ($null -eq $newUser.first) {
+                        Update-MgUser -UserId $user.Id -Surname $newUser.last -DisplayName $newUser.disp
+                        Invoke-MgRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{GivenName = $null}
+                    }
+                    else {
+                        Update-MgUser -UserId $user.Id -Surname $newUser.last -GivenName $newUser.first -DisplayName $newUser.disp
+                    }
+                }
             }
         }
     }

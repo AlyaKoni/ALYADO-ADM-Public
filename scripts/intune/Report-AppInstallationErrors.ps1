@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2022-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     26.04.2022 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -55,13 +56,16 @@ Write-Host "Exporting Intune report to $DataRoot"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureADPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-AD
+LoginTo-MgGraph -Scopes @(
+    "Directory.Read.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "DeviceManagementServiceConfig.Read.All",
+    "DeviceManagementConfiguration.Read.All",
+    "DeviceManagementApps.Read.All"
+)
 
 # =============================================================
 # Intune stuff
@@ -71,44 +75,33 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Export-IntuneConfiguration | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
-
-
 #GET /deviceAppManagement/mobileApps/{mobileAppId}/deviceStatuses
 #GET /deviceAppManagement/mobileApps/{mobileAppId}/userStatuses/{userAppInstallStatusId}/deviceStatuses
 
 #devices
-$uri = "https://graph.microsoft.com/beta/deviceManagement/managedDevices"
-$managedDevices = Get-MsGraphObject -AccessToken $token -Uri $uri
+$uri = "/beta/deviceManagement/managedDevices"
+$managedDevices = Get-MsGraphObject -Uri $uri
 while ($managedDevices.'@odata.nextLink')
 {
-    $nmanagedDevices = Get-MsGraphObject -AccessToken $token -Uri $managedDevices.'@odata.nextLink'
+    $nmanagedDevices = Get-MsGraphObject -Uri $managedDevices.'@odata.nextLink'
     $managedDevices.value += $nmanagedDevices.value
     $managedDevices.'@odata.nextLink' = $nmanagedDevices.'@odata.nextLink'
 }
 $devices = $managedDevices.value
 
 #intuneApplications
-$uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps"
-$intuneApplications = Get-MsGraphObject -AccessToken $token -Uri $uri
+$uri = "/beta/deviceAppManagement/mobileApps"
+$intuneApplications = Get-MsGraphObject -Uri $uri
 $applications = $intuneApplications.value
 $report = New-Object System.Collections.ArrayList
 foreach($application in $applications)
 {
     #if ($application.displayName -ne "Google Recorder") {continue}
     Write-Host "App: $($application.displayName)"
-    $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)"
-    $applicationRes = Get-MsGraphObject -AccessToken $token -Uri $uri
-    $uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)/deviceStatuses"
-    $deviceStatuses = Get-MsGraphObject -AccessToken $token -Uri $uri
+    $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)"
+    $applicationRes = Get-MsGraphObject -Uri $uri
+    $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/deviceStatuses"
+    $deviceStatuses = Get-MsGraphObject -Uri $uri
     foreach($deviceStatus in $deviceStatuses.value)
     {
         if ($deviceStatus.installState -eq "failed")
@@ -161,8 +154,8 @@ foreach($application in $applications)
             $null = $report.Add($obj)
         }
     }
-    <#$uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)/userStatuses"
-    $userStatuses = Get-MsGraphObject -AccessToken $token -Uri $uri
+    <#$uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/userStatuses"
+    $userStatuses = Get-MsGraphObject -Uri $uri
     foreach($userStatus in $userStatuses.value)
     {
         if ($userStatus.failedDeviceCount -gt 0)
@@ -170,8 +163,8 @@ foreach($application in $applications)
             Write-Host "  Usr: $($userStatus.userPrincipalName)"
             $statusId = $userStatus.id.Substring(35,36)
             #Write-Host "  Usr: $($statusId)"
-            #$uri = "https://graph.microsoft.com/beta/deviceAppManagement/mobileApps/$($application.id)/userStatuses/$($statusId)/deviceStatuses"
-            #$userDeviceStatuses = Get-MsGraphObject -AccessToken $token -Uri $uri
+            #$uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/userStatuses/$($statusId)/deviceStatuses"
+            #$userDeviceStatuses = Get-MsGraphObject -Uri $uri
             #$userDeviceStatuses | fl
         }
     }#>

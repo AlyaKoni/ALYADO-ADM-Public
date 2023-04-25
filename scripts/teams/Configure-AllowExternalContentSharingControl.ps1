@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2022-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     08.07.2022 Konrad Brunner       Initial Version
+    23.04.2023 Konrad Brunner       Teams module only, removed others
 
 #>
 
@@ -45,12 +46,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-AllowExternalConten
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-Teams
 
 # =============================================================

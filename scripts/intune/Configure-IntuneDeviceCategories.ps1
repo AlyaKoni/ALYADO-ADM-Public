@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2021
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     21.10.2020 Konrad Brunner       Initial Version
+    24.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -43,16 +44,15 @@ Param(
 # Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneDeviceCategories-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
-# Constants
-$categoryNames = $AlyaDeviceCategories
-
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes @(
+    "DeviceManagementManagedDevices.ReadWrite.All"
+)
+#Disconnect-MgGraph
 
 # =============================================================
 # Intune stuff
@@ -62,22 +62,10 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Configure-IntuneDeviceCategories | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context and token
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$token = Get-AdalAccessToken
-
-# Main
-$scripts = Get-ChildItem -Path $ScriptDir -Filter "*.ps1"
-
 # Processing categories
-foreach($categoryName in $categoryNames)
+foreach($categoryName in $AlyaDeviceCategories)
 {
-    Write-Host "Configuring category $($categoryName)" -ForegroundColor $CommandInfo
+    Write-Host "Configuring category '$($categoryName)'" -ForegroundColor $CommandInfo
 
     $body = @"
 {
@@ -90,20 +78,20 @@ foreach($categoryName in $categoryNames)
     # Checking if category exists
     Write-Host "  Checking if category exists"
     $searchValue = [System.Web.HttpUtility]::UrlEncode($categoryName)
-    $uri = "https://graph.microsoft.com/beta//deviceManagement/deviceCategories?`$filter=displayName eq '$searchValue'"
-    $actCategory = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
+    $uri = "/beta/deviceManagement/deviceCategories?`$filter=displayName eq '$searchValue'"
+    $actCategory = (Get-MsGraphObject -Uri $uri).value
     if (-Not $actCategory.id)
     {
         # Creating the category
         Write-Host "    Category does not exist, creating"
-        $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceCategories"
-        $actCategory = Post-MsGraph -AccessToken $token -Uri $uri -Body $body
+        $uri = "/beta/deviceManagement/deviceCategories"
+        $actCategory = Post-MsGraph -Uri $uri -Body $body
     }
 
     # Updating the category
     Write-Host "    Updating the category"
-    $uri = "https://graph.microsoft.com/beta/deviceManagement/deviceCategories/$($actCategory.id)"
-    $actCategory = Patch-MsGraph -AccessToken $token -Uri $uri -Body $body
+    $uri = "/beta/deviceManagement/deviceCategories/$($actCategory.id)"
+    $actCategory = Patch-MsGraph -Uri $uri -Body $body
 }
 
 #Stopping Transscript

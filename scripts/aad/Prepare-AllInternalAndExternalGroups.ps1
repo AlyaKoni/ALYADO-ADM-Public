@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     25.03.2023 Konrad Brunner       Initial Version
+    21.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -45,13 +46,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Prepare-AllInternalAndExternalG
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # Azure stuff
@@ -61,34 +61,33 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AAD | Prepare-AllInternalAndExternalGroups | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$AllInternalsGroup = Get-AzADGroup -DisplayName $AlyaAllInternals
-$AllExternalsGroup = Get-AzADGroup -DisplayName $AlyaAllExternals
+$AllUsers = Get-MgUser -All -Property "Id","UserPrincipalName","ExternalUserState"
+$AllInternalsGroup = Get-MgGroup -Filter "DisplayName eq '$AlyaAllInternals'"
+$AllExternalsGroup = Get-MgGroup -Filter "DisplayName eq '$AlyaAllExternals'"
+$AllInternalsGroupMembers = Get-MgGroupMember -GroupId $AllInternalsGroup.Id
+$AllExternalsGroupMembers = Get-MgGroupMember -GroupId $AllExternalsGroup.Id
 
-$AllUsers = Get-AzAdUser -Select "ExternalUserState" -AppendSelected
-$AllInternalsGroupMembers = Get-AzADGroupMember -GroupObjectId $AllInternalsGroup.Id
-$AllExternalsGroupMembers = Get-AzADGroupMember -GroupObjectId $AllExternalsGroup.Id
-
-$AllUsers = Get-AzAdUser -Select "ExternalUserState" -AppendSelected
 foreach($user in $AllUsers)
 {
+    Write-Host "User $($user.UserPrincipalName)"
     if ($user.ExternalUserState -eq "Accepted")
     {
-        Write-Host "Guest $($user.Mail)"
-        $extMemb = $AllExternalsGroupMembers | where { $_.Id -eq $user.Id }
+        Write-Host "  Guest $($user.Mail)"
+        $extMemb = $AllExternalsGroupMembers | where { $_.AdditionalProperties.userPrincipalName -eq $user.UserPrincipalName }
         if (-Not $extMemb)
         {
-            Write-Warning "Adding to $AlyaAllExternals"
-            Add-AzADGroupMember -TargetGroupObject $AllExternalsGroup -MemberUserPrincipalName $user.UserPrincipalName
+            Write-Warning "    Adding to $AlyaAllExternals"
+            New-MgGroupMember -GroupId $AllExternalsGroup.Id -DirectoryObjectId $user.Id
         }
     }
     if (-Not $user.ExternalUserState)
     {
-        Write-Host "Member $($user.UserPrincipalName)"
-        $intMemb = $AllInternalsGroupMembers | where { $_.Id -eq $user.Id }
+        Write-Host "  Member $($user.UserPrincipalName)"
+        $intMemb = $AllInternalsGroupMembers | where { $_.AdditionalProperties.userPrincipalName -eq $user.UserPrincipalName }
         if (-Not $intMemb)
         {
-            Write-Warning "Adding to $AlyaAllExternals"
-            Add-AzADGroupMember -TargetGroupObject $AllInternalsGroup -MemberUserPrincipalName $user.UserPrincipalName
+            Write-Warning "    Adding to $AlyaAllExternals"
+            New-MgGroupMember -GroupId $AllInternalsGroup.Id -DirectoryObjectId $user.Id
         }
     }
 }

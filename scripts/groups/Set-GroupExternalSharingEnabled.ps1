@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     11.10.2020 Konrad Brunner       Initial Version
+    20.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -53,30 +54,53 @@ if (-Not $GroupToAllowExternalGuests)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
     
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
-# Azure stuff
+# Graph stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-GroupExternalSharingEnabled | Azure" -ForegroundColor $CommandInfo
+Write-Host "Groups | Set-GroupExternalSharingEnabled | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Checking group
+Write-Host "Checking group" -ForegroundColor $CommandInfo
+$Group = Get-MgGroup -Filter "DisplayName eq '$GroupToAllowExternalGuests'"
+if (-Not $Group)
+{
+    throw "Group '$GroupToAllowExternalGuests' not found"
+}
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$template = Get-AzureADDirectorySettingTemplate | ? {$_.displayname -eq "group.unified.guest"}
-$settingsCopy = $template.CreateDirectorySetting()
-$settingsCopy["AllowToAddGuests"] = "True"
-$groupID = (Get-AzureADGroup -SearchString $GroupToAllowExternalGuests).ObjectId
-New-AzureADObjectSetting -TargetType Groups -TargetObjectId $groupID -DirectorySetting $settingsCopy
-Get-AzureADObjectSetting -TargetObjectId $groupID -TargetType Groups | fl Values
+$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
+$Setting = Get-MgGroupSetting -GroupId $Group.Id | where { $_.TemplateId -eq $SettingTemplate.Id }
+if (-Not $Setting)
+{
+    Write-Warning "Setting not yet created. Creating one based on template."
+    $Values = @()
+    foreach($dval in $SettingTemplate.Values) {
+	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+    }
+    $Setting = New-MgGroupSetting -GroupId $Group.Id -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgGroupSetting -GroupId $Group.Id | where { $_.TemplateId -eq $SettingTemplate.Id }
+}
+
+$Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+if ($Value.Value -eq $true) {
+    Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
+} 
+else {
+    Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
+    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+}
+
+Update-MgGroupSetting -GroupId $Group.Id -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 #Stopping Transscript
 Stop-Transcript

@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2022-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     25.11.2022 Konrad Brunner       Initial Version
+    25.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -45,15 +46,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-CompanyBranding-$($AlyaT
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MgGraph -Scopes @("Organization.ReadWrite.All")
-Disconnect-MgGraph # Required after first login with consent dialog
 LoginTo-MgGraph -Scopes @("Organization.ReadWrite.All")
 
 # =============================================================
@@ -218,7 +214,7 @@ else
     try
     {
         $params = @{  
-            BackgroundImageInputFile = $uplFile
+            SquareLogoInputFile = $uplFile
         }  
         Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
@@ -251,7 +247,7 @@ else
     try
     {
         $params = @{  
-            BackgroundImageInputFile = $uplFile
+            SquareLogoInputFile = $uplFile
         }  
         Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
@@ -288,7 +284,7 @@ else
     try
     {
         $params = @{  
-            BackgroundImageInputFile = $uplFile
+            BannerLogoInputFile = $uplFile
         }  
         Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
@@ -321,7 +317,7 @@ else
     try
     {
         $params = @{  
-            BackgroundImageInputFile = $uplFile
+            FaviconInputFile = $uplFile
         }  
         Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }

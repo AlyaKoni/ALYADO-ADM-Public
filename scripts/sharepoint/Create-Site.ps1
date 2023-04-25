@@ -73,6 +73,7 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Login
+#Set-PnPTraceLog -On -WriteToConsole -Level Debug -AutoFlush $true
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # Constants

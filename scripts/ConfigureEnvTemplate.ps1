@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2022
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -71,9 +71,11 @@ $AlyaSecurityPhoneNumber = $AlyaGeneralPhoneNumber
 $AlyaTimeZone = "PleaseSpecify" #Example:"W. Europe Standard Time"
 $AlyaGeoId = "PleaseSpecify" #Example:223
 $AlyaDefaultUsageLocation = "PleaseSpecify" #Example:"CH"
-$AlyaPasswordResetEnabled = "PleaseSpecify" #Example:$true
 $AlyaB2BCompStart = "PleaseSpecify" #Example:"["
 $AlyaB2BCompEnd = "PleaseSpecify" #Example:"]"
+$AlyaLicenseType = "PleaseSpecify" #Example:"BusinessPremium" #"BusinessBasic","BusinessStandard","BusinessPremium","EnterpriseOE1","EnterpriseOE3","EnterpriseOE5","EnterpriseME3orOE3EMS","EnterpriseME5orOE5EMS"
+$AlyaAddLicenses = @() #"M365DefenderP1","SMIME","MsLegacyStore"
+$AlyaPasswordResetEnabled = $AlyaLicenseType -in @("BusinessPremium","EnterpriseME3orOE3EMS","EnterpriseME5orOE5EMS")
 $AlyaVMLicenseTypeClient = "PleaseSpecify" #Example:"None" #Windows_Client=HybridBenefit, None=PAYG
 $AlyaVMLicenseTypeServer = "PleaseSpecify" #Example:"None" #Windows_Server=HybridBenefit, None=PAYG
 $AlyaServerOuProd = $null #Example:"OU=PROD,OU=WVD,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
@@ -91,9 +93,9 @@ $AlyaSupportMail = "support@alyaconsulting.ch"
 $AlyaSupportUrl = "https://alyaconsulting.ch/Home/Support"
 
 <# BRANDING #>
-$AlyaAzureBrandingBackgroundColor = "#FFFFFF"
-$AlyaAzureBrandingTextColor = "#000000"
-$AlyaAzureBrandingPrimaryColor = "#0000FF"
+$AlyaAzureBrandingBackgroundColor = "#FFFFFF" # $AlyaSpThemeDef.white
+$AlyaAzureBrandingTextColor = "#000000" # $AlyaSpThemeDef.neutralPrimary
+$AlyaAzureBrandingPrimaryColor = "#0000FF" # $AlyaSpThemeDef.themePrimary
 $AlyaAzureBrandingSignInPageTextDe = "Willkommen in der Microsoft Cloud von '$AlyaCompanyNameFull'"
 $AlyaAzureBrandingSignInPageTextEn = "Welcome to the Microsoft Cloud from '$AlyaCompanyNameFull'"
 $AlyaAzureBrandingSignInPageTextFr = "Bienvenue dans le cloud Microsoft de '$AlyaCompanyNameFull'"
@@ -244,7 +246,8 @@ $AlyaSpThemeDef = @{
 
 <# TEAMS SETTINGS #>
 $AlyaTeamsNewTeamOwner = $AlyaSharePointNewSiteOwner
-$AlyaTeamsNewTeamAdditionalOwner = $AlyaSharePointNewSiteOwner
+$AlyaTeamsNewTeamAdditionalOwner = $AlyaSharePointNewSiteAdditionalOwner
+$AlyaTeamsNewAdmins = @( $AlyaTeamsNewTeamOwner, $AlyaTeamsNewTeamAdditionalOwner )
 
 <# OFFICE GROUP SETTINGS #>
 $AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERS" # Only members can create groups
@@ -265,6 +268,7 @@ $AlyaWinPEBackgroundJpgImage = "PleaseSpecify"
 $AlyaDesktopBackgroundUrl = "PleaseSpecify"
 $AlyaLockScreenBackgroundUrl = "PleaseSpecify"
 $AlyaWelcomeScreenBackgroundUrl = "PleaseSpecify"
+$AlyaAppPrefix = "WIN"
 
 <# WORM BACKUP SETTINGS #>
 $AlyaWormStorageAccountName = "PleaseSpecify"
