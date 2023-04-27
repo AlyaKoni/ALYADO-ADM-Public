@@ -32,6 +32,7 @@
     27.02.2020 Konrad Brunner       Initial Version
     30.06.2022 Konrad Brunner       Change from REST to AzureAdPreview
     24.04.2023 Konrad Brunner       Switched to Graph, removed MSOL
+    27.04.2023 Konrad Brunner       Calling script to disable security defaults
 
 #>
 
@@ -337,12 +338,7 @@ else
 
 # Disabling security defaults
 Write-Host "Disabling security defaults" -ForegroundColor $CommandInfo
-Write-Host "You have now to disable the security defaults. Pleas browse to"
-Write-Host "  https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Properties"
-Write-Host "hit 'Manage Security defaults' at the bottom of the page and disable security defaults!"
-Write-Host "Please select 'My organization is using Conditional Access'."
-start https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Properties
-pause
+& "$AlyaScripts\tenant\Set-SecurityDefaultsDisabled.ps1"
 
 #Stopping Transscript
 Stop-Transcript

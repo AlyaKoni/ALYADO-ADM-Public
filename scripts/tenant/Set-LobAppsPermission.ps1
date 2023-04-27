@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     04.03.2020 Konrad Brunner       Initial Version
+    26.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -43,37 +44,33 @@ Param(
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-LobAppsDisabled-$($AlyaTimeString).log" | Out-Null
 
-# Constants
-
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
 
-# Logging in
-Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+# Logins
+LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-LobAppsPermission | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-LobAppsPermission | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$MsolCompanySettings = Get-MsolCompanyInformation
-if ($MsolCompanySettings.UsersPermissionToCreateLOBAppsEnabled -ne $AlyaAllowUsersToCreateLOBApps)
+# Checking LOB apps creation
+Write-Host "Checking LOB apps creation" -ForegroundColor $CommandInfo
+$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+if ($policy.DefaultUserRolePermissions.AllowedToCreateApps)
 {
-    Write-Warning "UsersPermissionToCreateLOBApps was $($MsolCompanySettings.UsersPermissionToCreateLOBAppsEnabled). Setting it to $($AlyaAllowUsersToCreateLOBApps)."
-    Set-MsolCompanySettings -UsersPermissionToCreateLOBAppsEnabled $false
+    Write-Warning "LOB apps creation was enabled. Disabling it now"
+    $RolePermissions = @{}
+    $RolePermissions["allowedToCreateApps"] = $false
+    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-else
-{
-    Write-Host "UsersPermissionToCreateLOBApps was already $($AlyaAllowUsersToCreateLOBApps)." -ForegroundColor $CommandSuccess
-}
+Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

@@ -45,13 +45,11 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-AuthorizationPolicy.ps1-
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-    
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
 
 # =============================================================
 # Azure stuff
@@ -61,33 +59,29 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-AuthorizationPolicy.ps1 | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking policy
-Write-Host "Checking policy" -ForegroundColor $CommandInfo
-$policy = Get-AzureADMSAuthorizationPolicy
+# Checking authorization policy
+Write-Host "Checking authorization policy" -ForegroundColor $CommandInfo
+$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
 
 if ($policy.GuestUserRoleId -ne "2af84b1e-32c8-42b7-82bc-daa82404023b")
 {
     Write-Warning "GuestUserRoleId changed to 'Restricted access' 2af84b1e-32c8-42b7-82bc-daa82404023b"
-    Set-AzureADMSAuthorizationPolicy -Id $policy.Id -GuestUserRoleId "2af84b1e-32c8-42b7-82bc-daa82404023b"
+    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -GuestUserRoleId "2af84b1e-32c8-42b7-82bc-daa82404023b"
 }
 
 if ($policy.AllowedToSignUpEmailBasedSubscriptions)
 {
     Write-Warning "Disabling AllowedToSignUpEmailBasedSubscriptions"
-    Set-AzureADMSAuthorizationPolicy -Id $policy.Id -AllowedToSignUpEmailBasedSubscriptions $false
+    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowedToSignUpEmailBasedSubscriptions $false
 }
 
 if ($policy.AllowEmailVerifiedUsersToJoinOrganization)
 {
     Write-Warning "Disabling AllowEmailVerifiedUsersToJoinOrganization"
-    Set-AzureADMSAuthorizationPolicy -Id $policy.Id -AllowEmailVerifiedUsersToJoinOrganization $false
+    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowEmailVerifiedUsersToJoinOrganization $false
 }
 
-if (-Not $policy.AllowedToUseSSPR)
-{
-    Write-Warning "GuestUserRoleId changed to 'Restricted access' 2af84b1e-32c8-42b7-82bc-daa82404023b"
-    Set-AzureADMSAuthorizationPolicy -Id $policy.Id -GuestUserRoleId "2af84b1e-32c8-42b7-82bc-daa82404023b"
-}
+Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

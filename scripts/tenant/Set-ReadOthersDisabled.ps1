@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     29.06.2022 Konrad Brunner       Initial Version
+    26.04.2023 Konrad Brunner       Switched to Graph
 
 #>
 
@@ -43,18 +44,13 @@ Param(
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-ReadOthersDisabled-$($AlyaTimeString).log" | Out-Null
 
-# Constants
-
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
 
-# Logging in
-Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+# Logins
+LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
 
 # =============================================================
 # O365 stuff
@@ -64,16 +60,17 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-ReadOthersDisabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$MsolCompanySettings = Get-MsolCompanyInformation
-if ($MsolCompanySettings.UsersPermissionToReadOtherUsersEnabled)
+# Checking permission to read others for guests
+Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
+$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
 {
-    Write-Warning "UsersPermissionToReadOtherUsers was enabled. Disabling it."
-    Set-MsolCompanySettings -UsersPermissionToReadOtherUsersEnabled $false
+    Write-Warning "Read others for guests was enabled. Disabling it now"
+    $RolePermissions = @{}
+    $RolePermissions["allowedToReadOtherUsers"] = $false
+    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-else
-{
-    Write-Host "UsersPermissionToReadOtherUsers was already disabled." -ForegroundColor $CommandSuccess
-}
+Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2023
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,8 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    04.03.2020 Konrad Brunner       Initial Version
-    26.04.2023 Konrad Brunner       Switched to Graph
+    26.04.2023 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-ReadOthersEnabled-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-OneTimePasscodeEnabled-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -50,27 +49,48 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
 
 # Logins
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.AuthenticationMethod")
 
 # =============================================================
-# O365 stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-ReadOthersEnabled | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-OneTimePasscodeEnabled | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking permission to read others for guests
-Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
-if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
+# Checking Email OTP enabled
+Write-Host "Checking Email OTP enabled" -ForegroundColor $CommandInfo
+(Get-MgPolicyAuthenticationMethodPolicy).AuthenticationMethodConfigurations
+$conf = Get-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email"
+if ($conf.State -ne "enabled")
 {
-    Write-Warning "Read others for guests was disabled. Enabling it now"
-    $RolePermissions = @{}
-    $RolePermissions["allowedToReadOtherUsers"] = $true
-    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
+    Write-Warning "Email OTP was not enabled. Enabling it now"
+    Update-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email" -State "enabled"
 }
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+
+# Checking guests enabled
+Write-Host "Checking guests enabled" -ForegroundColor $CommandInfo
+$conf = Get-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email"
+if ($conf.AdditionalProperties.allowExternalIdToUseEmailOtp -ne "enabled")
+{
+    Write-Warning "Email OTP guests were not enabled. Enabling them now"
+    $conf.AdditionalProperties.allowExternalIdToUseEmailOtp = "enabled"
+
+}
+if ($conf.AdditionalProperties.includeTargets.Count -eq 0)
+{
+    Write-Warning "Email OTP include target not set. Setting it now"
+    $conf.AdditionalProperties.includeTargets += @{
+        targetType = "group"
+        id = "all_users"
+        isRegistrationRequired = $false
+    }
+}
+else {
+    #TODO
+}
+Update-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email" -AdditionalProperties $conf.AdditionalProperties
 
 #Stopping Transscript
 Stop-Transcript

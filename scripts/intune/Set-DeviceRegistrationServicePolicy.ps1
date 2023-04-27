@@ -47,6 +47,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServic
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -66,7 +67,7 @@ Write-Host "=====================================================`n" -Foreground
 # Main
 Write-Host "Getting actual DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
 $policy = Get-MgPolicyDeviceRegistrationPolicy
-$policy | ConvertTo-Json -Depth 99
+$policy | ConvertTo-Json -Depth 5
 
 Write-Host "Setting DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
 $allowedGroup = Get-MgGroup -Filter "DisplayName eq '$($AlyaDeviceAdminsGroupName)'"
@@ -79,7 +80,7 @@ try
         "Id": "deviceRegistrationPolicy",
         "DisplayName": "Device Registration Policy",
         "Description": "Tenant-wide policy that manages intial provisioning controls using quota restrictions, additional authentication and authorization checks",      
-        "MultiFactorAuthConfiguration": "1",
+        "MultiFactorAuthConfiguration": "0",
         "UserDeviceQuota": 50,
         "AzureAdJoin": {
             "AllowedGroups": [`"$($allowedGroup.Id)`"],
@@ -107,7 +108,7 @@ try
         "Id": "deviceRegistrationPolicy",
         "DisplayName": "Device Registration Policy",
         "Description": "Tenant-wide policy that manages intial provisioning controls using quota restrictions, additional authentication and authorization checks",      
-        "MultiFactorAuthConfiguration": "1",
+        "MultiFactorAuthConfiguration": "0",
         "UserDeviceQuota": 50,
         "AzureAdJoin": {
             "AllowedGroups": [],

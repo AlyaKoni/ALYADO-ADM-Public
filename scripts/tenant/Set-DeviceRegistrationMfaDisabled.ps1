@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2023
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,8 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    04.03.2020 Konrad Brunner       Initial Version
-    26.04.2023 Konrad Brunner       Switched to Graph
+    27.04.2023 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-ReadOthersEnabled-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-DeviceRegistrationMfaDisabled-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -50,27 +49,32 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
 
 # Logins
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.DeviceConfiguration","Directory.Read.All")
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-ReadOthersEnabled | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-DeviceRegistrationMfaDisabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking permission to read others for guests
-Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
-if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
+# Main
+Write-Host "Getting actual DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
+$policy = Get-MgPolicyDeviceRegistrationPolicy
+$policy | ConvertTo-Json -Depth 5
+
+Write-Host "Setting DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
+if ($policy.MultiFactorAuthConfiguration -eq "1")
 {
-    Write-Warning "Read others for guests was disabled. Enabling it now"
-    $RolePermissions = @{}
-    $RolePermissions["allowedToReadOtherUsers"] = $true
-    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
+    Write-Warning "MFA was required to register device. Disabling it now"
+    $policy.MultiFactorAuthConfiguration = "0"
+    Add-Member -InputObject $policy -Type NoteProperty -Name "localAdminPassword" -Value $policy.AdditionalProperties.localAdminPassword
+    $policy.localAdminPassword = $policy.AdditionalProperties.localAdminPassword
+    $policy.AdditionalProperties.Clear()
+    $body = $policy | ConvertTo-Json -Depth 5
+    Put-MsGraph -Uri "/beta/policies/deviceRegistrationPolicy" -Body $body
 }
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

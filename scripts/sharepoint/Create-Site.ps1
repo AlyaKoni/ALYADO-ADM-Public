@@ -299,21 +299,21 @@ if ($siteTemplate -eq "TeamSite")
 {
     Write-Host "Setting M365 Group sharing capability " -ForegroundColor $CommandInfo
     $m365GroupId = $site.GroupId.Guid
-    $settingsValue = "true"
+    $settingsValue = $true
     if ($externalSharing -eq "None")
     {
         $settingsValue = "false"
     }
-    $settings = Get-PnPMicrosoft365GroupSettings -Identity $m365GroupId
+    $settings = Get-PnPMicrosoft365GroupSettings -Connection $adminCon -Identity $m365GroupId
     if (-Not $settings)
     {
         Write-Warning "Created new team guest settings to disable Guests"
-        $settings = New-PnPMicrosoft365GroupSettings -Identity $m365GroupId -DisplayName "Group.Unified.Guest" -TemplateId "08d542b9-071f-4e16-94b0-74abb372e3d9" -Values @{"AllowToAddGuests"=$settingsValue}
+        $settings = New-PnPMicrosoft365GroupSettings -Connection $adminCon -Identity $m365GroupId -DisplayName "Group.Unified.Guest" -TemplateId "08d542b9-071f-4e16-94b0-74abb372e3d9" -Values @{"AllowToAddGuests"=$settingsValue}
     }
-    if ($settings["AllowToAddGuests"].ToString() -ne $settingsValue)
+    if (($settings.Values | where { $_.Name -eq "AllowToAddGuests"}).Value.ToString() -ne $settingsValue.ToString())
     {
         Write-Warning "Existing team guest settings changed to disable Guests"
-        $settings = Set-PnPMicrosoft365GroupSettings -Identity $settings.ID -Group $m365GroupId -Values @{"AllowToAddGuests"=$settingsValue}
+        $settings = Set-PnPMicrosoft365GroupSettings -Connection $adminCon -Identity $settings.ID -Group $m365GroupId -Values @{"AllowToAddGuests"=$settingsValue}
     }
 }
 

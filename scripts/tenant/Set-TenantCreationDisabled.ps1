@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2023
+    Copyright (c) Alya Consulting, 2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -29,8 +29,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    04.03.2020 Konrad Brunner       Initial Version
-    26.04.2023 Konrad Brunner       Switched to Graph
+    26.04.2023 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-ReadOthersEnabled-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-TenantCreationDisabled-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -53,21 +52,21 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
 LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
 
 # =============================================================
-# O365 stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-ReadOthersEnabled | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-TenantCreationDisabled | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking permission to read others for guests
-Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
+# Checking tenant creation
+Write-Host "Checking tenant creation" -ForegroundColor $CommandInfo
 $policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
-if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
+if ($policy.DefaultUserRolePermissions.AllowedToCreateTenants)
 {
-    Write-Warning "Read others for guests was disabled. Enabling it now"
+    Write-Warning "Tenant creation enabled. Disabling it now"
     $RolePermissions = @{}
-    $RolePermissions["allowedToReadOtherUsers"] = $true
+    $RolePermissions["allowedToCreateTenants"] = $false
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
 Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
