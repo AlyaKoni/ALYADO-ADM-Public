@@ -254,7 +254,6 @@ if (-Not $VmExt)
 {
     Write-Warning "AntiMalware extension on vm not found. Installing AntiMalware on vm $VMName"
     #$exts = Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select PublisherName, Type, Version ; $exts | ft
-    #Get-Command Set-Az*Extension* -Module Az.Compute     
     #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
     $amsettings = @"
         {

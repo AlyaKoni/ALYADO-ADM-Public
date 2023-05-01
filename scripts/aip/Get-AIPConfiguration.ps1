@@ -41,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-Configuration-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-AIPConfiguration-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 $mode = 0 # 0=norestriction 1=onlyLicenseUser else group name to use
@@ -58,7 +58,7 @@ LoginTo-AIP
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Get-Configuration | AIP" -ForegroundColor $CommandInfo
+Write-Host "AIP | Get-AIPConfiguration | AIP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Get-AipServiceConfiguration | fl

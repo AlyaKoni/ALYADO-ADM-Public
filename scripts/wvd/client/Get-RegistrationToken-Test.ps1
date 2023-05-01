@@ -43,7 +43,7 @@ Param(
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\client\Get-RegistrationToken-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\client\Get-RegistrationToken-Test-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 $ErrorActionPreference = "Stop"
@@ -64,7 +64,7 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "WVD Client | Get-RegistrationToken | WVD" -ForegroundColor $CommandInfo
+Write-Host "WVD Client | Get-RegistrationToken-Test | WVD" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context

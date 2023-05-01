@@ -41,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-ServiceLocation-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-AIPServiceLocation-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 # Checking modules
@@ -56,7 +56,7 @@ LoginTo-AIP
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Get-ServiceLocation | AADRM" -ForegroundColor $CommandInfo
+Write-Host "AIP | Get-AIPServiceLocation | AADRM" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 $conf = Get-AipServiceConfiguration

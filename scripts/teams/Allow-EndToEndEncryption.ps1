@@ -60,10 +60,15 @@ Write-Host "=====================================================`n" -Foreground
 
 #Main
 $encPol = Get-CsTeamsEnhancedEncryptionPolicy -Identity Global
-if ($encPol.CallingEndtoEndEncryptionEnabledType -eq "Disabled")
+if ($encPol.CallingEndtoEndEncryptionEnabledType -ne "DisabledUserOverride")
 {
-    Write-Warning "End to end encryption policy was not enabled. Enabling it now."
-    $null = Set-CsTeamsEnhancedEncryptionPolicy -Identity Global -CallingEndtoEndEncryptionEnabledType "DisabledUserOverride" -Force
+    Write-Warning "Calling end to end encryption policy was not enabled. Enabling it now."
+    $null = Set-CsTeamsEnhancedEncryptionPolicy -Identity Global -CallingEndtoEndEncryptionEnabledType "DisabledUserOverride"
+}
+if ($encPol.MeetingEndToEndEncryption -ne "DisabledUserOverride")
+{
+    Write-Warning "Meeting end to end encryption policy was not enabled. Enabling it now."
+    $null = Set-CsTeamsEnhancedEncryptionPolicy -Identity Global -MeetingEndToEndEncryption "DisabledUserOverride"
 }
 
 #Stopping Transscript

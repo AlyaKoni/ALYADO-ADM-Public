@@ -270,7 +270,6 @@ if (-Not $VmExt1)
 {
     Write-Warning "AntiMalware extension on vm 1 not found. Installing AntiMalware on ad vm $VMName1"
     #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-    #Get-Command Set-Az*Extension* -Module Az.Compute     
     #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
     $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
@@ -305,7 +304,6 @@ if (-Not $VmExt2)
 {
     Write-Warning "AntiMalware extension on vm 2 not found. Installing AntiMalware on ad vm $VMName2"
     #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-    #Get-Command Set-Az*Extension* -Module Az.Compute     
     #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
     $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")

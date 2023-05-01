@@ -44,7 +44,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Configure-Labels-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Configure-LabelsAndPolicies-$($AlyaTimeString).log" | Out-Null
 
 #Members
 if (-Not $inputLabelFile)
@@ -86,7 +86,7 @@ LoginTo-IPPS
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "UnifiedLabels | Configure-Labels | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "UnifiedLabels | Configure-LabelsAndPolicies | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Configuring labels
@@ -447,7 +447,7 @@ LoginTo-AIP
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "UnifiedLabels | Configure-Labels | AIPSERVICE" -ForegroundColor $CommandInfo
+Write-Host "UnifiedLabels | Configure-LabelsAndPolicies | AIPSERVICE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 $actTemplates = Get-AipServiceTemplate

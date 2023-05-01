@@ -681,8 +681,7 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
     {
         Write-Warning "$VmExtName extension on vm not found. Installing $VmExtName on vm $VMName"
         #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-        #Get-Command Set-Az*Extension* -Module Az.Compute     
-        #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
+            #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
         $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
         $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
         $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]

@@ -42,7 +42,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-TrackingLogs-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-AIPTrackingLogs-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -56,7 +56,7 @@ LoginTo-AIP
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Get-TrackingLogs | AIP" -ForegroundColor $CommandInfo
+Write-Host "AIP | Get-AIPTrackingLogs | AIP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Get-AipServiceTrackingLog -UserEmail $userEmail

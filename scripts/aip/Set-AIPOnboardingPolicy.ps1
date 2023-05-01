@@ -41,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Set-OnboardingPolicy-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Set-AIPOnboardingPolicy-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 $mode = $AlyaAipOnboardingPolicy # 0=norestriction 1=onlyLicenseUser else group name to use
@@ -58,7 +58,7 @@ LoginTo-AIP
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Set-OnboardingPolicy | AIP" -ForegroundColor $CommandInfo
+Write-Host "AIP | Set-AIPOnboardingPolicy | AIP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Checking AipServiceOnboardingControlPolicy" -ForegroundColor $CommandInfo

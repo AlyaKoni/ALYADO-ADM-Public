@@ -104,7 +104,10 @@ else
 do
 {
     $Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
-    if (-Not $Team -or -Not $Team.GroupId) { Start-Sleep -Seconds 2 }
+    if (-Not $Team -or -Not $Team.GroupId) { 
+        Write-Host "Waiting for Teams..."
+        Start-Sleep -Seconds 10
+    }
 }
 while (-Not $Team -or -Not $Team.GroupId)
 if ($TeamPicturePath)
