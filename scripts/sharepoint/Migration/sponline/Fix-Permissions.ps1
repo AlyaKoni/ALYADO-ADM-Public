@@ -28,8 +28,8 @@ function DownloadAndInstallCSOM($dir, $nuget, $nuvrs)
 
 function PrepareCSOM($dir, $nuget)
 {
-    $resp = Invoke-WebRequest –Uri "https://www.nuget.org/packages/$nuget"
-    $nusrc = ($resp).Links | where { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
+    $resp = Invoke-WebRequest -SkipHttpErrorCheck –Uri "https://www.nuget.org/packages/$nuget"
+    $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$PSScriptRoot\$dir\lib\net45"))
     {
@@ -83,7 +83,7 @@ if ([string]::IsNullOrEmpty($migSites[0].DstCol))
 	exit
 }
 
-$migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | foreach {
+$migSites | Where-Object { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | Foreach-Object {
 
     if ([string]::IsNullOrEmpty($_.DstUrl))
     {
@@ -102,7 +102,7 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
     foreach($permType in ("Web", "List"))
     {
 
-        $onpremWebs = $onpremPerms | where { $_.Type -eq $permType -and $_.Site -eq $fullSrcUrl } | select -ExpandProperty Web -Unique
+        $onpremWebs = $onpremPerms | Where-Object { $_.Type -eq $permType -and $_.Site -eq $fullSrcUrl } | Select-Object -ExpandProperty Web -Unique
         foreach ($onpremWeb in $onpremWebs)
         {
             $onlineWeb = $onpremWeb
@@ -115,15 +115,15 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
             $onlineWeb = "/sites/" + $alias + $onlineWeb
 	        Write-Output "   Web $($onlineWeb) Type $($permType)"
         
-            $onpremChkPerms = $onpremPerms | where { $_.Type -eq $permType -and $_.Site -eq $fullSrcUrl -and $_.Web -eq $onpremWeb }
-            $onlineChkPerms = $onlinePerms | where { $_.Type -eq $permType -and $_.Site -eq $fullUrl -and $_.Web -eq $onlineWeb }
+            $onpremChkPerms = $onpremPerms | Where-Object { $_.Type -eq $permType -and $_.Site -eq $fullSrcUrl -and $_.Web -eq $onpremWeb }
+            $onlineChkPerms = $onlinePerms | Where-Object { $_.Type -eq $permType -and $_.Site -eq $fullUrl -and $_.Web -eq $onlineWeb }
 
             switch($permType)
             {
 
                 "Web" {
-                    $onpremWebMmbrs = $onpremChkPerms | select -ExpandProperty Member -Unique
-                    $onlineWebMmbrs = $onlineChkPerms | select -ExpandProperty Member -Unique
+                    $onpremWebMmbrs = $onpremChkPerms | Select-Object -ExpandProperty Member -Unique
+                    $onlineWebMmbrs = $onlineChkPerms | Select-Object -ExpandProperty Member -Unique
                     foreach ($onlineWebMmbr in $onlineWebMmbrs)
                     {
                         if ($onlineWebMmbr.StartsWith("Besitzer von")) {continue}
@@ -154,16 +154,16 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
                     }
                 }
                 "List" {
-                    $listTitles = $onpremChkPerms | select -ExpandProperty List -Unique
+                    $listTitles = $onpremChkPerms | Select-Object -ExpandProperty List -Unique
 
                     foreach ($listTitle in $listTitles)
                     {
 	                    Write-Output "     List $($listTitle)"
-                        $onpremListPerms = $onpremChkPerms | where { $_.List -eq $listTitle }
-                        $onlineListPerms = $onlineChkPerms | where { $_.List -eq $listTitle }
+                        $onpremListPerms = $onpremChkPerms | Where-Object { $_.List -eq $listTitle }
+                        $onlineListPerms = $onlineChkPerms | Where-Object { $_.List -eq $listTitle }
 
-                        $onpremListMmbrs = $onpremListPerms | select -ExpandProperty Member -Unique
-                        $onlineListMmbrs = $onlineListPerms | select -ExpandProperty Member -Unique
+                        $onpremListMmbrs = $onpremListPerms | Select-Object -ExpandProperty Member -Unique
+                        $onlineListMmbrs = $onlineListPerms | Select-Object -ExpandProperty Member -Unique
 
                         foreach ($onlineListMmbr in $onlineListMmbrs)
                         {

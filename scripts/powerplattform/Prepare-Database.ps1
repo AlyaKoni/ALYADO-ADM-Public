@@ -59,8 +59,8 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Environment | Prepare-Database | PowerPlatform" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$defCurrency = Get-AdminPowerAppCdsDatabaseCurrencies -LocationName $env.location | where { $_.IsTenantDefaultCurrency -eq $true }
-$defLanguage = Get-AdminPowerAppCdsDatabaseLanguages -LocationName $env.location | where { $_.IsTenantDefaultLanguage -eq $true }
+$defCurrency = Get-AdminPowerAppCdsDatabaseCurrencies -LocationName $env.location | Where-Object { $_.IsTenantDefaultCurrency -eq $true }
+$defLanguage = Get-AdminPowerAppCdsDatabaseLanguages -LocationName $env.location | Where-Object { $_.IsTenantDefaultLanguage -eq $true }
 
 $envs = Get-AdminPowerAppEnvironment
 foreach($env in $envs)

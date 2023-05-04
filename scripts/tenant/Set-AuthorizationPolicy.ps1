@@ -61,7 +61,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking authorization policy
 Write-Host "Checking authorization policy" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 
 if ($policy.GuestUserRoleId -ne "2af84b1e-32c8-42b7-82bc-daa82404023b")
 {
@@ -81,7 +81,7 @@ if ($policy.AllowEmailVerifiedUsersToJoinOrganization)
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowEmailVerifiedUsersToJoinOrganization $false
 }
 
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

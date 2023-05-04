@@ -454,8 +454,8 @@ $actTemplates = Get-AipServiceTemplate
 foreach ($actTemplate in $actTemplates)
 {
     #$actTemplate = $actTemplates[1]
-    if (($actTemplate.Names | where { $_.Key -eq 1033 }).Value.StartsWith("Highly Confidential") -or `
-        ($actTemplate.Names | where { $_.Key -eq 1033 }).Value.StartsWith("Confidential"))
+    if (($actTemplate.Names | Where-Object { $_.Key -eq 1033 }).Value.StartsWith("Highly Confidential") -or `
+        ($actTemplate.Names | Where-Object { $_.Key -eq 1033 }).Value.StartsWith("Confidential"))
     {
         Remove-AipServiceTemplate -TemplateId $actTemplate.TemplateId
     }

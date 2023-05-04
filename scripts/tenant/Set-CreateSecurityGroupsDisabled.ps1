@@ -61,7 +61,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking right to create security groups
 Write-Host "Checking right to create security groups" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if ($policy.DefaultUserRolePermissions.AllowedToCreateSecurityGroups)
 {
     Write-Warning "Create security groups was enabled. Disabling it now"
@@ -69,7 +69,7 @@ if ($policy.DefaultUserRolePermissions.AllowedToCreateSecurityGroups)
     $RolePermissions["allowedToCreateSecurityGroups"] = $false
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

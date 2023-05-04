@@ -137,7 +137,7 @@ foreach($SourceFile in $UploadItems)
     if ($SourceFile.FullName.EndsWith(".json")) { $mime = "application/json" }
     if ($SourceFile.FullName.EndsWith(".svg")) { $mime = "image/svg+xml" }
     $BlobName = $relPath.Substring(1)
-    $DestinationBlob = Get-AzStorageBlob -Context $StrgContext -Container $ToStorageBlobContainer -Blob $BlobName -ErrorAction SilentlyContinue | where { -Not $_.SnapshotTime }
+    $DestinationBlob = Get-AzStorageBlob -Context $StrgContext -Container $ToStorageBlobContainer -Blob $BlobName -ErrorAction SilentlyContinue | Where-Object { -Not $_.SnapshotTime }
     if ($DestinationBlob)
     {
         if ($SourceFile.Length -gt (2*1024*1024*1024))

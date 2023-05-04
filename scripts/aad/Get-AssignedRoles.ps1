@@ -71,7 +71,7 @@ Write-Host "Getting  permanent role members" -ForegroundColor $CommandInfo
 $assignedRoles = Get-MgRoleManagementDirectoryRoleAssignment -All -ExpandProperty Principal
 foreach ($roleDefinition in $roleDefinitions)
 {
-    $actMembs = $assignedRoles | where { $_.RoleDefinitionId -eq $roleDefinition.Id }
+    $actMembs = $assignedRoles | Where-Object { $_.RoleDefinitionId -eq $roleDefinition.Id }
     if ($actMembs -and $actMembs.Count -gt 0)
     {
         Write-Host "Role: $($roleDefinition.DisplayName)"
@@ -107,7 +107,7 @@ if ($configurePIM)
     catch {}
     foreach ($roleDefinition in $roleDefinitions)
     {
-        $actMembs = $assignedRoles | where { $_.RoleDefinitionId -eq $roleDefinition.Id }
+        $actMembs = $assignedRoles | Where-Object { $_.RoleDefinitionId -eq $roleDefinition.Id }
         if ($actMembs -and $actMembs.Count -gt 0)
         {
             Write-Host "Role: $($roleDefinition.DisplayName)"

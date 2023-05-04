@@ -65,11 +65,11 @@ Write-Host "AAD | Reset-SSPR | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Actual AlternateEmailAddresses" -ForegroundColor $CommandInfo
-Get-MsolUser -UserPrincipalName $userUpn | select AlternateEmailAddresses
+Get-MsolUser -UserPrincipalName $userUpn | Select-Object AlternateEmailAddresses
 Write-Host "Actual MobilePhone" -ForegroundColor $CommandInfo
-Get-MsolUser -UserPrincipalName $userUpn | select MobilePhone
+Get-MsolUser -UserPrincipalName $userUpn | Select-Object MobilePhone
 Write-Host "Actual PhoneNumber" -ForegroundColor $CommandInfo
-Get-MsolUser -UserPrincipalName $userUpn | select PhoneNumber
+Get-MsolUser -UserPrincipalName $userUpn | Select-Object PhoneNumber
 
 Write-Host "Clearing values" -ForegroundColor $CommandInfo
 Set-MsolUser -UserPrincipalName $userUpn -AlternateEmailAddresses $null

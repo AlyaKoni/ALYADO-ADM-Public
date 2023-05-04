@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2021
+    Copyright (c) Alya Consulting, 2020-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     28.09.2020 Konrad Brunner       Initial Version
+    01.05.2023 Konrad Brunner       Switched to Graph, removed MSOL
 
 #>
 
@@ -45,49 +46,54 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-Admins-$($AlyaTimeStr
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Configure-Admins | AZURE" -ForegroundColor $CommandInfo
+Write-Host "AAD | Configure-Admins | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Checking Company Administrator role
 Write-Host "Checking Company Administrator role:" -ForegroundColor $CommandInfo
-$gaRole = Get-MsolRole -RoleName "Company Administrator"
-$gaRoleMembs = Get-MsolRoleMember -RoleObjectId $gaRole.ObjectId
-Write-Host "Actual Company Administrators:"
+$gaRole = Get-MgRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Global Administrator'"
+$gaRoleMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($gaRole.Id)'" -All -ExpandProperty Principal
+Write-Host "Company Administrators:"
 $gaRoleMembs
 if ($gaRoleMembs.Count -gt 1)
 {
     Write-Warning "We suggest to have only one single Company Administrator"
 }
-if ($globalAdmin.EmailAddress -like "admin@*" -or $globalAdmin.EmailAddress -like "administrator@*" -or `
-    $globalAdmin.EmailAddress -like "globaladmin@*")
+foreach($memb in $gaRoleMembs)
 {
-    $name = -Join ([System.Security.Cryptography.HashAlgorithm]::Create("MD5").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($AlyaDomainName)) | % { $_.ToString("x2") } )
-    $AlyaGlobalAdmin = "$name@$($AlyaDomainName)"
-    Write-Warning "We suggest strong names for Company Administrators"
-    Write-Warning "Example: $AlyaGlobalAdmin"
+    $globalAdmin = Get-MgUser -UserId $memb.PrincipalId
+    Write-Host "$($globalAdmin.UserPrincipalName)"
+    if ($globalAdmin.UserPrincipalName -like "admin@*" -or $globalAdmin.UserPrincipalName -like "administrator@*" -or `
+        $globalAdmin.UserPrincipalName -like "globaladmin@*" -or $globalAdmin.UserPrincipalName -like "breakingglass@*" -or `
+        $globalAdmin.UserPrincipalName -like "breaking.glass@*" -or $globalAdmin.UserPrincipalName -like "breakglass@*")
+    {
+        $name = -Join ([System.Security.Cryptography.HashAlgorithm]::Create("MD5").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($AlyaDomainName)) | % { $_.ToString("x2") } )
+        $AlyaGlobalAdmin = "$name@$($AlyaDomainName)"
+        Write-Warning "We suggest strong names for Company Administrators"
+        Write-Warning "Example: $AlyaGlobalAdmin"
+    }
 }
 
 # Checking Privileged Role Administrator role
 Write-Host "Checking Privileged Role Administrator role:" -ForegroundColor $CommandInfo
-$paRole = Get-MsolRole -RoleName "Privileged Role Administrator"
-$privilegedAdmins = Get-MsolRoleMember -RoleObjectId $paRole.ObjectId
-Write-Host "Actual Privileged Role Administrators:"
-$privilegedAdmins
-if ($privilegedAdmins.Count -eq 0)
+$paRole = Get-MgRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Privileged Role Administrator'"
+$paRoleMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($paRole.Id)'" -All -ExpandProperty Principal
+Write-Host "Privileged Role Administrators:"
+$paRoleMembs
+if ($paRoleMembs.Count -eq 0)
 {
     Write-Warning "We suggest to specify at least one Privileged Role Administrator"
     Write-Warning "He will be able to solve Global Administrator rights if something goes wrong"

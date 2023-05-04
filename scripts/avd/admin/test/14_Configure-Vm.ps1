@@ -62,7 +62,7 @@ Set-WinHomeLocation -GeoId 223
 # Enable PSRemoting
 Enable-PSRemoting -Force
 New-NetFirewallRule -Name "Allow WinRM HTTPS" -DisplayName "WinRM HTTPS" -Enabled True -Profile Any -Action Allow -Direction Inbound -LocalPort 5986 -Protocol TCP
-$cert = Get-ChildItem "Cert:\LocalMachine\My" -Recurse | where { $_.DnsNameList -eq $env:COMPUTERNAME }
+$cert = Get-ChildItem "Cert:\LocalMachine\My" -Recurse | Where-Object { $_.DnsNameList -eq $env:COMPUTERNAME }
 if(-Not $cert)
 {
     $thumbprint = (New-SelfSignedCertificate -DnsName $env:COMPUTERNAME -CertStoreLocation "Cert:\LocalMachine\My").Thumbprint

@@ -107,7 +107,7 @@ foreach($script in $scripts)
         # Checking if script exists
         Write-Host "  Checking if script exists"
         $uri = "/beta/deviceManagement/deviceManagementScripts"
-        $actScript = (Get-MsGraphObject -Uri $uri).value | where { $_.displayName -eq $scriptName}
+        $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
         if (-Not $actScript.id)
         {
             # Creating the script

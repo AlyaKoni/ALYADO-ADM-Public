@@ -70,7 +70,7 @@ if (-Not $Context)
 }
 
 $vm = Get-AzVM -Name $VmName
-$agent = $vm | Select -ExpandProperty OSProfile | Select -ExpandProperty Windowsconfiguration | Select ProvisionVMAgent
+$agent = $vm | Select-Object -ExpandProperty OSProfile | Select-Object -ExpandProperty Windowsconfiguration | Select-Object ProvisionVMAgent
 Write-Host $vm.Name $agent.ProvisionVMAgent
 
 #Stopping Transscript

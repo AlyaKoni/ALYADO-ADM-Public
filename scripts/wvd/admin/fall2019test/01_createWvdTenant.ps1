@@ -95,7 +95,7 @@ if (-Not $WvdTenant)
     $WvdTenant = New-RdsTenant -Name $AlyaWvdTenantNameTest -AadTenantId $AlyaTenantId -AzureSubscriptionId $SubscriptionId
 }
 
-Get-RdsTenant -Name $AlyaWvdTenantNameTest -ErrorAction Stop | fl
+Get-RdsTenant -Name $AlyaWvdTenantNameTest -ErrorAction Stop | Format-List
 
 #Get-RdsDiagnosticActivities -Detailed
 #Remove-RdsTenant -Name $AlyaWvdTenantNameTest

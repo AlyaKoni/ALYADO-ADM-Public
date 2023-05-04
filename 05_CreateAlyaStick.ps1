@@ -64,7 +64,7 @@ switch (($usbDisk | Measure-Object | Select-Object Count).Count)
 if ($disk)
 {
     #Volume selection
-    $vol = $disk | Get-Partition | Get-Volume | where { -Not [string]::IsNullOrEmpty($_.DriveLetter) }
+    $vol = $disk | Get-Partition | Get-Volume | Where-Object { -Not [string]::IsNullOrEmpty($_.DriveLetter) }
     $alyaDir = "$($vol.DriveLetter):\Alya$AlyaCompanyNameShortM365"
     if (-Not (Test-Path $alyaDir))
     {

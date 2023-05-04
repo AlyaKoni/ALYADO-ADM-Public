@@ -137,7 +137,7 @@ if ($preferredDatalocation -eq $centralSite.ToUpper() -and $mySite.IndexOf($shar
 
 # Getting multi geo status
 Write-Host "Getting multi geo status" -ForegroundColor $CommandInfo
-$status = Get-SPOGeoMoveCrossCompatibilityStatus | where { $_.DestinationDataLocation -eq $preferredDatalocation -and $_.CompatibilityStatus -ne "Compatible" }
+$status = Get-SPOGeoMoveCrossCompatibilityStatus | Where-Object { $_.DestinationDataLocation -eq $preferredDatalocation -and $_.CompatibilityStatus -ne "Compatible" }
 if ($status)
 {
     $status

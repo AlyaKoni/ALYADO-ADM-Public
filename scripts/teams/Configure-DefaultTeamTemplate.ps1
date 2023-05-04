@@ -63,8 +63,8 @@ Write-Host "=====================================================`n" -Foreground
 
 $TemplateListEn = Get-CsTeamTemplateList -PublicTemplateLocale "en-US"
 $TemplateListDe = Get-CsTeamTemplateList -PublicTemplateLocale "de-DE"
-$ProjectTemplateEn = $TemplateListEn | where { $_.Name -eq "Manage a Project" }
-$ProjectTemplateDe = $TemplateListDe | where { $_.Name -eq "Ein Projekt verwalten" }
+$ProjectTemplateEn = $TemplateListEn | Where-Object { $_.Name -eq "Manage a Project" }
+$ProjectTemplateDe = $TemplateListDe | Where-Object { $_.Name -eq "Ein Projekt verwalten" }
 $ProjectTemplateJsonEn = Get-CsTeamTemplate -OdataId $ProjectTemplateEn.OdataId
 $ProjectTemplateJsonDe = Get-CsTeamTemplate -OdataId $ProjectTemplateDe.OdataId
 
@@ -77,8 +77,8 @@ $ProjectTemplateJsonDe.Category = $null
 New-CsTeamTemplate -Locale "de-DE" -Body $ProjectTemplateJsonDe
 
 <#
-$TemplateListEn | where { $_.Name -like "$($AlyaCompanyNameShortM365.ToUpper())*" }
-$TemplateListDe | where { $_.Name -like "$($AlyaCompanyNameShortM365.ToUpper())*" }
+$TemplateListEn | Where-Object { $_.Name -like "$($AlyaCompanyNameShortM365.ToUpper())*" }
+$TemplateListDe | Where-Object { $_.Name -like "$($AlyaCompanyNameShortM365.ToUpper())*" }
 Remove-CsTeamTemplate -OdataId /api/teamtemplates/v1.0/09750b21-1b50-4f81-a9bf-1071fdd46931/Tenant/de-DE
 Remove-CsTeamTemplate -OdataId /api/teamtemplates/v1.0/5b26980c-0691-46da-b9e9-1dbee63794fb/Tenant/en-US
 Remove-CsTeamTemplate -OdataId /api/teamtemplates/v1.0/09750b21-1b50-4f81-a9bf-1071fdd46931/Tenant/de-DE

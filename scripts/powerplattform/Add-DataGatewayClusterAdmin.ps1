@@ -73,7 +73,7 @@ if (-Not $AdminUser)
     Write-Error "User not found"
     exit
 }
-$GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | where { $_.Name -eq $GatewayName }
+$GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $GatewayName }
 Add-DataGatewayClusterUser -GatewayClusterId $GatewayDetails.Id -PrincipalObjectId $AdminUser.Id -AllowedDataSourceTypes $null -Role Admin
 
 #Stopping Transscript

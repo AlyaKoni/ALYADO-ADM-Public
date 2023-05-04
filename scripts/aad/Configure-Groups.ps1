@@ -81,10 +81,10 @@ $AllGroups = Import-Excel $inputFile -WorksheetName "Gruppen" -ErrorAction Stop
 
 Write-Host "Configured groups" -ForegroundColor $CommandInfo
 $AllGroups | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
-$GroupsToDisable = $AllGroups | where { $_.Activ -ne "yes" }
+$GroupsToDisable = $AllGroups | Where-Object { $_.Activ -ne "yes" }
 
 Write-Host "Groups to create" -ForegroundColor $CommandInfo
-$AllGroups = $AllGroups | where { $_.Activ -eq "yes" }
+$AllGroups = $AllGroups | Where-Object { $_.Activ -eq "yes" }
 $AllGroups | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
 
 Write-Host "Checking groups" -ForegroundColor $CommandInfo
@@ -172,8 +172,8 @@ foreach ($group in $AllGroups)
             $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
             foreach($license in $group.Licenses.Split(","))
             {
-                $licPresent = $exGrp.AssignedLicenses | where { $_.SkuPartNumber -like "*$($license)" }
-                $licSku = $Skus | where { $_.SkuPartNumber -eq $license }
+                $licPresent = $exGrp.AssignedLicenses | Where-Object { $_.SkuPartNumber -like "*$($license)" }
+                $licSku = $Skus | Where-Object { $_.SkuPartNumber -eq $license }
                 if (-Not $licSku)
                 {
                     Write-Warning "Can't find license '$($license)' in your list of available licenses!"
@@ -192,8 +192,8 @@ foreach ($group in $AllGroups)
         if ($null -ne $group.AllowGuests)
         {
             $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
-            $SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
-            $Setting = Get-MgGroupSetting -GroupId $exGrp.Id | where { $_.TemplateId -eq $SettingTemplate.Id }
+            $SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+            $Setting = Get-MgGroupSetting -GroupId $exGrp.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
             if (-Not $Setting)
             {
                 Write-Warning "Setting not yet created. Creating one based on template."
@@ -202,26 +202,26 @@ foreach ($group in $AllGroups)
                     $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
                 }
                 $Setting = New-MgGroupSetting -GroupId $exGrp.Id -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-                $Setting = Get-MgGroupSetting -GroupId $exGrp.Id | where { $_.TemplateId -eq $SettingTemplate.Id }
+                $Setting = Get-MgGroupSetting -GroupId $exGrp.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
             }
             if ($group.AllowGuests) {
-                $Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+                $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
                 if ($Value.Value -eq $true) {
                     Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
                 } 
                 else {
                     Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
-                    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+                    ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $true
                 }
             }
             else {
-                $Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+                $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
                 if ($Value.Value -eq $false) {
                     Write-Host "Setting 'AllowToAddGuests' was already set to '$false'"
                 } 
                 else {
                     Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$false'"
-                    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $false
+                    ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $false
                 }
             }
             Update-MgGroupSetting -GroupId $exGrp.Id -DirectorySettingId $Setting.Id -Values $Setting.Values

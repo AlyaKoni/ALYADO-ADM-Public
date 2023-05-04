@@ -65,7 +65,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "OnPremisesDataGateways | Get-DataGatewayClusterDataSources | PowerPlatform" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n`n" -ForegroundColor $CommandInfo
 
-$GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | where { $_.Name -eq $GatewayName }
+$GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $GatewayName }
 Get-DataGatewayClusterDatasource -GatewayClusterId $GatewayDetails.Id
 
 #Stopping Transscript

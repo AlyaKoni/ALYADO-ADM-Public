@@ -118,7 +118,7 @@ else
         foreach($languageToInstall in $languagesToInstall)
         {
             $packageFamilyName = $languageToInstall.PackageFamilyName
-            $pkg = $packages | where { $_.PackageFamilyName -eq $packageFamilyName }
+            $pkg = $packages | Where-Object { $_.PackageFamilyName -eq $packageFamilyName }
             if (-Not $pkg)
             {
                 $applicationId = $languageToInstall.ProductId.ToLower()
@@ -164,7 +164,7 @@ else
             foreach($languageToInstall in $languagesToInstall)
             {
                 $packageFamilyName = $languageToInstall.PackageFamilyName
-                $pkg = $packages | where { $_.PackageFamilyName -eq $packageFamilyName }
+                $pkg = $packages | Where-Object { $_.PackageFamilyName -eq $packageFamilyName }
                 $pkg
                 if (-Not $pkg -or $pkg.Status -ne "Ok")
                 {
@@ -180,7 +180,7 @@ else
         foreach($languageToInstall in $languagesToInstall)
         {
             $packageFamilyName = $languageToInstall.PackageFamilyName
-            $packages | where { $_.PackageFamilyName -eq $packageFamilyName }
+            $packages | Where-Object { $_.PackageFamilyName -eq $packageFamilyName }
         }
 
         # Trigger install for language FOD packages"

@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://support.apple.com/de-ch/HT210384"
-$req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*iTunes64Setup.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 

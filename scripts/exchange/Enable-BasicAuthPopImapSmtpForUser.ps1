@@ -88,7 +88,7 @@ try
 
     # Setting authentication policy for user
     Write-Host "Setting authentication policy for user " -ForegroundColor $CommandInfo
-    $user = Get-User | where { $_.RecipientType -eq "UserMailbox" -and $_.UserPrincipalName -eq "$userUpn" }
+    $user = Get-User | Where-Object { $_.RecipientType -eq "UserMailbox" -and $_.UserPrincipalName -eq "$userUpn" }
     if ($user.AuthenticationPolicy -ne "EnableBasicAuthPopImapSmtp")
     {
         Set-User -Identity $user.UserPrincipalName -AuthenticationPolicy "EnableBasicAuthPopImapSmtp" -Force -Confirm:$false

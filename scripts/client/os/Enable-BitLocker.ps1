@@ -47,11 +47,11 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Enable-BitLocker-$($AlyaTimeString).log" | Out-Null
 
 #Check BitLocker prerequisites
-$TPMNotEnabled = Get-WmiObject win32_tpm -Namespace root\cimv2\security\microsofttpm | where {$_.IsEnabled_InitialValue -eq $false} -ErrorAction SilentlyContinue
-$TPMEnabled = Get-WmiObject win32_tpm -Namespace root\cimv2\security\microsofttpm | where {$_.IsEnabled_InitialValue -eq $true} -ErrorAction SilentlyContinue
+$TPMNotEnabled = Get-WmiObject win32_tpm -Namespace root\cimv2\security\microsofttpm | Where-Object {$_.IsEnabled_InitialValue -eq $false} -ErrorAction SilentlyContinue
+$TPMEnabled = Get-WmiObject win32_tpm -Namespace root\cimv2\security\microsofttpm | Where-Object {$_.IsEnabled_InitialValue -eq $true} -ErrorAction SilentlyContinue
 $WindowsVer = Get-WmiObject -Query 'select * from Win32_OperatingSystem where (Version like "6.2%" or Version like "6.3%" or Version like "10.0%") and ProductType = "1"' -ErrorAction SilentlyContinue
 $BitLockerReadyDrive = Get-BitLockerVolume -MountPoint $env:SystemDrive -ErrorAction SilentlyContinue
-$BitLockerDecrypted = Get-BitLockerVolume -MountPoint $env:SystemDrive | where {$_.VolumeStatus -eq "FullyDecrypted"} -ErrorAction SilentlyContinue
+$BitLockerDecrypted = Get-BitLockerVolume -MountPoint $env:SystemDrive | Where-Object {$_.VolumeStatus -eq "FullyDecrypted"} -ErrorAction SilentlyContinue
 $BLVS = Get-BitLockerVolume | Where-Object {$_.KeyProtector | Where-Object {$_.KeyProtectorType -eq 'RecoveryPassword'}} -ErrorAction SilentlyContinue
 $IsInDomain = (Get-WmiObject -Class Win32_ComputerSystem).PartOfDomain
 

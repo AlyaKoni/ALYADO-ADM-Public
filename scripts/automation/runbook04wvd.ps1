@@ -109,14 +109,14 @@ try {
 		"Processing subscription: $($sub)"
         $null = Set-AzContext -Subscription $sub
 
-		Get-AzResourceGroup | foreach {
+		Get-AzResourceGroup | Foreach-Object {
 			$ResGName = $_.ResourceGroupName
 			"  Checking ressource group $($ResGName)"
 			foreach($vm in (Get-AzVM -ResourceGroupName $ResGName))
 			{
 				"    Checking VM $($vm.Name)"
 				$tags = $vm.Tags
-				$tKeys = $tags | select -ExpandProperty keys
+				$tKeys = $tags | Select-Object -ExpandProperty keys
 				$startTime = $null
 				$stopTime = $null
 				foreach ($tkey in $tkeys)

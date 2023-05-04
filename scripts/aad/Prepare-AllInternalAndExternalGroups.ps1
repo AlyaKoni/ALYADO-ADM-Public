@@ -73,7 +73,7 @@ foreach($user in $AllUsers)
     if ($user.ExternalUserState -eq "Accepted")
     {
         Write-Host "  Guest $($user.Mail)"
-        $extMemb = $AllExternalsGroupMembers | where { $_.AdditionalProperties.userPrincipalName -eq $user.UserPrincipalName }
+        $extMemb = $AllExternalsGroupMembers | Where-Object { $_.AdditionalProperties.userPrincipalName -eq $user.UserPrincipalName }
         if (-Not $extMemb)
         {
             Write-Warning "    Adding to $AlyaAllExternals"
@@ -83,7 +83,7 @@ foreach($user in $AllUsers)
     if (-Not $user.ExternalUserState)
     {
         Write-Host "  Member $($user.UserPrincipalName)"
-        $intMemb = $AllInternalsGroupMembers | where { $_.AdditionalProperties.userPrincipalName -eq $user.UserPrincipalName }
+        $intMemb = $AllInternalsGroupMembers | Where-Object { $_.AdditionalProperties.userPrincipalName -eq $user.UserPrincipalName }
         if (-Not $intMemb)
         {
             Write-Warning "    Adding to $AlyaAllExternals"

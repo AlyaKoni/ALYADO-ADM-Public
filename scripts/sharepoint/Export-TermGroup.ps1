@@ -71,7 +71,7 @@ $termStore = $mms.TermStores.GetByName($termStoreName)
 $ctx.Load($termStore)
 $ctx.Load($termStore.Groups)
 $ctx.ExecuteQuery()
-$termGroup = $termStore.Groups | where { $_.Name -eq $termGroupName }
+$termGroup = $termStore.Groups | Where-Object { $_.Name -eq $termGroupName }
 $ctx.Load($termGroup)
 $ctx.Load($termGroup.TermSets)
 $ctx.ExecuteQuery()

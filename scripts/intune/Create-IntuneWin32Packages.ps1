@@ -138,7 +138,7 @@ foreach($packageDir in $packageDirs)
         $profile = [Environment]::GetFolderPath("UserProfile")
         $downloads = $profile+"\downloads"
         $lastfilename = $null
-        $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+        $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
         if ($file)
         {
             $lastfilename = $file.Name
@@ -154,11 +154,11 @@ foreach($packageDir in $packageDirs)
             Write-Host "      please don't start any other download!" -ForegroundColor $CommandWarning
             try {
                 #TODO Better download!
-                start $downloadUrl
+                Start-Process $downloadUrl
                 do
                 {
                     Start-Sleep -Seconds 10
-                    $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+                    $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
                     if ($file)
                     {
                         $filename = $file.Name

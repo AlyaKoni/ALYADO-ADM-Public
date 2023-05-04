@@ -118,7 +118,7 @@ if (-Not $VNet)
 
 # Checking network subnets
 Write-Host "Checking network subnets" -ForegroundColor $CommandInfo
-$Subnet = $VNet.Subnets | where { $_.Name -eq $VMSubnetName }
+$Subnet = $VNet.Subnets | Where-Object { $_.Name -eq $VMSubnetName }
 if (-Not $Subnet)
 {
     throw "Virtual network subnet not found. Please create the virtual network subnet $VMSubnetName"
@@ -224,7 +224,7 @@ $AdVm1 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName1 -ErrorAct
 if (-Not $AdVm1)
 {
     Write-Warning "AD vm not found. Creating the ad vm $VMName1"
-    #Get-AzVMSize -Location $AlyaLocation | where { $_.Name -like "Standard_A*" }
+    #Get-AzVMSize -Location $AlyaLocation | Where-Object { $_.Name -like "Standard_A*" }
     #Get-AzVMImagePublisher -Location $AlyaLocation
     #Get-AzVMImageOffer -Location $AlyaLocation -PublisherName "MicrosoftWindowsServer"
     $VMCredential = New-Object System.Management.Automation.PSCredential ("$($VMName1)admin", $VMPasswordSec)
@@ -246,7 +246,7 @@ $AdVm2 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName2 -ErrorAct
 if (-Not $AdVm2)
 {
     Write-Warning "AD vm not found. Creating the ad vm $VMName2"
-    #Get-AzVMSize -Location $AlyaLocation | where { $_.Name -like "Standard_A*" }
+    #Get-AzVMSize -Location $AlyaLocation | Where-Object { $_.Name -like "Standard_A*" }
     #Get-AzVMImagePublisher -Location $AlyaLocation
     #Get-AzVMImageOffer -Location $AlyaLocation -PublisherName "MicrosoftWindowsServer"
     $VMCredential = New-Object System.Management.Automation.PSCredential ("$($VMName2)admin", $VMPasswordSec)
@@ -269,9 +269,9 @@ $VmExt1 = Get-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMNam
 if (-Not $VmExt1)
 {
     Write-Warning "AntiMalware extension on vm 1 not found. Installing AntiMalware on ad vm $VMName1"
-    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
-    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
+    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | Select-Object -last 1
+    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
     $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
     $amsettings = @'
@@ -303,9 +303,9 @@ $VmExt2 = Get-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMNam
 if (-Not $VmExt2)
 {
     Write-Warning "AntiMalware extension on vm 2 not found. Installing AntiMalware on ad vm $VMName2"
-    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
-    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
+    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | Select-Object -last 1
+    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
     $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
     $amsettings = @'

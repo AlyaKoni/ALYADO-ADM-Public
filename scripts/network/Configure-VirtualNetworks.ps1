@@ -121,7 +121,7 @@ for ($i = 1; $i -lt $Networks.Count; $i++)
     $SubnetName = "$DefaultSubnetName" -f "$i".PadLeft(2, "0")
     $SubnetSecGrpName = "$DefaultSubnetSecGrpName" -f "$i".PadLeft(2, "0")
     $Subnet = $Networks[$i-1]
-    $exist = $Subnets | where { $_.Name -eq $SubnetName }
+    $exist = $Subnets | Where-Object { $_.Name -eq $SubnetName }
     if (-Not $exist)
     {
         $SubnetSecGrp = Get-AzNetworkSecurityGroup -ResourceGroupName $ResourceGroupName -Name $SubnetSecGrpName -ErrorAction SilentlyContinue
@@ -136,7 +136,7 @@ for ($i = 1; $i -lt $Networks.Count; $i++)
     }
 }
 $GatewaySubnetName = "GatewaySubnet"
-$exist = $Subnets | where { $_.Name -eq $GatewaySubnetName }
+$exist = $Subnets | Where-Object { $_.Name -eq $GatewaySubnetName }
 if (-Not $exist)
 {
     Add-AzVirtualNetworkSubnetConfig -VirtualNetwork $VNet -Name $GatewaySubnetName -AddressPrefix $Networks[$Networks.Count-1]

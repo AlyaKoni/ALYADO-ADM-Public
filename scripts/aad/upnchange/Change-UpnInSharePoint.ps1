@@ -58,22 +58,22 @@ Write-Host "UPNCHANGE | Change-UpnInSharePoint | SHAREPOINT" -ForegroundColor $C
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main
-$webApplications | foreach {
+$webApplications | Foreach-Object {
     $webApplication = $_
     Write-Host "WebApplication: $($webApplication)"
     $sites = Get-SPSite -WebApplication $webApplication -Limit all
-    $sites | foreach {
+    $sites | Foreach-Object {
         $site = $_
         Write-Host " Site: $($site.Url)"
         $someFound = $false
         $webs = Get-SPWeb -Site $site -Limit all
-        $webs | foreach {
+        $webs | Foreach-Object {
             $web = $_
             Write-Host "  Web: $($web.Url)"
             $users = Get-SPUser -Web $web -Limit ALL
             $oldUser = $null
             $newUser = $null
-            $users | foreach {
+            $users | Foreach-Object {
                 $user = $_
                 if ($user.UserLogin -like "*$($oldUPN)*")
                 {

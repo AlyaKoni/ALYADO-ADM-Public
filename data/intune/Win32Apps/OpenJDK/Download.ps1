@@ -3,10 +3,10 @@
 #
 
 $pageUrl = "https://www.oracle.com/java/technologies/javase-downloads.html"
-$req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"']*javase-(?!server)[^`"']*jre[^`"']*downloads.html"
 $newUrl = "https://www.oracle.com"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-$req = Invoke-WebRequest -Uri $newUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $newUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"']*jre[^`"']*windows-x64.exe"
 $fileUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 $fileName = $fileUrl.SubString($fileUrl.LastIndexOf("/")+1)
@@ -33,7 +33,7 @@ if (-Not (Test-Path $contentRoot))
 $profile = [Environment]::GetFolderPath("UserProfile")
 $downloads = $profile+"\downloads"
 $lastfilename = $null
-$file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+$file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
 if ($file)
 {
     $lastfilename = $file.Name
@@ -45,11 +45,11 @@ while ($attempts -ge 0)
     Write-Host "Downloading setup file from $newUrl"
     Write-Warning "Please don't start any other download!"
     try {
-        start $newUrl
+        Start-Process $newUrl
         do
         {
             Start-Sleep -Seconds 10
-            $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+            $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
             if ($file)
             {
                 $filename = $file.Name

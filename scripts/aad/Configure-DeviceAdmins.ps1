@@ -76,7 +76,7 @@ if (-Not $devAdmGrp)
 Write-Host "Checking role assignment" -ForegroundColor $CommandInfo
 $role = Get-MgRoleManagementDirectoryRoleDefinition -Filter "DisplayName eq 'Azure AD Joined Device Local Administrator'"
 $actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
-$memb = $actMembs | where { $_.PrincipalId -eq $devAdmGrp.Id }
+$memb = $actMembs | Where-Object { $_.PrincipalId -eq $devAdmGrp.Id }
 if (-Not $memb)
 {
     Write-Host "    adding group $($AlyaDeviceAdminsGroupName) to role 'Azure AD Joined Device Local Administrator'" -ForegroundColor $CommandWarning

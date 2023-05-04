@@ -99,7 +99,7 @@ if (-Not $VNet)
 
 # Checking network subnets
 Write-Host "Checking network subnets" -ForegroundColor $CommandInfo
-$Subnet = $VNet.Subnets | where { $_.Name -eq $VMSubnetName }
+$Subnet = $VNet.Subnets | Where-Object { $_.Name -eq $VMSubnetName }
 if (-Not $Subnet)
 {
     throw "Virtual network subnet not found. Please create the virtual network subnet $VMSubnetName"
@@ -165,17 +165,17 @@ $ImageHostVm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName -Err
 if (-Not $ImageHostVm)
 {
     Write-Warning "Image host vm not found. Creating the image host vm $VMName"
-    #Get-AzVMSize -Location $AlyaLocation | where { $_.Name -like "Standard_D4s*" }
+    #Get-AzVMSize -Location $AlyaLocation | Where-Object { $_.Name -like "Standard_D4s*" }
     #Get-AzVMImagePublisher -Location $AlyaLocation
     #Get-AzVMImageOffer -Location $AlyaLocation -PublisherName "MicrosoftWindowsServer"
     $VMCredential = New-Object System.Management.Automation.PSCredential ("$($VMName)admin", $VMPasswordSec)
     #TODO -LicenseType $AlyaVmLicenseType if server and hybrid benefit
     $VMConfig = New-AzVMConfig -VMName $VMName -VMSize "Standard_D4s_v3" #-LicenseType PAYG
     $VMConfig | Set-AzVMOperatingSystem -Windows -ComputerName $VMName -Credential $VMCredential -ProvisionVMAgent | Out-Null
-    $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" | where { $_.Skus -like "win10*avd*" } | select -Last 1).Skus
+    $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" | Where-Object { $_.Skus -like "win10*avd*" } | Select-Object -Last 1).Skus
     if ($AlyaAvdHypervisorVersion -eq "V1")
     {
-        $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" | where { $_.Skus -like "win10*avd*" -and $_.Skus -notlike "*-g2" } | select -Last 1).Skus
+        $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" | Where-Object { $_.Skus -like "win10*avd*" -and $_.Skus -notlike "*-g2" } | Select-Object -Last 1).Skus
     }
     $VMConfig | Set-AzVMSourceImage -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" -Skus $sku -Version latest | Out-Null
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic.Id | Out-Null
@@ -194,9 +194,9 @@ $VmExt = Get-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName
 if (-Not $VmExt)
 {
     Write-Warning "AntiMalware extension on vm not found. Installing AntiMalware on Image host vm $VMName"
-    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
-    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
+    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | Select-Object -last 1
+    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
     $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
     $amsettings = @'

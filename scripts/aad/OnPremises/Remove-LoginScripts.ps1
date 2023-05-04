@@ -56,7 +56,7 @@ Write-Host "AD | Remove-LoginScripts | ONPREMISES" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main
-$users = Get-ADUser -Filter * -Properties * | where { -Not [string]::IsNullOrEmpty($_.ScriptPath) -and $_.UserPrincipalName -like "*@alyaconsulting.ch" } | select samAccountName,UserPrincipalName,ScriptPath
+$users = Get-ADUser -Filter * -Properties * | Where-Object { -Not [string]::IsNullOrEmpty($_.ScriptPath) -and $_.UserPrincipalName -like "*@alyaconsulting.ch" } | Select-Object samAccountName,UserPrincipalName,ScriptPath
 
 foreach ($user in $users)
 {

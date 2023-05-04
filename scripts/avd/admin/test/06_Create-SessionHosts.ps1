@@ -150,7 +150,7 @@ if (-Not $VNet)
 
 # Checking network subnets
 Write-Host "Checking network subnets" -ForegroundColor $CommandInfo
-$Subnet = $VNet.Subnets | where { $_.Name -eq $VMSubnetName }
+$Subnet = $VNet.Subnets | Where-Object { $_.Name -eq $VMSubnetName }
 if (-Not $Subnet)
 {
     throw "Virtual network subnet not found. Please create the virtual network subnet $VMSubnetName with the script Configure-Network.ps1"
@@ -268,7 +268,7 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
     }
     else
     {
-        $VMPassword = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
+        $VMPassword = ($AzureKeyVaultSecret.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password })
         $VMPasswordSec = ConvertTo-SecureString $VMPassword -AsPlainText -Force
     }
     Clear-Variable -Name "VMPassword" -Force -ErrorAction SilentlyContinue
@@ -290,7 +290,7 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
     if (-Not $SessionHostVm)
     {
         Write-Warning "Session host vm not found. Creating the session host vm $VMName"
-        #Get-AzVMSize -Location $AlyaAvdSessionHostLocation | where { $_.Name -like "Standard_D8s*" }
+        #Get-AzVMSize -Location $AlyaAvdSessionHostLocation | Where-Object { $_.Name -like "Standard_D8s*" }
         #Get-AzVMImagePublisher -Location $AlyaAvdSessionHostLocation
         #Get-AzVMImageOffer -Location $AlyaAvdSessionHostLocation -PublisherName "MicrosoftWindowsDesktop"
         $VMCredential = New-Object System.Management.Automation.PSCredential ($vmAdminName, $VMPasswordSec)
@@ -309,7 +309,7 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
 
     # Starting image vm if not running
     Write-Host "Starting session host if not running"
-    if (-Not ($SessionHostVm.Statuses | where { $_.Code -eq "PowerState/running"}))
+    if (-Not ($SessionHostVm.Statuses | Where-Object { $_.Code -eq "PowerState/running"}))
     {
         Write-Warning "Starting VM $VMName"
         Start-AzVM -ResourceGroupName $ShResourceGroupName -Name $VMName
@@ -354,10 +354,10 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
     if (-Not $VmExt)
     {
         Write-Warning "$VmExtName extension on vm not found. Installing $VmExtName on vm $VMName"
-        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
+        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
         #Get-Command Set-Az*Extension* -Module Az.Compute
-        #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Diagnostics.IaaSDiagnostics" -Type "IaaSAntimalware" | select -last 1
-        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Diagnostics" -Type "IaaSDiagnostics" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+        #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Diagnostics.IaaSDiagnostics" -Type "IaaSAntimalware" | Select-Object -last 1
+        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Diagnostics" -Type "IaaSDiagnostics" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
         $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
         $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
         $diagSettings = @'
@@ -647,10 +647,10 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
     if (-Not $VmExt)
     {
         Write-Warning "$VmExtName extension on vm not found. Installing $VmExtName on vm $VMName"
-        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
+        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
         #Get-Command Set-Az*Extension* -Module Az.Compute
-        #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
-        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Monitor" -Type "AzureMonitorWindowsAgent" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+        #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | Select-Object -last 1
+        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Monitor" -Type "AzureMonitorWindowsAgent" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
         $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
         $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
         $PublicSettings = @{"workspaceId" = $LogAnaWrkspc.CustomerId}
@@ -668,10 +668,10 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
     if (-Not $VmExt)
     {
         Write-Warning "$VmExtName extension on vm not found. Installing $VmExtName on vm $VMName"
-        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
+        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
         #Get-Command Set-Az*Extension* -Module Az.Compute
-        #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
-        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Monitoring.DependencyAgent" -Type "DependencyAgentWindows" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+        #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | Select-Object -last 1
+        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Monitoring.DependencyAgent" -Type "DependencyAgentWindows" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
         $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
         $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
         $VmExt = Set-AzVMExtension -ResourceGroupName $ShResourceGroupName -VMName $VMName -Location $AlyaAvdSessionHostLocation `
@@ -686,9 +686,9 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
     if (-Not $VmExt)
     {
         Write-Warning "$VmExtName extension on vm not found. Installing $VmExtName on vm $VMName"
-        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-            #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
-        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
+            #$Extension = Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | Select-Object -last 1
+        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
         $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
         $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
         $amsettings = @'
@@ -723,7 +723,7 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
         if (-Not $VmDomainJoinExt)
         {
             Write-Warning "$VmDomainJoinExtName extension on vm not found. Installing $VmDomainJoinExtName on vm $VMName"
-            $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.ActiveDirectory" -Type "AADLoginForWindows" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+            $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Azure.ActiveDirectory" -Type "AADLoginForWindows" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
             $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
             $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
             $VmExt = Set-AzVMExtension -ResourceGroupName $ShResourceGroupName -VMName $VMName -Location $AlyaAvdSessionHostLocation `
@@ -748,7 +748,7 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
         {
             Write-Host "  Does not exist. Creating it now" -ForegroundColor $CommandWarning
             Write-Warning "  **ATTENTION**: Make sure your account is already with AADDS synced!"
-            $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Compute" -Type "JsonADDomainExtension" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+            $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Compute" -Type "JsonADDomainExtension" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
             $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
             $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
             Set-AzVMADDomainExtension -ResourceGroupName $ShResourceGroupName -VMName $VMName -Location $AlyaAvdSessionHostLocation `
@@ -826,7 +826,7 @@ Start-Sleep -Seconds 30
 Write-Host "Enable PSRemoting"
 Enable-PSRemoting -Force
 New-NetFirewallRule -Name "Allow WinRM HTTPS" -DisplayName "WinRM HTTPS" -Enabled True -Profile Any -Action Allow -Direction Inbound -LocalPort 5986 -Protocol TCP
-$cert = Get-ChildItem "Cert:\LocalMachine\My" -Recurse | where { $_.DnsNameList -eq $env:COMPUTERNAME }
+$cert = Get-ChildItem "Cert:\LocalMachine\My" -Recurse | Where-Object { $_.DnsNameList -eq $env:COMPUTERNAME }
 if(-Not $cert)
 {
     $thumbprint = (New-SelfSignedCertificate -DnsName $env:COMPUTERNAME -CertStoreLocation "Cert:\LocalMachine\My").Thumbprint
@@ -904,10 +904,10 @@ Stop-Transcript
         Remove-Item -Path $FilePath -Force -ErrorAction SilentlyContinue
         $StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $DiagnosticResourceGroupName -Name $DiagnosticStorageName
         $StrgKey = $StrgKeys.GetValue(0).Value
-        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | where { $_.PublisherName -like "Microsoft.*" }
+        #Get-AzVmImagePublisher -Location $AlyaAvdSessionHostLocation | Where-Object { $_.PublisherName -like "Microsoft.*" }
         #(Get-AzVMExtensionImageType -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Compute").Type
         #Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Compute" -Type CustomScriptExtension
-        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Compute" -Type "CustomScriptExtension" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+        $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaAvdSessionHostLocation -PublisherName "Microsoft.Compute" -Type "CustomScriptExtension" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
         $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
         $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
         $VmExt = Set-AzVMCustomScriptExtension -ResourceGroupName $ShResourceGroupName -Location $AlyaAvdSessionHostLocation `

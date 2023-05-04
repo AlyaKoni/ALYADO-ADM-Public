@@ -81,7 +81,7 @@ foreach($OfficeTool in $AlyaOfficeToolsOnTaskbar)
     Copy-Item -Path $source -Destination $destin -Force
 
     $ItemLnk = $Folder.ParseName($OfficeTool + ".lnk")
-    $ItemLnkVerb = $ItemLnk.Verbs() | where { $_.Name.Replace("&", "") -eq $KeyPath4 }
+    $ItemLnkVerb = $ItemLnk.Verbs() | Where-Object { $_.Name.Replace("&", "") -eq $KeyPath4 }
     $ItemLnkVerb.DoIt()
     $ItemLnk.InvokeVerb("{:}")
 }

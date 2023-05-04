@@ -74,7 +74,7 @@ else
 {
     $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 }
-$sitesToProcess = Get-PnPTenantSite -Connection $adminCon -Detailed -IncludeOneDriveSites | where { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
+$sitesToProcess = Get-PnPTenantSite -Connection $adminCon -Detailed -IncludeOneDriveSites | Where-Object { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
 
 # Function definitions
 function Process-Member

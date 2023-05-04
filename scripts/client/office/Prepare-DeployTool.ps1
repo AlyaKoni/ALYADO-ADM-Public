@@ -46,10 +46,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Prepare-DeployTool-$(
 Write-Host "Checking office deploy tool installation" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$AlyaDeployToolRoot"))
 {
-    $req = Invoke-WebRequest -Uri $AlyaDeployToolDownload -UseBasicParsing -Method Get
+    $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $AlyaDeployToolDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*officedeploymenttool_[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-    $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\officedeploymenttool.exe"
+    $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $url -Method Get -OutFile ".\officedeploymenttool.exe"
     cmd /c".\officedeploymenttool.exe" /extract:"$AlyaDeployToolRoot" /quiet
     do
     {

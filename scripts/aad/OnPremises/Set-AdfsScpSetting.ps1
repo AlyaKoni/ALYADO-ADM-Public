@@ -73,7 +73,7 @@ Write-Host "Registry file generated in $($AlyaData)\aad\OnPremises\AdfsScpSettin
 Write-Host "Press return to import it"
 pause
 
-start "Scp Import" "$($AlyaData)\aad\OnPremises\AdfsScpSetting.reg"
+Start-Process "$($AlyaData)\aad\OnPremises\AdfsScpSetting.reg"
 
 #Stopping Transscript
 Stop-Transcript

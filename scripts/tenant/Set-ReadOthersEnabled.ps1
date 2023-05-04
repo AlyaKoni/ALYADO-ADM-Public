@@ -62,7 +62,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking permission to read others for guests
 Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
 {
     Write-Warning "Read others for guests was disabled. Enabling it now"
@@ -70,7 +70,7 @@ if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
     $RolePermissions["allowedToReadOtherUsers"] = $true
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

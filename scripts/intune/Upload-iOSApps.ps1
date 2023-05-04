@@ -98,7 +98,7 @@ foreach($iosApp in $appsIOS)
         {
             $iconUrl = $app.artworkUrl512
         }
-        $iconResponse = Invoke-WebRequest $iconUrl
+        $iconResponse = Invoke-WebRequest -SkipHttpErrorCheck $iconUrl
         $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
         $iconType = ($iconResponse.Headers["Content-Type"] | Out-String).Trim()
         if(($app.minimumOsVersion.Split(".")).Count -gt 2)

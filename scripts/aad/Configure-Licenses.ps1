@@ -94,7 +94,7 @@ Write-Host "Configured licenses:" -ForegroundColor $CommandInfo
 $licNames = $null
 $fndMissingGroup = $false
 $byGroup = @{}
-$licDefs | foreach {
+$licDefs | Foreach-Object {
     $licDef = $_
     if ($licDef.Name -like "User*")
     {
@@ -218,7 +218,7 @@ else
         Write-Host "  Group '$group'"
         if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
         {
-            $groupDef = $AllGroups | where { $_.DisplayName -eq $group }
+            $groupDef = $AllGroups | Where-Object { $_.DisplayName -eq $group }
             foreach ($user in $byGroup[$group].Users)
             {
                 Write-Host "    User '$user'"
@@ -235,7 +235,7 @@ else
                     if ($licDets.SkuPartNumber -notcontains $lic)
                     {
                         Write-Host "      Adding license '$lic'"
-                        $Sku = Get-MgSubscribedSku -All | where { $_.SkuPartNumber -eq $lic }
+                        $Sku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq $lic }
                         Set-MgUserLicense -UserId $adUser.Id -AddLicenses @{SkuId = $Sku.SkuId} -RemoveLicenses @() | Out-Null
                     }
                 }
@@ -257,7 +257,7 @@ else
             if (-Not $userLics.Contains($lic))
             {
                 Write-Host "    Removing license '$lic'"
-                $Sku = Get-MgSubscribedSku -All | where { $_.SkuPartNumber -eq $lic }
+                $Sku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq $lic }
                 Set-MgUserLicense -UserId $adUser.Id -AddLicenses @() -RemoveLicenses @($Sku.SkuId) | Out-Null
             }
         }

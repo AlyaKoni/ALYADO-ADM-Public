@@ -69,7 +69,7 @@ $partners = Get-MgPolicyCrossTenantAccessPolicyPartner
 foreach($tenant in $AlyaFullTrustCrossTenantDirectConnectAccess)
 {
     Write-Host "Tenant '$($tenant.Name)' $($tenant.Id)" -ForegroundColor $CommandInfo
-    $partner = $partners | where { $_.TenantId -eq $tenant.Id }
+    $partner = $partners | Where-Object { $_.TenantId -eq $tenant.Id }
     $params = @{
 	    TenantId = $tenant.Id
 	    B2bDirectConnectOutbound = @{

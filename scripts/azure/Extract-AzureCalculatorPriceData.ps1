@@ -51,7 +51,7 @@ Install-ModuleIfNotInstalled "ImportExcel"
 
 # Main
 Write-Host "Getting actual configuration"
-$resp = Invoke-WebRequest -UseBasicParsing -Method GET -Uri "https://azure.microsoft.com/en-us/pricing/calculator/"
+$resp = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Method GET -Uri "https://azure.microsoft.com/en-us/pricing/calculator/"
 $mtch = $resp.Content -match "global.currencyData = (.*);"
 $exportCurrencyData = ConvertFrom-Json -InputObject $Matches[1]
 $mtch = $resp.Content -match "name=`"awa-stv`" content=`"(.*)`""
@@ -75,17 +75,17 @@ $bandwidth = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.
 $virtualmachines = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/virtual-machines/calculator/$query"
 $postgresql = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/postgresql/calculator/$query"
 
-$computeWinBenchmarks = Invoke-WebRequest -UseBasicParsing -Method GET -Uri "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/compute-benchmark-scores"
+$computeWinBenchmarks = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Method GET -Uri "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/compute-benchmark-scores"
 
 Write-Host "Building products table" -ForegroundColor $CommandInfo
 $productsCsv = [System.Collections.ArrayList]@()
 foreach ($categorySlug in $categories.slug)
 {
-    $category = $categories | where { $_.slug -eq $categorySlug }
+    $category = $categories | Where-Object { $_.slug -eq $categorySlug }
     #Write-Host "Category: $($category.displayName)"
     foreach ($productSlug in $category.products.slug)
     {
-        $product = $category.products | where { $_.slug -eq $productSlug }
+        $product = $category.products | Where-Object { $_.slug -eq $productSlug }
         #Write-Host "  Product: $($product.displayName)"
 
         $pricingUrl = $product.links.pricingUrl
@@ -205,22 +205,22 @@ foreach ($sku in (Get-Member -InputObject $postgresql.skus))
 }
 foreach ($region in $postgresql.regions)
 {
-    #$region = $postgresql.regions | where { $_.slug -eq "switzerland-north" }
+    #$region = $postgresql.regions | Where-Object { $_.slug -eq "switzerland-north" }
     #Write-Host "Region: $($region.displayName)"
     $tierSlugs =  $postgresql.tiers.slug
     $tierSlugs += ""
     foreach ($tierSlug in $tierSlugs)
     {
-        $tier = $postgresql.tiers | Where { $_.slug -eq $tierSlug }
+        $tier = $postgresql.tiers | Where-Object { $_.slug -eq $tierSlug }
         $tierName = $tier.displayName
         if ([string]::IsNullOrEmpty($tierName)) { $tierName = $tierSlug }
-        #$tier = $postgresql.tiers | where { $_.slug -eq "standardssd" }
+        #$tier = $postgresql.tiers | Where-Object { $_.slug -eq "standardssd" }
         #Write-Host "  Tier: $($tierName)"
         if (-Not [string]::IsNullOrEmpty($tierSlug)) { $tierSlug += "-" }
         $deploymentOptionSlugs = $postgresql.deploymentOptions.slug
         foreach ($deploymentOptionSlug in $deploymentOptionSlugs)
         {
-            $deploymentOption = $postgresql.deploymentOptions | Where { $_.slug -eq $deploymentOptionSlug }
+            $deploymentOption = $postgresql.deploymentOptions | Where-Object { $_.slug -eq $deploymentOptionSlug }
             $deploymentOptionName = $deploymentOption.displayName
             if ([string]::IsNullOrEmpty($deploymentOptionName)) { $deploymentOptionName = $deploymentOptionSlug }
             #Write-Host "    DeploymentOption: $($deploymentOptionSlug)"
@@ -309,17 +309,17 @@ Write-Host "Building disk table" -ForegroundColor $CommandInfo
 $diskCsv = [System.Collections.ArrayList]@()
 foreach ($region in $manageddisks.regions)
 {
-    #$region = $manageddisks.regions | where { $_.slug -eq "switzerland-north" }
+    #$region = $manageddisks.regions | Where-Object { $_.slug -eq "switzerland-north" }
     #Write-Host "Region: $($region.displayName)"
     $tierSlugs =  $manageddisks.tiers.slug
     $tierSlugs += "burstable"
     $tierSlugs += "transactions"
     foreach ($tierSlug in $tierSlugs)
     {
-        $tier = $manageddisks.tiers | Where { $_.slug -eq $tierSlug }
+        $tier = $manageddisks.tiers | Where-Object { $_.slug -eq $tierSlug }
         $tierName = $tier.displayName
         if ([string]::IsNullOrEmpty($tierName)) { $tierName = $tierSlug }
-        #$tier = $manageddisks.tiers | where { $_.slug -eq "standardssd" }
+        #$tier = $manageddisks.tiers | Where-Object { $_.slug -eq "standardssd" }
         #Write-Host "  Tier: $($tierName)"
         $sizeSlugs =  $manageddisks.sizes.slug
         $sizeSlugs += "hdd"
@@ -329,7 +329,7 @@ foreach ($region in $manageddisks.regions)
         $sizeSlugs += "transaction"
         foreach ($sizeSlug in $sizeSlugs)
         {
-            $size = $manageddisks.sizes | Where { $_.slug -eq $sizeSlug }
+            $size = $manageddisks.sizes | Where-Object { $_.slug -eq $sizeSlug }
             $sizeName = $size.displayName
             if ([string]::IsNullOrEmpty($sizeName)) { $sizeName = $sizeSlug }
             #Write-Host "    Size: $($sizeName)"
@@ -338,8 +338,8 @@ foreach ($region in $manageddisks.regions)
             $redundancySlugs += ""
             foreach ($redundancySlug in $redundancySlugs)
             {
-                $redundancy = $manageddisks.tierRedundancies | where { $_.slug -eq $redundancySlug }
-                #$redundancy = $manageddisks.tierRedundancies | where { $_.slug -eq "lrs" }
+                $redundancy = $manageddisks.tierRedundancies | Where-Object { $_.slug -eq $redundancySlug }
+                #$redundancy = $manageddisks.tierRedundancies | Where-Object { $_.slug -eq "lrs" }
                 #Write-Host "      Redundancy: $($redundancy.displayName)"
                 foreach ($addType in @("", "-disk-mount", "-one-year"))
                 {
@@ -425,21 +425,21 @@ $slugsDone = 0
 Write-Host "  Processing $($slugCount) items"
 foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -Property "displayName" -Descending))
 {
-    #$operatingSystem = $virtualmachines.operatingSystems | where { $_.slug -eq "windows" }
+    #$operatingSystem = $virtualmachines.operatingSystems | Where-Object { $_.slug -eq "windows" }
     #Write-Host "Operating System: $($operatingSystem.displayName)"
     foreach ($tier in $virtualmachines.tiers)
     {
-        #$tier = $virtualmachines.tiers | where { $_.slug -eq "standard" }
+        #$tier = $virtualmachines.tiers | Where-Object { $_.slug -eq "standard" }
         #Write-Host "  Tier: $($tier.displayName)"
         foreach ($region in $virtualmachines.regions)
         {
-            #$region = $virtualmachines.regions | where { $_.slug -eq "switzerland-north" }
+            #$region = $virtualmachines.regions | Where-Object { $_.slug -eq "switzerland-north" }
             #Write-Host "    Region: $($region.displayName)"
             foreach ($groupSlug in ($virtualmachines.dropdown.slug | Sort-Object))
             {
                 $slugsDone++
                 if (($slugsDone % 50) -eq 0) { Write-Host "$($slugsDone)..." -NoNewLine }
-                $group = $virtualmachines.dropdown | Where { $_.slug -eq $groupSlug }
+                $group = $virtualmachines.dropdown | Where-Object { $_.slug -eq $groupSlug }
                 $groupName = $group.displayName
                 if ([string]::IsNullOrEmpty($groupName)) { $groupName = $groupSlug }
                 if (-Not $groupName) { $groupName = "All" }
@@ -447,7 +447,7 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
                 $groupSeries = $group.series
                 foreach ($subgroupSlug in ($groupSeries.slug | Sort-Object))
                 {
-                    $subgroup = $groupSeries | Where { $_.slug -eq $subgroupSlug }
+                    $subgroup = $groupSeries | Where-Object { $_.slug -eq $subgroupSlug }
                     $subgroupName = $subgroup.displayName
                     if ([string]::IsNullOrEmpty($subgroupName)) { $subgroupName = $subgroupSlug }
                     #Write-Host "        Sub Group: $subgroupName"
@@ -563,7 +563,7 @@ $benchmarks = @(
 foreach($benchmark in $benchmarks)
 {
     Write-Host "  $($benchmark.OS): $($benchmark.URL)"
-    $computeWinBenchmarks = Invoke-WebRequest -UseBasicParsing -Method GET -Uri $benchmark.URL
+    $computeWinBenchmarks = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Method GET -Uri $benchmark.URL
     $tables = ([regex]::Matches($computeWinBenchmarks.Content, "<table>(\n|.)*?</table>", [System.Text.RegularExpressions.RegExOptions]::Multiline -bor [System.Text.RegularExpressions.RegExOptions]::IgnoreCase)).Value
     foreach($table in $tables)
     {

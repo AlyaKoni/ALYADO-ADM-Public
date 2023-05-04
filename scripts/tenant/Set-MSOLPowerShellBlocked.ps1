@@ -61,13 +61,13 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking Msol PowerShell
 Write-Host "Checking Msol PowerShell" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if (-Not $policy.BlockMsolPowerShell)
 {
     Write-Warning "Msol PowerShell was enabled. Disabling it now"
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -BlockMsolPowerShell $true
 }
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

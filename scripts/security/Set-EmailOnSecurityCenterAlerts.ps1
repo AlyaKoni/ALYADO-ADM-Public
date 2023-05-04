@@ -42,7 +42,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\security\Add-EmailToSecurityCenterAlerts-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-EmailOnSecurityCenterAlerts-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -53,7 +53,7 @@ Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Security | Add-EmailToSecurityCenterAlerts | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "Security | Set-EmailOnSecurityCenterAlerts | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 try
@@ -64,7 +64,7 @@ try
     {
         #$protAlert = $protAlerts[9]
         Write-Host "Checking alert $($protAlert.Name)" -ForegroundColor $CommandInfo
-        $actUsers = @(([string[]]$protAlert.NotifyUser) | foreach { $_.toLower() })
+        $actUsers = @(([string[]]$protAlert.NotifyUser) | Foreach-Object { $_.toLower() })
         if ($actUsers -notcontains $emailAddress.ToLower())
         {
             Write-Host "Adding $($emailAddress)"

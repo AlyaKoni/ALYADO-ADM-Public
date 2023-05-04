@@ -6,7 +6,7 @@ do
     $check = $null
     try
     {
-        $req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
+        $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
         [regex]$regex = "<h1>.*?General-Availability Release.*?</h1>"
         $check = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
     } catch {}

@@ -58,7 +58,7 @@ Write-Host "=====================================================`n" -Foreground
 
 #Main
 $groups = Get-AdGroup -Filter "samAccountName -like '*'" -Properties *
-$secgroups = $groups | where { $_.GroupCategory -eq "Security" }
+$secgroups = $groups | Where-Object { $_.GroupCategory -eq "Security" }
 
 $exp = @()
 $exp += "Gruppe;User"
@@ -66,7 +66,7 @@ foreach($group in $secgroups.SamAccountName)
 {
     Write-Host "+ $($group)"
     $members = Get-ADGroupMember -Identity $group
-    foreach($member in ($members | where { $_.objectClass -eq "user" }))
+    foreach($member in ($members | Where-Object { $_.objectClass -eq "user" }))
     {
         $user = Get-AdUser -Identity $member.SamAccountName -Properties *
         Write-Host " - $($user.UserPrincipalName)"

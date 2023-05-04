@@ -188,7 +188,7 @@ function Login-AzureAutomation([bool] $AzModuleOnly) {
 		}
 		else
 		{
-            $RunAsConnection | fl | Write-Output
+            $RunAsConnection | Format-List | Write-Output
 		}
 		throw
     }

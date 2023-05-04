@@ -122,7 +122,7 @@ if (-not $AppRole)
 
 Write-Host "Checking assignment" -ForegroundColor $CommandInfo
 $Assignments = Get-AzureADServiceAppRoleAssignedTo -ObjectId $App.ObjectId -All $true
-$Assignment = $Assignments | where { $_.Id -eq $AppRole.Id -and $_.PrincipalId -eq $App.ObjectId -and $_.ResourceId -eq $ToApp.ObjectId  }
+$Assignment = $Assignments | Where-Object { $_.Id -eq $AppRole.Id -and $_.PrincipalId -eq $App.ObjectId -and $_.ResourceId -eq $ToApp.ObjectId  }
 if (-not $Assignment)
 {
     Write-Warning "Assignment not found. Creating it now"

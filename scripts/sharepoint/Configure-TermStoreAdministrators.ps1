@@ -76,14 +76,14 @@ $adminCnt.ExecuteQuery()
 
 # Checking term store
 Write-Host "Checking term store" -ForegroundColor $CommandInfo
-$termStore = $mms.TermStores | where { $_.Name -like "Taxonomy*" }
+$termStore = $mms.TermStores | Where-Object { $_.Name -like "Taxonomy*" }
 $adminCnt.Load($termStore)
 $adminCnt.Load($termStore.Groups)
 $adminCnt.ExecuteQuery()
 
 # Checking term group
 Write-Host "Checking term group $AlyaCompanyNameShortM365" -ForegroundColor $CommandInfo
-$TermGroup = $termStore.Groups | where { $_.Name -eq $AlyaCompanyNameShortM365 }
+$TermGroup = $termStore.Groups | Where-Object { $_.Name -eq $AlyaCompanyNameShortM365 }
 if (-Not $TermGroup)
 {
     Write-Warning "$AlyaCompanyNameShortM365 term group does not exist, creating it now"

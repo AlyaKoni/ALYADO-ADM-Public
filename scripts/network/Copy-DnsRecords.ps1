@@ -166,7 +166,7 @@ function CopyDomain
     }
     foreach($additionalCopy in $additionalCopies)
     {
-        $record = Resolve-DnsName -Name ($additionalCopy+"."+$domainName) -Type All -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+        $record = Resolve-DnsName -Name ($additionalCopy+"."+$domainName) -Type All -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
         $allRecords += $record
     }
     foreach($record in $allRecords)
@@ -177,17 +177,17 @@ function CopyDomain
             switch($record.Type)
             {
                 "SOA" {
-                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Type -eq "SOA" }
-                    $toRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $toServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Type -eq "SOA" }
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Type -eq "SOA" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $toServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Type -eq "SOA" }
                     Write-Warning "  We do not update SOA records. Please check difference and update by hand!"
                     Write-Warning "  From record:"
-                    Write-Host (($fromRecord | fl | Out-String).Trim())
+                    Write-Host (($fromRecord | Format-List | Out-String).Trim())
                     Write-Warning "  To record:"
-                    Write-Host (($toRecord | fl | Out-String).Trim())
+                    Write-Host (($toRecord | Format-List | Out-String).Trim())
                 }
                 "MX" {
-                    $fromRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                    $toRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
                     if (-Not $toRecord)
                     {
                         Write-Host "  Creating MX record"
@@ -204,8 +204,8 @@ function CopyDomain
                     }
                 }
                 "TXT" {
-                    $fromRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                    $toRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
                     $recordName = $record.Name -replace ("."+$domainName), ""
                     if ($record.Name -eq $domainName)
                     {
@@ -237,11 +237,11 @@ function CopyDomain
                     }
                 }
                 "A" {
-                    $fromRecord = Resolve-DnsName -Name $record.Name -Type A -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                    $toRecord = Resolve-DnsName -Name $record.Name -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type A -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
                     if (-Not $toRecord)
                     {
-                        $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                        $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
                     }
                     $recordName = $record.Name -replace ("."+$domainName), ""
                     if ($record.Name -eq $domainName)
@@ -263,8 +263,8 @@ function CopyDomain
                     }
                 }
                 "CNAME" {
-                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                    $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
                     $recordName = $record.Name -replace ("."+$domainName), ""
                     if ($record.Name -eq $domainName)
                     {
@@ -285,8 +285,8 @@ function CopyDomain
                     }
                 }
                 "SRV" {
-                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | where { $_.Section -eq "Answer" }
-                    $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | where { $_.Section -eq "Answer" }
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
                     $recordName = $record.Name -replace ("."+$domainName), ""
                     if ($record.Name -eq $domainName)
                     {

@@ -827,15 +827,15 @@ function Update-Signature
 }
 function RemoveHybrid
 {
-    start "$($AlyaScripts)\exchange\RemoveHybrid.txt"
+    Start-Process "$($AlyaScripts)\exchange\RemoveHybrid.txt"
 }
 function UsefullExchangeCommands
 {
-    start "$($AlyaScripts)\exchange\UsefullExchangeCommands.txt"
+    Start-Process "$($AlyaScripts)\exchange\UsefullExchangeCommands.txt"
 }
 function pstexport
 {
-    start "$($AlyaScripts)\exchange\pstexport"
+    Start-Process "$($AlyaScripts)\exchange\pstexport"
 }
 function SyncFrom-AzureFileStorageShare
 {
@@ -863,7 +863,7 @@ function SyncTo-SharePoint
 }
 function Enable-PINReset
 {
-    start "$($AlyaScripts)\intune\Enable-PINReset.txt"
+    Start-Process "$($AlyaScripts)\intune\Enable-PINReset.txt"
 }
 function Create-IntuneWin32Packages
 {
@@ -924,7 +924,7 @@ function Get-IntunePowershellSamples
 }
 function extractPackages
 {
-    start "$($AlyaScripts)\intune\extractPackages"
+    Start-Process "$($AlyaScripts)\intune\extractPackages"
 }
 function Add-PSTNGateway
 {
@@ -1306,27 +1306,27 @@ function Prepare-ImageServer
 }
 function ImageInstallTools
 {
-    start "$($AlyaScripts)\wvd\image\install"
+    Start-Process "$($AlyaScripts)\wvd\image\install"
 }
 function admTemplates
 {
-    start "$($AlyaScripts)\wvd\wvdGpo\admTemplates"
+    Start-Process "$($AlyaScripts)\wvd\wvdGpo\admTemplates"
 }
 function groupPolicies
 {
-    start "$($AlyaScripts)\wvd\wvdGpo\groupPolicies"
+    Start-Process "$($AlyaScripts)\wvd\wvdGpo\groupPolicies"
 }
 function wvdIcons
 {
-    start "$($AlyaScripts)\wvd\wvdIcons"
+    Start-Process "$($AlyaScripts)\wvd\wvdIcons"
 }
 function wvdStartApps
 {
-    start "$($AlyaScripts)\wvd\wvdStartApps"
+    Start-Process "$($AlyaScripts)\wvd\wvdStartApps"
 }
 function wvdTheme
 {
-    start "$($AlyaScripts)\wvd\wvdTheme"
+    Start-Process "$($AlyaScripts)\wvd\wvdTheme"
 }
 function Clean-Image
 {

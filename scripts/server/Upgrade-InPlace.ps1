@@ -140,7 +140,7 @@ if (-Not $ReattachToReportsDir)
 	Get-WindowsFeature | Out-File -FilePath "$reportDir\windowsFeature.txt" -Encoding utf8
 	Get-Service | Out-File -FilePath "$reportDir\services.txt" -Encoding utf8
 	dir env: | Out-File -FilePath "$reportDir\env.txt" -Encoding utf8
-	Get-Process -IncludeUserName | select UserName, ProcessName | Out-File -FilePath "$reportDir\processes.txt" -Encoding utf8
+	Get-Process -IncludeUserName | Select-Object UserName, ProcessName | Out-File -FilePath "$reportDir\processes.txt" -Encoding utf8
 	Dism /Online /Cleanup-Image /ScanHealth | Out-File -FilePath "$reportDir\dismScanHealth.txt" -Encoding utf8
 	Dism /Online /Cleanup-Image /CheckHealth | Out-File -FilePath "$reportDir\dismCheckHealth.txt" -Encoding utf8
 	sfc.exe /scannow | Out-File -FilePath "$reportDir\sfcscan.txt" -Encoding utf8
@@ -176,7 +176,7 @@ if (-Not $ReattachToReportsDir)
 		setspn -L $compName | Out-File -FilePath "$reportDir\adfsSpns.txt" -Encoding utf8
 		$filter = 'Name=' + "'adfssrv'" + ''
 		$service = Get-CimInstance -namespace "root\cimv2" -class Win32_Service -Filter $filter
-		$service | fl -Property * | Out-File -FilePath "$reportDir\adfsService.txt" -Encoding utf8
+		$service | Format-List -Property * | Out-File -FilePath "$reportDir\adfsService.txt" -Encoding utf8
 		Get-ADFSEndpoint | Out-File -FilePath "$reportDir\adfsEndpoints.txt" -Encoding utf8
 		Get-ADFSClaimDescription | Out-File -FilePath "$reportDir\adfsClaimtypes.txt" -Encoding utf8
 		Get-ADFSClaimsProviderTrust | Out-File -FilePath "$reportDir\adfsCptrusts.txt" -Encoding utf8
@@ -248,13 +248,13 @@ if (-Not $ReattachToReportsDir)
 # Reading systeminfo
 Write-Host "Reading systeminfo" -ForegroundColor Cyan
 $sysInfo = Get-Content -Path "$reportDir\systeminfo.txt" -Encoding UTF8
-$OsName = ($sysInfo | where { $_ -like "*Betriebssystemname:*" -or $_ -like "*OS Name:*" }).Split(":")[1].Trim()
-$OsVersion = ($sysInfo | where { $_ -like "*Betriebssystemversion:*" -or $_ -like "*OS Version:*" }).Split(":")[1].Trim()
-$OsConfiguration = ($sysInfo | where { $_ -like "*Betriebssystemkonfiguration:*" -or $_ -like "*OS Configuration:*" }).Split(":")[1].Trim()
-$OsType = ($sysInfo | where { $_ -like "*Systemtyp:*" -or $_ -like "*System Type:*" }).Split(":")[1].Trim()
-$OsLocale = ($sysInfo | where { $_ -like "*Systemgebietsschema:*" -or $_ -like "*System Locale:*" }).Split(":")[1].Split(";")[0].Trim()
-$OsDomain = ($sysInfo | where { $_ -like "*Dom?ne:*" -or $_ -like "*Domain:*" }).Split(":")[1].Trim()
-$OsPartition = Get-Partition | where { $_.DriveLetter -eq $env:SystemDrive.Replace(":", "") }
+$OsName = ($sysInfo | Where-Object { $_ -like "*Betriebssystemname:*" -or $_ -like "*OS Name:*" }).Split(":")[1].Trim()
+$OsVersion = ($sysInfo | Where-Object { $_ -like "*Betriebssystemversion:*" -or $_ -like "*OS Version:*" }).Split(":")[1].Trim()
+$OsConfiguration = ($sysInfo | Where-Object { $_ -like "*Betriebssystemkonfiguration:*" -or $_ -like "*OS Configuration:*" }).Split(":")[1].Trim()
+$OsType = ($sysInfo | Where-Object { $_ -like "*Systemtyp:*" -or $_ -like "*System Type:*" }).Split(":")[1].Trim()
+$OsLocale = ($sysInfo | Where-Object { $_ -like "*Systemgebietsschema:*" -or $_ -like "*System Locale:*" }).Split(":")[1].Split(";")[0].Trim()
+$OsDomain = ($sysInfo | Where-Object { $_ -like "*Dom?ne:*" -or $_ -like "*Domain:*" }).Split(":")[1].Trim()
+$OsPartition = Get-Partition | Where-Object { $_.DriveLetter -eq $env:SystemDrive.Replace(":", "") }
 
 $OsCode = (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\Nls\Language -Name InstallLanguage).InstallLanguage
 switch($OsCode)
@@ -437,7 +437,7 @@ if ($mediaEdition -ne $null)
 	{
 		# Checking domain controller roles
 		Write-Host "Checking domain controller roles" -ForegroundColor Cyan
-		Get-ADDomainController -Filter * | Select-Object Name, Domain, Forest, OperationMasterRoles | fl | Out-File -FilePath "$reportDir\domainControllers.txt" -Encoding utf8
+		Get-ADDomainController -Filter * | Select-Object Name, Domain, Forest, OperationMasterRoles | Format-List | Out-File -FilePath "$reportDir\domainControllers.txt" -Encoding utf8
 		Get-ADDomainController -Filter * | Select-Object Name, Domain, Forest, OperationMasterRoles
 		$dom = Get-ADDomain
 		$for = Get-ADForest
@@ -544,17 +544,17 @@ if ($mediaEdition -ne $null)
 	$isSccm = Get-Service -Name "SMS_EXECUTIVE" -ErrorAction SilentlyContinue
 	if ($isSccm)
 	{
-		Get-Service | where {$_.DisplayName -like "SMS*"} | Stop-Service -Force
+		Get-Service | Where-Object {$_.DisplayName -like "SMS*"} | Stop-Service -Force
         Start-Sleep -Seconds 20
-		Get-Service | where {$_.DisplayName -like "SMS*"} | Stop-Service -Force
+		Get-Service | Where-Object {$_.DisplayName -like "SMS*"} | Stop-Service -Force
 	}
 	
 	$isMsSql = Get-Service -Name "SQLBrowser" -ErrorAction SilentlyContinue
 	if ($isSccm)
 	{
-		Get-Service | where {$_.DisplayName -like "SQL*"} | Stop-Service -Force
+		Get-Service | Where-Object {$_.DisplayName -like "SQL*"} | Stop-Service -Force
         Start-Sleep -Seconds 20
-		Get-Service | where {$_.DisplayName -like "SQL*"} | Stop-Service -Force
+		Get-Service | Where-Object {$_.DisplayName -like "SQL*"} | Stop-Service -Force
 	}
 	
 	# Launching update
@@ -725,7 +725,7 @@ else
 			$firstProcs += $tmp[$tmp.Count - 1]
 		}
 	}
-	$firstProcs = $firstProcs | select -Unique
+	$firstProcs = $firstProcs | Select-Object -Unique
 	$actualProcs = @()
 	foreach($actualProcesse in $actualProcesses)
 	{
@@ -735,7 +735,7 @@ else
 			$actualProcs += $tmp[$tmp.Count - 1]
 		}
 	}
-	$actualProcs = $actualProcs | select -Unique
+	$actualProcs = $actualProcs | Select-Object -Unique
 	foreach($firstProc in $firstProcs)
 	{
 		if ($actualProcs -notcontains $firstProc)

@@ -81,8 +81,8 @@ if (-Not $ExchUser)
 Set-MsolUser -UserPrincipalName $ExchUserName -PasswordNeverExpires $true
 
 Write-Host "Checking Exchange service account role membership" -ForegroundColor $CommandInfo
-$ExchangeRole = Get-MsolRole | where { $_.Name -eq "Exchange Administrator" }
-$RoleMember = Get-MsolRoleMember -RoleObjectId $ExchangeRole.ObjectId -All | where { $_.ObjectId -eq $ExchUser.ObjectId }
+$ExchangeRole = Get-MsolRole | Where-Object { $_.Name -eq "Exchange Administrator" }
+$RoleMember = Get-MsolRoleMember -RoleObjectId $ExchangeRole.ObjectId -All | Where-Object { $_.ObjectId -eq $ExchUser.ObjectId }
 if (-Not $RoleMember)
 {
     Write-Warning "Exchange service account role membership not found. Creating the Exchange service account role membership"
@@ -108,7 +108,7 @@ if (-Not $NoMfaGroup)
     Write-Warning "No MFA group not found. Creating the No MFA group"
     $NoMfaGroup = New-MsolGroup -DisplayName $NoMfaGroupName -Description "MFA is disabled for members in this group"
 }
-$GroupMember = Get-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -All | where { $_.ObjectId -eq $ExchUser.ObjectId }
+$GroupMember = Get-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -All | Where-Object { $_.ObjectId -eq $ExchUser.ObjectId }
 if (-Not $GroupMember)
 {
     Write-Warning "Exchange service account group membership not found. Creating the NoMfa group membership"
@@ -179,7 +179,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $ExchUserPasswordForRunAsAccount = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
+    $ExchUserPasswordForRunAsAccount = ($AzureKeyVaultSecret.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password })
 }
 
 #Stopping Transscript

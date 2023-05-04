@@ -126,7 +126,7 @@ foreach($user in $users)
     foreach($prop in $propNames)
     {
         if ($prop -eq "SID") { continue }
-        $psProp = $allProps | where { $_.Name -eq $prop }
+        $psProp = $allProps | Where-Object { $_.Name -eq $prop }
         if (-Not $psProp)
         {
             Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ""

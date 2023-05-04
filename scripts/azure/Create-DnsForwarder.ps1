@@ -64,10 +64,10 @@ $VMSku = "servercore-2019"
 $VMPlan = "servercore-2019"
 $VMNicName = "$($VMName)nic1"
 $VMDiskName = "$($VMName)osdisk"
-#Get-AzVMSize -Location $AlyaLocation | where { $_.Name -like "Standard_A1_v2" }
-#Get-AzVMImagePublisher -Location $AlyaLocation | where { $_.PublisherName -like "cloud-infrastructure-services" }
-#Get-AzVMImageOffer -Location $AlyaLocation -PublisherName "cloud-infrastructure-services" | fl
-#Get-AzVMImageSku -Location $AlyaLocation -PublisherName "cloud-infrastructure-services" -Offer "servercore-2019" | fl
+#Get-AzVMSize -Location $AlyaLocation | Where-Object { $_.Name -like "Standard_A1_v2" }
+#Get-AzVMImagePublisher -Location $AlyaLocation | Where-Object { $_.PublisherName -like "cloud-infrastructure-services" }
+#Get-AzVMImageOffer -Location $AlyaLocation -PublisherName "cloud-infrastructure-services" | Format-List
+#Get-AzVMImageSku -Location $AlyaLocation -PublisherName "cloud-infrastructure-services" -Offer "servercore-2019" | Format-List
 $DomJoinName = $AlyaLocalDomainName
 $DomJoinOUPath = $AlyaServerOuProd
 $DomJoinOption = 0x00000003
@@ -234,7 +234,7 @@ if (-Not $Vm)
     $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig -Tag @{displayName="DNS forwarder";ownerEmail=$Context.Account.Id} -DisableBginfoExtension
     $Vm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName -Status
 }
-if (-Not ($VM.Statuses | where { $_.Code -eq "PowerState/running"}))
+if (-Not ($VM.Statuses | Where-Object { $_.Code -eq "PowerState/running"}))
 {
     Write-Warning "Starting VM $VMName"
     Start-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName
@@ -247,8 +247,8 @@ $VmExt = Get-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName
 if (-Not $VmExt)
 {
     Write-Warning "AntiMalware extension on vm not found. Installing AntiMalware on vm $VMName"
-    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
+    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
+    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | Select-Object -last 1
     $amsettings = @"
         {
             "AntimalwareEnabled": true,
@@ -266,7 +266,7 @@ if (-Not $VmExt)
             }
         }
 "@
-    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
     $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
     $VmExt = Set-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName -Location $AlyaLocation `
@@ -282,7 +282,7 @@ if (-Not $VmDomainJoinExt)
 {
     Write-Warning "Domain join extension on vm not found. Setting domain join on vm $VMName"
     $DomJoinCredential = Get-Credential -Message "Account to join domain"
-    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Compute" -Type "JsonADDomainExtension" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Compute" -Type "JsonADDomainExtension" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
     $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
     Set-AzVMADDomainExtension -ResourceGroupName $ResourceGroupName -VMName $VMName -Location $AlyaLocation `
@@ -384,10 +384,10 @@ Stop-Transcript
     Remove-Item -Path $FilePath -Force -ErrorAction SilentlyContinue
     $StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $DiagnosticResourceGroupName -Name $DiagnosticStorageName
     $StrgKey = $StrgKeys.GetValue(0).Value
-    #Get-AzVmImagePublisher -Location $AlyaLocation | where { $_.PublisherName -like "Microsoft.*" }
+    #Get-AzVmImagePublisher -Location $AlyaLocation | Where-Object { $_.PublisherName -like "Microsoft.*" }
     #(Get-AzVMExtensionImageType -Location $AlyaLocation -PublisherName "Microsoft.Compute").Type
     #Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Compute" -Type CustomScriptExtension
-    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Compute" -Type "CustomScriptExtension" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Compute" -Type "CustomScriptExtension" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
     $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
     $VmScriptExt = Set-AzVMCustomScriptExtension -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VMName $VMName -Name $VmScriptExtName -StorageAccountName $DiagnosticStorageName -StorageAccountKey $StrgKey -ContainerName "scripts" -FileName "$VmScriptExtName.ps1" -Run "$VmScriptExtName.ps1" -SecureExecution -TypeHandlerVersion $typeHandlerVerMjandMn

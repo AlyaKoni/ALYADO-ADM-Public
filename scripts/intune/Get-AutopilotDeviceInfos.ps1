@@ -61,7 +61,7 @@ Write-Host "Intune Autopilot hardware information:" -ForegroundColor $CommandInf
 Get-WindowsAutoPilotInfo -OutputFile "$($AlyaData)\intune\WindowsAutoPilotInfo.csv" -Append -GroupTag "Standard"
 $info = Get-WindowsAutoPilotInfo
 Increase-ConsoleWidth
-$info | fl
+$info | Format-List
 Reset-ConsoleWidth
 
 #Stopping Transscript

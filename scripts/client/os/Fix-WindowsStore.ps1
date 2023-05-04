@@ -7,7 +7,7 @@ regsvr32 wintrust.dll /s
 regsvr32 initpki.dll /s
 regsvr32 mssip32.dll /s
 
-Get-AppxPackage -allusers Microsoft.WindowsStore | Foreach {Add-AppxPackage -DisableDevelopmentMode -Register “$($_.InstallLocation)\AppXManifest.xml”}
+Get-AppxPackage -allusers Microsoft.WindowsStore | Foreach-Object {Add-AppxPackage -DisableDevelopmentMode -Register “$($_.InstallLocation)\AppXManifest.xml”}
 
 del /s "%LOCALAPPDATA%\Packages\Microsoft.WindowsStore_8wekyb3d8bbwe\LocalState\*.*"
 

@@ -63,7 +63,7 @@ Write-Host "=====================================================`n" -Foreground
 # Getting organisation
 Write-Host "Getting organisation" -ForegroundColor $CommandInfo
 $org = Get-MgOrganization -OrganizationId $AlyaTenantId
-$org | fl
+$org | Format-List
 
 # Setting organisation info
 Write-Host "Setting organisation info" -ForegroundColor $CommandInfo
@@ -87,7 +87,7 @@ try
     Write-Warning "Branding does not exists, creating"
     Write-Warning "Please create default branding on the following page"
     Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
-    start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+    Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
     pause
     $branding = Get-MgOrganizationBranding -OrganizationId $AlyaTenantId
 }
@@ -100,11 +100,11 @@ Update-MgOrganizationBranding -OrganizationId $AlyaTenantId `
       -UsernameHintText $AlyaAzureBrandingUsernameHintTextDefault
 
 $locs = Get-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId
-$locDef = $locs | where { $_.Id -eq 0 }
-$locEn = $locs | where { $_.Id -eq "en-US" }
-$locDe = $locs | where { $_.Id -eq "de-de" }
-$locFr = $locs | where { $_.Id -eq "fr-FR" }
-$locIt = $locs | where { $_.Id -eq "it-IT" }
+$locDef = $locs | Where-Object { $_.Id -eq 0 }
+$locEn = $locs | Where-Object { $_.Id -eq "en-US" }
+$locDe = $locs | Where-Object { $_.Id -eq "de-de" }
+$locFr = $locs | Where-Object { $_.Id -eq "fr-FR" }
+$locIt = $locs | Where-Object { $_.Id -eq "it-IT" }
 if ($locEn)
 {
     Update-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "en-US" `
@@ -189,7 +189,7 @@ else
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update backgroundImage by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
-        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
     }
     if ($uplFile -ne $AlyaAzureBrandingBackgroundImage) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
@@ -222,7 +222,7 @@ else
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update squareLogo by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
-        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
     }
     if ($uplFile -ne $AlyaAzureBrandingSquareLogo) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
@@ -255,7 +255,7 @@ else
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update squareLogoDark by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
-        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
     }
     if ($uplFile -ne $AlyaAzureBrandingSquareLogoDark) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
@@ -292,7 +292,7 @@ else
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update bannerLogo by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
-        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
     }
     if ($uplFile -ne $AlyaAzureBrandingBannerLogo) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
@@ -325,7 +325,7 @@ else
     {
         Write-Warning "Update-MgOrganizationBranding still not working, please update favicon by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
-        start "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
     }
     if ($uplFile -ne $AlyaAzureBrandingFavicon) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
@@ -338,7 +338,7 @@ Write-Host "Color Nav: $($AlyaSpThemeDef.white)"
 Write-Host "Color Text: $($AlyaSpThemeDef.neutralPrimary)"
 Write-Host "Click Url: https://portal.office.com"
 Write-Host "https://admin.microsoft.com/Adminportal/Home?source=applauncher#/Settings/OrganizationProfile/:/Settings/L1/CustomThemes"
-start "https://admin.microsoft.com/Adminportal/Home?source=applauncher#/Settings/OrganizationProfile/:/Settings/L1/CustomThemes"
+Start-Process "https://admin.microsoft.com/Adminportal/Home?source=applauncher#/Settings/OrganizationProfile/:/Settings/L1/CustomThemes"
 pause
 
 #Stopping Transscript

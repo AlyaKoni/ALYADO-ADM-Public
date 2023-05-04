@@ -235,7 +235,7 @@ foreach($packageDir in $packages)
         Write-Host "    Getting existing categories"
 	    $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories"
 	    $actCategories = Get-MsGraphCollection -Uri $uri
-        $isPresent = $actCategories | where { $_.id -eq $category.id }
+        $isPresent = $actCategories | Where-Object { $_.id -eq $category.id }
         if (-Not $isPresent)
         {
             # Adding category

@@ -103,10 +103,10 @@ if (-Not $AzureAdServicePrincipal)
 Write-Host "Checking automation service principal on all subscriptions"
 
 $RunAsApplication = Get-AzADApplication -DisplayNameStartWith $AutomationAccountName -ErrorAction SilentlyContinue
-Get-AzSubscription | foreach {
+Get-AzSubscription | Foreach-Object {
     write-host "Configuring app on subscription $($_.Name) $($_.Id)"
     Select-AzSubscription -SubscriptionId $_.Id
-    $NewRole = Get-AzRoleAssignment -ErrorAction SilentlyContinue | where {$_.DisplayName -eq $AutomationAccountName -and $_.RoleDefinitionName -eq "Contributor"}
+    $NewRole = Get-AzRoleAssignment -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -eq $AutomationAccountName -and $_.RoleDefinitionName -eq "Contributor"}
     While ($NewRole -eq $null)
     {
 	    Try {
@@ -118,7 +118,7 @@ Get-AzSubscription | foreach {
 		    Write-Verbose "Service Principal not yet active, delay before adding the role assignment."
             Sleep 5
 	    }
-	    $NewRole = Get-AzRoleAssignment -ErrorAction SilentlyContinue | where {$_.DisplayName -eq $AutomationAccountName -and $_.RoleDefinitionName -eq "Contributor"}
+	    $NewRole = Get-AzRoleAssignment -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -eq $AutomationAccountName -and $_.RoleDefinitionName -eq "Contributor"}
         Write-Verbose "Added role assignment for Azure AD application $($AutomationAccountName)"
     }
 }

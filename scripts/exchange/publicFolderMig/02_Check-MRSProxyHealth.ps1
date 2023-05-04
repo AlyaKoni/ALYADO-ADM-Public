@@ -37,4 +37,4 @@
 Param(
 )
 
-Get-MailboxServer | Test-MRSHealth | Select Identity,Check,Passed,Message | ft -auto
+Get-MailboxServer | Test-MRSHealth | Select-Object Identity,Check,Passed,Message | Format-Table -auto

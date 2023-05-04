@@ -67,7 +67,7 @@ function AuthenticateSharePoint
     while ($true)
     {
         Start-Sleep -Milliseconds 500
-        $result = $shell.windows() | where { $_.HWND -eq $hwnd }
+        $result = $shell.windows() | Where-Object { $_.HWND -eq $hwnd }
         if (-Not $result)
         {
             Write-Host "Was not able to launch ie" -ForegroundColor Red

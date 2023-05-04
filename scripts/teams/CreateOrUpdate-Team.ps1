@@ -143,7 +143,7 @@ $TeamChannels = Get-TeamChannel -GroupId $Team.GroupId
 foreach($AddChannel in $AddChannels)
 {
     Write-Host "Channel $($AddChannel.DisplayName)"
-    $TeamChannel = $TeamChannels | where { $_.DisplayName -eq $AddChannel.DisplayName }
+    $TeamChannel = $TeamChannels | Where-Object { $_.DisplayName -eq $AddChannel.DisplayName }
     if (-Not $TeamChannel)
     {
         Write-Warning "Channel does not exist. Creating it now."
@@ -185,14 +185,14 @@ foreach($memb in $Owners)
         $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
-            $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
+            $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
             if (-Not $group)
             {
                 throw "Can't find a user or group with email $memb"
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | foreach {
+                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewOwners += $_.AdditionalProperties.userPrincipalName
@@ -214,14 +214,14 @@ foreach($memb in $Owners)
         $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
-            $group = $allGroups | where { $_.Id -eq $memb }
+            $group = $allGroups | Where-Object { $_.Id -eq $memb }
             if (-Not $group)
             {
                 throw "Can't find a user or group with id $memb"
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | foreach {
+                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewOwners += $_.AdditionalProperties.userPrincipalName
@@ -279,14 +279,14 @@ foreach($memb in $Members)
         $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
-            $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
+            $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
             if (-Not $group)
             {
                 throw "Can't find a user or group with email $memb"
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | foreach {
+                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewMembers += $_.AdditionalProperties.userPrincipalName
@@ -308,14 +308,14 @@ foreach($memb in $Members)
         $user = Get-MgUser -UserId $memb
         if (-Not $user)
         {
-            $group = $allGroups | where { $_.Id -eq $memb }
+            $group = $allGroups | Where-Object { $_.Id -eq $memb }
             if (-Not $group)
             {
                 throw "Can't find a user or group with id $memb"
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | foreach {
+                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewMembers += $_.AdditionalProperties.userPrincipalName
@@ -369,8 +369,8 @@ if ($OwerwriteMembersOwnersGuests)
 if ($AllowToAddGuests)
 {
     Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-    $SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
-    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+    $SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     if (-Not $Setting)
     {
         Write-Warning "Setting not yet created. Creating one based on template."
@@ -379,15 +379,15 @@ if ($AllowToAddGuests)
             $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
         }
         $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-        $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+        $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     }
-    $Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+    $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
     if ($Value.Value -eq $true) {
         Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
     } 
     else {
         Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
-        ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+        ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $true
     }
     Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
 
@@ -401,14 +401,14 @@ if ($AllowToAddGuests)
             $user = Get-MgUser -UserId $memb
             if (-Not $user)
             {
-                $group = $allGroups | where { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
+                $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
                 if (-Not $group)
                 {
                     throw "Can't find a user or group with email $memb"
                 }
                 else
                 {
-                    Get-MgGroupMember -GroupId $group.Id | foreach {
+                    Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
                         if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.AdditionalProperties.userPrincipalName)
                         {
                             throw "TODO"
@@ -432,14 +432,14 @@ if ($AllowToAddGuests)
             $user = Get-MgUser -UserId $memb
             if (-Not $user)
             {
-                $group = $allGroups | where { $_.Id -eq $memb }
+                $group = $allGroups | Where-Object { $_.Id -eq $memb }
                 if (-Not $group)
                 {
                     throw "Can't find a user or group with id $memb"
                 }
                 else
                 {
-                    Get-MgGroupMember -GroupId $group.Id | foreach {
+                    Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
                         if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.AdditionalProperties.userPrincipalName)
                         {
                             throw "TODO"
@@ -501,8 +501,8 @@ if ($AllowToAddGuests)
 else
 {
     Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-    $SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
-    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+    $SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     if (-Not $Setting)
     {
         Write-Warning "Setting not yet created. Creating one based on template."
@@ -511,15 +511,15 @@ else
             $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
         }
         $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-        $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | where { $_.TemplateId -eq $SettingTemplate.Id }
+        $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     }
-    $Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+    $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
     if ($Value.Value -eq $false) {
         Write-Host "Setting 'AllowToAddGuests' was already set to '$false'"
     } 
     else {
         Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$false'"
-        ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $false
+        ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $false
     }
     Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
 

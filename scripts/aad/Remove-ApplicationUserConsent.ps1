@@ -101,7 +101,7 @@ if ($UserUpn)
 
 Write-Host "Getting Grants" -ForegroundColor $CommandInfo
 $grants = Get-AzureADOAuth2PermissionGrant -All $true | Where-Object { $_.clientId -eq $App.ObjectId -and $_.PrincipalId -eq $User.ObjectId }
-$grants | fl
+$grants | Format-List
 
 Write-Host "Deleting Grants" -ForegroundColor $CommandInfo
 $grants | Remove-AzureADOAuth2PermissionGrant

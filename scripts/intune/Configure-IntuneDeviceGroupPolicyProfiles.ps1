@@ -132,10 +132,10 @@ foreach($definedProfile in $definedProfiles)
         {
             #$definedDefinitionValue = $definedProfile.definitionValues[0]
             Write-Host "      $($definedDefinitionValue.definition.displayName)"
-            $extDefinitionValue = $extDefinitionValues | where { $_.definition.classType -eq $definedDefinitionValue.definition.classType -and $_.definition.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.definition.displayName -eq $definedDefinitionValue.definition.displayName }
+            $extDefinitionValue = $extDefinitionValues | Where-Object { $_.definition.classType -eq $definedDefinitionValue.definition.classType -and $_.definition.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.definition.displayName -eq $definedDefinitionValue.definition.displayName }
             if (-Not $extDefinitionValue)
             {
-                $groupPolicyDefinition = $groupPolicyDefinitions | where { $_.classType -eq $definedDefinitionValue.definition.classType -and $_.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.displayName -eq $definedDefinitionValue.definition.displayName } 
+                $groupPolicyDefinition = $groupPolicyDefinitions | Where-Object { $_.classType -eq $definedDefinitionValue.definition.classType -and $_.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.displayName -eq $definedDefinitionValue.definition.displayName } 
                 if (-Not $groupPolicyDefinition)
                 {
                     throw "Was not able to find the right definition"
@@ -148,7 +148,7 @@ foreach($definedProfile in $definedProfiles)
                 $presentations = Get-MsGraphCollection -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
                 foreach($pvalue in $mvalue.presentationValues)
                 {
-                    $presentation = $presentations | where { $_.label -eq $pvalue.presentation.label } 
+                    $presentation = $presentations | Where-Object { $_.label -eq $pvalue.presentation.label } 
                     $pvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
                     $pvalue.PSObject.properties.remove("definition")
                     $pvalue.PSObject.properties.remove("definitionNext")
@@ -180,9 +180,9 @@ foreach($definedProfile in $definedProfiles)
                     $mvalue.PSObject.properties.remove("presentations")
                     $mvalue.PSObject.properties.remove("presentation")
                     $mvalue.PSObject.properties.remove("presentation@odata.bind")
-                    $presentation = $presentations | where { $_.label -eq $pvalue.presentation.label } 
+                    $presentation = $presentations | Where-Object { $_.label -eq $pvalue.presentation.label } 
                     $mvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
-                    $presentationValue = $presentationValues | where { $_.presentation.label -eq $pvalue.presentation.label }
+                    $presentationValue = $presentationValues | Where-Object { $_.presentation.label -eq $pvalue.presentation.label }
                     if (-Not $presentationValue)
                     {
                         $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($extProfile.id)/definitionValues/$($extDefinitionValue.id)/presentationValues"

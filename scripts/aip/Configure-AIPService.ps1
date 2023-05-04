@@ -84,7 +84,7 @@ else
 
 Write-Host "Checking AipServiceDevicePlatform" -ForegroundColor $CommandInfo
 $enabled = Get-AipServiceDevicePlatform -All
-$enabled = $enabled | where { $_.Value -eq $false }
+$enabled = $enabled | Where-Object { $_.Value -eq $false }
 if ($enabled)
 {
     Write-Host "Enabling AipServiceDevicePlatform All"
@@ -108,7 +108,7 @@ else
 }
 
 $aipConfiguration = Get-AipServiceConfiguration
-$aipConfiguration | fl
+$aipConfiguration | Format-List
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "AIP | Configure-AIPService | Exchange Online" -ForegroundColor $CommandInfo
@@ -161,7 +161,7 @@ if (-Not $actConfiguration.AutomaticServiceUpdateEnabled)
 }
 #Test-IRMConfiguration -Sender first.last@domain.ch
 
-Get-IRMConfiguration | fl
+Get-IRMConfiguration | Format-List
 DisconnectFrom-EXOandIPPS
 
 #Stopping Transscript

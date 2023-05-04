@@ -61,7 +61,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AIP | Get-AIPConfiguration | AIP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Get-AipServiceConfiguration | fl
+Get-AipServiceConfiguration | Format-List
 
 #Stopping Transscript
 Stop-Transcript

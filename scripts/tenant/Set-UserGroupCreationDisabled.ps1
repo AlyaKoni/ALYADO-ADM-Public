@@ -65,8 +65,8 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
@@ -75,16 +75,16 @@ if (-Not $Setting)
 	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
     }
     $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "EnableGroupCreation" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "EnableGroupCreation" }
 if ($Value.Value -eq $false) {
     Write-Host "Setting 'EnableGroupCreation' was already set to '$false'"
 } 
 else {
     Write-Warning "Setting 'EnableGroupCreation' was set to '$($Value.Value)' updating to '$false'"
-    ($Setting.Values | where { $_.Name -eq "EnableGroupCreation" }).Value = $false
+    ($Setting.Values | Where-Object { $_.Name -eq "EnableGroupCreation" }).Value = $false
 }
 
 Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values

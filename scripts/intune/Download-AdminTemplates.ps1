@@ -61,7 +61,7 @@ if (-Not (Test-Path $dataRoot))
 # Office apps admx templates
 Write-Host "Office apps" -ForegroundColor $CommandInfo
 $url = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49030"
-$req = Invoke-WebRequest -Uri $url -UseBasicParsing -Method Get
+$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $url -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*admintemplates_x64[^`"]*.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $fileName = Split-Path $newUrl -Leaf

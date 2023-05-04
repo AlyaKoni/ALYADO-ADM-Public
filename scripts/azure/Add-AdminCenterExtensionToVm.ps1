@@ -117,7 +117,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $WacSalt = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
+    $WacSalt = ($AzureKeyVaultSecret.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password })
 }
 Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
@@ -128,7 +128,7 @@ if (-Not $Vm)
 {
     throw "VM not found. Please create the VM $VMName"
 }
-if (-Not ($VM.Statuses | where { $_.Code -eq "PowerState/running"}))
+if (-Not ($VM.Statuses | Where-Object { $_.Code -eq "PowerState/running"}))
 {
     Write-Warning "Starting VM $VMName"
     Start-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName
@@ -172,15 +172,15 @@ $VmExt = Get-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName
 if (-Not $VmExt)
 {
     Write-Warning "AdminCenter extension on vm not found. Installing AdminCenter on vm $VMName"
-    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select Type, Version
-    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | select -last 1
+    #Get-AzVmImagePublisher -Location $AlyaLocation | Get-AzVMExtensionImageType | Get-AzVMExtensionImage | Select-Object Type, Version
+    #$Extension = Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.Azure.Security" -Type "IaaSAntimalware" | Select-Object -last 1
     $wacSettings = @"
         {
             "port": $WacPort,
             "salt": $WacSalt
         }
 "@
-    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.AdminCenter" -Type "AdminCenter" | %{ new-object System.Version ($_.Version) } | Sort | Select -Last 1).ToString()
+    $typeHandlerVer = (Get-AzVMExtensionImage -Location $AlyaLocation -PublisherName "Microsoft.AdminCenter" -Type "AdminCenter" | %{ new-object System.Version ($_.Version) } | Sort | Select-Object -Last 1).ToString()
     $typeHandlerVerMjandMn = $typeHandlerVer.split(".")
     $typeHandlerVerMjandMn = $typeHandlerVerMjandMn[0] + "." + $typeHandlerVerMjandMn[1]
     $VmExt = Set-AzVMExtension -ResourceGroupName $ResourceGroupName -VMName $VMName -Location $AlyaLocation `

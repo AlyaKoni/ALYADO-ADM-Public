@@ -186,7 +186,7 @@ if (Test-Path $chromeDir)
             }
         }
         $data = Get-content $pathToJsonFile -Encoding UTF8 | out-string | ConvertFrom-Json
-        $sections = $data.roots.PSObject.Properties | select -ExpandProperty name
+        $sections = $data.roots.PSObject.Properties | Select-Object -ExpandProperty name
         ForEach ($entry in $sections)
         {
             $data.roots.$entry | Get-BookmarkFolder

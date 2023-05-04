@@ -97,10 +97,10 @@ $ImgDefinition = Get-AzGalleryImageDefinition -ResourceGroupName $ResourceGroupN
 if (-Not $ImgDefinition)
 {
     Write-Warning "Image definition not found. Creating the image definition $ImageName"
-    $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" | where { $_.Skus -like "win10*avd*" } | select -Last 1).Skus
+    $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" | Where-Object { $_.Skus -like "win10*avd*" } | Select-Object -Last 1).Skus
     if ($AlyaAvdHypervisorVersion -eq "V1")
     {
-        $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" | where { $_.Skus -like "win10*avd*" -and $_.Skus -notlike "*-g2" } | select -Last 1).Skus
+        $sku = (Get-AzVMImageSku -Location $AlyaLocation -PublisherName "MicrosoftWindowsDesktop" -Offer "office-365" | Where-Object { $_.Skus -like "win10*avd*" -and $_.Skus -notlike "*-g2" } | Select-Object -Last 1).Skus
     }
     $ImgDefinition = New-AzGalleryImageDefinition -ResourceGroupName $ResourceGroupName -GalleryName $GalleryName -Name $ImageName -Location $AlyaLocation `
                        -OsState "Generalized" -OsType "Windows" -Publisher "MicrosoftWindowsDesktop" -Offer "office-365" -Sku $sku `

@@ -70,27 +70,27 @@ try
         $newProcs = Get-Process
         foreach($proc in $newProcs)
         {
-            $fnd = $oldProcs | where { $_.Id -eq $proc.Id }
+            $fnd = $oldProcs | Where-Object { $_.Id -eq $proc.Id }
             if (-Not $fnd)
             {
                 if ($ignoreProcesses -notcontains $proc.ProcessName)
                 {
                     $obj = Get-ReportObject -proc $proc -type "Start"
                     $obj | Add-Content -Path $file -Force
-                    $obj | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Select -Last 1 | Add-Content -Path ($file.FullName+".csv") -Force
+                    $obj | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Select-Object -Last 1 | Add-Content -Path ($file.FullName+".csv") -Force
                 }
             }
         }
         foreach($proc in $oldProcs)
         {
-            $fnd = $newProcs | where { $_.Id -eq $proc.Id }
+            $fnd = $newProcs | Where-Object { $_.Id -eq $proc.Id }
             if (-Not $fnd)
             {
                 if ($ignoreProcesses -notcontains $proc.ProcessName)
                 {
                     $obj = Get-ReportObject -proc $proc -type "Stop"
                     $obj | Add-Content -Path $file -Force
-                    $obj | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Select -Last 1 | Add-Content -Path ($file.FullName+".csv") -Force
+                    $obj | ConvertTo-Csv -Delimiter ";" -NoTypeInformation | Select-Object -Last 1 | Add-Content -Path ($file.FullName+".csv") -Force
                 }
             }
         }

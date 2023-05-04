@@ -76,7 +76,7 @@ if (-Not $Context)
 # Getting source conditional access policy
 Write-Host "Getting source conditional access policy" -ForegroundColor $CommandInfo
 $policies = (Invoke-AzRestMethod -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies").Content | ConvertFrom-Json
-$srcPolicyId = ($policies.value | where { $_.displayName -eq $srcCondAccessRuleName }).id
+$srcPolicyId = ($policies.value | Where-Object { $_.displayName -eq $srcCondAccessRuleName }).id
 if (-Not $srcPolicyId)
 {
 	throw "Policy $srcCondAccessRuleName not found"
@@ -85,7 +85,7 @@ $srcPolicy = Get-AzureADMSConditionalAccessPolicy -PolicyId $srcPolicyId
 
 # Checking destination conditional access policy
 Write-Host "Checking destination conditional access policy" -ForegroundColor $CommandInfo
-$dstPolicyId = ($policies.value | where { $_.displayName -eq $dstCondAccessRuleName }).id
+$dstPolicyId = ($policies.value | Where-Object { $_.displayName -eq $dstCondAccessRuleName }).id
 if (-Not $dstPolicyId)
 {
     Write-Warning "  Does not exist. Creating it now"

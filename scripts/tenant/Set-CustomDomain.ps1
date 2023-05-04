@@ -79,7 +79,7 @@ if ($dom.SupportedServices.Count -eq 0)
 # Your domain configuration
 Write-Host "Your domain configuration" -ForegroundColor $CommandInfo
 $domConfigs = Get-AzureADDomainServiceConfigurationRecord -Name $AlyaDomainName
-$domConfigs | Select -Property * -ExcludeProperty DnsRecordId,SupportedService,IsOptional | fl
+$domConfigs | Select-Object -Property * -ExcludeProperty DnsRecordId,SupportedService,IsOptional | Format-List
 
 # Checking domain configuration
 Write-Host "Checking domain configuration" -ForegroundColor $CommandInfo

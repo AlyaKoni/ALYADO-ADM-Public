@@ -125,7 +125,7 @@ if ($AppGroupType -eq "Desktop")
     $app = Get-AzWvdDesktop -ApplicationGroupName $AppGroupName -ResourceGroupName $ResourceGroupName
     if ($app.FriendlyName -ne $AppGroupFriendlyName)
     {
-        $appName = $app.Name.Split("/") | Select -Last 1
+        $appName = $app.Name.Split("/") | Select-Object -Last 1
         Update-AzWvdDesktop -ApplicationGroupName $AppGroupName -ResourceGroupName $ResourceGroupName -Name $appName -FriendlyName $AppGroupFriendlyName
     }
 }

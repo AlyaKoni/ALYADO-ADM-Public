@@ -80,8 +80,8 @@ if (-Not $SPUser)
 Set-MsolUser -UserPrincipalName $SPUserName -PasswordNeverExpires $true
 
 Write-Host "Checking SharePoint service account role membership" -ForegroundColor $CommandInfo
-$SharePointRole = Get-MsolRole | where { $_.Name -like "SharePoint*" }
-$RoleMember = Get-MsolRoleMember -RoleObjectId $SharePointRole.ObjectId -All | where { $_.ObjectId -eq $SPUser.ObjectId }
+$SharePointRole = Get-MsolRole | Where-Object { $_.Name -like "SharePoint*" }
+$RoleMember = Get-MsolRoleMember -RoleObjectId $SharePointRole.ObjectId -All | Where-Object { $_.ObjectId -eq $SPUser.ObjectId }
 if (-Not $RoleMember)
 {
     Write-Warning "SharePoint service account role membership not found. Creating the SharePoint service account role membership"
@@ -107,7 +107,7 @@ if (-Not $NoMfaGroup)
     Write-Warning "No MFA group not found. Creating the No MFA group"
     $NoMfaGroup = New-MsolGroup -DisplayName $NoMfaGroupName -Description "MFA is disabled for members in this group"
 }
-$GroupMember = Get-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -All | where { $_.ObjectId -eq $SPUser.ObjectId }
+$GroupMember = Get-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -All | Where-Object { $_.ObjectId -eq $SPUser.ObjectId }
 if (-Not $GroupMember)
 {
     Write-Warning "SharePoint service account group membership not found. Creating the NoMfa group membership"
@@ -178,7 +178,7 @@ if (-Not $AzureKeyVaultSecret)
 }
 else
 {
-    $SPUserPasswordForRunAsAccount = ($AzureKeyVaultSecret.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password })
+    $SPUserPasswordForRunAsAccount = ($AzureKeyVaultSecret.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password })
 }
 
 #Stopping Transscript

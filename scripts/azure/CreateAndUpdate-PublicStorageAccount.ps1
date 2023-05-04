@@ -188,7 +188,7 @@ else
 }
 
 $BlobPublicRoot = "$AlyaData\azure\publicStorage"
-$containers = Get-ChildItem -Path $BlobPublicRoot | where { $_.PSIsContainer }
+$containers = Get-ChildItem -Path $BlobPublicRoot | Where-Object { $_.PSIsContainer }
 foreach($container in $containers)
 {
     $StorageContainerName = $container.Name

@@ -60,7 +60,7 @@ Write-Host "=====================================================`n" -Foreground
 
 #Main
 Write-Host "Found processes" -ForegroundColor $CommandInfo
-$prcs = Invoke-Command -ComputerName $serverName -ScriptBlock { Get-Process -IncludeUserName | where { $_.UserName -like "*$using:userName" } | select Id }
+$prcs = Invoke-Command -ComputerName $serverName -ScriptBlock { Get-Process -IncludeUserName | Where-Object { $_.UserName -like "*$using:userName" } | Select-Object Id }
 $prcs
 foreach($prc in $prcs)
 {

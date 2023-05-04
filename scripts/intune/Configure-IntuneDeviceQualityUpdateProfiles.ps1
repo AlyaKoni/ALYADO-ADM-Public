@@ -246,7 +246,7 @@ foreach($profile in $profiles)
         Write-Host "  Checking if profile exists"
         $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
         $actProfiles = (Get-MsGraphObject -Uri $uri).value
-        $actProfile = $actProfiles | where { $_.displayName -eq $profile.displayName }
+        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
         if (-Not $actProfile.id)
         {
             # Creating the profile

@@ -129,7 +129,7 @@ foreach($user in $users)
                 foreach($breache in $Results)
                 {
                     Write-Host "Found in breache '$($breache.Name)'"
-                    $breache | fl
+                    $breache | Format-List
                     $hack = [PSCustomObject]@{
                         Mail = $mail
                         BreacheName = $breache.Name

@@ -85,7 +85,7 @@ if($MDMAuthority -notlike "intune")
         Write-Host " - Select 'Microsoft Intune'"
         Write-Host " - Set for MDM and MAM 'All'"
         Write-Host " - Save"
-        start "https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
+        Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
         pause
     }
 }

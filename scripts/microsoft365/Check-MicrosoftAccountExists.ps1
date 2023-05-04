@@ -60,7 +60,7 @@ try
 {
     $browser = $null
     Load-NugetAssembly -url 'https://www.nuget.org/api/v2/package/Selenium.WebDriver' -name 'WebDriver.dll' -zipinternalpath 'lib/net48/WebDriver.dll' -EA Stop
-    $edge = Get-Package -Name 'Microsoft Edge' -EA SilentlyContinue | select -F 1
+    $edge = Get-Package -Name 'Microsoft Edge' -EA SilentlyContinue | Select-Object -F 1
     if (!$edge){
         throw "Microsoft Edge Browser not installed."
         return

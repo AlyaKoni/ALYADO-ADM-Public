@@ -90,7 +90,7 @@ if ($AlyaPasswordResetEnabled)
         Write-Host "and allow password reset for group $AlyaSsprEnabledGroupName. Also configure reset options."
     }
     Write-Host "Also configure reset options."
-    start https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset
+    Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
     pause
 }
 

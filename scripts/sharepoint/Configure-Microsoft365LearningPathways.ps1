@@ -102,7 +102,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking ADM hub site
 Write-Host "Checking ADM hub site" -ForegroundColor $CommandInfo
-$hubSiteDef = $hubSites | where { $_.short -eq "ADM" }
+$hubSiteDef = $hubSites | Where-Object { $_.short -eq "ADM" }
 $hubSiteName = $hubSiteDef.title
 $admHubSite = Get-PnPHubSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$hubSiteName" -ErrorAction SilentlyContinue
 if (-Not $admHubSite)
@@ -174,14 +174,14 @@ if (-Not $site)
     Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
     $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
     $aRoles = Get-PnPRoleDefinition -Connection $siteCon
-    $eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
-    $cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
+    $eRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Editor" }
+    $cRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Contributor" }
     $perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
-    if (-Not ($perms | where { $_.Id -eq $cRole.Id }))
+    if (-Not ($perms | Where-Object { $_.Id -eq $cRole.Id }))
     {
         Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
     }
-    if (($perms | where { $_.Id -eq $eRole.Id }))
+    if (($perms | Where-Object { $_.Id -eq $eRole.Id }))
     {
         Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
     }
@@ -247,7 +247,7 @@ do
     Start-Sleep -Seconds 10
     try
     {
-        $app = Get-PnPApp -Connection $appSiteCon -Scope "Tenant" | where { $_.Id -eq $appId }
+        $app = Get-PnPApp -Connection $appSiteCon -Scope "Tenant" | Where-Object { $_.Id -eq $appId }
     } catch {}
     $retries--
     if ($retries -lt 0) { break }
@@ -267,7 +267,7 @@ $retries = 20
 $hasInstalled = $false
 do
 {
-    $sapp = Get-PnPApp -Connection $siteCon | where { $_.Title -eq "Microsoft 365 learning pathways" }
+    $sapp = Get-PnPApp -Connection $siteCon | Where-Object { $_.Title -eq "Microsoft 365 learning pathways" }
     if (-Not $sapp.InstalledVersion -And -Not $hasInstalled)
     {
         Install-PnPApp -Connection $siteCon -Identity $appId -Scope "Tenant" -Wait
@@ -284,7 +284,7 @@ if (-Not $sapp.InstalledVersion)
 {
     throw "Not able to deploy app package on site!"
 }
-$sapp = Get-PnPApp -Connection $siteCon | where { $_.Title -eq "Microsoft 365 learning pathways" }
+$sapp = Get-PnPApp -Connection $siteCon | Where-Object { $_.Title -eq "Microsoft 365 learning pathways" }
 if ($sapp.AppCatalogVersion -ne $sapp.InstalledVersion)
 {
     Update-PnPApp -Connection $siteCon -Identity $appId -Scope "Tenant"
@@ -340,7 +340,7 @@ if($null -ne $sitePagesList) {
     $WebPartsFound = $false
     while ($stopwatch.elapsed -lt $timeout) {
         $comps = Get-PnPPageComponent -Connection $siteCon -page CustomLearningViewer.aspx -ListAvailable
-        if ($comps | where { $_.Name -eq "Microsoft 365 learning pathways administration"} ) {
+        if ($comps | Where-Object { $_.Name -eq "Microsoft 365 learning pathways administration"} ) {
             Write-Host "Microsoft 365 learning pathways web parts found"
             $WebPartsFound = $true
             break
@@ -388,7 +388,7 @@ Set-PnPHomePage -Connection $siteCon -RootFolderRelativeUrl "SitePages/CustomLea
 # Launching custom configuration
 Write-Host "Launching custom configuration" -ForegroundColor $CommandInfo
 Write-Host "  $($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
-start "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
+Start-Process "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
 
 #Stopping Transscript
 Stop-Transcript

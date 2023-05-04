@@ -262,7 +262,7 @@ $AlyaAipCustomPageUrl = "PleaseSpecify"
 
 <# INTUNE SETTINGS #>
 $AlyaDeviceCategories = @("Standard")
-$AlyaDeviceAdminsGroupName = "PleaseSpecify" # Only members can manage devices
+$AlyaDeviceAdminsGroupName = "PleaseSpecify" # Only these members can manage devices #Example:"$($AlyaCompanyNameShortM365)SG-DEV-ADMINS"
 $AlyaAllowDeviceRegistration = "PleaseSpecify" # All, None or a group name
 $AlyaWinPEBackgroundJpgImage = "PleaseSpecify"
 $AlyaDesktopBackgroundUrl = "PleaseSpecify"

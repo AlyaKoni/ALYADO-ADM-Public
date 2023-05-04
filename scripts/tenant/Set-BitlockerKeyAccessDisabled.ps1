@@ -61,7 +61,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking right to read own bitlocker keys
 Write-Host "Checking right to read own bitlocker keys" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if ($policy.DefaultUserRolePermissions.AllowedToReadBitlockerKeysForOwnedDevice)
 {
     Write-Warning "Reading own bitlocker keys was enabled. Disabling it now"
@@ -69,7 +69,7 @@ if ($policy.DefaultUserRolePermissions.AllowedToReadBitlockerKeysForOwnedDevice)
     $RolePermissions["allowedToReadBitlockerKeysForOwnedDevice"] = $false
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

@@ -95,14 +95,14 @@ if (-Not $Global:RdsContext)
 $reportStartTime = Get-Date | Get-Date -Hour 0 -Minute 0 -Second 0 
 
 Write-Host "Getting diagnostics" -ForegroundColor $CommandInfo
-$acts = Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -Detailed -StartTime $reportStartTime -ErrorAction SilentlyContinue # | where {$_.UserName -like "*$($AlyaDomainName)"}
+$acts = Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -Detailed -StartTime $reportStartTime -ErrorAction SilentlyContinue # | Where-Object {$_.UserName -like "*$($AlyaDomainName)"}
 
 Write-Host ""
 Write-Host "Activities:" -ForegroundColor $CommandInfo
-$acts | select ActivityType, Status, StartTime, UserName | Out-String | % {Write-Host $_}
+$acts | Select-Object ActivityType, Status, StartTime, UserName | Out-String | % {Write-Host $_}
 
 Write-Host "Disconnects:" -ForegroundColor $CommandInfo
-$acts = $acts | where {$_.CheckPoints.Name -eq "OnClientDisconnected"}
+$acts = $acts | Where-Object {$_.CheckPoints.Name -eq "OnClientDisconnected"}
 if (-Not $acts)
 {
     Write-Host "No disconnects found`n"
@@ -112,7 +112,7 @@ else
     $errors = @()
     foreach($act in $acts)
     {
-        foreach($err in $act.CheckPoints | where {$_.Name -eq "OnClientDisconnected"})
+        foreach($err in $act.CheckPoints | Where-Object {$_.Name -eq "OnClientDisconnected"})
         {
             $obj = New-Object -TypeName psobject
             $obj | Add-Member -MemberType NoteProperty -Name UserName -Value $act.UserName
@@ -127,7 +127,7 @@ else
             $errors += $obj
         }
     }
-    $errors | ft | Out-String | % {Write-Host $_}
+    $errors | Format-Table | Out-String | % {Write-Host $_}
 }
 
 Write-Host "Errors:" -ForegroundColor $CommandInfo
@@ -169,7 +169,7 @@ foreach ($hpool in $hpools)
         Write-Host "       Update: UpdateState: $($hosti.UpdateState) LastUpdateTime:$($hosti.LastUpdateTime) UpdateErrorMessage:$($hosti.UpdateErrorMessage)"
         if ($hosti.SessionHostHealthCheckResult)
         {
-            $hosti.SessionHostHealthCheckResult | ConvertFrom-Json | fl *
+            $hosti.SessionHostHealthCheckResult | ConvertFrom-Json | Format-List *
         }
         else
         {
@@ -179,10 +179,10 @@ foreach ($hpool in $hpools)
 }
 
 #Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName Renata.Tozzi@alyaconsulting.ch -Detailed -StartTime "18.09.2019 13:00:00"
-#((Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName alex.papadopoulos@alyaconsulting.ch -Detailed -StartTime "18.09.2019 13:00:00").CheckPoints | where {$_.Name -eq "OnClientDisconnected"}).Parameters
-#Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName alex.papadopoulos@alyaconsulting.ch -Detailed -StartTime "19.08.2019 17:00:00" | ft ActivityType,StartTime,Outcome
-#Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName test.user@alyaconsulting.ch -Detailed -StartTime "19.08.2019 17:00:00" | ft ActivityType,StartTime,Outcome
-#(Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName first.last@alyaconsulting.ch -Detailed -StartTime "19.08.2019 17:00:00" | where { $_.Outcome -eq "Failure" }).Errors
+#((Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName alex.papadopoulos@alyaconsulting.ch -Detailed -StartTime "18.09.2019 13:00:00").CheckPoints | Where-Object {$_.Name -eq "OnClientDisconnected"}).Parameters
+#Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName alex.papadopoulos@alyaconsulting.ch -Detailed -StartTime "19.08.2019 17:00:00" | Format-Table ActivityType,StartTime,Outcome
+#Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName test.user@alyaconsulting.ch -Detailed -StartTime "19.08.2019 17:00:00" | Format-Table ActivityType,StartTime,Outcome
+#(Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -UserName first.last@alyaconsulting.ch -Detailed -StartTime "19.08.2019 17:00:00" | Where-Object { $_.Outcome -eq "Failure" }).Errors
 #Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -Detailed -ActivityId 05427ab5-6582-4346-8e12-30a1262b89b0
 
 #Stopping Transscript

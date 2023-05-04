@@ -220,7 +220,7 @@ try
     $CerCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".cer")
     #Getting the certificate 
     $CertificateRetrieved = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AzureCertificateName
-    $CertificateBytes = [System.Convert]::FromBase64String(($CertificateRetrieved.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password }))
+    $CertificateBytes = [System.Convert]::FromBase64String(($CertificateRetrieved.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password }))
     $CertCollection = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
     $CertCollection.Import($CertificateBytes, $null, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
     #Export the .pfx file 
@@ -296,9 +296,9 @@ try
 
         <#To check existing permissions
         $tmp.RequiredResourceAccess
-        ($tmp.RequiredResourceAccess | where { $_.ResourceAppId -eq '00000003-0000-0ff1-ce00-000000000000'}).ResourceAccess
-        ($tmp.RequiredResourceAccess | where { $_.ResourceAppId -eq '00000003-0000-0000-c000-000000000000'}).ResourceAccess
-        ($tmp.RequiredResourceAccess | where { $_.ResourceAppId -eq '00000002-0000-0000-c000-000000000000'}).ResourceAccess
+        ($tmp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -eq '00000003-0000-0ff1-ce00-000000000000'}).ResourceAccess
+        ($tmp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -eq '00000003-0000-0000-c000-000000000000'}).ResourceAccess
+        ($tmp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -eq '00000002-0000-0000-c000-000000000000'}).ResourceAccess
         $tmp.RequiredResourceAccess.ResourceAppId
         $tmp.RequiredResourceAccess.ResourceAccess
         #>

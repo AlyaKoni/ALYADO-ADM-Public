@@ -157,7 +157,7 @@ foreach($appGrp in $appGrps)
 #Remove-RdsRemoteApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Standard Apps" -Name "File Explorer"
 #$activity = Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameTest -ActivityId c9063ef8-03ed-483c-bcff-0e09f48d6bc0
 #Set-RdsRemoteApp -TenantName "ALYA-Test" -HostPoolName "$($AlyaNamingPrefixTest)hpol002" -AppGroupName "Standard Apps" -Name "Explorer" -IconPath "C:\Mobimo\WvdIcons\File Explorer.Ico" -IconIndex 0
-#Get-RDSStartMenuApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Desktop Application Group" | where {$_.AppAlias -eq "Notepad"}
+#Get-RDSStartMenuApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Desktop Application Group" | Where-Object {$_.AppAlias -eq "Notepad"}
 
 #Stopping Transscript
 Stop-Transcript

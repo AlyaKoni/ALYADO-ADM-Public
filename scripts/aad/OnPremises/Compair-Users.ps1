@@ -111,7 +111,7 @@ foreach($user1Access in $user1Accesses)
 }
 
 cls
-$UserComparison | where { $_.Comparison -eq "Different" } | fl
+$UserComparison | Where-Object { $_.Comparison -eq "Different" } | Format-List
 
 
 #Stopping Transscript

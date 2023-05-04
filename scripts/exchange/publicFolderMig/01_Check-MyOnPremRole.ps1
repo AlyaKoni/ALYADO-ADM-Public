@@ -41,15 +41,15 @@ Param(
 
 $allRoles = Get-ManagementRoleAssignment -GetEffectiveUsers | Where-Object {$_.EffectiveUserName -eq $migAdminUserName } | select-object Role -Unique
 $allAssignees = Get-ManagementRoleAssignment -GetEffectiveUsers | Where-Object {$_.EffectiveUserName -eq $migAdminUserName } | select-object RoleAssigneeName -Unique
-$orgRole = $allAssignees | where { $_.RoleAssigneeName -eq "Organization Management" }
+$orgRole = $allAssignees | Where-Object { $_.RoleAssigneeName -eq "Organization Management" }
 if (-Not $orgRole)
 {
-    $orgRole = $allRoles | where { $_.Role.Name -eq "Organization Management" }
+    $orgRole = $allRoles | Where-Object { $_.Role.Name -eq "Organization Management" }
 }
-$srvRole = $allAssignees | where { $_.RoleAssigneeName -eq "Server Management" }
+$srvRole = $allAssignees | Where-Object { $_.RoleAssigneeName -eq "Server Management" }
 if (-Not $srvRole)
 {
-    $srvRole = $allRoles | where { $_.Role.Name -eq "Organization Management" }
+    $srvRole = $allRoles | Where-Object { $_.Role.Name -eq "Organization Management" }
 }
 
 if (-Not $orgRole -and -Not $srvRole)

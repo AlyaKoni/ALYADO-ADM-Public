@@ -86,7 +86,7 @@ $con.TunnelConnectionStatusText
 $con.UsePolicyBasedTrafficSelectors
 $con.UseLocalAzureIpAddress
 
-$con | fl
+$con | Format-List
 
 #Stopping Transscript
 Stop-Transcript

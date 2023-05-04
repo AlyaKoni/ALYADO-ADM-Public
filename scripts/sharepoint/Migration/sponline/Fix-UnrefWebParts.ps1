@@ -29,8 +29,8 @@ function DownloadAndInstallCSOM($dir, $nuget, $nuvrs)
 
 function PrepareCSOM($dir, $nuget)
 {
-    $resp = Invoke-WebRequest –Uri "https://www.nuget.org/packages/$nuget"
-    $nusrc = ($resp).Links | where { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
+    $resp = Invoke-WebRequest -SkipHttpErrorCheck –Uri "https://www.nuget.org/packages/$nuget"
+    $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$PSScriptRoot\$dir\lib\net45"))
     {
@@ -155,7 +155,7 @@ function RunWeb($web,$serverUrl)
 }
 
 $global:foundItems = @()
-$migSites | where { $migrateAll -or ($_.Command.ToLower() -eq "copy" -and $_.WebApplication -eq $webApplication) } | foreach {
+$migSites | Where-Object { $migrateAll -or ($_.Command.ToLower() -eq "copy" -and $_.WebApplication -eq $webApplication) } | Foreach-Object {
     if ([string]::IsNullOrEmpty($_.DstUrl))
     {
 	    $fullDstUrl = "$($sharepointSitesUrl)/$($_.DstCol)$($sharePointEnvSuffix)"

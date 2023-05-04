@@ -66,14 +66,14 @@ foreach($site in $sites)
     foreach($run in $runs)
     {
         Write-Host "    '$($run.SiteDesignTitle)' v$($run.SiteDesignVersion) $($run.SiteDesignId)"
-        $SiteDesign = $SiteDesigns | where { $_.Title -eq $run.SiteDesignTitle }
+        $SiteDesign = $SiteDesigns | Where-Object { $_.Title -eq $run.SiteDesignTitle }
         if (-Not $SiteDesign)
         {
             Write-Host "    Can't find site design. Not able to update it!"
         }
         else
         {
-            if (-Not ($toRuns | where { $_.Title -eq $SiteDesign.Title }))
+            if (-Not ($toRuns | Where-Object { $_.Title -eq $SiteDesign.Title }))
             {
                 $toRuns += $SiteDesign
             }

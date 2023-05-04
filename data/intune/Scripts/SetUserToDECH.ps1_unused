@@ -52,7 +52,7 @@ if (-Not $StartFrom -or $StartFrom -ne "StartUp")
     }
     Copy-Item -Path $ActPath -Destination $ScriptPath -Force -Confirm:$false
     $CmdContent = @"
-start "SetUserToDECH" /min powershell.exe -NoLogo -WindowStyle Hidden -ExecutionPolicy Bypass -Command "$($ScriptPath) -StartFrom StartUp"
+    start "SetUserToDECH" /min powershell.exe -NoLogo -WindowStyle Hidden -ExecutionPolicy Bypass -Command "$($ScriptPath) -StartFrom StartUp"
 "@
     $CmdContent | Set-Content -Path $CmdPath -Force
 }
@@ -61,16 +61,16 @@ else
     # Run the script
     #TODO Set-WinUILanguageOverride
     $UserLanguageList = Get-WinUserLanguageList
-    if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "de-CH" })) {
+    if (-Not ($UserLanguageList | Where-Object { $_.LanguageTag -eq "de-CH" })) {
         $UserLanguageList.Add("de-CH")
     }
-    if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "fr-CH" })) {
+    if (-Not ($UserLanguageList | Where-Object { $_.LanguageTag -eq "fr-CH" })) {
         $UserLanguageList.Add("fr-CH")
     }
-    if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "it-CH" })) {
+    if (-Not ($UserLanguageList | Where-Object { $_.LanguageTag -eq "it-CH" })) {
         $UserLanguageList.Add("it-CH")
     }
-    if (-Not ($UserLanguageList | where { $_.LanguageTag -eq "en-CH" })) {
+    if (-Not ($UserLanguageList | Where-Object { $_.LanguageTag -eq "en-CH" })) {
         $UserLanguageList.Add("en-CH")
     }
     for ($i=0; $i -lt ($UserLanguageList.Count-1); $i++)

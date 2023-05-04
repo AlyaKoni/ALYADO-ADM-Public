@@ -89,7 +89,7 @@ if (-Not $JumpHostVm)
 
 # Starting image vm if not running
 Write-Host "Starting image vm if not running" -ForegroundColor $CommandInfo
-if (-Not ($JumpHostVm.Statuses | where { $_.Code -eq "PowerState/running"}))
+if (-Not ($JumpHostVm.Statuses | Where-Object { $_.Code -eq "PowerState/running"}))
 {
     Write-Warning "Starting VM $VMName"
     Start-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName

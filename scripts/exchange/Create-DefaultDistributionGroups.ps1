@@ -88,7 +88,7 @@ try
     $dGrp | Set-DistributionGroup -Alias $grpAlias -PrimarySmtpAddress $AlyaPrivacyEmail -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
     Write-Host "  checking members"
     $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyName Privacy"
-    $memb = $membs | where { $_.PrimarySmtpAddress -eq $ownerEmail }
+    $memb = $membs | Where-Object { $_.PrimarySmtpAddress -eq $ownerEmail }
     if (-Not $memb)
     {
         Write-Host "  adding member $ownerEmail"
@@ -110,7 +110,7 @@ try
     $dGrp | Set-DistributionGroup -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
     Write-Host "  checking members"
     $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyName Security"
-    $memb = $membs | where { $_.PrimarySmtpAddress -eq $ownerEmail }
+    $memb = $membs | Where-Object { $_.PrimarySmtpAddress -eq $ownerEmail }
     if (-Not $memb)
     {
         Write-Host "  adding member $ownerEmail"
@@ -132,7 +132,7 @@ try
     $dGrp | Set-DistributionGroup -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
     Write-Host "  checking members"
     $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyName Cloud"
-    $memb = $membs | where { $_.PrimarySmtpAddress -eq $ownerEmail }
+    $memb = $membs | Where-Object { $_.PrimarySmtpAddress -eq $ownerEmail }
     if (-Not $memb)
     {
         Write-Host "  adding member $ownerEmail"
@@ -154,7 +154,7 @@ try
     $dGrp | Set-DistributionGroup -MemberJoinRestriction Closed -MemberDepartRestriction Closed -RequireSenderAuthenticationEnabled $false
     Write-Host "  checking members"
     $membs = Get-DistributionGroupMember -Identity "$AlyaCompanyName Support"
-    $memb = $membs | where { $_.PrimarySmtpAddress -eq $ownerEmail }
+    $memb = $membs | Where-Object { $_.PrimarySmtpAddress -eq $ownerEmail }
     if (-Not $memb)
     {
         Write-Host "  adding member $ownerEmail"

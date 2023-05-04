@@ -130,7 +130,7 @@ foreach($appGrp in $appGrps)
         {
             $allMembs += $admin
         }
-        $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $admin }
+        $grpUser = $grpUsers | Where-Object { $_.UserPrincipalName -eq $admin }
         if (-Not $grpUser)
         {
             Write-Host "   - Adding admin $($admin)"
@@ -148,7 +148,7 @@ foreach($appGrp in $appGrps)
             {
                 $allMembs += $memb.UserPrincipalName
             }
-            $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $memb.UserPrincipalName }
+            $grpUser = $grpUsers | Where-Object { $_.UserPrincipalName -eq $memb.UserPrincipalName }
             if (-Not $grpUser)
             {
                 Write-Host "   - Adding user $($memb.UserPrincipalName)"
@@ -158,7 +158,7 @@ foreach($appGrp in $appGrps)
     }
     foreach ($grpUser in $grpUsers)
     {
-        $memb = $allMembs | where { $_ -eq $grpUser.UserPrincipalName }
+        $memb = $allMembs | Where-Object { $_ -eq $grpUser.UserPrincipalName }
         if (-Not $memb)
         {
             Write-Host " - Removing user $($grpUser.UserPrincipalName)"

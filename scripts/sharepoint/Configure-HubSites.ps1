@@ -141,7 +141,7 @@ foreach($hubSite in $hubSites)
     {
         Write-Host "Registering to parent hub $($hubSite.parent)" -ForegroundColor $TitleColor
         Start-Sleep -Seconds 60
-        $parHubSite = $hubSites | where { $_.short -eq $hubSite.parent }
+        $parHubSite = $hubSites | Where-Object { $_.short -eq $hubSite.parent }
         if (-Not $parHubSite)
         {
             throw "Hub site $($hubSite.parent) not found"
@@ -176,7 +176,7 @@ foreach($hubSite in $hubSites)
     # Checking site script
     Write-Host "Checking site script" -ForegroundColor $CommandInfo
     $hubSite.siteScript = $hubSite.siteScript.Replace("##HUBSITEID##", $site.HubSiteId).Replace("##HUBSITENAME##", $hubSite.title)
-    $SiteScript = Get-PnPSiteScript -Connection $adminCon | where { $_.Title -eq "$SiteScriptName"}
+    $SiteScript = Get-PnPSiteScript -Connection $adminCon | Where-Object { $_.Title -eq "$SiteScriptName"}
     if (-Not $SiteScript)
     {
         Write-Warning "Site script not found. Creating now site script $SiteScriptName"
@@ -187,11 +187,11 @@ foreach($hubSite in $hubSites)
         Write-Host "Updating site script $SiteScriptName"
         $SiteScript = Set-PnPSiteScript -Connection $adminCon -Identity $SiteScript -Title $SiteScriptName -Content $hubSite.siteScript -Description $hubSite.siteScriptDescription
     }
-    $SiteScript = Get-PnPSiteScript -Connection $adminCon | where { $_.Title -eq "$SiteScriptName"}
+    $SiteScript = Get-PnPSiteScript -Connection $adminCon | Where-Object { $_.Title -eq "$SiteScriptName"}
 
     # Checking site design
     Write-Host "Checking team site design" -ForegroundColor $CommandInfo
-    $SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameTeam"}
+    $SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameTeam"}
     if (-Not $SiteDesignTeam)
     {
         Write-Warning "Team site design not found. Creating now team site design $SiteDesignNameTeam"
@@ -202,11 +202,11 @@ foreach($hubSite in $hubSites)
         Write-Host "Updating Team site design $SiteDesignNameTeam"
         $SiteDesignTeam = Set-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignTeam.Id -Title $SiteDesignNameTeam -WebTemplate "64" -SiteScriptIds $SiteScript.Id -Description $hubSite.siteScriptDescription
     }
-    $SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameTeam"}
+    $SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameTeam"}
 
     # Checking site design
     Write-Host "Checking communication site design" -ForegroundColor $CommandInfo
-    $SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameComm"}
+    $SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameComm"}
     if (-Not $SiteDesignComm)
     {
         Write-Warning "Communication site design not found. Creating now Communication site design $SiteDesignNameComm"
@@ -217,7 +217,7 @@ foreach($hubSite in $hubSites)
         Write-Host "Updating Communication site design $SiteDesignNameComm"
         $SiteDesignComm = Set-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignComm.Id -Title $SiteDesignNameComm -WebTemplate "68" -SiteScriptIds $SiteScript.Id -Description $hubSite.siteScriptDescription
     }
-    $SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameComm"}
+    $SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameComm"}
 
     # Checking site script for sub sites
     if ($hubSite.subSiteScript)
@@ -229,7 +229,7 @@ foreach($hubSite in $hubSites)
         # Checking site script for sub sites
         Write-Host "Checking site script for sub sites" -ForegroundColor $CommandInfo
         $hubSite.subSiteScript = $hubSite.subSiteScript.Replace("##HUBSITEID##", $site.HubSiteId).Replace("##HUBSITENAME##", $hubSite.title)
-        $SubSiteScript = Get-PnPSiteScript -Connection $adminCon | where { $_.Title -eq "$SubSiteScriptName"}
+        $SubSiteScript = Get-PnPSiteScript -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteScriptName"}
         if (-Not $SubSiteScript)
         {
             Write-Warning "Site script not found. Creating now site script $SubSiteScriptName"
@@ -239,12 +239,12 @@ foreach($hubSite in $hubSites)
         {
             Write-Host "Updating site script $SubSiteScriptName"
             $tmp = Set-PnPSiteScript -Connection $adminCon -Identity $SubSiteScript -Title $SubSiteScriptName -Content $hubSite.subSiteScript -Description $hubSite.siteScriptDescription
-            $SubSiteScript = Get-PnPSiteScript -Connection $adminCon | where { $_.Title -eq "$SubSiteScriptName"}
+            $SubSiteScript = Get-PnPSiteScript -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteScriptName"}
         }
 
         # Checking site design
         Write-Host "Checking team site design" -ForegroundColor $CommandInfo
-        $SubSiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SubSiteDesignNameTeam"}
+        $SubSiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteDesignNameTeam"}
         if (-Not $SubSiteDesignTeam)
         {
             Write-Warning "Team site design not found. Creating now team site design $SubSiteDesignNameTeam"
@@ -255,11 +255,11 @@ foreach($hubSite in $hubSites)
             Write-Host "Updating Team site design $SubSiteDesignNameTeam"
             $SubSiteDesignTeam = Set-PnPSiteDesign -Connection $adminCon -Identity $SubSiteDesignTeam.Id -Title $SubSiteDesignNameTeam -WebTemplate "64" -SiteScriptIds $SubSiteScript.Id -Description $hubSite.siteScriptDescription
         }
-        $SubSiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SubSiteDesignNameTeam"}
+        $SubSiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteDesignNameTeam"}
 
         # Checking site design
         Write-Host "Checking communication site design" -ForegroundColor $CommandInfo
-        $SubSiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SubSiteDesignNameComm"}
+        $SubSiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteDesignNameComm"}
         if (-Not $SubSiteDesignComm)
         {
             Write-Warning "Communication site design not found. Creating now Communication site design $SubSiteDesignNameComm"
@@ -270,7 +270,7 @@ foreach($hubSite in $hubSites)
             Write-Host "Updating Communication site design $SubSiteDesignNameComm"
             $SubSiteDesignComm = Set-PnPSiteDesign -Connection $adminCon -Identity $SubSiteDesignComm.Id -Title $SubSiteDesignNameComm -WebTemplate "68" -SiteScriptIds $SubSiteScript.Id -Description $hubSite.siteScriptDescription
         }
-        $SubSiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SubSiteDesignNameComm"}
+        $SubSiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteDesignNameComm"}
     }
 
     # Processing site design
@@ -349,7 +349,7 @@ if (-Not $createHubSitesOnly)
             {
                 if ($hubSiteI.url -ne $hubSite.url)
                 {
-                    $nav = $topNavs | where {$_.Title -eq $hubSiteI.title}
+                    $nav = $topNavs | Where-Object {$_.Title -eq $hubSiteI.title}
                     if (-Not $nav)
                     {
                         Write-Host ("Adding nav node title={0} url={1}" -f $hubSiteI.title, $hubSiteI.url)
@@ -374,8 +374,8 @@ if (-Not $createHubSitesOnly)
             Write-Host "Hub Site $($hubSite.title)"
             $SubSiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Team Site "+$siteLocale
             $SubSiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP $($hubSite.short) SubSite Communication Site "+$siteLocale
-            $SubSiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SubSiteDesignNameTeam"}
-            $SubSiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SubSiteDesignNameComm"}
+            $SubSiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteDesignNameTeam"}
+            $SubSiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteDesignNameComm"}
 
             $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
             $hubSiteObj = Get-PnPHubSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
@@ -421,7 +421,7 @@ if (-Not $createHubSitesOnly)
         Write-Warning "Looks like noone has started once the SharePoint start page."
         Write-Warning "The links list will only be created after first access."
         Write-Warning "Please access once the start page: $($AlyaSharePointUrl)/_layouts/15/sharepoint.aspx"
-        start "$($AlyaSharePointUrl)"
+        Start-Process "$($AlyaSharePointUrl)"
         pause
         $list = Get-PnPList -Connection $siteCon -Identity "SharePointHomeOrgLinks"
     }
@@ -483,8 +483,8 @@ if (-Not $createHubSitesOnly)
     }
     $SiteDesignNameTeam = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Team Site"
     $SiteDesignNameComm = "$($AlyaCompanyNameShortM365.ToUpper())SP Default Communication Site"
-    $SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameTeam"}
-    $SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameComm"}
+    $SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameTeam"}
+    $SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameComm"}
     if ($web.WebTemplate -eq "SITEPAGEPUBLISHING")
     {
         Invoke-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignComm.Id -WebUrl "$($AlyaSharePointUrl)"

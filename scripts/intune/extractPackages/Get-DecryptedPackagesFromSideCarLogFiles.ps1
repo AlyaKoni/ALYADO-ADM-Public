@@ -63,7 +63,7 @@ Get-Content $agentLogPath | ForEach-Object {
         $repl = $repl.Substring($stringToSearchPoly.Length, $repl.IndexOf("}]]LOG]!>")-$stringToSearchPoly.Length)
         foreach($pol in ("[{$($repl)}]" | ConvertFrom-Json))
         {
-            $extPol = $policies | where { $_.Id -eq $pol.Id }
+            $extPol = $policies | Where-Object { $_.Id -eq $pol.Id }
             if (-Not $extPol)
             {
                 $policies += $pol
@@ -88,7 +88,7 @@ $failedApps | ForEach-Object {
     {
         if ($_.Name -like "$($app.ApplicationId)*")
         {
-            $pol = $policies | where { $_.Id -eq $app.ApplicationId }
+            $pol = $policies | Where-Object { $_.Id -eq $app.ApplicationId }
             Write-Host "    AppID: $($app.ApplicationId)"
             Write-Host "      Name: $($pol.Name)"
             Write-Host "      InstallCommand: $($pol.InstallCommandLine)"
@@ -115,11 +115,11 @@ $failedApps | ForEach-Object {
 Write-Host "Getting successfull apps"
 foreach($app in $apps)
 {
-    $fapp = $failedApps | where { $_.Name -like "$($app.ApplicationId)*" }
+    $fapp = $failedApps | Where-Object { $_.Name -like "$($app.ApplicationId)*" }
     if (-Not $fapp)
     {
         Write-Host "  Found successfull app: $($app.ApplicationId)"
-        $pol = $policies | where { $_.Id -eq $app.ApplicationId }
+        $pol = $policies | Where-Object { $_.Id -eq $app.ApplicationId }
         Write-Host "    AppID: $($app.ApplicationId)"
         Write-Host "      Name: $($pol.Name)"
         Write-Host "      InstallCommand: $($pol.InstallCommandLine)"

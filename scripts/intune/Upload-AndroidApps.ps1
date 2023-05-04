@@ -86,15 +86,15 @@ foreach($androidApp in $appsAndroid)
     try {
         
         # Getting store data
-        $storeApp = Invoke-WebRequest -Uri $androidApp.informationUrl -Method Get
-        $img = $storeApp.Images | where { $_.class -eq "T75of sHb2Xb" }
+        $storeApp = Invoke-WebRequest -SkipHttpErrorCheck -Uri $androidApp.informationUrl -Method Get
+        $img = $storeApp.Images | Where-Object { $_.class -eq "T75of sHb2Xb" }
         if (-Not $img)
         {
-            $img = $storeApp.Images | where { $_.alt -eq "Covergestaltung" }
+            $img = $storeApp.Images | Where-Object { $_.alt -eq "Covergestaltung" }
         }
         if ($img -and $img.src)
         {
-            $iconResponse = Invoke-WebRequest $img.src
+            $iconResponse = Invoke-WebRequest -SkipHttpErrorCheck $img.src
             $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
             $iconType = ($iconResponse.Headers["Content-Type"] | Out-String).Trim()
             $androidApp.largeIcon = @{

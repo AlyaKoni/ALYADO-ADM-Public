@@ -141,7 +141,7 @@ for ($i = 1; $i -lt ($Networks.Count+1); $i++)
     $SubnetName = "$DefaultSubnetName" -f "$i".PadLeft(2, "0")
     $SubnetSecGrpName = "$DefaultSubnetSecGrpName" -f "$i".PadLeft(2, "0")
     $Subnet = $Networks[$i-1]
-    $exist = $Subnets | where { $_.Name -eq $SubnetName }
+    $exist = $Subnets | Where-Object { $_.Name -eq $SubnetName }
     if (-Not $exist)
     {
         $SubnetSecGrp = Get-AzNetworkSecurityGroup -ResourceGroupName $ResourceGroupNameTest -Name $SubnetSecGrpName -ErrorAction SilentlyContinue

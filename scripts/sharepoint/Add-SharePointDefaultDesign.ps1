@@ -42,7 +42,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-SharePointDesign-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-SharePointDefaultDesign-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -74,7 +74,7 @@ $SiteScriptDef = @"
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Add-SharePointDesign | PnP" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Add-SharePointDefaultDesign | PnP" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting theme
@@ -87,7 +87,7 @@ if (-Not $Theme)
 
 # Checking site script
 Write-Host "Checking site script" -ForegroundColor $CommandInfo
-$SiteScript = Get-PnPSiteScript -Connection $adminCon | where { $_.Title -eq "$SiteScriptName"}
+$SiteScript = Get-PnPSiteScript -Connection $adminCon | Where-Object { $_.Title -eq "$SiteScriptName"}
 if (-Not $SiteScript)
 {
     Write-Warning "Site script not found. Creating now site script $SiteScriptName"
@@ -98,11 +98,11 @@ else
     Write-Host "Updating site script $SiteScriptName"
     $SiteScript = Set-PnPSiteScript -Connection $adminCon -Identity $SiteScript -Title $SiteScriptName -Content $SiteScriptDef -Description "Fügt das $AlyaCompanyName Design hinzu"
 }
-$SiteScript = Get-PnPSiteScript -Connection $adminCon | where { $_.Title -eq "$SiteScriptName"}
+$SiteScript = Get-PnPSiteScript -Connection $adminCon | Where-Object { $_.Title -eq "$SiteScriptName"}
 
 # Checking team site design
 Write-Host "Checking team site design" -ForegroundColor $CommandInfo
-$SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameTeam"}
+$SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameTeam"}
 if (-Not $SiteDesignTeam)
 {
     Write-Warning "Team site design not found. Creating now team site design $SiteDesignNameTeam"
@@ -113,11 +113,11 @@ else
     Write-Host "Updating Team site design $SiteDesignNameTeam"
     $SiteDesignTeam = Set-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignTeam.Id -Title $SiteDesignNameTeam -WebTemplate "64" -SiteScriptIds $SiteScript.Id -Description "Fügt das $AlyaCompanyName Design hinzu"
 }
-$SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameTeam"}
+$SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameTeam"}
 
 # Checking communication site design
 Write-Host "Checking communication site design" -ForegroundColor $CommandInfo
-$SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameComm"}
+$SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameComm"}
 if (-Not $SiteDesignComm)
 {
     Write-Warning "Communication site design not found. Creating now Communication site design $SiteDesignNameComm"
@@ -128,7 +128,7 @@ else
     Write-Host "Updating Communication site design $SiteDesignNameComm"
     $SiteDesignComm = Set-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignComm.Id -Title $SiteDesignNameComm -WebTemplate "68" -SiteScriptIds $SiteScript.Id -Description "Fügt das $AlyaCompanyName Design hinzu"
 }
-$SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | where { $_.Title -eq "$SiteDesignNameComm"}
+$SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameComm"}
 
 #Stopping Transscript
 Stop-Transcript

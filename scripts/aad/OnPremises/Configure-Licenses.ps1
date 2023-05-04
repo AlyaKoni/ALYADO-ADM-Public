@@ -75,7 +75,7 @@ $licDefs = Import-Excel $inputFile -ErrorAction Stop
 # Configured licenses
 Write-Host "Configured licenses:" -ForegroundColor $CommandInfo
 $licNames = $null
-$licDefs | foreach {
+$licDefs | Foreach-Object {
     $licDef = $_
     if ($licDef.Name -like "User*")
     {
@@ -107,11 +107,11 @@ Write-Host "=====================================================`n" -Foreground
 # Reading users from AD and setting license
 Write-Host "Reading users from AD and setting license" -ForegroundColor $CommandInfo
 $adUsers = Get-ADUser -Filter {UserPrincipalName -like '*'} -Properties UserPrincipalName,extensionAttribute1
-$adUsers | foreach {
+$adUsers | Foreach-Object {
     
     $adUser = $_
 
-    $licDef = $licDefs | where {$_.Name.ToLower() -eq $adUser.UserPrincipalName.ToLower()}
+    $licDef = $licDefs | Where-Object {$_.Name.ToLower() -eq $adUser.UserPrincipalName.ToLower()}
     if (-Not $licDef)
     {
         if (-Not [string]::IsNullOrEmpty($adUser.extensionAttribute1))

@@ -81,15 +81,15 @@ $allApps = Get-AzADApplication
 $allApps += Get-AzADServicePrincipal
 $appsWithErrorExcluded = @()
 $appsWithErrorIncluded = @()
-#($allApps | where { $_.DisplayName -like "*Azure*" }).DisplayName
-#($allApps | where { $_.DisplayName -like "*Admin*" }).DisplayName
-#($allApps | where { $_.AppId -eq "0c1307d4-29d6-4389-a11c-5cbe7f65d7fa" }).DisplayName
-#($allApps | where { $_.Id -eq "0c1307d4-29d6-4389-a11c-5cbe7f65d7fa" }).DisplayName
+#($allApps | Where-Object { $_.DisplayName -like "*Azure*" }).DisplayName
+#($allApps | Where-Object { $_.DisplayName -like "*Admin*" }).DisplayName
+#($allApps | Where-Object { $_.AppId -eq "0c1307d4-29d6-4389-a11c-5cbe7f65d7fa" }).DisplayName
+#($allApps | Where-Object { $_.Id -eq "0c1307d4-29d6-4389-a11c-5cbe7f65d7fa" }).DisplayName
 
 # Getting conditional access policy
 Write-Host "Getting conditional access policy" -ForegroundColor $CommandInfo
 $policies = (Invoke-AzRestMethod -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies").Content | ConvertFrom-Json
-$policyId = ($policies.value | where { $_.displayName -eq $condAccessRuleName }).id
+$policyId = ($policies.value | Where-Object { $_.displayName -eq $condAccessRuleName }).id
 if (-Not $policyId)
 {
 	throw "Policy $condAccessRuleName not found"
@@ -119,7 +119,7 @@ while ($true)
     {
         if ($appsEx -contains $app)
         {
-		    $appsEx = $appsEx | where { $_ -ne $app }
+		    $appsEx = $appsEx | Where-Object { $_ -ne $app }
             $dirty = $true
         }
     }
@@ -189,7 +189,7 @@ while ($true)
 # Setting icluded apps
 Write-Host "Setting icluded apps" -ForegroundColor $CommandInfo
 $dirty = $true
-$appsIn = $allApps.AppId | Select -Unique
+$appsIn = $allApps.AppId | Select-Object -Unique
 $unSupportedFirstyPartyApplications = @()
 while ($true)
 {
@@ -198,7 +198,7 @@ while ($true)
         if ($appsIn -contains $app)
         {
    		    Write-Host "  Removing excluded app $app from IncludeApplications" -ForegroundColor $CommandWarning
-		    $appsIn = $appsIn | where { $_ -ne $app }
+		    $appsIn = $appsIn | Where-Object { $_ -ne $app }
             $dirty = $true
         }
     }
@@ -206,7 +206,7 @@ while ($true)
     {
         if ($appsIn -contains $app)
         {
-		    $appsIn = $appsIn | where { $_ -ne $app }
+		    $appsIn = $appsIn | Where-Object { $_ -ne $app }
             $dirty = $true
         }
     }

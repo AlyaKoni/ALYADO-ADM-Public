@@ -78,8 +78,8 @@ if (-Not $Group)
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified.Guest" }
-$Setting = Get-MgGroupSetting -GroupId $Group.Id | where { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+$Setting = Get-MgGroupSetting -GroupId $Group.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
@@ -88,16 +88,16 @@ if (-Not $Setting)
 	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
     }
     $Setting = New-MgGroupSetting -GroupId $Group.Id -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgGroupSetting -GroupId $Group.Id | where { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = Get-MgGroupSetting -GroupId $Group.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
 if ($Value.Value -eq $true) {
     Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
 } 
 else {
     Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
-    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+    ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $true
 }
 
 Update-MgGroupSetting -GroupId $Group.Id -DirectorySettingId $Setting.Id -Values $Setting.Values

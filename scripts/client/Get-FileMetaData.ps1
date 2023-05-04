@@ -42,7 +42,7 @@ param(
 $objShell = New-Object -ComObject Shell.Application
 $objFile = $objShell.namespace($fileNameAndPath)
 $objFolder = $objFile.ParentFolder
-$objFolderFile = $objFolder.Items() | where { $_.Path -eq $fileNameAndPath }
+$objFolderFile = $objFolder.Items() | Where-Object { $_.Path -eq $fileNameAndPath }
 
 Write-Host "$($fileNameAndPath)" -ForegroundColor Cyan
 for ($a = 0 ; $a  -le 400; $a++)

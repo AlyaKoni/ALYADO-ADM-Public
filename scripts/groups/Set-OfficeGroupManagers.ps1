@@ -87,7 +87,7 @@ if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzung.htm
 }
 try {
     $resp = $null
-    ($resp = Invoke-WebRequest -Method "Get" -Uri "https://$StorageAccountName.blob.core.windows.net/pages/OfficeGroupsNutzung.html") | Out-Null
+    ($resp = Invoke-WebRequest -SkipHttpErrorCheck -Method "Get" -Uri "https://$StorageAccountName.blob.core.windows.net/pages/OfficeGroupsNutzung.html") | Out-Null
     if (-Not $resp -or $resp.StatusCode -ne 200) { throw }
 }
 catch {
@@ -96,8 +96,8 @@ catch {
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
@@ -106,34 +106,34 @@ if (-Not $Setting)
 	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
     }
     $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "UsageGuidelinesUrl" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "UsageGuidelinesUrl" }
 if ($Value.Value -eq "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html") {
     Write-Host "Setting 'UsageGuidelinesUrl' was already set to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html'"
 } 
 else {
     Write-Warning "Setting 'UsageGuidelinesUrl' was set to '$($Value.Value)' updating to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html'"
-    ($Setting.Values | where { $_.Name -eq "UsageGuidelinesUrl" }).Value = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
+    ($Setting.Values | Where-Object { $_.Name -eq "UsageGuidelinesUrl" }).Value = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "EnableGroupCreation" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "EnableGroupCreation" }
 if ($Value.Value -eq $false) {
     Write-Host "Setting 'EnableGroupCreation' was already set to '$false'"
 } 
 else {
     Write-Warning "Setting 'EnableGroupCreation' was set to '$($Value.Value)' updating to '$false'"
-    ($Setting.Values | where { $_.Name -eq "EnableGroupCreation" }).Value = $false
+    ($Setting.Values | Where-Object { $_.Name -eq "EnableGroupCreation" }).Value = $false
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "GroupCreationAllowedGroupId" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "GroupCreationAllowedGroupId" }
 if ($Value.Value -eq $Group.Id) {
     Write-Host "Setting 'GroupCreationAllowedGroupId' was already set to '$($Group.Id)'"
 } 
 else {
     Write-Warning "Setting 'GroupCreationAllowedGroupId' was set to '$($Value.Value)' updating to '$($Group.Id)'"
-    ($Setting.Values | where { $_.Name -eq "GroupCreationAllowedGroupId" }).Value = $Group.Id
+    ($Setting.Values | Where-Object { $_.Name -eq "GroupCreationAllowedGroupId" }).Value = $Group.Id
 }
 
 Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values

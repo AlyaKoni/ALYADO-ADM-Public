@@ -41,7 +41,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Enable-EmailOneTimePasscode-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-EmailOneTimePasscodeEnabled-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -59,14 +59,16 @@ LoginTo-MgGraph -Scopes "Policy.ReadWrite.AuthenticationMethod", "Organization.R
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Guests | Enable-EmailOneTimePasscode | AAD" -ForegroundColor $CommandInfo
+Write-Host "Guests | Set-EmailOneTimePasscodeEnabled | AAD" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting AuthenticationMethodConfiguration
 Write-Host "Getting AuthenticationMethodConfiguration" -ForegroundColor $CommandInfo
 
 Write-Host "This script does not yet work. Please update email OTP by hand"
-start https://portal.azure.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/AdminAuthMethods
+Write-Host "https://portal.azure.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/AdminAuthMethods"
+Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/AdminAuthMethods"
+pause
 
 <#
 $config = Get-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration # -AuthenticationMethodConfigurationId "Email"

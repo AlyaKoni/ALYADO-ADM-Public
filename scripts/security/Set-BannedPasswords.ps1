@@ -78,8 +78,8 @@ $bannedPasswords = Get-Content -Path $bannedPasswordFile -Encoding utf8 -Raw
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Password Rule Settings" }
-$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Password Rule Settings" }
+$Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
@@ -88,25 +88,25 @@ if (-Not $Setting)
 	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
     }
     $Setting = New-MgDirectorySetting -DisplayName "Password Rule Settings" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "EnableBannedPasswordCheck" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "EnableBannedPasswordCheck" }
 if ($Value.Value -eq $true) {
     Write-Host "Setting 'EnableBannedPasswordCheck' was already set to '$true'"
 } 
 else {
     Write-Warning "Setting 'EnableBannedPasswordCheck' was set to '$($Value.Value)' updating to '$true'"
-    ($Setting.Values | where { $_.Name -eq "EnableBannedPasswordCheck" }).Value = $true
+    ($Setting.Values | Where-Object { $_.Name -eq "EnableBannedPasswordCheck" }).Value = $true
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "EnableBannedPasswordCheckOnPremises" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "EnableBannedPasswordCheckOnPremises" }
 if ($Value.Value -eq $true) {
     Write-Host "Setting 'EnableBannedPasswordCheckOnPremises' was already set to '$true'"
 } 
 else {
     Write-Warning "Setting 'EnableBannedPasswordCheckOnPremises' was set to '$($Value.Value)' updating to '$true'"
-    ($Setting.Values | where { $_.Name -eq "EnableBannedPasswordCheckOnPremises" }).Value = $true
+    ($Setting.Values | Where-Object { $_.Name -eq "EnableBannedPasswordCheckOnPremises" }).Value = $true
 }
 
 if ($AlyaCompanyNameShort.Length -gt 3) { $bannedPasswords = $AlyaCompanyNameShort + "`r`n" + $bannedPasswords }
@@ -120,7 +120,7 @@ if ($AlyaCompanyNameFull.Length -gt 16) { $bannedPasswords = $AlyaCompanyNameFul
 if ($AlyaDomainName.Length -gt 16) { $bannedPasswords = $AlyaDomainName.Substring(0,16) + "`r`n" + $bannedPasswords } else { $bannedPasswords = $AlyaDomainName + "`r`n" + $bannedPasswords }
 
 Write-Warning "Setting 'BannedPasswordList' to content from banned password file'"
-($Setting.Values | where { $_.Name -eq "BannedPasswordList" }).Value = $bannedPasswords
+($Setting.Values | Where-Object { $_.Name -eq "BannedPasswordList" }).Value = $bannedPasswords
 
 Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 

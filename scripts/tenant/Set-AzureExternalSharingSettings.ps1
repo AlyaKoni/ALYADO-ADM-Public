@@ -63,7 +63,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring B2B domain policy
 Write-Host "Configuring B2B domain policy" -ForegroundColor $CommandInfo
-$Policy = Get-AzureADPolicy | where { $_.DisplayName -eq "B2BManagementPolicy" }
+$Policy = Get-AzureADPolicy | Where-Object { $_.DisplayName -eq "B2BManagementPolicy" }
 if (-Not $Policy)
 {
     Write-Warning "B2B domain policy not found. Creating the B2B domain policy B2BManagementPolicy"

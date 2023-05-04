@@ -82,7 +82,7 @@ $sharePointDomainName = "$($domainName).sharepoint.com"
 $exists = $true
 try
 {
-    $chk = Invoke-WebRequest -Uri "https://$($sharePointDomainName)" -Method Get -UseBasicParsing
+    $chk = Invoke-WebRequest -SkipHttpErrorCheck -Uri "https://$($sharePointDomainName)" -Method Get -UseBasicParsing
     if ($chk.StatusCode -ne "200")
     {
         $exists = $false
@@ -98,12 +98,12 @@ if ($exists)
 
 # Checking existing domains
 Write-Host "Checking existing domains" -ForegroundColor $CommandInfo
-$existingDomain = Get-AzureADDomain | where { $_.Name -eq $newDomainName }
+$existingDomain = Get-AzureADDomain | Where-Object { $_.Name -eq $newDomainName }
 if (-Not $existingDomain)
 {
     Write-Warning "Domain $($newDomainName) does not exists, adding it now"
     New-AzureADDomain -Name $newDomainName
-    $existingDomain = Get-AzureADDomain | where { $_.Name -eq $newDomainName }
+    $existingDomain = Get-AzureADDomain | Where-Object { $_.Name -eq $newDomainName }
 }
 #Defaults ?
 #IsDefault                     : False
@@ -115,7 +115,7 @@ if (-Not $existingDomain.IsVerified)
     Write-Warning "Domain $($newDomainName) not yet verified, verifying it now"
     $verCodes = Get-AzureADDomainVerificationDnsRecord -Name $newDomainName
     Write-Warning "Please add one of the following records to your dns"
-    $verCodes | fl
+    $verCodes | Format-List
     pause
     Confirm-AzureADDomain -Name $newDomainName
 }
@@ -131,7 +131,7 @@ if ($state -eq "TODO") #cmdlet was not yet ready: Error Code: -773,Nicht impleme
 }
 else
 {
-    $state | fl
+    $state | Format-List
 }
 
 #Stopping Transscript

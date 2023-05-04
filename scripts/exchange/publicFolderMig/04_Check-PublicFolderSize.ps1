@@ -44,7 +44,7 @@ foreach($migMap in $migMapping)
 {
     $folderName = $migMap.publicFolder
     Write-Host "Checking PublicFolder $folderName"
-    $folder = $allFolders | where { $_.Name -eq $folderName }
+    $folder = $allFolders | Where-Object { $_.Name -eq $folderName }
     if (-Not $folder)
     {
         Write-Warning "Public folder $folderName not found!"

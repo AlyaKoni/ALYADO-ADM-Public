@@ -175,7 +175,7 @@ function Do-Request ($URL, $fromURL)
 
         if ($URL -eq $fromURL)
         {
-            $links = $output | Select-String -Pattern $regexUrl -AllMatches | % { $_.Matches } | % { $_.Value } | Select -Unique
+            $links = $output | Select-String -Pattern $regexUrl -AllMatches | % { $_.Matches } | % { $_.Value } | Select-Object -Unique
             foreach($link in $links)
             {
                 foreach($retsub in (Do-Request -Url $link -fromURL $URL))

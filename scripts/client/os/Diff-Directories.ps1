@@ -227,7 +227,7 @@ function Install-ModuleIfNotInstalled (
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
         #TODO Unload module
-        $paramIM = (Get-Command Install-Module).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
+        $paramIM = (Get-Command Install-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
         if ($paramIM)
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
@@ -424,8 +424,8 @@ function Traverse($left, $right)
                     Path = $left+"\"+$leftFileName
                 }) | Out-Null
             }
-            $objFolderFileLeft = $objFolderLeft.Items() | where { $_.Name -eq $leftFileName }
-            $objFolderFileRight = $objFolderRight.Items() | where { $_.Name -eq $leftFileName }
+            $objFolderFileLeft = $objFolderLeft.Items() | Where-Object { $_.Name -eq $leftFileName }
+            $objFolderFileRight = $objFolderRight.Items() | Where-Object { $_.Name -eq $leftFileName }
             for ($a = 0 ; $a  -le 400; $a++)
             { 
                 $NameLeft = $objFolderLeft.getDetailsOf($objFolderFileLeft.Path, $a)

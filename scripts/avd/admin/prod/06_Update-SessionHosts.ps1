@@ -112,7 +112,7 @@ foreach($sessionHost in $sessionHosts)
 {
     $VMName = $sessionHost.Name
     Write-Host "Removing session host $VMName" -ForegroundColor $CommandInfo
-    $shost = Get-AzWvdSessionHost -HostPoolName $HostPoolName -ResourceGroupName $ResourceGroupName | where { $_.Name -like "*$VMName*"}
+    $shost = Get-AzWvdSessionHost -HostPoolName $HostPoolName -ResourceGroupName $ResourceGroupName | Where-Object { $_.Name -like "*$VMName*"}
     if ($shost)
     {
         $sHostName = $shost.Name.Replace($HostPoolName, "").Trim("/")

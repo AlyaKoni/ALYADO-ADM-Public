@@ -8,11 +8,11 @@ function fixTermStoreRights()
     $termStore.AddTermStoreAdministrator("alyaconsulting\konradbrunner")
     $termStore.CommitAll()
 
-    $termStore.Groups | foreach {
+    $termStore.Groups | Foreach-Object {
         $grp = $_
         Write-Output "Working on group $($grp.name)"
         $mangrs = $grp.GroupManagers
-        $mangrs | foreach {
+        $mangrs | Foreach-Object {
             $mangr = $_
             if ($mangr.PrincipalName -eq "i:0e.t|sts.alyaconsulting.ch_upn|first1last1@alyaconsulting.ch" -or $mangr.PrincipalName -eq "alyaconsulting\first1last1")
             {
@@ -28,7 +28,7 @@ function fixTermStoreRights()
             }
         }
         $contrs = $grp.Contributors
-        $contrs | foreach {
+        $contrs | Foreach-Object {
             $contr = $_
             if ($contr.PrincipalName -eq "i:0e.t|sts.alyaconsulting.ch_upn|first1last1@alyaconsulting.ch" -or $contr.PrincipalName -eq "alyaconsulting\first1last1")
             {
@@ -43,7 +43,7 @@ function fixTermStoreRights()
                 $grp.DeleteContributor($contr.PrincipalName)
             }
         }
-        $grp.TermSets | foreach {
+        $grp.TermSets | Foreach-Object {
             $set = $_
             if ($set.Owner -like "i:0*")
             {

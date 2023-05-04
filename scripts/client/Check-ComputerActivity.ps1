@@ -7,11 +7,11 @@ $numSamples = 3 # if you run the script every 10 minutes, the vm will be stopped
 Start-Sleep -Seconds 5 # Scheduler and PowerShell start cool down
 
 $cpuUsage = (Get-CimInstance win32_processor | Measure-Object -Property LoadPercentage -Average).Average
-$diskUsage = 100-(Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk | where { $_.Name -eq "_Total"}).PercentIdleTime
+$diskUsage = 100-(Get-CimInstance Win32_PerfFormattedData_PerfDisk_PhysicalDisk | Where-Object { $_.Name -eq "_Total"}).PercentIdleTime
 $sampleCount = 0
 $actBandwidth = do {
     $sampleCount ++
-    (Get-CimInstance -Query "Select BytesTotalPersec from Win32_PerfFormattedData_Tcpip_NetworkInterface" | Select-Object BytesTotalPerSec | where {$_.BytesTotalPerSec -gt 0}).BytesTotalPerSec
+    (Get-CimInstance -Query "Select BytesTotalPersec from Win32_PerfFormattedData_Tcpip_NetworkInterface" | Select-Object BytesTotalPerSec | Where-Object {$_.BytesTotalPerSec -gt 0}).BytesTotalPerSec
 } while ($sampleCount -le 10)
 $netUsage = [math]::round(($actBandwidth | Measure-Object -Average).average, 2) / 1024 * 8
 $hasActiveUser = $false
@@ -63,7 +63,7 @@ $states += [pscustomobject]@{
     hasActiveProcess = $hasActiveProcess
     hasActiveUser = $hasActiveUser
 }
-$states | Select -Last $numSamples | Export-Csv -Delimiter "," -Path $stateFile -Encoding UTF8 -Force -NoTypeInformation
+$states | Select-Object -Last $numSamples | Export-Csv -Delimiter "," -Path $stateFile -Encoding UTF8 -Force -NoTypeInformation
 $states = @(Import-Csv -Delimiter "," -Path $stateFile -Encoding UTF8 -ErrorAction SilentlyContinue)
 
 if ($states.Count -eq $numSamples)

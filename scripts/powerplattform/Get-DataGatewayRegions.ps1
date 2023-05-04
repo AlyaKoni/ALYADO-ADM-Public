@@ -74,7 +74,7 @@ foreach($reg in $regs)
 Write-Host ""
 
 Write-Host "Default regions:`n" -ForegroundColor $CommandWarning
-$regs = Get-DataGatewayRegion | where { $_.IsDefaultPowerBIRegion -eq $true }
+$regs = Get-DataGatewayRegion | Where-Object { $_.IsDefaultPowerBIRegion -eq $true }
 foreach($reg in $regs)
 {
     Write-Host "RegionKey : $($reg.RegionKey)"

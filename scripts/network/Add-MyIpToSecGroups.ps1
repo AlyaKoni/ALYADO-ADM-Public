@@ -140,7 +140,7 @@ foreach ($Subnet in $Subnets)
         $SecGroupRes = Get-AzResource -ResourceId $Subnet.NetworkSecurityGroup.Id
         Write-Host "Checking security group $($SecGroupRes.Name)"
         $SecGroup = Get-AzNetworkSecurityGroup -Name $SecGroupRes.Name -ResourceGroupName $SecGroupRes.ResourceGroupName
-        $Rule = $SecGroup.SecurityRules | where { $_.Name -eq $SecGroupRuleName }
+        $Rule = $SecGroup.SecurityRules | Where-Object { $_.Name -eq $SecGroupRuleName }
         $dirty = $false
         if (-Not $Rule)
         {

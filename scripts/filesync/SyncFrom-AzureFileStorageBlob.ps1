@@ -115,13 +115,13 @@ if (-Not $SourceContainer)
 }
 
 # Main
-$OwnerRole = Get-AzRoleAssignment -Scope $StrgAccount.Id -SignInName (Get-AzContext).Account.Id | where { $_.RoleDefinitionName -eq "Storage Blob Data Owner" }
+$OwnerRole = Get-AzRoleAssignment -Scope $StrgAccount.Id -SignInName (Get-AzContext).Account.Id | Where-Object { $_.RoleDefinitionName -eq "Storage Blob Data Owner" }
 if (-Not $ReaderRole)
 {
     $OwnerRole = New-AzRoleAssignment -Scope $StrgAccount.Id -SignInName (Get-AzContext).Account.Id -RoleDefinitionName "Storage Blob Data Owner"
     do
     {
-        $OwnerRole = Get-AzRoleAssignment -Scope $StrgAccount.Id -SignInName (Get-AzContext).Account.Id | where { $_.RoleDefinitionName -eq "Storage Blob Data Owner" }
+        $OwnerRole = Get-AzRoleAssignment -Scope $StrgAccount.Id -SignInName (Get-AzContext).Account.Id | Where-Object { $_.RoleDefinitionName -eq "Storage Blob Data Owner" }
         Start-Sleep -Seconds 5
     } while (-Not $OwnerRole)
 }

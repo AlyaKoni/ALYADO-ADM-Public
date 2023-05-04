@@ -61,7 +61,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking tenant creation
 Write-Host "Checking tenant creation" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if ($policy.DefaultUserRolePermissions.AllowedToCreateTenants)
 {
     Write-Warning "Tenant creation enabled. Disabling it now"
@@ -69,7 +69,7 @@ if ($policy.DefaultUserRolePermissions.AllowedToCreateTenants)
     $RolePermissions["allowedToCreateTenants"] = $false
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

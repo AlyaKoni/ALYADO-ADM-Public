@@ -56,7 +56,7 @@ Write-Host "=====================================================`n" -Foreground
 
 Write-Warning "Please check the classic settings in the admin center."
 Write-Host "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
-start "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
+Start-Process "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
 
 #Stopping Transscript
 Stop-Transcript

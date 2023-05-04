@@ -403,12 +403,12 @@ if ($WithADIntegration)
         if (-Not (Test-Path $toolDir))
         {
             New-Item -Path $toolDir -ItemType Directory -Force | Out-Null
-            $req = Invoke-WebRequest -Uri "https://github.com/Azure-Samples/azure-files-samples/releases" -UseBasicParsing -Method Get
+            $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri "https://github.com/Azure-Samples/azure-files-samples/releases" -UseBasicParsing -Method Get
             [regex]$regex = "[^`"]*/release[^`"]*windows/[^`"]*"
             [regex]$regex = "[^`"]*/AzFilesHybrid.zip[^`"]*"
             $getUrl = "https://github.com"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
             $outFile = "$toolDir\AzFilesHybrid.zip"
-            $req = Invoke-WebRequest -Uri $getUrl -OutFile $outFile
+            $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $getUrl -OutFile $outFile
             $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
             if ($cmdTst)
             {
@@ -446,7 +446,7 @@ if ($WithADIntegration)
         }
         else
         {
-            $StrgAccountFiles.AzureFilesIdentityBasedAuth | fl
+            $StrgAccountFiles.AzureFilesIdentityBasedAuth | Format-List
             $StrgAccountFiles.AzureFilesIdentityBasedAuth.ActiveDirectoryProperties
         }
         #Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountNameFiles -ListKerbKey
@@ -481,7 +481,7 @@ if (-Not $admGrp -And -not $WithADIntegration)
     Write-Warning "Admin Security group  not found. Creating it now"
     $admGrp = New-AzAdGroup -DisplayName $admGrpName -MailNickname $admGrpName -Description "Group to assign admin access to share '$ShareName' on storage '$StorageAccountNameFiles'"
 }
-$admGrpMemb = Get-AzADGroupMember -GroupObjectId $admGrp.Id | where { $_.UserPrincipalName -eq $context.Account.Id }
+$admGrpMemb = Get-AzADGroupMember -GroupObjectId $admGrp.Id | Where-Object { $_.UserPrincipalName -eq $context.Account.Id }
 if (-Not $admGrpMemb)
 {
     Add-AzADGroupMember -TargetGroupObjectId $admGrp.Id -MemberUserPrincipalName $context.Account.Id

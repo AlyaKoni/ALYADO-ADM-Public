@@ -61,7 +61,7 @@ Write-Host "=====================================================`n" -Foreground
 
 $uri = "https://graph.microsoft.com/beta/organization/$AlyaTenantId"
 $org = (Invoke-AzRestMethod -Uri $uri -Method GET).Content | ConvertFrom-Json
-$org | fl
+$org | Format-List
 
 $token = Get-AzAccessToken -Audience "https://graph.microsoft.com"
 $headers = @{

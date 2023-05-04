@@ -25,16 +25,16 @@ Hide Office Group
 	$grp.HiddenFromAddressListsEnabled
 
 Get Mailbox statistics
-	Get-Mailbox -ResultSize Unlimited | Get-MailboxStatistics | Select DisplayName,TotalItemSize
+	Get-Mailbox -ResultSize Unlimited | Get-MailboxStatistics | Select-Object DisplayName,TotalItemSize
 	Get-Mailbox -ResultSize Unlimited | Get-MailboxFolderStatistics
 
 Recoverable Items
 	Get-MailboxFolderStatistics -FolderScope RecoverableItems | Format-Table Name,FolderAndSubfolderSize,ItemsInFolderAndSubfolders -Auto
-	$users = Get-Mailbox -ResultSize Unlimited | select Alias
+	$users = Get-Mailbox -ResultSize Unlimited | Select-Object Alias
 	foreach($user in $users)
 	{
     		Write-Output "$user"
-    		Get-MailboxFolderStatistics -Identity $user.Alias -FolderScope RecoverableItems | where { $_.Name -eq "Recoverable Items"} | select FolderAndSubfolderSize,ItemsInFolderAndSubfolders
+    		Get-MailboxFolderStatistics -Identity $user.Alias -FolderScope RecoverableItems | Where-Object { $_.Name -eq "Recoverable Items"} | Select-Object FolderAndSubfolderSize,ItemsInFolderAndSubfolders
 	}
 
 
@@ -46,8 +46,8 @@ Get all roles for a user
 
 Get Mailbox statistics
 	$Db = Get-MailboxDatabase
-	$stats = Get-MailboxStatistics -Database $Db.Name | where {$_.disconnectdate -ne $null}
-	$stats | select displayname,MailboxGUID
+	$stats = Get-MailboxStatistics -Database $Db.Name | Where-Object {$_.disconnectdate -ne $null}
+	$stats | Select-Object displayname,MailboxGUID
 
 Assign rights to all mailboxes
 	Get-Mailbox -ResultSize Unlimited | Add-MailboxPermission -AccessRights FullAccess -User konrad.brunner
@@ -67,7 +67,7 @@ List all mailboxes
 	foreach($box in $boxes)
 	{
 		$Name = $box.Name
-		$EmailAddress = $($box.EmailAddresses | where { $_.IsPrimaryAddress -eq $true }).SmtpAddress.ToLower()
+		$EmailAddress = $($box.EmailAddresses | Where-Object { $_.IsPrimaryAddress -eq $true }).SmtpAddress.ToLower()
 		$Company = $EmailAddress.Split("@")[1].Split(".")[0]
 		$UserPrincipalName = $box.UserPrincipalName
 		$ForwardingSmtpAddress = $box.ForwardingSmtpAddress
@@ -85,5 +85,5 @@ List all public folders
 	Get-PublicFolder -Recurse
 
 Check MRSProxy
-	Get-MailboxServer | Test-MRSHealth | Select Identity,Check,Passed,Message | ft -auto
+	Get-MailboxServer | Test-MRSHealth | Select-Object Identity,Check,Passed,Message | Format-Table -auto
 

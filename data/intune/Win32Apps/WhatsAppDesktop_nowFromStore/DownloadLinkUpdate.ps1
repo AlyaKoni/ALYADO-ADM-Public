@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://www.whatsapp.com/download?lang=de"
-$req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*desktop[^`"]*x64[^`"]*.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $Shell = New-Object -ComObject WScript.Shell

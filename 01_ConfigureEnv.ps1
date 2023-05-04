@@ -494,8 +494,8 @@ function Install-PackageIfNotInstalled (
     {
         $tmp = New-Item -Path "$($AlyaTools)\Packages" -ItemType Directory -Force
     }
-    $resp = Invoke-WebRequest -Uri "https://www.nuget.org/packages/$packageName" -UseBasicParsing
-    $nusrc = ($resp).Links | where { $_.outerText -eq "Download package" -or $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
+    $resp = Invoke-WebRequest -SkipHttpErrorCheck -Uri "https://www.nuget.org/packages/$packageName" -UseBasicParsing
+    $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Download package" -or $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$($AlyaTools)\Packages\$packageName\$packageName.nuspec"))
     {
@@ -583,6 +583,12 @@ function Uninstall-ModuleIfInstalled (
             }
         }
     }
+}
+
+function Get-ActualLoadedLibraries ()
+{
+    [System.AppDomain]::CurrentDomain.GetAssemblies() | Select-Object -Property FullName,Location | Sort-Object -Property FullName | Format-List
+    [System.AppDomain]::CurrentDomain.GetAssemblies() | Select-Object -Property FullName,Location | Sort-Object -Property FullName | Format-Table
 }
 
 function Install-ModuleIfNotInstalled (
@@ -712,14 +718,14 @@ function Install-ModuleIfNotInstalled (
         {
             throw "Please install the powershell package management"
         }
-        $installModuleHasPrerelease = $null -ne ((Get-Command Install-Module).Parameters.GetEnumerator() | where { $_.Key -eq "AllowPrerelease" })
-        $installModuleHasAcceptLicense = $null -ne ((Get-Command Install-Module).Parameters.GetEnumerator() | where { $_.Key -eq "AcceptLicense" })
-        $saveModuleHasPrerelease = $null -ne ((Get-Command Save-Module).Parameters.GetEnumerator() | where { $_.Key -eq "AllowPrerelease" })
+        $installModuleHasPrerelease = $null -ne ((Get-Command Install-Module).Parameters.GetEnumerator() | Where-Object { $_.Key -eq "AllowPrerelease" })
+        $installModuleHasAcceptLicense = $null -ne ((Get-Command Install-Module).Parameters.GetEnumerator() | Where-Object { $_.Key -eq "AcceptLicense" })
+        $saveModuleHasPrerelease = $null -ne ((Get-Command Save-Module).Parameters.GetEnumerator() | Where-Object { $_.Key -eq "AllowPrerelease" })
         $optionalArgs = New-Object -TypeName Hashtable
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
         #TODO Unload module
-        $installModuleHasAcceptLicense = (Get-Command Install-Module).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
+        $installModuleHasAcceptLicense = (Get-Command Install-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
         if ($installModuleHasAcceptLicense)
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
@@ -901,7 +907,7 @@ function Install-ScriptIfNotInstalled (
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating script {0} to version [{1}] within scope of the current user.' -f $scriptName, $requestedVersion)
         #TODO Unload script
-        $paramAL = (Get-Command Install-Script).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
+        $paramAL = (Get-Command Install-Script).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
         if ($paramAL)
         {
             Install-Script -Name $scriptName @optionalArgs -Scope CurrentUser -AcceptLicense -Force -Verbose
@@ -952,15 +958,15 @@ function Get-CustomersContext(
     $context = $null
     if ($SubscriptionId)
     {
-        $context = Get-AzContext -ListAvailable | where { $_.Name -like "*$SubscriptionId*$AlyaTenantId*" }
+        $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$SubscriptionId*$AlyaTenantId*" }
     }
     elseif ($SubscriptionName)
     {
-        $context = Get-AzContext -ListAvailable | where { $_.Name -like "*$SubscriptionName*$AlyaTenantId*" }
+        $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$SubscriptionName*$AlyaTenantId*" }
     }
     else
     {
-        $context = Get-AzContext -ListAvailable | where { $_.Name -like "*$AlyaTenantId*" }
+        $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$AlyaTenantId*" }
         if ($context -and $context.Count -gt 1) { $context = $context[0] }
     }
     return $context
@@ -1123,7 +1129,7 @@ function LoginTo-MgGraph(
         Select-MgProfile -Name $Profile
     }
 
-    $mgContext = Get-MgContext | where { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+    $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
     if ($mgContext)
     {
         Write-Host "  checking existing context"
@@ -1140,14 +1146,14 @@ function LoginTo-MgGraph(
     if (-Not $mgContext)
     {
         Connect-MGGraph -Scopes $Scopes -TenantId $AlyaTenantId
-        $mgContext = Get-MgContext | where { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+        $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
         if (-Not $Global:AlyaMgContext)
         {
             #Required after a consent, otherwise you run into a login mess
             # TODO check bug still there, way to check if consent happended
             $mgContext = Disconnect-MgGraph
             Connect-MGGraph -Scopes $Scopes -TenantId $AlyaTenantId
-            $mgContext = Get-MgContext | where { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+            $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
             $Global:AlyaMgContext = $mgContext
         }
 
@@ -1216,7 +1222,7 @@ function Get-AdalAccessToken(
     {
         throw "This function requires the AzureAdPreview module loaded"
     }
-    $dll = $module.FileList | where { $_ -like "*Microsoft.IdentityModel.Clients.ActiveDirectory.dll" }
+    $dll = $module.FileList | Where-Object { $_ -like "*Microsoft.IdentityModel.Clients.ActiveDirectory.dll" }
     Add-Type -Path $dll
     $resourceAppIdURI = "https://graph.microsoft.com"
     $authority = "https://login.microsoftonline.com/$AlyaTenantName"
@@ -1379,8 +1385,8 @@ function LoginTo-EXO([String[]]$commandsToLoad = $null)
 function LoginTo-IPPS()
 {
     Write-Host "Login to IPPS" -ForegroundColor $CommandInfo
-    $extRunspaces = Get-Runspace | where { $_.ConnectionInfo.ComputerName -like "*compliance.protection.outlook.com" }
-    $actConnection = $extRunspaces | where { $_.RunspaceStateInfo.State -eq "Opened" }
+    $extRunspaces = Get-Runspace | Where-Object { $_.ConnectionInfo.ComputerName -like "*compliance.protection.outlook.com" }
+    $actConnection = $extRunspaces | Where-Object { $_.RunspaceStateInfo.State -eq "Opened" }
     if (-Not $actConnection)
     {
         foreach($extRunspace in $extRunspaces)
@@ -1401,7 +1407,7 @@ function DisconnectFrom-EXOandIPPS()
     Write-Host "Disconnecting from EXO and IPPS" -ForegroundColor $CommandInfo
     Disconnect-ExchangeOnline -Confirm:$false
     <#
-    $extRunspaces = Get-Runspace | where { $_.ConnectionInfo.ComputerName -like "*compliance.protection.outlook.com" }
+    $extRunspaces = Get-Runspace | Where-Object { $_.ConnectionInfo.ComputerName -like "*compliance.protection.outlook.com" }
     foreach($extRunspace in $extRunspaces)
     {
         $extRunspace.Dispose()
@@ -1504,15 +1510,15 @@ function LogoutFrom-PnP(
     [object] [Parameter(Mandatory = $true)] $Connection
     )
 {
-    if ($Connection -ne $null -and $Connection.Url -ne $null)
+    if ($null -ne $Connection -and $null -ne $Connection.Url)
     {
         if ($Connection.ClientId -and $Connection.Thumbprint)
         {
-            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -ne $Connection.Url.TrimEnd("/") -and $_.ClientId -ne $Connection.ClientId }
+            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -ne $Connection.Url.TrimEnd("/") -and $_.ClientId -ne $Connection.ClientId }
         }
         else
         {
-            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -ne $Connection.Url.TrimEnd("/") }
+            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -ne $Connection.Url.TrimEnd("/") }
         }
     }
     try { $null = Disconnect-PnPOnline -Connection $Connection -ErrorAction SilentlyContinue } catch {}
@@ -1544,11 +1550,11 @@ function LoginTo-PnP(
     $CreatedConnection = $false
     if ($ClientId -and $Thumbprint)
     {
-        $AlyaConnection = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") -and $_.ClientId -eq $ClientId }
+        $AlyaConnection = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") -and $_.ClientId -eq $ClientId }
     }
     else
     {
-        $AlyaConnection = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") }
+        $AlyaConnection = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") }
     }
 
     if ($null -ne $AlyaConnection -and $Relogin)
@@ -1556,11 +1562,11 @@ function LoginTo-PnP(
         $null = Disconnect-PnPOnline -Connection $AlyaConnection
         if ($ClientId -and $Thumbprint)
         {
-            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -ne $Url.TrimEnd("/") -and $_.ClientId -ne $ClientId }
+            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -ne $Url.TrimEnd("/") -and $_.ClientId -ne $ClientId }
         }
         else
         {
-            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | where { $_.Url.TrimEnd("/") -ne $Url.TrimEnd("/") }
+            $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -ne $Url.TrimEnd("/") }
         }
         $AlyaConnection = $null
     }
@@ -1700,7 +1706,6 @@ function Connect-MsGraphAsDelegated
     $Resource = "https://graph.microsoft.com"
     $RedirectUri = "https://login.microsoftonline.com/common/oauth2/nativeclient"
     Add-Type -AssemblyName System.Web
-    $ClientIDEncoded = [System.Web.HttpUtility]::UrlEncode($ClientID)
     $ClientSecretEncoded = [System.Web.HttpUtility]::UrlEncode($ClientSecret)
     $ResourceEncoded = [System.Web.HttpUtility]::UrlEncode($Resource)
     $RedirectUriEncoded = [System.Web.HttpUtility]::UrlEncode($RedirectUri)
@@ -1802,7 +1807,7 @@ function Get-MsGraphCollection
         {
             $NextLink = $Results.'@odata.nextLink'
         }
-    } while ($NextLink -ne $null)
+    } while ($null -ne $NextLink )
     return $QueryResults
 }
 
@@ -1987,7 +1992,6 @@ function Put-MsGraph
 $AlyaWOctet = 16777216
 $AlyaXOctet = 65536
 $AlyaYOctet = 256
-$AlyaZOctet = 1
 function IP-toINT64()
 {
     param ($ip)
@@ -2045,7 +2049,6 @@ function Get-BroadcastAddress()
     }
     if ($ip)
     {
-        $ipaddr = [Net.IPAddress]::Parse($ip)
         if ($cidr)
         {
             $networkaddr = [Net.IPAddress]::Parse((Get-NetworkAddress -ip $ip -cidr $cidr))

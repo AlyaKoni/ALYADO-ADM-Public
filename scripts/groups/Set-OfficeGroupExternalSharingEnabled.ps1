@@ -71,7 +71,7 @@ if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExte
 }
 try {
     $resp = $null
-    ($resp = Invoke-WebRequest -Method "Get" -Uri "https://$StorageAccountName.blob.core.windows.net/pages/OfficeGroupsNutzungExterne.html") | Out-Null
+    ($resp = Invoke-WebRequest -SkipHttpErrorCheck -Method "Get" -Uri "https://$StorageAccountName.blob.core.windows.net/pages/OfficeGroupsNutzungExterne.html") | Out-Null
     if (-Not $resp -or $resp.StatusCode -ne 200) { throw }
 }
 catch {
@@ -80,8 +80,8 @@ catch {
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
@@ -90,43 +90,43 @@ if (-Not $Setting)
 	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
     }
     $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "GuestUsageGuidelinesUrl" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "GuestUsageGuidelinesUrl" }
 if ($Value.Value -eq "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html") {
     Write-Host "Setting 'GuestUsageGuidelinesUrl' was already set to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html'"
 } 
 else {
     Write-Warning "Setting 'GuestUsageGuidelinesUrl' was set to '$($Value.Value)' updating to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html'"
-    ($Setting.Values | where { $_.Name -eq "GuestUsageGuidelinesUrl" }).Value = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
+    ($Setting.Values | Where-Object { $_.Name -eq "GuestUsageGuidelinesUrl" }).Value = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "AllowToAddGuests" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
 if ($Value.Value -eq $true) {
     Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
 } 
 else {
     Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
-    ($Setting.Values | where { $_.Name -eq "AllowToAddGuests" }).Value = $true
+    ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $true
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "AllowGuestsToBeGroupOwner" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "AllowGuestsToBeGroupOwner" }
 if ($Value.Value -eq $true) {
     Write-Host "Setting 'AllowGuestsToBeGroupOwner' was already set to '$true'"
 } 
 else {
     Write-Warning "Setting 'AllowGuestsToBeGroupOwner' was set to '$($Value.Value)' updating to '$true'"
-    ($Setting.Values | where { $_.Name -eq "AllowGuestsToBeGroupOwner" }).Value = $true
+    ($Setting.Values | Where-Object { $_.Name -eq "AllowGuestsToBeGroupOwner" }).Value = $true
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "AllowGuestsToAccessGroups" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "AllowGuestsToAccessGroups" }
 if ($Value.Value -eq $true) {
     Write-Host "Setting 'AllowGuestsToAccessGroups' was already set to '$true'"
 } 
 else {
     Write-Warning "Setting 'AllowGuestsToAccessGroups' was set to '$($Value.Value)' updating to '$true'"
-    ($Setting.Values | where { $_.Name -eq "AllowGuestsToAccessGroups" }).Value = $true
+    ($Setting.Values | Where-Object { $_.Name -eq "AllowGuestsToAccessGroups" }).Value = $true
 }
 
 Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values

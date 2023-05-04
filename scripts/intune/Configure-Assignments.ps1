@@ -219,7 +219,7 @@ foreach($profile in $featureProfiles)
 
     $uri = "/beta/deviceManagement/windowsFeatureUpdateProfiles"
     $actProfiles = (Get-MsGraphObject -Uri $uri).value
-    $actProfile = $actProfiles | where { $_.displayName -eq $profile.displayName }
+    $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
     if (-Not $actProfile){
         Write-Error "Can't find profile $($profile.displayName)"
     }
@@ -256,7 +256,7 @@ foreach($profile in $qualityProfiles)
 
     $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
     $actProfiles = (Get-MsGraphObject -Uri $uri).value
-    $actProfile = $actProfiles | where { $_.displayName -eq $profile.displayName }
+    $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
     $assignment = @{
         assignments = @(
             @{
@@ -297,7 +297,7 @@ foreach($profile in $updateProfiles)
 
     $uri = "/beta/deviceManagement/deviceConfigurations"
     $actProfiles = (Get-MsGraphObject -Uri $uri).value
-    $actProfile = $actProfiles | where { $_.displayName -eq $profile.displayName }
+    $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
     if (-Not $actProfile){
         Write-Error "Can't find profile $($profile.displayName)"
     }
@@ -369,7 +369,7 @@ foreach($script in $scripts)
 
     $uri = "/beta/deviceManagement/deviceManagementScripts"
     $actScripts = (Get-MsGraphObject -Uri $uri).value
-    $actScript = $actScripts | where { $_.fileName -eq $script.Name }
+    $actScript = $actScripts | Where-Object { $_.fileName -eq $script.Name }
     if (-Not $actScript){
         Write-Error "Can't find script $($script.Name)"
     }

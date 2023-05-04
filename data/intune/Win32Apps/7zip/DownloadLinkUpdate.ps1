@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://www.7-zip.org/download.html"
-$req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*7z[^`"]*x64[^`"]*.msi"
 $newUrl = "https://www.7-zip.org/"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 #$content = Get-Content -Path "$PSScriptRoot\Download.url" -Raw -Encoding UTF8

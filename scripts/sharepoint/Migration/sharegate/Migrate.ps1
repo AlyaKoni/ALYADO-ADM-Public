@@ -60,7 +60,7 @@ if ([string]::IsNullOrEmpty($migSites[0].DstCol))
 	exit
 }
 
-$migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | foreach {
+$migSites | Where-Object { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | Foreach-Object {
 
     if ([string]::IsNullOrEmpty($_.DstUrl))
     {

@@ -237,7 +237,7 @@ foreach($profile in $profiles)
         #$searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
         $uri = "/beta/deviceManagement/windowsFeatureUpdateProfiles"
         $actProfiles = (Get-MsGraphObject -Uri $uri).value
-        $actProfile = $actProfiles | where { $_.displayName -eq $profile.displayName }
+        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
         if (-Not $actProfile.id)
         {
             # Creating the profile

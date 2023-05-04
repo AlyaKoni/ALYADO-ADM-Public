@@ -140,7 +140,7 @@ catch
     Write-Host " - 50 devices per user"
     Write-Host " - Enable LAPS"
     Write-Host " - Save"
-    start "https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
+    Start-Process "https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
     pause
 }
 

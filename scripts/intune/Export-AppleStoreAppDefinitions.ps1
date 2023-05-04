@@ -51,7 +51,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Export-AppleStoreAppDefinitions | Apple" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$req = Invoke-WebRequest -Method Get -Uri "https://apps.apple.com/de/developer/microsoft-corporation/id298856275#see-all/i-phonei-pad-apps" -UseBasicParsing
+$req = Invoke-WebRequest -SkipHttpErrorCheck -Method Get -Uri "https://apps.apple.com/de/developer/microsoft-corporation/id298856275#see-all/i-phonei-pad-apps" -UseBasicParsing
 [regex]$regex = "[^`";&?]*/app/[^`";&?]*/id(\d*)"
 $matches = ([regex]::Matches($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant'))
 $appIds = @()
@@ -63,7 +63,7 @@ $appIds = $appIds | Select-Object -Unique
 $appDefs = @()
 foreach ($appId in $appIds)
 {
-    $req = Invoke-WebRequest -Method Get -Uri ("https://itunes.apple.com/lookup?id="+$appId) -UseBasicParsing
+    $req = Invoke-WebRequest -SkipHttpErrorCheck -Method Get -Uri ("https://itunes.apple.com/lookup?id="+$appId) -UseBasicParsing
     $def = $req.Content | ConvertFrom-Json
     $appDefs += $def.results[0]
 }

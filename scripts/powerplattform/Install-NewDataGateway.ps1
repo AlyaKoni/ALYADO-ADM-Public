@@ -91,7 +91,7 @@ if (-Not $RecoverKey)
 }
 
 Write-Host "`n`nInstalling gateway cluster" -ForegroundColor $CommandInfo
-$GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | where { $_.Name -eq $GatewayName }
+$GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $GatewayName }
 if (-Not $GatewayDetails)
 {
     Write-Warning "Gateway cluster not yet installed, installing now"
@@ -108,7 +108,7 @@ else
 {
     Write-Host "Gateway cluster already installed"
 }
-$GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | where { $_.Name -eq $GatewayName }
+$GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $GatewayName }
 
 Write-Host "`n`nAdding $((Get-AzContext).Account.Id) as gateway cluster admin" -ForegroundColor $CommandInfo
 $AdminUserId = (Get-AzContext).Account.ExtendedProperties["HomeAccountId"].Split(".")[0]

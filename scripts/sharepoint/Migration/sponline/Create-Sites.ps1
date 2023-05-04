@@ -36,7 +36,7 @@ if ([string]::IsNullOrEmpty($migSites[0].DstCol))
 	exit
 }
 
-$migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | foreach {
+$migSites | Where-Object { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | Foreach-Object {
 
     if ([string]::IsNullOrEmpty($_.DstUrl))
     {
@@ -79,7 +79,7 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
 Write-Host "Waiting for 5 minutes to let backgound jobs doing their work"
 Start-Sleep -Seconds 300
 
-$migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | foreach {
+$migSites | Where-Object { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | Foreach-Object {
 
     if ([string]::IsNullOrEmpty($_.DstUrl))
     {

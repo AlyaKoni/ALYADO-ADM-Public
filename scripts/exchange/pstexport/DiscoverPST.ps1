@@ -5,8 +5,8 @@ $usr = [Environment]::UserName.ToLower()
 $dmn = [Environment]::UserDomainName.ToLower()
 $comp = [Environment]::MachineName.ToLower()
 $outlook = New-Object -comObject Outlook.Application
-$psts = $outlook.Session.Stores | where { ($_.FilePath.ToLower() -like '*.pst')}
-$osts = $outlook.Session.Stores | where { ($_.FilePath.ToLower() -like '*.ost')}
+$psts = $outlook.Session.Stores | Where-Object { ($_.FilePath.ToLower() -like '*.pst')}
+$osts = $outlook.Session.Stores | Where-Object { ($_.FilePath.ToLower() -like '*.ost')}
 $accnts = $outlook.Session.Accounts
 $result = @{usr = $usr;dmn = $dmn;comp = $comp;accnts = @();osts = @(); psts = @()}
 foreach ($pst in $psts)

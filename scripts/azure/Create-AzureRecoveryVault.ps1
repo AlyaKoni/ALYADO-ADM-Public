@@ -182,8 +182,6 @@ if (-Not $RecVault)
     Set-AzRecoveryServicesAsrVaultContext -Vault $RecVault
     Set-AzRecoveryServicesAsrAlertSetting -CustomEmailAddress $AlyaGeneralInformEmail -EnableEmailSubscriptionOwner -LocaleID DE
     Set-AzRecoveryServicesAsrNotificationSetting -CustomEmailAddress $AlyaGeneralInformEmail -EnableEmailSubscriptionOwner -LocaleID DE
-    #Get-AzDiagnosticSetting -ResourceId $RecVault.ID
-    Set-AzDiagnosticSetting -Name $LogAnaDiagnosticRuleName -ResourceId $RecVault.ID -Enabled $True -Category AzureBackupReport -WorkspaceId $LogAnaWrkspc.ResourceId -StorageAccountId $StrgAccount.Id
 }
 
 # Checking backup policy

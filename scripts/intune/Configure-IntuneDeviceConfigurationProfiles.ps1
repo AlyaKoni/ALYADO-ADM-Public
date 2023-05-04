@@ -149,7 +149,7 @@ function Replace-AlyaStrings($obj, $depth)
                     }
                     else
                     {
-                        $sobj = $prop.Value | select -First 1
+                        $sobj = $prop.Value | Select-Object -First 1
                         if ($sobj.GetType().Name -eq "String")
                         {
                             if ($sobj.Contains("##Alya"))

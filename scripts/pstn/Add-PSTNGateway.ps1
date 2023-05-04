@@ -66,7 +66,7 @@ if ((Get-CsTenant).VerifiedDomains.Name -notcontains $AlyaPstnGateway)
     Write-Host "Please create a user in this domain, assign a O365E1 license and wait up to some hours or days" -ForegroundColor Red
     exit 1
 }
-if (((Get-CsTenant).VerifiedDomains | where { $_.Name -eq $AlyaPstnGateway }).Status -ne "Enabled")
+if (((Get-CsTenant).VerifiedDomains | Where-Object { $_.Name -eq $AlyaPstnGateway }).Status -ne "Enabled")
 {
     Write-Host "$AlyaPstnGateway is not yet enabled" -ForegroundColor Red
     Write-Host "Please enbale the domain $AlyaPstnGateway" -ForegroundColor Red

@@ -105,9 +105,9 @@ else
 
         $languagListString = "`$UserLanguageList = Get-WinUserLanguageList`n"
         $languagListString += "`$UserLanguageList.Clear()`n"
-        $languageToInstall = $languagesToInstall | Sort-Object -Property Order | foreach {
+        $languageToInstall = $languagesToInstall | Sort-Object -Property Order | Foreach-Object {
             $languagListString += "`$UserLanguageList.Add(`"$($_.LanguageTag)`")`n"
-            $languagListString += "`$UserLanguageList | where { `$_.LanguageTag -eq `"$($_.LanguageTag)`" } | foreach {`n"
+            $languagListString += "`$UserLanguageList | Where-Object { `$_.LanguageTag -eq `"$($_.LanguageTag)`" } | Foreach-Object {`n"
             $languagListString += "    `$_.Handwriting=`$true`n"
             $languagListString += "    `$_.Spellchecking=`$true`n"
             $languagListString += "    `$_.InputMethodTips[0] = `"$($_.InputLanguageID)`"`n"
@@ -147,7 +147,7 @@ else
 `$languageTag = "$languageTag"
 `$packageFamilyName = "$packageFamilyName"
 `$geoId = $geoId
-`$appxLxpPath = (Get-AppxPackage | where { `$_.PackageFamilyName -eq `$packageFamilyName }).InstallLocation
+`$appxLxpPath = (Get-AppxPackage | Where-Object { `$_.PackageFamilyName -eq `$packageFamilyName }).InstallLocation
 Add-AppxPackage -Register -Path "`$appxLxpPath\AppxManifest.xml" -DisableDevelopmentMode
 #Set-WinUserLanguageList `$languageTag -Force
 $languagListString

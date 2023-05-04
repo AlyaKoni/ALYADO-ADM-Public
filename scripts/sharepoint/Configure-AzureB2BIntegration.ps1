@@ -75,13 +75,13 @@ if (-Not $TenantConfig.EnableAzureADB2BIntegration)
     Set-SPOTenant -EnableAzureADB2BIntegration $true
     Set-SPOTenant -SyncAadB2BManagementPolicy $true
     Write-Warning "Enabling one-time-passcode authentication"
-    $currentpolicy =  Get-AzureADPolicy | where {$_.Type -eq 'B2BManagementPolicy' -and $_.IsOrganizationDefault -eq $true} | select -First 1
+    $currentpolicy =  Get-AzureADPolicy | Where-Object {$_.Type -eq 'B2BManagementPolicy' -and $_.IsOrganizationDefault -eq $true} | Select-Object -First 1
     if (-Not $currentpolicy)
     {
         Write-Warning "Creating B2BManagementPolicy"
         $policyValue=@("{`"B2BManagementPolicy`":{`"PreviewPolicy`":{`"Features`":[`"OneTimePasscode`"]}}}")
         New-AzureADPolicy -Definition $policyValue -DisplayName B2BManagementPolicy -Type B2BManagementPolicy -IsOrganizationDefault $true
-        $currentpolicy =  Get-AzureADPolicy | where {$_.Type -eq 'B2BManagementPolicy' -and $_.IsOrganizationDefault -eq $true} | select -First 1
+        $currentpolicy =  Get-AzureADPolicy | Where-Object {$_.Type -eq 'B2BManagementPolicy' -and $_.IsOrganizationDefault -eq $true} | Select-Object -First 1
     }
     $policy = $currentpolicy.Definition | ConvertFrom-Json
     $features = [PSCustomObject]@{'Features'=@('OneTimePasscode')}; $policy.B2BManagementPolicy | Add-Member 'PreviewPolicy' $features -Force; $policy.B2BManagementPolicy

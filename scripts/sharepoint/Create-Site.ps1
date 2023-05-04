@@ -151,7 +151,7 @@ if (-Not $site)
 if ($hub)
 {
     Write-Host "Assigning site to hub $($hub)" -ForegroundColor $CommandInfo
-    $hubSite = $hubSites | where { $_.short -eq $hub }
+    $hubSite = $hubSites | Where-Object { $_.short -eq $hub }
     if (-Not $hubSite)
     {
         throw "Hub site $($hub) not found"
@@ -203,7 +203,7 @@ Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -PrimarySiteCollec
 Write-Host "Processing site design" -ForegroundColor $CommandInfo
 if (-Not $siteDesignName)
 {
-    $hubSiteDef = $hubSites | where { $_.short -eq $hub }
+    $hubSiteDef = $hubSites | Where-Object { $_.short -eq $hub }
     if ($siteTemplate -eq "TeamSite")
     {
         if ($hubSiteDef.subSiteScript)
@@ -269,14 +269,14 @@ foreach ($usrEmail in $siteMembers)
 # Configuring member permissions
 Write-Host "Configuring member permissions" -ForegroundColor $CommandInfo
 $aRoles = Get-PnPRoleDefinition -Connection $siteCon
-$eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
-$cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
+$eRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Editor" }
+$cRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Contributor" }
 $perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
-if (-Not ($perms | where { $_.Id -eq $cRole.Id }))
+if (-Not ($perms | Where-Object { $_.Id -eq $cRole.Id }))
 {
     Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
 }
-if (($perms | where { $_.Id -eq $eRole.Id }))
+if (($perms | Where-Object { $_.Id -eq $eRole.Id }))
 {
     Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
 }
@@ -310,7 +310,7 @@ if ($siteTemplate -eq "TeamSite")
         Write-Warning "Created new team guest settings to disable Guests"
         $settings = New-PnPMicrosoft365GroupSettings -Connection $adminCon -Identity $m365GroupId -DisplayName "Group.Unified.Guest" -TemplateId "08d542b9-071f-4e16-94b0-74abb372e3d9" -Values @{"AllowToAddGuests"=$settingsValue}
     }
-    if (($settings.Values | where { $_.Name -eq "AllowToAddGuests"}).Value.ToString() -ne $settingsValue.ToString())
+    if (($settings.Values | Where-Object { $_.Name -eq "AllowToAddGuests"}).Value.ToString() -ne $settingsValue.ToString())
     {
         Write-Warning "Existing team guest settings changed to disable Guests"
         $settings = Set-PnPMicrosoft365GroupSettings -Connection $adminCon -Identity $settings.ID -Group $m365GroupId -Values @{"AllowToAddGuests"=$settingsValue}
@@ -332,7 +332,7 @@ if ($overwritePages -and $homePageTemplate)
 Write-Host "OneDrive Sync Url" -ForegroundColor $CommandInfo
 $site = Get-PnPSite -Connection $siteCon -Includes "ID"
 $web = Get-PnPWeb -Connection $siteCon -Includes "ID","Title"
-$list = Get-PnPList -Connection $siteCon | where { $_.Title -eq "Dokumente" -or $_.Title -eq "Freigegebene Dokumente" -or $_.Title -eq "Documents" -or $_.Title -eq "Shared Documents" }
+$list = Get-PnPList -Connection $siteCon | Where-Object { $_.Title -eq "Dokumente" -or $_.Title -eq "Freigegebene Dokumente" -or $_.Title -eq "Documents" -or $_.Title -eq "Shared Documents" }
 $WebURL = [System.Web.HttpUtility]::UrlEncode("$($AlyaSharePointUrl)/sites/$title/")
 $SiteID = [System.Web.HttpUtility]::UrlEncode("{$($site.Id.Guid)}")
 $WebID = [System.Web.HttpUtility]::UrlEncode("{$($web.Id.Guid)}")

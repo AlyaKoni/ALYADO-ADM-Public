@@ -110,7 +110,7 @@ foreach ($hpool in $hpools)
         #$appGrp=$appGrps
         Write-Host "   - AppGroup: $($appGrp.AppGroupName)"
         $grpUsers = Get-RdsAppGroupUser $AlyaWvdTenantNameProd $hpool.HostPoolName $appGrp.AppGroupName
-        $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $UserNameToRemove }
+        $grpUser = $grpUsers | Where-Object { $_.UserPrincipalName -eq $UserNameToRemove }
         if ($grpUser)
         {
             Write-Host "     * Removing user $($user)"

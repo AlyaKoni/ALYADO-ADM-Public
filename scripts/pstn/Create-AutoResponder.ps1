@@ -139,7 +139,7 @@ try
     $membs = Get-DistributionGroupMember -Identity $callGroupName
     foreach($callGroupUserUpn in $callGroupUserUpns)
     {
-        $memb = $membs | where { $_.PrimarySmtpAddress -eq $callGroupUserUpn }
+        $memb = $membs | Where-Object { $_.PrimarySmtpAddress -eq $callGroupUserUpn }
         if (-Not $memb)
         {
             Write-Host "  adding member $callGroupUserUpn"

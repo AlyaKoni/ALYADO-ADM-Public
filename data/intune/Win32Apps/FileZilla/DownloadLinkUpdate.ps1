@@ -7,7 +7,7 @@ $headers = @{
     "upgrade-insecure-requests" = "1"
     "user-agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/"
 }
-$req = Invoke-WebRequest -Uri $pageUrl -UseBasicParsing -Method Get -Headers $headers
+$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get -Headers $headers
 [regex]$regex = "[^`"]*FileZilla[^`"]*win64[^`"]*.exe[^`"]*"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $Shell = New-Object -ComObject WScript.Shell

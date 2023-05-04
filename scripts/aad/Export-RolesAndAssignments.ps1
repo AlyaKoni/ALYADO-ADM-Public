@@ -79,11 +79,11 @@ if (-Not $Context)
 Write-Host "Getting defined AD roles" -ForegroundColor $CommandInfo
 $roleMappings = @()
 $adRoleDefs = Get-AzureADDirectoryRoleTemplate | Sort-Object -Property DisplayName
-$adRoleDefs | FT ObjectType, DisplayName, Description
+$adRoleDefs | Format-Table ObjectType, DisplayName, Description
 $defRoles = Get-AzureADDirectoryRole | Sort-Object -Property DisplayName
 foreach($roleDef in $adRoleDefs)
 {
-    $role = $defRoles | where { $_.DisplayName -eq $roleDef.DisplayName }
+    $role = $defRoles | Where-Object { $_.DisplayName -eq $roleDef.DisplayName }
     if ($role)
     {
         Write-Host "Role: $($role.DisplayName)"
@@ -111,7 +111,7 @@ $roleMappings | Export-CSV -Path "$AlyaData\aad\RoleMappings.csv" -NoTypeInforma
 # Getting all Subscriptions
 Write-Host "`n`nGetting all Subscriptions" -ForegroundColor $CommandInfo
 $subs = Get-AzSubscription -TenantId $AlyaTenantId
-$subs | FT Name, Id
+$subs | Format-Table Name, Id
 
 # Getting defined RBAC roles
 Write-Host "Getting defined RBAC roles" -ForegroundColor $CommandInfo
@@ -121,18 +121,18 @@ foreach($sub in $subs)
     $rds = Get-AzRoleDefinition -Scope "/subscriptions/$($sub.Id)" -Custom -ErrorAction SilentlyContinue
     foreach($rd in $rds)
     {
-        $exRd = $iamRoleDefs | where { $_.Id -eq $rd.Id}
+        $exRd = $iamRoleDefs | Where-Object { $_.Id -eq $rd.Id}
         if (-Not $exRd)
         {
             $iamRoleDefs += $rd
         }
     }
 }
-$iamRoleDefs | FT IsCustom, Name, Description
+$iamRoleDefs | Format-Table IsCustom, Name, Description
 
 # Reporting custom roles
 Write-Host "Reporting custom roles" -ForegroundColor $CommandInfo
-$iamRoleDefsCusts = $iamRoleDefs | where { $_.IsCustom -eq $true }
+$iamRoleDefsCusts = $iamRoleDefs | Where-Object { $_.IsCustom -eq $true }
 foreach($iamRoleDefsCust in $iamRoleDefsCusts)
 {
     Write-Host "Custom role $($iamRoleDefsCust.Name):" -ForegroundColor $CommandSuccess
@@ -166,7 +166,7 @@ if ($manGrpsExp)
 {
     TraverseManGrps -grp $manGrpsExp
 }
-$Global:manGrps | FT Id, Name, Description
+$Global:manGrps | Format-Table Id, Name, Description
 
 # Getting all role assigments from all subscriptions
 Write-Host "Getting all role assigments from all subscriptions" -ForegroundColor $CommandInfo
@@ -191,7 +191,7 @@ foreach($sub in $subs)
             $mgName = $assignment.Scope.Substring("/providers/Microsoft.Management/managementGroups/".Length).Trim("/")
             if ($Global:manGrps.Count -gt 0)
             {
-                $mgName = ($Global:manGrps | where { $_.Name -eq $mgName}).DisplayName
+                $mgName = ($Global:manGrps | Where-Object { $_.Name -eq $mgName}).DisplayName
             }
         }
         if ($assignment.Scope.StartsWith("/subscriptions/"+$sub.Id,"CurrentCultureIgnoreCase"))

@@ -73,7 +73,7 @@ Write-Output "Getting all users"
 $AzureADUsers = Get-MSolUser -All
 foreach ($AzureADUser in $AzureADUsers)
 {
-    #$AzureADUser = $AzureADUsers | where UserPrincipalName -eq "konrad.brunner@alyaconsulting.ch"
+    #$AzureADUser = $AzureADUsers | Where-Object { $_.UserPrincipalName -eq "konrad.brunner@alyaconsulting.ch"
     #if ($AzureADUser.UserPrincipalName -ne "konrad.brunner@alyaconsulting.ch") { continue }
 
     $targetUPN = $AzureADUser.UserPrincipalName.ToString()

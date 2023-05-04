@@ -86,7 +86,7 @@ if ($dcs -contains $thisDcName -or $dcs -contains $thisDcFqdn)
     if ($addDnsServer.Count -gt 0)
     {
         Write-Host "Configuring dns client" -ForegroundColor $titleColor
-        $dnsConfs = Get-DnsClientServerAddress | where { $_.AddressFamily -eq 2 }
+        $dnsConfs = Get-DnsClientServerAddress | Where-Object { $_.AddressFamily -eq 2 }
         foreach($dnsConf in $dnsConfs)
         {
             if ($dnsConf.ServerAddresses.Count -gt 0)

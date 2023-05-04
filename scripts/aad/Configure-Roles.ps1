@@ -215,13 +215,13 @@ if ($configurePIM)
       foreach($alertingRole in $alertingRoles)
       {
           Write-Host "  on $alertingRole"
-          $rol = $allBuiltInRoles | where { $_.DisplayName -eq $alertingRole }
-          $ass = $assigments | where { $_.RoleDefinitionId -eq $rol.Id }
-          $pol = $policies | where { $_.Id -eq $ass.PolicyId }
+          $rol = $allBuiltInRoles | Where-Object { $_.DisplayName -eq $alertingRole }
+          $ass = $assigments | Where-Object { $_.RoleDefinitionId -eq $rol.Id }
+          $pol = $policies | Where-Object { $_.Id -eq $ass.PolicyId }
           $rules = Get-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id
           
           Write-Host "    Approval_EndUser_Assignment"
-          $rul = $rules | where { $_.Id -eq "Approval_EndUser_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Approval_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -247,7 +247,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    AuthenticationContext_EndUser_Assignment"
-          $rul = $rules | where { $_.Id -eq "AuthenticationContext_EndUser_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "AuthenticationContext_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -258,7 +258,7 @@ if ($configurePIM)
 "@
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
-          $rul = $rules | where { $_.Id -eq "Expiration_Admin_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Expiration_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -270,7 +270,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Expiration_Admin_Eligibility"
-          $rul = $rules | where { $_.Id -eq "Expiration_Admin_Eligibility" }
+          $rul = $rules | Where-Object { $_.Id -eq "Expiration_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -282,7 +282,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Expiration_EndUser_Assignment"
-          $rul = $rules | where { $_.Id -eq "Expiration_EndUser_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Expiration_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -295,7 +295,7 @@ if ($configurePIM)
 
 
           Write-Host "    Enablement_Admin_Eligibility"
-          $rul = $rules | where { $_.Id -eq "Enablement_Admin_Eligibility" }
+          $rul = $rules | Where-Object { $_.Id -eq "Enablement_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -306,7 +306,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Enablement_Admin_Assignment"
-          $rul = $rules | where { $_.Id -eq "Enablement_Admin_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Enablement_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -319,7 +319,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Enablement_EndUser_Assignment"
-          $rul = $rules | where { $_.Id -eq "Enablement_EndUser_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Enablement_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -344,7 +344,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Admin_Admin_Eligibility"
-          $rul = $rules | where { $_.Id -eq "Notification_Admin_Admin_Eligibility" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Admin_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -361,7 +361,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Admin_Admin_Assignment"
-          $rul = $rules | where { $_.Id -eq "Notification_Admin_Admin_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Admin_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -378,7 +378,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Admin_EndUser_Assignment"
-          $rul = $rules | where { $_.Id -eq "Notification_Admin_EndUser_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Admin_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -395,7 +395,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Approver_Admin_Eligibility"
-          $rul = $rules | where { $_.Id -eq "Notification_Approver_Admin_Eligibility" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Approver_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -412,7 +412,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Approver_Admin_Assignment"
-          $rul = $rules | where { $_.Id -eq "Notification_Approver_Admin_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Approver_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -429,7 +429,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Approver_EndUser_Assignment"
-          $rul = $rules | where { $_.Id -eq "Notification_Approver_EndUser_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Approver_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -444,7 +444,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Requestor_Admin_Eligibility"
-          $rul = $rules | where { $_.Id -eq "Notification_Requestor_Admin_Eligibility" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Requestor_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -461,7 +461,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Requestor_Admin_Assignment"
-          $rul = $rules | where { $_.Id -eq "Notification_Requestor_Admin_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Requestor_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -478,7 +478,7 @@ if ($configurePIM)
           Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Requestor_EndUser_Assignment"
-          $rul = $rules | where { $_.Id -eq "Notification_Requestor_EndUser_Assignment" }
+          $rul = $rules | Where-Object { $_.Id -eq "Notification_Requestor_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
@@ -511,15 +511,15 @@ foreach($roleName in $allRoles.Keys)
     {
         Write-Host "  Configuring permanent role"
         $newUsers = $permanentRoles[$roleName]
-        $role = $allBuiltInRoles | where { $_.DisplayName -eq $roleName }
+        $role = $allBuiltInRoles | Where-Object { $_.DisplayName -eq $roleName }
         $actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 
         #Adding new members
-        $newUsers | foreach {
+        $newUsers | Foreach-Object {
             $newMemb = $_
             if ($newMemb)
             {
-                $actMemb = $actMembs | where { $_.PrincipalId -eq $newMemb.Id}
+                $actMemb = $actMembs | Where-Object { $_.PrincipalId -eq $newMemb.Id}
                 if (-Not $actMemb)
                 {
                     Write-Host "    adding user $($newMemb.UserPrincipalName)" -ForegroundColor $CommandWarning
@@ -536,11 +536,11 @@ foreach($roleName in $allRoles.Keys)
             $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 
             #Adding new members
-            $newUsers | foreach {
+            $newUsers | Foreach-Object {
                 $newMemb = $_
                 if ($newMemb)
                 {
-                    $actMemb = $actMembs | where { $_.PrincipalId -eq $newMemb.Id}
+                    $actMemb = $actMembs | Where-Object { $_.PrincipalId -eq $newMemb.Id}
                     if (-Not $actMemb)
                     {
                         Write-Host "    adding user $($newMemb.UserPrincipalName)" -ForegroundColor $CommandWarning
@@ -580,23 +580,23 @@ foreach($roleName in $allRoles.Keys)
         Write-Host "  Configuring permanent role"
         $newUsers = $permanentRoles[$roleName]
 
-        $role = $allBuiltInRoles | where { $_.DisplayName -eq $roleName }
+        $role = $allBuiltInRoles | Where-Object { $_.DisplayName -eq $roleName }
         $actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
         # TODO "roleDefinitionId eq '$($role.Id)' and principalOrganizationId eq '$AlyaTenantId'" not working
-        $actMembs = $actMembs | where { $_.principalOrganizationId -eq $AlyaTenantId }
+        $actMembs = $actMembs | Where-Object { $_.principalOrganizationId -eq $AlyaTenantId }
         if ($configurePIM)
         {
           $actEliMembs = Get-MgRoleManagementDirectoryRoleAssignmentSchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty "*"
         }
 
         #Removing inactivated members
-        $actMembs | foreach {
+        $actMembs | Foreach-Object {
             $actMemb = $_
             if ($actMemb)
             {
                 if ($configurePIM)
                 {
-                  if (($actEliMembs | where { $_.PrincipalId -eq $actMemb.PrincipalId }).AssignmentType -eq "Activated") {
+                  if (($actEliMembs | Where-Object { $_.PrincipalId -eq $actMemb.PrincipalId }).AssignmentType -eq "Activated") {
                     Write-Host "  '$($actMemb.PrincipalId)' has active assignment"
                     # TODO remove active assignment
                     continue
@@ -656,7 +656,7 @@ foreach($roleName in $allRoles.Keys)
             $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 
             #Adding new members
-            $actMembs | foreach {
+            $actMembs | Foreach-Object {
                 $actMemb = $_
                 if ($actMemb)
                 {

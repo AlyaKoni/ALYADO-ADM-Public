@@ -26,9 +26,9 @@ if (-Not $driverVersion)
     $rpf = 1
     $ctk = 0
 
-    $link = Invoke-WebRequest -Uri "https://www.nvidia.com/Download/processDriver.aspx?psid=$psid&pfid=$pfid&rpf=$rpf&osid=$osid&lid=$lid&lang=en-us&ctk=0" -Method GET -UseBasicParsing
-    $link = Invoke-WebRequest -Uri $link.Content -Method GET -UseBasicParsing
-    $link = ($link.Links | where { $_.outerHTML.Contains("lnkDwnldBtn") }).href
+    $link = Invoke-WebRequest -SkipHttpErrorCheck -Uri "https://www.nvidia.com/Download/processDriver.aspx?psid=$psid&pfid=$pfid&rpf=$rpf&osid=$osid&lid=$lid&lang=en-us&ctk=0" -Method GET -UseBasicParsing
+    $link = Invoke-WebRequest -SkipHttpErrorCheck -Uri $link.Content -Method GET -UseBasicParsing
+    $link = ($link.Links | Where-Object { $_.outerHTML.Contains("lnkDwnldBtn") }).href
 
     $link -match '/(\d+?\.\d+?)/' | Out-Null
     $driverVersion = $matches[1]

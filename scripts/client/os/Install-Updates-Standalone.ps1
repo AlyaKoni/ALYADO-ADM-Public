@@ -232,7 +232,7 @@ function Install-ModuleIfNotInstalled (
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
         #TODO Unload module
-        $paramIM = (Get-Command Install-Module).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
+        $paramIM = (Get-Command Install-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
         if ($paramIM)
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
@@ -328,7 +328,7 @@ Install-ModuleIfNotInstalled "PSWindowsUpdate"
 
 # Preparing service manager
 Write-Host "Preparing service manager" -ForegroundColor $CommandInfo
-$serviceMgrs = Get-WUServiceManager | Select -Property ServiceID
+$serviceMgrs = Get-WUServiceManager | Select-Object -Property ServiceID
 if ($serviceMgrs.ServiceID -notcontains "7971f918-a847-4430-9279-4a52d1efe18d")
 {
     Add-WUServiceManager -ServiceID "7971f918-a847-4430-9279-4a52d1efe18d" -AddServiceFlag 7
@@ -355,7 +355,7 @@ do
 Write-Host "Last WSUS result" -ForegroundColor $CommandInfo
 $result = Get-WULastResults
 Restart-Transscipt
-Write-Host ($result | fl | Out-String)
+Write-Host ($result | Format-List | Out-String)
 
 if ($retryCount -gt 5)
 {
@@ -368,7 +368,7 @@ $restartScript = [io.path]::GetFullPath($env:AllUsersProfile) + "\Microsoft\Wind
 Write-Host "Checking for updates" -ForegroundColor $CommandInfo
 $availableUpdates = Get-WindowsUpdate -MicrosoftUpdate -AcceptAll
 Restart-Transscipt
-Write-Host ($availableUpdates | fl | Out-String)
+Write-Host ($availableUpdates | Format-List | Out-String)
 if ($availableUpdates.Count -gt 0)
 {
     Write-Host "We have $($availableUpdates.Count) updates to install"

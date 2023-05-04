@@ -76,7 +76,7 @@ else
 }
 
 <#
-$policy = Get-MgPolicyAuthorizationPolicy -All | where { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgPolicyAuthorizationPolicy -All | Where-Object { $_.Id -eq "authorizationPolicy" }
 if ($policy.AllowUserConsentForRiskyApps)
 {
     Write-Warning "App consent for users was disabled. Enabling it now"
@@ -85,13 +85,13 @@ if ($policy.AllowUserConsentForRiskyApps)
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions @{
         "PermissionGrantPoliciesAssigned" = @("managePermissionGrantsForSelf.microsoft-user-default-low") }
 }
-Get-MgPolicyAuthorizationPolicy -All | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgPolicyAuthorizationPolicy -All | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 #>
 <#
 $policies = Get-MgPolicyPermissionGrantPolicy -All
-$policy = $policies | where { $_.DisplayName -eq "Default User Low Risk Policy" }
-$policy = $policies | where { $_.DisplayName -eq "Application Admin Policy" }
-$policy = $policies | where { $_.DisplayName -eq "Default User Legacy Policy" }
+$policy = $policies | Where-Object { $_.DisplayName -eq "Default User Low Risk Policy" }
+$policy = $policies | Where-Object { $_.DisplayName -eq "Application Admin Policy" }
+$policy = $policies | Where-Object { $_.DisplayName -eq "Default User Legacy Policy" }
 if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
 {
     Write-Warning "App consent for users was disabled. Enabling it now"

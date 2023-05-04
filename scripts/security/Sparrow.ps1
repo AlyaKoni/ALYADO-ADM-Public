@@ -276,7 +276,7 @@ Function Get-UALData {
     }
 }
 
-Function Get-AzureDomains{
+Function Get-AzureDomains {
 
     [cmdletbinding()]Param(
         [Parameter(Mandatory=$true)]
@@ -311,7 +311,7 @@ Function Get-AzureDomains{
     $DomainArr | Export-Csv $ExportDir\Domain_List.csv -NoTypeInformation
 }
 
-Function Get-AzureSPAppRoles{
+Function Get-AzureSPAppRoles {
 
     [cmdletbinding()]Param(
         [Parameter(Mandatory=$true)]

@@ -28,8 +28,8 @@ function DownloadAndInstallCSOM($dir, $nuget, $nuvrs)
 
 function PrepareCSOM($dir, $nuget)
 {
-    $resp = Invoke-WebRequest –Uri "https://www.nuget.org/packages/$nuget"
-    $nusrc = ($resp).Links | where { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
+    $resp = Invoke-WebRequest -SkipHttpErrorCheck –Uri "https://www.nuget.org/packages/$nuget"
+    $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$PSScriptRoot\$dir\lib\net45"))
     {
@@ -122,7 +122,7 @@ if ([string]::IsNullOrEmpty($migSites[0].DstCol))
 	exit
 }
 
-$migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | foreach {
+$migSites | Where-Object { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | Foreach-Object {
 
     if ([string]::IsNullOrEmpty($_.DstUrl))
     {
@@ -138,7 +138,7 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
 	Write-Output "  Site $($fullUrl)"
 	Write-Output "   with data from $($fullSrcUrl)"
 
-    $onpremWebs = $onpremNavs | where { $_.Site -eq $fullSrcUrl } | select -ExpandProperty Web -Unique
+    $onpremWebs = $onpremNavs | Where-Object { $_.Site -eq $fullSrcUrl } | Select-Object -ExpandProperty Web -Unique
     foreach ($onpremWeb in $onpremWebs)
     {
         $onlineWeb = $onpremWeb
@@ -155,19 +155,19 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
         {
 	        Write-Output "      NavType $($navType)"
 
-            $onpremWebNodes = $onpremNavs | where { $_.Site -eq $fullSrcUrl -and $_.Web -eq $onpremWeb -and $_.Location -eq $navType -and $_.ParentId -eq "" }
+            $onpremWebNodes = $onpremNavs | Where-Object { $_.Site -eq $fullSrcUrl -and $_.Web -eq $onpremWeb -and $_.Location -eq $navType -and $_.ParentId -eq "" }
 
-            <#$onlineWebNodes = $onlineNavs | where { $_.Site -eq $fullUrl -and $_.Web -eq $onlineWeb -and $_.Location -eq $navType -and $_.ParentId -eq "" -and $_.Url -eq "" }
+            <#$onlineWebNodes = $onlineNavs | Where-Object { $_.Site -eq $fullUrl -and $_.Web -eq $onlineWeb -and $_.Location -eq $navType -and $_.ParentId -eq "" -and $_.Url -eq "" }
             foreach ($onlineWebNode in $onlineWebNodes)
             {
                 $onlineWebNode.Delete = $true
             }#>
-            $onlineWebNodes = $onlineNavs | where { $_.Site -eq $fullUrl -and $_.Web -eq $onlineWeb -and $_.Location -eq $navType -and $_.ParentId -eq "" -and $_.Delete -eq $false }
+            $onlineWebNodes = $onlineNavs | Where-Object { $_.Site -eq $fullUrl -and $_.Web -eq $onlineWeb -and $_.Location -eq $navType -and $_.ParentId -eq "" -and $_.Delete -eq $false }
 
-            $titles = $onlineWebNodes | select -ExpandProperty Title -Unique
+            $titles = $onlineWebNodes | Select-Object -ExpandProperty Title -Unique
             foreach ($title in $titles)
             {
-                $checkNodes = $onlineWebNodes | where { $_.Title -eq $title -and $_.Delete -eq $false }
+                $checkNodes = $onlineWebNodes | Where-Object { $_.Title -eq $title -and $_.Delete -eq $false }
                 for ($i=0; $i -lt $checkNodes.Length; $i++)
                 {
                     if ($i -gt 0)
@@ -176,14 +176,14 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
                     }
                     else
                     {
-                        $onpremNode = $onpremWebNodes | where { $_.Title -eq $title }
+                        $onpremNode = $onpremWebNodes | Where-Object { $_.Title -eq $title }
                         if ($checkNodes[$i].IsVisible -ne $onpremNode.IsVisible)
                         {
                             $checkNodes[$i].MakeVisible = $onpremNode.IsVisible
                         }
                     }
                 }
-                $checkNodes = $onpremWebNodes | where { $_.Title -eq $title }
+                $checkNodes = $onpremWebNodes | Where-Object { $_.Title -eq $title }
                 if (-Not $checkNodes -Or $checkNodes.Length -eq 0)
                 {
                     $renamed = $false
@@ -192,23 +192,23 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
                         if ($onpremWebNode.Title -like $title+"*")
                         {
                             $renamed = $true
-                            ($onlineWebNodes | where { $_.Title -eq $title }).RenameTo = $onpremWebNode.Title
+                            ($onlineWebNodes | Where-Object { $_.Title -eq $title }).RenameTo = $onpremWebNode.Title
                             break
                         }
                     }
                     if (-Not $renamed)
                     {
-                        ($onlineWebNodes | where { $_.Title -eq $title }).Delete = $true
+                        ($onlineWebNodes | Where-Object { $_.Title -eq $title }).Delete = $true
                     }
                 }
             }
 
             foreach ($onpremWebNode in $onpremWebNodes)
             {
-                $checkNodes = $onlineWebNodes | where { $_.Title -eq $onpremWebNode.Title -and $_.Delete -eq $false }
+                $checkNodes = $onlineWebNodes | Where-Object { $_.Title -eq $onpremWebNode.Title -and $_.Delete -eq $false }
                 if (-Not $checkNodes -Or $checkNodes.Length -Eq 0)
                 {
-                    $renamedOne = $onlineWebNodes | where { $_.RenameTo -eq $onpremWebNode.Title }
+                    $renamedOne = $onlineWebNodes | Where-Object { $_.RenameTo -eq $onpremWebNode.Title }
                     if (-Not $renamedOne -Or $renamedOne.Length -Eq 0)
                     {
                         $fnd = New-Object System.Object
@@ -234,11 +234,11 @@ Write-Output "Fixing"
 $totAdd = 0
 $totDel = 0
 $totRen = 0
-$onlineSites = $onlineNavs | select -ExpandProperty Site -Unique
+$onlineSites = $onlineNavs | Select-Object -ExpandProperty Site -Unique
 foreach ($onlineSite in $onlineSites)
 {
     Write-Host "  $($onlineSite)"
-    $onlineWebs = $onlineNavs | where { $_.Site -eq $onlineSite } | select -ExpandProperty Web -Unique
+    $onlineWebs = $onlineNavs | Where-Object { $_.Site -eq $onlineSite } | Select-Object -ExpandProperty Web -Unique
     foreach ($onlineWeb in $onlineWebs)
     {
         Write-Host "    $($onlineWeb)"
@@ -253,7 +253,7 @@ foreach ($onlineSite in $onlineSites)
             $ctx.executeQuery()
 
             Write-Host "        Adds:"
-            $onlineNodes = $onlineNavs | where { $_.Site -eq $onlineSite -And $_.Web -eq $onlineWeb -and $_.Location -eq $navType -And $_.Add -eq $true }
+            $onlineNodes = $onlineNavs | Where-Object { $_.Site -eq $onlineSite -And $_.Web -eq $onlineWeb -and $_.Location -eq $navType -And $_.Add -eq $true }
             foreach ($onlineNode in $onlineNodes)
             {
                 Write-Host "          $($onlineNode.Title)"        
@@ -267,7 +267,7 @@ foreach ($onlineSite in $onlineSites)
             }
 
             Write-Host "        Deletes:"
-            $onlineNodes = $onlineNavs | where { $_.Site -eq $onlineSite -And $_.Web -eq $onlineWeb -and $_.Location -eq $navType -And $_.Delete -eq $true }
+            $onlineNodes = $onlineNavs | Where-Object { $_.Site -eq $onlineSite -And $_.Web -eq $onlineWeb -and $_.Location -eq $navType -And $_.Delete -eq $true }
             foreach ($onlineNode in $onlineNodes)
             {
                 Write-Host "          $($onlineNode.Title)" 
@@ -293,7 +293,7 @@ foreach ($onlineSite in $onlineSites)
             }
 
             Write-Host "        Renames:"
-            $onlineNodes = $onlineNavs | where { $_.Site -eq $onlineSite -And $_.Web -eq $onlineWeb -and $_.Location -eq $navType -And $_.RenameTo -ne $null }
+            $onlineNodes = $onlineNavs | Where-Object { $_.Site -eq $onlineSite -And $_.Web -eq $onlineWeb -and $_.Location -eq $navType -And $_.RenameTo -ne $null }
             foreach ($onlineNode in $onlineNodes)
             {
                 Write-Host "          '$($onlineNode.Title)' to '$($onlineNode.RenameTo)'" 

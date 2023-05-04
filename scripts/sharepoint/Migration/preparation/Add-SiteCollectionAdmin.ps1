@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 Add-PSSnapin Microsoft.SharePoint.PowerShell -ErrorAction Stop
 
-Get-SPWebApplication | foreach { 
+Get-SPWebApplication | Foreach-Object { 
     $webApp = $_ 
 	foreach($siteCol in $webApp.Sites) {
 	    foreach($siteCol in $webApp.Sites) {

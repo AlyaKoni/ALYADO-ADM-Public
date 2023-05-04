@@ -61,16 +61,16 @@ Write-Host "=====================================================`n" -Foreground
 
 #Main 
 Write-Host "CsOnlineUser account:" -ForegroundColor $CommandInfo
-Get-CsOnlineUser | select -Property AccountType, UserPrincipalName, AccountEnabled, AssignedPlan | ft
+Get-CsOnlineUser | Select-Object -Property AccountType, UserPrincipalName, AccountEnabled, AssignedPlan | Format-Table
 
 Write-Host "CsOnlineUser lines:" -ForegroundColor $CommandInfo
-Get-CsOnlineUser | select -Property UserPrincipalName, LineURI, OnPremLineURI | ft
+Get-CsOnlineUser | Select-Object -Property UserPrincipalName, LineURI, OnPremLineURI | Format-Table
 
-Write-Host "CsOnlineVoiceUsers:" -ForegroundColor $CommandInfo | ft
-Get-CsOnlineVoiceUser | select -Property Name, EnterpriseVoiceEnabled, Number, PstnConnectivity | ft
+Write-Host "CsOnlineVoiceUsers:" -ForegroundColor $CommandInfo | Format-Table
+Get-CsOnlineVoiceUser | Select-Object -Property Name, EnterpriseVoiceEnabled, Number, PstnConnectivity | Format-Table
 
-Write-Host "CsOnlineApplicationInstance:" -ForegroundColor $CommandInfo | ft
-Get-CsOnlineApplicationInstance | select -Property UserPrincipalName, DisplayName, PhoneNumber | ft
+Write-Host "CsOnlineApplicationInstance:" -ForegroundColor $CommandInfo | Format-Table
+Get-CsOnlineApplicationInstance | Select-Object -Property UserPrincipalName, DisplayName, PhoneNumber | Format-Table
 
 #Stopping Transscript
 Stop-Transcript

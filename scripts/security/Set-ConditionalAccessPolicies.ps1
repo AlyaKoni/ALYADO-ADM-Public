@@ -127,7 +127,7 @@ $ExcludeRoleIds = @()
 $allRoles = Get-MgRoleManagementDirectoryRoleDefinition -All
 foreach($roleName in $roleDefs)
 {
-    $role = $allRoles | where { $_.Displayname -eq $roleName }
+    $role = $allRoles | Where-Object { $_.Displayname -eq $roleName }
     if (-Not $role)
     {
         throw "Role $roleName not found!"
@@ -135,7 +135,7 @@ foreach($roleName in $roleDefs)
     $IncludeRoleIds += $role.Id
 }
 $ExcludeRoleIds = $IncludeRoleIds
-$syncrole = $allRoles | where { $_.Displayname -eq "Directory Synchronization Accounts" }
+$syncrole = $allRoles | Where-Object { $_.Displayname -eq "Directory Synchronization Accounts" }
 $ExcludeRoleIds += $syncrole.Id
 
 # Getting actual access policies
@@ -161,7 +161,7 @@ $grantcontrols  = @{
     BuiltInControls = @("mfa")
     Operator = "OR"
 }
-$policyObj = $ActPolicies | where { $_.DisplayName -eq "MFA: Required for all admins" }
+$policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "MFA: Required for all admins" }
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'MFA: Required for all admins'"
@@ -231,7 +231,7 @@ $grantcontrols  = @{
     BuiltInControls = @("mfa")
     Operator = "OR"
 }
-$policyObj = $ActPolicies | where { $_.DisplayName -eq "MFA: Required for all users" }
+$policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "MFA: Required for all users" }
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'MFA: Required for all users'"
@@ -273,7 +273,7 @@ $sessioncontrols  = @{
         mode = "Always"
     }
 }
-$policyObj = $ActPolicies | where { $_.DisplayName -eq "SESSION: For all admins" }
+$policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: For all admins" }
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: For all admins'"
@@ -316,7 +316,7 @@ $sessioncontrols  = @{
         mode = "Always"
     }
 }
-$policyObj = $ActPolicies | where { $_.DisplayName -eq "SESSION: For all users" }
+$policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: For all users" }
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: For all users'"

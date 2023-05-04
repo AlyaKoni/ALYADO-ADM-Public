@@ -94,10 +94,10 @@ else
             do
             {
                 Start-Sleep -Seconds 5
-                $process = Get-Process -Name "msiexec" -IncludeUserName -ErrorAction SilentlyContinue | where { $_.UserName -notlike "*\SYSTEM" }
+                $process = Get-Process -Name "msiexec" -IncludeUserName -ErrorAction SilentlyContinue | Where-Object { $_.UserName -notlike "*\SYSTEM" }
                 if (-Not $process)
                 {
-                    $process = Get-Process -Name "msiexec.exe" -IncludeUserName -ErrorAction SilentlyContinue | where { $_.UserName -notlike "*\SYSTEM" }
+                    $process = Get-Process -Name "msiexec.exe" -IncludeUserName -ErrorAction SilentlyContinue | Where-Object { $_.UserName -notlike "*\SYSTEM" }
                 }
 
             } while ($process)

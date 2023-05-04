@@ -538,7 +538,7 @@ foreach($application in $intuneApplications)
     $userStatuses = Get-MsGraphObject -Uri $uri
     $userStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_userStatuses.json")) -Force
 }
-$mdmApps = $intuneApplications | where { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#microsoft.graph.iosVppApp")) }
+$mdmApps = $intuneApplications | Where-Object { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#microsoft.graph.iosVppApp")) }
 foreach($mdmApp in $mdmApps)
 {
     $uri = "/beta/deviceAppManagement/mobileApps/$($mdmApp.id)?`$select=largeIcon"
@@ -546,12 +546,12 @@ foreach($mdmApp in $mdmApps)
     $mdmApp.largeIcon = $appIcon.largeIcon
 }
 
-$intuneApplications | where { ($_.'@odata.type').Contains("managed") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMAM.json")) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managed") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMAM.json")) -Force
 $mdmApps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDMfull.json")) -Force
-$intuneApplications | where { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#microsoft.graph.iosVppApp")) -and (!($_.'@odata.type').Contains("#microsoft.graph.windowsAppX")) -and (!($_.'@odata.type').Contains("#microsoft.graph.androidForWorkApp")) -and (!($_.'@odata.type').Contains("#microsoft.graph.windowsMobileMSI")) -and (!($_.'@odata.type').Contains("#microsoft.graph.androidLobApp")) -and (!($_.'@odata.type').Contains("#microsoft.graph.iosLobApp")) -and (!($_.'@odata.type').Contains("#microsoft.graph.microsoftStoreForBusinessApp")) } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDM.json")) -Force
-$intuneApplications | where { ($_.'@odata.type').Contains("win32") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsWIN32.json")) -Force
-$intuneApplications | where { ($_.'@odata.type').Contains("managedAndroidStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsAndroid.json")) -Force
-$intuneApplications | where { ($_.'@odata.type').Contains("managedIOSStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsIos.json")) -Force
+$intuneApplications | Where-Object { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#microsoft.graph.iosVppApp")) -and (!($_.'@odata.type').Contains("#microsoft.graph.windowsAppX")) -and (!($_.'@odata.type').Contains("#microsoft.graph.androidForWorkApp")) -and (!($_.'@odata.type').Contains("#microsoft.graph.windowsMobileMSI")) -and (!($_.'@odata.type').Contains("#microsoft.graph.androidLobApp")) -and (!($_.'@odata.type').Contains("#microsoft.graph.iosLobApp")) -and (!($_.'@odata.type').Contains("#microsoft.graph.microsoftStoreForBusinessApp")) } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDM.json")) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("win32") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsWIN32.json")) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managedAndroidStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsAndroid.json")) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managedIOSStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsIos.json")) -Force
 
 #mobileAppConfigurations
 $uri = "/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments"
@@ -778,21 +778,21 @@ if ($doUserDataExport)
         {
             if ($config.userStatuses)
             {
-                $config.userStatuses = $config.userStatuses | where { $_.userPrincipalName -eq $upn}
+                $config.userStatuses = $config.userStatuses | Where-Object { $_.userPrincipalName -eq $upn}
             }
         }
         foreach($script in $scripts)
         {
             if ($script.userRunStates)
             {
-                $script.userRunStates = $script.userRunStates | where { $_.userPrincipalName -eq $upn}
+                $script.userRunStates = $script.userRunStates | Where-Object { $_.userPrincipalName -eq $upn}
             }
         }
         foreach($application in $applications)
         {
             if ($application.userStatuses)
             {
-                $application.userStatuses = $application.userStatuses | where { $_.userPrincipalName -eq $upn}
+                $application.userStatuses = $application.userStatuses | Where-Object { $_.userPrincipalName -eq $upn}
             }
         }
         try
@@ -870,7 +870,7 @@ if ($doUserDataExport)
         {
             #iosUpdateStatuses
             $uri = "/beta/deviceManagement/iosUpdateStatuses"
-            $iosUpdateStatuses = Get-MsGraphObject -Uri $uri | where { $_.userPrincipalName -ieq $upn }
+            $iosUpdateStatuses = Get-MsGraphObject -Uri $uri | Where-Object { $_.userPrincipalName -ieq $upn }
             $iosUpdateStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\iosUpdateStatuses.json")) -Force
         } catch { }
         try
@@ -917,14 +917,14 @@ if ($doUserDataExport)
                         {
                             if ($config.deviceStatuses)
                             {
-                                $config.deviceStatusesForDevice += $config.deviceStatuses | where { $_.id.Contains($device.id) }
+                                $config.deviceStatusesForDevice += $config.deviceStatuses | Where-Object { $_.id.Contains($device.id) }
                             }
                         }
                         foreach($application in $applications)
                         {
                             if ($application.deviceStatuses)
                             {
-                                $application.deviceStatusesForDevice += $application.deviceStatuses | where { $_.id.Contains($device.id) }
+                                $application.deviceStatusesForDevice += $application.deviceStatuses | Where-Object { $_.id.Contains($device.id) }
                             }
                         }
 

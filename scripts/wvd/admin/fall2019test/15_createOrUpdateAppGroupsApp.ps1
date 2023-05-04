@@ -111,7 +111,7 @@ if (-Not $Global:RdsContext)
 
 # Deleting app group
 Write-Host "Deleting app group $AppGroupNameToDelete" -ForegroundColor $CommandInfo
-$appToDelete = Get-RdsAppGroup -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName | where { $_.AppGroupName -eq $AppGroupNameToDelete }
+$appToDelete = Get-RdsAppGroup -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName | Where-Object { $_.AppGroupName -eq $AppGroupNameToDelete }
 if ($appToDelete)
 {
     Remove-RdsAppGroup -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -Name $AppGroupNameToDelete
@@ -134,7 +134,7 @@ foreach($appGrp in $appsToGroup)
     $appGrpApps = Get-RdsRemoteApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName $appGrpName
     foreach ($appName in $appsFromGrp)
     {
-        $existApp = $appGrpApps | where { $_.RemoteAppName -eq $appName }
+        $existApp = $appGrpApps | Where-Object { $_.RemoteAppName -eq $appName }
         if (-Not $existApp)
         {
             Write-Host " - Adding app $($appName)"
@@ -173,7 +173,7 @@ foreach($appGrp in $appsToGroup)
     $appGrpApps = Get-RdsRemoteApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName $appGrpName
     foreach ($existApp in $appGrpApps)
     {
-        $missingApp = $appsFromGrp | where { $_ -eq $existApp.RemoteAppName }
+        $missingApp = $appsFromGrp | Where-Object { $_ -eq $existApp.RemoteAppName }
         if (-Not $missingApp)
         {
             Write-Host " - Removing app $($existApp.RemoteAppName)"
@@ -189,7 +189,7 @@ foreach($appGrp in $appsToGroup)
         {
             $allMembs += $admin
         }
-        $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $admin }
+        $grpUser = $grpUsers | Where-Object { $_.UserPrincipalName -eq $admin }
         if (-Not $grpUser)
         {
             Write-Host "   - Adding user $($admin)"
@@ -207,7 +207,7 @@ foreach($appGrp in $appsToGroup)
             {
                 $allMembs += $memb.UserPrincipalName
             }
-            $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $memb.UserPrincipalName }
+            $grpUser = $grpUsers | Where-Object { $_.UserPrincipalName -eq $memb.UserPrincipalName }
             if (-Not $grpUser)
             {
                 Write-Host "   - Adding user $($memb.UserPrincipalName)"
@@ -217,7 +217,7 @@ foreach($appGrp in $appsToGroup)
     }
     foreach ($grpUser in $grpUsers)
     {
-        $memb = $allMembs | where { $_ -eq $grpUser.UserPrincipalName }
+        $memb = $allMembs | Where-Object { $_ -eq $grpUser.UserPrincipalName }
         if (-Not $memb)
         {
             Write-Host " - Removing user $($grpUser.UserPrincipalName)"
@@ -227,7 +227,7 @@ foreach($appGrp in $appsToGroup)
 }
 
 
-#Get-RdsStartMenuApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Desktop Application Group" | select AppAlias
+#Get-RdsStartMenuApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Desktop Application Group" | Select-Object AppAlias
 #(Get-RdsRemoteApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Standard Apps").FriendlyName
 #Remove-RdsRemoteApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Standard Apps" -Name "DynamicsCRM"
 #Get-RdsRemoteApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Standard Apps" -Name "Quorum"

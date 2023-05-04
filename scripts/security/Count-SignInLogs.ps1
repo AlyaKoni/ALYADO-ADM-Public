@@ -106,26 +106,26 @@ foreach($user in $users)
             $allLogs += [PSCustomObject]@{
                 "UPN" = $user.UserPrincipalName
                 "Name" = $user.DisplayName
-                "Count" = ($logs | where { $_.IsInteractive -eq $true }).Count
-                "Count$countByCountry" = ($logs | where { $_.IsInteractive -eq $true -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
-                "CountNot$countByCountry" = ($logs | where { $_.IsInteractive -eq $true -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
-                "LastDayCount" = ($logs | where { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay }).Count
-                "LastDayCount$countByCountry" = ($logs | where { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
-                "LastDayCountNot$countByCountry" = ($logs | where { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
-                "LastWeekCount" = ($logs | where { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek }).Count
-                "LastWeekCount$countByCountry" = ($logs | where { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
-                "LastWeekCountNot$countByCountry" = ($logs | where { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
-                "FailureCount" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true }).Count
-                "FailureCount$countByCountry" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
-                "FailureCountNot$countByCountry" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
-                "FailureLastDayCount" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay }).Count
-                "FailureLastDayCount$countByCountry" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
-                "FailureLastDayCountNot$countByCountry" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
-                "FailureLastWeekCount" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek }).Count
-                "FailureLastWeekCount$countByCountry" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
-                "FailureLastWeekCountNot$countByCountry" = ($logs | where { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
-                #NonInteractiveCount = ($logs | where { $_.IsInteractive -eq $false }).Count
-                "RiskCount" = ($logs | where { $_.RiskState -ne "none" }).Count
+                "Count" = ($logs | Where-Object { $_.IsInteractive -eq $true }).Count
+                "Count$countByCountry" = ($logs | Where-Object { $_.IsInteractive -eq $true -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
+                "CountNot$countByCountry" = ($logs | Where-Object { $_.IsInteractive -eq $true -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
+                "LastDayCount" = ($logs | Where-Object { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay }).Count
+                "LastDayCount$countByCountry" = ($logs | Where-Object { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
+                "LastDayCountNot$countByCountry" = ($logs | Where-Object { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
+                "LastWeekCount" = ($logs | Where-Object { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek }).Count
+                "LastWeekCount$countByCountry" = ($logs | Where-Object { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
+                "LastWeekCountNot$countByCountry" = ($logs | Where-Object { $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
+                "FailureCount" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true }).Count
+                "FailureCount$countByCountry" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
+                "FailureCountNot$countByCountry" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
+                "FailureLastDayCount" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay }).Count
+                "FailureLastDayCount$countByCountry" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
+                "FailureLastDayCountNot$countByCountry" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastDay -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
+                "FailureLastWeekCount" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek }).Count
+                "FailureLastWeekCount$countByCountry" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
+                "FailureLastWeekCountNot$countByCountry" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
+                #NonInteractiveCount = ($logs | Where-Object { $_.IsInteractive -eq $false }).Count
+                "RiskCount" = ($logs | Where-Object { $_.RiskState -ne "none" }).Count
                 "MinDate" = $min
                 "MaxDate" = $max
             }
@@ -146,7 +146,7 @@ foreach($user in $users)
     } while ($true)
 }
 
-$allLogs | ft
+$allLogs | Format-Table
 
 do
 {

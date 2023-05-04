@@ -62,22 +62,22 @@ Write-Host "=====================================================`n" -Foreground
 
 # Enabling AIP integration
 Write-Host "Enabling AIP integration in AAD" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
     $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id
-    $Setting = Get-MgDirectorySetting | where { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
-$Value = $Setting.Values | where { $_.Name -eq "EnableMIPLabels" }
+$Value = $Setting.Values | Where-Object { $_.Name -eq "EnableMIPLabels" }
 if ($Value.Value -eq $true) {
     Write-Host "Setting 'EnableMIPLabels' was already set to '$true'"
 } 
 else {
     Write-Warning "Setting 'EnableMIPLabels' was set to '$($Value.Value)' updating to '$true'"
-    ($Setting.Values | where { $_.Name -eq "EnableMIPLabels" }).Value = $true
+    ($Setting.Values | Where-Object { $_.Name -eq "EnableMIPLabels" }).Value = $true
 }
 
 Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values

@@ -29,8 +29,8 @@ function DownloadAndInstallCSOM($dir, $nuget, $nuvrs)
 
 function PrepareCSOM($dir, $nuget)
 {
-    $resp = Invoke-WebRequest –Uri "https://www.nuget.org/packages/$nuget"
-    $nusrc = ($resp).Links | where { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
+    $resp = Invoke-WebRequest -SkipHttpErrorCheck –Uri "https://www.nuget.org/packages/$nuget"
+    $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$PSScriptRoot\$dir\lib\net45"))
     {
@@ -82,7 +82,7 @@ function Process-Folder($folderOnPrem, $folderOnline, $webUrlOnPrem, $webUrlOnli
 
     foreach($sfolder in $folderOnPrem.Folders)
     {
-        $oFolder = $folderOnline.Folders | where { $_.Name -eq $sfolder.Name }
+        $oFolder = $folderOnline.Folders | Where-Object { $_.Name -eq $sfolder.Name }
         if (-Not $oFolder -Or $oFolder.ServerObjectIsNull)
         {
             $onlineFolder = $sfolder.ServerRelativeUrl
@@ -110,7 +110,7 @@ function Process-Folder($folderOnPrem, $folderOnline, $webUrlOnPrem, $webUrlOnli
 
     foreach($file in $folderOnPrem.Files)
     {
-        $oFile = $folderOnline.Files | where { $_.Name -eq $file.Name }
+        $oFile = $folderOnline.Files | Where-Object { $_.Name -eq $file.Name }
         if (-Not $oFile -Or $oFile.ServerObjectIsNull)
         {
             $onlineFile = $file.ServerRelativeUrl
@@ -150,7 +150,7 @@ function RunWeb($onpremWeb, $onlineWeb, $fullSrcUrl, $fullDstUrl, $siteSrcUrl, $
 
         if (-Not $list.RootFolder.ServerRelativeUrl.Contains("/_catalogs") -and -Not $list.RootFolder.ServerRelativeUrl.Contains("/Style Library") -and $list.BaseType -eq "DocumentLibrary")
         {
-            $olist = $onlineWeb.Lists | where { $_.Title -eq $list.Title }
+            $olist = $onlineWeb.Lists | Where-Object { $_.Title -eq $list.Title }
             if (-Not $olist -Or $olist.ServerObjectIsNull)
             {
                 $onlineList = $list.RootFolder.ServerRelativeUrl
@@ -187,7 +187,7 @@ function RunWeb($onpremWeb, $onlineWeb, $fullSrcUrl, $fullDstUrl, $siteSrcUrl, $
     $ctxOnline.executeQuery()
     foreach($web in $onpremWeb.Webs)
     {
-        $oWeb = $onlineWeb.Webs | where { $_.Title -eq $web.Title }
+        $oWeb = $onlineWeb.Webs | Where-Object { $_.Title -eq $web.Title }
         if (-Not $oweb -Or $oweb.ServerObjectIsNull)
         {
             $onlineWeb = $web.ServerRelativeUrl
@@ -214,7 +214,7 @@ function RunWeb($onpremWeb, $onlineWeb, $fullSrcUrl, $fullDstUrl, $siteSrcUrl, $
 }
 
 $global:foundItems = @()
-$migSites | where { $migrateAll -or ($_.Command.ToLower() -eq "copy" -and $_.WebApplication -eq $webApplication) } | foreach {
+$migSites | Where-Object { $migrateAll -or ($_.Command.ToLower() -eq "copy" -and $_.WebApplication -eq $webApplication) } | Foreach-Object {
     if ([string]::IsNullOrEmpty($_.DstUrl))
     {
 	    $fullDstUrl = "$($sharepointSitesUrl)/$($_.DstCol)$($sharePointEnvSuffix)"

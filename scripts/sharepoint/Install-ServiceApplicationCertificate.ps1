@@ -132,7 +132,7 @@ $PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($CompName + $AzureCertificate
 $PfxCertPlainPasswordForRunAsAccount = "`$" + [Guid]::NewGuid().ToString() + "!"
 #Getting the certificate 
 $CertificateRetrieved = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AzureCertificateName
-$CertificateBytes = [System.Convert]::FromBase64String(($CertificateRetrieved.SecretValue | foreach { [System.Net.NetworkCredential]::new("", $_).Password }))
+$CertificateBytes = [System.Convert]::FromBase64String(($CertificateRetrieved.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password }))
 $CertCollection = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
 $CertCollection.Import($CertificateBytes, $null, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
 #Export the .pfx file 

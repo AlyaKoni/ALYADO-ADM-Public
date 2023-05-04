@@ -62,7 +62,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking LOB apps creation
 Write-Host "Checking LOB apps creation" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if ($policy.DefaultUserRolePermissions.AllowedToCreateApps)
 {
     Write-Warning "LOB apps creation was enabled. Disabling it now"
@@ -70,7 +70,7 @@ if ($policy.DefaultUserRolePermissions.AllowedToCreateApps)
     $RolePermissions["allowedToCreateApps"] = $false
     Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-Get-MgPolicyAuthorizationPolicy | where { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

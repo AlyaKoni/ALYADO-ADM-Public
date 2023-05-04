@@ -107,7 +107,7 @@ foreach($application in $applications)
         if ($deviceStatus.installState -eq "failed")
         {
             Write-Host "  Dev: $($deviceStatus.deviceName)"
-            $dev = $devices | where { $_.id -eq $deviceStatus.deviceId }
+            $dev = $devices | Where-Object { $_.id -eq $deviceStatus.deviceId }
             <#$null = $report.Add(@{
                 errType = "DeviceFailure"
                 appId = $applicationRes.id
@@ -165,7 +165,7 @@ foreach($application in $applications)
             #Write-Host "  Usr: $($statusId)"
             #$uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/userStatuses/$($statusId)/deviceStatuses"
             #$userDeviceStatuses = Get-MsGraphObject -Uri $uri
-            #$userDeviceStatuses | fl
+            #$userDeviceStatuses | Format-List
         }
     }#>
 }

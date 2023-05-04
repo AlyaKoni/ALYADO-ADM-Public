@@ -28,8 +28,8 @@ function DownloadAndInstallCSOM($dir, $nuget, $nuvrs)
 
 function PrepareCSOM($dir, $nuget)
 {
-    $resp = Invoke-WebRequest –Uri "https://www.nuget.org/packages/$nuget"
-    $nusrc = ($resp).Links | where { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
+    $resp = Invoke-WebRequest -SkipHttpErrorCheck –Uri "https://www.nuget.org/packages/$nuget"
+    $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$PSScriptRoot\$dir\lib\net45"))
     {
@@ -83,7 +83,7 @@ if ([string]::IsNullOrEmpty($migSites[0].DstCol))
 	exit
 }
 
-$migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | foreach {
+$migSites | Where-Object { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.WebApplication -eq $webApplication } | Foreach-Object {
 
     if ([string]::IsNullOrEmpty($_.DstUrl))
     {
@@ -99,10 +99,10 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
 	Write-Host "  Site $($fullUrl)"
 	Write-Host "   with data from $($fullSrcUrl)"
 
-    $onpremWebs = $onpremWPs | where { $_.Site -eq $fullSrcUrl } | select -ExpandProperty Web -Unique
+    $onpremWebs = $onpremWPs | Where-Object { $_.Site -eq $fullSrcUrl } | Select-Object -ExpandProperty Web -Unique
     foreach ($onpremWeb in $onpremWebs)
     {
-        $onpremPages = $onpremWPs | where { $_.Site -eq $fullSrcUrl -and $_.Web -eq $onpremWeb } | select -ExpandProperty Page -Unique
+        $onpremPages = $onpremWPs | Where-Object { $_.Site -eq $fullSrcUrl -and $_.Web -eq $onpremWeb } | Select-Object -ExpandProperty Page -Unique
         foreach ($onpremPage in $onpremPages)
         {
             $onlineWeb = $onpremWeb
@@ -117,11 +117,11 @@ $migSites | where { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -and $_.
             $onlinePage = $onpremPage.Replace($onpremWeb,$onlineWeb)
 	        Write-Host "     Page $($onlinePage)"
 
-            $onpremPageWPs = $onpremWPs | where { $_.Site -eq $fullSrcUrl -and $_.Page -eq $onpremPage }
+            $onpremPageWPs = $onpremWPs | Where-Object { $_.Site -eq $fullSrcUrl -and $_.Page -eq $onpremPage }
             foreach ($onpremPageWP in $onpremPageWPs)
             {
 	            Write-Host "       WP $($onpremPageWP.WPTitle)"
-                $onlinePageWPFnd = $onlineWPs | where { $_.Site -eq $fullUrl -and $_.Page -eq $onlinePage -and $_.WPTitle -eq $onpremPageWP.WPTitle -and $_.WPHidden -eq $onpremPageWP.WPHidden -and $_.WPDisplayName -eq $onpremPageWP.WPDisplayName }
+                $onlinePageWPFnd = $onlineWPs | Where-Object { $_.Site -eq $fullUrl -and $_.Page -eq $onlinePage -and $_.WPTitle -eq $onpremPageWP.WPTitle -and $_.WPHidden -eq $onpremPageWP.WPHidden -and $_.WPDisplayName -eq $onpremPageWP.WPDisplayName }
                 if ($onlinePageWPFnd.Count -gt 1)
                 {
                     Write-Host "         *** $($onlinePageWPFnd.Count) duplicates found" -ForegroundColor Red

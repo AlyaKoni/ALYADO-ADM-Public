@@ -139,7 +139,7 @@ else
 
         # Installing drivers
         Write-Host "Checking Sharp driver"
-        $driverSharp = Get-PrinterDriver | where { $_.Name -eq $driverSharpName } -ErrorAction SilentlyContinue
+        $driverSharp = Get-PrinterDriver | Where-Object { $_.Name -eq $driverSharpName } -ErrorAction SilentlyContinue
         if (-Not $driverSharp)
         {
             Write-Host "  Installing Sharp driver"
@@ -151,7 +151,7 @@ else
             Restart-Service -Name Spooler -Force
             Add-PrinterDriver -Name $driverSharpName
             Start-Sleep -Seconds 10
-            $driverSharp = Get-PrinterDriver | where { $_.Name -eq $driverSharpName } -ErrorAction SilentlyContinue
+            $driverSharp = Get-PrinterDriver | Where-Object { $_.Name -eq $driverSharpName } -ErrorAction SilentlyContinue
             if (-Not $driverSharp)
             {
                 throw "Not able to install the Sharp driver"
@@ -159,7 +159,7 @@ else
         }
 
         Write-Host "Checking Hp PCL driver"
-        $driverHpPcl = Get-PrinterDriver | where { $_.Name -eq $driverHpPclUniversalName } -ErrorAction SilentlyContinue
+        $driverHpPcl = Get-PrinterDriver | Where-Object { $_.Name -eq $driverHpPclUniversalName } -ErrorAction SilentlyContinue
         if (-Not $driverHpPcl)
         {
             Write-Host "  Installing Hp Universal PCL driver"
@@ -172,7 +172,7 @@ else
             Start-Sleep -Seconds 10
             Add-PrinterDriver -Name $driverHpPclUniversalName
             Start-Sleep -Seconds 10
-            $driverHpPcl = Get-PrinterDriver | where { $_.Name -eq $driverHpPclUniversalName } -ErrorAction SilentlyContinue
+            $driverHpPcl = Get-PrinterDriver | Where-Object { $_.Name -eq $driverHpPclUniversalName } -ErrorAction SilentlyContinue
             if (-Not $driverHpPcl)
             {
                 throw "Not able to install the Hp PCL driver"
@@ -180,7 +180,7 @@ else
         }
 
         Write-Host "Checking Hp Ps driver"
-        $driverHpPs = Get-PrinterDriver | where { $_.Name -eq $driverHpPsUniversalName } -ErrorAction SilentlyContinue
+        $driverHpPs = Get-PrinterDriver | Where-Object { $_.Name -eq $driverHpPsUniversalName } -ErrorAction SilentlyContinue
         if (-Not $driverHpPs)
         {
             Write-Host "  Installing Hp Universal Ps driver"
@@ -192,7 +192,7 @@ else
             Restart-Service -Name Spooler -Force
             Add-PrinterDriver -Name $driverHpPsUniversalName
             Start-Sleep -Seconds 10
-            $driverHpPs = Get-PrinterDriver | where { $_.Name -eq $driverHpPsUniversalName } -ErrorAction SilentlyContinue
+            $driverHpPs = Get-PrinterDriver | Where-Object { $_.Name -eq $driverHpPsUniversalName } -ErrorAction SilentlyContinue
             if (-Not $driverHpPs)
             {
                 throw "Not able to install the Hp Ps driver"
@@ -241,8 +241,8 @@ else
                 }
 
                 Write-Host "  Setting access"
-                #$PermissionSDDL = Get-Printer -full -Name $printerName | select PermissionSDDL -ExpandProperty PermissionSDDL
-                $newSDDL = (Get-Printer -full -Name $printerName | select PermissionSDDL -ExpandProperty PermissionSDDL)+$addSDDL
+                #$PermissionSDDL = Get-Printer -full -Name $printerName | Select-Object PermissionSDDL -ExpandProperty PermissionSDDL
+                $newSDDL = (Get-Printer -full -Name $printerName | Select-Object PermissionSDDL -ExpandProperty PermissionSDDL)+$addSDDL
                 Set-Printer -Name $printerName -PermissionSDDL $newSDDL
             }
 

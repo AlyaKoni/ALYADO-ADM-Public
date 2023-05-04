@@ -85,7 +85,7 @@ $Runs = Get-AzLogicAppRunHistory -Name $logicAppName -ResourceGroupName $ResGrp 
 Write-Host "Exporting all logic app triggers" -ForegroundColor $CommandInfo
 $Trigg = Get-AzLogicAppTrigger -Name $logicAppName -ResourceGroupName $ResGrp
 $TriggHistsAll = Get-AzLogicAppTriggerHistory -Name $logicAppName -ResourceGroupName $ResGrp -TriggerName $Trigg.Name -FollowNextPageLink #-MaximumFollowNextPageLink 2000
-$TriggHists = $TriggHistsAll | where {$_.Status -ne "Skipped" -and $_.Fired -eq $true}
+$TriggHists = $TriggHistsAll | Where-Object {$_.Status -ne "Skipped" -and $_.Fired -eq $true}
 
 # Fired logic app trigger outputs
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
@@ -99,18 +99,18 @@ foreach($TriggHist in $TriggHists)
     Add-Member -InputObject $obj -MemberType NoteProperty -Name "StartTime" -Value $TriggHist.StartTime
     $TriggHistOutps += $obj
 }
-$TriggHistOutps | Select Run, Name, StartTime, LastModified | Format-Table | Out-String | % {Write-Host $_}
+$TriggHistOutps | Select-Object Run, Name, StartTime, LastModified | Format-Table | Out-String | % {Write-Host $_}
 
 # Logic app runs
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs" -ForegroundColor $CommandInfo
-$Runs | Select Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+$Runs | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
 
 # Logic app runs with status Succeeded
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs with status Succeeded" -ForegroundColor $CommandInfo
-$SRuns = $Runs | where {$_.Status -eq "Succeeded"}
-$SRuns | Select Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+$SRuns = $Runs | Where-Object {$_.Status -eq "Succeeded"}
+$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
 
 # Actions from succeeded logic app runs
 Write-Host "`nActions from succeeded logic app runs" -ForegroundColor $CommandInfo
@@ -123,7 +123,7 @@ foreach($Run in $SRuns)
     Write-Host "`nSucceeded run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
     Write-Host "`nActions:"
     $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
-    $Acts | Select Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
     if ($exportInputsAndOutputs)
     {
         Write-Host "`nInputs and Outputs:"
@@ -151,8 +151,8 @@ foreach($Run in $SRuns)
 # Logic app runs with status Cancelled
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs with status Cancelled" -ForegroundColor $CommandInfo
-$SRuns = $Runs | where {$_.Status -eq "Cancelled"}
-$SRuns | Select Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+$SRuns = $Runs | Where-Object {$_.Status -eq "Cancelled"}
+$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
 
 # Actions from cancelled logic app runs
 Write-Host "`nActions from cancelled logic app runs" -ForegroundColor $CommandInfo
@@ -162,7 +162,7 @@ foreach($Run in $SRuns)
     Write-Host "`nCancelled run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
     Write-Host "Actions:"
     $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
-    $Acts | Select Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
     if ($exportInputsAndOutputs)
     {
         Write-Host "`nInputs and Outputs:"
@@ -190,8 +190,8 @@ foreach($Run in $SRuns)
 # Logic app runs with status Failed
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs with status Failed" -ForegroundColor $CommandInfo
-$SRuns = $Runs | where {$_.Status -eq "Failed"}
-$SRuns | Select Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+$SRuns = $Runs | Where-Object {$_.Status -eq "Failed"}
+$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
 
 # Actions from failed logic app runs
 Write-Host "`nActions from failed logic app runs" -ForegroundColor $CommandInfo
@@ -201,7 +201,7 @@ foreach($Run in $SRuns)
     Write-Host "`nFailed run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
     Write-Host "Actions:"
     $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
-    $Acts | Select Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
     if ($exportInputsAndOutputs)
     {
         Write-Host "`nInputs and Outputs:"

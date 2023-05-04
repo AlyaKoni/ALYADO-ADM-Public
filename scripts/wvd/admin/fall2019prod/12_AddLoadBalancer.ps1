@@ -121,47 +121,47 @@ if (-Not $pipOut)
 #Remove-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $FePipOut -Force
 
 Write-Host "Checking frontend ip configurations" -ForegroundColor $CommandInfo
-$ipConfigIn = $lb.FrontendIpConfigurations | where { $_.Name -eq $FeNameIn }
+$ipConfigIn = $lb.FrontendIpConfigurations | Where-Object { $_.Name -eq $FeNameIn }
 if (-Not $ipConfigIn)
 {
     Write-Host " - Creating ip configuration $FeNameIn"
     $tmp = Add-AzLoadBalancerFrontendIpConfig -LoadBalancer $lb -Name $FeNameIn -PublicIpAddress $pipIn
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
-    $ipConfigIn = $lb.FrontendIpConfigurations | where { $_.Name -eq $FeNameIn }
+    $ipConfigIn = $lb.FrontendIpConfigurations | Where-Object { $_.Name -eq $FeNameIn }
 }
-$ipConfigOut = $lb.FrontendIpConfigurations | where { $_.Name -eq $FeNameOut }
+$ipConfigOut = $lb.FrontendIpConfigurations | Where-Object { $_.Name -eq $FeNameOut }
 if (-Not $ipConfigOut)
 {
     Write-Host " - Creating ip configuration $FeNameOut"
     $tmp = Add-AzLoadBalancerFrontendIpConfig -LoadBalancer $lb -Name $FeNameOut -PublicIpAddress $pipOut
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
-    $ipConfigOut = $lb.FrontendIpConfigurations | where { $_.Name -eq $FeNameOut }
+    $ipConfigOut = $lb.FrontendIpConfigurations | Where-Object { $_.Name -eq $FeNameOut }
 }
 
 Write-Host "Checking backend pools" -ForegroundColor $CommandInfo
-$backPoolIn = $lb.BackendAddressPools | where { $_.Name -eq $NameBackPoolIn }
+$backPoolIn = $lb.BackendAddressPools | Where-Object { $_.Name -eq $NameBackPoolIn }
 if (-Not $backPoolIn)
 {
     Write-Host " - Creating incoming backend pool $NameBackPoolIn"
     $tmp = Add-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $lb -Name $NameBackPoolIn
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
-    $backPoolIn = $lb.BackendAddressPools | where { $_.Name -eq $NameBackPoolIn }
+    $backPoolIn = $lb.BackendAddressPools | Where-Object { $_.Name -eq $NameBackPoolIn }
 }
-$backPoolOut = $lb.BackendAddressPools | where { $_.Name -eq $NameBackPoolOut }
+$backPoolOut = $lb.BackendAddressPools | Where-Object { $_.Name -eq $NameBackPoolOut }
 if (-Not $backPoolOut)
 {
     Write-Host " - Creating outgoing backend pool $NameBackPoolOut"
     $tmp = Add-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $lb -Name $NameBackPoolOut
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
-    $backPoolOut = $lb.BackendAddressPools | where { $_.Name -eq $NameBackPoolOut }
+    $backPoolOut = $lb.BackendAddressPools | Where-Object { $_.Name -eq $NameBackPoolOut }
 }
 
 Write-Host "Checking host probe" -ForegroundColor $CommandInfo
-$hostProbe = $lb.Probes | where { $_.Name -eq $NameHealthProbe }
+$hostProbe = $lb.Probes | Where-Object { $_.Name -eq $NameHealthProbe }
 if (-Not $hostProbe)
 {
     Write-Host " - Creating host probe $NameHealthProbe"
@@ -172,12 +172,12 @@ if (-Not $hostProbe)
             -ProbeCount 5
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
-    $hostProbe = $lb.Probes | where { $_.Name -eq $NameHealthProbe }
+    $hostProbe = $lb.Probes | Where-Object { $_.Name -eq $NameHealthProbe }
 }
 
 <#
 Write-Host "Configuring inboundNatRule" -ForegroundColor $CommandInfo
-$inRule = $lb.InboundNatRules | where { $_.Name -eq $RuleNameIn }
+$inRule = $lb.InboundNatRules | Where-Object { $_.Name -eq $RuleNameIn }
 if (-Not $inRule)
 {
     Write-Host " - Creating $RuleNameIn"
@@ -190,14 +190,14 @@ if (-Not $inRule)
                     -BackendPort 3389
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
-    $inRule = $lb.InboundNatRules | where { $_.Name -eq $RuleNameIn }
+    $inRule = $lb.InboundNatRules | Where-Object { $_.Name -eq $RuleNameIn }
 }
 #$lb.InboundNatRules.Remove($inRule)
 #$lb | Set-AzLoadBalancer
 #>
 
 Write-Host "Configuring outboundRule" -ForegroundColor $CommandInfo
-$outRule = $lb.OutboundRules | where { $_.Name -eq $RuleNameOut }
+$outRule = $lb.OutboundRules | Where-Object { $_.Name -eq $RuleNameOut }
 if (-Not $outRule)
 {
     Write-Host " - Creating $RuleNameOut"
@@ -210,7 +210,7 @@ if (-Not $outRule)
                     -IdleTimeoutInMinutes 10
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
-    $outRule = $lb.OutboundRules | where { $_.Name -eq $RuleNameOut }
+    $outRule = $lb.OutboundRules | Where-Object { $_.Name -eq $RuleNameOut }
 }
 #$lb.OutboundRules.Remove($outRule)
 #$lb | Set-AzLoadBalancer
@@ -223,14 +223,14 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     <#
     Write-Host "Configuring nics inboundNatRule" -ForegroundColor $CommandInfo
     $nic = Get-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VmNicName
-    $nicInRule = $nic.IpConfigurations[0].LoadBalancerInboundNatRules | where { $_.Name -eq $RuleNameIn -or $_.Id -like "*$($RuleNameIn)"}
+    $nicInRule = $nic.IpConfigurations[0].LoadBalancerInboundNatRules | Where-Object { $_.Name -eq $RuleNameIn -or $_.Id -like "*$($RuleNameIn)"}
     if (-Not $nicInRule)
     {
         Write-Host " - Creating rule for nic $VmNicName"
         $nic.IpConfigurations[0].LoadBalancerInboundNatRules.Add($inRule)
         $nic | Set-AzNetworkInterface
         $nic = Get-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VmNicName
-        $nicInRule = $nic.IpConfigurations[0].LoadBalancerInboundNatRules | where { $_.Name -eq $RuleNameIn -or $_.Id -like "*$($RuleNameIn)"}
+        $nicInRule = $nic.IpConfigurations[0].LoadBalancerInboundNatRules | Where-Object { $_.Name -eq $RuleNameIn -or $_.Id -like "*$($RuleNameIn)"}
     }
     #$nic.IpConfigurations[0].LoadBalancerInboundNatRules.Remove($nicInRule)
     #$nic | Set-AzNetworkInterface
@@ -238,14 +238,14 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
 
     Write-Host "Configuring nics outbound rule" -ForegroundColor $CommandInfo
     $nic = Get-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VmNicName
-    $nicOutRule = $nic.IpConfigurations[0].LoadBalancerBackendAddressPools | where { $_.Name -eq $RuleNameOut -or $_.Id -like "*$($RuleNameOut)"}
+    $nicOutRule = $nic.IpConfigurations[0].LoadBalancerBackendAddressPools | Where-Object { $_.Name -eq $RuleNameOut -or $_.Id -like "*$($RuleNameOut)"}
     if (-Not $nicOutRule)
     {
         Write-Host " - Creating rule for nic $VmNicName"
         $nic.IpConfigurations[0].LoadBalancerBackendAddressPools.Add($backPoolOut)
         $nic | Set-AzNetworkInterface
         $nic = Get-AzNetworkInterface -ResourceGroupName $ResourceGroupName -Name $VmNicName
-        $nicOutRule = $nic.IpConfigurations[0].LoadBalancerBackendAddressPools | where { $_.Name -eq $RuleNameOut -or $_.Id -like "*$($RuleNameOut)"}
+        $nicOutRule = $nic.IpConfigurations[0].LoadBalancerBackendAddressPools | Where-Object { $_.Name -eq $RuleNameOut -or $_.Id -like "*$($RuleNameOut)"}
     }
     #$nic.IpConfigurations[0].LoadBalancerBackendAddressPools.Remove($nicOutRule)
     #$nic | Set-AzNetworkInterface

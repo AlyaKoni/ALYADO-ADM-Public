@@ -86,11 +86,11 @@ Write-Host "Getting Teams" -ForegroundColor $CommandInfo
 $TeamsList = @{}
 if ($UsedUnifiedGroups -eq $false)
 {
-   Get-UnifiedGroup -Filter { ResourceProvisioningOptions -eq "Team" } -ResultSize Unlimited | foreach { $TeamsList.Add($_.ExternalDirectoryObjectId, $_.DisplayName) }
+   Get-UnifiedGroup -Filter { ResourceProvisioningOptions -eq "Team" } -ResultSize Unlimited | Foreach-Object { $TeamsList.Add($_.ExternalDirectoryObjectId, $_.DisplayName) }
 }
 else
 {
-    $Groups | where {$_.ResourceProvisioningOptions -eq "Team"} | foreach { $TeamsList.Add($_.ExternalDirectoryObjectId, $_.DisplayName) }
+    $Groups | Where-Object {$_.ResourceProvisioningOptions -eq "Team"} | Foreach-Object { $TeamsList.Add($_.ExternalDirectoryObjectId, $_.DisplayName) }
 }
 
 # Loop groups
@@ -132,7 +132,7 @@ foreach ($Group in $Groups)
         if ($Grp.SharePointSiteURL -ne $null)
         {
             $AuditCheck = $Grp.SharePointSiteURL + "/*"
-            $AuditRecs = Search-UnifiedAuditLog -StartDate $WarningDate -EndDate $Today -ObjectId $AuditCheck | where { $_.UserIds -ne "app@sharepoint" -and $_.UserIds -ne "SHAREPOINT\system" } | Sort-Object -Property CreationDate -Descending | Select-Object -First 1
+            $AuditRecs = Search-UnifiedAuditLog -StartDate $WarningDate -EndDate $Today -ObjectId $AuditCheck | Where-Object { $_.UserIds -ne "app@sharepoint" -and $_.UserIds -ne "SHAREPOINT\system" } | Sort-Object -Property CreationDate -Descending | Select-Object -First 1
             if ($AuditRecs -ne $null)
             {
                 if ($AuditRecs[0].CreationDate -gt $WarningDate)

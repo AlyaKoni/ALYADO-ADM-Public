@@ -87,13 +87,13 @@ foreach($user in $users)
     Add-Member -InputObject $psuser -MemberType NoteProperty -Name "UserPrincipalName" -Value $user.UserPrincipalName
     foreach($Sku in $Skus)
     {
-        $assignedLicense = $user.AssignedLicenses | where { $_.SkuId -like $Sku.SkuId }
+        $assignedLicense = $user.AssignedLicenses | Where-Object { $_.SkuId -like $Sku.SkuId }
         if ($assignedLicense)
         {
             $DisabledPlans = ""
             foreach($plan in $assignedLicense.DisabledPlans)
             {
-                $planName = ($Sku.ServicePlans | where { $_.ServicePlanId -eq $plan }).ServicePlanName
+                $planName = ($Sku.ServicePlans | Where-Object { $_.ServicePlanId -eq $plan }).ServicePlanName
                 $DisabledPlans += $planName + ","
             }
             $DisabledPlans = $DisabledPlans.TrimEnd(",")

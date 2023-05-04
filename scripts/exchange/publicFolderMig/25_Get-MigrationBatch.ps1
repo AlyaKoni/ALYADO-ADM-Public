@@ -42,7 +42,7 @@ Param(
 Connect-ExchangeOnline -ShowProgress $true
 
 $batch = Get-MigrationBatch -Identity $migBatchName
-$batch | fl
+$batch | Format-List
 $batch
 
 Disconnect-ExchangeOnline -Confirm:$false

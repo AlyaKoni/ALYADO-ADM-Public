@@ -46,14 +46,14 @@ foreach($migMap in $migMapping)
 {
     $folderName = $migMap.publicFolder
     Write-Host "Checking PublicFolder access $folderName"
-    $folder = $allFolders | where { $_.Name -eq $folderName }
+    $folder = $allFolders | Where-Object { $_.Name -eq $folderName }
     if (-Not $folder)
     {
         Write-Warning "Public folder $folderName not found!"
         Continue
     }
     $perms = $folder | Get-PublicFolderClientPermission
-    $defPerm = $perms | where { $_.User.DisplayName -eq "Standard" -or $_.User.DisplayName -eq "Default" }
+    $defPerm = $perms | Where-Object { $_.User.DisplayName -eq "Standard" -or $_.User.DisplayName -eq "Default" }
     Write-Host "  Default permissions"
     if ($defPerm)
     {

@@ -76,8 +76,8 @@ if (-Not $termGroupName)
 
 $taxSite = Get-SPSite (Get-SPWebApplication -IncludeCentralAdministration | ? {$_.IsAdministrationWebApplication -eq $True}).Url
 $taxonomySession = Get-SPTaxonomySession -site $taxSite
-$termStore =  $taxonomySession.TermStores | where Name -eq $termStoreName
-$termGroup = $termStore.Groups | where Name -eq $termGroupName
+$termStore =  $taxonomySession.TermStores | Where-Object { $_.Name -eq $termStoreName }
+$termGroup = $termStore.Groups | Where-Object { $_.Name -eq $termGroupName }
 
 # Create xml
 $resultInXml = New-Object xml

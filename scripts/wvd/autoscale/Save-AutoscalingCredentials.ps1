@@ -117,30 +117,30 @@ if ($ConfigFile -eq "Autoscaling_Config.json")
     Install-ModuleIfNotInstalled Az
     LoginTo-Az -SubscriptionName $AlyaSubscriptionName
     $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdAzureServicePrincipalName
-    ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "AADTenantId" }).Value = $AlyaTenantId
-    ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "AADApplicationId" }).Value = $AzureAdServicePrincipal.AppId.Guid
-    ($Variable.WVDScale.Deployment.Variables | where { $_.Name -eq "rdBroker" }).Value = $AlyaWvdRDBroker
+    ($Variable.WVDScale.Azure.Variables | Where-Object { $_.Name -eq "AADTenantId" }).Value = $AlyaTenantId
+    ($Variable.WVDScale.Azure.Variables | Where-Object { $_.Name -eq "AADApplicationId" }).Value = $AzureAdServicePrincipal.AppId.Guid
+    ($Variable.WVDScale.Deployment.Variables | Where-Object { $_.Name -eq "rdBroker" }).Value = $AlyaWvdRDBroker
     $ConfigValue = Read-Host -Prompt "Host pool name"
-    ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "hostPoolName" }).Value = $ConfigValue
+    ($Variable.WVDScale.Azure.Variables | Where-Object { $_.Name -eq "hostPoolName" }).Value = $ConfigValue
     $ConfigFile = "Autoscaling_$ConfigValue.json"
     $ConfigValue = Read-Host -Prompt "Resource group name"
-    ($Variable.WVDScale.Deployment.Variables | where { $_.Name -eq "ResourceGroupName" }).Value = $ConfigValue
+    ($Variable.WVDScale.Deployment.Variables | Where-Object { $_.Name -eq "ResourceGroupName" }).Value = $ConfigValue
 
     if ($ConfigEnv -eq "Prod")
     {
         $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameProd
-        ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "tenantName" }).Value = $AlyaWvdTenantNameProd
+        ($Variable.WVDScale.Azure.Variables | Where-Object { $_.Name -eq "tenantName" }).Value = $AlyaWvdTenantNameProd
         $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName
-        ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "currentAzureSubscriptionId" }).Value = $sub.Id
-        ($Variable.WVDScale.Deployment.Variables | where { $_.Name -eq "userName" }).Value = $AzureAdServicePrincipal.AppId.Guid
+        ($Variable.WVDScale.Azure.Variables | Where-Object { $_.Name -eq "currentAzureSubscriptionId" }).Value = $sub.Id
+        ($Variable.WVDScale.Deployment.Variables | Where-Object { $_.Name -eq "userName" }).Value = $AzureAdServicePrincipal.AppId.Guid
     }
     else
     {
         $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AlyaWvdServicePrincipalNameTest
-        ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "tenantName" }).Value = $AlyaWvdTenantNameTest
+        ($Variable.WVDScale.Azure.Variables | Where-Object { $_.Name -eq "tenantName" }).Value = $AlyaWvdTenantNameTest
         $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionNameTest
-        ($Variable.WVDScale.Azure.Variables | where { $_.Name -eq "currentAzureSubscriptionId" }).Value = $sub.Id
-        ($Variable.WVDScale.Deployment.Variables | where { $_.Name -eq "userName" }).Value = $AzureAdServicePrincipal.AppId.Guid
+        ($Variable.WVDScale.Azure.Variables | Where-Object { $_.Name -eq "currentAzureSubscriptionId" }).Value = $sub.Id
+        ($Variable.WVDScale.Deployment.Variables | Where-Object { $_.Name -eq "userName" }).Value = $AzureAdServicePrincipal.AppId.Guid
     }
 
     $Variable | ConvertTo-Json -Depth 50 | Set-Content -Path "$($AlyaData)\wvd\autoscale\$ConfigFile" -Encoding UTF8 -Force

@@ -19,7 +19,7 @@ if (-Not (Test-Path $contentRoot))
 $profile = [Environment]::GetFolderPath("UserProfile")
 $downloads = $profile+"\downloads"
 $lastfilename = $null
-$file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+$file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
 if ($file)
 {
     $lastfilename = $file.Name
@@ -31,11 +31,11 @@ while ($attempts -ge 0)
     Write-Host "Downloading setup file from $setupDownloadUrl"
     Write-Warning "Please don't start any other download!"
     try {
-        start $setupDownloadUrl
+        Start-Process $setupDownloadUrl
         do
         {
             Start-Sleep -Seconds 10
-            $file = Get-ChildItem -path $downloads | sort LastWriteTime | select -last 1
+            $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
             if ($file)
             {
                 $filename = $file.Name

@@ -87,7 +87,7 @@ The first column is required, and must be the SPO User Name (in Office 365 this 
 
 **Tip:** You can get a list of usernames from Office 365 using Windows Azure AD PowerShell and export them straight into a CSV file. Then, you can open the CSV file in Microsoft Excel, and use autocomplete features in Excel to complete the source picture column on mass (assuming you have a repeatable naming convention for your source image files).
 The sample PowerShell command below takes all licensed users in the Office 365 tenant and exports the UPN (user name) and display name to a CSV file. You could use this as the starting point to your source CSV file.
-Get-MSOLUser | Where-Object { $_.isLicensed -eq "TRUE" } | select userprincipalname, displayname | Export-CSV c:\temp\userlist.csv
+Get-MSOLUser | Where-Object { $_.isLicensed -eq "TRUE" } | Select-Object userprincipalname, displayname | Export-CSV c:\temp\userlist.csv
 The article linked here, describes how to the Get-MSOLUser command - http://msdn.microsoft.com/en-us/library/windowsazure/dn194133.aspx
 
 # FAQ #

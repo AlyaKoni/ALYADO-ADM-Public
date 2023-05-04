@@ -74,7 +74,7 @@ $extensionAttribute13 = 0
 $extensionAttribute14 = 0
 $extensionAttribute15 = 0
 
-$adUsers | foreach {
+$adUsers | Foreach-Object {
     
     $adUser = $_
     if (-Not [string]::IsNullOrEmpty($adUser.extensionAttribute1)) { $extensionAttribute1++ }

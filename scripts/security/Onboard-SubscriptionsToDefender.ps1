@@ -106,7 +106,7 @@ if (-Not $LogAnaWrkspcParent)
 }
 
 # Setting auditing on subscriptions
-foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | select -Unique))
+foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique))
 {
     Write-Host "Onboarding defender on subscription $AlyaSubscriptionName" -ForegroundColor $MenuColor
 
@@ -201,11 +201,11 @@ foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | select -Unique))
 
     # Registering policies
     Write-Host "  Registering policies" -ForegroundColor $CommandInfo
-    #(Get-AzPolicySetDefinition).Properties.displayName | where { $_ -notlike "*Deprecated*" }
+    #(Get-AzPolicySetDefinition).Properties.displayName | Where-Object { $_ -notlike "*Deprecated*" }
     foreach($enabledPolicy in $DefenderOnboardedPolicies)
     {
         #$enabledPolicy = $DefenderOnboardedPolicies[0]
-        $Policy = Get-AzPolicySetDefinition | where {$_.Properties.displayName -eq $enabledPolicy.Policy}
+        $Policy = Get-AzPolicySetDefinition | Where-Object {$_.Properties.displayName -eq $enabledPolicy.Policy}
         $assignmentName = "DFC '$($enabledPolicy.Name)' on '$($AlyaSubscriptionName)'"
         $assignmentDisplayName = "DFC '$($enabledPolicy.Name)' on '$($AlyaSubscriptionName)' <$($sub.Id)>"
         $assignmentName = $assignmentName.Replace("%", "-").Replace("&", "-").Replace("\", "-").Replace("?", "-").Replace("/", "-").Replace(":", "-").Replace("<", "-").Replace(">", "-").Replace(" ", "-")

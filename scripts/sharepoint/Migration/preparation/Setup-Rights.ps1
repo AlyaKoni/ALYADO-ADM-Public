@@ -4,7 +4,7 @@ Add-PSSnapin Microsoft.SharePoint.PowerShell -ErrorAction Stop
 $userOrGroup = "alyaconsulting\konradbrunner" 
 $displayName = "Brunner Konrad" 
 
-Get-SPWebApplication | foreach { 
+Get-SPWebApplication | Foreach-Object { 
     $webApp = $_ 
     $policy = $webApp.Policies.Add($userOrGroup, $displayName) 
     $policyRole = $webApp.PolicyRoles.GetSpecialRole([Microsoft.SharePoint.Administration.SPPolicyRoleType]::FullControl) 
@@ -12,7 +12,7 @@ Get-SPWebApplication | foreach {
     $webApp.Update() 
 }
 
-Get-SPWebApplication | foreach { 
+Get-SPWebApplication | Foreach-Object { 
     $webApp = $_ 
 	foreach($siteCol in $webApp.Sites) {
         	New-SPUser -UserAlias "i:0e.t|sts.alyaconsulting.ch_upn|konrad.brunner@alyaconsulting.ch" -Web $siteCol.Url -SiteCollectionAdmin

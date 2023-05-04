@@ -108,8 +108,8 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-AzureADDirectorySettingTemplate | where { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-AzureADDirectorySetting | where { $_.DisplayName -eq "Group.Unified" }
+$SettingTemplate = Get-AzureADDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-AzureADDirectorySetting | Where-Object { $_.DisplayName -eq "Group.Unified" }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."

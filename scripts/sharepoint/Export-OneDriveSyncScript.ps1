@@ -115,7 +115,7 @@ foreach ($site in $sitesToProcess)
     # Creating ODFB link
     $psite = Get-PnPSite -Connection $siteCon -Includes "ID"
     $pweb = Get-PnPWeb -Connection $siteCon -Includes "ID","Title"
-    $plist = Get-PnPList -Connection $siteCon | where { $_.Title -eq "Dokumente" -or $_.Title -eq "Freigegebene Dokumente" -or $_.Title -eq "Documents" -or $_.Title -eq "Shared Documents" }
+    $plist = Get-PnPList -Connection $siteCon | Where-Object { $_.Title -eq "Dokumente" -or $_.Title -eq "Freigegebene Dokumente" -or $_.Title -eq "Documents" -or $_.Title -eq "Shared Documents" }
     $WebURL = [System.Web.HttpUtility]::UrlEncode("$($psite.Url)")
     $SiteID = [System.Web.HttpUtility]::UrlEncode("{$($psite.Id.Guid)}")
     $WebID = [System.Web.HttpUtility]::UrlEncode("{$($pweb.Id.Guid)}")

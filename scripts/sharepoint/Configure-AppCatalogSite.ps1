@@ -103,7 +103,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking ADM hub site
 Write-Host "Checking ADM hub site" -ForegroundColor $CommandInfo
-$hubSiteDef = $hubSites | where { $_.short -eq "ADM" }
+$hubSiteDef = $hubSites | Where-Object { $_.short -eq "ADM" }
 $hubSiteName = $hubSiteDef.title
 $admHubSite = Get-PnPHubSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$hubSiteName" -ErrorAction SilentlyContinue
 if (-Not $admHubSite)
@@ -166,14 +166,14 @@ if (-Not $site)
     Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
     $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
     $aRoles = Get-PnPRoleDefinition -Connection $siteCon
-    $eRole = $aRoles | where { $_.RoleTypeKind -eq "Editor" }
-    $cRole = $aRoles | where { $_.RoleTypeKind -eq "Contributor" }
+    $eRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Editor" }
+    $cRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Contributor" }
     $perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
-    if (-Not ($perms | where { $_.Id -eq $cRole.Id }))
+    if (-Not ($perms | Where-Object { $_.Id -eq $cRole.Id }))
     {
         Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
     }
-    if (($perms | where { $_.Id -eq $eRole.Id }))
+    if (($perms | Where-Object { $_.Id -eq $eRole.Id }))
     {
         Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
     }

@@ -316,7 +316,7 @@ New-Module -Script {
                 $ctx.Load($parentFolder)
                 $ctx.Load($parentFolder.Folders)
                 $ctx.ExecuteQuery()
-                $folderNames = $parentFolder.Folders | Select -ExpandProperty Name
+                $folderNames = $parentFolder.Folders | Select-Object -ExpandProperty Name
                 if($folderNames -notcontains $folderNames)
                 {
                     $tmp = $parentFolder.Folders.Add($dir)

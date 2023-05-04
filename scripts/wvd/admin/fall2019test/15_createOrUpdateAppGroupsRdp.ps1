@@ -117,7 +117,7 @@ foreach ($admin in $AlyaWvdAdmins)
     {
         $allMembs += $admin
     }
-    $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $admin }
+    $grpUser = $grpUsers | Where-Object { $_.UserPrincipalName -eq $admin }
     if (-Not $grpUser)
     {
         Write-Host "   - Adding user $($admin)"
@@ -133,7 +133,7 @@ foreach ($memb in $membs)
     {
         $allMembs += $memb.UserPrincipalName
     }
-    $grpUser = $grpUsers | where { $_.UserPrincipalName -eq $memb.UserPrincipalName }
+    $grpUser = $grpUsers | Where-Object { $_.UserPrincipalName -eq $memb.UserPrincipalName }
     if (-Not $grpUser)
     {
         Write-Host "   - Adding user $($memb.UserPrincipalName)"
@@ -142,7 +142,7 @@ foreach ($memb in $membs)
 }
 foreach ($grpUser in $grpUsers)
 {
-    $memb = $allMembs | where { $_ -eq $grpUser.UserPrincipalName }
+    $memb = $allMembs | Where-Object { $_ -eq $grpUser.UserPrincipalName }
     if (-Not $memb)
     {
         Write-Host " - Removing user $($grpUser.UserPrincipalName)"

@@ -59,7 +59,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Environment | Get-ApiUrl | PowerPlatform" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$env = Get-AdminPowerAppEnvironment | where { $_.DisplayName -like "*default*" }
+$env = Get-AdminPowerAppEnvironment | Where-Object { $_.DisplayName -like "*default*" }
 $AlyaPowerAppsApiUrl = $env.Internal.Properties.linkedEnvironmentMetadata.instanceApiUrl
 if (-Not $AlyaPowerAppsApiUrl)
 {

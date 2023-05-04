@@ -80,7 +80,7 @@ if (-Not $noMfaUsr)
 
 # Assigning user to group
 Write-Host "Assigning user to group" -ForegroundColor $CommandInfo
-$member = Get-AzADGroupMember -GroupObjectId $noMfaGrp.Id | where { $_.UserPrincipalName -eq $userUpn }
+$member = Get-AzADGroupMember -GroupObjectId $noMfaGrp.Id | Where-Object { $_.UserPrincipalName -eq $userUpn }
 if (-Not $member)
 {
     Write-Warning "User is not yet a member. Adding it now."
