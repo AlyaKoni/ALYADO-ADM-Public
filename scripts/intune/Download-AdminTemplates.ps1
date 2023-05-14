@@ -61,7 +61,7 @@ if (-Not (Test-Path $dataRoot))
 # Office apps admx templates
 Write-Host "Office apps" -ForegroundColor $CommandInfo
 $url = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49030"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $url -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $url -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*admintemplates_x64[^`"]*.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $fileName = Split-Path $newUrl -Leaf
@@ -70,10 +70,10 @@ if (-Not (Test-Path "$dataRoot\OfficeApps"))
 {
     New-Item -Path "$dataRoot\OfficeApps" -ItemType Directory -Force | Out-Null
 }
-pushd "$dataRoot"
+Push-Location "$dataRoot"
 Write-Host "  Please accept the UAC prompt"
 cmd /c ".\$fileName" /quiet /extract:.\OfficeApps
-popd
+Pop-Location 
 Remove-Item -Path "$dataRoot\$fileName" -Force
 
 Write-Host "Policies downloaded to $dataRoot" -ForegroundColor $CommandSuccess

@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://git-scm.com/download/win"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*windows[^`"]*Git[^`"]*64-bit.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $Shell = New-Object -ComObject WScript.Shell

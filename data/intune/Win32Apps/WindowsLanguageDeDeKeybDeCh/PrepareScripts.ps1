@@ -33,7 +33,7 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
     #Getting en-US
     $pck = $apps | Where-Object { $_.ProductTitle.StartsWith("English (United States) Local Experience Pack") }
     if (-Not $pck) { throw "Can't find local experience pack 'English (United States) Local Experience Pack' in your store!" }
-    $req = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
+    $req = Invoke-WebRequestIndep -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
     $languagesToInstall += @{
         "Order" = 4
         "Locale" = "en-US"
@@ -50,7 +50,7 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
     #Getting it-IT
     $pck = $apps | Where-Object { $_.ProductTitle.StartsWith("italiano Pacchetto di esperienze locali") }
     if (-Not $pck) { throw "Can't find local experience pack 'italiano Pacchetto di esperienze locali' in your store!" }
-    $req = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
+    $req = Invoke-WebRequestIndep -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
     $languagesToInstall += @{
         "Order" = 3
         "Locale" = "it-IT"
@@ -67,7 +67,7 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
     #Getting fr-FR
     $pck = $apps | Where-Object { $_.ProductTitle.StartsWith("Module d'expérience locale français (France)") }
     if (-Not $pck) { throw "Can't find local experience pack 'Module d'expérience locale français (France)' in your store!" }
-    $req = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
+    $req = Invoke-WebRequestIndep -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
     $languagesToInstall += @{
         "Order" = 2
         "Locale" = "fr-FR"
@@ -84,7 +84,7 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
     #Getting de-DE
     $pck = $apps | Where-Object { $_.ProductTitle.StartsWith("Deutsch Local Experience Pack") }
     if (-Not $pck) { throw "Can't find local experience pack 'Deutsch Local Experience Pack' in your store!" }
-    $req = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
+    $req = Invoke-WebRequestIndep -UseBasicParsing -Uri "https://bspmts.mp.microsoft.com/v1/public/catalog/Retail/Products/$($pck.ProductId)/applockerdata"
     $languagesToInstall += @{
         "Order" = 1
         "Locale" = "de-DE"

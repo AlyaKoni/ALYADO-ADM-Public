@@ -28,7 +28,7 @@ foreach($tryFile in $tryFileList)
         {
             $null = Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
         }
-        $req = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Uri ($storageRoot+"$tryFile") -Method Get -OutFile $outFile -ErrorAction SilentlyContinue
+        $req = Invoke-WebRequestIndep -UseBasicParsing -Uri ($storageRoot+"$tryFile") -Method Get -OutFile $outFile -ErrorAction SilentlyContinue
     }
     catch {}
 }

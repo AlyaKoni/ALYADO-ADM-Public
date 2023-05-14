@@ -82,7 +82,7 @@ $sharePointDomainName = "$($domainName).sharepoint.com"
 $exists = $true
 try
 {
-    $chk = Invoke-WebRequest -SkipHttpErrorCheck -Uri "https://$($sharePointDomainName)" -Method Get -UseBasicParsing
+    $chk = Invoke-WebRequestIndep -Uri "https://$($sharePointDomainName)" -Method Get -UseBasicParsing
     if ($chk.StatusCode -ne "200")
     {
         $exists = $false

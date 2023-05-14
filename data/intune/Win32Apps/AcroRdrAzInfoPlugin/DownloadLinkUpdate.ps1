@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://helpx.adobe.com/acrobat/kb/mip-plugin-download.html"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 #Only version 20 can be downloaded. Newer versions have to be downloaded via licensed download
 [regex]$regex = "[^`"]*AIPPlugin[^`"]*_Rdr_DC.msi"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value

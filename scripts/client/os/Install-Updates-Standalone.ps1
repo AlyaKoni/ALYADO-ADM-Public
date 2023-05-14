@@ -32,18 +32,25 @@
     ---------- -------------------- ----------------------------
     16.10.2020 Konrad Brunner       Initial Version
     15.03.2023 Konrad Brunner       Keep running for non blocking updates
+    14.05.2023 Konrad Brunner       Next script, log location, module path
 
 #>
 
 [CmdletBinding()]
 Param(
     [int]$retryCount = 0,
-    [bool]$installUpgrades = $false
+    [bool]$installUpgrades = $false,
+    [string]$installUpgradesStr = $null,
+    [string]$nextScriptToLaunch = $null,
+    [bool]$rebootForNextScriptToLaunch = $false,
+    [string]$logLocation = $null
 )
+if ($installUpgradesStr) { $installUpgrades = [bool]::Parse($installUpgradesStr) }
 
 #Starting Transscript
-$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmss")
-$logPath = "$PSScriptRoot\logs\Install-Updates-$($AlyaTimeString).log"
+$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+if (-Not $logLocation) { $logLocation = $PSScriptRoot }
+$logPath = "$logLocation\Logs\Install-Updates-Standalone-$($AlyaTimeString).log"
 Start-Transcript -Path $logPath -IncludeInvocationHeader | Out-Null
 
 #Members
@@ -56,11 +63,22 @@ $Global:ProgressPreference = "SilentlyContinue"
 $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
 $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 $AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Modules"
+if (Test-Path "$PSScriptRoot\..\Modules")
+{
+    Push-Location "$PSScriptRoot\..\Modules"
+    $AlyaModulePath = $pwd
+    Pop-Location
+}
+if (Test-Path "$PSScriptRoot\Modules")
+{
+    Push-Location "$PSScriptRoot\Modules"
+    $AlyaModulePath = $pwd
+    Pop-Location
+}
 if (-Not $AlyaModulePath)
 {
     $AlyaModulePath = $AlyaDefaultModulePath
 }
-$paramSetName = $PSCmdlet.ParameterSetName
 if ($AlyaModulePath -ne $AlyaDefaultModulePath)
 {
     if (-Not (Test-Path $AlyaModulePath))
@@ -72,7 +90,6 @@ if ($AlyaModulePath -ne $AlyaDefaultModulePath)
         $env:PSModulePath = "$($AlyaModulePath);"+$env:PSModulePath
     }
 }
-
 #Functions
 function Is-InternetConnected()
 {
@@ -125,17 +142,39 @@ function Install-ModuleIfNotInstalled (
         Install-ModuleIfNotInstalled "PackageManagement"
         throw "PackageManagement updated! Please restart your powershell session"
     }
+    $repCmd = Get-Command Get-PSRepository -ErrorAction SilentlyContinue
+    if (-Not $repCmd)
+    {
+        $ModuleContentUrl = "https://www.powershellgallery.com/api/v2/package/PackageManagement"
+        do {
+            $ModuleContentUrl = (Invoke-WebRequest -Uri $ModuleContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore).Headers.Location 
+        } while (!$ModuleContentUrl.Contains(".nupkg"))
+        $WebClient = New-Object System.Net.WebClient
+        $PathFolderName = New-Guid
+        $ModuleContentZip = Join-Path $env:TEMP ("$PathFolderName.zip")
+        $WebClient.DownloadFile($ModuleContentUrl, $ModuleContentZip)
+        $ModuleContentDir = Join-Path $env:TEMP $PathFolderName
+        $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+        if ($cmdTst)
+        {
+            Expand-Archive -Path $ModuleContentZip -DestinationPath $ModuleContentDir -Force
+        }
+        else
+        {
+            Expand-Archive -Path $ModuleContentZip -OutputPath v -Force
+        }
+        Import-Module "$ModuleContentDir\PackageManagement.psd1" -Force -Verbose
+    }
+
     $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
     if (-Not $regRep)
     {
         Register-PSRepository -Name "PSGallery" -SourceLocation "https://www.powershellgallery.com/api/v2/" -PublishLocation "https://www.powershellgallery.com/api/v2/package/" -ScriptSourceLocation "https://www.powershellgallery.com/api/v2/items/psscript/" -ScriptPublishLocation "https://www.powershellgallery.com/api/v2/package/" -InstallationPolicy Trusted -PackageManagementProvider NuGet
     }
-    else
+    $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
+    if ($regRep.InstallationPolicy -ne "Trusted")
     {
-        if ($regRep.InstallationPolicy -ne "Trusted")
-        {
-	        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
-        }
+	    Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
     }
     $psg = Get-Module -Name PowerShellGet -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
     if ($moduleName -ne "PackageManagement" -and $moduleName -ne "PowerShellGet" -and (-Not $psg -or $psg.Version -lt [Version]"2.0.0.0"))
@@ -145,7 +184,7 @@ function Install-ModuleIfNotInstalled (
     }
     if ((Get-PackageProvider -Name NuGet -Force).Version -lt '2.8.5.201')
     {
-        Write-Warning "Installing nuget"
+        Write-Warning "Installing nuget package provider"
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
     }
     $requestedVersion = $minimalVersion
@@ -232,7 +271,7 @@ function Install-ModuleIfNotInstalled (
         $optionalArgs['RequiredVersion'] = $requestedVersion
         Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
         #TODO Unload module
-        $paramIM = (Get-Command Install-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
+        $paramIM = (Get-Command Install-Module).ParameterSets | Select -ExpandProperty Parameters | where { $_.Name -eq "AcceptLicense" }
         if ($paramIM)
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
@@ -328,7 +367,7 @@ Install-ModuleIfNotInstalled "PSWindowsUpdate"
 
 # Preparing service manager
 Write-Host "Preparing service manager" -ForegroundColor $CommandInfo
-$serviceMgrs = Get-WUServiceManager | Select-Object -Property ServiceID
+$serviceMgrs = Get-WUServiceManager | Select -Property ServiceID
 if ($serviceMgrs.ServiceID -notcontains "7971f918-a847-4430-9279-4a52d1efe18d")
 {
     Add-WUServiceManager -ServiceID "7971f918-a847-4430-9279-4a52d1efe18d" -AddServiceFlag 7
@@ -355,7 +394,7 @@ do
 Write-Host "Last WSUS result" -ForegroundColor $CommandInfo
 $result = Get-WULastResults
 Restart-Transscipt
-Write-Host ($result | Format-List | Out-String)
+Write-Host ($result | fl | Out-String)
 
 if ($retryCount -gt 5)
 {
@@ -368,12 +407,16 @@ $restartScript = [io.path]::GetFullPath($env:AllUsersProfile) + "\Microsoft\Wind
 Write-Host "Checking for updates" -ForegroundColor $CommandInfo
 $availableUpdates = Get-WindowsUpdate -MicrosoftUpdate -AcceptAll
 Restart-Transscipt
-Write-Host ($availableUpdates | Format-List | Out-String)
+Write-Host ($availableUpdates | fl | Out-String)
 if ($availableUpdates.Count -gt 0)
 {
     Write-Host "We have $($availableUpdates.Count) updates to install"
     Write-Host "Preparing restart after reboot"
-    "powershell.exe -NoLogo -ExecutionPolicy Bypass -Command `"Start-Process powershell.exe -ArgumentList '-NoLogo -ExecutionPolicy Bypass -File \`"$PSCommandPath\`" -retryCount $($retryCount+1)' -Verb RunAs`"" | Set-Content -Path $restartScript -Force
+
+    $parms = "-retryCount $($retryCount+1) -installUpgradesStr $($installUpgrades)"
+    if ($nextScriptToLaunch) { $parms += " -nextScriptToLaunch \`"$($nextScriptToLaunch)\`"" }
+    if ($logLocation) { $parms += " -logLocation \`"$($logLocation)\`"" }
+    "powershell.exe -NoLogo -ExecutionPolicy Bypass -Command `"Start-Process powershell.exe -ArgumentList '-NoLogo -ExecutionPolicy Bypass -File \`"$PSCommandPath\`" $parms' -Verb RunAs`"" | Set-Content -Path $restartScript -Force
     #Start-WUScan #-SearchCriteria "IsInstalled=0 and IsHidden=0"
     Write-Host "Installing updates"
     Install-WindowsUpdate -MicrosoftUpdate -AcceptAll -AutoReboot
@@ -440,7 +483,10 @@ else
         if ($toBeUpgraded)
         {
             Write-Host "Preparing restart after reboot"
-            "powershell.exe -NoLogo -ExecutionPolicy Bypass -Command `"Start-Process powershell.exe -ArgumentList '-NoLogo -ExecutionPolicy Bypass -File \`"$PSCommandPath\`" -retryCount $($retryCount+1)' -Verb RunAs`"" | Set-Content -Path $restartScript -Force
+            $parms = "-retryCount $($retryCount+1)"
+            if ($nextScriptToLaunch) { $parms += " -nextScriptToLaunch \`"$($nextScriptToLaunch)\`"" }
+            if ($logLocation) { $parms += " -logLocation \`"$($logLocation)\`"" }
+            "powershell.exe -NoLogo -ExecutionPolicy Bypass -Command `"Start-Process powershell.exe -ArgumentList '-NoLogo -ExecutionPolicy Bypass -File \`"$PSCommandPath\`" $parms' -Verb RunAs`"" | Set-Content -Path $restartScript -Force
             Write-Host "Launching $exeFile"
             cmd /c $exeFile /quiet /skipeula /auto upgrade /telemetry Disable /copylogs "$toolsDir"
             $file.VersionInfo.ProductVersion | Set-Content -Path "$exeFile.$($env:COMPUTERNAME).txt" -Force -Encoding UTF8
@@ -454,6 +500,19 @@ else
                 $tmp = Remove-Item -Path $restartScript -Force
             }
             Write-Host "Device has all actual updates and upgrades installed!" -ForegroundColor $CommandSuccess
+            if ($nextScriptToLaunch)
+            {
+                Write-Host "Launching now script $($nextScriptToLaunch)"
+                if ($rebootForNextScriptToLaunch)
+                {
+                    "powershell.exe -NoLogo -ExecutionPolicy Bypass -Command `"Start-Process powershell.exe -ArgumentList '-NoLogo -ExecutionPolicy Bypass -File \`"$nextScriptToLaunch\`"' -Verb RunAs`"" | Set-Content -Path $restartScript -Force
+                    cmd /c shutdown /r /t 0
+                }
+                else
+                {
+                    & $nextScriptToLaunch
+                }
+            }
         }
     }
     else
@@ -463,6 +522,19 @@ else
             $tmp = Remove-Item -Path $restartScript -Force
         }
         Write-Host "Device has all actual updates installed!" -ForegroundColor $CommandSuccess
+        if ($nextScriptToLaunch)
+        {
+            Write-Host "Launching now script $($nextScriptToLaunch)"
+            if ($rebootForNextScriptToLaunch)
+            {
+                "powershell.exe -NoLogo -ExecutionPolicy Bypass -Command `"Start-Process powershell.exe -ArgumentList '-NoLogo -ExecutionPolicy Bypass -File \`"$nextScriptToLaunch\`"' -Verb RunAs`"" | Set-Content -Path $restartScript -Force
+                cmd /c shutdown /r /t 0
+            }
+            else
+            {
+                & $nextScriptToLaunch
+            }
+        }
     }
 }
 

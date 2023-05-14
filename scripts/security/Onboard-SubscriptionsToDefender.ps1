@@ -48,8 +48,8 @@ $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdAuditStorage)"
 $LogAnaWrkspcName = "$($AlyaNamingPrefix)loga$($AlyaResIdLogAnalytics)"
 $DefenderOnboardedServices = @("KeyVaults", "Dns", "Arm")
 $DefenderOnboardedPolicies = @(
-    @{Name="CIS Benchmark v1.3.0"; Policy="CIS Microsoft Azure Foundations Benchmark v1.3.0"},
-    @{Name="Azure Security Benchmark"; Policy="Azure Security Benchmark"}
+    @{Name="CIS Benchmark v1.4.0"; Policy="CIS Microsoft Azure Foundations Benchmark v1.4.0"},
+    @{Name="Azure Security Benchmark"; Policy="[Preview]: Windows machines should meet requirements for the Azure compute security baseline"}
     #"ISO 27001:2013",
     #"Enable Azure Monitor for VMs"
 )
@@ -206,6 +206,11 @@ foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique
     {
         #$enabledPolicy = $DefenderOnboardedPolicies[0]
         $Policy = Get-AzPolicySetDefinition | Where-Object {$_.Properties.displayName -eq $enabledPolicy.Policy}
+        if (-not $Policy)
+        {
+            Write-Warning "Policy $($enabledPolicy.Policy) not found!"
+            continue
+        }
         $assignmentName = "DFC '$($enabledPolicy.Name)' on '$($AlyaSubscriptionName)'"
         $assignmentDisplayName = "DFC '$($enabledPolicy.Name)' on '$($AlyaSubscriptionName)' <$($sub.Id)>"
         $assignmentName = $assignmentName.Replace("%", "-").Replace("&", "-").Replace("\", "-").Replace("?", "-").Replace("/", "-").Replace(":", "-").Replace("<", "-").Replace(">", "-").Replace(" ", "-")

@@ -60,10 +60,10 @@ if (-Not (Test-Path "$($AlyaTools)\Setups"))
 }
 if (-Not (Test-Path "$($AlyaTools)\Setups\AzInfoProtection_UL.exe"))
 {
-    $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $AlyaAipClientDownload -UseBasicParsing -Method Get
+    $req = Invoke-WebRequestIndep -Uri $AlyaAipClientDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*AzInfoProtection_UL[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-    $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $url -Method Get -OutFile "$($AlyaTools)\Setups\AzInfoProtection_UL.exe"
+    $req = Invoke-WebRequestIndep -Uri $url -Method Get -OutFile "$($AlyaTools)\Setups\AzInfoProtection_UL.exe"
 }
 
 Write-Host "Install now the AIP Client with the following command:" -ForegroundColor $CommandInfo

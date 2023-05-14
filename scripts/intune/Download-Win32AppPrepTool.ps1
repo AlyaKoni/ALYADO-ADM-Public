@@ -65,10 +65,10 @@ Write-Host "Checking git installation" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$AlyaGitRoot"))
 {
     Write-Host "Downloading git"
-    $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $AlyaGitDownload -UseBasicParsing -Method Get
+    $req = Invoke-WebRequestIndep -Uri $AlyaGitDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*windows[^`"]*portable[^`"]*64[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-    $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $url -Method Get -OutFile ".\PortableGit64bit.exe"
+    $req = Invoke-WebRequestIndep -Uri $url -Method Get -OutFile ".\PortableGit64bit.exe"
     Write-Host "Installing git"
     cmd /c ".\PortableGit64bit.exe" -o"$AlyaGitRoot" -y
     do

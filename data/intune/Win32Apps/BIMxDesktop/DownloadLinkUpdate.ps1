@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://graphisoft.com/de/downloads/bimx/bimx_desktop"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "http[^`"]*BIMx[^`"]*.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $Shell = New-Object -ComObject WScript.Shell

@@ -51,7 +51,7 @@ Install-ModuleIfNotInstalled "ImportExcel"
 
 # Main
 Write-Host "Getting actual configuration"
-$resp = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Method GET -Uri "https://azure.microsoft.com/en-us/pricing/calculator/"
+$resp = Invoke-WebRequestIndep -UseBasicParsing -Method GET -Uri "https://azure.microsoft.com/en-us/pricing/calculator/"
 $mtch = $resp.Content -match "global.currencyData = (.*);"
 $exportCurrencyData = ConvertFrom-Json -InputObject $Matches[1]
 $mtch = $resp.Content -match "name=`"awa-stv`" content=`"(.*)`""
@@ -75,7 +75,7 @@ $bandwidth = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.
 $virtualmachines = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/virtual-machines/calculator/$query"
 $postgresql = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/postgresql/calculator/$query"
 
-$computeWinBenchmarks = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Method GET -Uri "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/compute-benchmark-scores"
+$computeWinBenchmarks = Invoke-WebRequestIndep -UseBasicParsing -Method GET -Uri "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/compute-benchmark-scores"
 
 Write-Host "Building products table" -ForegroundColor $CommandInfo
 $productsCsv = [System.Collections.ArrayList]@()
@@ -563,7 +563,7 @@ $benchmarks = @(
 foreach($benchmark in $benchmarks)
 {
     Write-Host "  $($benchmark.OS): $($benchmark.URL)"
-    $computeWinBenchmarks = Invoke-WebRequest -SkipHttpErrorCheck -UseBasicParsing -Method GET -Uri $benchmark.URL
+    $computeWinBenchmarks = Invoke-WebRequestIndep -UseBasicParsing -Method GET -Uri $benchmark.URL
     $tables = ([regex]::Matches($computeWinBenchmarks.Content, "<table>(\n|.)*?</table>", [System.Text.RegularExpressions.RegExOptions]::Multiline -bor [System.Text.RegularExpressions.RegExOptions]::IgnoreCase)).Value
     foreach($table in $tables)
     {

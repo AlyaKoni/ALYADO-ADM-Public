@@ -109,9 +109,9 @@ if ($disk)
         New-Item -Path $localDir -ItemType Directory -Force | Out-Null
     }
     @"
-pushd `"`$AlyaRoot\..\Tools\WindowsPowerShell\Modules`"
+Push-Location `"`$AlyaRoot\..\Tools\WindowsPowerShell\Modules`"
 `$AlyaModulePath = `$pwd
-popd
+Pop-Location 
 "@ | Set-Content -Path "$($vol.DriveLetter):\Alya$AlyaCompanyNameShortM365\_local\ConfigureEnv.ps1" -Encoding UTF8
 }
 else

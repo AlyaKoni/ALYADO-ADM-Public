@@ -79,12 +79,6 @@ if (-Not $Context)
     Exit 1
 }
 
-# adding actual user to email recipients
-#if ($ActionGroupNameGeneralEmails -notcontains $Context.Account.Id)
-#{
-#    $ActionGroupNameGeneralEmails += $Context.Account.Id
-#}
-
 # Checking resource provider registration
 Write-Host "Checking resource provider registration Microsoft.Insights" -ForegroundColor $CommandInfo
 $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
@@ -97,6 +91,14 @@ if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne
         Start-Sleep -Seconds 5
         $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
     } while ($resProv[0].RegistrationState -ne "Registered")
+}
+
+# Checking ressource group
+Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $ResGrp)
+{
+    throw "Ressource Group not found. Please create the resource group with the script Create-AzureLogAnalyticsWorkspace.ps1"
 }
 
 # Checking action group general

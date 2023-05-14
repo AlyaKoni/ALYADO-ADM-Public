@@ -69,6 +69,6 @@ if (-Not $Global:ocred)
 Write-Warning "The microsoft migration script does not support MFA! Please remove MFA for $($Global:cred.UserName)"
 pause
 
-pushd "$migDir\MigScripts"
+Push-Location "$migDir\MigScripts"
 .\AddMembersToGroups.ps1 -MappingCsv "$migDir\import.csv" -BackupDir "$migDir\Backup" -ArePublicFoldersOnPremises $true -Credential $Global:ocred
-popd
+Pop-Location 

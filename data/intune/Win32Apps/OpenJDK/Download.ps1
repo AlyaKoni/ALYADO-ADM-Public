@@ -3,10 +3,10 @@
 #
 
 $pageUrl = "https://www.oracle.com/java/technologies/javase-downloads.html"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"']*javase-(?!server)[^`"']*jre[^`"']*downloads.html"
 $newUrl = "https://www.oracle.com"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $newUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $newUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"']*jre[^`"']*windows-x64.exe"
 $fileUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 $fileName = $fileUrl.SubString($fileUrl.LastIndexOf("/")+1)

@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://support.apple.com/de-ch/HT204283"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*iCloudSetup.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 
@@ -12,7 +12,7 @@ if (-Not (Test-Path $contentRoot))
 
 Invoke-WebRequest -UseBasicParsing -Uri $newUrl -Method Get -OutFile "$contentRoot\iCloudSetup.exe"
 
-pushd "$contentRoot"
+Push-Location "$contentRoot"
 .\iCloudSetup.exe /extract
 do
 {
@@ -26,4 +26,4 @@ foreach($file in (Get-ChildItem -Path $contentRoot))
         $file | Remove-Item -Force
     }
 }
-popd
+Pop-Location 

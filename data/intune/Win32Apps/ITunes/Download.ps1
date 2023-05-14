@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://support.apple.com/de-ch/HT210384"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*iTunes64Setup.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 
@@ -12,7 +12,7 @@ if (-Not (Test-Path $contentRoot))
 
 Invoke-WebRequest -UseBasicParsing -Uri $newUrl -Method Get -OutFile "$contentRoot\iTunes64Setup.exe"
 
-pushd "$contentRoot"
+Push-Location "$contentRoot"
 .\iTunes64Setup.exe /extract
 do
 {
@@ -27,4 +27,4 @@ foreach($file in (Get-ChildItem -Path $contentRoot))
         $file | Remove-Item -Force
     }
 }
-popd
+Pop-Location 

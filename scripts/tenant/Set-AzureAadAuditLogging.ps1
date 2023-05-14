@@ -270,7 +270,7 @@ $body = @"
 "@
 $method = "Put"
 $uri = "https://management.azure.com/providers/microsoft.aadiam/diagnosticSettings/{0}?api-version=2017-04-01-preview" -f $DiagnosticRuleName
-$response = Invoke-WebRequest -SkipHttpErrorCheck -Method $method -Uri $uri -Body $body -Headers $headers
+$response = Invoke-WebRequestIndep -Method $method -Uri $uri -Body $body -Headers $headers
 
 if ($response.StatusCode -ne 200) {
     throw "An error occured setting diagnostic settings on azure active directory: $($response | out-string)"

@@ -53,12 +53,13 @@ Write-Host "=====================================================`n" -Foreground
 
 $userName = "scanner@$AlyaDomainName"
 
-Write-Host "Create user $userName and lixense"
+Write-Host "Create user $userName by hand and assign license"
 pause
 
+& "$($AlyaScripts)\aad\Disable-MfaForUser.ps1" -userUpn $userName
+& "$($AlyaScripts)\aad\Set-UserPasswordNeverExpire.ps1" -userUpn $userName
 & "$($AlyaScripts)\exchange\Enable-SmtpAuthForUser.ps1" -userUpn $userName
 & "$($AlyaScripts)\exchange\Enable-BasicAuthPopImapSmtpForUser.ps1" -userUpn $userName
-& "$($AlyaScripts)\aad\Disable-MfaForUser.ps1" -userUpn $userName
 
 Write-Host "Please login once to https://portal.office.com with user $userName"
 pause

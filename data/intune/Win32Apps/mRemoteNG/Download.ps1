@@ -3,7 +3,7 @@
 #
 
 $pageUrl = "https://mobaxterm.mobatek.net/download-home-edition.html"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*/MobaXterm_Installer[^`"]*.zip"
 $newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 

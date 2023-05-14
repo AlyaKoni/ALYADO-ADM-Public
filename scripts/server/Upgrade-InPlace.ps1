@@ -65,9 +65,9 @@ Param(
 Write-Host "Members" -ForegroundColor Cyan
 $mypath = $MyInvocation.MyCommand.Path
 $scriptsDir = $PSScriptRoot
-pushd "$PSScriptRoot\.."
+Push-Location "$PSScriptRoot\.."
 $mediaShareRoot = $pwd.ProviderPath
-popd
+Pop-Location 
 $compName = ($env:COMPUTERNAME).ToLower()
 $compNameFqdn = ($env:COMPUTERNAME+"."+$env:USERDNSDOMAIN).ToLower()
 $reportRootDir = [System.IO.Path]::Combine($mediaShareRoot, "Reports")
@@ -110,7 +110,7 @@ Start-Transcript -IncludeInvocationHeader -Path "$reportDir\Transcript-$timeStr.
 sl $reportDir
 
 # Functions
-function SelectItem()
+function Select-Item()
 {
     Param(
 	    $list,
@@ -124,7 +124,7 @@ function SelectItem()
 function SelectDcName()
 {
 	$list = Get-ADDomainController -Filter * | Select-Object Name, Domain, Forest, OperationMasterRoles
-	$sel = SelectItem -list $list
+	$sel = Select-Item -list $list
 	return $sel.Name
 }
 
@@ -574,10 +574,10 @@ if ($mediaEdition -ne $null)
 	Write-Host "OsLocale: $($OsLocale)"
 	Write-Host "OsDomain: $($OsDomain)"
 	
-	pushd $mediaShare
+	Push-Location $mediaShare
 	& "$setupFile"
 	#& "$setupFile" /unattend:$AutounattendFile
-	popd
+	Pop-Location 
 
 	<#
     # Done

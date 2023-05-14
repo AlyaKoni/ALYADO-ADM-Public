@@ -71,7 +71,7 @@ if (-Not (Test-Path "$AlyaData\azure\publicStorage\pages\OfficeGroupsNutzungExte
 }
 try {
     $resp = $null
-    ($resp = Invoke-WebRequest -SkipHttpErrorCheck -Method "Get" -Uri "https://$StorageAccountName.blob.core.windows.net/pages/OfficeGroupsNutzungExterne.html") | Out-Null
+    ($resp = Invoke-WebRequestIndep -Method "Get" -Uri "https://$StorageAccountName.blob.core.windows.net/pages/OfficeGroupsNutzungExterne.html") | Out-Null
     if (-Not $resp -or $resp.StatusCode -ne 200) { throw }
 }
 catch {

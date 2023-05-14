@@ -72,13 +72,13 @@ if ($policy.GuestUserRoleId -ne "2af84b1e-32c8-42b7-82bc-daa82404023b")
 if ($policy.AllowedToSignUpEmailBasedSubscriptions)
 {
     Write-Warning "Disabling AllowedToSignUpEmailBasedSubscriptions"
-    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowedToSignUpEmailBasedSubscriptions $false
+    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowedToSignUpEmailBasedSubscriptions:$false
 }
 
 if ($policy.AllowEmailVerifiedUsersToJoinOrganization)
 {
     Write-Warning "Disabling AllowEmailVerifiedUsersToJoinOrganization"
-    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowEmailVerifiedUsersToJoinOrganization $false
+    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowEmailVerifiedUsersToJoinOrganization:$false
 }
 
 Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5

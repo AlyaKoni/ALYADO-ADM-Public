@@ -67,7 +67,7 @@ $apiToken = Get-AzAccessToken
 Write-Host "Getting licenses" -ForegroundColor $CommandInfo
 $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
 $url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
-$response = Invoke-WebRequest -SkipHttpErrorCheck -Uri $url -Headers $header -Method GET -ErrorAction Stop
+$response = Invoke-WebRequestIndep -Uri $url -Headers $header -Method GET -ErrorAction Stop
 $availableLics = $response | ConvertFrom-Json
 
 $availableLics | Select-Object name,accountSkuId,availableUnits,totalUnits,consumedUnits | Format-Table

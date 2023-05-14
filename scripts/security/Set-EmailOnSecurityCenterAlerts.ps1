@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2021
+    Copyright (c) Alya Consulting, 2021-2023
 
     This file is part of the Alya Base Configuration.
 	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,6 +30,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     28.05.2021 Konrad Brunner       Initial Creation
+    08.05.2023 Konrad Brunner       WebDriver version
 
 #>
 
@@ -58,7 +59,196 @@ Write-Host "=====================================================`n" -Foreground
 
 try
 {
-    LoginTo-IPPS
+    $browser = Get-SeleniumBrowser
+    $browser.Url = "https://security.microsoft.com/"
+    $navi = $browser.Navigate()
+    do
+    {
+        Start-Sleep -Milliseconds 1000
+    } while ($browser.Title -notlike "Startseite*Microsoft 365 Security" -and $browser.Title -ne "TODO")
+    Start-Sleep -Seconds 2
+    $browser.Url = "https://security.microsoft.com/alertpolicies"
+    $navi = $browser.Navigate()
+    do
+    {
+        Start-Sleep -Milliseconds 1000
+    } while ($browser.Title -notlike "Warnungsrichtlinie*Microsoft 365 Security" -and $browser.Title -ne "TODO")
+    Start-Sleep -Seconds 2
+
+    $alreadyDone = @()
+    do
+    {
+        $somethingChanged = $false
+
+        $gridField = $null
+        do
+        {
+            Start-Sleep -Milliseconds 500
+            try
+            {
+                $gridField = $browser.FindElement([OpenQA.Selenium.By]::XPath("//div[@role='grid']"))
+            } catch {}
+        } while ($null -eq $gridField)
+
+        $msgBtns = $browser.FindElements([OpenQA.Selenium.By]::XPath("//button[@type='button' and .//span='Schließen']"))
+        foreach($msgBtn in $msgBtns)
+        {
+            $msgBtn.Click()
+        }
+
+        do
+        {
+            Start-Sleep -Milliseconds 500
+            try
+            {
+                $rows = $gridField.FindElements([OpenQA.Selenium.By]::XPath(".//div[@role='row']"))
+            } catch {}
+        } while (-Not $rows -or $rows.Count -lt 30)
+
+        $proceed = $true
+        foreach($row in $rows)
+        {
+            $msgBtns = $browser.FindElements([OpenQA.Selenium.By]::XPath("//button[@type='button' and .//span='Schließen']"))
+            foreach($msgBtn in $msgBtns)
+            {
+                $msgBtn.Click()
+            }
+    
+            if (-Not $proceed) { continue }
+            if ($row.FindElements([OpenQA.Selenium.By]::XPath(".//div[@data-automation-key='CustomSeverity']")).Count -gt 0)
+            {
+                $sev = $row.FindElement([OpenQA.Selenium.By]::XPath(".//div[@data-automation-key='CustomSeverity']"))
+                $btn = $row.FindElement([OpenQA.Selenium.By]::XPath(".//button"))
+                if ($btn.Text -in $alreadyDone) { continue }
+                $alreadyDone += $btn.Text
+                Write-Host "$($btn.Text)"
+                if ($sev.Text -in @("Hoch"))
+                {
+                    $btn.Click()
+                    $iconField = $null
+                    do
+                    {
+                        Start-Sleep -Milliseconds 500
+                        try
+                        {
+                            $dlgField = $browser.FindElement([OpenQA.Selenium.By]::XPath("//div[@role='dialog' and @aria-label='$($btn.text)']"))
+                            if ($dlgField)
+                            {
+                                $grpField = $dlgField.FindElement([OpenQA.Selenium.By]::XPath(".//div[@role='menubar']"))
+                                if ($grpField)
+                                {
+                                    $iconField = $grpField.FindElement([OpenQA.Selenium.By]::XPath(".//button"))
+                                }
+                            }
+                        } catch {}
+                    } while ($null -eq $iconField)
+                    $iconField.Click()
+                    
+                    $inputField = $null
+                    do
+                    {
+                        Start-Sleep -Milliseconds 500
+                        try
+                        {
+                            $dlgFields = $browser.FindElements([OpenQA.Selenium.By]::XPath("//div[@role='dialog']"))
+                            $dlgField2 = $dlgFields | Where-Object { $_ -ne $dlgField }
+                            if ($dlgField)
+                            {
+                                $inputField = $dlgField2.FindElement([OpenQA.Selenium.By]::XPath(".//input[@role='combobox']"))
+                            }
+                        } catch {}
+                    } while ($null -eq $inputField)
+
+                    Start-Sleep -Milliseconds 500
+                    $existFields = $dlgField2.FindElements([OpenQA.Selenium.By]::XPath("//div[contains(@class,'ms-PickerPersona-container')]"))
+                    $existFound = $existFields | where { $_.Text -like "*security@rechtsanwalt-zuerich.ch*" }
+
+                    if (-Not $existFound) {
+                        Write-Host "  configuring"
+                        $body = $browser.FindElement([OpenQA.Selenium.By]::XPath("//body"))
+                        $body.SendKeys("`t")
+                        $body.SendKeys("`t")
+                        $inputField.SendKeys("security@rechtsanwalt-zuerich.ch")
+
+                        $suggField = $null
+                        do
+                        {
+                            Start-Sleep -Milliseconds 500
+                            try
+                            {
+                                $sugCField = $browser.FindElement([OpenQA.Selenium.By]::XPath("//div[contains(@class,'ms-Suggestions-container')]"))
+                                if ($sugCField)
+                                {
+                                    $suggField = $sugCField.FindElement([OpenQA.Selenium.By]::XPath("//div[contains(@class,'ms-Suggestions-item')]"))
+                                }
+                            } catch {}
+                        } while ($null -eq $suggField)
+                        $suggField.Click()
+
+                        if ($btn.Text -like "*Reply-all storm detected*")
+                        {
+                            $valueField = $dlgField2.FindElement([OpenQA.Selenium.By]::XPath(".//input[@type='number']"))
+                            $valueField.SendKeys("`b`b`b`b`b`b`b`b`b`b`b20")
+                        }
+
+                        $weiter = $null
+                        do
+                        {
+                            Start-Sleep -Milliseconds 500
+                            try
+                            {
+                                $weiter = $dlgField2.FindElement([OpenQA.Selenium.By]::XPath(".//button[@aria-label='Weiter']"))
+                            } catch {}
+                        } while ($null -eq $weiter)
+                        $weiter.Click()
+
+                        $absenden = $null
+                        do
+                        {
+                            Start-Sleep -Milliseconds 500
+                            try
+                            {
+                                $absenden = $dlgField2.FindElement([OpenQA.Selenium.By]::XPath(".//button[@aria-label='Absenden']"))
+                            } catch {}
+                        } while ($null -eq $absenden)
+                        $absenden.Click()
+
+                        $fertig = $null
+                        do
+                        {
+                            Start-Sleep -Milliseconds 500
+                            try
+                            {
+                                $fertig = $dlgField2.FindElement([OpenQA.Selenium.By]::XPath(".//button[@aria-label='Fertig']"))
+                            } catch {}
+                        } while ($null -eq $fertig)
+                        $fertig.Click()
+                        $proceed = $false
+                        $somethingChanged = $true
+                    }
+                    else {
+                        $abbrechen = $null
+                        do
+                        {
+                            Start-Sleep -Milliseconds 500
+                            try
+                            {
+                                $abbrechen = $dlgField2.FindElement([OpenQA.Selenium.By]::XPath(".//button[@aria-label='Abbrechen']"))
+                            } catch {}
+                        } while ($null -eq $abbrechen)
+                        $abbrechen.Click()
+                    }
+
+                    $msgBtn = $dlgField.FindElement([OpenQA.Selenium.By]::XPath("//button[@type='button' and @aria-label='Schließen']"))
+                    $msgBtn.Click()
+                }
+            }
+
+        }
+
+    } while ($somethingChanged)
+
+    <#LoginTo-IPPS
     $protAlerts = Get-ProtectionAlert
     foreach($protAlert in $protAlerts)
     {
@@ -79,7 +269,7 @@ try
                 Set-ProtectionAlert -Identity $protAlert.DistinguishedName -NotifyUser $actUsers
             }
         }
-    }
+    }#>
 }
 catch
 {
@@ -88,7 +278,8 @@ catch
 }
 finally
 {
-    DisconnectFrom-EXOandIPPS
+    #DisconnectFrom-EXOandIPPS
+    Close-SeleniumBrowser -browser $browser
 }
 
 #Stopping Transscript

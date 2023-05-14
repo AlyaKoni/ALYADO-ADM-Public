@@ -247,7 +247,7 @@ $AlyaSpThemeDef = @{
 <# TEAMS SETTINGS #>
 $AlyaTeamsNewTeamOwner = $AlyaSharePointNewSiteOwner
 $AlyaTeamsNewTeamAdditionalOwner = $AlyaSharePointNewSiteAdditionalOwner
-$AlyaTeamsNewAdmins = @( $AlyaTeamsNewTeamOwner, $AlyaTeamsNewTeamAdditionalOwner )
+$AlyaTeamsNewAdmins = $AlyaSharePointNewSiteCollectionAdmins
 
 <# OFFICE GROUP SETTINGS #>
 $AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERS" # Only members can create groups

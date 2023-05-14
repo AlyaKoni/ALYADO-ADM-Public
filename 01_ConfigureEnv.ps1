@@ -43,12 +43,13 @@
     12.07.2021 Konrad Brunner       Added own module path
     04.10.2021 Konrad Brunner       Proxy default credentials
     04.08.2022 Konrad Brunner       Added simple password generator
-    18.08.2022 Konrad Brunner       SelectItem
+    18.08.2022 Konrad Brunner       Select-Item
     18.10.2022 Konrad Brunner       LoginTo-MgGraph
     20.12.2022 Konrad Brunner       LoginTo-DataGateway
     22.03.2023 Konrad Brunner       Check for existing PowerShell Modules in default module path
     10.04.2023 Konrad Brunner       Reuse connection in PnP Powershell
 	20.04.2023 Konrad Brunner		Added Mime Mapping function for PS7
+	14.05.2023 Konrad Brunner		Fixed package management update
 
 #>
 
@@ -87,13 +88,14 @@ $Global:ErrorActionPreference = "Stop"
 $Global:ProgressPreference = "SilentlyContinue"
 
 <# TLS Connections #>
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+[Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls12, [Net.SecurityProtocolType]::Tls13)
 $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
 $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 
 <# OTHER PATHS #>
 $AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Modules"
 $AlyaDefaultModulePathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Modules"
+$AlyaIsPsCore = $PSVersionTable.PSVersion.Major -ge 6
 if (-Not $AlyaModulePath)
 {
     $AlyaModulePath = $AlyaDefaultModulePath
@@ -480,6 +482,140 @@ function DownloadAndInstall-Package($packageName, $nuvrs, $nusrc)
     Remove-Item $fileName
 }
 
+function Set-AllCallsToVerbose
+{
+    $PSDefaultParameterValues = @{"*:Verbose"=$True}
+}
+
+function Invoke-WebRequestIndep ()
+{
+    [CmdletBinding()]
+    Param(
+        [Switch]$UseBasicParsing,
+        [System.Uri]$Uri,
+        [System.Version]$HttpVersion,
+        [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession,
+        [System.String]$SessionVariable,
+        [Switch]$AllowUnencryptedAuthentication,
+        [Microsoft.PowerShell.Commands.WebAuthenticationType]$Authentication,
+        [System.Management.Automation.PSCredential]$Credential,
+        [Switch]$UseDefaultCredentials,
+        [System.String]$CertificateThumbprint,
+        [System.Security.Cryptography.X509Certificates.X509Certificate]$Certificate,
+        [Switch]$SkipCertificateCheck,
+        [Microsoft.PowerShell.Commands.WebSslProtocol]$SslProtocol,
+        [System.Security.SecureString]$Token,
+        [System.String]$UserAgent,
+        [Switch]$DisableKeepAlive,
+        [System.Int32]$TimeoutSec,
+        [System.Collections.IDictionary]$Headers,
+        [System.Int32]$MaximumRedirection,
+        [System.Int32]$MaximumRetryCount,
+        [System.Int32]$RetryIntervalSec,
+        [Microsoft.PowerShell.Commands.WebRequestMethod]$Method,
+        [System.String]$CustomMethod,
+        [Switch]$NoProxy,
+        [System.Uri]$Proxy,
+        [System.Management.Automation.PSCredential]$ProxyCredential,
+        [Switch]$ProxyUseDefaultCredentials,
+        [System.Object]$Body,
+        [System.Collections.IDictionary]$Form,
+        [System.String]$ContentType,
+        [System.String]$TransferEncoding,
+        [System.String]$InFile,
+        [System.String]$OutFile,
+        [Switch]$PassThru,
+        [Switch]$Resume,
+        [Switch]$SkipHttpErrorCheck
+    )
+    $parms = @{}
+    $pkeys = $PSBoundParameters.Keys
+    if ($pkeys -contains "UseBasicParsing") { $parms["UseBasicParsing"] = $null }
+    if ($pkeys -contains "Uri") { $parms["Uri"] = $Uri }
+    if ($pkeys -contains "HttpVersion") { $parms["HttpVersion"] = $HttpVersion }
+    if ($pkeys -contains "WebSession") { $parms["WebSession"] = $WebSession }
+    if ($pkeys -contains "SessionVariable") { $parms["SessionVariable"] = $SessionVariable }
+    if ($pkeys -contains "AllowUnencryptedAuthentication") { $parms["AllowUnencryptedAuthentication"] = $null }
+    if ($pkeys -contains "Authentication") { $parms["Authentication"] = $Authentication }
+    if ($pkeys -contains "Credential") { $parms["Credential"] = $Credential }
+    if ($pkeys -contains "UseDefaultCredentials") { $parms["UseDefaultCredentials"] = $null }
+    if ($pkeys -contains "CertificateThumbprint") { $parms["CertificateThumbprint"] = $CertificateThumbprint }
+    if ($pkeys -contains "Certificate") { $parms["Certificate"] = $Certificate }
+    if ($pkeys -contains "SkipCertificateCheck") { $parms["SkipCertificateCheck"] = $null }
+    if ($pkeys -contains "SslProtocol") { $parms["SslProtocol"] = $SslProtocol }
+    if ($pkeys -contains "Token") { $parms["Token"] = $Token }
+    if ($pkeys -contains "UserAgent") { $parms["UserAgent"] = $UserAgent }
+    if ($pkeys -contains "DisableKeepAlive") { $parms["DisableKeepAlive"] = $null }
+    if ($pkeys -contains "TimeoutSec") { $parms["TimeoutSec"] = $TimeoutSec }
+    if ($pkeys -contains "Headers") { $parms["Headers"] = $Headers }
+    if ($pkeys -contains "MaximumRedirection") { $parms["MaximumRedirection"] = $MaximumRedirection }
+    if ($pkeys -contains "MaximumRetryCount") { $parms["MaximumRetryCount"] = $MaximumRetryCount }
+    if ($pkeys -contains "RetryIntervalSec") { $parms["RetryIntervalSec"] = $RetryIntervalSec }
+    if ($pkeys -contains "Method") { $parms["Method"] = $Method }
+    if ($pkeys -contains "CustomMethod") { $parms["CustomMethod"] = $CustomMethod }
+    if ($pkeys -contains "NoProxy") { $parms["NoProxy"] = $null }
+    if ($pkeys -contains "Proxy") { $parms["Proxy"] = $Proxy }
+    if ($pkeys -contains "ProxyCredential") { $parms["ProxyCredential"] = $ProxyCredential }
+    if ($pkeys -contains "ProxyUseDefaultCredentials") { $parms["ProxyUseDefaultCredentials"] = $null }
+    if ($pkeys -contains "Body") { $parms["Body"] = $Body }
+    if ($pkeys -contains "Form") { $parms["Form"] = $Form }
+    if ($pkeys -contains "ContentType") { $parms["ContentType"] = $ContentType }
+    if ($pkeys -contains "TransferEncoding") { $parms["TransferEncoding"] = $TransferEncoding }
+    if ($pkeys -contains "InFile") { $parms["InFile"] = $InFile }
+    if ($pkeys -contains "OutFile") { $parms["OutFile"] = $OutFile }
+    if ($pkeys -contains "PassThru") { $parms["PassThru"] = $null }
+    if ($pkeys -contains "Resume") { $parms["Resume"] = $null }
+    if ($pkeys -contains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
+    if ($pkeys -contains "PreserveAuthorizationOnRedirect") { $parms["PreserveAuthorizationOnRedirect"] = $null }
+    if ($pkeys -contains "SkipHeaderValidation") { $parms["SkipHeaderValidation"] = $null }
+    if ($pkeys -contains "Verbose") { $parms["Verbose"] = $null }
+    if ($pkeys -contains "Debug") { $parms["Debug"] = $null }
+    if ($pkeys -contains "ErrorAction") { $parms["ErrorAction"] = $ErrorAction }
+    if ($pkeys -contains "WarningAction") { $parms["WarningAction"] = $WarningAction }
+    if ($pkeys -contains "InformationAction") { $parms["InformationAction"] = $InformationAction }
+    if ($pkeys -contains "ErrorVariable") { $parms["ErrorVariable"] = $ErrorVariable }
+    if ($pkeys -contains "WarningVariable") { $parms["WarningVariable"] = $WarningVariable }
+    if ($pkeys -contains "InformationVariable") { $parms["InformationVariable"] = $InformationVariable }
+    if ($pkeys -contains "OutVariable") { $parms["OutVariable"] = $OutVariable }
+    if ($pkeys -contains "OutBuffer") { $parms["OutBuffer"] = $OutBuffer }
+    if ($pkeys -contains "PipelineVariable") { $parms["PipelineVariable"] = $PipelineVariable }
+    if ($AlyaIsPsCore -and $pkeys -notcontains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
+    return Invoke-WebRequest @parms
+}
+<#
+$parser = @()
+foreach($key in $other.Parameters.Keys)
+{
+    $par = $other.Parameters[$key]
+    $psets = @()
+    foreach ($pset in $par.ParameterSets.Keys)
+    {
+        if ($pset -ne "__AllParameterSets")
+        {
+            $psets += $pset
+        }
+    }
+    foreach($ps in $par.ParameterSets.Keys)
+    {
+        if ($par.Mandatory)
+        {
+            Write-Host "        [Parameter(Mandatory=`$true)]"
+        }
+    }
+    if ($par.SwitchParameter)
+    {
+        Write-Host "        [Switch]`$$($key),"
+        $parser += "    if ($pkeys -contains `"$($key)`") { `$parms[`"$($key)`"] = `$null }"
+    }
+    else
+    {
+        Write-Host "        [$($par.ParameterType.FullName)]`$$($key) = `$null,"
+        $parser += "    if ($pkeys -contains `"$($key)`") { `$parms[`"$($key)`"] = `$$($key) }"
+    }
+}
+$parser
+#>
+
 function Install-PackageIfNotInstalled (
     [string] [Parameter(Mandatory = $true)] $packageName,
     [bool] $autoUpdate = $true
@@ -494,7 +630,7 @@ function Install-PackageIfNotInstalled (
     {
         $tmp = New-Item -Path "$($AlyaTools)\Packages" -ItemType Directory -Force
     }
-    $resp = Invoke-WebRequest -SkipHttpErrorCheck -Uri "https://www.nuget.org/packages/$packageName" -UseBasicParsing
+    $resp = Invoke-WebRequestIndep -Uri "https://www.nuget.org/packages/$packageName" -UseBasicParsing
     $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Download package" -or $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$($AlyaTools)\Packages\$packageName\$packageName.nuspec"))
@@ -509,11 +645,15 @@ function Install-PackageIfNotInstalled (
             $nuspec = [xml](Get-Content "$($AlyaTools)\Packages\$packageName\$packageName.nuspec")
             if ($nuspec.package.metadata.version -ne $nuvrs)
             {
-                Write-Host "    There is a newer CSOM package available. Downloading and installing it."
+                Write-Host "    There is a newer '$packageName' package available. Downloading and installing it."
                 Remove-Item -Recurse -Force "$($AlyaTools)\Packages\$packageName"
                 DownloadAndInstall-Package -packageName $packageName -nuvrs $nuvrs -nusrc $nusrc
             }
         }
+    }
+    foreach($file in (Get-ChildItem -Path "$($AlyaTools)\Packages\$packageName" -Recurse))
+    {
+        Unblock-File -Path $file.FullName
     }
 }
 
@@ -614,6 +754,29 @@ function Install-ModuleIfNotInstalled (
     {
         Install-ModuleIfNotInstalled "PackageManagement"
         throw "PackageManagement updated! Please restart your powershell session"
+    }
+    $repCmd = Get-Command Get-PSRepository -ErrorAction SilentlyContinue
+    if (-Not $repCmd)
+    {
+        $ModuleContentUrl = "https://www.powershellgallery.com/api/v2/package/PackageManagement"
+        do {
+            $ModuleContentUrl = (Invoke-WebRequest -Uri $ModuleContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore).Headers.Location 
+        } while (!$ModuleContentUrl.Contains(".nupkg"))
+        $WebClient = New-Object System.Net.WebClient
+        $PathFolderName = New-Guid
+        $ModuleContentZip = Join-Path $env:TEMP ("$PathFolderName.zip")
+        $WebClient.DownloadFile($ModuleContentUrl, $ModuleContentZip)
+        $ModuleContentDir = Join-Path $env:TEMP $PathFolderName
+        $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+        if ($cmdTst)
+        {
+            Expand-Archive -Path $ModuleContentZip -DestinationPath $ModuleContentDir -Force
+        }
+        else
+        {
+            Expand-Archive -Path $ModuleContentZip -OutputPath v -Force
+        }
+        Import-Module "$ModuleContentDir\PackageManagement.psd1" -Force -Verbose
     }
     $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
     if (-Not $regRep)
@@ -1000,7 +1163,7 @@ function LoginTo-Az(
         Write-Host "  checking existing context"
         if ($AlyaContext.Count -gt 1)
         {
-            $AlyaContext = SelectItem -message "Please select an existing context" -list $AlyaContext
+            $AlyaContext = Select-Item -message "Please select an existing context" -list $AlyaContext
         }
         if ($AlyaContext.Tenant.Id -ne $AlyaTenantId)
         {
@@ -2205,7 +2368,7 @@ function Split-NetworkAddressWithoutGateway()
     }
     return $networks
 }
-function CheckNetworkToSubnet ([int64]$un2, [int64]$ma2, [int64]$un1)
+function Check-NetworkToSubnet ([int64]$un2, [int64]$ma2, [int64]$un1)
 {
     if($un2 -eq ($ma2 -band $un1)){
         return $True
@@ -2213,7 +2376,7 @@ function CheckNetworkToSubnet ([int64]$un2, [int64]$ma2, [int64]$un1)
         return $False
     }
 }
-function CheckSubnetToNetwork ([int64]$un1, [int64]$ma1, [int64]$un2)
+function Check-SubnetToNetwork ([int64]$un1, [int64]$ma1, [int64]$un2)
 {
     if($un1 -eq ($ma1 -band $un2)){
         return $False
@@ -2221,7 +2384,7 @@ function CheckSubnetToNetwork ([int64]$un1, [int64]$ma1, [int64]$un2)
         return $True
     }
 }
-function CheckNetworkToNetwork ([int64]$un1, [int64]$un2)
+function Check-NetworkToNetwork ([int64]$un1, [int64]$un2)
 {
     if($un1 -eq $un2){
         return $True
@@ -2229,7 +2392,7 @@ function CheckNetworkToNetwork ([int64]$un1, [int64]$un2)
         return $False
     }
 }
-function CheckSubnetInSubnet ([string]$isAddr, [string]$withinAddr)
+function Check-SubnetInSubnet ([string]$isAddr, [string]$withinAddr)
 {
     if ($isAddr.IndexOf("/") -eq -1) { $isAddr += "/32" }
     if ($withinAddr.IndexOf("/") -eq -1) { $withinAddr += "/32" }
@@ -2245,12 +2408,12 @@ function CheckSubnetInSubnet ([string]$isAddr, [string]$withinAddr)
     $nwk2 = new-object net.ipaddress (($mask2addr.address -band $network2addr.address))
     return $nwk1.Address -ge $nwk2.Address -and $bcast1.Address -le $bcast2.Address
 }
-#CheckSubnetInSubnet "172.16.72.0/24" "172.16.0.0/16" true
-#CheckSubnetInSubnet "172.16.72.1" "172.16.0.0/16" true
-#CheckSubnetInSubnet "172.16.0.0/28" "172.16.72.0/24" false
-#CheckSubnetInSubnet "172.16.72.0/24" "172.16.0.0/28" false
-#CheckSubnetInSubnet "172.16.72.0" "172.16.0.0/28" false TODO!!
-#CheckSubnetInSubnet "10.249.14.0/23" "10.249.0.0/20" true
+#Check-SubnetInSubnet "172.16.72.0/24" "172.16.0.0/16" true
+#Check-SubnetInSubnet "172.16.72.1" "172.16.0.0/16" true
+#Check-SubnetInSubnet "172.16.0.0/28" "172.16.72.0/24" false
+#Check-SubnetInSubnet "172.16.72.0/24" "172.16.0.0/28" false
+#Check-SubnetInSubnet "172.16.72.0" "172.16.0.0/28" false TODO!!
+#Check-SubnetInSubnet "10.249.14.0/23" "10.249.0.0/20" true
 
 # Checking custom properties
 if ($AlyaNamingPrefix.Length -gt 8)
@@ -2265,7 +2428,7 @@ if ($AlyaNamingPrefixTest.Length -gt 8)
 }
 if ($AlyaAzureNetwork -and $AlyaProdNetwork -and $AlyaAzureNetwork -ne "PleaseSpecify" -and $AlyaProdNetwork -ne "PleaseSpecify")
 {
-    if (-Not (CheckSubnetInSubnet $AlyaProdNetwork $AlyaAzureNetwork))
+    if (-Not (Check-SubnetInSubnet $AlyaProdNetwork $AlyaAzureNetwork))
     {
         Write-Error "AlyaProdNetwork '$($AlyaProdNetwork)' is not within AlyaAzureNetwork '$($AlyaAzureNetwork)'" -ErrorAction Continue
         exit
@@ -2273,14 +2436,14 @@ if ($AlyaAzureNetwork -and $AlyaProdNetwork -and $AlyaAzureNetwork -ne "PleaseSp
 }
 if ($AlyaAzureNetwork -and $AlyaTestNetwork -and $AlyaAzureNetwork -ne "PleaseSpecify" -and $AlyaTestNetwork -ne "PleaseSpecify")
 {
-    if (-Not (CheckSubnetInSubnet $AlyaTestNetwork $AlyaAzureNetwork))
+    if (-Not (Check-SubnetInSubnet $AlyaTestNetwork $AlyaAzureNetwork))
     {
         Write-Error "AlyaTestNetwork '$($AlyaTestNetwork)' is not within AlyaAzureNetwork '$($AlyaAzureNetwork)'" -ErrorAction Continue
         exit
     }
 }
 
-function SelectItem()
+function Select-Item()
 {
     Param(
         $list,
@@ -2290,4 +2453,49 @@ function SelectItem()
     )
     $sel = $list | Out-GridView -Title $message -OutputMode $outputMode
     return $sel
+}
+
+<# SELENIUM BROWSER #>
+function Get-SeleniumBrowser()
+{
+    Param(
+        [bool]$HideCommandPrompt = $true,
+        [bool]$Headless = $false,
+        $OptionSettings =  @{ browserName=""},
+        $driverversion = ""
+    )
+    $browser = $null
+    Install-PackageIfNotInstalled "Selenium.WebDriver"
+    Install-PackageIfNotInstalled "Selenium.WebDriver.MSEdgeDriver"
+    Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
+    if ($env:Path.IndexOf("$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64") -eq -1)
+    {
+        $env:Path = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64;$($env:Path)"
+    }
+    $edge = Get-AppXPackage | where { $_.Name -eq "Microsoft.MicrosoftEdge" }
+    if (!$edge){
+        throw "Microsoft Edge Browser not installed."
+        return
+    }
+    $dService = [OpenQA.Selenium.Edge.EdgeDriverService]::CreateDefaultService()
+    $dService.HideCommandPromptWindow = $HideCommandPrompt
+    $options = New-Object -TypeName OpenQA.Selenium.Edge.EdgeOptions -Property $OptionSettings
+    if($PrivateBrowsing) {$options.AddArguments('InPrivate')}
+    if($Headless) {$options.AddArguments('headless')}
+    $browser = New-Object OpenQA.Selenium.Edge.EdgeDriver $dService, $options
+    $browser.Manage().window.position = '0,0'
+    return $browser
+}
+function Close-SeleniumBrowser()
+{
+    Param(
+        $browser = $null
+    )
+    if ($browser) {
+        try { $browser.Close() } catch {}
+        try { $browser.Quit() } catch {}
+        try { $browser.Dispose() } catch {}
+    }
+    Start-Sleep -Seconds 2
+    Get-Process -Name msedgedriver -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
 }

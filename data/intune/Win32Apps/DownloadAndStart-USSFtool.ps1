@@ -1,5 +1,5 @@
 ﻿$pageUrl = "https://deployhappiness.com/resources/tool-downloads/"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $pageUrl -UseBasicParsing -Method Get
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*ussf.zip"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 
@@ -7,7 +7,7 @@ $actDir = $PSScriptRoot
 $fileName = Split-Path -Path $newUrl -Leaf
 $filePath = Join-Path $actDir $fileName
 $exePath = Join-Path $actDir "ussf.exe"
-$req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $newUrl -UseBasicParsing -Method Get -OutFile $filePath
+$req = Invoke-WebRequestIndep -Uri $newUrl -UseBasicParsing -Method Get -OutFile $filePath
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 $zip = [System.IO.Compression.ZipFile]::OpenRead($filePath)

@@ -143,10 +143,10 @@ else
         if (-Not $driverSharp)
         {
             Write-Host "  Installing Sharp driver"
-            pushd $driverSharpDir
+            Push-Location $driverSharpDir
             Invoke-Command { pnputil.exe -i -a *.inf }
             Wait-UntilProcessEnds "pnputil"
-            popd
+            Pop-Location 
             Start-Sleep -Seconds 30
             Restart-Service -Name Spooler -Force
             Add-PrinterDriver -Name $driverSharpName
@@ -163,10 +163,10 @@ else
         if (-Not $driverHpPcl)
         {
             Write-Host "  Installing Hp Universal PCL driver"
-            pushd $driverHpPclDir
+            Push-Location $driverHpPclDir
             .\Install.exe /infstage /h /q
 			Wait-UntilProcessEnds "Install"
-            popd
+            Pop-Location 
             Start-Sleep -Seconds 30
             Restart-Service -Name Spooler -Force
             Start-Sleep -Seconds 10
@@ -184,10 +184,10 @@ else
         if (-Not $driverHpPs)
         {
             Write-Host "  Installing Hp Universal Ps driver"
-            pushd $driverHpPsDir
+            Push-Location $driverHpPsDir
             .\Install.exe /infstage /h /q
 			Wait-UntilProcessEnds "Install"
-            popd
+            Pop-Location 
             Start-Sleep -Seconds 30
             Restart-Service -Name Spooler -Force
             Add-PrinterDriver -Name $driverHpPsUniversalName

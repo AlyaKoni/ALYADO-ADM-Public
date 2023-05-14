@@ -403,12 +403,12 @@ if ($WithADIntegration)
         if (-Not (Test-Path $toolDir))
         {
             New-Item -Path $toolDir -ItemType Directory -Force | Out-Null
-            $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri "https://github.com/Azure-Samples/azure-files-samples/releases" -UseBasicParsing -Method Get
+            $req = Invoke-WebRequestIndep -Uri "https://github.com/Azure-Samples/azure-files-samples/releases" -UseBasicParsing -Method Get
             [regex]$regex = "[^`"]*/release[^`"]*windows/[^`"]*"
             [regex]$regex = "[^`"]*/AzFilesHybrid.zip[^`"]*"
             $getUrl = "https://github.com"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
             $outFile = "$toolDir\AzFilesHybrid.zip"
-            $req = Invoke-WebRequest -SkipHttpErrorCheck -Uri $getUrl -OutFile $outFile
+            $req = Invoke-WebRequestIndep -Uri $getUrl -OutFile $outFile
             $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
             if ($cmdTst)
             {
@@ -419,9 +419,9 @@ if ($WithADIntegration)
                 Expand-Archive -Path $outFile -OutputPath $toolDir -Force #AlyaAutofixed
             }
             Remove-Item -Path $outFile -Force | Out-Null
-            pushd $toolDir
+            Push-Location $toolDir
             .\CopyToPSPath.ps1
-            popd
+            Pop-Location 
         }
 
         # Integrate

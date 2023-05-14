@@ -364,7 +364,7 @@ foreach($packageDir in $packages)
             try {
                 do {
                     try {
-                        $response = Invoke-WebRequest -SkipHttpErrorCheck -Uri $curi -Method Put -Headers $headers -Body $encodedBody
+                        $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Headers $headers -Body $encodedBody
                         $StatusCode = $response.StatusCode
                     } catch {
                         $StatusCode = $_.Exception.Response.StatusCode.value__
@@ -430,7 +430,7 @@ foreach($packageDir in $packages)
 	$xml += '</BlockList>'
     do {
         try {
-            $response = Invoke-WebRequest -SkipHttpErrorCheck -Uri $curi -Method Put -Body $xml
+            $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Body $xml
             $StatusCode = $response.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__

@@ -194,7 +194,7 @@ function Set-SubscriptionRule($subName)
         "Authorization" = "Bearer $($token)"
         "Content-Type"  = "application/json"
     }
-    $response = Invoke-WebRequest -SkipHttpErrorCheck -Method Put -Uri $uri -Body $body -Headers $headers
+    $response = Invoke-WebRequestIndep -Method Put -Uri $uri -Body $body -Headers $headers
 
     if ($response.StatusCode -ne 200) {
         throw "An error occured setting diagnostic settings on subscription: $($response | out-string)"
