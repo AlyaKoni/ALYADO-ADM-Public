@@ -1,9 +1,9 @@
-[Deutsch](#Alya-Basis-Konfiguration) | [English](#Alya-Base-Configuration)
+[Deutsch](#Alya-Basis-Konfiguration-von-Alya-Consulting) | [English](#Alya-Base-Configuration-from-Alya-Consulting)
 
-# Alya Basis Konfiguration
+# Alya Basis Konfiguration von Alya Consulting
 
 ## Einleitung 
-Willkommen auf der öffentlichen Source Code Verwaltung von Alya Consulting. In diesem Bereich teilen wir mit Euch Informationen, Skripte und Programme, die Ihr für Eure eigene Cloud Implementierung verwenden könnt.
+Willkommen in der Source Code Verwaltung von Alya Consulting. In diesem Bereich teilen wir mit Euch Informationen, Skripte und Programme, die Ihr für Eure eigene Cloud Implementierung verwenden könnt.
 
 ## Inhalt
 Die Alya Basis Konfiguration ist eine Sammlung hunderter PowerShell-Skripte zur Verwaltung aller Aspekte der Microsoft Cloud mit aktuell mehr als 1100 Cmdlets aus mehr als 80 PowerShell-Modulen, die für die Verwendung mit PowerShell 7 und Visual Studio Code bereit sind.
@@ -23,6 +23,7 @@ Um mit der Konfiguration zu arbeiten:
 	Install-Script Install-VSCode -Scope CurrentUser; Install-VSCode.ps1
 3. In Visual Studio Code
 	Setze terminal.integrated.shell.windows auf C:\Program Files\PowerShell\7\pwsh.exe
+	Setze files.encoding auf utf8bom
 	Installiere die PowerShell Extension
 4. Klone dieses Repository in Deinem eigenen DevOps oder GitHub mit dem Namen XXXXDO-ADM-CloudKonfiguration wobei XXXX Dein Firmenkürzel ist
 5. Klone Dein eigenes Repository XXXXDO-ADM-CloudKonfiguration auf Deinen Rechner
@@ -30,10 +31,10 @@ Um mit der Konfiguration zu arbeiten:
 7. Definiere in XXXXDO-ADM-Public\data\ConfigureEnv.ps1 Deine eigenen Einstellungen
 8. Nutze die Skripte
 
-# Alya Base Configuration
+# Alya Base Configuration from Alya Consulting
 
 ## Introduction 
-Welcome to the public source code management of Alya Consulting. Here we share with you information, scripts and programs that you can use for your own cloud implementation.
+Welcome to the source code management from Alya Consulting. Here we share with you information, scripts and programs that you can use for your own cloud implementation.
 
 ## Content
 The Alya Base Configuration is a collection of hundreds of PowerShell scripts for managing all aspects of the Microsoft Cloud, with currently more than 1100 cmdlets from more than 80 PowerShell modules ready for use with PowerShell 7 and Visual Studio Code.
@@ -53,9 +54,11 @@ To work with the configuration:
 	Install-Script Install-VSCode -Scope CurrentUser; Install-VSCode.ps1
 3. In Visual Studio Code
 	Set terminal.integrated.shell.windows to C:\Program Files\PowerShell\7\pwsh.exe
+	Set files.encoding to utf8bom
 	Install the PowerShell Extension
 4. Clone this repository in your own DevOps or GitHub with the name XXXXDO-ADM-CloudConfiguration where XXXX is your company code
 5. Clone your own repository XXXXDO-ADM-CloudConfiguration on your computer
 6. Copy the file XXXXDO-ADM-Public\scripts\ConfigureEnvTemplate.ps1 to XXXXDO-ADM-Public\data\ConfigureEnv.ps1
 7. Define your own settings in XXXXDO-ADM-Public\data\ConfigureEnv.ps1
 8. Use the scripts
+

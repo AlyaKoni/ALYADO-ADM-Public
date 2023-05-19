@@ -1,42 +1,44 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2022
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
-	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
-	and/or modify it under the terms of the GNU General Public License as
-	published by the Free Software Foundation, either version 3 of the
-	License, or (at your option) any later version.
+    and/or modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
     Alya Base Configuration is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of 
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
-    Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
-	Bedingungen der GNU General Public License, wie von der Free Software
-	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
-    veroeffentlichten Version, weiter verteilen und/oder modifizieren.
-    Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
-	aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
-    Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
+    Bedingungen der GNU General Public License, wie von der Free Software
+    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veröffentlichten Version, weiter verteilen und/oder modifizieren.
+    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
+    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
     Siehe die GNU General Public License fuer weitere Details:
-	https://www.gnu.org/licenses/gpl-3.0.txt
+    https://www.gnu.org/licenses/gpl-3.0.txt
+
 
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    22.10.2022 Konrad Brunner       Initial Version
+    15.05.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory = $true)]
-    [string]$userPrincipalName
+    [string]$userPrincipalName,
+    [bool]$configurePIM = $true
 )
 
 #Reading configuration
@@ -47,29 +49,75 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AssignedRolesFromUser-$($Al
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes "Directory.Read.All"
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Get-AssignedRolesFromUser | AZURE" -ForegroundColor $CommandInfo
+Write-Host "AAD | Get-AssignedRolesFromUser | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting all built in roGetting Userles
-Write-Host "Getting User" -ForegroundColor $CommandInfo
-$usr = Get-AzADUser -UserPrincipalName $userPrincipalName
+# Checking  license
+if ($configurePIM)
+{
+    Write-Host "Checking  license" -ForegroundColor $CommandInfo
+    try
+    {
+        $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
+    }
+    catch
+    {
+        if ($_.Exception.ToString() -like "*AadPremiumLicenseRequired*" -or $_.Exception.ToString() -like "*AAD Premium 2*")
+        {
+            Write-Host "No  license available! Can't configure PIM roles."
+            $configurePIM = $false
+        }
+        else
+        {
+            throw $_.Exception
+        }
+    }
+}
 
-# Getting roles
-Write-Host "Getting roles" -ForegroundColor $CommandInfo
-$roles = Get-AzRoleAssignment -ObjectId $usr.Id
-return $roles
+# Getting user
+Write-Host "Getting user" -ForegroundColor $CommandInfo
+$user = Get-MgUser -UserId $userPrincipalName
+if (-Not $user)
+{
+    throw "User $userPrincipalName not found!"
+}
+
+# Getting all built in roles
+Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
+$roleDefinitions = Get-MgRoleManagementDirectoryRoleDefinition -All
+
+# Getting permanent role assignments
+Write-Host "Getting permanent role assignments" -ForegroundColor $CommandInfo
+$assignedRoles = Get-MgRoleManagementDirectoryRoleAssignment -Filter "principalId eq '$($user.Id)'"
+foreach ($assigned in $assignedRoles)
+{
+    $role = $roleDefinitions | Where-Object { $_.Id -eq $assigned.RoleDefinitionId }
+    Write-Host "  $($role.DisplayName)"
+}
+
+if ($configurePIM)
+{
+    # Getting  eligable role assignments
+    Write-Host "Getting eligable role assignments" -ForegroundColor $CommandInfo
+    $assignedRoles = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
+    foreach ($assigned in $assignedRoles)
+    {
+        $role = $roleDefinitions | Where-Object { $_.Id -eq $assigned.RoleDefinitionId }
+        Write-Host "  $($role.DisplayName)"
+    }
+}
 
 #Stopping Transscript
 Stop-Transcript

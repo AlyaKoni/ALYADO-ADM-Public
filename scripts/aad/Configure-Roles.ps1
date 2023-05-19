@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2020-2023
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -16,15 +16,16 @@
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
-    Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
+    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
-    veroeffentlichten Version, weiter verteilen und/oder modifizieren.
-    Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
-    aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
-    Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    veröffentlichten Version, weiter verteilen und/oder modifizieren.
+    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
+    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
     Siehe die GNU General Public License fuer weitere Details:
     https://www.gnu.org/licenses/gpl-3.0.txt
+
 
     History:
     Date       Author               Description
@@ -165,21 +166,24 @@ foreach ($roleDef in $roleDefs)
 foreach($key in $allRoles.Keys) { Write-Host "  $key" }
 
 # Checking  license
-Write-Host "Checking  license" -ForegroundColor $CommandInfo
-try
+if ($configurePIM)
 {
-    $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
-}
-catch
-{
-    if ($_.Exception.ToString() -like "*AadPremiumLicenseRequired*" -or $_.Exception.ToString() -like "*AAD Premium 2*")
+    Write-Host "Checking  license" -ForegroundColor $CommandInfo
+    try
     {
-        Write-Host "No  license available! Can't configure PIM roles."
-        $configurePIM = $false
+        $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
     }
-    else
+    catch
     {
-        throw $_.Exception
+        if ($_.Exception.ToString() -like "*AadPremiumLicenseRequired*" -or $_.Exception.ToString() -like "*AAD Premium 2*")
+        {
+            Write-Host "No  license available! Can't configure PIM roles."
+            $configurePIM = $false
+        }
+        else
+        {
+            throw $_.Exception
+        }
     }
 }
 

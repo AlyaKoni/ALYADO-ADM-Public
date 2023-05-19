@@ -337,6 +337,6 @@ ASALocalRun/
 /scripts/wvd/autoscale/Logs
 
 /data/intune/Configuration/IntuneDataExport
-/scripts/solutions/orderCatalog/FunctionSource/alyainfpfapp016/Properties/ServiceDependencies/alyainfpfapp016 - ZIP Deploy
-/scripts/solutions/orderCatalog/FunctionSource/alyainfpfapp016/Properties/serviceDependencies.alyainfpfapp016 - ZIP Deploy.json
+/solutions/orderCatalog/FunctionSource/alyainfpfapp016/Properties/ServiceDependencies/alyainfpfapp016 - ZIP Deploy
+/solutions/orderCatalog/FunctionSource/alyainfpfapp016/Properties/serviceDependencies.alyainfpfapp016 - ZIP Deploy.json
 /desktop.ini

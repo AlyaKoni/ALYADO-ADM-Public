@@ -4,27 +4,28 @@
     Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
-	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
-	and/or modify it under the terms of the GNU General Public License as
-	published by the Free Software Foundation, either version 3 of the
-	License, or (at your option) any later version.
+    and/or modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
     Alya Base Configuration is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of 
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-	Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-	https://alyaconsulting.ch/Loesungen/BasisKonfiguration
-    Alya Basis Konfiguration ist Freie Software: Sie koennen es unter den
-	Bedingungen der GNU General Public License, wie von der Free Software
-	Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
-    veroeffentlichten Version, weiter verteilen und/oder modifizieren.
-    Alya Basis Konfiguration wird in der Hoffnung, dass es nuetzlich sein wird,
-	aber OHNE JEDE GEWAEHRLEISTUNG, bereitgestellt; sogar ohne die implizite
-    Gewaehrleistung der MARKTFAEHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
+    Bedingungen der GNU General Public License, wie von der Free Software
+    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veröffentlichten Version, weiter verteilen und/oder modifizieren.
+    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
+    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
     Siehe die GNU General Public License fuer weitere Details:
-	https://www.gnu.org/licenses/gpl-3.0.txt
+    https://www.gnu.org/licenses/gpl-3.0.txt
+
 
     History:
     Date       Author               Description
@@ -74,6 +75,7 @@ $AlyaTemp = "$AlyaRoot\_temp"
 $AlyaLocal = "$AlyaRoot\_local"
 $AlyaData = "$AlyaRoot\data"
 $AlyaScripts = "$AlyaRoot\scripts"
+$AlyaSolutions = "$AlyaRoot\solutions"
 $AlyaTools = "$AlyaRoot\tools"
 
 # Loading custom configuration
@@ -485,6 +487,43 @@ function DownloadAndInstall-Package($packageName, $nuvrs, $nusrc)
 function Set-AllCallsToVerbose
 {
     $PSDefaultParameterValues = @{"*:Verbose"=$True}
+}
+
+function Get-PowerShellDefaultEncoding
+{
+    [psobject].Assembly.GetTypes() | Where-Object { $_.Name -eq 'ClrFacade'} |
+    ForEach-Object {
+      $_.GetMethod('GetDefaultEncoding', [System.Reflection.BindingFlags]'nonpublic,static').Invoke($null, @())
+    }
+}
+
+function Get-PowerShellEncodingIfNoBom
+{
+    $badBytes = [byte[]]@(0xC3, 0x80)
+    $utf8Str = [System.Text.Encoding]::UTF8.GetString($badBytes)
+    $bytes = [System.Text.Encoding]::ASCII.GetBytes('Write-Output "') + [byte[]]@(0xC3, 0x80) + [byte[]]@(0x22)
+    $path = Join-Path ([System.IO.Path]::GetTempPath()) 'encodingtest.ps1'
+    try
+    {
+        [System.IO.File]::WriteAllBytes($path, $bytes)
+        switch (& $path)
+        {
+            $utf8Str
+            {
+                return 'UTF-8'
+                break
+            }
+            default
+            {
+                return 'Windows-1252'
+                break
+            }
+        }
+    }
+    finally
+    {
+        Remove-Item $path
+    }
 }
 
 function Invoke-WebRequestIndep ()
