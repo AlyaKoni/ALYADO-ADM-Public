@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://www.jam-software.de/treesize_free"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "<a\s*href=`"([^`"]*)`"\s*class=`"button`"\s*>\s*Download\s*</a>"
@@ -37,7 +39,7 @@ $newUrl = $matches[0].Groups[1].Value
 $uri = [Uri]::new($newUrl)
 
 $req = Invoke-WebRequestIndep -Uri $newUrl -UseBasicParsing -Method Get
-[regex]$regex = "<option\s*value=`"([^`"]*)`"\s*>TreeSizeFreeSetup.*"
+[regex]$regex = "<option\s*value=`"([^`"]*)`"\s*>TreeSizeFreeSetup\.*"
 $matches = [regex]::Matches($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant')
 
 $path = $uri.AbsolutePath.Replace("downloadTrial.php", "downloadTrialProcess.php")

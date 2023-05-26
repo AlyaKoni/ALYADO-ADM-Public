@@ -58,7 +58,7 @@ if (Test-Path $RepRoot)
 {
     Write-Host "IntuneWinAppUtil is present at:" -ForegroundColor $CommandSuccess
     Write-Host "$RepRoot" -ForegroundColor $CommandSuccess
-    exit
+    Write-Host "Will be updated" -ForegroundColor $CommandSuccess
 }
 $RepRoot = Join-Path $AlyaTools "IntuneWinAppUtil"
 
@@ -112,6 +112,11 @@ if (-Not (Test-Path $RepRoot))
 {
     $tmp = New-Item -Path $RepRoot -ItemType Directory -Force
     cmd /c "$AlyaGitRoot\cmd\git.exe" clone "$AlyaIntuneWinAppUtilDownload" "$RepRoot" -q
+    Wait-UntilProcessEnds -processName "git"
+}
+else
+{
+    cmd /c "$($AlyaGitRoot)\cmd\git.exe" pull 2>&1 3>&1 4>&1 5>&1 6>&1
     Wait-UntilProcessEnds -processName "git"
 }
 

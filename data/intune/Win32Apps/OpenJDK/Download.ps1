@@ -29,16 +29,18 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 #
 # Downloading Setup Exe
 #
 
 $pageUrl = "https://www.oracle.com/java/technologies/javase-downloads.html"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"']*javase-(?!server)[^`"']*jre[^`"']*downloads.html"
+[regex]$regex = "[^`"']*javase-(?!server)[^`"']*jre[^`"']*downloads\.html"
 $newUrl = "https://www.oracle.com"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 $req = Invoke-WebRequestIndep -Uri $newUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"']*jre[^`"']*windows-x64.exe"
+[regex]$regex = "[^`"']*jre[^`"']*windows-x64\.exe"
 $fileUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 $fileName = $fileUrl.SubString($fileUrl.LastIndexOf("/")+1)
 

@@ -29,9 +29,11 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://www.7-zip.org/download.html"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*7z[^`"]*x64[^`"]*.msi"
+[regex]$regex = "[^`"]*7z[^`"]*x64[^`"]*\.msi"
 $newUrl = "https://www.7-zip.org/"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 #$content = Get-Content -Path "$PSScriptRoot\Download.url" -Raw -Encoding UTF8
 #[regex]$regex = "URL=.*"

@@ -45,7 +45,7 @@ if ((Test-Path $instPath))
 }
 $tmp = New-Item -Path $instPath -ItemType Directory -Force
 $unpackFile = Join-Path $contentRoot "driver.zip"
-$req = Invoke-WebRequestIndep -Uri $hpPclDownloadUrl -Method Get -OutFile $unpackFile
+$req = Invoke-WebRequest -Uri $hpPclDownloadUrl -Method Get -OutFile $unpackFile
 $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
 if ($cmdTst)
 {
@@ -65,7 +65,7 @@ if ((Test-Path $instPath))
 }
 $tmp = New-Item -Path $instPath -ItemType Directory -Force
 $unpackFile = Join-Path $contentRoot "driver.zip"
-$req = Invoke-WebRequestIndep -Uri $hpPsDownloadUrl -Method Get -OutFile $unpackFile
+$req = Invoke-WebRequest -Uri $hpPsDownloadUrl -Method Get -OutFile $unpackFile
 $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
 if ($cmdTst)
 {
@@ -85,7 +85,7 @@ if ((Test-Path $instPath))
 }
 $tmp = New-Item -Path $instPath -ItemType Directory -Force
 $unpackFile = Join-Path $contentRoot "innoextract.zip"
-$req = Invoke-WebRequestIndep -Uri $innoextractDownloadUrl -Method Get -OutFile $unpackFile
+$req = Invoke-WebRequest -Uri $innoextractDownloadUrl -Method Get -OutFile $unpackFile
 $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
 if ($cmdTst)
 {
@@ -107,7 +107,7 @@ if ((Test-Path $instPath))
 }
 $tmp = New-Item -Path $instPath -ItemType Directory -Force
 $unpackFile = Join-Path $contentRoot "driver.exe"
-$req = Invoke-WebRequestIndep -Uri $sharpPclDownloadUrl -Method Get -OutFile $unpackFile
+$req = Invoke-WebRequest -Uri $sharpPclDownloadUrl -Method Get -OutFile $unpackFile
 Push-Location -Path $instPath
 & "$innoextract" $unpackFile
 Pop-Location

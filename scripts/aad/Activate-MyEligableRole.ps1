@@ -64,6 +64,12 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AAD | Activate-MyEligableRole | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+# Write warning
+Write-Host "WARNING:" -ForegroundColor $CommandWarning
+Write-Host "If you are not able to activate your role," -ForegroundColor $CommandWarning
+Write-Host "you need to run this script once with already activated Global Administrator" -ForegroundColor $CommandWarning
+Write-Host "to get required consents." -ForegroundColor $CommandWarning
+
 # Getting user
 Write-Host "Getting user" -ForegroundColor $CommandInfo
 $actUser = (Get-MgContext).Account

@@ -29,9 +29,11 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://winmerge.org/downloads"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*WinMerge[^`"]*x64[^`"]*Setup[^`"]*.exe"
+[regex]$regex = "[^`"]*WinMerge[^`"]*x64[^`"]*Setup[^`"]*\.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $Shell = New-Object -ComObject WScript.Shell
 $sc = $shell.CreateShortcut("$PSScriptRoot\Download.url")

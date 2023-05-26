@@ -29,13 +29,17 @@ if %errorLevel% NEQ 0 (
 	pause
 	EXIT /B 65
 ) else (
-	echo Installing or updating PowerShell
+	echo Installing or updating PowerShell 7
+	pause
 	rem [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes('Invoke-Expression "& { $(Invoke-RestMethod https://aka.ms/install-powershell.ps1) } -UseMSI"'))
 	PowerShell -NoProfile -ExecutionPolicy Bypass -EncodedCommand SQBuAHYAbwBrAGUALQBFAHgAcAByAGUAcwBzAGkAbwBuACAAIgAmACAAewAgACQAKABJAG4AdgBvAGsAZQAtAFIAZQBzAHQATQBlAHQAaABvAGQAIABoAHQAdABwAHMAOgAvAC8AYQBrAGEALgBtAHMALwBpAG4AcwB0AGEAbABsAC0AcABvAHcAZQByAHMAaABlAGwAbAAuAHAAcwAxACkAIAB9ACAALQBVAHMAZQBNAFMASQAiAA==
+	echo Installing or updating Visual Studio Code
 	pause
-	rem Install-Script Install-VSCode -Scope CurrentUser; Install-VSCode.ps1
-	echo For Visual Studio Code:
-	echo   Set terminal.integrated.shell.windows to C:\Program Files\PowerShell\7\pwsh.exe
-	echo   Install PowerShell extension
+	Install-Script Install-VSCode -Scope CurrentUser
+    Install-VSCode.ps1
+	echo Configure Visual Studio Code:
+	echo - Set terminal.integrated.shell.windows to C:\Program Files\PowerShell\7\pwsh.exe
+	echo - Set files.encoding to utf8bom
+	echo - Install the PowerShell Extension
 	pause
 )

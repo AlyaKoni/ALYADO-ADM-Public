@@ -565,7 +565,8 @@ function Invoke-WebRequestIndep ()
         [System.String]$OutFile,
         [Switch]$PassThru,
         [Switch]$Resume,
-        [Switch]$SkipHttpErrorCheck
+        [Switch]$SkipHttpErrorCheck,
+        [Switch]$SkipHeaderValidation
     )
     $parms = @{}
     $pkeys = $PSBoundParameters.Keys
@@ -619,6 +620,7 @@ function Invoke-WebRequestIndep ()
     if ($pkeys -contains "OutBuffer") { $parms["OutBuffer"] = $OutBuffer }
     if ($pkeys -contains "PipelineVariable") { $parms["PipelineVariable"] = $PipelineVariable }
     if ($AlyaIsPsCore -and $pkeys -notcontains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
+    if ($AlyaIsPsCore -and $pkeys -notcontains "SkipHeaderValidation") { $parms["SkipHeaderValidation"] = $null }
     return Invoke-WebRequest @parms
 }
 <#
@@ -1890,6 +1892,12 @@ function LoginTo-AIP()
     }
 }
 
+<# MISC FUNCTIONS #>
+function Get-LastAzErrorDetails( )
+{
+    Resolve-AzError -Last
+}
+
 <# STRING FUNCTIONS #>
 function Make-PascalCase(
     [string]$string)
@@ -2109,8 +2117,8 @@ function SendBody-MsGraph
         $Method,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $true)]
-        $Body
+        [parameter(Mandatory = $false)]
+        $Body = $null
     )
     if ($AccessToken) {
         $HeaderParams = @{
@@ -2123,11 +2131,19 @@ function SendBody-MsGraph
     do {
         try {
             if ($AccessToken) {
-                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
-                $StatusCode = $Results.StatusCode
+                if (-Not [string]::IsNullOrEmpty($Body)){
+                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
+                } else {
+                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method
                 }
+                $StatusCode = $Results.StatusCode
+            }
             else{
-                $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
+                if (-Not [string]::IsNullOrEmpty($Body)){
+                    $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
+                } else {
+                    $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri
+                }
             }
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
@@ -2157,8 +2173,8 @@ function Post-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $true)]
-        $Body
+        [parameter(Mandatory = $false)]
+        $Body = $null
     )
     SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Post"
 }
@@ -2170,8 +2186,8 @@ function Patch-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $true)]
-        $Body
+        [parameter(Mandatory = $false)]
+        $Body = $null
     )
     SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Patch"
 }
@@ -2183,8 +2199,8 @@ function Put-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $true)]
-        $Body
+        [parameter(Mandatory = $false)]
+        $Body = $null
     )
     SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Put"
 }

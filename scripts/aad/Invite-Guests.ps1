@@ -53,17 +53,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Invite-Guests-$($AlyaTimeString
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureADPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-
-# Constants
-
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # Azure stuff
@@ -75,18 +70,20 @@ Write-Host "=====================================================`n" -Foreground
 
 if ($sendInvitationMessage)
 {
-    $invitedUserMessageInfo = New-Object Microsoft.Open.MSGraph.Model.InvitedUserMessageInfo
-    if ($ccRecipients -and $ccRecipients.Length -gt 0)
-    {
-        $invitedUserMessageInfo.CcRecipients = New-Object System.Collections.Generic.List[Microsoft.Open.MSGraph.Model.Recipient]
-    }
+    Import-Module "Microsoft.Graph.Identity.SignIns"
+    $invitedUserMessageInfo = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphInvitedUserMessageInfo
+    $recptList = New-Object System.Collections.Generic.List[Microsoft.Graph.PowerShell.Models.MicrosoftGraphRecipient]
     foreach($ccRecipient in $ccRecipients)
     {
-        $recpt = New-Object Microsoft.Open.MSGraph.Model.Recipient
-        $addr = New-Object Microsoft.Open.MSGraph.Model.EmailAddress
+        $recpt = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphRecipient
+        $addr = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphEmailAddress
         $addr.Address = $ccRecipient
         $recpt.EmailAddress = $addr
-        $invitedUserMessageInfo.CcRecipients.Add($recpt)
+        $recptList.Add($recpt)
+    }
+    if ($recptList.Count -gt 0)
+    {
+        $invitedUserMessageInfo.CcRecipients = $recptList
     }
     $invitedUserMessageInfo.CustomizedMessageBody = $customizedMessageBody
     $invitedUserMessageInfo.MessageLanguage = $messageLanguage
@@ -97,22 +94,26 @@ foreach($userEmailToInvite in $userEmailsToInvite)
     Write-Host "Inviting guest $($userEmailToInvite.Mail)" -ForegroundColor $CommandInfo
     if ($sendInvitationMessage)
     {
-        New-AzureADMSInvitation `
-           -InvitedUserDisplayName $userEmailToInvite.Name `
-           -InvitedUserEmailAddress $userEmailToInvite.Mail `
-           -SendInvitationMessage $sendInvitationMessage `
-           -InviteRedirectUrl $inviteRedirectUrl `
-           -InvitedUserMessageInfo $invitedUserMessageInfo `
-           -InvitedUserType $invitedUserType
+        $params = @{
+            InvitedUserEmailAddress = $userEmailToInvite.Mail
+            InvitedUserDisplayName = $userEmailToInvite.Name
+            InviteRedirectUrl = $inviteRedirectUrl
+            InvitedUserMessageInfo = $invitedUserMessageInfo
+            InvitedUserType = $invitedUserType
+            SendInvitationMessage = $sendInvitationMessage
+        }
+        New-MgInvitation -BodyParameter $params
     }
     else
     {
-        New-AzureADMSInvitation `
-           -InvitedUserDisplayName $userEmailToInvite.Name `
-           -InvitedUserEmailAddress $userEmailToInvite.Mail `
-           -SendInvitationMessage $sendInvitationMessage `
-           -InviteRedirectUrl $inviteRedirectUrl `
-           -InvitedUserType $invitedUserType
+        $params = @{
+            InvitedUserEmailAddress = $userEmailToInvite.Mail
+            InvitedUserDisplayName = $userEmailToInvite.Name
+            InviteRedirectUrl = $inviteRedirectUrl
+            InvitedUserType = $invitedUserType
+            SendInvitationMessage = $sendInvitationMessage
+        }
+        New-MgInvitation -BodyParameter $params
     }
 }
 

@@ -1,106 +1,102 @@
-﻿{
-    "@odata.type":  "#microsoft.graph.win32LobApp",
-    "displayName":  "Win10 RemoteDesktopManager",
-    "description":  "Installs Remote Desktop Manager",
-    "publisher":  "remotedesktopmanager.com",
-    "largeIcon":  {
-                      "value":  "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",
-                      "type":  "image/png",
-                      "@odata.type":  "#microsoft.graph.mimeContent"
-                  },
-    "isFeatured":  false,
-    "privacyInformationUrl":  "https://remotedesktopmanager.com/",
-    "informationUrl":  "https://remotedesktopmanager.com/",
-    "owner":  "",
-    "developer":  "Devolutions inc.",
-    "notes":  "",
-    "roleScopeTagIds":  [
-
-                        ],
-    "installCommandLine":  "Install.cmd",
-    "uninstallCommandLine":  "Uninstall.cmd",
-    "applicableArchitectures":  "x64",
-    "minimumFreeDiskSpaceInMB":  10,
-    "minimumMemoryInMB":  100,
-    "minimumNumberOfProcessors":  1,
-    "minimumCpuSpeedInMHz":  1,
-    "msiInformation":  {
-                           "requiresReboot":  "false",
-                           "productVersion":  "2022.3.35.0",
-                           "publisher":  "Devolutions inc.",
-                           "productCode":  "{DD44A271-60DC-4457-B180-BC54C74059BA}",
-                           "upgradeCode":  "{2707F3BF-4D7B-40C2-882F-14B0ED869EE8}",
-                           "productName":  "Remote Desktop Manager",
-                           "packageType":  "PerMachine"
-                       },
-    "fileName":  "Setup.RemoteDesktopManager.2022.3.35.0.intunewin",
-    "setupFilePath":  "Setup.RemoteDesktopManager.2022.3.35.0.msi",
-    "minimumSupportedWindowsRelease":  "1607",
-    "minimumSupportedOperatingSystem":  {
-                                            "v8_0":  false,
-                                            "v8_1":  false,
-                                            "v10_0":  false,
-                                            "v10_1607":  true,
-                                            "v10_1703":  false,
-                                            "v10_1709":  false,
-                                            "v10_1803":  false,
-                                            "v10_1809":  false,
-                                            "v10_1903":  false
-                                        },
-    "detectionRules":  [
-                           {
-                               "@odata.type":  "#microsoft.graph.win32LobAppFileSystemDetection",
-                               "path":  "%ProgramFiles(x86)%\\Devolutions\\Remote Desktop Manager Free",
-                               "fileOrFolderName":  "RemoteDesktopManagerFree.exe",
-                               "check32BitOn64System":  true,
-                               "detectionType":  "version",
-                               "operator":  "greaterThanOrEqual",
-                               "detectionValue":  "2022.3.35.0"
-                           }
-                       ],
-    "requirementRules":  [
-
-                         ],
-    "rules":  [
-                  {
-                      "@odata.type":  "#microsoft.graph.win32LobAppFileSystemRule",
-                      "ruleType":  "detection",
-                      "path":  "%ProgramFiles(x86)%\\Devolutions\\Remote Desktop Manager Free",
-                      "fileOrFolderName":  "RemoteDesktopManagerFree.exe",
-                      "check32BitOn64System":  true,
-                      "operationType":  "version",
-                      "operator":  "greaterThanOrEqual",
-                      "comparisonValue":  "2022.3.35.0"
-                  }
-              ],
-    "installExperience":  {
-                              "runAsAccount":  "system",
-                              "deviceRestartBehavior":  "suppress"
-                          },
-    "returnCodes":  [
-                        {
-                            "returnCode":  -1,
-                            "type":  "failed"
-                        },
-                        {
-                            "returnCode":  0,
-                            "type":  "success"
-                        },
-                        {
-                            "returnCode":  1707,
-                            "type":  "success"
-                        },
-                        {
-                            "returnCode":  3010,
-                            "type":  "softReboot"
-                        },
-                        {
-                            "returnCode":  1641,
-                            "type":  "hardReboot"
-                        },
-                        {
-                            "returnCode":  1618,
-                            "type":  "retry"
-                        }
-                    ]
+{
+  "@odata.type": "#microsoft.graph.win32LobApp",
+  "displayName": "Win10 RemoteDesktopManager",
+  "description": "Installs Remote Desktop Manager",
+  "publisher": "remotedesktopmanager.com",
+  "largeIcon": {
+    "value": "iVBORw0KGgoAAAANSUhEUgAAAQAAAAEACAYAAAErdZjwAAAKQ2lDQ1BJQ0MgcHJvZmlsZQAAeNqdU3dYk/cWPt/3ZQ9WQtjwsZdsgQAiI6wIyBBZohCSAGGEEBJAxYWIClYUFRGcSFXEgtUKSJ2I4qAouGdBiohai1VcOO4f3Ke1fXrv7e371/u855zn/M55zw+AERImkeaiagA5UoU8Otgfj09IxMm9gAIVSOAEIBDmy8JnBcUAAPADeXh+dLA//AGvbwACAHDVLiQSx+H/g7pQJlcAIJEA4CIS5wsBkFIAyC5UyBQAyBgAsFOzZAoAlAAAbHl8QiIAqg0A7PRJPgUA2KmT3BcA2KIcqQgAjQEAmShHJAJAuwBgVYFSLALAwgCgrEAiLgTArgGAWbYyRwKAvQUAdo5YkA9AYACAmUIszAAgOAIAQx4TzQMgTAOgMNK/4KlfcIW4SAEAwMuVzZdL0jMUuJXQGnfy8ODiIeLCbLFCYRcpEGYJ5CKcl5sjE0jnA0zODAAAGvnRwf44P5Dn5uTh5mbnbO/0xaL+a/BvIj4h8d/+vIwCBAAQTs/v2l/l5dYDcMcBsHW/a6lbANpWAGjf+V0z2wmgWgrQevmLeTj8QB6eoVDIPB0cCgsL7SViob0w44s+/zPhb+CLfvb8QB7+23rwAHGaQJmtwKOD/XFhbnauUo7nywRCMW735yP+x4V//Y4p0eI0sVwsFYrxWIm4UCJNx3m5UpFEIcmV4hLpfzLxH5b9CZN3DQCshk/ATrYHtctswH7uAQKLDljSdgBAfvMtjBoLkQAQZzQyefcAAJO/+Y9AKwEAzZek4wAAvOgYXKiUF0zGCAAARKCBKrBBBwzBFKzADpzBHbzAFwJhBkRADCTAPBBCBuSAHAqhGJZBGVTAOtgEtbADGqARmuEQtMExOA3n4BJcgetwFwZgGJ7CGLyGCQRByAgTYSE6iBFijtgizggXmY4EImFINJKApCDpiBRRIsXIcqQCqUJqkV1II/ItchQ5jVxA+pDbyCAyivyKvEcxlIGyUQPUAnVAuagfGorGoHPRdDQPXYCWomvRGrQePYC2oqfRS+h1dAB9io5jgNExDmaM2WFcjIdFYIlYGibHFmPlWDVWjzVjHVg3dhUbwJ5h7wgkAouAE+wIXoQQwmyCkJBHWExYQ6gl7CO0EroIVwmDhDHCJyKTqE+0JXoS+cR4YjqxkFhGrCbuIR4hniVeJw4TX5NIJA7JkuROCiElkDJJC0lrSNtILaRTpD7SEGmcTCbrkG3J3uQIsoCsIJeRt5APkE+S+8nD5LcUOsWI4kwJoiRSpJQSSjVlP+UEpZ8yQpmgqlHNqZ7UCKqIOp9aSW2gdlAvU4epEzR1miXNmxZDy6Qto9XQmmlnafdoL+l0ugndgx5Fl9CX0mvoB+nn6YP0dwwNhg2Dx0hiKBlrGXsZpxi3GS+ZTKYF05eZyFQw1zIbmWeYD5hvVVgq9ip8FZHKEpU6lVaVfpXnqlRVc1U/1XmqC1SrVQ+rXlZ9pkZVs1DjqQnUFqvVqR1Vu6k2rs5Sd1KPUM9RX6O+X/2C+mMNsoaFRqCGSKNUY7fGGY0hFsYyZfFYQtZyVgPrLGuYTWJbsvnsTHYF+xt2L3tMU0NzqmasZpFmneZxzQEOxrHg8DnZnErOIc4NznstAy0/LbHWaq1mrX6tN9p62r7aYu1y7Rbt69rvdXCdQJ0snfU6bTr3dQm6NrpRuoW623XP6j7TY+t56Qn1yvUO6d3RR/Vt9KP1F+rv1u/RHzcwNAg2kBlsMThj8MyQY+hrmGm40fCE4agRy2i6kcRoo9FJoye4Ju6HZ+M1eBc+ZqxvHGKsNN5l3Gs8YWJpMtukxKTF5L4pzZRrmma60bTTdMzMyCzcrNisyeyOOdWca55hvtm82/yNhaVFnMVKizaLx5balnzLBZZNlvesmFY+VnlW9VbXrEnWXOss623WV2xQG1ebDJs6m8u2qK2brcR2m23fFOIUjynSKfVTbtox7PzsCuya7AbtOfZh9iX2bfbPHcwcEh3WO3Q7fHJ0dcx2bHC866ThNMOpxKnD6VdnG2ehc53zNRemS5DLEpd2lxdTbaeKp26fesuV5RruutK10/Wjm7ub3K3ZbdTdzD3Ffav7TS6bG8ldwz3vQfTw91jicczjnaebp8LzkOcvXnZeWV77vR5Ps5wmntYwbcjbxFvgvct7YDo+PWX6zukDPsY+Ap96n4e+pr4i3z2+I37Wfpl+B/ye+zv6y/2P+L/hefIW8U4FYAHBAeUBvYEagbMDawMfBJkEpQc1BY0FuwYvDD4VQgwJDVkfcpNvwBfyG/ljM9xnLJrRFcoInRVaG/owzCZMHtYRjobPCN8Qfm+m+UzpzLYIiOBHbIi4H2kZmRf5fRQpKjKqLupRtFN0cXT3LNas5Fn7Z72O8Y+pjLk722q2cnZnrGpsUmxj7Ju4gLiquIF4h/hF8ZcSdBMkCe2J5MTYxD2J43MC52yaM5zkmlSWdGOu5dyiuRfm6c7Lnnc8WTVZkHw4hZgSl7I/5YMgQlAvGE/lp25NHRPyhJuFT0W+oo2iUbG3uEo8kuadVpX2ON07fUP6aIZPRnXGMwlPUit5kRmSuSPzTVZE1t6sz9lx2S05lJyUnKNSDWmWtCvXMLcot09mKyuTDeR55m3KG5OHyvfkI/lz89sVbIVM0aO0Uq5QDhZML6greFsYW3i4SL1IWtQz32b+6vkjC4IWfL2QsFC4sLPYuHhZ8eAiv0W7FiOLUxd3LjFdUrpkeGnw0n3LaMuylv1Q4lhSVfJqedzyjlKD0qWlQyuCVzSVqZTJy26u9Fq5YxVhlWRV72qX1VtWfyoXlV+scKyorviwRrjm4ldOX9V89Xlt2treSrfK7etI66Trbqz3Wb+vSr1qQdXQhvANrRvxjeUbX21K3nShemr1js20zcrNAzVhNe1bzLas2/KhNqP2ep1/XctW/a2rt77ZJtrWv913e/MOgx0VO97vlOy8tSt4V2u9RX31btLugt2PGmIbur/mft24R3dPxZ6Pe6V7B/ZF7+tqdG9s3K+/v7IJbVI2jR5IOnDlm4Bv2pvtmne1cFoqDsJB5cEn36Z8e+NQ6KHOw9zDzd+Zf7f1COtIeSvSOr91rC2jbaA9ob3v6IyjnR1eHUe+t/9+7zHjY3XHNY9XnqCdKD3x+eSCk+OnZKeenU4/PdSZ3Hn3TPyZa11RXb1nQ8+ePxd07ky3X/fJ897nj13wvHD0Ivdi2yW3S609rj1HfnD94UivW2/rZffL7Vc8rnT0Tes70e/Tf/pqwNVz1/jXLl2feb3vxuwbt24m3Ry4Jbr1+Hb27Rd3Cu5M3F16j3iv/L7a/eoH+g/qf7T+sWXAbeD4YMBgz8NZD+8OCYee/pT/04fh0kfMR9UjRiONj50fHxsNGr3yZM6T4aeypxPPyn5W/3nrc6vn3/3i+0vPWPzY8Av5i8+/rnmp83Lvq6mvOscjxx+8znk98ab8rc7bfe+477rfx70fmSj8QP5Q89H6Y8en0E/3Pud8/vwv94Tz+4A5JREAAAAZdEVYdFNvZnR3YXJlAEFkb2JlIEltYWdlUmVhZHlxyWU8AAAMK0lEQVR42mL8//8/w0ACJoYBBqMOGHAHsIAIRkZGhv90So1Au0B2/kVxAHJIMGaeppnl/6ebgihuIP40kFHAPPjSAJ7gok6844nW0Ww46gAWelsILO/eIRVKjHQNAVBuQMsRjKNpYNQBow4YvAURLRsmgzsESG0HUBpSjKC2KKhIBtJ/6e17kL0sSBxhIMVJgsMfU8UR0BCApQdi0wSoYSlCgoMxYhqIPwLxW2QHkORwqOWUVOc/wXige8eMA+0AgABiHB0fGHXAYBkfoFtRDG2J/4c20eEFCRudxgZgpegf9ChgHqhoH/7jA4SidTQbjjqA7g4AFj4/oYOiTHR1AJaxAdaBjgLG0UQ46oBRB4yOD2CEAL3HBpB7x9xA+gudxwY4gXb+gIXAX6CAFAlRwgLU/ICa4wOMUMuJ7aeDZr6EKUhDv4D4JahmZEEaMCClX/ANiP+R4GB08A/eNB/I3jG8YzKQjgAIwL617CAIA8FdohEPHP3///I/SIzBKANICpIGpbS1nU24Qna6r84OwfmB7FsBASAAkbTiN1X7TKwoqIWDhqvF7JJyTPCQS7GwTwcbAL5GUuf9dTpUnofG/1hTAzTbGvAjunHk+YZIZRskAASAg1DSZsrVloajIuOD12QjYN4WF1r3qKZmESQABIAAEAAOQp5uXowAAvBnKbA3+RFDOo2boUFMBwKxku3CXNv3rsGdVoV/nWbHdBJIYG2JH/7qHdID7zvFnAIAoBFD0ejYQE3fW/Qv0qs0QxCw8O0mPUv8kQJeok++W8Q7pwfMpxMHcDucub0EYO9cdhCEgShaHrrQhTt3/v9H+SMGKLGVkpT6IIqlpHNIiC6MwOHO0ClzAQUwEgQAAAAAAAAAQPZ8gF8HSG+SqqSpvAy+59glVn2qPsMusf1EPnl0iVkA2pXAswoQHQLZVrxcBgEwMw74MblsQ98LEzUhAAAAAAAAAAAAABgJ5rqExvhwhkiiAiYTJKVQ1RdZh8BMu7yd9uskK6CUHgJcBgEAAAAAAAAAAAAAAAAAAHxXDudmmUMBAAAAAMQbJ/EMea99sT2Cx1ePncnqgIvipIbH0nb+6yYeirer+cFFDQ7Pv3v7zAavW84Bo3O0UW+6KpeA32q4+QB67+BjuDt3WwcwKkBHOHj7f50Jr7P5PKjg9tRKiz3Bt1DdTzkgVu5xa+PUleKW3OiOnzRO1ytuXLszoBPlg3EfWuW5x+uVJdi6MEvpHu9TKCB2iC1LgpIN1FSD0gHcBWDvXnQShqEADHeA+Ay+/1P5KgSoDFfpyMZVTUu/PzFeEo1tf04P63ZO8/UDvAJAABAABAABQAAQAARAK4wuBp89SHb8Jsa4N03lMpSBPi7VPb+XLgBOnQZ02YcIUceLOB3x3H3isrjw8/4Pr81v8ayHtVo8as9cBFiGApqiYwjZ83fprcLpoLf7rQhgC6grkU/r5V0ACAAC4Jkk8D8SFxSSUIsAtgAQAAQAAUAAEAAEQDusTEHd3FLV4VJTMRGgDWZPCwnQTqSfLHxBgDboK5QspySQA9QSw68cGF05eEtdFUUAOQABQAAQAAQAAQhgCggAAoAAIAAIAAKgJf70NFANAREABAABQAC8WBJY+7P/ElQRAATAqGfQ8ABJKhLZ30rcFyF8D6dihP3dpV0tgzuM7dMS//RM7dsGpt6Q8VKp2OPche/Cg/twareXWu+VLkBXk6QlJoExW/jN8HX+ZEnpk5v+z6XlfU6A9HkbxgWkS3/1L4bFfzuEvo9hK8u3r1ePDvEscm8eeRsYw7j+bDXbXZbD5E1S0/bVStKbBEh7fl5N/O7rALHCwW+zAe/CzHNxjUSBbZ78PSJAbQMPmfEpDHZZhGhFgPPtfLKfwOpFBx+zBd9J9eajuN7BjeNKIAFAADTLlwDs3VGO2jAQgOEEaA+wD33q/e/UY/S1S+IGKdEaCxJBAsvg75csYFcgJfN7PA7EVgPIACAACAACgAAgAAgAAoAAIAAIAAKAACAACAACgAB4J85+Fl5uL5f8XOjlmdsT8Bp5WOcygDtsgziwWQYoPpAA8QS4OWPvZj5UfRCnjmvXvPla8AkQR4C7JdjNpH8LLMRgv2bYvlYDLA4Blll7LjPL8uUrt2xaAygC4xSBm9cABIgnQLuVAK4DVHQdQKVvCgECgAAgAAiA2njoMnHRN5V4yhzum6+oygCGABAABAABQAAQAAQAAUAAEAAEAAFAABAABAABQAC8EwenIDYppb9z/19aQkYGMASgghhfvXmUAPUIoAaoPMv3U9lAgLrYZ4FPhoA6BbhaB8gAQVi6g2jmLqyTAJ0isGJ35opAAtQjgAwAAoAAIAAIAAKAACAAAUAAEAAEAAFAABAABAABQAAQAAQAAUAAEAAEAAFAALwND7059Lu3RIMMAAKAACAACAACgAAgAAiAkbuvBM4sS/byuEIpA4AAIAAIUDttSl8LSI/bi+zH4vDn0nYkCBDgtv0YHv4N7XNox6H1ecwPC2/+dRJhaD+a81WnQzAc6B8K3DcNTEXrx+D3gQRohfc+AVL2eAp4vtT4LkjQWwKszwBT8HfZ39oAAkxNgbsiA5Q9v3z96gLsm6+tUnCDAGX6P47PuyBpder5+7FwxcohIBWp/9UF2I0tjbPa3+MxHqLNYNZMfsYOexynf6uKwDZ7HeHkTb1/ygRd9thUJEBfdOCLO4YtZYBLzyMcfHNBgChF7JYCdIUENw0BEYNf2t9ltUuqbFaQH393TwaIbH/eAz6DFbFbn4PjUiY4vOkJ6Ive0FYowKWhoIoM0DTn++TWFPxLEqTaMkCZBaJMYR/REdJSLXd484NvAxayjzof1QgQeRbzdM4EyH8ogDrwjRkBQAAQAAQAAVAb/wVo716P0waiAIxqQRXkb+pwUanIRaWCNJEOohuSkTKb9YLRE5DOmdFgMH4MsJ9WEoOSTT+wBgAEABAAQAAAAQAEABAAQAAAAQAEABAAQAAAAQAEABAAQACA5zH3g0F9mgjM0J+cd94gnPGhPu2Nf2zVPwwsFpHJoRgzA0ifXAembYbHo2bW7cjB70TMsE4AHnJSk3bk4C8XYLkAbB6BdsLgP2WXwDx/zmo9nMCvKzYDVo/AvTOAfPDnCzA/ACkb/N2W+wLG7gTMQ3Ce8gfTt++ecnYr3t+mBCBf4296UtPTiMFfCwEwT208pWcLQPmPCgAsH4DNx5XteDgwAQABAAQAEABAAICda1/1H5/whguoOvKb08wAwCYAIACAAAACAAgAIACAAAACAAgAIACAAAACAAgAIACAAAACAAgAIADAQ7UeAniciPg593ekCwGA48oDEAIAx9uUrw38EAA4TgCiGPzpswgIALy+82XpsgjEvTMARwFgHwE49+M5FfsEkhkAbGTuWYYmnvHqXJn2p3tmAWYAsIPu9EttBmATAHbulA36NCYCAgD7mgWMLgdw4KkDIACAAAACAAgAIACAAAACAAgAIACAAAACAAgAIACAAAACAAgAIACAAAACAAgAIACAAAACAAgAsLCXPTvw3LOwAmYAIACAAAACAAgAIACAAAACAOzJ5m8Eivc3j/qDePMUZgCAAAACAAIACABwMCki6t9I6e9Fv5yy5ZwtbXE9v9/ws6zg8rz98CjQj9Uvl4tf2dJlS/RLUxvrUw4D/vuF2WV+exS3A0+qHTno84Hf9Wv6rrKmDzOA5QL/yXVYPQB5BIYBP3zdVKKQBGDxwZ+yS48rmwUgshdeFAM/+gEf2b4Cg3/ZwV8O/OFxhtUDENkLcAhBV4Tg1O94OFlLrRaA2s5Y2HQfQLltP3zd3Rj4IjA/AvnM6t+RmJTS1yII5ezLY78f+Qp3WPK9/qtvAqTm4x7/dGM71eBfbvCXa//zjZ8xM9h3AGpH2aK4z6ozgGu3GezrTf9Pzf/7X27NzsIMYPcB6JqPx/m7yusglgzAmBiwbADixpo9+hnBcJ9OAA4RgMg2A7rK9+4ej63H9mmf8NR8fN9FeR9HYI4dgavv+rs3BALw/BHIZ1iOwAhAU5kJlGv/uHd2LgCv8cQ3jSMwXgP1EFzbQbjaPgAetylQzgwcgTluBGoriGbM2l8AXu+Jr91msHttNGMGvQAc+AmH3NXPAwD2zzvHQAAAAQAEABAAQAAAAQB25zfW2TedtoEwsAAAAABJRU5ErkJggg==",
+    "type": "image/png",
+    "@odata.type": "#microsoft.graph.mimeContent"
+  },
+  "isFeatured": false,
+  "privacyInformationUrl": "https://remotedesktopmanager.com/",
+  "informationUrl": "https://remotedesktopmanager.com/",
+  "owner": "",
+  "developer": "Devolutions inc.",
+  "notes": "",
+  "roleScopeTagIds": [],
+  "installCommandLine": "Install.cmd",
+  "uninstallCommandLine": "Uninstall.cmd",
+  "applicableArchitectures": "x64",
+  "minimumFreeDiskSpaceInMB": 10,
+  "minimumMemoryInMB": 100,
+  "minimumNumberOfProcessors": 1,
+  "minimumCpuSpeedInMHz": 1,
+  "msiInformation": {
+    "productCode": "{88FB5334-E4B0-4A50-BA5C-E0C84F123B16}",
+    "upgradeCode": "{2707F3BF-4D7B-40C2-882F-14B0ED869EE8}",
+    "requiresReboot": "false",
+    "packageType": "PerMachine",
+    "productVersion": "2023.1.28.0",
+    "productName": "Remote Desktop Manager",
+    "publisher": "Devolutions inc."
+  },
+  "fileName": "Setup.RemoteDesktopManager.2023.1.28.0.intunewin",
+  "setupFilePath": "Setup.RemoteDesktopManager.2023.1.28.0.msi",
+  "minimumSupportedWindowsRelease": "1607",
+  "minimumSupportedOperatingSystem": {
+    "v8_0": false,
+    "v8_1": false,
+    "v10_0": false,
+    "v10_1607": true,
+    "v10_1703": false,
+    "v10_1709": false,
+    "v10_1803": false,
+    "v10_1809": false,
+    "v10_1903": false
+  },
+  "detectionRules": [
+    {
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
+      "path": "%ProgramFiles(x86)%\\Devolutions\\Remote Desktop Manager Free",
+      "fileOrFolderName": "RemoteDesktopManagerFree.exe",
+      "check32BitOn64System": true,
+      "detectionType": "version",
+      "operator": "greaterThanOrEqual",
+      "detectionValue": "2023.1.28.0"
+    }
+  ],
+  "requirementRules": [],
+  "rules": [
+    {
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemRule",
+      "ruleType": "detection",
+      "path": "%ProgramFiles(x86)%\\Devolutions\\Remote Desktop Manager Free",
+      "fileOrFolderName": "RemoteDesktopManagerFree.exe",
+      "check32BitOn64System": true,
+      "operationType": "version",
+      "operator": "greaterThanOrEqual",
+      "comparisonValue": "2023.1.28.0"
+    }
+  ],
+  "installExperience": {
+    "runAsAccount": "system",
+    "deviceRestartBehavior": "suppress"
+  },
+  "returnCodes": [
+    {
+      "returnCode": -1,
+      "type": "failed"
+    },
+    {
+      "returnCode": 0,
+      "type": "success"
+    },
+    {
+      "returnCode": 1707,
+      "type": "success"
+    },
+    {
+      "returnCode": 3010,
+      "type": "softReboot"
+    },
+    {
+      "returnCode": 1641,
+      "type": "hardReboot"
+    },
+    {
+      "returnCode": 1618,
+      "type": "retry"
+    }
+  ]
 }

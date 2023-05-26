@@ -29,16 +29,37 @@
 
 #>
 
-[CmdletBinding()]
-Param(
-    [bool]$reuseExistingPackages = $false
-)
-
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
-
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\AzInfoProtectionCoAuth\Package" -PathType Container)))
+Write-Host "Alya Teams Backgrounds"
+Write-Host "======================"
+$storageRoot = "https://alyainfpstrg001.blob.core.windows.net/teams/"
+$customer = "AlyaConsulting"
+$teamsDir = "$env:APPDATA\Microsoft\Teams"
+$uploadsDir = "$teamsDir\Backgrounds\Uploads"
+if (-Not (Test-Path $teamsDir))
 {
-	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "AzInfoProtectionCoAuth"
+    throw "Teams directory $teamsDir not found. Is Teams installed?"
 }
-& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "AzInfoProtectionCoAuth"
-& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "AzInfoProtectionCoAuth"
+if (-Not (Test-Path $uploadsDir))
+{
+    $null = New-Item -Path $uploadsDir -ItemType Directory -Force
+}
+$tryFileList = @(
+    "fluentSpaces3Own.png",
+    "fluentSpaces4Own.png",
+    "teamsBackgroundContemporaryOffice02Own.png",
+    "teamsBackgroundHomeOwn.png",
+    "teamsBackgroundTraditionalOffice01Own.png"
+)
+foreach($tryFile in $tryFileList)
+{
+    try
+    {
+        $outFile = "$uploadsDir\$customer-$tryFile"
+        if (Test-Path $outFile)
+        {
+            $null = Remove-Item -Path $outFile -Force -ErrorAction SilentlyContinue
+        }
+        $req = Invoke-WebRequest -UseBasicParsing -Uri ($storageRoot+"$tryFile") -Method Get -OutFile $outFile -ErrorAction SilentlyContinue
+    }
+    catch {}
+}

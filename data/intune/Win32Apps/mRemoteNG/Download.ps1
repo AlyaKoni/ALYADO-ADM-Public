@@ -29,13 +29,15 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 #
 # Downloading Setup Msi
 #
 
 $pageUrl = "https://mobaxterm.mobatek.net/download-home-edition.html"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*/MobaXterm_Installer[^`"]*.zip"
+[regex]$regex = "[^`"]*/MobaXterm_Installer[^`"]*\.zip"
 $newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 
 $packageRoot = "$PSScriptRoot"

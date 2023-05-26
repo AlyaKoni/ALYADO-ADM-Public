@@ -110,7 +110,8 @@ foreach($packageDir in $packages)
     if ($package.Count -gt 1)
     {
         Write-Error "Found more than 1 Intune packages!" -ErrorAction Continue
-        Write-Error "Please delete older once" -ErrorAction Continue
+        Write-Error "Please delete older once and rerun" -ErrorAction Continue
+        pause
         continue
     }
 
@@ -288,6 +289,30 @@ foreach($packageDir in $packages)
     $zip.Dispose()
     $bytes = [System.IO.File]::ReadAllBytes("$($package.FullName).Extracted")
     Remove-Item -Path "$($package.FullName).Extracted" -Force
+
+    # Checking existing failed upload
+    Write-Host "  Checking existing failed upload"
+	$appId = $app.id
+    Write-Host "    appId: $($app.id)"
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions"
+    $existVersion = $null
+    try {
+        $existVersion = Get-MsGraph -Uri $uri
+    }
+    catch {
+    }
+    if ($existVersion)
+    {
+        $maxVersion = ($existVersion.Id | Measure-Object -Maximum).Maximum
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$maxVersion/files"
+        $file = Get-MsGraph -Uri $uri
+        if ($file -and -Not $file.isCommitted)
+        {
+            Write-Warning "Existing failed upload found! So far, we know no way how to fix such stuff. Please wait and try later!"
+            pause
+            continue
+        }
+    }
 
     # Creating Content Version
     Write-Host "  Creating Content Version"

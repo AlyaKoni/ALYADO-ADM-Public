@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $deviceKeyboard = "00000807"
 $packageRoot = "$PSScriptRoot"
 if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
