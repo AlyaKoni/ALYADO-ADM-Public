@@ -30,21 +30,20 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    21.10.2020 Konrad Brunner       Initial Version
-    24.04.2023 Konrad Brunner       Switched to Graph
+    26.05.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$BuiltInAppsFile = $null #defaults to $($AlyaData)\intune\appsBuiltIn.json
+    [string]$WinGetAppsFile = $null #defaults to $($AlyaData)\intune\appsWinGet.json
 )
 
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-BuiltInApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-WinGetApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
 if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
@@ -53,9 +52,9 @@ if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
 else {
     $AppPrefix = "WIN "
 }
-if (-Not $BuiltInAppsFile)
+if (-Not $WinGetAppsFile)
 {
-    $BuiltInAppsFile = "$($AlyaData)\intune\appsBuiltIn.json"
+    $WinGetAppsFile = "$($AlyaData)\intune\appsWinGet.json"
 }
 
 # Checking modules
@@ -76,11 +75,11 @@ LoginTo-MgGraph -Scopes @(
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Configure-BuiltInApps | Graph" -ForegroundColor $CommandInfo
+Write-Host "Intune | Configure-WinGetApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$winGetApps = Get-Content -Path $WinGetAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
 
 # Defining bodies
 $assBody = @"
@@ -108,13 +107,13 @@ $catBody = @"
 "@
 $category = $catBody | ConvertFrom-Json
 
-# Processing defined builtInApps
+# Processing defined winGetApps
 $hadError = $false
-foreach($builtInApp in $builtInApps)
+foreach($winGetApp in $winGetApps)
 {
-    if ($builtInApp.Comment1 -and $builtInApp.Comment2 -and $builtInApp.Comment3) { continue }
-    if ($builtInApp.displayName.EndsWith("_unused")) { continue }
-    Write-Host "Configuring builtInApp '$($builtInApp.displayName)'" -ForegroundColor $CommandInfo
+    if ($winGetApp.Comment1 -and $winGetApp.Comment2 -and $winGetApp.Comment3) { continue }
+    if ($winGetApp.displayName.EndsWith("_unused")) { continue }
+    Write-Host "Configuring winGetApp '$($winGetApp.displayName)'" -ForegroundColor $CommandInfo
     
     try {
         
@@ -124,12 +123,12 @@ foreach($builtInApp in $builtInApps)
         {   
             $winGetApp.displayName = $winGetApp.displayName.Replace("WIN ", $AppPrefix)
         }
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($winGetApp.displayName)
         $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         $app = (Get-MsGraphObject -Uri $uri).value
         if (-Not $app.id)
         {
-            Write-Error "The app with name $($builtInApp.displayName) does not exist. Please create it first." -ErrorAction Continue
+            Write-Error "The app with name $($winGetApp.displayName) does not exist. Please create it first." -ErrorAction Continue
             $hadError = $true
             continue
         }

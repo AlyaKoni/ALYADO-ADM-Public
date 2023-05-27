@@ -308,7 +308,7 @@ foreach($packageDir in $packages)
         $file = Get-MsGraph -Uri $uri
         if ($file -and -Not $file.isCommitted)
         {
-            Write-Warning "Existing failed upload found! So far, we know no way how to fix such stuff. Please wait and try later!"
+            Write-Warning "Existing failed upload found! So far, we don't know how to fix such stuff. Please wait and try later!"
             pause
             continue
         }
@@ -316,8 +316,6 @@ foreach($packageDir in $packages)
 
     # Creating Content Version
     Write-Host "  Creating Content Version"
-	$appId = $app.id
-    Write-Host "    appId: $($app.id)"
 	$uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions"
 	$contentVersion = Post-MsGraph -Uri $uri -Body "{}"
     Write-Host "    contentVersion: $($contentVersion.id)"

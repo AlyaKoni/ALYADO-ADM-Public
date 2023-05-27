@@ -30,32 +30,31 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    21.10.2020 Konrad Brunner       Initial Version
-    24.04.2023 Konrad Brunner       Switched to Graph
+    26.05.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$BuiltInAppsFile = $null #defaults to $($AlyaData)\intune\appsBuiltIn.json
+    [string]$winGetAppsFile = $null #defaults to $($AlyaData)\intune\appsWinGet.json
 )
 
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-BuiltInApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-WinGetApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
 if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
     $AppPrefix = "$AlyaAppPrefix "
 }
 else {
-    $AppPrefix = "Win10 "
+    $AppPrefix = "WIN "
 }
-if (-Not $BuiltInAppsFile)
+if (-Not $winGetAppsFile)
 {
-    $BuiltInAppsFile = "$($AlyaData)\intune\appsBuiltIn.json"
+    $winGetAppsFile = "$($AlyaData)\intune\appsWinGet.json"
 }
 
 # Checking modules
@@ -76,46 +75,48 @@ LoginTo-MgGraph -Scopes @(
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Upload-BuiltInApps | Graph" -ForegroundColor $CommandInfo
+Write-Host "Intune | Upload-WinGetApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$winGetApps = Get-Content -Path $winGetAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
 
-# Processing defined builtInApps
+# Processing defined WinGetApps
 $hadError = $false
-foreach($builtInApp in $builtInApps)
+foreach($winGetApp in $winGetApps)
 {
-    if (-Not $builtInApp.displayName -or $builtInApp.displayName.EndsWith("_unused")) { continue }
-    Write-Host "Configuring builtInApp $($builtInApp.displayName)" -ForegroundColor $CommandInfo
+    if (-Not $winGetApp.displayName -or $winGetApp.displayName.EndsWith("_unused")) { continue }
+    Write-Host "Configuring WinGetApp $($winGetApp.displayName)" -ForegroundColor $CommandInfo
     
     try {
         
-        # Checking if builtInApp exists
-        Write-Host "  Checking if builtInApp exists"
+        # Checking if WinGetApp exists
+        Write-Host "  Checking if WinGetApp exists"
         if (!$AppPrefix.StartsWith("WIN "))
         {   
-            $builtInApp.displayName = $builtInApp.displayName.Replace("WIN ", $AppPrefix)
+            $winGetApp.displayName = $winGetApp.displayName.Replace("WIN ", $AppPrefix)
         }
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($winGetApp.displayName)
         $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         $actApp = (Get-MsGraphObject -Uri $uri).value
         if (-Not $actApp.id)
         {
-            # Creating the builtInApp
+            # Creating the WinGetApp
             Write-Host "    App does not exist, creating"
             $uri = "/beta/deviceAppManagement/mobileApps"
-            $actApp = Post-MsGraph -Uri $uri -Body ($builtInApp | ConvertTo-Json -Depth 50)
+            $actApp = Post-MsGraph -Uri $uri -Body ($winGetApp | ConvertTo-Json -Depth 50)
         }
 
-        # Updating the builtInApp
-        Write-Host "    Updating the builtInApp"
-        $builtInApp.PSObject.Properties.Remove("developer")
-        $builtInApp.PSObject.Properties.Remove("publisher")
-        $builtInApp.PSObject.Properties.Remove("owner")
-        $builtInApp.PSObject.Properties.Remove("channel")
+        # Updating the WinGetApp
+        Write-Host "    Updating the WinGetApp"
+        $winGetApp.PSObject.Properties.Remove("developer")
+        $winGetApp.PSObject.Properties.Remove("publisher")
+        $winGetApp.PSObject.Properties.Remove("owner")
+        $winGetApp.PSObject.Properties.Remove("channel")
+        $winGetApp.PSObject.Properties.Remove("installExperience")
+        $winGetApp.PSObject.Properties.Remove("packageIdentifier")
         $uri = "/beta/deviceAppManagement/mobileApps/$($actApp.id)"
-        $actApp = Patch-MsGraph -Uri $uri -Body ($builtInApp | ConvertTo-Json -Depth 50)
+        $actApp = Patch-MsGraph -Uri $uri -Body ($winGetApp | ConvertTo-Json -Depth 50)
     }
     catch {
         $hadError = $true
