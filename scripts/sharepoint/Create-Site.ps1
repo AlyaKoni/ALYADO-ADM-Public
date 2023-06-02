@@ -325,7 +325,7 @@ if ($overwritePages -and $homePageTemplate)
     #To export it: Export-PnPPage -Connection $siteCon -Force -Identity Home.aspx -Out $tempFile
     $tempFile = [System.IO.Path]::GetTempFileName()
     $homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
-    $tmp = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
+    $null = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
     Remove-Item -Path $tempFile
 }
 

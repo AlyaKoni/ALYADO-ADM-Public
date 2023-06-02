@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://helpx.adobe.com/acrobat/kb/mip-plugin-download.html"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 #Only version 20 can be downloaded. Newer versions have to be downloaded via licensed download

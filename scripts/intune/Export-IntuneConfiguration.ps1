@@ -52,7 +52,7 @@ $IsOneDriveDir = $true
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "Configuration"
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 Write-Host "Exporting Intune data to $DataRoot"
 
@@ -151,7 +151,7 @@ function MakeFsCompatiblePath()
 ##### Starting exports GeneralInformation
 #####
 Write-Host "Exporting GeneralInformation" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot")) { $tmp = New-Item -Path "$DataRoot" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot")) { $null = New-Item -Path "$DataRoot" -ItemType Directory -Force }
 
 #groups
 $uri = "/beta/groups"
@@ -177,7 +177,7 @@ $managedDeviceOverview | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -
 ##### Starting exports AndroidEnterprise
 #####
 Write-Host "Exporting AndroidEnterprise" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\AndroidEnterprise")) { $tmp = New-Item -Path "$DataRoot\AndroidEnterprise" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\AndroidEnterprise")) { $null = New-Item -Path "$DataRoot\AndroidEnterprise" -ItemType Directory -Force }
 
 #deviceEnrollmentConfigurations
 $uri = "/beta/deviceManagement/deviceEnrollmentConfigurations"
@@ -222,7 +222,7 @@ $androidManagedStoreAccountEnterpriseSettings | ConvertTo-Json -Depth 50 | Set-C
 ##### Starting exports AppConfigurationPolicy
 #####
 Write-Host "Exporting AppConfigurationPolicy" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\AppConfigurationPolicy")) { $tmp = New-Item -Path "$DataRoot\AppConfigurationPolicy" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\AppConfigurationPolicy")) { $null = New-Item -Path "$DataRoot\AppConfigurationPolicy" -ItemType Directory -Force }
 
 #targetedManagedAppConfigurations
 $uri = "/beta/deviceAppManagement/targetedManagedAppConfigurations?`$expand=apps"
@@ -247,7 +247,7 @@ foreach($config in $mobileAppConfigurations)
 ##### Starting exports AppleEnrollment
 #####
 Write-Host "Exporting AppleEnrollment" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\AppleEnrollment")) { $tmp = New-Item -Path "$DataRoot\AppleEnrollment" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\AppleEnrollment")) { $null = New-Item -Path "$DataRoot\AppleEnrollment" -ItemType Directory -Force }
 
 #applePushNotificationCertificateapplePushNotificationCertificate
 #TODO $uri = "/beta/devicemanagement/applePushNotificationCertificate"
@@ -279,7 +279,7 @@ $iosLobAppProvisioningConfigurations | ConvertTo-Json -Depth 50 | Set-Content -E
 ##### Starting exports Auditing
 #####
 Write-Host "Exporting Auditing" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\Auditing")) { $tmp = New-Item -Path "$DataRoot\Auditing" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\Auditing")) { $null = New-Item -Path "$DataRoot\Auditing" -ItemType Directory -Force }
 
 #auditCategories
 $uri = "/beta/deviceManagement/auditEvents/getAuditCategories"
@@ -307,7 +307,7 @@ $iosUpdateStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path
 ##### Starting exports CertificationAuthority
 #####
 Write-Host "Exporting CertificationAuthority" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\CertificationAuthority")) { $tmp = New-Item -Path "$DataRoot\CertificationAuthority" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\CertificationAuthority")) { $null = New-Item -Path "$DataRoot\CertificationAuthority" -ItemType Directory -Force }
 
 #ndesconnectors
 $uri = "/beta/deviceManagement/ndesconnectors"
@@ -318,7 +318,7 @@ $ndesconnectors | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (M
 ##### Starting exports CompanyPortalBranding
 #####
 Write-Host "Exporting CompanyPortalBranding" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\CompanyPortalBranding")) { $tmp = New-Item -Path "$DataRoot\CompanyPortalBranding" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\CompanyPortalBranding")) { $null = New-Item -Path "$DataRoot\CompanyPortalBranding" -ItemType Directory -Force }
 
 #intuneBrand
 $uri = "/beta/deviceManagement/intuneBrand"
@@ -334,7 +334,7 @@ $intuneBrandingProfiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 
 ##### Starting exports CompliancePolicy
 #####
 Write-Host "Exporting CompliancePolicy" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\CompliancePolicy")) { $tmp = New-Item -Path "$DataRoot\CompliancePolicy" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\CompliancePolicy")) { $null = New-Item -Path "$DataRoot\CompliancePolicy" -ItemType Directory -Force }
 
 #deviceCompliancePolicies
 $uri = "/beta/deviceManagement/deviceCompliancePolicies"
@@ -351,7 +351,7 @@ foreach($policy in $deviceCompliancePolicies)
 ##### Starting exports CorporateDeviceEnrollment
 #####
 Write-Host "Exporting CorporateDeviceEnrollment" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\CorporateDeviceEnrollment")) { $tmp = New-Item -Path "$DataRoot\CorporateDeviceEnrollment" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\CorporateDeviceEnrollment")) { $null = New-Item -Path "$DataRoot\CorporateDeviceEnrollment" -ItemType Directory -Force }
 
 #importedDeviceIdentities
 $uri = "/beta/deviceManagement/importedDeviceIdentities"
@@ -362,7 +362,7 @@ $importedDeviceIdentities | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF
 ##### Starting exports GroupPolicyConfiguration
 #####
 Write-Host "Exporting GroupPolicyConfiguration" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\GroupPolicyConfiguration")) { $tmp = New-Item -Path "$DataRoot\GroupPolicyConfiguration" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\GroupPolicyConfiguration")) { $null = New-Item -Path "$DataRoot\GroupPolicyConfiguration" -ItemType Directory -Force }
 
 #groupPolicyDefinitions
 $uri = "/beta/deviceManagement/groupPolicyDefinitions"
@@ -465,7 +465,7 @@ $groupPolicyConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UT
 ##### Starting exports DeviceConfiguration
 #####
 Write-Host "Exporting DeviceConfiguration" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\DeviceConfiguration")) { $tmp = New-Item -Path "$DataRoot\DeviceConfiguration" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\DeviceConfiguration")) { $null = New-Item -Path "$DataRoot\DeviceConfiguration" -ItemType Directory -Force }
 
 #deviceConfigurations
 $uri = "/beta/deviceManagement/deviceConfigurations"
@@ -498,7 +498,7 @@ foreach($script in $deviceManagementScripts)
 ##### Starting exports EnrollmentRestrictions
 #####
 Write-Host "Exporting EnrollmentRestrictions" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\EnrollmentRestrictions")) { $tmp = New-Item -Path "$DataRoot\EnrollmentRestrictions" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\EnrollmentRestrictions")) { $null = New-Item -Path "$DataRoot\EnrollmentRestrictions" -ItemType Directory -Force }
 
 #deviceEnrollmentConfigurations
 $uri = "/beta/deviceManagement/deviceEnrollmentConfigurations"
@@ -509,7 +509,7 @@ $deviceEnrollmentConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encodi
 ##### Starting exports Applications
 #####
 Write-Host "Exporting Applications" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\Applications")) { $tmp = New-Item -Path "$DataRoot\Applications" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\Applications")) { $null = New-Item -Path "$DataRoot\Applications" -ItemType Directory -Force }
 
 #mobileAppCategories
 $uri = "/beta/deviceAppManagement/mobileAppCategories"
@@ -520,7 +520,7 @@ $mobileAppCategories | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Pa
 $uri = "/beta/deviceAppManagement/mobileApps"
 $intuneApplications = Get-MsGraphCollection -Uri $uri
 $intuneApplications | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplications.json")) -Force
-if (-Not (Test-Path "$DataRoot\Applications\Data")) { $tmp = New-Item -Path "$DataRoot\Applications\Data" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\Applications\Data")) { $null = New-Item -Path "$DataRoot\Applications\Data" -ItemType Directory -Force }
 foreach($application in $intuneApplications)
 {
     $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)"
@@ -622,7 +622,7 @@ foreach($policy in $managedAppPolicies)
 ##### Starting exports ManagedDevices
 #####
 Write-Host "Exporting ManagedDevices" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\ManagedDevices")) { $tmp = New-Item -Path "$DataRoot\ManagedDevices" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\ManagedDevices")) { $null = New-Item -Path "$DataRoot\ManagedDevices" -ItemType Directory -Force }
 
 #managedDevices
 $uri = "/beta/deviceManagement/managedDevices"
@@ -677,7 +677,7 @@ $healthStates | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (Mak
 ##### Starting exports SoftwareUpdates
 #####
 Write-Host "Exporting SoftwareUpdates" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\SoftwareUpdates")) { $tmp = New-Item -Path "$DataRoot\SoftwareUpdates" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\SoftwareUpdates")) { $null = New-Item -Path "$DataRoot\SoftwareUpdates" -ItemType Directory -Force }
 
 #softwareUpdatePoliciesWin
 $uri = "/beta/deviceManagement/deviceConfigurations?`$filter=isof('microsoft.graph.windowsUpdateForBusinessConfiguration')&`$expand=groupAssignments"
@@ -713,7 +713,7 @@ $windowsQualityUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encod
 ##### Starting exports TermsAndConditions
 #####
 Write-Host "Exporting TermsAndConditions" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\TermsAndConditions")) { $tmp = New-Item -Path "$DataRoot\TermsAndConditions" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\TermsAndConditions")) { $null = New-Item -Path "$DataRoot\TermsAndConditions" -ItemType Directory -Force }
 
 #softwareUpdatePoliciesWin
 $uri = "/beta/deviceManagement/termsAndConditions"
@@ -724,7 +724,7 @@ $termsAndConditions | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Pat
 ##### Starting exports IntuneDataExport
 #####
 Write-Host "Exporting IntuneDataExport" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\IntuneDataExport")) { $tmp = New-Item -Path "$DataRoot\IntuneDataExport" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\IntuneDataExport")) { $null = New-Item -Path "$DataRoot\IntuneDataExport" -ItemType Directory -Force }
 
 $uri = "/beta/deviceAppManagement/mobileAppConfigurations"
 $mobileAppConfigurations = Get-MsGraphCollection -Uri $uri
@@ -768,7 +768,7 @@ if ($doUserDataExport)
         $upn = $user.userPrincipalName
         Write-Host "Exporting user $upn"
         $token = Get-AdalAccessToken
-        if (-Not (Test-Path "$DataRoot\IntuneDataExport\$upn")) { $tmp = New-Item -Path "$DataRoot\IntuneDataExport\$upn" -ItemType Directory -Force }
+        if (-Not (Test-Path "$DataRoot\IntuneDataExport\$upn")) { $null = New-Item -Path "$DataRoot\IntuneDataExport\$upn" -ItemType Directory -Force }
         $mobileAppConfigurationsForUser = $mobileAppConfigurations | ConvertTo-Json -Depth 50 | ConvertFrom-Json
         $configs = $mobileAppConfigurationsForUser
         $deviceManagementScriptsForUser = $deviceManagementScripts | ConvertTo-Json -Depth 50 | ConvertFrom-Json

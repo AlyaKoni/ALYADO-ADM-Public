@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $deviceKeyboard = "00000807"
 $packageRoot = "$PSScriptRoot"
 if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
@@ -74,7 +76,7 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
     if (-Not $ass -or $ass.Count -eq 0)
     {
         Write-Host "No assignment found. Creating one for current user"
-        $tmp = Add-MSStoreSeatAssignment -ProductId $pck.ProductId -SkuId $pck.SkuId -Username $Global:StroreCreds.UserName
+        $null = Add-MSStoreSeatAssignment -ProductId $pck.ProductId -SkuId $pck.SkuId -Username $Global:StroreCreds.UserName
     }
 
     #Getting it-IT
@@ -96,7 +98,7 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
     if (-Not $ass -or $ass.Count -eq 0)
     {
         Write-Host "No assignment found. Creating one for current user"
-        $tmp = Add-MSStoreSeatAssignment -ProductId $pck.ProductId -SkuId $pck.SkuId -Username $Global:StroreCreds.UserName
+        $null = Add-MSStoreSeatAssignment -ProductId $pck.ProductId -SkuId $pck.SkuId -Username $Global:StroreCreds.UserName
     }
 
     #Getting fr-FR
@@ -118,7 +120,7 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
     if (-Not $ass -or $ass.Count -eq 0)
     {
         Write-Host "No assignment found. Creating one for current user"
-        $tmp = Add-MSStoreSeatAssignment -ProductId $pck.ProductId -SkuId $pck.SkuId -Username $Global:StroreCreds.UserName
+        $null = Add-MSStoreSeatAssignment -ProductId $pck.ProductId -SkuId $pck.SkuId -Username $Global:StroreCreds.UserName
     }
 
     #Getting de-DE
@@ -140,7 +142,7 @@ if (-Not (Test-Path "$packageRoot\Scripts\localesToInstall.json"))
     if (-Not $ass -or $ass.Count -eq 0)
     {
         Write-Host "No assignment found. Creating one for current user"
-        $tmp = Add-MSStoreSeatAssignment -ProductId $pck.ProductId -SkuId $pck.SkuId -Username $Global:StroreCreds.UserName
+        $null = Add-MSStoreSeatAssignment -ProductId $pck.ProductId -SkuId $pck.SkuId -Username $Global:StroreCreds.UserName
     }
 
     $languagesToInstall | ConvertTo-Json -Depth 50 | Set-Content -Path "$packageRoot\Scripts\localesToInstall.json" -Force -Encoding UTF8

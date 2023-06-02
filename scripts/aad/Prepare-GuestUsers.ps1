@@ -579,7 +579,7 @@ function Main
             }
             if ($decision -eq 1)
             {
-                $tmp = $first
+                $null = $first
                 $first = $last
                 $last = $tmp
                 $disp = ($first + " " + $last).Trim() + " " + $CompStart + $comp + $CompEnd

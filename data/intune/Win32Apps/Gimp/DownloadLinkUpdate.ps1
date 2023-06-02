@@ -29,9 +29,11 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://www.gimp.org/downloads/"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*gimp[^`"]*setup[^`"]*.exe"
+[regex]$regex = "[^`"]*gimp[^`"]*setup[^`"]*\.exe"
 $newUrl = "https:"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 $Shell = New-Object -ComObject WScript.Shell
 $sc = $shell.CreateShortcut("$PSScriptRoot\Download.url")

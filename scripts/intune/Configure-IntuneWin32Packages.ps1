@@ -53,7 +53,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneWin32Package
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 
 # Checking modules

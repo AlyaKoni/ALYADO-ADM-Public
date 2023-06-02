@@ -546,7 +546,7 @@ if ($WithADIntegration)
         $acc
         if ($acc.IdentityReference -like "$AlyaLocalDomainName\*")
         {
-            $tmp = $acl.RemoveAccessRule($acc)
+            $null = $acl.RemoveAccessRule($acc)
         }
     }
     Set-Acl Z:\ $acl

@@ -50,7 +50,7 @@ $IsOneDriveDir = $true
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "Configuration"
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 Write-Host "Exporting Intune data to $DataRoot"
 
@@ -134,7 +134,7 @@ function MakeFsCompatiblePath()
 ##### Starting exports Applications
 #####
 Write-Host "Exporting Applications" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\Applications")) { $tmp = New-Item -Path "$DataRoot\Applications" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\Applications")) { $null = New-Item -Path "$DataRoot\Applications" -ItemType Directory -Force }
 
 #mobileAppCategories
 $uri = "/beta/deviceAppManagement/mobileAppCategories"
@@ -145,7 +145,7 @@ $mobileAppCategories | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompa
 $uri = "/beta/deviceAppManagement/mobileApps?`$expand=categories"
 $intuneApplications = Get-MsGraphCollection -Uri $uri
 $intuneApplications | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplications.json")) -Force
-if (-Not (Test-Path "$DataRoot\Applications\Data")) { $tmp = New-Item -Path "$DataRoot\Applications\Data" -ItemType Directory -Force }
+if (-Not (Test-Path "$DataRoot\Applications\Data")) { $null = New-Item -Path "$DataRoot\Applications\Data" -ItemType Directory -Force }
 foreach($application in $intuneApplications)
 {
     $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)?`$expand=categories"

@@ -500,7 +500,7 @@ $compilerParameters.CompilerOptions = '/debug-'
 foreach ($reference in $ReferencedAssemblies)
 {
     $resolvedAssembly = $resolveAssemblyMethod.Invoke($addTypeCommandInstance, $reference)
-    $tmp = $compilerParameters.ReferencedAssemblies.Add($resolvedAssembly)
+    $null = $compilerParameters.ReferencedAssemblies.Add($resolvedAssembly)
 }
 
 $compilerParameters.IncludeDebugInformation = $true
@@ -516,7 +516,7 @@ Write-Host "=====================================================`n" -Foreground
 
 if (-Not (Test-Path $AlyaTemp))
 {
-    $tmp = New-Item -Path $AlyaTemp -ItemType Directory -Force
+    $null = New-Item -Path $AlyaTemp -ItemType Directory -Force
 }
 
 Write-Host "Analysing directories" -ForegroundColor $CommandInfo

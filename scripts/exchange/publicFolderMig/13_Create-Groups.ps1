@@ -62,7 +62,7 @@ foreach($migMap in $migMapping)
     if ($exGrp)
     {
         Write-Host "   - Group already exists! Updating."
-        $tmp = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $groupName -MailNickname $groupName -Visibility $migMap.access
+        $null = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $groupName -MailNickname $groupName -Visibility $migMap.access
     }
     else
     {

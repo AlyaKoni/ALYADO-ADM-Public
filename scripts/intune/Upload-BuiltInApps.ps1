@@ -47,6 +47,12 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-BuiltInApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
+if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
+    $AppPrefix = "$AlyaAppPrefix "
+}
+else {
+    $AppPrefix = "Win10 "
+}
 if (-Not $BuiltInAppsFile)
 {
     $BuiltInAppsFile = "$($AlyaData)\intune\appsBuiltIn.json"
@@ -87,6 +93,10 @@ foreach($builtInApp in $builtInApps)
         
         # Checking if builtInApp exists
         Write-Host "  Checking if builtInApp exists"
+        if (!$AppPrefix.StartsWith("WIN "))
+        {   
+            $builtInApp.displayName = $builtInApp.displayName.Replace("WIN ", $AppPrefix)
+        }
         $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
         $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         $actApp = (Get-MsGraphObject -Uri $uri).value

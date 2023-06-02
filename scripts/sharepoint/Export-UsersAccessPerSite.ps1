@@ -69,13 +69,14 @@ if ($UseAppAuthentication)
         exit
     }
 
-	$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+    #TODO login
+
 }
 else
 {
-    $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+    $script:adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 }
-$sitesToProcess = Get-PnPTenantSite -Connection $adminCon -Detailed -IncludeOneDriveSites | Where-Object { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
+$sitesToProcess = Get-PnPTenantSite -Connection $script:adminCon -Detailed -IncludeOneDriveSites | Where-Object { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
 
 # Function definitions
 function Process-Member
@@ -85,15 +86,14 @@ function Process-Member
         $userOrGroup,
         $rolebindings,
         $access,
-        $siteAcc,
-        $siteCon
+        $siteAcc
     )
     if ($access)
     {
         $rolebindings = @((New-Object PSObject -Property @{"Name" = $access}))
     }
-    $loginName = Get-PnPProperty -Connection $siteCon -ClientObject $userOrGroup -Property "LoginName"
-    $principalType = Get-PnPProperty -Connection $siteCon -ClientObject $userOrGroup -Property "PrincipalType"
+    $loginName = Get-PnPProperty -Connection $script:siteCon -ClientObject $userOrGroup -Property "LoginName"
+    $principalType = Get-PnPProperty -Connection $script:siteCon -ClientObject $userOrGroup -Property "PrincipalType"
     if ($principalType -eq "SharePointGroup")
     {
         foreach($rolebinding in $rolebindings)
@@ -108,7 +108,7 @@ function Process-Member
 		    }
             $siteAcc.Add($obj) | Out-Null
 		}
-        $members = Get-PnPGroupMember -Connection $siteCon -Identity $loginName #TODO does this work for sub webs?
+        $members = Get-PnPGroupMember -Connection $script:siteCon -Identity $loginName #TODO does this work for sub webs?
         foreach($member in $members)
         {
             if ($member.LoginName -like "*|federateddirectoryclaimprovider|*" -or $member.LoginName -like "*|tenant|*")
@@ -119,7 +119,7 @@ function Process-Member
                     $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
                 }
                 $oGroup = $null
-                $oGroup = Get-PnPAzureADGroup -Connection $adminCon -Identity $oGroupId -ErrorAction SilentlyContinue
+                $oGroup = Get-PnPAzureADGroup -Connection $script:adminCon -Identity $oGroupId -ErrorAction SilentlyContinue
                 if ($oGroup)
                 {
                     $grpType = "AadSecurityGroup"
@@ -130,12 +130,12 @@ function Process-Member
                     $dispName = $oGroup.DisplayName
                     if ($member.LoginName.EndsWith("_o"))
                     {
-                        $ogMembers = Get-PnPAzureADGroupOwner -Connection $adminCon -Identity $oGroupId
+                        $ogMembers = Get-PnPAzureADGroupOwner -Connection $script:adminCon -Identity $oGroupId
                         $dispName += " Owners"
                     }
                     else
                     {
-                        $ogMembers = Get-PnPAzureADGroupMember -Connection $adminCon -Identity $oGroupId
+                        $ogMembers = Get-PnPAzureADGroupMember -Connection $script:adminCon -Identity $oGroupId
                         $dispName += " Members"
                     }
                     foreach($rolebinding in $rolebindings)
@@ -152,7 +152,7 @@ function Process-Member
                     }
                     foreach($ogMember in $ogMembers)
                     {
-                        $ogUser = Get-PnPAzureADUser -Connection $adminCon -Identity $ogMember.Id -ErrorAction SilentlyContinue
+                        $ogUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $ogMember.Id -ErrorAction SilentlyContinue
                         if (-not $ogUser)
                         {
                             Write-Warning "User $($ogMember.Id) not found"
@@ -214,7 +214,7 @@ function Process-Member
                     $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
                 }
                 $ogUser = $null
-                $ogUser = Get-PnPAzureADUser -Connection $adminCon -Identity $dispName -ErrorAction SilentlyContinue
+                $ogUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $dispName -ErrorAction SilentlyContinue
                 if (-not $ogUser)
                 {
                     Write-Warning "User $($dispName) not found"
@@ -271,7 +271,7 @@ function Process-Member
                 {
                     $oUserId = $oUserId.Substring(0, $oUserId.LastIndexOf("_"))
                 }
-                $oUser = Get-PnPAzureADUser -Connection $adminCon -Identity $oUserId -ErrorAction SilentlyContinue
+                $oUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $oUserId -ErrorAction SilentlyContinue
                 if ($oUser)
                 {
                     foreach($rolebinding in $rolebindings)
@@ -300,7 +300,7 @@ function Process-Member
                     $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
                 }
                 $oGroup = $null
-                $oGroup = Get-PnPAzureADGroup -Connection $adminCon -Identity $oGroupId -ErrorAction SilentlyContinue
+                $oGroup = Get-PnPAzureADGroup -Connection $script:adminCon -Identity $oGroupId -ErrorAction SilentlyContinue
                 if ($oGroup)
                 {
                     $grpType = "Security"
@@ -311,12 +311,12 @@ function Process-Member
                     $dispName = $oGroup.DisplayName
                     if ($loginName.EndsWith("_o"))
                     {
-                        $ogMembers = Get-PnPAzureADGroupOwner -Connection $adminCon -Identity $oGroupId
+                        $ogMembers = Get-PnPAzureADGroupOwner -Connection $script:adminCon -Identity $oGroupId
                         $dispName += " Owners"
                     }
                     else
                     {
-                        $ogMembers = Get-PnPAzureADGroupMember -Connection $adminCon -Identity $oGroupId
+                        $ogMembers = Get-PnPAzureADGroupMember -Connection $script:adminCon -Identity $oGroupId
                         $dispName += " Members"
                     }
                     foreach($rolebinding in $rolebindings)
@@ -333,7 +333,7 @@ function Process-Member
                     }
                     foreach($ogMember in $ogMembers)
                     {
-                        $ogUser = Get-PnPAzureADUser -Connection $adminCon -Identity $ogMember.Id -ErrorAction SilentlyContinue
+                        $ogUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $ogMember.Id -ErrorAction SilentlyContinue
                         if (-not $ogUser)
                         {
                             Write-Warning "User $($ogMember.Id) not found"
@@ -396,7 +396,7 @@ function Process-Member
                 $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
             }
             $ogUser = $null
-            $ogUser = Get-PnPAzureADUser -Connection $adminCon -Identity $dispName -ErrorAction SilentlyContinue
+            $ogUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $dispName -ErrorAction SilentlyContinue
             if (-not $ogUser)
             {
                 Write-Warning "User $($dispName) not found)"
@@ -446,23 +446,22 @@ function Process-Member
 function Get-WebAccess
 {
     param(
-        $siteCon,
         $web
     )
     Write-Host "Web $($web.ServerRelativeUrl)"
     $siteAcc = New-Object System.Collections.ArrayList
-    $roleAssignments = Get-PnPProperty -Connection $siteCon -ClientObject $web -Property "RoleAssignments"
+    $roleAssignments = Get-PnPProperty -Connection $script:siteCon -ClientObject $web -Property "RoleAssignments"
     foreach($ra in $roleAssignments)
     {
-        $rolebindings = Get-PnPProperty -Connection $siteCon -ClientObject $ra -Property "RoleDefinitionBindings"
-        Process-Member -siteCon $siteCon -web $web -userOrGroup $ra.Member -rolebindings $rolebindings -siteAcc $siteAcc
+        $rolebindings = Get-PnPProperty -Connection $script:siteCon -ClientObject $ra -Property "RoleDefinitionBindings"
+        Process-Member -web $web -userOrGroup $ra.Member -rolebindings $rolebindings -siteAcc $siteAcc
     }
 
-    $subWebs = Get-PnPSubWeb -Recurse -Connection $siteCon
+    $subWebs = Get-PnPSubWeb -Recurse -Connection $script:siteCon
     foreach($sWeb in $subWebs)
     {
-        #TODO required? $siteCon = LoginTo-PnP -Url $siteUrl
-        $subSiteAcc = Get-WebAccess -siteCon $siteCon -web $sWeb
+        #TODO required? $script:siteCon = LoginTo-PnP -Url $siteUrl
+        $subSiteAcc = Get-WebAccess -web $sWeb
         if ($subSiteAcc -and $subSiteAcc.Count -gt 0)
         {
             $siteAcc.AddRange($subSiteAcc)
@@ -479,7 +478,10 @@ foreach($site in $sitesToProcess)
 {
     $siteUrl = $site.Url
     Write-Host "Site $siteUrl"
-    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $AlyaSharePointNewSiteCollectionAdmins
+    if ($script:adminCon)
+    {
+        Set-PnPTenantSite -Connection $script:adminCon -Identity $site.Url -Owners $AlyaSharePointNewSiteCollectionAdmins
+    }
 
     $retries = 10
     do
@@ -488,22 +490,22 @@ foreach($site in $sitesToProcess)
         {
             if ($UseAppAuthentication)
             {
-                $siteCon = LoginTo-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
+                $script:siteCon = LoginTo-PnP -Url $siteUrl -ClientId $AlyaSharePointAppId -Thumbprint $AlyaSharePointAppCertificate
             }
             else
             {
-                $siteCon = LoginTo-PnP -Url $siteUrl
+                $script:siteCon = LoginTo-PnP -Url $siteUrl
             }
-            $web = Get-PnPWeb -Connection $siteCon
-            $admins = Get-PnPSiteCollectionAdmin -Connection $siteCon
+            $web = Get-PnPWeb -Connection $script:siteCon
+            $admins = Get-PnPSiteCollectionAdmin -Connection $script:siteCon
             foreach($admin in $admins)
             {
-                Process-Member -siteCon $siteCon -web $web -userOrGroup $admin -access "SiteColAdmin" -siteAcc $allSiteAcc
+                Process-Member -web $web -userOrGroup $admin -access "SiteColAdmin" -siteAcc $allSiteAcc
             }
-            $siteAcc = Get-WebAccess -siteCon $siteCon -web $web
+            $siteAcc = Get-WebAccess -web $web
             if ($siteAcc -and $siteAcc.Count -gt 0)
             {
-                $allSiteAcc.AddRange($siteAcc)
+                $allSiteAcc.AddRange(@($siteAcc))
             }
             break
         }

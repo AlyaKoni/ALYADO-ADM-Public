@@ -190,7 +190,7 @@ else
                         $rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
                         if (-not $rule)
                         {
-                            $tmp = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Any -Program $progPath -Action Allow -Protocol $prot
+                            $null = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Any -Program $progPath -Action Allow -Protocol $prot
                         }
                     }
                 }

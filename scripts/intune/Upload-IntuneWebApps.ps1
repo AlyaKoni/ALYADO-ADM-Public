@@ -51,7 +51,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-IntuneWebApps-$($Alya
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "WebApps"
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 
 # Checking modules

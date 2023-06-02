@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 Write-Host "    Preparing version"
 $packageRoot = "$PSScriptRoot"
 $versionFile = Join-Path $packageRoot "version.json"

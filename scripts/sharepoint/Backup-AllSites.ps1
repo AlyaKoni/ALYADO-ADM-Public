@@ -63,7 +63,7 @@ if (-Not $backupLocation)
 }
 if (-Not (Test-Path $backupLocation))
 {
-    $tmp = New-Item -Path $backupLocation -ItemType Directory -Force
+    $null = New-Item -Path $backupLocation -ItemType Directory -Force
 }
 
 # Getting app information
@@ -124,7 +124,7 @@ function Get-ExportObject(
             {
                 try
                 {
-                    $tmp = Get-PnPProperty -Connection $siteCon -ClientObject $obj -Property $prop.Name
+                    $null = Get-PnPProperty -Connection $siteCon -ClientObject $obj -Property $prop.Name
                 } catch {}
             }
         }
@@ -237,7 +237,7 @@ function Download-FolderRecursive($folderObj, $webUrl, $parentDir)
             $folderPath = Split-Path -Path $itemPath
             if(-Not (Test-Path $folderPath))
             {
-                $tmp = New-Item -Path $folderPath -ItemType Directory -Force
+                $null = New-Item -Path $folderPath -ItemType Directory -Force
                 if(-Not (Test-Path $folderPath))
                 {
                     Start-Sleep -Seconds 1
@@ -409,7 +409,7 @@ foreach($site in $sites)
             Write-Host "Cleaning last export"
             Remove-Item -Path $expDir -Recurse -Force -ErrorAction SilentlyContinue
         }
-        $tmp = New-Item -Path $expDir -ItemType Directory -Force -ErrorAction SilentlyContinue
+        $null = New-Item -Path $expDir -ItemType Directory -Force -ErrorAction SilentlyContinue
 
         if ($expSiteCol.Template -ne "RedirectSite#0")
         {
@@ -445,7 +445,7 @@ foreach($site in $sites)
                     $listDir = Join-Path $expDir $relUrl.Replace("/","\")
                     if (-Not (Test-Path $listDir -PathType Container))
                     {
-                        $tmp = New-Item -Path $listDir -ItemType Directory -Force
+                        $null = New-Item -Path $listDir -ItemType Directory -Force
                     }
 
                     $retries = 10

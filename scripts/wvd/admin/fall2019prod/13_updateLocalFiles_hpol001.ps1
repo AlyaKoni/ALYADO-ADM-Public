@@ -68,11 +68,11 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     Write-Host "    Copying files"
     if (-Not (Test-Path "\\$($actHostName)\C$\$($AlyaCompanyName)"))
     {
-        $tmp = New-Item -Path "\\$($actHostName)\C$" -Name $AlyaCompanyName -ItemType Directory
+        $null = New-Item -Path "\\$($actHostName)\C$" -Name $AlyaCompanyName -ItemType Directory
     }
     robocopy /mir "$($RootDir)\..\..\WvdIcons" "\\$($actHostName)\C$\$($AlyaCompanyName)\WvdIcons"
     robocopy /mir "$($RootDir)\..\..\WvdStartApps\$($AlyaCompanyName)" "\\$($actHostName)\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\$($AlyaCompanyName)"
-    $tmp = Copy-Item "$($RootDir)\..\..\WvdTheme\$($AlyaCompanyName)Prod.theme" "\\$($actHostName)\C$\Windows\resources\Themes\$($AlyaCompanyName).theme" -Force
+    $null = Copy-Item "$($RootDir)\..\..\WvdTheme\$($AlyaCompanyName)Prod.theme" "\\$($actHostName)\C$\Windows\resources\Themes\$($AlyaCompanyName).theme" -Force
 }
 
 #Stopping Transscript

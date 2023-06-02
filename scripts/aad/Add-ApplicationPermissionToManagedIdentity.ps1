@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     23.09.2022 Konrad Brunner       Initial Version
+    31.05.2023 Konrad Brunner       Switched to MsGraph
 
 #>
 
@@ -51,14 +52,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Add-ApplicationPermissionToMana
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureADPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Applications"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-AD
+LoginTo-MgGraph -Scopes @("Directory.Read.All","AppRoleAssignment.ReadWrite.All")
 
 # =============================================================
 # Azure stuff
@@ -72,7 +71,7 @@ Write-Host "Getting ServicePrincipal Requesting" -ForegroundColor $CommandInfo
 $App = $null
 if ($ServicePrincipalNameRequestingPermission)
 {
-    $App = Get-AzureADServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalNameRequestingPermission)'"
+    $App = Get-MgServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalNameRequestingPermission)'"
     if (-Not $App)
     {
         throw "ServicePrincipal with name '$($ServicePrincipalNameRequestingPermission)' not found"
@@ -80,7 +79,7 @@ if ($ServicePrincipalNameRequestingPermission)
 }
 if ($ServicePrincipalIdRequestingPermission)
 {
-    $App = Get-AzureADServicePrincipal -Filter "AppId eq '$($ServicePrincipalIdRequestingPermission)'"
+    $App = Get-MgServicePrincipal -Filter "AppId eq '$($ServicePrincipalIdRequestingPermission)'"
     if (-Not $App)
     {
         throw "ServicePrincipal with id '$($ServicePrincipalIdRequestingPermission)' not found"
@@ -95,7 +94,7 @@ Write-Host "Getting ServicePrincipal Providing" -ForegroundColor $CommandInfo
 $ToApp = $null
 if ($ServicePrincipalNameProvidingPermission)
 {
-    $ToApp = Get-AzureADServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalNameProvidingPermission)'"
+    $ToApp = Get-MgServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalNameProvidingPermission)'"
     if (-Not $ToApp)
     {
         throw "ServicePrincipal with name '$($ServicePrincipalNameProvidingPermission)' not found"
@@ -103,7 +102,7 @@ if ($ServicePrincipalNameProvidingPermission)
 }
 if ($ServicePrincipalIdProvidingPermission)
 {
-    $ToApp = Get-AzureADServicePrincipal -Filter "AppId eq '$($ServicePrincipalIdProvidingPermission)'"
+    $ToApp = Get-MgServicePrincipal -Filter "AppId eq '$($ServicePrincipalIdProvidingPermission)'"
     if (-Not $ToApp)
     {
         throw "ServicePrincipal with id '$($ServicePrincipalIdProvidingPermission)' not found"
@@ -122,12 +121,10 @@ if (-not $AppRole)
 }
 
 Write-Host "Checking assignment" -ForegroundColor $CommandInfo
-$Assignments = Get-AzureADServiceAppRoleAssignedTo -ObjectId $App.ObjectId -All $true
-$Assignment = $Assignments | Where-Object { $_.Id -eq $AppRole.Id -and $_.PrincipalId -eq $App.ObjectId -and $_.ResourceId -eq $ToApp.ObjectId  }
-if (-not $Assignment)
+$Assignments = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $App.Id -All
+if ($null -eq ($Assignments | Where-Object { $_.AppRoleId -eq $AppRole.Id -and $_.ResourceId -eq $ToApp.Id}))
 {
-    Write-Warning "Assignment not found. Creating it now"
-    New-AzureAdServiceAppRoleAssignment -ObjectId $App.ObjectId -PrincipalId $App.ObjectId -ResourceId $ToApp.ObjectId -Id $AppRole.Id
+    New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
 }
 else
 {

@@ -80,12 +80,12 @@ foreach ($dir in $dirs)
     Write-Host "Cleaning $($dir.Name)"
     if ((Test-Path (Join-Path $dir.FullName "Content")) -or (Test-Path (Join-Path $dir.FullName "Content.deleteMe")))
     {
-        $tmp = Remove-OneDriveItemRecursive -Path (Join-Path $dir.FullName "Content")
+        $null = Remove-OneDriveItemRecursive -Path (Join-Path $dir.FullName "Content")
     }
     # Uncomment following block, if package directory should not be cleared
     if ((Test-Path (Join-Path $dir.FullName "Package")) -or (Test-Path (Join-Path $dir.FullName "Package.deleteMe")))
     {
-        $tmp = Remove-OneDriveItemRecursive -Path (Join-Path $dir.FullName "Package")
+        $null = Remove-OneDriveItemRecursive -Path (Join-Path $dir.FullName "Package")
     }
     <#if ($dir.Name -eq "LocalPrinters" -or $dir.Name -eq "LocalPrinters_unused")
     {
@@ -95,7 +95,7 @@ foreach ($dir in $dirs)
             $zdirs = Get-ChildItem -Path $zipDir -Directory
             foreach ($zdir in $zdirs)
             {
-                $tmp = Remove-OneDriveItemRecursive -Path $zdir.FullName
+                $null = Remove-OneDriveItemRecursive -Path $zdir.FullName
             }
         }
     }#>

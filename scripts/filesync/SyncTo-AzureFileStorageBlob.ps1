@@ -152,7 +152,7 @@ foreach($SourceFile in $UploadItems)
         if ($DestinationBlob.ICloudBlob.Properties.ContentMD5 -ne $hash)
         {
 			Write-Host "    + Creating Snapshot"
-			$Tmp = $DestinationBlob.ICloudBlob.CreateSnapshot()
+			$null = $DestinationBlob.ICloudBlob.CreateSnapshot()
 		    Write-Host "    + Copying blob"
             $DestinationBlob = Set-AzStorageBlobContent -File $SourceFile.FullName -Context $StrgContext -Container $ToStorageBlobContainer -Blob $BlobName -Force
         }

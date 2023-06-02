@@ -303,9 +303,9 @@ for ($h = 0; $h -lt $SessionHostCount; $h++)
         $VMConfig | Add-AzVMNetworkInterface -Id $VMNic.Id | Out-Null
         $VMConfig | Set-AzVMOSDisk -Name $VMDiskName -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 128 | Out-Null
         $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
-        $tmp = New-AzVM -ResourceGroupName $ShResourceGroupName -Location $AlyaAvdSessionHostLocation -VM $VMConfig -DisableBginfoExtension
+        $null = New-AzVM -ResourceGroupName $ShResourceGroupName -Location $AlyaAvdSessionHostLocation -VM $VMConfig -DisableBginfoExtension
         $SessionHostVm = Get-AzVM -ResourceGroupName $ShResourceGroupName -Name $VMName
-        $tmp = Set-AzResource -ResourceId $SessionHostVm.Id -Tag @{displayName="AVD $($WrkSpc.FriendlyName) host $h";ownerEmail=$Context.Account.Id;startTime=$VmStartTime;stopTime=$VmStopTime} -Force
+        $null = Set-AzResource -ResourceId $SessionHostVm.Id -Tag @{displayName="AVD $($WrkSpc.FriendlyName) host $h";ownerEmail=$Context.Account.Id;startTime=$VmStartTime;stopTime=$VmStopTime} -Force
         $SessionHostVm = Get-AzVM -ResourceGroupName $ShResourceGroupName -Name $VMName -Status
     }
 

@@ -236,9 +236,9 @@ if (-Not $AdVm1)
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic1.Id | Out-Null
     $VMConfig | Set-AzVMOSDisk -Name $VMDiskName1 -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 127 | Out-Null
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
-    $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
+    $null = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
     $AdVm1 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName1
-    $tmp = Set-AzResource -ResourceId $AdVm1.Id -Tag @{displayName="Active Directory First";ownerEmail=$Context.Account.Id} -ApiVersion "2022-03-01" -Force
+    $null = Set-AzResource -ResourceId $AdVm1.Id -Tag @{displayName="Active Directory First";ownerEmail=$Context.Account.Id} -ApiVersion "2022-03-01" -Force
 }
 
 # Checking ad vm 2
@@ -258,9 +258,9 @@ if (-Not $AdVm2)
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic2.Id | Out-Null
     $VMConfig | Set-AzVMOSDisk -Name $VMDiskName2 -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 127 | Out-Null
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
-    $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
+    $null = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig
     $AdVm2 = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName2
-    $tmp = Set-AzResource -ResourceId $AdVm2.Id -Tag @{displayName="Active Directory Second";ownerEmail=$Context.Account.Id} -ApiVersion "2022-03-01" -Force
+    $null = Set-AzResource -ResourceId $AdVm2.Id -Tag @{displayName="Active Directory Second";ownerEmail=$Context.Account.Id} -ApiVersion "2022-03-01" -Force
 }
 
 # Checking anti malware vm 1 extension

@@ -156,7 +156,7 @@ foreach($actLock in $actLocks)
     if ($actLock.Properties.level -eq "CanNotDelete")
     {
         Write-Host "Removing lock $($actLock.Name)"
-        $tmp = $actLock | Remove-AzResourceLock -Force
+        $null = $actLock | Remove-AzResourceLock -Force
     }
 }
 

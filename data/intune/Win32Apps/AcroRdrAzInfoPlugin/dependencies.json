@@ -1,8 +1,8 @@
 [{
         "app": "AcroRdrDC",
-        "autoInstall": false
+        "autoInstall": true
     }, {
         "app": "AzInfoProtection",
-        "autoInstall": false
+        "autoInstall": true
     }
 ]

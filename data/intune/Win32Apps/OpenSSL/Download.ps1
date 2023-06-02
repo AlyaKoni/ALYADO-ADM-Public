@@ -29,17 +29,19 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://slproweb.com/products/Win32OpenSSL.html"
 
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
 {
-    $tmp = New-Item -Path $contentRoot -ItemType Directory -Force
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
 
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*/Win64OpenSSL-[^`"]*.msi"
+[regex]$regex = "[^`"]*/Win64OpenSSL-[^`"]*\.msi"
 $newUrl = "https://slproweb.com" + [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $outfile = Join-Path $contentRoot (Split-Path $newUrl -Leaf)
 $dreq = Invoke-WebRequestIndep -Uri $newUrl -Method Get -OutFile $outfile

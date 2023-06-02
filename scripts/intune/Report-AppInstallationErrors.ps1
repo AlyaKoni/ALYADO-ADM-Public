@@ -51,7 +51,7 @@ $IsOneDriveDir = $true
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "Reports"
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 Write-Host "Exporting Intune report to $DataRoot"
 

@@ -60,14 +60,14 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Checking ADK dir" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$($AlyaTools)\ADK"))
 {
-    $tmp = New-Item -Path "$($AlyaTools)\ADK" -ItemType Directory -Force
+    $null = New-Item -Path "$($AlyaTools)\ADK" -ItemType Directory -Force
 }
 
 Write-Host "Checking AlyaADK" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "C:\AlyaADK"))
 {
     Write-Host "Creating C:\AlyaADK"
-    $tmp = New-Item -Path "C:\AlyaADK" -ItemType Directory -Force
+    $null = New-Item -Path "C:\AlyaADK" -ItemType Directory -Force
 }
 
 Write-Host "Checking Assessment and Deployment Kit" -ForegroundColor $CommandInfo
@@ -157,7 +157,7 @@ if (-Not (Test-Path "$($AlyaTools)\ADK") -or -Not (Test-Path $($adkAutopilotIso)
     Write-Host "Creating new iso image"
     if ((Test-Path $($adkAutopilot)))
     {
-        $tmp = Remove-Item -Path $($adkAutopilot) -Recurse -Force
+        $null = Remove-Item -Path $($adkAutopilot) -Recurse -Force
     }
 
     Write-Host "Copying pe image"
@@ -251,11 +251,11 @@ if (-Not (Test-Path "$($AlyaTools)\ADK") -or -Not (Test-Path $($adkAutopilotIso)
     $sourceRoot = "C:\AlyaADKpe\mount\Alya"
     if (-Not (Test-Path $sourceRoot))
     {
-        $tmp = New-Item -Path $sourceRoot -ItemType Directory -Force
+        $null = New-Item -Path $sourceRoot -ItemType Directory -Force
     }
     if (-Not (Test-Path "$sourceRoot\data"))
     {
-        $tmp = New-Item -Path "$sourceRoot\data" -ItemType Directory -Force
+        $null = New-Item -Path "$sourceRoot\data" -ItemType Directory -Force
     }
     cmd /c robocopy "$($AlyaRoot)" "$($sourceRoot)" /MIR /XF 9*.cmd /XF .gitignore /XD data /XD .git /XD WVD /XD Solutions /XD _logs /XD _local /XD _temp /XD tools
     cmd /c copy /y "$($AlyaData)\ConfigureEnv.ps1" "$($sourceRoot)\data"
@@ -264,15 +264,15 @@ if (-Not (Test-Path "$($AlyaTools)\ADK") -or -Not (Test-Path $($adkAutopilotIso)
     $sourceRoot = "C:\AlyaADKpe\mount\Alya\tools\WindowsPowerShell"
     if (-Not (Test-Path $sourceRoot))
     {
-        $tmp = New-Item -Path $sourceRoot -ItemType Directory -Force
+        $null = New-Item -Path $sourceRoot -ItemType Directory -Force
     }
     if (-Not (Test-Path "$($sourceRoot)\Scripts"))
     {
-        $tmp = New-Item -Path "$($sourceRoot)\Scripts" -ItemType Directory -Force
+        $null = New-Item -Path "$($sourceRoot)\Scripts" -ItemType Directory -Force
     }
     if (-Not (Test-Path "$($sourceRoot)\Modules"))
     {
-        $tmp = New-Item -Path "$($sourceRoot)\Modules" -ItemType Directory -Force
+        $null = New-Item -Path "$($sourceRoot)\Modules" -ItemType Directory -Force
     }
     Save-Module -Name PackageManagement -Path "$($sourceRoot)\Modules" -Force
     Save-Module -Name PowershellGet -Path "$($sourceRoot)\Modules" -Force

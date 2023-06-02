@@ -29,12 +29,14 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://www.scribus.net/downloads/stable-branch/"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*http://sourceforge.net/projects/scribus[^`"]*"
 $prjUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $req = Invoke-WebRequestIndep -Uri $prjUrl -UseBasicParsing -Method Get
-[regex]$regex = "http[^`"]*scribus[^`"]*windows-x64.exe"
+[regex]$regex = "http[^`"]*scribus[^`"]*windows-x64\.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $Shell = New-Object -ComObject WScript.Shell
 $sc = $shell.CreateShortcut("$PSScriptRoot\Download.url")

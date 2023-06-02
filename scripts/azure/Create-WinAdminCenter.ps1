@@ -237,7 +237,7 @@ if (-Not $Vm)
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic.Id | Out-Null
     $VMConfig | Set-AzVMOSDisk -Name $VMDiskName -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB $VMOsDiskSize -StorageAccountType $VMOsDiskType | Out-Null
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName | Out-Null
-    $tmp = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig -Tag @{DisplayName="DNS forwarder"} -DisableBginfoExtension
+    $null = New-AzVM -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -VM $VMConfig -Tag @{DisplayName="DNS forwarder"} -DisableBginfoExtension
     $Vm = Get-AzVM -ResourceGroupName $ResourceGroupName -Name $VMName -Status
 }
 if (-Not ($VM.Statuses | Where-Object { $_.Code -eq "PowerState/running"}))

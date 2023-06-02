@@ -64,7 +64,22 @@ Write-Host '      Set-TimeZone -Id "UTC"'
 #Write-Host '      Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation -Name RealTimeIsUniversal -Value 1 -Type DWord -Force'
 #Write-Host '      Set-Service -Name w32time -StartupType Automatic'
 #Write-Host '      Remove-Item -Path C:\Windows\Panther -Recurse -Force'
-Write-Host '      cmd /c "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
+Write-Host '      $state = (Get-ItemProperty -Path HKLM:\SYSTEM\Setup\Status\SysprepStatus -Name GeneralizationState).GeneralizationState'
+Write-Host '      if ($state -ne 7) { throw "wrong GeneralizationState" }'
+Write-Host '      for ($i=0; $i -le 2; $i++) {'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "Microsoft.LanguageExperiencePack*"} | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "AdobeNotificationClient_*"} | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "Adobe.CC.XD_*"} | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "Adobe.Fresco_*" } | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "InputApp_*" } | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "Microsoft.PPIProjection_*" } | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Microsoft.LanguageExperiencePack*"} | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "AdobeNotificationClient_*"} | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Adobe.CC.XD_*"} | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Adobe.Fresco_*" } | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "InputApp_*" } | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Microsoft.PPIProjection_*" } | Remove-AppxProvisionedPackage -Online -ErrorAction Continue }'
+Write-Host '      & "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
 Write-Host '  - Wait until the vm has stopped state'
 Write-Host '  - In case of troubles, follow this guide: https://learn.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image'
 <#
@@ -124,7 +139,7 @@ foreach($actLock in $actLocks)
     if ($actLock.Properties.level -eq "CanNotDelete")
     {
         Write-Host "Removing lock $($actLock.Name)"
-        $tmp = $actLock | Remove-AzResourceLock -Force
+        $null = $actLock | Remove-AzResourceLock -Force
     }
 }
 
@@ -274,7 +289,7 @@ foreach($actLock in $actLocks)
     if ($actLock.Properties.level -eq "CanNotDelete")
     {
         Write-Host "Adding lock $($actLock.Name)"
-        $tmp = Set-AzResourceLock -ResourceGroupName $VmResourceGroupName -LockName $actLock.Name -LockLevel CanNotDelete -LockNotes $actLock.Properties.notes -Force
+        $null = Set-AzResourceLock -ResourceGroupName $VmResourceGroupName -LockName $actLock.Name -LockLevel CanNotDelete -LockNotes $actLock.Properties.notes -Force
     }
 }
 

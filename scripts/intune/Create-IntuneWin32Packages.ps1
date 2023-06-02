@@ -52,7 +52,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Create-IntuneWin32Packages-$
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 
 & "$PSScriptRoot\Download-Win32AppPrepTool.ps1"
@@ -84,26 +84,26 @@ foreach($packageDir in $packageDirs)
     {
         try
         {
-            $tmp = Remove-Item -Path $contentPath -Recurse -Force -Confirm:$false
+            $null = Remove-Item -Path $contentPath -Recurse -Force -Confirm:$false
         } catch
         {
             Write-Warning "Was not able to delete directory. Please delete $contentPath.deleteMe by hand"
-            $tmp = Move-Item -Path $contentPath -Destination "$contentPath.deleteMe"
+            $null = Move-Item -Path $contentPath -Destination "$contentPath.deleteMe"
         }
     }
-    $tmp = New-Item -Path $contentPath -ItemType Directory
+    $null = New-Item -Path $contentPath -ItemType Directory
     if ((Test-Path $packagePath))
     {
         try
         {
-            $tmp = Remove-Item -Path $packagePath -Recurse -Force -Confirm:$false
+            $null = Remove-Item -Path $packagePath -Recurse -Force -Confirm:$false
         } catch
         {
             Write-Warning "Was not able to delete directory. Please delete $packagePath.deleteMe by hand"
-            $tmp = Move-Item -Path $packagePath -Destination "$packagePath.deleteMe"
+            $null = Move-Item -Path $packagePath -Destination "$packagePath.deleteMe"
         }
     }
-    $tmp = New-Item -Path $packagePath -ItemType Directory
+    $null = New-Item -Path $packagePath -ItemType Directory
 
     Write-Host "  Updating scripts if required"
     $prepareScript = Get-Item -Path (Join-Path $packageDir.FullName "PrepareScripts.ps1") -ErrorAction SilentlyContinue

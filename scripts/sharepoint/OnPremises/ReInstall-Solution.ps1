@@ -158,13 +158,13 @@ function Uninstall-SPSolution-IfExist([string]$solutionName)
         {
             $global:SolutionUrls = $solution.DeployedWebApplications.Url | Out-String
             Uninstall-SPSolution -Identity $solutionName -Confirm:$false -AllWebApplications
-            $tmp = WaitForSPSolutionJobToComplete -solutionName $solutionName
+            $null = WaitForSPSolutionJobToComplete -solutionName $solutionName
         }
         else
         {
             $global:SolutionUrls = $null
 		    Uninstall-SPSolution -Identity $solutionName -Confirm:$false
-            $tmp = WaitForSPSolutionJobToComplete -solutionName $solutionName
+            $null = WaitForSPSolutionJobToComplete -solutionName $solutionName
         }
     }
     else
@@ -215,13 +215,13 @@ if ($global:SolutionUrls)
     foreach($SolutionUrl in $SolutionUrls)
     {
         Install-SPSolution -Identity $SolutionId -Confirm:$false -AllWebApplications:$false -WebApplication $SolutionUrl -GACDeployment -Force
-        $tmp = WaitForSPSolutionJobToComplete -solutionName $SolutionId
+        $null = WaitForSPSolutionJobToComplete -solutionName $SolutionId
     }
 }
 else
 {
     Install-SPSolution -Identity $SolutionId -Confirm:$false -GACDeployment -Force
-    $tmp = WaitForSPSolutionJobToComplete -solutionName $SolutionId
+    $null = WaitForSPSolutionJobToComplete -solutionName $SolutionId
 }
 
 # done 

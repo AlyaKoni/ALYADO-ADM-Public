@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://support.apple.com/de-ch/HT210384"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*iTunes64Setup.exe"
@@ -38,7 +40,7 @@ $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
 {
-    $tmp = New-Item -Path $contentRoot -ItemType Directory -Force
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
 
 Invoke-WebRequest -UseBasicParsing -Uri $newUrl -Method Get -OutFile "$contentRoot\iTunes64Setup.exe"

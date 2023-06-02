@@ -86,6 +86,8 @@ foreach(`$par in (Get-ChildItem HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts))
 	if (`$tenant -eq "5757de31-29c4-4f39-9bd1-478cec348035")
 	{
 		`$mail = Get-ItemPropertyValue -Path `$par.PSPath -Name "UserEmail"
+		`$bname = `$par.PSChildName
+		`$tname = Get-ItemPropertyValue -Path `$par.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
 		break
 	}
 }

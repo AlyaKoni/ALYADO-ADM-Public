@@ -65,7 +65,7 @@ try {
 	$RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
 	Write-Output "Logging in to Az ($AzureEnvironment)..."
     Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
-	$tmp = Add-AzAccount `
+	$null = Add-AzAccount `
 		-ServicePrincipal `
 		-TenantId $RunAsConnection.TenantId `
         -SubscriptionId $RunAsConnection.SubscriptionId `

@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $pageUrl = "https://mremoteng.org/download"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"']*mRemoteNG-Installer[^`"']*.msi"

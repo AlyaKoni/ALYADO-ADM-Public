@@ -93,21 +93,22 @@ if (-Not $AutomationAccount)
 
 # Checking application
 Write-Host "Checking application" -ForegroundColor $CommandInfo
-$AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $AutomationAccountName
+$RunasAppName = "$($AutomationAccountName)RunAsApp"
+$AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName $RunasAppName
 if (-Not $AzureAdServicePrincipal)
 {
-    Write-Warning "Automation Application not found. Please create the Automation Application $AutomationAccountName"
+    Write-Warning "Automation Application not found. Please create the Automation Application $RunasAppName"
     Exit
 }
 
 # Checking automation service principal on all subscriptions
 Write-Host "Checking automation service principal on all subscriptions"
 
-$RunAsApplication = Get-AzADApplication -DisplayNameStartWith $AutomationAccountName -ErrorAction SilentlyContinue
+$RunAsApplication = Get-AzADApplication -DisplayNameStartWith $RunasAppName -ErrorAction SilentlyContinue
 Get-AzSubscription | Foreach-Object {
     write-host "Configuring app on subscription $($_.Name) $($_.Id)"
     Select-AzSubscription -SubscriptionId $_.Id
-    $NewRole = Get-AzRoleAssignment -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -eq $AutomationAccountName -and $_.RoleDefinitionName -eq "Contributor"}
+    $NewRole = Get-AzRoleAssignment -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -eq $RunasAppName -and $_.RoleDefinitionName -eq "Contributor"}
     While ($NewRole -eq $null)
     {
 	    Try {
@@ -119,8 +120,8 @@ Get-AzSubscription | Foreach-Object {
 		    Write-Verbose "Service Principal not yet active, delay before adding the role assignment."
             Sleep 5
 	    }
-	    $NewRole = Get-AzRoleAssignment -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -eq $AutomationAccountName -and $_.RoleDefinitionName -eq "Contributor"}
-        Write-Verbose "Added role assignment for Azure AD application $($AutomationAccountName)"
+	    $NewRole = Get-AzRoleAssignment -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -eq $RunasAppName -and $_.RoleDefinitionName -eq "Contributor"}
+        Write-Verbose "Added role assignment for Azure AD application $($RunasAppName)"
     }
 }
 

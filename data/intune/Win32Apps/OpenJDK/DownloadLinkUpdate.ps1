@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $version = 22
 do
 {
@@ -43,7 +45,7 @@ do
     } catch {}
 } while (-Not $check -and $version -gt 16)
 
-[regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64_bin.zip"
+[regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64_bin\.zip"
 $newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 $Shell = New-Object -ComObject WScript.Shell
 $sc = $shell.CreateShortcut("$PSScriptRoot\Download.url")

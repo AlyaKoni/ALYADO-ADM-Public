@@ -498,7 +498,7 @@ else
         {
             if ((Test-Path $restartScript))
             {
-                $tmp = Remove-Item -Path $restartScript -Force
+                $null = Remove-Item -Path $restartScript -Force
             }
             Write-Host "Device has all actual updates and upgrades installed!" -ForegroundColor $CommandSuccess
             if ($nextScriptToLaunch)
@@ -520,7 +520,7 @@ else
     {
         if ((Test-Path $restartScript))
         {
-            $tmp = Remove-Item -Path $restartScript -Force
+            $null = Remove-Item -Path $restartScript -Force
         }
         Write-Host "Device has all actual updates installed!" -ForegroundColor $CommandSuccess
         if ($nextScriptToLaunch)

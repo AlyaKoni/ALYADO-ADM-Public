@@ -70,7 +70,7 @@ foreach ($url in $urlsToSet)
 $regFile = "$($AlyaData)\client\os\Set-O365AndAzureTrustedSites-$((Get-Date).ToString("yyyyMMddHHmmss")).reg"
 if (-Not (Test-Path "$($AlyaData)\client\os2"))
 {
-    $tmp = New-Item -Path "$($AlyaData)\client\os" -ItemType Directory -Force
+    $null = New-Item -Path "$($AlyaData)\client\os" -ItemType Directory -Force
 }
 Write-Host "Generating registry file $($regFile)" -ForegroundColor $CommandInfo
 $regStr | Set-Content -Path $regFile -Force

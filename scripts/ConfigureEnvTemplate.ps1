@@ -79,8 +79,8 @@ $AlyaAddLicenses = @() #"M365DefenderP1","SMIME","MsLegacyStore"
 $AlyaPasswordResetEnabled = $AlyaLicenseType -in @("BusinessPremium","EnterpriseME3orOE3EMS","EnterpriseME5orOE5EMS")
 $AlyaVMLicenseTypeClient = "PleaseSpecify" #Example:"None" #Windows_Client=HybridBenefit, None=PAYG
 $AlyaVMLicenseTypeServer = "PleaseSpecify" #Example:"None" #Windows_Server=HybridBenefit, None=PAYG
-$AlyaServerOuProd = $null #Example:"OU=PROD,OU=WVD,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
-$AlyaServerOuTest = $null #Example:"OU=TEST,OU=WVD,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
+$AlyaServerOuProd = $null #Example:"OU=PROD,OU=Avd,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
+$AlyaServerOuTest = $null #Example:"OU=TEST,OU=Avd,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
 
 <# LOGOS #>
 $AlyaLogoUrlQuad = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzQuadrat_256x248_wbg.png"
@@ -128,7 +128,8 @@ $AlyaResIdWebSiteResGrp = "PleaseSpecify" #Example:"011"
 $AlyaResIdLetsEncryptResGrp = "PleaseSpecify" #Example:"012"
 $AlyaResIdWormResGrp = "PleaseSpecify" #Example:"015"
 $AlyaResIdOrdCatResGrp = "PleaseSpecify" #Example:"016"
-$AlyaResIdWvdImageResGrp = "PleaseSpecify" #Example:"040"
+$AlyaResIdZefixResGrp = "PleaseSpecify" #Example:"021"
+$AlyaResIdAvdImageResGrp = "PleaseSpecify" #Example:"040"
 $AlyaResIdLogAnalytics = "PleaseSpecify" #Example:"002"
 $AlyaResIdVirtualNetwork = "PleaseSpecify" #Example:"000"
 $AlyaResIdMainKeyVault = "PleaseSpecify" #Example:"001"
@@ -137,10 +138,12 @@ $AlyaResIdAuditStorage = "PleaseSpecify" #Example:"002"
 $AlyaResIdPublicStorage = "PleaseSpecify" #Example:"001"
 $AlyaResIdPrivateStorage = "PleaseSpecify" #Example:"004"
 $AlyaResIdWormStorage = "PleaseSpecify" #Example:"015"
+$AlyaResIdZefixStorage = "PleaseSpecify" #Example:"021"
 $AlyaResIdOrdCatStorage = "PleaseSpecify" #Example:"016"
 $AlyaResIdRecoveryVault = "PleaseSpecify" #Example:"001"
 $AlyaResIdAutomationAccount = "PleaseSpecify" #Example:"001"
-$AlyaResIdWormAutomationAccount = "PleaseSpecify" #Example:"015"
+$AlyaResIdWormFunctionApp = "PleaseSpecify" #Example:"015"
+$AlyaResIdZefixFunctionApp = "PleaseSpecify" #Example:"021"
 $AlyaResIdAdSrv1 = "PleaseSpecify" #Example:"001"
 $AlyaResIdAdSrv2 = "PleaseSpecify" #Example:"002"
 $AlyaResIdForwarderSrv = "PleaseSpecify" #Example:"003"
@@ -149,11 +152,14 @@ $AlyaResIdAdSNet = "PleaseSpecify" #Example:"04"
 $AlyaResIdJumpHost = "PleaseSpecify" #Example:"010"
 $AlyaResIdJumpHostSNet = "PleaseSpecify" #Example:"05"
 $AlyaResIdVpnGateway = "PleaseSpecify" #Example:"001"
-$AlyaResIdWvdImageClient = "PleaseSpecify" #Example:"041"
-$AlyaResIdWvdImageServer = "PleaseSpecify" #Example:"042"
-$AlyaResIdWvdImageSNet = "PleaseSpecify" #Example:"05"
-$AlyaResIdWvdHostSNet = "PleaseSpecify" #Example:"01"
+$AlyaResIdAvdImageClient = "PleaseSpecify" #Example:"041"
+$AlyaResIdAvdImageServer = "PleaseSpecify" #Example:"042"
+$AlyaResIdAvdImageSNet = "PleaseSpecify" #Example:"05"
+$AlyaResIdAvdHostSNet = "PleaseSpecify" #Example:"01"
 $AlyaResIdOrdCatFuncApp = "PleaseSpecify" #Example:"016"
+
+<# RESOURCE SETTINGS #>
+$AlyaResEnableInsightsAndAlerts = $false
 
 <# SHARING SETTINGS #>
 $AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" #  # None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)
@@ -189,23 +195,17 @@ $AlyaSubnetPrefixLength = "PleaseSpecify" #Example:26
 $AlyaGatewayPrefixLength = "PleaseSpecify" #Example:28
 $AlyaDeployGateway = "PleaseSpecify" #Example:$false
 
-<# WVD SETTINGS #>
+<# AVD SETTINGS #>
 <#
-$AlyaWvdRDBroker = "PleaseSpecify" #Example:"https://rdbroker.wvd.microsoft.com"
-$AlyaWvdShareServer = "PleaseSpecify" # TODO from vars
-$AlyaWvdShareRoot = "PleaseSpecify"
-$AlyaWvdTenantNameProd = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365) Prod"
-$AlyaWvdTenantNameTest = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365) Test"
-$AlyaWvdAzureServicePrincipalName = "PleaseSpecify" #Example:"AlyaWvdAzureApp"
-$AlyaWvdServicePrincipalNameProd = "PleaseSpecify" #Example:"AlyaWvdProdApp"
-$AlyaWvdServicePrincipalNameTest = "PleaseSpecify" #Example:"AlyaWvdTestApp"
-$AlyaWvdTenantGroupName = "PleaseSpecify" #Example:"Default Tenant Group"
-$AlyaWvdDomainAdminUPN = "PleaseSpecify" #Example:@("konrad.brunner@$($AlyaDomainName)")
-$AlyaWvdOuProd = "PleaseSpecify" #Example:"OU=PROD,OU=WVD,OU=COMPUTERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
-$AlyaWvdOuTest = "PleaseSpecify" #Example:"OU=TEST,OU=WVD,OU=COMPUTERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
-$AlyaWvdAdmins = "PleaseSpecify" #Example:@("konrad.brunner@$($AlyaDomainName)")
-$AlyaWvdStartTime = "PleaseSpecify" #Example:"06:00"
-$AlyaWvdStopTime = "PleaseSpecify" #Example:"23:00"
+$AlyaAvdRDBroker = "PleaseSpecify" #Example:"https://rdbroker.wvd.microsoft.com"
+$AlyaAvdShareServer = "PleaseSpecify" # TODO from vars
+$AlyaAvdShareRoot = "PleaseSpecify"
+$AlyaAvdDomainAdminUPN = "PleaseSpecify" #Example:@("konrad.brunner@$($AlyaDomainName)")
+$AlyaAvdOuProd = "PleaseSpecify" #Example:"OU=PROD,OU=Avd,OU=COMPUTERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
+$AlyaAvdOuTest = "PleaseSpecify" #Example:"OU=TEST,OU=Avd,OU=COMPUTERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
+$AlyaAvdAdmins = "PleaseSpecify" #Example:@("konrad.brunner@$($AlyaDomainName)")
+$AlyaAvdStartTime = "PleaseSpecify" #Example:"06:00"
+$AlyaAvdStopTime = "PleaseSpecify" #Example:"23:00"
 #>
 
 <# SHAREPOINT ONPREM SETTINGS #>

@@ -106,7 +106,7 @@ foreach($actLock in $actLocks)
     if ($actLock.Properties.level -eq "CanNotDelete")
     {
         Write-Host "Removing lock $($actLock.Name)"
-        $tmp = $actLock | Remove-AzResourceLock -Force
+        $null = $actLock | Remove-AzResourceLock -Force
     }
 }
 
@@ -242,7 +242,7 @@ else
     $VMConfig | Add-AzVMNetworkInterface -Id $VMNic.Id
     $VMConfig | Set-AzVMOSDisk -Name $VMDiskName -CreateOption FromImage -Caching ReadWrite -DiskSizeInGB 128
     $VMConfig | Set-AzVMBootDiagnostic -Enable -ResourceGroupName $DiagnosticResourceGroupName -StorageAccountName $DiagnosticStorageName
-    $tmp = New-AzVM -ResourceGroupName $VmResourceGroupName -Location $AlyaLocation -VM $VMConfig -DisableBginfoExtension
+    $null = New-AzVM -ResourceGroupName $VmResourceGroupName -Location $AlyaLocation -VM $VMConfig -DisableBginfoExtension
 }
 
 # Restoring locks on resource group
@@ -252,7 +252,7 @@ foreach($actLock in $actLocks)
     if ($actLock.Properties.level -eq "CanNotDelete")
     {
         Write-Host "Adding lock $($actLock.Name)"
-        $tmp = Set-AzResourceLock -ResourceGroupName $VmResourceGroupName -LockName $actLock.Name -LockLevel CanNotDelete -LockNotes $actLock.Properties.notes -Force
+        $null = Set-AzResourceLock -ResourceGroupName $VmResourceGroupName -LockName $actLock.Name -LockLevel CanNotDelete -LockNotes $actLock.Properties.notes -Force
     }
 }
 
