@@ -37,7 +37,8 @@
 
 [CmdletBinding()]
 Param(
-    $UpdateRunbooks = $true
+    [bool]$UpdateRunbooks = $true,
+    [bool]$DeployGroupUpdater = $false
 )
 
 # Loading configuration
@@ -193,14 +194,18 @@ Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
 $user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
 if ($KeyVault.EnableRbacAuthorization)
 {
-    $RoleAssignment = $null
+    $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
     $Retries = 0;
     While ($null -eq $RoleAssignment -and $Retries -le 6)
     {
-        $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+        $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
         Start-Sleep -s 10
-        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
         $Retries++;
+    }
+    if ($Retries -gt 6)
+    {
+        throw "Was not able to set role assigment 'Key Vault Administrator' for app $($AutomationAccount.Identity.PrincipalId) on scope $($KeyVault.ResourceId)"
     }
 }
 else
@@ -333,14 +338,18 @@ try
     Write-Host "Setting automation account identity key vault access" -ForegroundColor $CommandInfo
     if ($KeyVault.EnableRbacAuthorization)
     {
-        $RoleAssignment = $null
+        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
         $Retries = 0;
         While ($null -eq $RoleAssignment -and $Retries -le 6)
         {
-            $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+            $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
             Start-Sleep -s 10
-            $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+            $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
             $Retries++;
+        }
+        if ($Retries -gt 6)
+        {
+            throw "Was not able to set role assigment 'Key Vault Administrator' for app $($AutomationAccount.Identity.PrincipalId) on scope $($KeyVault.ResourceId)"
         }
     }
     else
@@ -367,15 +376,19 @@ try
     {
         New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
     }
-    $RoleAssignment = $null
-    $Retries = 0;
     $AutomationAccountId = "/subscriptions/$($AutomationAccount.SubscriptionId)/resourceGroups/$($AutomationAccount.ResourceGroupName)/providers/Microsoft.Automation/automationAccounts/$AutomationAccountName"
+    $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Contributor" -ObjectId $AcIdentity.Id -Scope $AutomationAccountId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $AutomationAccountId }
+    $Retries = 0;
     While ($null -eq $RoleAssignment -and $Retries -le 6)
     {
-        $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Contributor" -ApplicationId $AcIdentity.AppId -scope $AutomationAccountId -ErrorAction SilentlyContinue
+        $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Contributor" -ApplicationId $AcIdentity.AppId -Scope $AutomationAccountId -ErrorAction SilentlyContinue
         Start-Sleep -s 10
-        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Contributor" -ObjectId $AcIdentity.Id -scope $AutomationAccountId -ErrorAction SilentlyContinue
+        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Contributor" -ObjectId $AcIdentity.Id -Scope $AutomationAccountId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $AutomationAccountId }
         $Retries++;
+    }
+    if ($Retries -gt 6)
+    {
+        throw "Was not able to set role assigment 'Contributor' for app $($AcIdentity.Id) on scope $($AutomationAccountId)"
     }
 
     # Checking RunAs application
@@ -528,10 +541,15 @@ try {
         $mgrp = Select-Item -list $mgrps -message "Please select the root mangement group"
     }
     $user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
-    $ass = Get-AzRoleAssignment -ObjectId $user.Id -Scope $mgrp.Id -RoleDefinitionName "Management Group Contributor"
+    $ass = Get-AzRoleAssignment -ObjectId $user.Id -Scope $mgrp.Id -RoleDefinitionName "Management Group Contributor" | Where-Object { $_.Scope -eq $mgrp.Id }
     if (-Not $ass)
     {
         $ass = New-AzRoleAssignment -ObjectId $user.Id -Scope $mgrp.Id -RoleDefinitionName "Management Group Contributor"
+    }
+    $ass = Get-AzRoleAssignment -ObjectId $user.Id -Scope $mgrp.Id -RoleDefinitionName "User Access Administrator" | Where-Object { $_.Scope -eq $mgrp.Id }
+    if (-Not $ass)
+    {
+        $ass = New-AzRoleAssignment -ObjectId $user.Id -Scope $mgrp.Id -RoleDefinitionName "User Access Administrator"
     }
 }
 catch {
@@ -542,28 +560,36 @@ catch {
     pause
     exit
 }
-$RoleAssignment = $null
+$RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Contributor" -ServicePrincipalName $AzAdServicePrincipal.AppId -Scope $mgrp.Id -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $mgrp.Id }
 $Retries = 0;
 While ($null -eq $RoleAssignment -and $Retries -le 6)
 {
-    $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName Contributor -ServicePrincipalName $AzAdServicePrincipal.AppId -scope $mgrp.Id -ErrorAction SilentlyContinue
-    Start-Sleep -s 10
-    $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName Contributor -ServicePrincipalName $AzAdServicePrincipal.AppId -scope $mgrp.Id -ErrorAction SilentlyContinue
+    $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Contributor" -ServicePrincipalName $AzAdServicePrincipal.AppId -Scope $mgrp.Id -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 10
+    $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Contributor" -ServicePrincipalName $AzAdServicePrincipal.AppId -Scope $mgrp.Id -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $mgrp.Id }
     $Retries++;
+}
+if ($Retries -gt 6)
+{
+    throw "Was not able to set role assigment Contributor for app $($AzAdServicePrincipal.AppId) on scope $($mgrp.Id)"
 }
         
 # Checking app key vault access
 Write-Host "Checking app key vault access" -ForegroundColor $CommandInfo
 if ($KeyVault.EnableRbacAuthorization)
 {
-    $RoleAssignment = $null
+    $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Secrets User" -ServicePrincipalName $AzAdServicePrincipal.AppId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
     $Retries = 0;
     While ($null -eq $RoleAssignment -and $Retries -le 6)
     {
-        $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Secrets User" -ServicePrincipalName $AzAdServicePrincipal.AppId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+        $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Secrets User" -ServicePrincipalName $AzAdServicePrincipal.AppId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
         Start-Sleep -s 10
-        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Secrets User" -ServicePrincipalName $AzAdServicePrincipal.AppId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Secrets User" -ServicePrincipalName $AzAdServicePrincipal.AppId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
         $Retries++;
+    }
+    if ($Retries -gt 6)
+    {
+        throw "Was not able to set role assigment 'Key Vault Secrets User' for app $($AzAdServicePrincipal.AppId) on scope $($KeyVault.ResourceId)"
     }
 }
 else
@@ -599,6 +625,8 @@ if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
     $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
     $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
+    $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
+    $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
     $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
 }
 $Runnbook = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb01") -ErrorAction SilentlyContinue
@@ -646,6 +674,8 @@ if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
     $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
     $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
+    $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
+    $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
     $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
 }
 $Runnbook = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02") -ErrorAction SilentlyContinue
@@ -690,6 +720,8 @@ if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
     $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
     $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
+    $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
+    $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
     $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
 }
 $Runnbook = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb03") -ErrorAction SilentlyContinue
@@ -737,6 +769,8 @@ if ($AvdEnabled)
         $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
         $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
         $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
+        $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
+        $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
         $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
     }
 }
@@ -755,6 +789,8 @@ else
         $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
         $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
         $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
+        $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
+        $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
         $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
     }
 }
@@ -783,6 +819,55 @@ else
         Write-Host "Automation Runbook 04 found. Updating the Automation Runbook $($AutomationAccountName+"rb04")"
         $null = Import-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -Type PowerShell -Description "Will be called, when a new item in sharepoint is created" -Tags @{displayName="New Item Received"} -Path $runbookPath -Force
         $null = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04")
+    }
+}
+if ($DeployGroupUpdater)
+{
+    Write-Host "Checking automation runbook 09" -ForegroundColor $CommandInfo
+    $runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccountName)rb09.ps1"
+    if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
+    {
+        $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook09.ps1" -Raw -Encoding UTF8
+        $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
+        $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
+        $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb09"))
+        $rbContent = $rbContent.Replace("##AlyaApplicationId##", $AzAdApplication.AppId)
+        $rbContent = $rbContent.Replace("##AlyaTenantId##", $Context.Tenant.Id)
+        $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
+        $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
+        $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+        $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
+        $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
+        $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
+        $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
+        $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
+    }
+    $Runnbook = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb09") -ErrorAction SilentlyContinue
+    if (-Not $Runnbook)
+    {
+        Write-Warning "Automation Runbook 09 not found. Creating the Automation Runbook $($AutomationAccountName+"rb09")"
+        if (-Not (Test-Path $runbookPath))
+        {
+            Write-Error "Can't find runbook $($runbookPath)" -ErrorAction Continue 
+            Exit 4
+        }
+        $null = Import-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb09") -Type PowerShell -Description "Updates the all internals and all externals groups" -Tags @{displayName="Group Updater"} -Path $runbookPath -Force
+        $null = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb09")
+        $Schedule = Get-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name "FourTimesADay" -ErrorAction SilentlyContinue
+        if (-Not $Schedule)
+        {
+            $Schedule = New-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name "FourTimesADay" -StartTime ((Get-Date "04:00:00").AddDays(1)) -HourInterval 6 -TimeZone ([System.TimeZoneInfo]::Local).Id
+        }
+        $null = Register-AzAutomationScheduledRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb09") -ScheduleName "FourTimesADay"
+    }
+    else
+    {
+        if ($UpdateRunbooks)
+        {
+            Write-Host "Automation Runbook 09 found. Updating the Automation Runbook $($AutomationAccountName+"rb09")"
+            $null = Import-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb09") -Type PowerShell -Description "Updates the all internals and all externals groups" -Tags @{displayName="Group Updater"} -Path $runbookPath -Force
+            $null = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb09")
+        }
     }
 }
 

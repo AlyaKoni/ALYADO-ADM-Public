@@ -46,7 +46,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Get-ExtensionAttributeSt
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module ActiveDirectory
+Check-Module "ActiveDirectory"
 
 # =============================================================
 # AD stuff

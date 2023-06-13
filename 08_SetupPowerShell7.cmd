@@ -36,10 +36,10 @@ if %errorLevel% NEQ 0 (
 	echo Installing or updating Visual Studio Code
 	pause
 	Install-Script Install-VSCode -Scope CurrentUser
-    Install-VSCode.ps1
+    Install-VSCode.ps1s
 	echo Configure Visual Studio Code:
+	echo - Install the PowerShell Extension
 	echo - Set terminal.integrated.shell.windows to C:\Program Files\PowerShell\7\pwsh.exe
 	echo - Set files.encoding to utf8bom
-	echo - Install the PowerShell Extension
 	pause
 )

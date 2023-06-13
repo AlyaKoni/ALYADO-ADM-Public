@@ -92,9 +92,14 @@ if (-Not $role)
     throw "Role '$roleName' not found"
 }
 $assigned = $assignedRoles | Where-Object { $_.RoleDefinitionId -eq $role.Id }
-if (-Not $role)
+if (-Not $assigned)
 {
     throw "User $userPrincipalName does not have role '$roleName' eligable assigned"
+}
+if ($assigned.Status -eq "Provisioned")
+{
+    Write-Host "Role is already provisioned. Nothing to do."
+    return
 }
 
 # Activating  eligable role assignment

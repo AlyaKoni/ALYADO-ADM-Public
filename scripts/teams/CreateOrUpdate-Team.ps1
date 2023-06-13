@@ -57,7 +57,11 @@ Param(
     [Parameter(Mandatory=$false)]
     [string]$TeamPicturePath = $null,
     [Parameter(Mandatory=$false)]
-    [bool]$AllowToAddGuests = $true
+    [bool]$AllowToAddGuests = $true,
+    [Parameter(Mandatory=$false)]
+    [bool]$AutoInviteGuests = $true,
+    [Parameter(Mandatory=$false)]
+    [bool]$InviteGuestsSendInvitation = $true
 )
 
 #Reading configuration
@@ -183,13 +187,14 @@ foreach($memb in $Owners)
     if ($memb.IndexOf("@") -gt -1)
     {
         # is email
-        $user = Get-MgUser -UserId $memb
+        $user = $null
+        try { $user = Get-MgUser -UserId $memb } catch {}
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
             if (-Not $group)
             {
-                throw "Can't find a user or group with email $memb"
+                Write-Warning "Can't find a user or group with email $memb"
             }
             else
             {
@@ -212,13 +217,14 @@ foreach($memb in $Owners)
     else
     {
         # is guid
-        $user = Get-MgUser -UserId $memb
+        $user = $null
+        try { $user = Get-MgUser -UserId $memb } catch {}
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.Id -eq $memb }
             if (-Not $group)
             {
-                throw "Can't find a user or group with id $memb"
+                Write-Warning "Can't find a user or group with id $memb"
             }
             else
             {
@@ -277,13 +283,14 @@ foreach($memb in $Members)
     if ($memb.IndexOf("@") -gt -1)
     {
         # is email
-        $user = Get-MgUser -UserId $memb
+        $user = $null
+        try { $user = Get-MgUser -UserId $memb } catch {}
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
             if (-Not $group)
             {
-                throw "Can't find a user or group with email $memb"
+                Write-Warning "Can't find a user or group with email $memb"
             }
             else
             {
@@ -306,13 +313,14 @@ foreach($memb in $Members)
     else
     {
         # is guid
-        $user = Get-MgUser -UserId $memb
+        $user = $null
+        try { $user = Get-MgUser -UserId $memb } catch {}
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.Id -eq $memb }
             if (-Not $group)
             {
-                throw "Can't find a user or group with id $memb"
+                Write-Warning "Can't find a user or group with id $memb"
             }
             else
             {
@@ -336,22 +344,19 @@ foreach($memb in $Members)
 $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Member
 foreach($memb in $NewMembers)
 {
-    if ($NewMembers -notcontains $memb)
+    $fnd = $false
+    foreach($tmemb in $TMembers)
     {
-        $fnd = $false
-        foreach($tmemb in $TMembers)
+        if ($memb -eq $tmemb.User)
         {
-            if ($memb -eq $tmemb.User)
-            {
-                $fnd = $true
-                break
-            }
+            $fnd = $true
+            break
         }
-        if (-Not $fnd)
-        {
-            Write-Warning "Adding member $memb to team."
-            Add-TeamUser -GroupId $Team.GroupId -Role Member -User $memb
-        }
+    }
+    if (-Not $fnd)
+    {
+        Write-Warning "Adding member $memb to team."
+        Add-TeamUser -GroupId $Team.GroupId -Role Member -User $memb
     }
 }
 if ($OwerwriteMembersOwnersGuests)
@@ -399,13 +404,37 @@ if ($AllowToAddGuests)
         if ($memb.IndexOf("@") -gt -1)
         {
             # is email
-            $user = Get-MgUser -UserId $memb
+            $user = $null
+            try { $user = Get-MgUser -UserId $memb } catch {}
+            if (-Not $user)
+            {
+                $user = Get-MgUser -Filter "mail eq '$memb'"
+            }
+            if (-Not $user)
+            {
+                $user = Get-MgUser -Filter "otherMails/any(c:c eq '$memb')"
+            }
             if (-Not $user)
             {
                 $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
                 if (-Not $group)
                 {
-                    throw "Can't find a user or group with email $memb"
+                    if ($AutoInviteGuests)
+                    {
+                        Write-Warning "Inviting $memb"
+                        $sendInvitationMessage = $InviteGuestsSendInvitation
+                        $inviteRedirectUrl = "https://teams.microsoft.com"
+                        $invitedUserType = "Guest"
+                        $ccRecipients = @()
+                        $customizedMessageBody = "Bitte akzeptieren Sie diese Einladung, um auf auf das Teams der 'Organisation der Arbeitswelt Pferdeberufe Schweiz' zugreifen zu können. Sollten Fragen oder Probleme auftauchen, dürfen Sie sich gerne an '$AlyaSupportEmail' wenden."
+                        $messageLanguage = "de"
+                        & "$($AlyaScripts)\aad\Invite-Guests.ps1" -userEmailsToInvite $userEmailsToInvite -sendInvitationMessage $sendInvitationMessage -inviteRedirectUrl $inviteRedirectUrl -invitedUserType $invitedUserType -ccRecipients $ccRecipients -customizedMessageBody $customizedMessageBody -messageLanguage $messageLanguage
+                        $NewGuests += $memb
+                    }
+                    else
+                    {
+                        Write-Warning "Can't find a user or group with email $memb"
+                    }
                 }
                 else
                 {
@@ -420,23 +449,24 @@ if ($AllowToAddGuests)
             }
             else
             {
-                if ($NewGuests -notcontains $user.Mail)
+                $fnd = $false
+                if ($NewGuests -notcontains $memb)
                 {
-                    throw "TODO"
-                    $NewGuests += $user.Mail
+                    $NewGuests += $memb
                 }
             }
         }
         else
         {
             # is guid
-            $user = Get-MgUser -UserId $memb
+            $user = $null
+            try { $user = Get-MgUser -UserId $memb } catch {}
             if (-Not $user)
             {
                 $group = $allGroups | Where-Object { $_.Id -eq $memb }
                 if (-Not $group)
                 {
-                    throw "Can't find a user or group with id $memb"
+                    Write-Warning "Can't find a user or group with id $memb"
                 }
                 else
                 {

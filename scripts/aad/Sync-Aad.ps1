@@ -63,8 +63,8 @@ else {
 }
 do
 {
-    Write-Host "Snyc is running..."
+    Write-Host "Sync is running..."
     Start-Sleep -Seconds 20
     $shd = Get-ADSyncScheduler
 } while ($shd.SyncCycleInProgress)
-Write-Host "Snyc done"
+Write-Host "Sync done"
