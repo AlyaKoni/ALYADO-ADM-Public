@@ -48,7 +48,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-ReadOthersEnabled-$($Aly
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logins
 LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
@@ -63,15 +63,15 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking permission to read others for guests
 Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
 {
     Write-Warning "Read others for guests was disabled. Enabling it now"
     $RolePermissions = @{}
     $RolePermissions["allowedToReadOtherUsers"] = $true
-    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
+    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

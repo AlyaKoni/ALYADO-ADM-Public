@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     01.12.2020 Konrad Brunner       Initial version
     24.12.2022 Konrad Brunner       Added cname and more additionalCopies 
+    28.06.2023 Konrad Brunner       Added new record names and AAAA 
 
 #>
 
@@ -54,37 +55,46 @@ $additionalCopies = @(
     "_caldavs._tcp",
     "_carddav._tcp",
     "_carddavs._tcp",
+    "_dmarc",
     "_ischedule._tcp",
+    "_msradc",
+    "_sip._tls",
+    "_sipfederationtls._tcp",
     "_xmpp-client._tcp",
     "_xmpp-server._tcp",
-    "autodiscover",
-    "ftp",
-    "imap",
-    "imap4",
-    "mail",
-    "pop",
-    "pop3",
-    "smtp",
-    "www",
-    "xas",
-    "xwa",
-    "_dmarc",
-    "default._domainkey",
-    "selector1._domainkey",
-    "selector2._domainkey",
-    "_msradc",
-    "_sipfederationtls._tcp",
-    "_sip._tls",
     "alt",
+    "autodiscover",
+    "connect",
+    "default._domainkey",
+    "email",
     "enterpriseenrollment",
     "enterpriseregistration",
+    "cam",
+    "ftp",
     "hosting",
+    "imap",
+    "imap4",
     "lyncdiscover",
+    "mail",
+    "mailings",
+    "partner",
+    "partners",
+    "pop",
+    "pop3",
+    "selector1._domainkey",
+    "selector2._domainkey",
+    "service",
+    "services",
     "shop",
     "sip",
+    "smtp",
     "spf",
     "webmail",
-    "wvd"
+    "wvd",
+    "www",
+    "webcam",
+    "xas",
+    "xwa"
 )
 
 # Checking modules
@@ -101,15 +111,14 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Azure | Copy-DnsRecords | AZURE" -ForegroundColor $CommandInfo
+Write-Host "DNS | Copy-DnsRecords | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context
 $Context = Get-AzContext
 if (-Not $Context)
 {
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
+    throw "Can't get Az context! Not logged in?"
 }
 
 # Checking ressource group
@@ -117,7 +126,7 @@ Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
 $ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $ResGrp)
 {
-    Write-Error "Ressource Group not found. Please create first the Ressource Group $ResourceGroupName"
+    throw "Ressource Group not found. Please create first the Ressource Group $ResourceGroupName"
 }
 
 # Checking main DNS zone
@@ -125,7 +134,7 @@ Write-Host "Checking main DNS zone" -ForegroundColor $CommandInfo
 $dnsZone = Get-AzDnsZone -Name $AlyaDomainName -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
 if (-Not $dnsZone)
 {
-    Write-Error "DNS zone not found. Please create first the DNS zone $AlyaDomainName"
+    throw "DNS zone not found. Please create first the DNS zone $AlyaDomainName"
 }
 
 # Checking additional DNS zones
@@ -135,7 +144,7 @@ foreach($zone in $AlyaAdditionalDomainNames)
     $addDnsZone = Get-AzDnsZone -Name $zone -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
     if (-Not $addDnsZone)
     {
-        Write-Error "DNS zone not found. Please create first the DNS zone $zone"
+        throw "DNS zone not found. Please create first the DNS zone $zone"
     }
 }
 
@@ -167,8 +176,8 @@ function CopyDomain
     }
     foreach($additionalCopy in $additionalCopies)
     {
-        $record = Resolve-DnsName -Name ($additionalCopy+"."+$domainName) -Type All -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
-        $allRecords += $record
+        $records = Resolve-DnsName -Name ($additionalCopy+"."+$domainName) -Type All -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+        $allRecords += $records
     }
     foreach($record in $allRecords)
     {
@@ -191,6 +200,14 @@ function CopyDomain
                     $toRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
                     if (-Not $toRecord)
                     {
+                        $toRecord = Resolve-DnsName -Name $record.Name.TrimEnd(".") -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        if (-Not $toRecord)
+                        {
+                            $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        }
+                    }
+                    if (-Not $toRecord)
+                    {
                         Write-Host "  Creating MX record"
                         New-AzDnsRecordSet -Name "@" -RecordType MX -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Exchange $fromRecord.NameExchange -Preference $fromRecord.Preference)
                     }
@@ -207,6 +224,14 @@ function CopyDomain
                 "TXT" {
                     $fromRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
                     $toRecord = Resolve-DnsName -Name $record.Name -Type TXT -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                    if (-Not $toRecord)
+                    {
+                        $toRecord = Resolve-DnsName -Name $record.Name.TrimEnd(".") -Type TXT -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        if (-Not $toRecord)
+                        {
+                            $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type TXT -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        }
+                    }
                     $recordName = $record.Name -replace ("."+$domainName), ""
                     if ($record.Name -eq $domainName)
                     {
@@ -242,7 +267,11 @@ function CopyDomain
                     $toRecord = Resolve-DnsName -Name $record.Name -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
                     if (-Not $toRecord)
                     {
-                        $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        $toRecord = Resolve-DnsName -Name $record.Name.TrimEnd(".") -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        if (-Not $toRecord)
+                        {
+                            $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type A -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        }
                     }
                     $recordName = $record.Name -replace ("."+$domainName), ""
                     if ($record.Name -eq $domainName)
@@ -263,9 +292,47 @@ function CopyDomain
                         Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
                     }
                 }
+                "AAAA" {
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type AAAA -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type AAAA -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                    if (-Not $toRecord)
+                    {
+                        $toRecord = Resolve-DnsName -Name $record.Name.TrimEnd(".") -Type AAAA -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        if (-Not $toRecord)
+                        {
+                            $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type AAAA -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        }
+                    }
+                    $recordName = $record.Name -replace ("."+$domainName), ""
+                    if ($record.Name -eq $domainName)
+                    {
+                        $recordName = "@"
+                    }
+                    if (-Not $toRecord)
+                    {
+                        Write-Host "  Creating A record"
+                        New-AzDnsRecordSet -Name $recordName -RecordType AAAA -ZoneName $domainName -ResourceGroupName $ResourceGroupName -Ttl $fromRecord.TTL -DnsRecords (New-AzDnsRecordConfig -Ipv6Address $fromRecord.IpAddress )
+                    }
+                    else
+                    {
+                        Write-Host "  Updating A record"
+                        $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType AAAA -ZoneName $domainName -ResourceGroupName $ResourceGroupName
+                        $recSet.Records[0].Ipv6Address = $fromRecord.IpAddress
+                        $recSet.Ttl = $fromRecord.TTL
+                        Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
+                    }
+                }
                 "CNAME" {
-                    $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
-                    $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                    $fromRecord = Resolve-DnsName -Name $record.Name -Type CNAME -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
+                    $toRecord = Resolve-DnsName -Name $record.Name -Type CNAME -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                    if (-Not $toRecord)
+                    {
+                        $toRecord = Resolve-DnsName -Name $record.Name.TrimEnd(".") -Type CNAME -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        if (-Not $toRecord)
+                        {
+                            $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type CNAME -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        }
+                    }
                     $recordName = $record.Name -replace ("."+$domainName), ""
                     if ($record.Name -eq $domainName)
                     {
@@ -288,6 +355,14 @@ function CopyDomain
                 "SRV" {
                     $fromRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
                     $toRecord = Resolve-DnsName -Name $record.Name -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                    if (-Not $toRecord)
+                    {
+                        $toRecord = Resolve-DnsName -Name $record.Name.TrimEnd(".") -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        if (-Not $toRecord)
+                        {
+                            $toRecord = Resolve-DnsName -Name ($record.Name+"."+$domainName) -Type SRV -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                        }
+                    }
                     $recordName = $record.Name -replace ("."+$domainName), ""
                     if ($record.Name -eq $domainName)
                     {
@@ -327,6 +402,8 @@ function CopyDomain
 # Copying main DNS zone
 Write-Host "Copying main DNS zone" -ForegroundColor $CommandInfo
 $toDnsServer = $dnsZone.NameServers[0]
+Write-Host "  fromDnsServer: $fromDnsServer" -ForegroundColor $CommandInfo
+Write-Host "  toDnsServer: $toDnsServer" -ForegroundColor $CommandInfo
 CopyDomain -domainName $AlyaDomainName -fromServer $fromDnsServer -toServer $toDnsServer
 
 # Copying additional DNS zones

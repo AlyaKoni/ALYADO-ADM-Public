@@ -56,7 +56,7 @@ if (-Not $inputFile)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 Install-ModuleIfNotInstalled "ImportExcel"
 
@@ -89,14 +89,14 @@ $AllGroups = $AllGroups | Where-Object { $_.Activ -eq "yes" }
 $AllGroups | Select-Object -Property Type, Name, Description | Format-Table -AutoSize
 
 Write-Host "Checking groups" -ForegroundColor $CommandInfo
-$Skus = Get-MgSubscribedSku
+$Skus = Get-MgBetaSubscribedSku
 foreach ($group in $AllGroups)
 {
     Write-Host "  Group '$($group.DisplayName)'"
     try {
         
         # Group
-        $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+        $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
         $groupTypes = @()
         $ruleProcessingState = "On"
         if ($group.Type -eq "M365Group" -or $group.Type -eq "O365Group")
@@ -111,11 +111,11 @@ foreach ($group in $AllGroups)
             {
                 if ([string]::IsNullOrEmpty($group.Alias))
                 {
-                    $exGrp = Update-MgGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.DisplayName -MailEnabled:$false -Visibility $group.Visibility
+                    $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.DisplayName -MailEnabled:$false -Visibility $group.Visibility
                 }
                 else
                 {
-                    $exGrp = Update-MgGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.Alias -MailEnabled:$true -Visibility $group.Visibility
+                    $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.Alias -MailEnabled:$true -Visibility $group.Visibility
                 }
             }
             else
@@ -123,11 +123,11 @@ foreach ($group in $AllGroups)
                 $groupTypes += @("DynamicMembership")
                 if ([string]::IsNullOrEmpty($group.Alias))
                 {
-                    $exGrp = Update-MgGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.DisplayName -MailEnabled:$false -Visibility $group.Visibility
+                    $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.DisplayName -MailEnabled:$false -Visibility $group.Visibility
                 }
                 else
                 {
-                    $exGrp = Update-MgGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.Alias -MailEnabled:$true -Visibility $group.Visibility
+                    $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.Alias -MailEnabled:$true -Visibility $group.Visibility
                 }
             }
         }
@@ -143,12 +143,12 @@ foreach ($group in $AllGroups)
             {
                 if ([string]::IsNullOrEmpty($group.Alias))
                 {
-                    $exGrp = New-MgGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.DisplayName -MailEnabled:$false -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
+                    $exGrp = New-MgBetaGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.DisplayName -MailEnabled:$false -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
                 }
                 else
                 {
                     # TODO this will not work as of documentation
-                    $exGrp = New-MgGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.Alias -MailEnabled:$true -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
+                    $exGrp = New-MgBetaGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MailNickname $group.Alias -MailEnabled:$true -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
                 }
             }
             else
@@ -156,12 +156,12 @@ foreach ($group in $AllGroups)
                 $groupTypes += @("DynamicMembership")
                 if ([string]::IsNullOrEmpty($group.Alias))
                 {
-                    $exGrp = New-MgGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.DisplayName -MailEnabled:$false -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
+                    $exGrp = New-MgBetaGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.DisplayName -MailEnabled:$false -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
                 }
                 else
                 {
                     # TODO this will not work as of documentation
-                    $exGrp = New-MgGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.Alias -MailEnabled:$true -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
+                    $exGrp = New-MgBetaGroup -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.Alias -MailEnabled:$true -SecurityEnabled:$true -Visibility $group.Visibility -IsAssignableToRole:$isAssignableToRole
                 }
             }
         }
@@ -170,7 +170,7 @@ foreach ($group in $AllGroups)
         if (-Not [string]::IsNullOrEmpty($group.Licenses))
         {
             Write-Host "   - Configuring license." -ForegroundColor $CommandSuccess
-            $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+            $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
             foreach($license in $group.Licenses.Split(","))
             {
                 $licPresent = $exGrp.AssignedLicenses | Where-Object { $_.SkuPartNumber -like "*$($license)" }
@@ -184,7 +184,7 @@ foreach ($group in $AllGroups)
                 {
                     Write-Host "       Adding license '$($license)'"
                     $licenseOption = @{SkuId = $licSku.SkuId <# TODO ; DisabledPlans = @()#>}
-                    Set-MgGroupLicense -GroupId $exGrp.Id -AddLicenses $licenseOption -RemoveLicenses @()
+                    Set-MgBetaGroupLicense -GroupId $exGrp.Id -AddLicenses $licenseOption -RemoveLicenses @()
                 }
             }
         }
@@ -192,9 +192,9 @@ foreach ($group in $AllGroups)
         # Guest access
         if ($null -ne $group.AllowGuests)
         {
-            $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
-            $SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
-            $Setting = Get-MgGroupSetting -GroupId $exGrp.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+            $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+            $SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+            $Setting = Get-MgBetaGroupSetting -GroupId $exGrp.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
             if (-Not $Setting)
             {
                 Write-Warning "Setting not yet created. Creating one based on template."
@@ -202,8 +202,8 @@ foreach ($group in $AllGroups)
                 foreach($dval in $SettingTemplate.Values) {
                     $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
                 }
-                $Setting = New-MgGroupSetting -GroupId $exGrp.Id -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-                $Setting = Get-MgGroupSetting -GroupId $exGrp.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+                $Setting = New-MgBetaGroupSetting -GroupId $exGrp.Id -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+                $Setting = Get-MgBetaGroupSetting -GroupId $exGrp.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
             }
             if ($group.AllowGuests) {
                 $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
@@ -225,7 +225,7 @@ foreach ($group in $AllGroups)
                     ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $false
                 }
             }
-            Update-MgGroupSetting -GroupId $exGrp.Id -DirectorySettingId $Setting.Id -Values $Setting.Values
+            Update-MgBetaGroupSetting -GroupId $exGrp.Id -DirectorySettingId $Setting.Id -Values $Setting.Values
         }
 
 
@@ -308,14 +308,14 @@ Write-Host "Setting ProcessingState" -ForegroundColor $CommandInfo
 foreach ($group in $AllGroups)
 {
     if ($group.Type -ne "M365Group" -and $group.Type -ne "O365Group") { continue }
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
     if ($exGrp)
     {
         if (-Not [string]::IsNullOrEmpty($group.DanymicRule))
         {
             Write-Host "  Group '$($group.DisplayName)'"
             Write-Host "   - Setting processing state to On"
-            $exGrp = Update-MgGroup -GroupId $exGrp.Id -MembershipRuleProcessingState "On"
+            $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -MembershipRuleProcessingState "On"
         }
     }
 
@@ -324,12 +324,12 @@ foreach ($group in $AllGroups)
 Write-Host "Checking disabled groups" -ForegroundColor $CommandInfo
 foreach ($group in $GroupsToDisable)
 {
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
     if ($exGrp)
     {
         Write-Host "  Group '$($group.DisplayName)'"
         Write-Host "    disabling"
-        $exGrp = Update-MgGroup -GroupId $exGrp.Id -MailEnabled:$false -SecurityEnabled:$false -MailEnabled:$false
+        $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -MailEnabled:$false -SecurityEnabled:$false -MailEnabled:$false
     }
 }
 

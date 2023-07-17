@@ -28,7 +28,7 @@
 
 
     History:
-    Date       Author     Description
+    Date       Author               Description
     ---------- -------------------- ----------------------------
     22.04.2021 Konrad Brunner       Initial Version
 

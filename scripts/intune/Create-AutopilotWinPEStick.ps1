@@ -276,7 +276,7 @@ if (-Not (Test-Path "$($AlyaTools)\ADK") -or -Not (Test-Path $($adkAutopilotIso)
     }
     Save-Module -Name PackageManagement -Path "$($sourceRoot)\Modules" -Force
     Save-Module -Name PowershellGet -Path "$($sourceRoot)\Modules" -Force
-    Save-Module -Name Microsoft.Graph.Intune -Path "$($sourceRoot)\Modules" -Force
+    Save-Module -Name Microsoft.Graph.Beta.Intune -Path "$($sourceRoot)\Modules" -Force
     Save-Module -Name WindowsAutopilotIntune -Path "$($sourceRoot)\Modules" -Force
     Save-Module -Name PSWindowsUpdate -Path "$($sourceRoot)\Modules" -Force
     Save-Module -Name AzureAD -Path "$($sourceRoot)\Modules" -Force

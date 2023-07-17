@@ -307,7 +307,7 @@ if ($siteTemplate -eq "TeamSite")
 {
     Write-Host "Setting M365 Group sharing capability " -ForegroundColor $CommandInfo
     $m365GroupId = $site.GroupId.Guid
-    $settingsValue = $true
+    $settingsValue = "true"
     if ($externalSharing -eq "None")
     {
         $settingsValue = "false"

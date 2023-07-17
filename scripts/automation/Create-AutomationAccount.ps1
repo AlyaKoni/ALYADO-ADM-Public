@@ -82,7 +82,7 @@ if ($true -eq $AlyaResEnableInsightsAndAlerts)
     Install-ModuleIfNotInstalled "Az.Monitor"
 }
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Applications"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -364,17 +364,17 @@ try
     {
         throw "ServicePrincipal with name '$($AutomationAccountName)' not found"
     }
-    $GraphApp = Get-MgServicePrincipal -Filter "DisplayName eq 'Microsoft Graph'" -Property "*"
+    $GraphApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Graph'" -Property "*"
     $AppRole = $GraphApp.AppRoles | Where-Object {$_.Value -eq "Mail.Send" -and $_.AllowedMemberTypes -contains "Application"}
-    $Assignments = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -All
+    $Assignments = Get-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -All
     if ($null -eq ($Assignments | Where-Object {$_.AppRoleId -eq $AppRole.Id -and $_.ResourceId -eq $GraphApp.Id}))
     {
-        New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
+        New-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
     }
     $AppRole = $GraphApp.AppRoles | Where-Object {$_.Value -eq "Application.ReadWrite.OwnedBy" -and $_.AllowedMemberTypes -contains "Application"}
     if ($null -eq ($Assignments | Where-Object {$_.AppRoleId -eq $AppRole.Id -and $_.ResourceId -eq $GraphApp.Id}))
     {
-        New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
+        New-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
     }
     $AutomationAccountId = "/subscriptions/$($AutomationAccount.SubscriptionId)/resourceGroups/$($AutomationAccount.ResourceGroupName)/providers/Microsoft.Automation/automationAccounts/$AutomationAccountName"
     $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Contributor" -ObjectId $AcIdentity.Id -Scope $AutomationAccountId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $AutomationAccountId }
@@ -411,18 +411,18 @@ try
 
         #Setting identity as owner (required for automated cert updates)
         Write-Host "Setting identity as owner"
-        $owner = Get-MgApplicationOwner -ApplicationId $AzAdApplication.Id -All | Where-Object { $_.Id -eq $AcIdentity.Id}
+        $owner = Get-MgBetaApplicationOwner -ApplicationId $AzAdApplication.Id -All | Where-Object { $_.Id -eq $AcIdentity.Id}
         if ($null -eq $owner)
         {
             $params = @{
                 "@odata.id" = "https://graph.microsoft.com/beta/directoryObjects/{$($AcIdentity.Id)}"
             }
-            New-MgApplicationOwnerByRef -ApplicationId $AzAdApplication.Id -BodyParameter $params
+            New-MgBetaApplicationOwnerByRef -ApplicationId $AzAdApplication.Id -BodyParameter $params
         }
 
         #Granting permissions
         Write-Host "Granting permissions"
-        $SpApp = Get-MgServicePrincipal -Filter "DisplayName eq 'Office 365 SharePoint Online'" -Property "*"
+        $SpApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Office 365 SharePoint Online'" -Property "*"
         $SpAppRoleSite = $SpApp.AppRoles | Where-Object {$_.Value -eq "Sites.FullControl.All" -and $_.AllowedMemberTypes -contains "Application"}
         $SpAppRoleUser = $SpApp.AppRoles | Where-Object {$_.Value -eq "User.Read.All" -and $_.AllowedMemberTypes -contains "Application"}
         $GraphAppRoleReadAll = $GraphApp.AppRoles | Where-Object {$_.Value -eq "Directory.Read.All" -and $_.AllowedMemberTypes -contains "Application"}
@@ -452,14 +452,14 @@ try
                 }
             )
         }
-        Update-MgApplication -ApplicationId $AzAdApplication.Id -BodyParameter $params
+        Update-MgBetaApplication -ApplicationId $AzAdApplication.Id -BodyParameter $params
 
         # Waiting for admin consent
-        $tmp = Get-MgApplication -ApplicationId $AzAdApplication.Id -Property "RequiredResourceAccess"
+        $tmp = Get-MgBetaApplication -ApplicationId $AzAdApplication.Id -Property "RequiredResourceAccess"
         while ($tmp.RequiredResourceAccess.Count -lt 2)
         {
             Start-Sleep -Seconds 10
-            $tmp = Get-MgApplication -ApplicationId $AzAdApplication.Id -Property "RequiredResourceAccess"
+            $tmp = Get-MgBetaApplication -ApplicationId $AzAdApplication.Id -Property "RequiredResourceAccess"
         }
         Start-Sleep -Seconds 60 # Looks like there is some time issue for admin consent #TODO 60 seconds enough
 

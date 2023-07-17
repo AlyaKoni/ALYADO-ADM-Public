@@ -60,8 +60,8 @@ if (-Not (Test-Path $outputDirectory))
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ImportExcel"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -85,7 +85,7 @@ function Convert-ObjectIdToSid
 # Getting users
 Write-Host "Getting users" -ForegroundColor $CommandInfo
 #$users = Get-MsolUser -All
-$users = Get-MgUser -Property "*" -All
+$users = Get-MgBetaUser -Property "*" -All
 
 $propNames = @()
 foreach($user in $users)
@@ -153,7 +153,7 @@ foreach($user in $users)
                         $val = $user."$prop".ToString("s")
                     }
                 }
-                elseif ($psProp.TypeNameOfValue.Contains("Microsoft.Graph.PowerShell.Models") -or `
+                elseif ($psProp.TypeNameOfValue.Contains("Microsoft.Graph.Beta.PowerShell.Models") -or `
                 $psProp.TypeNameOfValue.Contains("StrongAuthenticationUserDetails") -or `
                 $psProp.TypeNameOfValue.Contains("StrongAuthenticationMethod") -or `
                 $psProp.TypeNameOfValue.Contains("ExtensionDataObject"))

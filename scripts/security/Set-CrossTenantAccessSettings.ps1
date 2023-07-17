@@ -49,8 +49,8 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Reports"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Reports"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
     
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -64,8 +64,8 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-CrossTenantAccessSettings | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$policies = Get-MgPolicyCrossTenantAccessPolicy
-$partners = Get-MgPolicyCrossTenantAccessPolicyPartner
+$policies = Get-MgBetaPolicyCrossTenantAccessPolicy
+$partners = Get-MgBetaPolicyCrossTenantAccessPolicyPartner
 
 foreach($tenant in $AlyaFullTrustCrossTenantDirectConnectAccess)
 {
@@ -122,12 +122,12 @@ foreach($tenant in $AlyaFullTrustCrossTenantDirectConnectAccess)
     if (-Not $partner)
     {
         Write-Host "  Creating policy"
-        New-MgPolicyCrossTenantAccessPolicyPartner -BodyParameter $params
+        New-MgBetaPolicyCrossTenantAccessPolicyPartner -BodyParameter $params
     }
     else
     {
         Write-Host "  Updating policy"
-        Update-MgPolicyCrossTenantAccessPolicyPartner -CrossTenantAccessPolicyConfigurationPartnerTenantId $tenant.Id -BodyParameter $params
+        Update-MgBetaPolicyCrossTenantAccessPolicyPartner -CrossTenantAccessPolicyConfigurationPartnerTenantId $tenant.Id -BodyParameter $params
     }
 
 }

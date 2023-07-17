@@ -55,8 +55,8 @@ if (-Not $outputFile)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -72,11 +72,11 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting available licenses
 Write-Host "Getting available licenses" -ForegroundColor $CommandInfo
-$Skus = Get-MgSubscribedSku
+$Skus = Get-MgBetaSubscribedSku
 
 # Getting users
 Write-Host "Getting users" -ForegroundColor $CommandInfo
-$users = Get-MgUser -All
+$users = Get-MgBetaUser -All
 
 # Getting user licenses
 Write-Host "Getting user licenses" -ForegroundColor $CommandInfo

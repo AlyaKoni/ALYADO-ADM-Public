@@ -74,9 +74,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\CreateOrUpdate-Team-$($AlyaTi
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Teams"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Teams"
 
 # Logins
 LoginTo-Teams
@@ -177,7 +177,7 @@ foreach($AddChannel in $AddChannels)
 
 # Getting groups
 Write-Host "Getting groups" -ForegroundColor $CommandInfo
-$allGroups = Get-MgGroup -All
+$allGroups = Get-MgBetaGroup -All
 
 # Checking team owners
 Write-Host "Checking team owners" -ForegroundColor $CommandInfo
@@ -188,7 +188,7 @@ foreach($memb in $Owners)
     {
         # is email
         $user = $null
-        try { $user = Get-MgUser -UserId $memb } catch {}
+        try { $user = Get-MgBetaUser -UserId $memb } catch {}
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
@@ -198,7 +198,7 @@ foreach($memb in $Owners)
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+                Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewOwners += $_.AdditionalProperties.userPrincipalName
@@ -218,7 +218,7 @@ foreach($memb in $Owners)
     {
         # is guid
         $user = $null
-        try { $user = Get-MgUser -UserId $memb } catch {}
+        try { $user = Get-MgBetaUser -UserId $memb } catch {}
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.Id -eq $memb }
@@ -228,7 +228,7 @@ foreach($memb in $Owners)
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+                Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewOwners += $_.AdditionalProperties.userPrincipalName
@@ -284,7 +284,7 @@ foreach($memb in $Members)
     {
         # is email
         $user = $null
-        try { $user = Get-MgUser -UserId $memb } catch {}
+        try { $user = Get-MgBetaUser -UserId $memb } catch {}
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
@@ -294,7 +294,7 @@ foreach($memb in $Members)
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+                Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewMembers += $_.AdditionalProperties.userPrincipalName
@@ -314,7 +314,7 @@ foreach($memb in $Members)
     {
         # is guid
         $user = $null
-        try { $user = Get-MgUser -UserId $memb } catch {}
+        try { $user = Get-MgBetaUser -UserId $memb } catch {}
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.Id -eq $memb }
@@ -324,7 +324,7 @@ foreach($memb in $Members)
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+                Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewMembers -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewMembers += $_.AdditionalProperties.userPrincipalName
@@ -375,8 +375,8 @@ if ($OwerwriteMembersOwnersGuests)
 if ($AllowToAddGuests)
 {
     Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-    $SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
-    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+    $SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+    $Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     if (-Not $Setting)
     {
         Write-Warning "Setting not yet created. Creating one based on template."
@@ -384,8 +384,8 @@ if ($AllowToAddGuests)
         foreach($dval in $SettingTemplate.Values) {
             $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
         }
-        $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-        $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+        $Setting = New-MgBetaGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+        $Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     }
     $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
     if ($Value.Value -eq $true) {
@@ -395,7 +395,7 @@ if ($AllowToAddGuests)
         Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
         ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $true
     }
-    Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
+    Update-MgBetaGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
 
     Write-Host "Checking team guests" -ForegroundColor $CommandInfo
     $NewGuests = @()
@@ -405,14 +405,14 @@ if ($AllowToAddGuests)
         {
             # is email
             $user = $null
-            try { $user = Get-MgUser -UserId $memb } catch {}
+            try { $user = Get-MgBetaUser -UserId $memb } catch {}
             if (-Not $user)
             {
-                $user = Get-MgUser -Filter "mail eq '$memb'"
+                $user = Get-MgBetaUser -Filter "mail eq '$memb'"
             }
             if (-Not $user)
             {
-                $user = Get-MgUser -Filter "otherMails/any(c:c eq '$memb')"
+                $user = Get-MgBetaUser -Filter "otherMails/any(c:c eq '$memb')"
             }
             if (-Not $user)
             {
@@ -438,7 +438,7 @@ if ($AllowToAddGuests)
                 }
                 else
                 {
-                    Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+                    Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
                         if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.AdditionalProperties.userPrincipalName)
                         {
                             throw "TODO"
@@ -460,7 +460,7 @@ if ($AllowToAddGuests)
         {
             # is guid
             $user = $null
-            try { $user = Get-MgUser -UserId $memb } catch {}
+            try { $user = Get-MgBetaUser -UserId $memb } catch {}
             if (-Not $user)
             {
                 $group = $allGroups | Where-Object { $_.Id -eq $memb }
@@ -470,7 +470,7 @@ if ($AllowToAddGuests)
                 }
                 else
                 {
-                    Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+                    Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
                         if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewGuests -notcontains $_.AdditionalProperties.userPrincipalName)
                         {
                             throw "TODO"
@@ -532,8 +532,8 @@ if ($AllowToAddGuests)
 else
 {
     Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-    $SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
-    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+    $SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+    $Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     if (-Not $Setting)
     {
         Write-Warning "Setting not yet created. Creating one based on template."
@@ -541,8 +541,8 @@ else
         foreach($dval in $SettingTemplate.Values) {
             $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
         }
-        $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-        $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+        $Setting = New-MgBetaGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+        $Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     }
     $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
     if ($Value.Value -eq $false) {
@@ -552,7 +552,7 @@ else
         Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$false'"
         ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $false
     }
-    Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
+    Update-MgBetaGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 }
 

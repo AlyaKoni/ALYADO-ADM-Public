@@ -224,12 +224,12 @@ foreach($profile in $profiles)
 
     # Checking if poliy is applicable
     Write-Host "  Checking if profile is applicable"
-    if ($profile."@odata.type" -eq "#microsoft.graph.iosConfigurationProfile" -and -not $appleConfigured)
+    if ($profile."@odata.type" -eq "#Microsoft.Graph.Beta.iosConfigurationProfile" -and -not $appleConfigured)
     {
         Write-Warning "iosConfigurationProfile is not applicable"
         continue
     }
-    if ($profile."@odata.type" -eq "#microsoft.graph.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
+    if ($profile."@odata.type" -eq "#Microsoft.Graph.Beta.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
     {
         Write-Warning "androidConfigurationProfile is not applicable"
         continue
@@ -241,8 +241,8 @@ foreach($profile in $profiles)
     # Special handling per profile
     if ($profile.displayName.Contains("PIN Reset"))
     {
-        $AzureAdServicePrincipalC = Get-MgServicePrincipal -Filter "DisplayName eq 'Microsoft Pin Reset Client Production'"
-        $AzureAdServicePrincipalS = Get-MgServicePrincipal -Filter "DisplayName eq 'Microsoft Pin Reset Service Production'"
+        $AzureAdServicePrincipalC = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Pin Reset Client Production'"
+        $AzureAdServicePrincipalS = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Pin Reset Service Production'"
         if ((-Not $AzureAdServicePrincipalC) -or (-Not $AzureAdServicePrincipalS))
         {
             #TODO script admin consent

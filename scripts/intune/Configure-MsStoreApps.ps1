@@ -80,12 +80,12 @@ $msStoreApps = Get-Content -Path $MsStorev -Raw -Encoding UTF8 | ConvertFrom-Jso
 $assBody = @"
 [
     {
-        "@odata.type": "#microsoft.graph.mobileAppAssignment",
+        "@odata.type": "#Microsoft.Graph.Beta.mobileAppAssignment",
         "intent": "available",
         "source": "direct",
         "sourceId": null,
         "target": {
-            "@odata.type": "#microsoft.graph.allLicensedUsersAssignmentTarget",
+            "@odata.type": "#Microsoft.Graph.Beta.allLicensedUsersAssignmentTarget",
             "deviceAndAppManagementAssignmentFilterId": null,
             "deviceAndAppManagementAssignmentFilterType": "none"
         }

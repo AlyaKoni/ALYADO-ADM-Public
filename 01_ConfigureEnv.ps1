@@ -309,13 +309,13 @@ function Invoke-WebRequestIndep ()
         [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession,
         [System.String]$SessionVariable,
         [Switch]$AllowUnencryptedAuthentication,
-        [Microsoft.PowerShell.Commands.WebAuthenticationType]$Authentication,
+        [Object]$Authentication,
         [System.Management.Automation.PSCredential]$Credential,
         [Switch]$UseDefaultCredentials,
         [System.String]$CertificateThumbprint,
         [System.Security.Cryptography.X509Certificates.X509Certificate]$Certificate,
         [Switch]$SkipCertificateCheck,
-        [Microsoft.PowerShell.Commands.WebSslProtocol]$SslProtocol,
+        [Object]$SslProtocol,
         [System.Security.SecureString]$Token,
         [System.String]$UserAgent,
         [Switch]$DisableKeepAlive,
@@ -324,7 +324,7 @@ function Invoke-WebRequestIndep ()
         [System.Int32]$MaximumRedirection,
         [System.Int32]$MaximumRetryCount,
         [System.Int32]$RetryIntervalSec,
-        [Microsoft.PowerShell.Commands.WebRequestMethod]$Method,
+        [Object]$Method,
         [System.String]$CustomMethod,
         [Switch]$NoProxy,
         [System.Uri]$Proxy,
@@ -1445,15 +1445,9 @@ function LoginTo-Az(
 function LoginTo-MgGraph(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
-    [string[]] [Parameter(Mandatory = $false)] $Scopes = $null,
-    [string] [Parameter(Mandatory = $false)] [ValidateSet("beta","v1.0")] $Profile = "beta")
+    [string[]] [Parameter(Mandatory = $false)] $Scopes = $null)
 {
     Write-Host "Login to Graph" -ForegroundColor $CommandInfo
-
-    if ((Get-MgProfile).Name -ne $Profile)
-    {
-        Select-MgProfile -Name $Profile
-    }
 
     $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
     if ($mgContext)

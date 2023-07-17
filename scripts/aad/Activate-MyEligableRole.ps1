@@ -50,7 +50,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Activate-MyEligableRole-$($Alya
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrolment"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -72,8 +72,8 @@ Write-Host "to get required consents." -ForegroundColor $CommandWarning
 
 # Getting user
 Write-Host "Getting user" -ForegroundColor $CommandInfo
-$actUser = (Get-MgContext).Account
-$user = Get-MgUser -UserId $actUser
+$actUser = (Get-MgBetaContext).Account
+$user = Get-MgBetaUser -UserId $actUser
 if (-Not $user)
 {
     throw "User $userPrincipalName not found!"
@@ -81,11 +81,11 @@ if (-Not $user)
 
 # Getting all built in roles
 Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
-$roleDefinitions = Get-MgRoleManagementDirectoryRoleDefinition -All
+$roleDefinitions = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
 
 # Getting  eligable role assignment
 Write-Host "Getting eligable role assignment" -ForegroundColor $CommandInfo
-$assignedRoles = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
+$assignedRoles = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
 $role = $roleDefinitions | Where-Object { $_.DisplayName -eq $roleName }
 if (-Not $role)
 {
@@ -120,7 +120,7 @@ $params = @{
 		}
 	}
 }
-New-MgRoleManagementDirectoryRoleAssignmentScheduleRequest -BodyParameter $params
+New-MgBetaRoleManagementDirectoryRoleAssignmentScheduleRequest -BodyParameter $params
 
 #Stopping Transscript
 Stop-Transcript

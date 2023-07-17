@@ -260,7 +260,7 @@ foreach($packageDir in $packages)
         $base64icon = [System.Convert]::ToBase64String($iconResponse)
         $iconExt = ([System.IO.Path]::GetExtension($logo.FullName)).replace(".","")
         $iconType = "image/$iconExt"
-        $appConfig.largeIcon = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
+        $appConfig.largeIcon = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
         $appConfig.largeIcon.type = "$iconType"
         $appConfig.largeIcon.value = "$base64icon"
     }
@@ -294,7 +294,7 @@ foreach($packageDir in $packages)
     Write-Host "  Checking existing failed upload"
 	$appId = $app.id
     Write-Host "    appId: $($app.id)"
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions"
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.Beta.win32LobApp/contentVersions"
     $existVersion = $null
     try {
         $existVersion = Get-MsGraph -Uri $uri
@@ -304,7 +304,7 @@ foreach($packageDir in $packages)
     if ($existVersion)
     {
         $maxVersion = ($existVersion.Id | Measure-Object -Maximum).Maximum
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$maxVersion/files"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.Beta.win32LobApp/contentVersions/$maxVersion/files"
         $file = Get-MsGraph -Uri $uri
         if ($file -and -Not $file.isCommitted)
         {
@@ -316,24 +316,24 @@ foreach($packageDir in $packages)
 
     # Creating Content Version
     Write-Host "  Creating Content Version"
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions"
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.Beta.win32LobApp/contentVersions"
 	$contentVersion = Post-MsGraph -Uri $uri -Body "{}"
     Write-Host "    contentVersion: $($contentVersion.id)"
 
     # Creating Content Version file
     Write-Host "  Creating Content Version file"
-	$fileBody = @{ "@odata.type" = "#microsoft.graph.mobileAppContentFile" }
+	$fileBody = @{ "@odata.type" = "#Microsoft.Graph.Beta.mobileAppContentFile" }
 	$fileBody.name = $package.Name
 	$fileBody.size = [long]$packageInfo.ApplicationInfo.UnencryptedContentSize
 	$fileBody.sizeEncrypted = [long]$bytes.Length
 	$fileBody.manifest = $null
     $fileBody.isDependency = $false
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files"
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.Beta.win32LobApp/contentVersions/$($contentVersion.id)/files"
 	$file = Post-MsGraph -Uri $uri -Body ($fileBody | ConvertTo-Json -Depth 50)
 
     # Waiting for file uri
     Write-Host "  Waiting for file uri"
-    $uri = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
+    $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.Beta.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
     $stage = "AzureStorageUriRequest"
 	$successState = "$($stage)Success"
 	$pendingState = "$($stage)Pending"
@@ -483,7 +483,7 @@ foreach($packageDir in $packages)
         fileDigest           = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigest
         fileDigestAlgorithm  = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigestAlgorithm
     }
-    $curi = "/beta/deviceAppManagement/mobileApps/$appId/microsoft.graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
+    $curi = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.Beta.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
 	$file = Post-MsGraph -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json -Depth 50)
 
     # Waiting for file commit

@@ -48,7 +48,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServic
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -67,11 +67,11 @@ Write-Host "=====================================================`n" -Foreground
 
 # Main
 Write-Host "Getting actual DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyDeviceRegistrationPolicy
+$policy = Get-MgBetaPolicyDeviceRegistrationPolicy
 $policy | ConvertTo-Json -Depth 5
 
 Write-Host "Setting DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-$allowedGroup = Get-MgGroup -Filter "DisplayName eq '$($AlyaDeviceAdminsGroupName)'"
+$allowedGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaDeviceAdminsGroupName)'"
 try
 {
     if ($AlyaAllowDeviceRegistration -and $AlyaAllowDeviceRegistration -ne "None" -and $AlyaAllowDeviceRegistration -ne "All")
@@ -146,7 +146,7 @@ catch
 }
 
 Write-Host "Getting new DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyDeviceRegistrationPolicy
+$policy = Get-MgBetaPolicyDeviceRegistrationPolicy
 $policy | ConvertTo-Json -Depth 99
 
 #Stopping Transscript

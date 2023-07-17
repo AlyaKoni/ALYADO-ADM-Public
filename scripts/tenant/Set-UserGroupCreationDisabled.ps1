@@ -50,7 +50,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-UserGroupCreationDisable
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -66,8 +66,8 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgBetaDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
@@ -75,8 +75,8 @@ if (-Not $Setting)
     foreach($dval in $SettingTemplate.Values) {
 	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
     }
-    $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = New-MgBetaDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgBetaDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
 $Value = $Setting.Values | Where-Object { $_.Name -eq "EnableGroupCreation" }
@@ -88,7 +88,7 @@ else {
     ($Setting.Values | Where-Object { $_.Name -eq "EnableGroupCreation" }).Value = $false
 }
 
-Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
+Update-MgBetaDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 #Stopping Transscript
 Stop-Transcript

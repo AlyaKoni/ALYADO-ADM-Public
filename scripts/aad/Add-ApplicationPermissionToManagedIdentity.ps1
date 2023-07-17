@@ -53,7 +53,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Add-ApplicationPermissionToMana
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Applications"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -71,7 +71,7 @@ Write-Host "Getting ServicePrincipal Requesting" -ForegroundColor $CommandInfo
 $App = $null
 if ($ServicePrincipalNameRequestingPermission)
 {
-    $App = Get-MgServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalNameRequestingPermission)'"
+    $App = Get-MgBetaServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalNameRequestingPermission)'"
     if (-Not $App)
     {
         throw "ServicePrincipal with name '$($ServicePrincipalNameRequestingPermission)' not found"
@@ -79,7 +79,7 @@ if ($ServicePrincipalNameRequestingPermission)
 }
 if ($ServicePrincipalIdRequestingPermission)
 {
-    $App = Get-MgServicePrincipal -Filter "AppId eq '$($ServicePrincipalIdRequestingPermission)'"
+    $App = Get-MgBetaServicePrincipal -Filter "AppId eq '$($ServicePrincipalIdRequestingPermission)'"
     if (-Not $App)
     {
         throw "ServicePrincipal with id '$($ServicePrincipalIdRequestingPermission)' not found"
@@ -94,7 +94,7 @@ Write-Host "Getting ServicePrincipal Providing" -ForegroundColor $CommandInfo
 $ToApp = $null
 if ($ServicePrincipalNameProvidingPermission)
 {
-    $ToApp = Get-MgServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalNameProvidingPermission)'"
+    $ToApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalNameProvidingPermission)'"
     if (-Not $ToApp)
     {
         throw "ServicePrincipal with name '$($ServicePrincipalNameProvidingPermission)' not found"
@@ -102,7 +102,7 @@ if ($ServicePrincipalNameProvidingPermission)
 }
 if ($ServicePrincipalIdProvidingPermission)
 {
-    $ToApp = Get-MgServicePrincipal -Filter "AppId eq '$($ServicePrincipalIdProvidingPermission)'"
+    $ToApp = Get-MgBetaServicePrincipal -Filter "AppId eq '$($ServicePrincipalIdProvidingPermission)'"
     if (-Not $ToApp)
     {
         throw "ServicePrincipal with id '$($ServicePrincipalIdProvidingPermission)' not found"
@@ -121,10 +121,10 @@ if (-not $AppRole)
 }
 
 Write-Host "Checking assignment" -ForegroundColor $CommandInfo
-$Assignments = Get-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $App.Id -All
+$Assignments = Get-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $App.Id -All
 if ($null -eq ($Assignments | Where-Object { $_.AppRoleId -eq $AppRole.Id -and $_.ResourceId -eq $ToApp.Id}))
 {
-    New-MgServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
+    New-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
 }
 else
 {

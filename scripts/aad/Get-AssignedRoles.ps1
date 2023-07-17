@@ -49,7 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AssignedRoles-$($AlyaTimeSt
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrolment"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -65,11 +65,11 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting all built in roles
 Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
-$roleDefinitions = Get-MgRoleManagementDirectoryRoleDefinition -All
+$roleDefinitions = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
 
 # Getting  permanent role members
 Write-Host "Getting  permanent role members" -ForegroundColor $CommandInfo
-$assignedRoles = Get-MgRoleManagementDirectoryRoleAssignment -All -ExpandProperty Principal
+$assignedRoles = Get-MgBetaRoleManagementDirectoryRoleAssignment -All -ExpandProperty Principal
 foreach ($roleDefinition in $roleDefinitions)
 {
     $actMembs = $assignedRoles | Where-Object { $_.RoleDefinitionId -eq $roleDefinition.Id }
@@ -81,13 +81,13 @@ foreach ($roleDefinition in $roleDefinitions)
             $memberName = $actMemb.PrincipalId
             switch ($actMemb.Principal.AdditionalProperties.'@odata.type')
             {
-                "#microsoft.graph.user" {
+                "#Microsoft.Graph.Beta.user" {
                     $memberName = "USR:"+$actMemb.Principal.AdditionalProperties.userPrincipalName
                 }
-                "#microsoft.graph.servicePrincipal" {
+                "#Microsoft.Graph.Beta.servicePrincipal" {
                     $memberName = "APP:"+$actMemb.Principal.AdditionalProperties.appId
                 }
-                "#microsoft.graph.group" {
+                "#Microsoft.Graph.Beta.group" {
                     $memberName = "GRP:"+$memberName
                 }
             }
@@ -103,7 +103,7 @@ if ($configurePIM)
     Write-Host "Getting eligable role members" -ForegroundColor $CommandInfo
     $assignedRoles = @()
     try {
-        $assignedRoles = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
+        $assignedRoles = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
     }
     catch {}
     foreach ($roleDefinition in $roleDefinitions)
@@ -117,13 +117,13 @@ if ($configurePIM)
                 $memberName = $actMemb.PrincipalId
                 switch ($actMemb.Principal.AdditionalProperties.'@odata.type')
                 {
-                    "#microsoft.graph.user" {
+                    "#Microsoft.Graph.Beta.user" {
                         $memberName = "USR:"+$actMemb.Principal.AdditionalProperties.userPrincipalName
                     }
-                    "#microsoft.graph.servicePrincipal" {
+                    "#Microsoft.Graph.Beta.servicePrincipal" {
                         $memberName = "APP:"+$actMemb.Principal.AdditionalProperties.appId
                     }
-                    "#microsoft.graph.group" {
+                    "#Microsoft.Graph.Beta.group" {
                         $memberName = "GRP:"+$memberName
                     }
                 }

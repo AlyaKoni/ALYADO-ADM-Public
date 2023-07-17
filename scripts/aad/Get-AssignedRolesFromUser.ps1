@@ -50,7 +50,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AssignedRolesFromUser-$($Al
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrolment"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -70,7 +70,7 @@ if ($configurePIM)
     Write-Host "Checking  license" -ForegroundColor $CommandInfo
     try
     {
-        $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
+        $actMembs = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
     }
     catch
     {
@@ -88,7 +88,7 @@ if ($configurePIM)
 
 # Getting user
 Write-Host "Getting user" -ForegroundColor $CommandInfo
-$user = Get-MgUser -UserId $userPrincipalName
+$user = Get-MgBetaUser -UserId $userPrincipalName
 if (-Not $user)
 {
     throw "User $userPrincipalName not found!"
@@ -96,11 +96,11 @@ if (-Not $user)
 
 # Getting all built in roles
 Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
-$roleDefinitions = Get-MgRoleManagementDirectoryRoleDefinition -All
+$roleDefinitions = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
 
 # Getting permanent role assignments
 Write-Host "Getting permanent role assignments" -ForegroundColor $CommandInfo
-$assignedRoles = Get-MgRoleManagementDirectoryRoleAssignment -Filter "principalId eq '$($user.Id)'"
+$assignedRoles = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "principalId eq '$($user.Id)'"
 foreach ($assigned in $assignedRoles)
 {
     $role = $roleDefinitions | Where-Object { $_.Id -eq $assigned.RoleDefinitionId }
@@ -111,7 +111,7 @@ if ($configurePIM)
 {
     # Getting  eligable role assignments
     Write-Host "Getting eligable role assignments" -ForegroundColor $CommandInfo
-    $assignedRoles = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
+    $assignedRoles = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
     foreach ($assigned in $assignedRoles)
     {
         $role = $roleDefinitions | Where-Object { $_.Id -eq $assigned.RoleDefinitionId }

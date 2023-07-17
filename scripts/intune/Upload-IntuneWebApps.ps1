@@ -209,7 +209,7 @@ foreach($packageDir in $packages)
         $base64icon = [System.Convert]::ToBase64String($iconResponse)
         $iconExt = ([System.IO.Path]::GetExtension($logo.FullName)).replace(".","")
         $iconType = "image/$iconExt"
-        $appConfig.largeIcon = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
+        $appConfig.largeIcon = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
         $appConfig.largeIcon.type = "$iconType"
         $appConfig.largeIcon.value = "$base64icon"
     }

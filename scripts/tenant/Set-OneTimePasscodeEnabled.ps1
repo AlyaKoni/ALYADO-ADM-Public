@@ -47,7 +47,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-OneTimePasscodeEnabled-$
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logins
 LoginTo-MgGraph -Scopes @("Policy.ReadWrite.AuthenticationMethod")
@@ -62,17 +62,17 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking Email OTP enabled
 Write-Host "Checking Email OTP enabled" -ForegroundColor $CommandInfo
-(Get-MgPolicyAuthenticationMethodPolicy).AuthenticationMethodConfigurations
-$conf = Get-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email"
+(Get-MgBetaPolicyAuthenticationMethodPolicy).AuthenticationMethodConfigurations
+$conf = Get-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email"
 if ($conf.State -ne "enabled")
 {
     Write-Warning "Email OTP was not enabled. Enabling it now"
-    Update-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email" -State "enabled"
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email" -State "enabled"
 }
 
 # Checking guests enabled
 Write-Host "Checking guests enabled" -ForegroundColor $CommandInfo
-$conf = Get-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email"
+$conf = Get-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email"
 if ($conf.AdditionalProperties.allowExternalIdToUseEmailOtp -ne "enabled")
 {
     Write-Warning "Email OTP guests were not enabled. Enabling them now"
@@ -91,7 +91,7 @@ if ($conf.AdditionalProperties.includeTargets.Count -eq 0)
 else {
     #TODO
 }
-Update-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email" -AdditionalProperties $conf.AdditionalProperties
+Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId "Email" -AdditionalProperties $conf.AdditionalProperties
 
 #Stopping Transscript
 Stop-Transcript

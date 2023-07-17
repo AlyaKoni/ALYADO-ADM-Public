@@ -39,7 +39,9 @@ Param(
     [Parameter(Mandatory = $true)]
     [string]$userEmailToReset,
     [Parameter(Mandatory = $false)]
-    [string]$newUserEmail = $null
+    [string]$newUserEmail = $null,
+    [Parameter(Mandatory = $false)]
+    [string]$inviteRedirectUrl = "http://myapps.microsoft.com"
 )
 
 #Reading configuration
@@ -52,7 +54,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Reset-GuestInvitation-$($AlyaTi
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users" -exactVersion 1.28.0
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -69,7 +71,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking user
 Write-Host "Checking user" -ForegroundColor $CommandInfo
-$user = Get-MgUser -Filter "startsWith(mail, '$userEmailToReset')"
+$user = Get-MgBetaUser -Filter "startsWith(mail, '$userEmailToReset')"
 if (-Not $user)
 {
     throw "User $userEmailToReset not found"
@@ -80,9 +82,9 @@ if (-Not $newUserEmail)
 
     # Resetting invitation
     Write-Host "Resetting invitation" -ForegroundColor $CommandInfo
-    New-MgInvitation `
+    New-MgBetaInvitation `
         -InvitedUserEmailAddress $user.Mail `
-        -InviteRedirectUrl "http://myapps.microsoft.com" `
+        -InviteRedirectUrl $inviteRedirectUrl `
         -ResetRedemption `
         -SendInvitationMessage `
         -InvitedUser $user
@@ -94,15 +96,18 @@ else
     # Resetting invitation with new email
     Write-Host "Resetting invitation with new email" -ForegroundColor $CommandInfo
     $otherMails = $user.OtherMails
-    $otherMails += $user.Mail
-    Update-MgUser -UserId $user.Id -Mail $newUserEmail -OtherMails $otherMails
-    New-MgInvitation `
+    if ($user.Mail -notin $otherMails)
+    {
+        $otherMails += $user.Mail
+    }
+    Update-MgBetaUser -UserId $user.Id -Mail $newUserEmail -OtherMails $otherMails
+    $invitation = New-MgBetaInvitation `
         -InvitedUserEmailAddress $newUserEmail `
-        -InviteRedirectUrl "http://myapps.microsoft.com" `
+        -InviteRedirectUrl $inviteRedirectUrl `
         -ResetRedemption `
         -SendInvitationMessage `
         -InvitedUser $user
-
+    Write-Host "InviteRedeemUrl: $($invitation.InviteRedeemUrl)"
 }
 
 #Stopping Transscript

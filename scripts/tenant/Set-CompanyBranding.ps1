@@ -48,7 +48,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-CompanyBranding-$($AlyaT
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logins
 LoginTo-MgGraph -Scopes @("Organization.ReadWrite.All")
@@ -63,12 +63,12 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting organisation
 Write-Host "Getting organisation" -ForegroundColor $CommandInfo
-$org = Get-MgOrganization -OrganizationId $AlyaTenantId
+$org = Get-MgBetaOrganization -OrganizationId $AlyaTenantId
 $org | Format-List
 
 # Setting organisation info
 Write-Host "Setting organisation info" -ForegroundColor $CommandInfo
-Update-MgOrganization -OrganizationId $AlyaTenantId `
+Update-MgBetaOrganization -OrganizationId $AlyaTenantId `
     -MarketingNotificationEmails @($AlyaGeneralInformEmail) `
     -PrivacyProfile @{
         contactEmail = $AlyaPrivacyEmail
@@ -81,7 +81,7 @@ Write-Host "Getting act branding" -ForegroundColor $CommandInfo
 $branding = $null
 try
 {
-    $branding = Get-MgOrganizationBranding -OrganizationId $AlyaTenantId
+    $branding = Get-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId
 } catch
 {
     #TODO fix this
@@ -90,17 +90,17 @@ try
     Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
     Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
     pause
-    $branding = Get-MgOrganizationBranding -OrganizationId $AlyaTenantId
+    $branding = Get-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId
 }
 
 # Setting azure branding
 Write-Host "Setting branding" -ForegroundColor $CommandInfo
-Update-MgOrganizationBranding -OrganizationId $AlyaTenantId `
+Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId `
       -BackgroundColor $AlyaAzureBrandingBackgroundColor `
       -SignInPageText $AlyaAzureBrandingSignInPageTextDefault `
       -UsernameHintText $AlyaAzureBrandingUsernameHintTextDefault
 
-$locs = Get-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId
+$locs = Get-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId
 $locDef = $locs | Where-Object { $_.Id -eq 0 }
 $locEn = $locs | Where-Object { $_.Id -eq "en-US" }
 $locDe = $locs | Where-Object { $_.Id -eq "de-de" }
@@ -108,56 +108,56 @@ $locFr = $locs | Where-Object { $_.Id -eq "fr-FR" }
 $locIt = $locs | Where-Object { $_.Id -eq "it-IT" }
 if ($locEn)
 {
-    Update-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "en-US" `
+    Update-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "en-US" `
         -BackgroundColor $AlyaAzureBrandingBackgroundColor `
         -SignInPageText $AlyaAzureBrandingSignInPageTextEn `
         -UsernameHintText $AlyaAzureBrandingUsernameHintTextEn
 }
 else
 {
-    New-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -Id "en-US" `
+    New-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -Id "en-US" `
         -BackgroundColor $AlyaAzureBrandingBackgroundColor `
         -SignInPageText $AlyaAzureBrandingSignInPageTextEn `
         -UsernameHintText $AlyaAzureBrandingUsernameHintTextEn
 }
 if ($locDe)
 {
-    Update-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "de-de" `
+    Update-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "de-de" `
         -BackgroundColor $AlyaAzureBrandingBackgroundColor `
         -SignInPageText $AlyaAzureBrandingSignInPageTextDe `
         -UsernameHintText $AlyaAzureBrandingUsernameHintTextDe
 }
 else
 {
-    New-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -Id "de-de" `
+    New-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -Id "de-de" `
         -BackgroundColor $AlyaAzureBrandingBackgroundColor `
         -SignInPageText $AlyaAzureBrandingSignInPageTextDe `
         -UsernameHintText $AlyaAzureBrandingUsernameHintTextDe
 }
 if ($locFr)
 {
-    Update-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "fr-FR" `
+    Update-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "fr-FR" `
         -BackgroundColor $AlyaAzureBrandingBackgroundColor `
         -SignInPageText $AlyaAzureBrandingSignInPageTextFr `
         -UsernameHintText $AlyaAzureBrandingUsernameHintTextFr
 }
 else
 {
-    New-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -Id "fr-FR" `
+    New-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -Id "fr-FR" `
         -BackgroundColor $AlyaAzureBrandingBackgroundColor `
         -SignInPageText $AlyaAzureBrandingSignInPageTextFr `
         -UsernameHintText $AlyaAzureBrandingUsernameHintTextFr
 }
 if ($locIt)
 {
-    Update-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "it-IT" `
+    Update-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -OrganizationalBrandingLocalizationId "it-IT" `
         -BackgroundColor $AlyaAzureBrandingBackgroundColor `
         -SignInPageText $AlyaAzureBrandingSignInPageTextIt `
         -UsernameHintText $AlyaAzureBrandingUsernameHintTextIt
 }
 else
 {
-    New-MgOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -Id "it-IT" `
+    New-MgBetaOrganizationBrandingLocalization -OrganizationId $AlyaTenantId -Id "it-IT" `
         -BackgroundColor $AlyaAzureBrandingBackgroundColor `
         -SignInPageText $AlyaAzureBrandingSignInPageTextIt `
         -UsernameHintText $AlyaAzureBrandingUsernameHintTextIt
@@ -184,11 +184,11 @@ else
         $params = @{  
             BackgroundImageInputFile = $uplFile
         }  
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
-        Write-Warning "Update-MgOrganizationBranding still not working, please update backgroundImage by hand"
+        Write-Warning "Update-MgBetaOrganizationBranding still not working, please update backgroundImage by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
@@ -217,11 +217,11 @@ else
         $params = @{  
             SquareLogoInputFile = $uplFile
         }  
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
-        Write-Warning "Update-MgOrganizationBranding still not working, please update squareLogo by hand"
+        Write-Warning "Update-MgBetaOrganizationBranding still not working, please update squareLogo by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
@@ -250,11 +250,11 @@ else
         $params = @{  
             SquareLogoInputFile = $uplFile
         }  
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
-        Write-Warning "Update-MgOrganizationBranding still not working, please update squareLogoDark by hand"
+        Write-Warning "Update-MgBetaOrganizationBranding still not working, please update squareLogoDark by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
@@ -279,19 +279,19 @@ else
         Invoke-WebRequest -Uri $AlyaAzureBrandingBannerLogo -OutFile $uplFile
     }
     #$stream = [System.IO.File]::Open($uplFile,[System.IO.FileMode]::Open)
-    #Set-MgOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile
+    #Set-MgBetaOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile
     #$stream.Close()
-    #Get-MgOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -OutFile $uplFile
+    #Get-MgBetaOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -OutFile $uplFile
     try
     {
         $params = @{  
             BannerLogoInputFile = $uplFile
         }  
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
-        Write-Warning "Update-MgOrganizationBranding still not working, please update bannerLogo by hand"
+        Write-Warning "Update-MgBetaOrganizationBranding still not working, please update bannerLogo by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause
@@ -320,11 +320,11 @@ else
         $params = @{  
             FaviconInputFile = $uplFile
         }  
-        Update-MgOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
     }
     catch
     {
-        Write-Warning "Update-MgOrganizationBranding still not working, please update favicon by hand"
+        Write-Warning "Update-MgBetaOrganizationBranding still not working, please update favicon by hand"
         Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
         pause

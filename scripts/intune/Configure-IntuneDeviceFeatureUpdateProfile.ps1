@@ -212,12 +212,12 @@ foreach($profile in $profiles)
 
     # Checking if poliy is applicable
     Write-Host "  Checking if profile is applicable"
-    if ($profile."@odata.type" -eq "#microsoft.graph.iosConfigurationProfile" -and -not $appleConfigured)
+    if ($profile."@odata.type" -eq "#Microsoft.Graph.Beta.iosConfigurationProfile" -and -not $appleConfigured)
     {
         Write-Warning "iosConfigurationProfile is not applicable"
         continue
     }
-    if ($profile."@odata.type" -eq "#microsoft.graph.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
+    if ($profile."@odata.type" -eq "#Microsoft.Graph.Beta.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
     {
         Write-Warning "androidConfigurationProfile is not applicable"
         continue

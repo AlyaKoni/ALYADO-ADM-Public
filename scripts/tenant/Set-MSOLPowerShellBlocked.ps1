@@ -47,7 +47,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-MSOLPowerShellBlocked-$(
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logins
 LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
@@ -62,13 +62,13 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking Msol PowerShell
 Write-Host "Checking Msol PowerShell" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if (-Not $policy.BlockMsolPowerShell)
 {
     Write-Warning "Msol PowerShell was enabled. Disabling it now"
-    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -BlockMsolPowerShell $true
+    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -BlockMsolPowerShell $true
 }
-Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

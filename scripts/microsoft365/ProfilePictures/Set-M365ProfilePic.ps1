@@ -31,16 +31,15 @@
     Date       Author     Description
     ---------- -------------------- ----------------------------
     13.03.2019 Konrad Brunner       Initial Version
-
-
+    16.06.2023 Konrad Brunner       Rework
 
 Picture sizes:
     AD   96*96
+    AAD  648*648
     SP-S 48*48
     SP-M 72*72
     SP-L 200*200
-
-
+    EXO  240*240
 #>
 
 # Parameters
@@ -56,20 +55,21 @@ Param(
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\onprem\Set-O365ProfilePic-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\microsoft365\ProfilePictures\Set-O365ProfilePic-$($AlyaTimeString).log" | Out-Null
 
 #Checking modules
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 
 #Main
 Write-Host "Setting profile picture in O365 for user $($upn) to $($image)" -ForegroundColor $CommandInfo
+$actPath = "$PSScriptRoot"
 
 #Checking configuration
 Write-Host "  Checking configuration"
 if (-Not (Test-Path "$PSScriptRoot\configuration.xml"))
 {
     Write-Host "    Creating configuration.xml"
-    $config = [XML]@"
+    $config = @"
 <?xml version="1.0" encoding="utf-8" ?>
 <configuration>
   <tenantName>$AlyaTenantName</tenantName>
@@ -88,21 +88,27 @@ if (-Not (Test-Path "$PSScriptRoot\configuration.xml"))
 
 #Setting exchange photo
 Write-Host "Setting Exchange photo" -ForegroundColor $CommandInfo
-LoginTo-IPPS
-if ((Get-User -Identity $upn))
+try
 {
-    $photo = Get-UserPhoto -Identity $upn -ErrorAction SilentlyContinue
-    if ($photo)
+    LoginTo-EXO
+    if ((Get-User -Identity $upn))
     {
-        #TODO Backup existing
+        $photo = Get-UserPhoto -Identity $upn -ErrorAction SilentlyContinue
+        if ($photo)
+        {
+            #TODO Backup existing
+        }
+        Set-UserPhoto -Identity $upn -PictureData ([System.IO.File]::ReadAllBytes($image)) -Confirm:$false -ErrorAction Continue
     }
-    Set-UserPhoto -Identity $upn -PictureData ([System.IO.File]::ReadAllBytes($image)) -Confirm:$false -ErrorAction Continue
+    else
+    {
+        Write-Host "  User does not exist in O365"
+    }
 }
-else
+finally
 {
-    Write-Host "  User does not exist in O365"
+    DisconnectFrom-EXOandIPPS
 }
-DisconnectFrom-EXOandIPPS
 
 #Setting SharePoint photo
 Write-Host "Setting SharePoint photo" -ForegroundColor $CommandInfo

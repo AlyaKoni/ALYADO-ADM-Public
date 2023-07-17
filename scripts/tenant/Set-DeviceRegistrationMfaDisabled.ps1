@@ -47,7 +47,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-DeviceRegistrationMfaDis
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logins
 LoginTo-MgGraph -Scopes @("Policy.ReadWrite.DeviceConfiguration","Directory.Read.All")
@@ -62,7 +62,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Main
 Write-Host "Getting actual DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyDeviceRegistrationPolicy
+$policy = Get-MgBetaPolicyDeviceRegistrationPolicy
 $policy | ConvertTo-Json -Depth 5
 
 Write-Host "Setting DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo

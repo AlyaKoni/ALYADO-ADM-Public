@@ -53,7 +53,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 LoginTo-MgGraph -Scopes @(
     "DeviceManagementManagedDevices.ReadWrite.All"
 )
-#Disconnect-MgGraph
+#Disconnect-MgBetaGraph
 
 # =============================================================
 # Intune stuff
@@ -70,7 +70,7 @@ foreach($categoryName in $AlyaDeviceCategories)
 
     $body = @"
 {
-  "@odata.type": "#microsoft.graph.deviceCategory",
+  "@odata.type": "#Microsoft.Graph.Beta.deviceCategory",
   "displayName": "$categoryName",
   "description": "Device category to manage devices of type $categoryName"
 }

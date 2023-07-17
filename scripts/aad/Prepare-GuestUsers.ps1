@@ -51,7 +51,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Prepare-GuestUsers-$($AlyaTimeS
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -72,7 +72,7 @@ Write-Host "=====================================================`n" -Foreground
 function Main
 {
     Write-Host "Getting all guest accounts" -ForegroundColor $CommandInfo
-    $Users = Get-Mguser -Filter "UserType eq 'Guest'" -All
+    $Users = Get-MgBetauser -Filter "UserType eq 'Guest'" -All
 
     Write-Host "Checking $($Users.Count) accounts"
     foreach($User in $Users)
@@ -590,32 +590,32 @@ function Main
                 $newUser = @{disp=$disp;first=$first;last=$last}
                 Write-Host "SWAPPED: $($newUser | ConvertTo-Json -Compress)"
                 if ($null -eq $newUser.last) {
-                    Update-MgUser -UserId $user.Id -GivenName $newUser.first -DisplayName $newUser.disp
-                    Invoke-MgRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{Surname = $null}
+                    Update-MgBetaUser -UserId $user.Id -GivenName $newUser.first -DisplayName $newUser.disp
+                    Invoke-MgBetaRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{Surname = $null}
                 }
                 else {
                     if ($null -eq $newUser.first) {
-                        Update-MgUser -UserId $user.Id -Surname $newUser.last -DisplayName $newUser.disp
-                        Invoke-MgRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{GivenName = $null}
+                        Update-MgBetaUser -UserId $user.Id -Surname $newUser.last -DisplayName $newUser.disp
+                        Invoke-MgBetaRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{GivenName = $null}
                     }
                     else {
-                        Update-MgUser -UserId $user.Id -Surname $newUser.last -GivenName $newUser.first -DisplayName $newUser.disp
+                        Update-MgBetaUser -UserId $user.Id -Surname $newUser.last -GivenName $newUser.first -DisplayName $newUser.disp
                     }
                 }
             }
             if ($decision -eq 0)
             {
                 if ($null -eq $newUser.last) {
-                    Update-MgUser -UserId $user.Id -GivenName $newUser.first -DisplayName $newUser.disp
-                    Invoke-MgRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{Surname = $null}
+                    Update-MgBetaUser -UserId $user.Id -GivenName $newUser.first -DisplayName $newUser.disp
+                    Invoke-MgBetaRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{Surname = $null}
                 }
                 else {
                     if ($null -eq $newUser.first) {
-                        Update-MgUser -UserId $user.Id -Surname $newUser.last -DisplayName $newUser.disp
-                        Invoke-MgRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{GivenName = $null}
+                        Update-MgBetaUser -UserId $user.Id -Surname $newUser.last -DisplayName $newUser.disp
+                        Invoke-MgBetaRestMethod -Method "Patch" -Uri "https://graph.microsoft.com/beta/users/$($user.Id)" -Body @{GivenName = $null}
                     }
                     else {
-                        Update-MgUser -UserId $user.Id -Surname $newUser.last -GivenName $newUser.first -DisplayName $newUser.disp
+                        Update-MgBetaUser -UserId $user.Id -Surname $newUser.last -GivenName $newUser.first -DisplayName $newUser.disp
                     }
                 }
             }
