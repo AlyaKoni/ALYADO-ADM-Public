@@ -98,7 +98,7 @@ $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalanc
 if (-Not $lb)
 {
     Write-Host " - Creating"
-    $tmp = New-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName -Location $AlyaLocation -Sku Standard
+    $null = New-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName -Location $AlyaLocation -Sku Standard
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
 }
 #Remove-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName -Force
@@ -108,7 +108,7 @@ $pipIn = Get-AzPublicIpAddress -ResourceGroupName  $ResourceGroupName -Name $FeP
 if (-Not $pipIn)
 {
     Write-Host " - Creating incoming public ip $FePipIn"
-    $tmp = New-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $FePipIn -Location $AlyaLocation -Sku Standard -IpAddressVersion IPv4 -IdleTimeoutInMinutes 10 -AllocationMethod Static -DomainNameLabel $FeNameIn
+    $null = New-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $FePipIn -Location $AlyaLocation -Sku Standard -IpAddressVersion IPv4 -IdleTimeoutInMinutes 10 -AllocationMethod Static -DomainNameLabel $FeNameIn
     $pipIn = Get-AzPublicIpAddress -ResourceGroupName  $ResourceGroupName -Name $FePipIn
 }
 #Remove-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $FePipIn -Force
@@ -116,7 +116,7 @@ $pipOut = Get-AzPublicIpAddress -ResourceGroupName  $ResourceGroupName -Name $Fe
 if (-Not $pipOut)
 {
     Write-Host " - Creating outgoing public ip $FePipOut"
-    $tmp = New-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $FePipOut -Location $AlyaLocation -Sku Standard -IpAddressVersion IPv4 -IdleTimeoutInMinutes 10 -AllocationMethod Static -DomainNameLabel $FeNameOut
+    $null = New-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $FePipOut -Location $AlyaLocation -Sku Standard -IpAddressVersion IPv4 -IdleTimeoutInMinutes 10 -AllocationMethod Static -DomainNameLabel $FeNameOut
     $pipOut = Get-AzPublicIpAddress -ResourceGroupName  $ResourceGroupName -Name $FePipOut
 }
 #Remove-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $FePipOut -Force
@@ -126,7 +126,7 @@ $ipConfigIn = $lb.FrontendIpConfigurations | Where-Object { $_.Name -eq $FeNameI
 if (-Not $ipConfigIn)
 {
     Write-Host " - Creating ip configuration $FeNameIn"
-    $tmp = Add-AzLoadBalancerFrontendIpConfig -LoadBalancer $lb -Name $FeNameIn -PublicIpAddress $pipIn
+    $null = Add-AzLoadBalancerFrontendIpConfig -LoadBalancer $lb -Name $FeNameIn -PublicIpAddress $pipIn
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
     $ipConfigIn = $lb.FrontendIpConfigurations | Where-Object { $_.Name -eq $FeNameIn }
@@ -135,7 +135,7 @@ $ipConfigOut = $lb.FrontendIpConfigurations | Where-Object { $_.Name -eq $FeName
 if (-Not $ipConfigOut)
 {
     Write-Host " - Creating ip configuration $FeNameOut"
-    $tmp = Add-AzLoadBalancerFrontendIpConfig -LoadBalancer $lb -Name $FeNameOut -PublicIpAddress $pipOut
+    $null = Add-AzLoadBalancerFrontendIpConfig -LoadBalancer $lb -Name $FeNameOut -PublicIpAddress $pipOut
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
     $ipConfigOut = $lb.FrontendIpConfigurations | Where-Object { $_.Name -eq $FeNameOut }
@@ -146,7 +146,7 @@ $backPoolIn = $lb.BackendAddressPools | Where-Object { $_.Name -eq $NameBackPool
 if (-Not $backPoolIn)
 {
     Write-Host " - Creating incoming backend pool $NameBackPoolIn"
-    $tmp = Add-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $lb -Name $NameBackPoolIn
+    $null = Add-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $lb -Name $NameBackPoolIn
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
     $backPoolIn = $lb.BackendAddressPools | Where-Object { $_.Name -eq $NameBackPoolIn }
@@ -155,7 +155,7 @@ $backPoolOut = $lb.BackendAddressPools | Where-Object { $_.Name -eq $NameBackPoo
 if (-Not $backPoolOut)
 {
     Write-Host " - Creating outgoing backend pool $NameBackPoolOut"
-    $tmp = Add-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $lb -Name $NameBackPoolOut
+    $null = Add-AzLoadBalancerBackendAddressPoolConfig -LoadBalancer $lb -Name $NameBackPoolOut
     $lb | Set-AzLoadBalancer
     $lb = Get-AzLoadBalancer -ResourceGroupName $ResourceGroupName -Name $LoadBalancerName
     $backPoolOut = $lb.BackendAddressPools | Where-Object { $_.Name -eq $NameBackPoolOut }
@@ -166,7 +166,7 @@ $hostProbe = $lb.Probes | Where-Object { $_.Name -eq $NameHealthProbe }
 if (-Not $hostProbe)
 {
     Write-Host " - Creating host probe $NameHealthProbe"
-    $tmp = Add-AzLoadBalancerProbeConfig -LoadBalancer $lb -Name $NameHealthProbe `
+    $null = Add-AzLoadBalancerProbeConfig -LoadBalancer $lb -Name $NameHealthProbe `
             -Protocol TCP `
             -Port 3389 `
             -IntervalInSeconds 30 `
@@ -182,7 +182,7 @@ $inRule = $lb.InboundNatRules | Where-Object { $_.Name -eq $RuleNameIn }
 if (-Not $inRule)
 {
     Write-Host " - Creating $RuleNameIn"
-    $tmp = Add-AzLoadBalancerInboundNatRuleConfig -Name $RuleNameIn `
+    $null = Add-AzLoadBalancerInboundNatRuleConfig -Name $RuleNameIn `
                     -LoadBalancer $lb `
                     -FrontendIpConfiguration $ipConfigIn `
                     -BackendAddressPool $backPoolIn `
@@ -202,7 +202,7 @@ $outRule = $lb.OutboundRules | Where-Object { $_.Name -eq $RuleNameOut }
 if (-Not $outRule)
 {
     Write-Host " - Creating $RuleNameOut"
-    $tmp = Add-AzLoadBalancerOutboundRuleConfig -Name $RuleNameOut `
+    $null = Add-AzLoadBalancerOutboundRuleConfig -Name $RuleNameOut `
                     -LoadBalancer $lb `
                     -FrontendIpConfiguration $ipConfigOut `
                     -BackendAddressPool $backPoolOut `

@@ -64,7 +64,7 @@ $enabled = Get-AipService
 if ($enabled -ne "Enabled")
 {
     Write-Host "Enabling AipService"
-    $tmp = Configure-AIPService
+    $null = Configure-AIPService
 }
 else
 {
@@ -76,7 +76,7 @@ $enabled = Get-AipServiceIPCv3
 if ($enabled -ne "Enabled")
 {
     Write-Host "Enabling AipServiceIPCv3"
-    $tmp = Configure-AIPServiceIPCv3
+    $null = Configure-AIPServiceIPCv3
 }
 else
 {
@@ -89,7 +89,7 @@ $enabled = $enabled | Where-Object { $_.Value -eq $false }
 if ($enabled)
 {
     Write-Host "Enabling AipServiceDevicePlatform All"
-    $tmp = Enable-AIPServiceDevicePlatform -All
+    $null = Enable-AIPServiceDevicePlatform -All
 }
 else
 {
@@ -101,7 +101,7 @@ $enabled = Get-AipServiceDocumentTrackingFeature
 if ($enabled -ne "Enabled")
 {
     Write-Host "Enabling AipServiceDocumentTrackingFeature"
-    $tmp = Enable-AIPServiceDocumentTrackingFeature -Force
+    $null = Enable-AIPServiceDocumentTrackingFeature -Force
 }
 else
 {

@@ -119,7 +119,7 @@ else
         # Preparing user scripts
         Write-Host "Preparing user scripts"
         $scriptFolderPath = "$env:SystemDrive\ProgramData\AlyaConsulting\LanguageScripts"
-        $tmp = New-Item -ItemType Directory -Force -Path $scriptFolderPath
+        $null = New-Item -ItemType Directory -Force -Path $scriptFolderPath
         $languageXmlPath = Join-Path -Path $scriptFolderPath -ChildPath "MUI_$($languageTag).xml"
         $languageXml = @"
 <gs:GlobalizationServices xmlns:gs="urn:longhornGlobalizationUnattend">
@@ -215,7 +215,7 @@ powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -File "$userConfi
     }
     catch
     {   
-        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
         Write-Error ($_.Exception) -ErrorAction Continue
         $exitCode = -1
     }

@@ -62,11 +62,11 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ImportExcel"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Applications"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.Governance"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -119,10 +119,10 @@ foreach ($roleDef in $roleDefs)
         if ($roleDef.Eligible -like "##*") {
             continue
         }
-        try { $principal = Get-MgUser -UserId $roleDef.Eligible } catch {}
+        try { $principal = Get-MgBetaUser -UserId $roleDef.Eligible } catch {}
         if (-Not $principal)
         {
-            $principal = Get-MgGroup -Filter "DisplayName eq '$($roleDef.Eligible)'"
+            $principal = Get-MgBetaGroup -Filter "DisplayName eq '$($roleDef.Eligible)'"
         }
         if (-Not $principal)
         {
@@ -144,10 +144,36 @@ foreach ($roleDef in $roleDefs)
             $allRoles.$roleName = $true
             continue
         }
-        try { $principal = Get-MgUser -UserId $roleDef.Permanent } catch {}
+        try { $principal = Get-MgBetaUser -UserId $roleDef.Permanent } catch {}
         if (-Not $principal)
         {
-            $principal = Get-MgGroup -Filter "DisplayName eq '$($roleDef.Permanent)'"
+            $id = $null
+            $name = $roleDef.Permanent
+            if ($roleDef.Permanent.IndexOf(":") -gt -1)
+            {
+                $id = $roleDef.Permanent.Split(":")[0]
+                $name = $roleDef.Permanent.Split(":")[1]
+            }
+            if ($id)
+            {
+                try { $principal = Get-MgBetaGroup -GroupId $id } catch {}
+                if (-Not $principal)
+                {
+                    try { $principal = Get-MgBetaServicePrincipal -Filter "AppId eq '$($id)'" } catch {}
+                }
+                if (-Not $principal)
+                {
+                    try { $principal = Get-MgBetaServicePrincipal -ServicePrincipalId $id } catch {}
+                }
+            }
+            if (-Not $principal)
+            {
+                try { $principal = Get-MgBetaGroup -Filter "DisplayName eq '$($name)'" } catch {}
+                if (-Not $principal)
+                {
+                    try { $principal = Get-MgBetaServicePrincipal -Filter "DisplayName eq '$($name)'" } catch {}
+                }
+            }
         }
         if (-Not $principal)
         {
@@ -171,7 +197,7 @@ if ($configurePIM)
     Write-Host "Checking  license" -ForegroundColor $CommandInfo
     try
     {
-        $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
+        $actMembs = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
     }
     catch
     {
@@ -189,7 +215,7 @@ if ($configurePIM)
 
 # Checking built in roles
 Write-Host "Checking built in roles" -ForegroundColor $CommandInfo
-$allBuiltInRoles = Get-MgRoleManagementDirectoryRoleDefinition -All
+$allBuiltInRoles = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
 $missFound = $false
 foreach($role in $allBuiltinRoles)
 {
@@ -210,8 +236,8 @@ $missFound = $false
 if ($configurePIM)
 {
   # Checking role settings
-  $assigments = Get-MgPolicyRoleManagementPolicyAssignment -Filter "scopeId eq '/' and scopeType eq 'Directory'"
-  $policies = Get-MgPolicyRoleManagementPolicy -Filter "scopeId eq '/' and scopeType eq 'Directory'"
+  $assigments = Get-MgBetaPolicyRoleManagementPolicyAssignment -Filter "scopeId eq '/' and scopeType eq 'Directory'"
+  $policies = Get-MgBetaPolicyRoleManagementPolicy -Filter "scopeId eq '/' and scopeType eq 'Directory'"
   if ($updatePIMRoleSettings)
   {
       Write-Host "Checking role settings" -ForegroundColor $CommandInfo
@@ -222,14 +248,14 @@ if ($configurePIM)
           $rol = $allBuiltInRoles | Where-Object { $_.DisplayName -eq $alertingRole }
           $ass = $assigments | Where-Object { $_.RoleDefinitionId -eq $rol.Id }
           $pol = $policies | Where-Object { $_.Id -eq $ass.PolicyId }
-          $rules = Get-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id
+          $rules = Get-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id
           
           Write-Host "    Approval_EndUser_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Approval_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyApprovalRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyApprovalRule",
     "setting": {
         "isApprovalRequired": false,
         "isApprovalRequiredForExtension": false,
@@ -248,54 +274,54 @@ if ($configurePIM)
     }
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    AuthenticationContext_EndUser_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "AuthenticationContext_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyAuthenticationContextRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyAuthenticationContextRule",
     "isEnabled": false,
     "claimValue": ""
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           $rul = $rules | Where-Object { $_.Id -eq "Expiration_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyExpirationRule",
     "isExpirationRequired": false,
     "maximumDuration": "P180D"
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Expiration_Admin_Eligibility"
           $rul = $rules | Where-Object { $_.Id -eq "Expiration_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyExpirationRule",
     "isExpirationRequired": false,
     "maximumDuration": "P365D"
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Expiration_EndUser_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Expiration_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyExpirationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyExpirationRule",
     "isExpirationRequired": true,
     "maximumDuration": "PT8H"
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
 
           Write-Host "    Enablement_Admin_Eligibility"
@@ -303,31 +329,31 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyEnablementRule",
     "enabledRules": []
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Enablement_Admin_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Enablement_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyEnablementRule",
     "enabledRules": [
         "Justification"
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Enablement_EndUser_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Enablement_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyEnablementRule",
     "enabledRules": [
       "MultiFactorAuthentication",
         "Justification"
@@ -338,21 +364,21 @@ if ($configurePIM)
           {
               $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyEnablementRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyEnablementRule",
     "enabledRules": [
         "Justification"
     ]
 }
 "@
           }
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Admin_Admin_Eligibility"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Admin_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Admin",
     "notificationLevel": "All",
@@ -362,14 +388,14 @@ if ($configurePIM)
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Admin_Admin_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Admin_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Admin",
     "notificationLevel": "All",
@@ -379,14 +405,14 @@ if ($configurePIM)
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Admin_EndUser_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Admin_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Admin",
     "notificationLevel": "All",
@@ -396,14 +422,14 @@ if ($configurePIM)
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Approver_Admin_Eligibility"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Approver_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Approver",
     "notificationLevel": "All",
@@ -413,14 +439,14 @@ if ($configurePIM)
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Approver_Admin_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Approver_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Approver",
     "notificationLevel": "All",
@@ -430,14 +456,14 @@ if ($configurePIM)
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Approver_EndUser_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Approver_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Approver",
     "notificationLevel": "All",
@@ -445,14 +471,14 @@ if ($configurePIM)
     "notificationRecipients": []
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Requestor_Admin_Eligibility"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Requestor_Admin_Eligibility" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Requestor",
     "notificationLevel": "All",
@@ -462,14 +488,14 @@ if ($configurePIM)
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Requestor_Admin_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Requestor_Admin_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Requestor",
     "notificationLevel": "All",
@@ -479,14 +505,14 @@ if ($configurePIM)
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
           Write-Host "    Notification_Requestor_EndUser_Assignment"
           $rul = $rules | Where-Object { $_.Id -eq "Notification_Requestor_EndUser_Assignment" }
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#microsoft.graph.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Requestor",
     "notificationLevel": "All",
@@ -496,7 +522,7 @@ if ($configurePIM)
     ]
 }
 "@
-          Update-MgPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
+          Update-MgBetaPolicyRoleManagementPolicyRule -UnifiedRoleManagementPolicyId $pol.Id -UnifiedRoleManagementPolicyRuleId $rul.Id -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99)
 
       }
   }
@@ -516,7 +542,7 @@ foreach($roleName in $allRoles.Keys)
         Write-Host "  Configuring permanent role"
         $newUsers = $permanentRoles[$roleName]
         $role = $allBuiltInRoles | Where-Object { $_.DisplayName -eq $roleName }
-        $actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
+        $actMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 
         #Adding new members
         $newUsers | Foreach-Object {
@@ -526,8 +552,11 @@ foreach($roleName in $allRoles.Keys)
                 $actMemb = $actMembs | Where-Object { $_.PrincipalId -eq $newMemb.Id}
                 if (-Not $actMemb)
                 {
-                    Write-Host "    adding user $($newMemb.UserPrincipalName)" -ForegroundColor $CommandWarning
-                    $actMemb = New-MgRoleManagementDirectoryRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $newMemb.Id -DirectoryScopeId "/"
+                    $otype = $newMemb.GetType().Name.Replace("MicrosoftGraph", "")
+                    $oname = $newMemb.UserPrincipalName
+                    if ([string]::IsNullOrEmpty($oname)) { $oname = $newMemb.DisplayName }
+                    Write-Host "    adding $otype $oname $($newMemb.Id)" -ForegroundColor $CommandWarning
+                    $actMemb = New-MgBetaRoleManagementDirectoryRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $newMemb.Id -DirectoryScopeId "/"
                 }
             }
         }
@@ -537,7 +566,7 @@ foreach($roleName in $allRoles.Keys)
             # Configuring eligible role
             Write-Host "  Configuring eligible role"
             $newUsers = $eligibleRoles[$roleName]
-            $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
+            $actMembs = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 
             #Adding new members
             $newUsers | Foreach-Object {
@@ -561,7 +590,7 @@ foreach($roleName in $allRoles.Keys)
     }
 }
 "@
-                      New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99) | Out-Null
+                      New-MgBetaRoleManagementDirectoryRoleEligibilityScheduleRequest -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99) | Out-Null
                     }
                 }
             }
@@ -585,12 +614,12 @@ foreach($roleName in $allRoles.Keys)
         $newUsers = $permanentRoles[$roleName]
 
         $role = $allBuiltInRoles | Where-Object { $_.DisplayName -eq $roleName }
-        $actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
+        $actMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
         # TODO "roleDefinitionId eq '$($role.Id)' and principalOrganizationId eq '$AlyaTenantId'" not working
         $actMembs = $actMembs | Where-Object { $_.principalOrganizationId -eq $AlyaTenantId }
         if ($configurePIM)
         {
-          $actEliMembs = Get-MgRoleManagementDirectoryRoleAssignmentSchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty "*"
+          $actEliMembs = Get-MgBetaRoleManagementDirectoryRoleAssignmentSchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty "*"
         }
 
         #Removing inactivated members
@@ -610,17 +639,17 @@ foreach($roleName in $allRoles.Keys)
                 {
                     $principal = $null
                     try {
-                      $principal = Get-MgUser -UserId $actMemb.PrincipalId
+                      $principal = Get-MgBetaUser -UserId $actMemb.PrincipalId
                       Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
                     }
                     catch {
                       try {
-                        $principal = Get-MgGroup -GroupId $actMemb.PrincipalId
+                        $principal = Get-MgBetaGroup -GroupId $actMemb.PrincipalId
                         Write-Host "    removing group $($principal.DisplayName)" -ForegroundColor $CommandError
                       }
                       catch {
                         try {
-                          $principal = Get-MgServicePrincipal -ServicePrincipalId $actMemb.PrincipalId
+                          $principal = Get-MgBetaServicePrincipal -ServicePrincipalId $actMemb.PrincipalId
                           Write-Host "    removing service principal $($principal.DisplayName)" -ForegroundColor $CommandError
                         }
                         catch {
@@ -629,7 +658,7 @@ foreach($roleName in $allRoles.Keys)
                       }
                     }
 
-                    if ((Get-MgContext).Account -eq $principal.UserPrincipalName)
+                    if ((Get-MgBetaContext).Account -eq $principal.UserPrincipalName)
                     {
                         Write-Host "    you can't remove yourself!!!" -ForegroundColor $CommandError
                     }
@@ -645,7 +674,7 @@ foreach($roleName in $allRoles.Keys)
                           $decision = 0
                         }
                         if ($decision -eq 0) {
-                            Remove-MgRoleManagementDirectoryRoleAssignment -UnifiedRoleAssignmentId $actMemb.Id
+                            Remove-MgBetaRoleManagementDirectoryRoleAssignment -UnifiedRoleAssignmentId $actMemb.Id
                         }
                     }
                 }
@@ -657,7 +686,7 @@ foreach($roleName in $allRoles.Keys)
             # Configuring eligible role
             Write-Host "  Configuring eligible role"
             $newUsers = $eligibleRoles[$roleName]
-            $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
+            $actMembs = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 
             #Adding new members
             $actMembs | Foreach-Object {
@@ -668,17 +697,17 @@ foreach($roleName in $allRoles.Keys)
                     {
                         $principal = $null
                         try {
-                          $principal = Get-MgUser -UserId $actMemb.PrincipalId
+                          $principal = Get-MgBetaUser -UserId $actMemb.PrincipalId
                           Write-Host "    removing user $($principal.UserPrincipalName)" -ForegroundColor $CommandError
                         }
                         catch {
                           try {
-                            $principal = Get-MgGroup -GroupId $actMemb.PrincipalId
+                            $principal = Get-MgBetaGroup -GroupId $actMemb.PrincipalId
                             Write-Host "    removing group $($principal.DisplayName)" -ForegroundColor $CommandError
                           }
                           catch {
                             try {
-                              $principal = Get-MgServicePrincipal -ServicePrincipalId $actMemb.PrincipalId
+                              $principal = Get-MgBetaServicePrincipal -ServicePrincipalId $actMemb.PrincipalId
                               Write-Host "    removing service principal $($principal.DisplayName)" -ForegroundColor $CommandError
                             }
                             catch {
@@ -706,7 +735,7 @@ foreach($roleName in $allRoles.Keys)
     "action": "adminRemove"
 }
 "@
-                            New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99) | Out-Null
+                            New-MgBetaRoleManagementDirectoryRoleEligibilityScheduleRequest -AdditionalProperties ($json | ConvertFrom-Json -AsHashtable -Depth 99) | Out-Null
                         }
                     }
                 }

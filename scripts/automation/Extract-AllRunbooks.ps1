@@ -94,7 +94,7 @@ foreach($AutomationAccount in $AutomationAccounts)
     $AccountRoot = "$($SolutionDataRoot)\$($AutomationAccount.AutomationAccountName)"
     if (-Not (Test-Path -Path $AccountRoot -PathType Container))
     {
-        $tmp = New-Item -Path $AccountRoot -ItemType Directory -Force | Out-Null
+        $null = New-Item -Path $AccountRoot -ItemType Directory -Force | Out-Null
     }
     $runbooks = Get-AzAutomationRunbook -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName
     foreach($runbook in $runbooks)
@@ -102,13 +102,13 @@ foreach($AutomationAccount in $AutomationAccounts)
         Write-Host "    Exporting $($runbook.Name) to $($AccountRoot)"
         try
         {
-            $tmp = Export-AzAutomationRunbook -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName -Name $runbook.Name -Slot "Published" -OutputFolder $AccountRoot -Force
+            $null = Export-AzAutomationRunbook -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName -Name $runbook.Name -Slot "Published" -OutputFolder $AccountRoot -Force
         }
         catch
         {
             try
             {
-                $tmp = Export-AzAutomationRunbook -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName -Name $runbook.Name -Slot "Draft" -OutputFolder $AccountRoot -Force
+                $null = Export-AzAutomationRunbook -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName -Name $runbook.Name -Slot "Draft" -OutputFolder $AccountRoot -Force
             }
             catch
             {

@@ -115,21 +115,21 @@ try
 {
     & "$RootDir\33_removeAllSessions.ps1" -HostPoolName $HostPoolName
 } catch {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 try
 {
     & "$RootDir\30_removeAppGroups.ps1" -HostPoolName $HostPoolName
 } catch {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 try
 {
     & "$RootDir\31_removeSessionHosts.ps1" -HostPoolName $HostPoolName
 } catch {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 Write-Host "Removing hostpool '$($HostPoolName)'" -ForegroundColor $CommandInfo
@@ -137,7 +137,7 @@ try
 {
     Remove-RdsHostPool -TenantName $AlyaWvdTenantNameProd -Name $HostPoolName
 } catch {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 
@@ -156,7 +156,7 @@ foreach($actLock in $actLocks)
     if ($actLock.Properties.level -eq "CanNotDelete")
     {
         Write-Host "Removing lock $($actLock.Name)"
-        $tmp = $actLock | Remove-AzResourceLock -Force
+        $null = $actLock | Remove-AzResourceLock -Force
     }
 }
 

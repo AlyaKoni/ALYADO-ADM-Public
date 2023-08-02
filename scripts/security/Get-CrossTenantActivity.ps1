@@ -49,7 +49,7 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Reports"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Reports"
 Install-ModuleIfNotInstalled "MSIdentityTools"
     
 # Logins

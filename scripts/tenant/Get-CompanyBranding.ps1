@@ -60,16 +60,16 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Get-CompanyBranding | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$uri = "https://graph.microsoft.com/beta/organization/$AlyaTenantId"
+$uri = "$AlyaGraphEndpoint/beta/organization/$AlyaTenantId"
 $org = (Invoke-AzRestMethod -Uri $uri -Method GET).Content | ConvertFrom-Json
 $org | Format-List
 
-$token = Get-AzAccessToken -Audience "https://graph.microsoft.com"
+$token = Get-AzAccessToken -Audience "$AlyaGraphEndpoint"
 $headers = @{
     "Accept-Language" = 0
     "Authorization" = "Bearer $token"
 }
-$uri = "https://graph.microsoft.com/beta/organization('$AlyaTenantId')/branding"
+$uri = "$AlyaGraphEndpoint/beta/organization('$AlyaTenantId')/branding"
 $branding = Invoke-RestMethod -Uri $uri -Method GET -UseBasicParsing -Headers $headers
 
 #Stopping Transscript

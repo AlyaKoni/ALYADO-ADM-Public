@@ -208,11 +208,11 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     Write-Host "    Copying files"
     if (-Not (Test-Path "\\$($actHostName)\C$\$($AlyaCompanyName)"))
     {
-        $tmp = New-Item -Path "\\$($actHostName)\C$" -Name $AlyaCompanyName -ItemType Directory
+        $null = New-Item -Path "\\$($actHostName)\C$" -Name $AlyaCompanyName -ItemType Directory
     }
 	if ((Test-Path "$($AlyaData)\wvd\WvdAtp\WindowsDefenderATPLocalOnboardingScript.cmd"))
 	{
-		$tmp = Copy-Item "$($AlyaData)\wvd\WvdAtp\WindowsDefenderATPLocalOnboardingScript.cmd" "\\$($actHostName)\C$\$($AlyaCompanyName)\WindowsDefenderATPLocalOnboardingScript.cmd" -Force
+		$null = Copy-Item "$($AlyaData)\wvd\WvdAtp\WindowsDefenderATPLocalOnboardingScript.cmd" "\\$($actHostName)\C$\$($AlyaCompanyName)\WindowsDefenderATPLocalOnboardingScript.cmd" -Force
 	}
 	else
 	{
@@ -220,7 +220,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
 	}
     robocopy /mir "$($RootDir)\..\..\WvdIcons" "\\$($actHostName)\C$\$($AlyaCompanyName)\WvdIcons"
     robocopy /mir "$($RootDir)\..\..\WvdStartApps\$($AlyaCompanyName)" "\\$($actHostName)\C$\ProgramData\Microsoft\Windows\Start Menu\Programs\$($AlyaCompanyName)"
-    $tmp = Copy-Item "$($RootDir)\..\..\WvdTheme\$($AlyaCompanyName)Test.theme" "\\$($actHostName)\C$\Windows\resources\Themes\$($AlyaCompanyName).theme" -Force
+    $null = Copy-Item "$($RootDir)\..\..\WvdTheme\$($AlyaCompanyName)Test.theme" "\\$($actHostName)\C$\Windows\resources\Themes\$($AlyaCompanyName).theme" -Force
 
     Write-Host "    Adding diagnostics"
     $diagConfig = Get-Content -Path "$($RootDir)\diagnosticConfig.xml" -Encoding UTF8 -Raw
@@ -409,7 +409,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     $tags += @{displayName="WVD Host $($HostPoolName)"}
     $tags += @{stopTime=$AlyaWvdStopTime}
     $tags += @{ownerEmail=$Context.Account.Id}
-    $tmp = Set-AzResource -ResourceId $vm.Id -Tag $tags -ApiVersion "2022-03-01" -Force
+    $null = Set-AzResource -ResourceId $vm.Id -Tag $tags -ApiVersion "2022-03-01" -Force
 }
 
 #Stopping Transscript

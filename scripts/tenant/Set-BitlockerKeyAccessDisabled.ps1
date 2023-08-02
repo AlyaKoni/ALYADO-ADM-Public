@@ -47,7 +47,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-BitlockerKeyAccessDisabl
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logins
 LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
@@ -62,15 +62,15 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking right to read own bitlocker keys
 Write-Host "Checking right to read own bitlocker keys" -ForegroundColor $CommandInfo
-$policy = Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
+$policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
 if ($policy.DefaultUserRolePermissions.AllowedToReadBitlockerKeysForOwnedDevice)
 {
     Write-Warning "Reading own bitlocker keys was enabled. Disabling it now"
     $RolePermissions = @{}
     $RolePermissions["allowedToReadBitlockerKeysForOwnedDevice"] = $false
-    Update-MgPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
+    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
 }
-Get-MgPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
 
 #Stopping Transscript
 Stop-Transcript

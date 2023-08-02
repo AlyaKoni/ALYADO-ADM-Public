@@ -54,7 +54,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Invite-Guests-$($AlyaTimeString
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -70,13 +70,13 @@ Write-Host "=====================================================`n" -Foreground
 
 if ($sendInvitationMessage)
 {
-    Import-Module "Microsoft.Graph.Identity.SignIns"
-    $invitedUserMessageInfo = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphInvitedUserMessageInfo
-    $recptList = New-Object System.Collections.Generic.List[Microsoft.Graph.PowerShell.Models.MicrosoftGraphRecipient]
+    Import-Module "Microsoft.Graph.Beta.Identity.SignIns"
+    $invitedUserMessageInfo = New-Object Microsoft.Graph.Beta.PowerShell.Models.MicrosoftGraphInvitedUserMessageInfo
+    $recptList = New-Object System.Collections.Generic.List[Microsoft.Graph.Beta.PowerShell.Models.MicrosoftGraphRecipient]
     foreach($ccRecipient in $ccRecipients)
     {
-        $recpt = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphRecipient
-        $addr = New-Object Microsoft.Graph.PowerShell.Models.MicrosoftGraphEmailAddress
+        $recpt = New-Object Microsoft.Graph.Beta.PowerShell.Models.MicrosoftGraphRecipient
+        $addr = New-Object Microsoft.Graph.Beta.PowerShell.Models.MicrosoftGraphEmailAddress
         $addr.Address = $ccRecipient
         $recpt.EmailAddress = $addr
         $recptList.Add($recpt)
@@ -102,7 +102,7 @@ foreach($userEmailToInvite in $userEmailsToInvite)
             InvitedUserType = $invitedUserType
             SendInvitationMessage = $sendInvitationMessage
         }
-        New-MgInvitation -BodyParameter $params
+        New-MgBetaInvitation -BodyParameter $params
     }
     else
     {
@@ -113,7 +113,7 @@ foreach($userEmailToInvite in $userEmailsToInvite)
             InvitedUserType = $invitedUserType
             SendInvitationMessage = $sendInvitationMessage
         }
-        New-MgInvitation -BodyParameter $params
+        New-MgBetaInvitation -BodyParameter $params
     }
 }
 

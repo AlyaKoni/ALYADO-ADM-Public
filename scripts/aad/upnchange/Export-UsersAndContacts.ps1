@@ -59,7 +59,7 @@ Write-Host "=====================================================`n" -Foreground
 #Main
 if (-Not (Test-Path "$AlyaData\aad\upnchange"))
 {
-    $tmp = New-Item -ItemType Directory -Path "$AlyaData\aad\upnchange" -Force
+    $null = New-Item -ItemType Directory -Path "$AlyaData\aad\upnchange" -Force
 }
 
 # Exporting contacts

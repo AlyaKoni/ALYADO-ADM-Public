@@ -124,7 +124,7 @@ foreach($actLock in $actLocks)
     if ($actLock.Properties.level -eq "CanNotDelete")
     {
         Write-Host "Removing lock $($actLock.Name)"
-        $tmp = $actLock | Remove-AzResourceLock -Force
+        $null = $actLock | Remove-AzResourceLock -Force
     }
 }
 
@@ -274,7 +274,7 @@ foreach($actLock in $actLocks)
     if ($actLock.Properties.level -eq "CanNotDelete")
     {
         Write-Host "Adding lock $($actLock.Name)"
-        $tmp = Set-AzResourceLock -ResourceGroupName $VmResourceGroupName -LockName $actLock.Name -LockLevel CanNotDelete -LockNotes $actLock.Properties.notes -Force
+        $null = Set-AzResourceLock -ResourceGroupName $VmResourceGroupName -LockName $actLock.Name -LockLevel CanNotDelete -LockNotes $actLock.Properties.notes -Force
     }
 }
 

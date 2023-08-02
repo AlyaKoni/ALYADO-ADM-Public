@@ -62,7 +62,7 @@ LoginTo-MgGraph -Scopes @(
     "DeviceManagementConfiguration.ReadWrite.All",
     "DeviceManagementManagedDevices.Read.All"
 )
-#Disconnect-MgGraph
+#Disconnect-MgBetaGraph
 
 # =============================================================
 # Intune stuff
@@ -125,12 +125,12 @@ foreach($policy in $policies)
 
     # Checking if poliy is applicable
     Write-Host "  Checking if policy is applicable"
-    if ($policy."@odata.type" -eq "#microsoft.graph.iosCompliancePolicy" -and -not $appleConfigured)
+    if ($policy."@odata.type" -eq "#Microsoft.Graph.Beta.iosCompliancePolicy" -and -not $appleConfigured)
     {
         Write-Warning "iosCompliancePolicy is not applicable"
         continue
     }
-    if ($policy."@odata.type" -eq "#microsoft.graph.androidCompliancePolicy" -and -not $androidConfigured)
+    if ($policy."@odata.type" -eq "#Microsoft.Graph.Beta.androidCompliancePolicy" -and -not $androidConfigured)
     {
         Write-Warning "androidCompliancePolicy is not applicable"
         continue

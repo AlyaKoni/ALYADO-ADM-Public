@@ -48,7 +48,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Enable-AIPIntegrationInGroups-$
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
     
 # Logins
 LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
@@ -63,13 +63,13 @@ Write-Host "=====================================================`n" -Foreground
 
 # Enabling AIP integration
 Write-Host "Enabling AIP integration in AAD" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgBetaDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
-    $Setting = New-MgDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id
-    $Setting = Get-MgDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = New-MgBetaDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id
+    $Setting = Get-MgBetaDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
 $Value = $Setting.Values | Where-Object { $_.Name -eq "EnableMIPLabels" }
@@ -81,7 +81,7 @@ else {
     ($Setting.Values | Where-Object { $_.Name -eq "EnableMIPLabels" }).Value = $true
 }
 
-Update-MgDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
+Update-MgBetaDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 # TODO Syncing labels
 #Write-Host "Syncing labels" -ForegroundColor $CommandInfo

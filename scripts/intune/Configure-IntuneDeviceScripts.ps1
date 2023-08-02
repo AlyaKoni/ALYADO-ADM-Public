@@ -92,11 +92,11 @@ foreach($script in $scripts)
         $scriptName = "WIN $($script.BaseName)"
         $body = @"
 {
-    "@odata.type": "#microsoft.graph.deviceManagementScript",
+    "@odata.type": "#Microsoft.Graph.Beta.deviceManagementScript",
     "displayName": "$scriptName",
     "description": "",
     "runSchedule": {
-        "@odata.type": "microsoft.graph.runSchedule"
+        "@odata.type": "Microsoft.Graph.Beta.runSchedule"
     },
     "scriptContent": "$base64script",
     "runAsAccount": "system",

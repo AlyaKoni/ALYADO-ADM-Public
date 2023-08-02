@@ -126,7 +126,7 @@ foreach($policy in $compliancePolicies)
         'IOS Compliance Policy' { $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM" }
         'MAC Compliance Policy' { $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-MACMDM" }
     }
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($assGrp)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
     }
@@ -142,7 +142,7 @@ foreach($policy in $compliancePolicies)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
                     groupId  = $exGrp.Id          
                 }
             }
@@ -174,7 +174,7 @@ foreach($profile in $configurationProfiles)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM"
     }
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($assGrp)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
     }
@@ -189,7 +189,7 @@ foreach($profile in $configurationProfiles)
     $assignment = @{
         deviceConfigurationGroupAssignments = @(
             @{
-                "@odata.type" = "#microsoft.graph.deviceConfigurationGroupAssignment"
+                "@odata.type" = "#Microsoft.Graph.Beta.deviceConfigurationGroupAssignment"
                 targetGroupId = $exGrp.Id
                 excludeGroup = $false
             }
@@ -213,7 +213,7 @@ foreach($profile in $featureProfiles)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
     }
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($assGrp)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
     }
@@ -229,7 +229,7 @@ foreach($profile in $featureProfiles)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
                     groupId = $exGrp.Id
                     deviceAndAppManagementAssignmentFilterId = $null
                 }
@@ -250,7 +250,7 @@ foreach($profile in $qualityProfiles)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($assGrp)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
     }
@@ -262,7 +262,7 @@ foreach($profile in $qualityProfiles)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
                     groupId = $exGrp.Id
                     deviceAndAppManagementAssignmentFilterId = $null
                 }
@@ -291,7 +291,7 @@ foreach($profile in $updateProfiles)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM"
     }
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($assGrp)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
     }
@@ -307,7 +307,7 @@ foreach($profile in $updateProfiles)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
                     groupId = $exGrp.Id
                     deviceAndAppManagementAssignmentFilterId = $null
                 }
@@ -328,7 +328,7 @@ foreach($profile in $grouPolicyProfiles)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($assGrp)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
     }
@@ -344,7 +344,7 @@ foreach($profile in $grouPolicyProfiles)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
                     groupId  = $exGrp.Id          
                 }
             }
@@ -363,7 +363,7 @@ foreach($script in $scripts)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
-    $exGrp = Get-MgGroup -Filter "DisplayName eq '$($assGrp)'"
+    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
     }
@@ -378,7 +378,7 @@ foreach($script in $scripts)
     $assignment = @{
         deviceManagementScriptGroupAssignments = @(
             @{
-                "@odata.type" = "#microsoft.graph.deviceManagementScriptGroupAssignment"
+                "@odata.type" = "#Microsoft.Graph.Beta.deviceManagementScriptGroupAssignment"
                 targetGroupId = $exGrp.Id
                 id = $actScript.id
             }

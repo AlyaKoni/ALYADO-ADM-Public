@@ -106,7 +106,7 @@ if (-Not $StrgAccount)
 {
     throw "Storage account not found. Please create the storage account $StorageAccountName"
 }
-$StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName
+$StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $StorageResourceGroupName -Name $StorageAccountName
 $StrgContext = New-AzStorageContext -StorageAccountName $StorageAccountName -StorageAccountKey $StrgKeys[0].Value
 
 # Checking alyaconsulting Blob
@@ -134,7 +134,7 @@ foreach($SourceFile in $UploadItems)
     #$SourceFile = $UploadItems[0]
     $relPath = $SourceFile.FullName.Replace($FromLocalDir, "")
     Write-Host "  - $relPath"
-    $mime = [System.Web.MimeMapping]::GetMimeMapping($SourceFile.FullName)
+    $mime = Get-MimeType -Extension ([System.IO.Path]::GetExtension($SourceFile.FullName))
     if ($SourceFile.FullName.EndsWith(".json")) { $mime = "application/json" }
     if ($SourceFile.FullName.EndsWith(".svg")) { $mime = "image/svg+xml" }
     $BlobName = $relPath.Substring(1)
@@ -152,7 +152,7 @@ foreach($SourceFile in $UploadItems)
         if ($DestinationBlob.ICloudBlob.Properties.ContentMD5 -ne $hash)
         {
 			Write-Host "    + Creating Snapshot"
-			$Tmp = $DestinationBlob.ICloudBlob.CreateSnapshot()
+			$null = $DestinationBlob.ICloudBlob.CreateSnapshot()
 		    Write-Host "    + Copying blob"
             $DestinationBlob = Set-AzStorageBlobContent -File $SourceFile.FullName -Context $StrgContext -Container $ToStorageBlobContainer -Blob $BlobName -Force
         }

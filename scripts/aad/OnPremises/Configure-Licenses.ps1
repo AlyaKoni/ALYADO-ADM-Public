@@ -53,7 +53,7 @@ if (-Not $inputFile)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module ActiveDirectory
+Check-Module "ActiveDirectory"
 #Import-Module "ActiveDirectory" -ErrorAction Stop
 Install-ModuleIfNotInstalled "ImportExcel"
 

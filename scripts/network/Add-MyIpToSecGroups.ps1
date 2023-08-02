@@ -146,7 +146,7 @@ foreach ($Subnet in $Subnets)
         if (-Not $Rule)
         {
             Write-Warning "Rule not found. Creating the rule $($SecGroupRuleName) on network security group $($SecGroupRes.Name)"
-            $tmp = $SecGroup | Add-AzNetworkSecurityRuleConfig -Name $SecGroupRuleName -Description "Allows RDP for specific addresses" -Access Allow `
+            $null = $SecGroup | Add-AzNetworkSecurityRuleConfig -Name $SecGroupRuleName -Description "Allows RDP for specific addresses" -Access Allow `
                 -Protocol * -Direction Inbound -Priority 3333 -SourceAddressPrefix $myIp -SourcePortRange * `
                 -DestinationAddressPrefix * -DestinationPortRange 3389
             $dirty = $true
@@ -157,13 +157,13 @@ foreach ($Subnet in $Subnets)
             if ($Rule.SourceAddressPrefix -notcontains $myIp)
             {
                 Write-Warning "IP not found in rule. Adding the ip $($myIp) on network security group $($SecGroupRes.Name)"
-                $tmp = $Rule.SourceAddressPrefix.Add($myIp)
+                $null = $Rule.SourceAddressPrefix.Add($myIp)
                 $dirty = $true
             }
         }
         if ($dirty)
         {
-            $tmp = $SecGroup | Set-AzNetworkSecurityGroup
+            $null = $SecGroup | Set-AzNetworkSecurityGroup
         }
     }
 }

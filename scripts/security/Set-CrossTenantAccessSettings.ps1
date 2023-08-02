@@ -30,7 +30,8 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    18.10.2020 Konrad Brunner       Initial Version
+    18.10.2022 Konrad Brunner       Initial Version
+    24.07.2023 Konrad Brunner       Added collaboration and other settings
 
 #>
 
@@ -46,14 +47,11 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-CrossTenantAccessSetti
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Reports"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Reports"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
     
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.CrossTenantAccess")
 
 # =============================================================
@@ -61,73 +59,158 @@ LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.CrossTenantAccess"
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-CrossTenantAccessSettings | AZURE" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-CrossTenantAccessSettings | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$policies = Get-MgPolicyCrossTenantAccessPolicy
-$partners = Get-MgPolicyCrossTenantAccessPolicyPartner
+$policies = Get-MgBetaPolicyCrossTenantAccessPolicy
+$partners = Get-MgBetaPolicyCrossTenantAccessPolicyPartner
 
-foreach($tenant in $AlyaFullTrustCrossTenantDirectConnectAccess)
+Write-Warning "Actually we do not have an api to check if the"
+Write-Warning "'Microsoft cloud settings' are configured. Please check"
+Write-Warning "if the cloud env is active your partners relies to."
+
+foreach($tenant in $AlyaFullTrustCrossTenantAccess)
 {
-    Write-Host "Tenant '$($tenant.Name)' $($tenant.Id)" -ForegroundColor $CommandInfo
-    $partner = $partners | Where-Object { $_.TenantId -eq $tenant.Id }
+    Write-Host "Tenant '$($tenant.Name)' $($tenant.TenantId)" -ForegroundColor $CommandInfo
+    $partner = $partners | Where-Object { $_.TenantId -eq $tenant.TenantId }
+
+    $EnableCollaboration = $false
+    $EnableDirectConnect = $false
+    $IsMfaAccepted = $true
+    $IsCompliantDeviceAccepted = $false
+    $IsHybridAzureADJoinedDeviceAccepted = $false
+    $AllowUsersSync = $false
+    $AutomaticRedemption = $false
+    if ($null -ne $tenant.EnableCollaboration) { $EnableCollaboration = $tenant.EnableCollaboration }
+    if ($null -ne $tenant.EnableDirectConnect) { $EnableDirectConnect = $tenant.EnableDirectConnect }
+    if ($null -ne $tenant.IsMfaAccepted) { $IsMfaAccepted = $tenant.IsMfaAccepted }
+    if ($null -ne $tenant.IsCompliantDeviceAccepted) { $IsCompliantDeviceAccepted = $tenant.IsCompliantDeviceAccepted }
+    if ($null -ne $tenant.IsHybridAzureADJoinedDeviceAccepted) { $IsHybridAzureADJoinedDeviceAccepted = $tenant.IsHybridAzureADJoinedDeviceAccepted }
+    if ($null -ne $tenant.AllowUsersSync) { $AllowUsersSync = $tenant.AllowUsersSync }
+    if ($null -ne $tenant.AutomaticRedemption) { $AutomaticRedemption = $tenant.AutomaticRedemption }
+
+    if ($null -ne $tenant.CloudEnv) {
+       Write-Host "  from cloud $($tenant.CloudEnv)" -ForegroundColor $CommandInfo
+    }
+
     $params = @{
-	    TenantId = $tenant.Id
-	    B2bDirectConnectOutbound = @{
-		    UsersAndGroups = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllUsers"
-					    TargetType = "user"
-				    }
-			    )
-		    }
-		    Applications = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllApplications"
-					    TargetType = "application"
-				    }
-			    )
-		    }
-	    }
-	    B2bDirectConnectInbound = @{
-		    UsersAndGroups = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllUsers"
-					    TargetType = "user"
-				    }
-			    )
-		    }
-		    Applications = @{
-			    AccessType = "allowed"
-			    Targets = @(
-				    @{
-					    Target = "AllApplications"
-					    TargetType = "application"
-				    }
-			    )
-		    }
-	    }
+	    TenantId = $tenant.TenantId
         InboundTrust = @{
-            IsMfaAccepted = $true
-            IsCompliantDeviceAccepted = $false
-            IsHybridAzureADJoinedDeviceAccepted = $false
+            IsMfaAccepted = $IsMfaAccepted
+            IsCompliantDeviceAccepted = $IsCompliantDeviceAccepted
+            IsHybridAzureADJoinedDeviceAccepted = $IsHybridAzureADJoinedDeviceAccepted
+        }
+        AutomaticUserConsentSettings = @{
+            InboundAllowed = $AutomaticRedemption
+            OutboundAllowed = $AutomaticRedemption
+        }
+        <#IdentitySynchronization = @{
+            UserSyncInbound = @{
+                IsSyncAllowed = $AllowUsersSync
+            }
+        }#>
+    }
+    if ($EnableDirectConnect)
+    {
+        $params.B2bDirectConnectOutbound = @{
+            UsersAndGroups = @{
+                AccessType = "allowed"
+                Targets = @(
+                    @{
+                        Target = "AllUsers"
+                        TargetType = "user"
+                    }
+                )
+            }
+            Applications = @{
+                AccessType = "allowed"
+                Targets = @(
+                    @{
+                        Target = "AllApplications"
+                        TargetType = "application"
+                    }
+                )
+            }
+        }
+        $params.B2bDirectConnectInbound = @{
+            UsersAndGroups = @{
+                AccessType = "allowed"
+                Targets = @(
+                    @{
+                        Target = "AllUsers"
+                        TargetType = "user"
+                    }
+                )
+            }
+            Applications = @{
+                AccessType = "allowed"
+                Targets = @(
+                    @{
+                        Target = "AllApplications"
+                        TargetType = "application"
+                    }
+                )
+            }
         }
     }
+    if ($EnableCollaboration)
+    {
+        $params.B2bCollaborationOutbound = @{
+            UsersAndGroups = @{
+                AccessType = "allowed"
+                Targets = @(
+                    @{
+                        Target = "AllUsers"
+                        TargetType = "user"
+                    }
+                )
+            }
+            Applications = @{
+                AccessType = "allowed"
+                Targets = @(
+                    @{
+                        Target = "AllApplications"
+                        TargetType = "application"
+                    }
+                )
+            }
+        }
+        $params.B2bCollaborationInbound = @{
+            UsersAndGroups = @{
+                AccessType = "allowed"
+                Targets = @(
+                    @{
+                        Target = "AllUsers"
+                        TargetType = "user"
+                    }
+                )
+            }
+            Applications = @{
+                AccessType = "allowed"
+                Targets = @(
+                    @{
+                        Target = "AllApplications"
+                        TargetType = "application"
+                    }
+                )
+            }
+        }
+    }
+
     if (-Not $partner)
     {
         Write-Host "  Creating policy"
-        New-MgPolicyCrossTenantAccessPolicyPartner -BodyParameter $params
+        New-MgBetaPolicyCrossTenantAccessPolicyPartner -BodyParameter $params
     }
     else
     {
         Write-Host "  Updating policy"
-        Update-MgPolicyCrossTenantAccessPolicyPartner -CrossTenantAccessPolicyConfigurationPartnerTenantId $tenant.Id -BodyParameter $params
+        Update-MgBetaPolicyCrossTenantAccessPolicyPartner -CrossTenantAccessPolicyConfigurationPartnerTenantId $tenant.TenantId -BodyParameter $params
+    }
+
+    if ($AllowUsersSync)
+    {
+        Write-Warning "We have actually issues, configuring AllowUsersSync. Pleas eupdate it by hand"
     }
 
 }

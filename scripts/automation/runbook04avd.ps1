@@ -66,7 +66,7 @@ try {
 	$RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
 	Write-Output "Logging in to Az ($AzureEnvironment)..."
     Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
-	$tmp = Add-AzAccount `
+	$null = Add-AzAccount `
 		-ServicePrincipal `
 		-TenantId $RunAsConnection.TenantId `
         -SubscriptionId $RunAsConnection.SubscriptionId `
@@ -148,7 +148,7 @@ try {
 		                    if (-Not ($infTime -lt $stopTime -and $infTime -gt $startTime))
 		                    {
 								$hostName = $vm.Name + "." + $AlyaLocalDomainName
-								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+								$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 								$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
 								foreach ($hpool in $hpools)
 								{
@@ -165,7 +165,7 @@ try {
 										}
 									}
 								}
-								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+								$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 								$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
 								foreach ($hpool in $hpools)
 								{
@@ -206,7 +206,7 @@ try {
 									{
 										"- Stopping VM"
 										$hostName = $vm.Name + "." + $AlyaLocalDomainName
-										$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+										$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 										$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
 										foreach ($hpool in $hpools)
 										{
@@ -224,7 +224,7 @@ try {
 												}
 											}
 										}
-										$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+										$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 										$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
 										foreach ($hpool in $hpools)
 										{
@@ -255,7 +255,7 @@ try {
 		                    if ($infTime -lt $startTime -and $infTime -gt $stopTime)
 		                    {
 								$hostName = $vm.Name + "." + $AlyaLocalDomainName
-								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+								$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 								$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
 								foreach ($hpool in $hpools)
 								{
@@ -272,7 +272,7 @@ try {
 										}
 									}
 								}
-								$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+								$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 								$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
 								foreach ($hpool in $hpools)
 								{
@@ -300,7 +300,7 @@ try {
 									{
 										"- Stopping VM"
 										$hostName = $vm.Name + "." + $AlyaLocalDomainName
-										$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+										$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 										$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
 										foreach ($hpool in $hpools)
 										{
@@ -318,7 +318,7 @@ try {
 												}
 											}
 										}
-										$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+										$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 										$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
 										foreach ($hpool in $hpools)
 										{
@@ -382,7 +382,7 @@ try {
 		                if ($infTime -gt $stopTime)
 		                {
 							$hostName = $vm.Name + "." + $AlyaLocalDomainName
-							$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+							$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 							$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
 							foreach ($hpool in $hpools)
 							{
@@ -399,7 +399,7 @@ try {
 									}
 								}
 							}
-							$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+							$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 							$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
 							foreach ($hpool in $hpools)
 							{
@@ -427,7 +427,7 @@ try {
 							    {
 								    "- Stopping VM"
 									$hostName = $vm.Name + "." + $AlyaLocalDomainName
-									$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+									$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdTestAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 									$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameTest
 									foreach ($hpool in $hpools)
 									{
@@ -445,7 +445,7 @@ try {
 											}
 										}
 									}
-									$tmp = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
+									$null = Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $WvdProdAppCred -ServicePrincipal -AadTenantId $AlyaTenantId
 									$hpools = Get-RdsHostPool -TenantName $AlyaWvdTenantNameProd
 									foreach ($hpool in $hpools)
 									{

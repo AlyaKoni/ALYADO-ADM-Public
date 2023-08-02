@@ -190,7 +190,7 @@ else
                         $rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
                         if (-not $rule)
                         {
-                            $tmp = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Any -Program $progPath -Action Allow -Protocol $prot
+                            $null = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Any -Program $progPath -Action Allow -Protocol $prot
                         }
                     }
                 }
@@ -204,7 +204,7 @@ else
     }
     catch
     {   
-        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
         Write-Error ($_.Exception) -ErrorAction Continue
         $exitCode = -1
     }

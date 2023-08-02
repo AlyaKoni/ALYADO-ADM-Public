@@ -29,7 +29,7 @@
 
 
     History:
-    Date       Author     Description
+    Date       Author               Description
     ---------- -------------------- ----------------------------
     13.03.2019 Konrad Brunner       Initial Version
 
@@ -178,7 +178,7 @@ New-Module -Script {
             $scopeStart = $scope.StartScope()
             $scopeTry = $scope.StartTry()
             $spUrl = ($dstUrl.Trim("/") + "/" + $relUrl.Trim("/")).Replace($global:siteUrl, "")
-            if (-not $global:checkedOut.Contains($spUrl)) { $tmp = $global:checkedOut.Add($spUrl) }
+            if (-not $global:checkedOut.Contains($spUrl)) { $null = $global:checkedOut.Add($spUrl) }
             $file = $ctx.Web.GetFileByServerRelativeUrl($spUrl)
             $ctx.Load($file)
             $ctx.Load($file.ListItemAllFields)
@@ -215,7 +215,7 @@ New-Module -Script {
                         $folderNames = $parentFolder.Folders | Select-Object -ExpandProperty Name
                         if($folderNames -notcontains $folderNames)
                         {
-                            $tmp = $parentFolder.Folders.Add($dir)
+                            $null = $parentFolder.Folders.Add($dir)
                             $ctx.ExecuteQuery()
                         }
                         $relDir = $relDir + "/" + $dir
@@ -259,7 +259,7 @@ New-Module -Script {
         $scopeStart = $scope.StartScope()
         $scopeTry = $scope.StartTry()
         $spUrl = ($dstUrl.Trim("/") + "/" + $relUrlOld.Trim("/")).Replace($global:siteUrl, "")
-        if ($global:checkedOut.Contains($spUrl)) { $tmp = $global:checkedOut.Remove($spUrl) }
+        if ($global:checkedOut.Contains($spUrl)) { $null = $global:checkedOut.Remove($spUrl) }
         $file = $ctx.Web.GetFileByServerRelativeUrl($spUrl)
         $ctx.Load($file)
         $ctx.Load($file.ListItemAllFields)
@@ -271,7 +271,7 @@ New-Module -Script {
         if ($file.Exists)
         {
             $spUrl = ($dstUrl.Trim("/") + "/" + $relUrlNew.Trim("/")).Replace($global:siteUrl, "")
-            if (-not $global:checkedOut.Contains($spUrl)) { $tmp = $global:checkedOut.Add($spUrl) }
+            if (-not $global:checkedOut.Contains($spUrl)) { $null = $global:checkedOut.Add($spUrl) }
             $file.MoveTo($spUrl, [Microsoft.SharePoint.Client.MoveOperations]::Overwrite)
             $ctx.ExecuteQuery()
             Write-Host "  Moved"
@@ -291,7 +291,7 @@ New-Module -Script {
         $file = $ctx.Web.GetFileByServerRelativeUrl($spUrl)
         $file.DeleteObject()
         $ctx.ExecuteQuery()
-        if ($global:checkedOut.Contains($spUrl)) { $tmp = $global:checkedOut.Remove($spUrl) }
+        if ($global:checkedOut.Contains($spUrl)) { $null = $global:checkedOut.Remove($spUrl) }
         Write-Host "  Done"
     }
 
@@ -320,7 +320,7 @@ New-Module -Script {
                 $folderNames = $parentFolder.Folders | Select-Object -ExpandProperty Name
                 if($folderNames -notcontains $folderNames)
                 {
-                    $tmp = $parentFolder.Folders.Add($dir)
+                    $null = $parentFolder.Folders.Add($dir)
                     $ctx.ExecuteQuery()
                 }
                 $relDir = $relDir + "/" + $dir
@@ -469,7 +469,7 @@ New-Module -Script {
             $global:dsw = New-Object IO.FileSystemWatcher "$global:srcFolder", $global:dirFilter -Property @{IncludeSubdirectories = $true; NotifyFilter = [IO.NotifyFilters]'DirectoryName'}
 
             Write-Host "Registering FileCreated-$($global:regGuid)"
-            $tmp = Register-ObjectEvent $global:fsw Created -SourceIdentifier "FileCreated-$($global:regGuid)" -Action {
+            $null = Register-ObjectEvent $global:fsw Created -SourceIdentifier "FileCreated-$($global:regGuid)" -Action {
                 try
                 {
                     Handle-Upload $Event
@@ -482,7 +482,7 @@ New-Module -Script {
             }
 
             Write-Host "Registering DirectoryCreated-$($global:regGuid)"
-            $tmp = Register-ObjectEvent $global:dsw Created -SourceIdentifier "DirectoryCreated-$($global:regGuid)" -Action {
+            $null = Register-ObjectEvent $global:dsw Created -SourceIdentifier "DirectoryCreated-$($global:regGuid)" -Action {
                 try
                 {
                     Handle-CreateDirectory $Event
@@ -495,7 +495,7 @@ New-Module -Script {
             }
 
             Write-Host "Registering FileDeleted-$($global:regGuid)"
-            $tmp = Register-ObjectEvent $global:fsw Deleted -SourceIdentifier "FileDeleted-$($global:regGuid)" -Action {
+            $null = Register-ObjectEvent $global:fsw Deleted -SourceIdentifier "FileDeleted-$($global:regGuid)" -Action {
                 try
                 {
                     Handle-FileDelete $Event
@@ -508,7 +508,7 @@ New-Module -Script {
             }
 
             Write-Host "Registering DirectoryDeleted-$($global:regGuid)"
-            $tmp = Register-ObjectEvent $global:dsw Deleted -SourceIdentifier "DirectoryDeleted-$($global:regGuid)" -Action {
+            $null = Register-ObjectEvent $global:dsw Deleted -SourceIdentifier "DirectoryDeleted-$($global:regGuid)" -Action {
                 try
                 {
                     Handle-DirectoryDelete $Event
@@ -521,7 +521,7 @@ New-Module -Script {
             }
 
             Write-Host "Registering FileRenamed-$($global:regGuid)"
-            $tmp = Register-ObjectEvent $global:fsw Renamed -SourceIdentifier "FileRenamed-$($global:regGuid)" -Action {
+            $null = Register-ObjectEvent $global:fsw Renamed -SourceIdentifier "FileRenamed-$($global:regGuid)" -Action {
                 try
                 {
                     Handle-FileRename $Event
@@ -534,7 +534,7 @@ New-Module -Script {
             }
 
             Write-Host "Registering DirectoryRenamed-$($global:regGuid)"
-            $tmp = Register-ObjectEvent $global:dsw Renamed -SourceIdentifier "DirectoryRenamed-$($global:regGuid)" -Action {
+            $null = Register-ObjectEvent $global:dsw Renamed -SourceIdentifier "DirectoryRenamed-$($global:regGuid)" -Action {
                 try
                 {
                     Handle-DirectoryRename $Event
@@ -547,7 +547,7 @@ New-Module -Script {
             }
 
             Write-Host "Registering FileChanged-$($global:regGuid)"
-            $tmp = Register-ObjectEvent $global:fsw Changed -SourceIdentifier "FileChanged-$($global:regGuid)" -Action {
+            $null = Register-ObjectEvent $global:fsw Changed -SourceIdentifier "FileChanged-$($global:regGuid)" -Action {
                 try
                 {
                     Handle-Upload $Event
@@ -560,7 +560,7 @@ New-Module -Script {
             }
 
             Write-Host "Registering FileError-$($global:regGuid)"
-            $tmp = Register-ObjectEvent $global:fsw Error -SourceIdentifier "FileError-$($global:regGuid)" -Action {
+            $null = Register-ObjectEvent $global:fsw Error -SourceIdentifier "FileError-$($global:regGuid)" -Action {
                 try
                 {
                     Handle-Error $Event

@@ -62,7 +62,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring default time zone
 Write-Host "Configuring default time zone" -ForegroundColor $CommandInfo
-$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings"
 $timeZoneEn = "(UTC) Dublin, Edinburgh, Lisbon, London"
 $timeZoneDe = "(UTC) Dublin, Edinburgh, Lisbon, London"
 switch ($AlyaTimeZone)
@@ -71,6 +71,10 @@ switch ($AlyaTimeZone)
         $timeZoneEn = "(UTC+01:00) Amsterdam, Berlin, Bern, Rome, Stockholm, Vienna"
         $timeZoneDe = "(UTC+01:00) Amsterdam, Berlin, Bern, Rom, Stockholm, Wien"
     }
+    "China Standard Time" {
+        $timeZoneEn = "(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi"
+        $timeZoneDe = "(UTC+08:00) Beijing, Chongqing, Hong Kong, Urumqi"
+    }
 }
 
 if ($setting.tenantDefaultTimezone -ne $timeZoneEn -and $setting.tenantDefaultTimezone -ne $timeZoneDe){
@@ -78,7 +82,7 @@ if ($setting.tenantDefaultTimezone -ne $timeZoneEn -and $setting.tenantDefaultTi
     $newSettings = @{
         "tenantDefaultTimezone" = $AlyaTimeZone
     }
-    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+    Invoke-MgGraphRequest -Method "Patch" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
 else {
     Write-host "Default TimeZone was alreadyset to '$timeZoneEn'"

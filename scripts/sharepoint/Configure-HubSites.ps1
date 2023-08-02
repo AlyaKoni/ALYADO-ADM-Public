@@ -239,7 +239,7 @@ foreach($hubSite in $hubSites)
         else
         {
             Write-Host "Updating site script $SubSiteScriptName"
-            $tmp = Set-PnPSiteScript -Connection $adminCon -Identity $SubSiteScript -Title $SubSiteScriptName -Content $hubSite.subSiteScript -Description $hubSite.siteScriptDescription
+            $null = Set-PnPSiteScript -Connection $adminCon -Identity $SubSiteScript -Title $SubSiteScriptName -Content $hubSite.subSiteScript -Description $hubSite.siteScriptDescription
             $SubSiteScript = Get-PnPSiteScript -Connection $adminCon | Where-Object { $_.Title -eq "$SubSiteScriptName"}
         }
 
@@ -354,7 +354,7 @@ if (-Not $createHubSitesOnly)
                     if (-Not $nav)
                     {
                         Write-Host ("Adding nav node title={0} url={1}" -f $hubSiteI.title, $hubSiteI.url)
-                        $tmp = Add-PnPNavigationNode -Connection $siteCon -Location TopNavigationBar -Title $hubSiteI.title -Url "$($AlyaSharePointUrl)/sites/$($hubSiteI.url)"
+                        $null = Add-PnPNavigationNode -Connection $siteCon -Location TopNavigationBar -Title $hubSiteI.title -Url "$($AlyaSharePointUrl)/sites/$($hubSiteI.url)"
                     }
                 }
             }
@@ -516,6 +516,15 @@ if (-Not $createHubSitesOnly)
     $group = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
     Add-PnPGroupMember -Connection $siteCon -Group $group -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
     Add-PnPGroupMember -Connection $siteCon -Group $group -EmailAddress "$AlyaAllExternals@$AlyaDomainName" -SendEmail:$false
+    $group = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
+    $members = Get-PnPGroupMember -Connection $siteCon -Group $group
+    foreach($member in $members)
+    {
+        if ($member.LoginName.Contains("spo-grid-all-users"))
+        {
+            Remove-PnPGroupMember -Connection $siteCon -Group $group -LoginName $member.LoginName
+        }
+    }
 }
 
 # Processing Hub Site Start Pages
@@ -534,7 +543,7 @@ if (-Not $createHubSitesOnly)
 		    $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
             $tempFile = [System.IO.Path]::GetTempFileName()
             $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
-            $tmp = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
+            $null = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
             Remove-Item -Path $tempFile
         }
         #Set-PnPTraceLog -Off
@@ -546,7 +555,7 @@ if (-Not $createHubSitesOnly)
             Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
             $tempFile = [System.IO.Path]::GetTempFileName()
             $homePageTemplateRootTeamSite | Set-Content -Path $tempFile -Encoding UTF8
-            $tmp = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
+            $null = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
             Remove-Item -Path $tempFile
         }
     }

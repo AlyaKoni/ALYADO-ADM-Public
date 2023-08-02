@@ -50,7 +50,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-DefaultUsageLocation-$($
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -64,11 +64,11 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-DefaultUsageLocation | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$org = Get-MgOrganization -OrganizationId $AlyaTenantId
+$org = Get-MgBetaOrganization -OrganizationId $AlyaTenantId
 if ([string]::IsNullOrEmpty($org.DefaultUsageLocation))
 {
     Write-Warning "DefaultUsageLocation is not set. Setting it to $AlyaDefaultUsageLocation"
-    Update-MgOrganization -OrganizationId $AlyaTenantId -DefaultUsageLocation $AlyaDefaultUsageLocation
+    Update-MgBetaOrganization -OrganizationId $AlyaTenantId -DefaultUsageLocation $AlyaDefaultUsageLocation
 }
 else
 {

@@ -70,7 +70,7 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Checking  license" -ForegroundColor $CommandInfo
 try
 {
-    $actMembs = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
+    $actMembs = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -All -ExpandProperty Principal
 }
 catch
 {
@@ -86,7 +86,7 @@ catch
 
 # Getting user
 Write-Host "Getting user" -ForegroundColor $CommandInfo
-$user = Get-MgUser -UserId $userPrincipalName
+$user = Get-MgBetaUser -UserId $userPrincipalName
 if (-Not $user)
 {
     throw "User $userPrincipalName not found!"
@@ -94,11 +94,11 @@ if (-Not $user)
 
 # Getting all built in roles
 Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
-$roleDefinitions = Get-MgRoleManagementDirectoryRoleDefinition -All
+$roleDefinitions = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
 
 # Getting  eligable role assignments
 Write-Host "Getting eligable role assignments" -ForegroundColor $CommandInfo
-$assignedRoles = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
+$assignedRoles = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
 $role = $roleDefinitions | Where-Object { $_.DisplayName -eq $roleName }
 if (-Not $role)
 {
@@ -128,7 +128,7 @@ $params = @{
 		}
 	}
 }
-New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -BodyParameter $params
+New-MgBetaRoleManagementDirectoryRoleEligibilityScheduleRequest -BodyParameter $params
 
 #Stopping Transscript
 Stop-Transcript

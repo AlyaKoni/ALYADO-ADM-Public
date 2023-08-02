@@ -76,7 +76,7 @@ if (-Not $Context)
 
 # Getting source conditional access policy
 Write-Host "Getting source conditional access policy" -ForegroundColor $CommandInfo
-$policies = (Invoke-AzRestMethod -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies").Content | ConvertFrom-Json
+$policies = (Invoke-AzRestMethod -Uri "$AlyaGraphEndpoint/beta/identity/conditionalAccess/policies").Content | ConvertFrom-Json
 $srcPolicyId = ($policies.value | Where-Object { $_.displayName -eq $srcCondAccessRuleName }).id
 if (-Not $srcPolicyId)
 {

@@ -94,10 +94,10 @@ foreach($dir in $dirs)
     if (-Not $userFnd -Or -Not $adminFnd)
     {
         Write-Host "  - User not found, adding"
-        $tmp = $acl.SetAccessRuleProtection($true, $false)
+        $null = $acl.SetAccessRuleProtection($true, $false)
         foreach($acc in $acl.Access)
         {
-            $tmp = $acl.RemoveAccessRule($acc)
+            $null = $acl.RemoveAccessRule($acc)
         }
         $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($AuthSystemSID, $AccessFullControl, $InheritanceFlagContainerAndObject, $PropagationFlagNone, $AccessTypeAllow)
         $acl.SetAccessRule($accessRule)

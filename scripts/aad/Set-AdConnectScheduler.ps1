@@ -29,4 +29,9 @@
 
 #>
 
-Set-ADSyncScheduler -CustomizedSyncCycleInterval 00:15:00
+[CmdletBinding()]
+Param(
+    [int]$minutes = 30
+)
+
+Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($minutes):00"

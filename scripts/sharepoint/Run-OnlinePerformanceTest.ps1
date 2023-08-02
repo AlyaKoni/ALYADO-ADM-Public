@@ -28,7 +28,7 @@
 
 
     History:
-    Date       Author     Description
+    Date       Author               Description
     ---------- -------------------- ----------------------------
     13.03.2019 Konrad Brunner       Initial Version
 
@@ -201,7 +201,7 @@ function Do-Request ($URL, $fromURL)
     }
     catch
     {
-		try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+		try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 		Write-Error ($_.Exception) -ErrorAction Continue
         Write-Host "    Error in request" -ForegroundColor $CommandError
         Write-Host "    $_.Exception.Message" -ForegroundColor $CommandError

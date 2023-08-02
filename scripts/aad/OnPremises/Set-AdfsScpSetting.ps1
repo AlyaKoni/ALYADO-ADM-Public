@@ -65,7 +65,7 @@ Windows Registry Editor Version 5.00
 
 if (-Not (Test-Path "$($AlyaData)\aad\OnPremises"))
 {
-    $tmp = New-Item -Path "$($AlyaData)\aad\OnPremises" -ItemType Directory -Force
+    $null = New-Item -Path "$($AlyaData)\aad\OnPremises" -ItemType Directory -Force
 }
 
 $regData | Set-Content -Path "$($AlyaData)\aad\OnPremises\AdfsScpSetting.reg" -Encoding UTF8 -Force

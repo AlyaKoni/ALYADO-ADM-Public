@@ -40,7 +40,7 @@ $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
 {
-    $tmp = New-Item -Path $contentRoot -ItemType Directory -Force
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
 
 Invoke-WebRequest -UseBasicParsing -Uri $newUrl -Method Get -OutFile "$contentRoot\iTunes64Setup.exe"

@@ -56,7 +56,7 @@ if (-Not $GroupToDisableExternalGuests)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
     
 # Logins
 LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
@@ -71,7 +71,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking group
 Write-Host "Checking group" -ForegroundColor $CommandInfo
-$Group = Get-MgGroup -Filter "DisplayName eq '$GroupToAllowExternalGuests'"
+$Group = Get-MgBetaGroup -Filter "DisplayName eq '$GroupToAllowExternalGuests'"
 if (-Not $Group)
 {
     throw "Group '$GroupToAllowExternalGuests' not found"
@@ -79,8 +79,8 @@ if (-Not $Group)
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
-$Setting = Get-MgGroupSetting -GroupId $Group.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+$Setting = Get-MgBetaGroupSetting -GroupId $Group.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
@@ -88,8 +88,8 @@ if (-Not $Setting)
     foreach($dval in $SettingTemplate.Values) {
 	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
     }
-    $Setting = New-MgGroupSetting -GroupId $Group.Id -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgGroupSetting -GroupId $Group.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = New-MgBetaGroupSetting -GroupId $Group.Id -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgBetaGroupSetting -GroupId $Group.Id | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 
 $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
@@ -101,7 +101,7 @@ else {
     ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $false
 }
 
-Update-MgGroupSetting -GroupId $Group.Id -DirectorySettingId $Setting.Id -Values $Setting.Values
+Update-MgBetaGroupSetting -GroupId $Group.Id -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 #Stopping Transscript
 Stop-Transcript

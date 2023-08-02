@@ -34,6 +34,7 @@
     30.06.2022 Konrad Brunner       Change from REST to AzureAdPreview
     24.04.2023 Konrad Brunner       Switched to Graph, removed MSOL
     27.04.2023 Konrad Brunner       Calling script to disable security defaults
+    23.07.2023 Konrad Brunner       Power BI Administrator sometimes not there
 
 #>
 
@@ -51,9 +52,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-ConditionalAccessPolic
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 
 # Logins
@@ -79,7 +80,7 @@ else
     $NoMfaGroupName = $AlyaMfaDisabledGroupName
 }
 
-$GrpRslt = Get-MgGroup -Filter "DisplayName eq '$($NoMfaGroupName)'"
+$GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($NoMfaGroupName)'"
 if (-Not $GrpRslt)
 {
     Write-Host "No MFA group not found. Creating the No MFA group $NoMfaGroupName" -ForegroundColor $CommandError
@@ -111,7 +112,8 @@ $roleDefs = @(
     "Printer Administrator",
     "Privileged Authentication Administrator",
     "Search Administrator",
-    "Security Administrator",
+    "Search Administrator",
+    "Service Support Administrator",
     "Skype for Business Administrator",
     "SharePoint Administrator",
     "Teams Administrator",
@@ -125,15 +127,17 @@ $roleDefs = @(
 )
 $IncludeRoleIds = @()
 $ExcludeRoleIds = @()
-$allRoles = Get-MgRoleManagementDirectoryRoleDefinition -All
+$allRoles = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
 foreach($roleName in $roleDefs)
 {
     $role = $allRoles | Where-Object { $_.Displayname -eq $roleName }
     if (-Not $role)
     {
-        throw "Role $roleName not found!"
+        Write-Warning "Role $roleName not found!"
     }
-    $IncludeRoleIds += $role.Id
+    else {
+        $IncludeRoleIds += $role.Id
+    }
 }
 $ExcludeRoleIds = $IncludeRoleIds
 $syncrole = $allRoles | Where-Object { $_.Displayname -eq "Directory Synchronization Accounts" }
@@ -141,11 +145,26 @@ $ExcludeRoleIds += $syncrole.Id
 
 # Getting actual access policies
 Write-Host "Getting actual access policies" -ForegroundColor $CommandInfo
-$ActPolicies = Get-MgIdentityConditionalAccessPolicy -All
+$ActPolicies = Get-MgBetaIdentityConditionalAccessPolicy -All
 
 # Specifying processing state
 $procState = "Enabled"
 if ($ReportOnly) { $procState = "EnabledForReportingButNotEnforced" }
+
+# Checking groups to exclude
+Write-Host "Checking groups to exclude" -ForegroundColor $CommandInfo
+$ExcludeGroupIds = @()
+foreach($groupName in $AlyaMfaDisabledForGroups)
+{
+    if ($groupName -eq "PleaseSpecify") { continue }
+    $GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($groupName)'"
+    if (-Not $GrpRslt)
+    {
+        throw "Group $groupName not found!"
+    }
+    $ExcludeGroupIds += $GrpRslt.Id
+}
+$ExcludeGroupIds += $ExcludeGroupId #NOMFAGroup
 
 # Checking all admins access policy
 Write-Host "Checking all admins access policy" -ForegroundColor $CommandInfo
@@ -155,7 +174,7 @@ $conditions = @{
     }
     Users = @{
         includeRoles = $IncludeRoleIds
-        excludeGroups = @("$ExcludeGroupId")
+        excludeGroups = $ExcludeGroupIds
     }
 }
 $grantcontrols  = @{
@@ -166,7 +185,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "MFA: Required for
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'MFA: Required for all admins'"
-    $policyObj = New-MgIdentityConditionalAccessPolicy `
+    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
         -DisplayName "MFA: Required for all admins" `
         -State $procState `
         -Conditions $conditions `
@@ -175,27 +194,12 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "MFA: Required for all admins" `
         -State $procState `
         -Conditions $conditions `
         -GrantControls $grantcontrols
 }
-
-# Checking groups to exclude
-Write-Host "Checking groups to exclude" -ForegroundColor $CommandInfo
-$ExcludeGroupIds = @()
-foreach($groupName in $AlyaMfaDisabledForGroups)
-{
-    if ($groupName -eq "PleaseSpecify") { continue }
-    $GrpRslt = Get-MgGroup -Filter "DisplayName eq '$($groupName)'"
-    if (-Not $GrpRslt)
-    {
-        throw "Group $groupName not found!"
-    }
-    $ExcludeGroupIds += $GrpRslt.Id
-}
-$ExcludeGroupIds += $ExcludeGroupId #NOMFAGroup
 
 # Checking all users access policy
 Write-Host "Checking all users access policy" -ForegroundColor $CommandInfo
@@ -215,7 +219,7 @@ if ([string]::IsNullOrEmpty($AlyaMfaEnabledGroupName) -or $AlyaMfaEnabledGroupNa
 else
 {
     $IncludeGroupIds = @()
-    $GrpRslt = Get-MgGroup -Filter "DisplayName eq '$($AlyaMfaEnabledGroupName)'"
+    $GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaMfaEnabledGroupName)'"
     $IncludeGroupIds += $GrpRslt.Id
     $conditions = @{ 
         Applications = @{
@@ -236,7 +240,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "MFA: Required for
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'MFA: Required for all users'"
-    $policyObj = New-MgIdentityConditionalAccessPolicy `
+    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
         -DisplayName "MFA: Required for all users" `
         -State $procState `
         -Conditions $conditions `
@@ -245,7 +249,7 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "MFA: Required for all users" `
         -State $procState `
         -Conditions $conditions `
@@ -278,7 +282,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: For all 
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: For all admins'"
-    $policyObj = New-MgIdentityConditionalAccessPolicy `
+    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
         -DisplayName "SESSION: For all admins" `
         -State $procState `
         -Conditions $conditions `
@@ -287,7 +291,7 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "SESSION: For all admins" `
         -State $procState `
         -Conditions $conditions `
@@ -321,7 +325,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: For all 
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: For all users'"
-    $policyObj = New-MgIdentityConditionalAccessPolicy `
+    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
         -DisplayName "SESSION: For all users" `
         -State $procState `
         -Conditions $conditions `
@@ -330,7 +334,7 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "SESSION: For all users" `
         -State $procState `
         -Conditions $conditions `

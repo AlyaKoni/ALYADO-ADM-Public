@@ -89,7 +89,7 @@ $appsWithErrorIncluded = @()
 
 # Getting conditional access policy
 Write-Host "Getting conditional access policy" -ForegroundColor $CommandInfo
-$policies = (Invoke-AzRestMethod -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies").Content | ConvertFrom-Json
+$policies = (Invoke-AzRestMethod -Uri "$AlyaGraphEndpoint/beta/identity/conditionalAccess/policies").Content | ConvertFrom-Json
 $policyId = ($policies.value | Where-Object { $_.displayName -eq $condAccessRuleName }).id
 if (-Not $policyId)
 {

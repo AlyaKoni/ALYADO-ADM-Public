@@ -61,14 +61,14 @@ Write-Host "=====================================================`n" -Foreground
 
 # Disable sharing for external users
 Write-Host "Disable sharing for external users" -ForegroundColor $CommandInfo
-$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings"
 
 if ($setting.isResharingByExternalUsersEnabled -ne $false){
     Write-Warning "Sharing for external users was set to '$($setting.isResharingByExternalUsersEnabled)', setting to '$false'"
     $newSettings = @{
         "isResharingByExternalUsersEnabled" = $false
     }
-    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+    Invoke-MgGraphRequest -Method "Patch" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
 else {
     Write-host "Sharing for external users was alreadyset to '$false'"

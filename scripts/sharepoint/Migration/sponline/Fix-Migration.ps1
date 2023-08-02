@@ -49,10 +49,10 @@ if (-Not $global:ocred)
 }
 
 Write-Output "Connecting to SPOService"
-$tmp = Connect-SPOService -Url $sharepointAdminUrl -Credential $global:ocred
+$null = Connect-SPOService -Url $sharepointAdminUrl -Credential $global:ocred
 
 Write-Output "Connecting to PnP"
-$tmp = Connect-PnPOnline -Url $sharepointUrl -Credential $global:ocred
+$null = Connect-PnPOnline -Url $sharepointUrl -Credential $global:ocred
 
 $migSites = Import-Csv -Delimiter "," -encoding UTF8 $PSScriptRoot\..\setupSites.csv
 if ([string]::IsNullOrEmpty($migSites[0].DstCol))
@@ -143,7 +143,7 @@ $migSites | Where-Object { ( $migrateAll -or $_.Command.ToLower() -eq "copy" ) -
             $featureguid = new-object System.Guid "E3540C7D-6BEA-403C-A224-1A12EAFEE4C4"
 		    Connect-PnPOnline -Url $fullUrl -Credential $global:ocred
             $site = Get-PnPSite
-            $tmp = $site.Features.Add($featureguid, $true, [Microsoft.SharePoint.Client.FeatureDefinitionScope]::None)
+            $null = $site.Features.Add($featureguid, $true, [Microsoft.SharePoint.Client.FeatureDefinitionScope]::None)
             Execute-PnPQuery
         }
 

@@ -184,7 +184,7 @@ function Login-AzureAutomation([bool] $AzModuleOnly) {
     } catch {
 		if (!$RunAsConnection) {
 			Write-Output $RunAsConnectionName
-			try { Write-Output ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+			try { Write-Output ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 			Write-Output "Connection 'AzureRunAsConnection' not found."
 		}
 		else

@@ -79,7 +79,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting users prefered data location
 Write-Host "Getting users prefered data location" -ForegroundColor $CommandInfo
-$res = Invoke-AzRestMethod -Method Get -Uri "https://graph.microsoft.com/beta/users/$($userUpn)?`$select=preferredDataLocation"
+$res = Invoke-AzRestMethod -Method Get -Uri "$AlyaGraphEndpoint/beta/users/$($userUpn)?`$select=preferredDataLocation"
 if ($res.StatusCode -ge 400)
 {
 	throw "$($result.StatusCode): $($result.Content)"

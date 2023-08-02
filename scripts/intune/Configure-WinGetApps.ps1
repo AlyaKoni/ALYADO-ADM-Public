@@ -85,12 +85,12 @@ $winGetApps = Get-Content -Path $WinGetAppsFile -Raw -Encoding UTF8 | ConvertFro
 $assBody = @"
 [
     {
-        "@odata.type": "#microsoft.graph.mobileAppAssignment",
+        "@odata.type": "#Microsoft.Graph.Beta.mobileAppAssignment",
         "intent": "available",
         "source": "direct",
         "sourceId": null,
         "target": {
-            "@odata.type": "#microsoft.graph.allLicensedUsersAssignmentTarget",
+            "@odata.type": "#Microsoft.Graph.Beta.allLicensedUsersAssignmentTarget",
             "deviceAndAppManagementAssignmentFilterId": null,
             "deviceAndAppManagementAssignmentFilterType": "none"
         }
@@ -100,7 +100,7 @@ $assBody = @"
 $assignments = $assBody | ConvertFrom-Json
 $catBody = @"
 {
-    "@odata.type": "#microsoft.graph.mobileAppCategory",
+    "@odata.type": "#Microsoft.Graph.Beta.mobileAppCategory",
     "id": "ed899483-3019-425e-a470-28e901b9790e",
     "displayName": "Productivity"
 }
@@ -160,7 +160,7 @@ foreach($winGetApp in $winGetApps)
                 # Adding category
                 Write-Host "    Adding category $($defCategory.displayName)"
                 $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
-                $body = "{ `"@odata.id`": `"https://graph.microsoft.com$caturi`" }"
+                $body = "{ `"@odata.id`": `"$AlyaGraphEndpoint$caturi`" }"
                 $appCat = Post-MsGraph -Uri $uri -Body $body
             }
             else

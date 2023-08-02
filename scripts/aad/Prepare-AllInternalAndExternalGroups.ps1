@@ -48,7 +48,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Prepare-AllInternalAndExternalG
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -62,11 +62,11 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AAD | Prepare-AllInternalAndExternalGroups | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$AllUsers = Get-MgUser -All -Property "Id","UserPrincipalName","ExternalUserState"
-$AllInternalsGroup = Get-MgGroup -Filter "DisplayName eq '$AlyaAllInternals'"
-$AllExternalsGroup = Get-MgGroup -Filter "DisplayName eq '$AlyaAllExternals'"
-$AllInternalsGroupMembers = Get-MgGroupMember -GroupId $AllInternalsGroup.Id
-$AllExternalsGroupMembers = Get-MgGroupMember -GroupId $AllExternalsGroup.Id
+$AllUsers = Get-MgBetaUser -All -Property "Id","UserPrincipalName","ExternalUserState"
+$AllInternalsGroup = Get-MgBetaGroup -Filter "DisplayName eq '$AlyaAllInternals'"
+$AllExternalsGroup = Get-MgBetaGroup -Filter "DisplayName eq '$AlyaAllExternals'"
+$AllInternalsGroupMembers = Get-MgBetaGroupMember -GroupId $AllInternalsGroup.Id
+$AllExternalsGroupMembers = Get-MgBetaGroupMember -GroupId $AllExternalsGroup.Id
 
 foreach($user in $AllUsers)
 {
@@ -78,7 +78,7 @@ foreach($user in $AllUsers)
         if (-Not $extMemb)
         {
             Write-Warning "    Adding to $AlyaAllExternals"
-            New-MgGroupMember -GroupId $AllExternalsGroup.Id -DirectoryObjectId $user.Id
+            New-MgBetaGroupMember -GroupId $AllExternalsGroup.Id -DirectoryObjectId $user.Id
         }
     }
     if (-Not $user.ExternalUserState)
@@ -88,7 +88,7 @@ foreach($user in $AllUsers)
         if (-Not $intMemb)
         {
             Write-Warning "    Adding to $AlyaAllExternals"
-            New-MgGroupMember -GroupId $AllInternalsGroup.Id -DirectoryObjectId $user.Id
+            New-MgBetaGroupMember -GroupId $AllInternalsGroup.Id -DirectoryObjectId $user.Id
         }
     }
 }

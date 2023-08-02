@@ -61,7 +61,7 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Azure | Create-DnsServices | AZURE" -ForegroundColor $CommandInfo
+Write-Host "DNS | Create-DnsServices | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context

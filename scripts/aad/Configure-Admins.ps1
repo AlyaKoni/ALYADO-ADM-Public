@@ -49,7 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-Admins-$($AlyaTimeStr
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -65,8 +65,8 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking Company Administrator role
 Write-Host "Checking Company Administrator role:" -ForegroundColor $CommandInfo
-$gaRole = Get-MgRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Global Administrator'"
-$gaRoleMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($gaRole.Id)'" -All -ExpandProperty Principal
+$gaRole = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Global Administrator'"
+$gaRoleMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($gaRole.Id)'" -All -ExpandProperty Principal
 Write-Host "Company Administrators:"
 $gaRoleMembs
 if ($gaRoleMembs.Count -gt 1)
@@ -75,7 +75,7 @@ if ($gaRoleMembs.Count -gt 1)
 }
 foreach($memb in $gaRoleMembs)
 {
-    $globalAdmin = Get-MgUser -UserId $memb.PrincipalId
+    $globalAdmin = Get-MgBetaUser -UserId $memb.PrincipalId
     Write-Host "$($globalAdmin.UserPrincipalName)"
     if ($globalAdmin.UserPrincipalName -like "admin@*" -or $globalAdmin.UserPrincipalName -like "administrator@*" -or `
         $globalAdmin.UserPrincipalName -like "globaladmin@*" -or $globalAdmin.UserPrincipalName -like "breakingglass@*" -or `
@@ -90,8 +90,8 @@ foreach($memb in $gaRoleMembs)
 
 # Checking Privileged Role Administrator role
 Write-Host "Checking Privileged Role Administrator role:" -ForegroundColor $CommandInfo
-$paRole = Get-MgRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Privileged Role Administrator'"
-$paRoleMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($paRole.Id)'" -All -ExpandProperty Principal
+$paRole = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Privileged Role Administrator'"
+$paRoleMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($paRole.Id)'" -All -ExpandProperty Principal
 Write-Host "Privileged Role Administrators:"
 $paRoleMembs
 if ($paRoleMembs.Count -eq 0)

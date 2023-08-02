@@ -144,13 +144,13 @@ foreach($definedProfile in $definedProfiles)
                 $mvalue = $definedDefinitionValue | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
                 $mvalue.PSObject.properties.remove("definition")
                 $mvalue.PSObject.properties.remove("definition@odata.bind")
-                $mvalue | Add-Member -MemberType NoteProperty -Name "definition@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')" -Force
+                $mvalue | Add-Member -MemberType NoteProperty -Name "definition@odata.bind" -Value "$AlyaGraphEndpoint/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')" -Force
                 $uri = "/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations"
                 $presentations = Get-MsGraphCollection -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
                 foreach($pvalue in $mvalue.presentationValues)
                 {
                     $presentation = $presentations | Where-Object { $_.label -eq $pvalue.presentation.label } 
-                    $pvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
+                    $pvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "$AlyaGraphEndpoint/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
                     $pvalue.PSObject.properties.remove("definition")
                     $pvalue.PSObject.properties.remove("definitionNext")
                     $pvalue.PSObject.properties.remove("definitionPrev")
@@ -182,7 +182,7 @@ foreach($definedProfile in $definedProfiles)
                     $mvalue.PSObject.properties.remove("presentation")
                     $mvalue.PSObject.properties.remove("presentation@odata.bind")
                     $presentation = $presentations | Where-Object { $_.label -eq $pvalue.presentation.label } 
-                    $mvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "https://graph.microsoft.com/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
+                    $mvalue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "$AlyaGraphEndpoint/beta/deviceManagement/groupPolicyDefinitions('$($groupPolicyDefinition.id)')/presentations('$($presentation.id)')" -Force
                     $presentationValue = $presentationValues | Where-Object { $_.presentation.label -eq $pvalue.presentation.label }
                     if (-Not $presentationValue)
                     {

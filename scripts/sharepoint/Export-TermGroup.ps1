@@ -83,8 +83,8 @@ $decl = $resultInXml.CreateXmlDeclaration("1.0", "UTF-8", $null)
 $rootNode = $resultInXml.CreateElement("ManagedMetadataExport")
 $rootNode.SetAttribute("TermGroupType", "Global")
 $rootNode.SetAttribute("Created", ((Get-Date).ToString("o")))
-$tmp = $resultInXml.InsertBefore($decl, $resultInXml.DocumentElement)
-$tmp = $resultInXml.AppendChild($rootNode)
+$null = $resultInXml.InsertBefore($decl, $resultInXml.DocumentElement)
+$null = $resultInXml.AppendChild($rootNode)
 
 # Write out the TermStore properties
 Write-Host "Exporting termstore $($termStore.Name)"
@@ -93,11 +93,11 @@ $TermStoreElem.SetAttribute("DefaultLanguage", $termStore.DefaultLanguage)
 $TermStoreElem.SetAttribute("WorkingLanguage", $termStore.WorkingLanguage)
 $TermStoreElem.SetAttribute("GUID", $termStore.ID)
 $TermStoreElem.SetAttribute("Name", $termStore.Name)
-$tmp = $rootNode.AppendChild($TermStoreElem)
+$null = $rootNode.AppendChild($TermStoreElem)
 			 
 #Write out TermStoreAdministrators as subcategory of TermStore
 $TermStoreAdministratorsElem = $resultInXml.CreateElement("TermStoreAdministrators");
-$tmp = $TermStoreElem.AppendChild($TermStoreAdministratorsElem);	 
+$null = $TermStoreElem.AppendChild($TermStoreAdministratorsElem);	 
 foreach ($Administrator in $termStore.TermStoreAdministrators)
 {
     $TermStoreAdministratorElem = $resultInXml.CreateElement("TermStoreAdministrator");
@@ -109,7 +109,7 @@ foreach ($Administrator in $termStore.TermStoreAdministrators)
     $TermStoreAdministratorElem.SetAttribute("RawSid", $Administrator.RawSid);
     $TermStoreAdministratorElem.SetAttribute("BinaryId", $Administrator.BinaryId);
     $TermStoreAdministratorElem.SetAttribute("BinaryIdType", $Administrator.BinaryIdType);
-    $tmp = $TermStoreAdministratorsElem.AppendChild($TermStoreAdministratorElem);
+    $null = $TermStoreAdministratorsElem.AppendChild($TermStoreAdministratorElem);
 }
 			 
 # Write out the TermGroup properties
@@ -123,22 +123,22 @@ $TermGroupElem.SetAttribute("SiteCollectionAccessIds", $termGroup.SiteCollection
 $TermGroupElem.SetAttribute("SiteCollectionReadOnlyAccessUrls", $termGroup.SiteCollectionReadOnlyAccessUrls);
 $TermGroupElem.SetAttribute("Id", $termGroup.Id);
 $TermGroupElem.SetAttribute("Name", $termGroupName);
-$tmp = $TermStoreElem.AppendChild($TermGroupElem);
+$null = $TermStoreElem.AppendChild($TermGroupElem);
 
 # Write out all managers of TermGroup as subcategory of TermGroup
 $TermGroupManagers = $termGroup.GroupManagerPrincipalNames
 $TermGroupManagersElem = $resultInXml.CreateElement("GroupManagers");
-$tmp = $TermGroupElem.AppendChild($TermGroupManagersElem);
+$null = $TermGroupElem.AppendChild($TermGroupManagersElem);
 foreach ($TermGroupManager in $TermGroupManagers)
 {
     $TermGroupManagerElem = $resultInXml.CreateElement("GroupManager");
     $TermGroupManagerElem.SetAttribute("PrincipalName", $TermGroupManager);
-    $tmp = $TermGroupManagersElem.AppendChild($TermGroupManagerElem);
+    $null = $TermGroupManagersElem.AppendChild($TermGroupManagerElem);
 }
 			 
 # Write out all contributors of TermGroup as subcategory of TermGroup
 $TermGroupContributorsElem = $resultInXml.CreateElement("Contributors");
-$tmp = $TermGroupElem.AppendChild($TermGroupContributorsElem);
+$null = $TermGroupElem.AppendChild($TermGroupContributorsElem);
 foreach ($Contributor in $termGroup.Contributors)
 {
     $TermGroupContributorElem = $resultInXml.CreateElement("Contributor");
@@ -150,7 +150,7 @@ foreach ($Contributor in $termGroup.Contributors)
     $TermGroupContributorElem.SetAttribute("RawSid", $Contributor.RawSid);
     $TermGroupContributorElem.SetAttribute("BinaryId", $Contributor.BinaryId);
     $TermGroupContributorElem.SetAttribute("BinaryIdType", $Contributor.BinaryIdType);
-    $tmp = $TermGroupContributorsElem.AppendChild($TermGroupContributorElem);
+    $null = $TermGroupContributorsElem.AppendChild($TermGroupContributorElem);
 }
 
 # Term set export function
@@ -168,7 +168,7 @@ function Export-SPTermSet
     {
 	    $TermsElem = $resultInXml.CreateElement("Terms");
 	    $TermsElem.SetAttribute("Level", $level)
-	    $tmp = $parentElement.AppendChild($TermsElem);
+	    $null = $parentElement.AppendChild($TermsElem);
     }
 
     if ($level -ge 1 -or $level -le 15)
@@ -227,13 +227,13 @@ function Export-SPTermSet
 			    $TermElem.SetAttribute("Name", $termName)
 				
 			    #Write above Attributes to XML
-                $tmp = $TermsElem.AppendChild($TermElem)
+                $null = $TermsElem.AppendChild($TermElem)
 
 			    #Create Labels Subcategory on TopTermElement
                 if ($term.Labels.Count -gt 0)
                 {
 			        $TermLabelsElem = $resultInXml.CreateElement("Labels")
-			        $tmp = $TermElem.AppendChild($TermLabelsElem)
+			        $null = $TermElem.AppendChild($TermLabelsElem)
 			        $TermLabels = $term.Labels
 			        foreach ($TermLabel in $TermLabels)
                     {
@@ -245,7 +245,7 @@ function Export-SPTermSet
 				        $TermLabelElem.SetAttribute("IsDefaultForLanguage", $TermLabel.IsDefaultForLanguage)
 				        $TermLabelElem.SetAttribute("Language", $TermLabel.Language)
 				        $TermLabelElem.SetAttribute("Value", $TermLabel.Value)
-				        $tmp = $TermLabelsElem.AppendChild($TermLabelElem)
+				        $null = $TermLabelsElem.AppendChild($TermLabelElem)
 			        }
 			    }
 				
@@ -253,7 +253,7 @@ function Export-SPTermSet
                 if ($term.CustomProperties.Keys.Count -gt 0)
                 {
 			        $TermCustomPropertiesElem = $resultInXml.CreateElement("CustomProperties")
-			        $tmp = $TermElem.AppendChild($TermCustomPropertiesElem)
+			        $null = $TermElem.AppendChild($TermCustomPropertiesElem)
 				
 			        $TermCustomPropertyKeys = $term.CustomProperties.Keys
 			        foreach ($Key in $TermCustomPropertyKeys)
@@ -261,7 +261,7 @@ function Export-SPTermSet
 				        $TermCustomPropertyElem = $resultInXml.CreateElement("CustomProperty")
 				        $TermCustomPropertyElem.SetAttribute("Name", $Key)
 				        $TermCustomPropertyElem.SetAttribute("Value", $term.CustomProperties[$Key])
-				        $tmp = $TermCustomPropertiesElem.AppendChild($TermCustomPropertyElem)
+				        $null = $TermCustomPropertiesElem.AppendChild($TermCustomPropertyElem)
 			        }
 			    }
 				
@@ -269,14 +269,14 @@ function Export-SPTermSet
                 if ($term.LocalCustomProperties.Keys.Count -gt 0)
                 {
 			        $TermLocalCustomPropertiesElem = $resultInXml.CreateElement("LocalCustomProperties")
-			        $tmp = $TermElem.AppendChild($TermLocalCustomPropertiesElem)
+			        $null = $TermElem.AppendChild($TermLocalCustomPropertiesElem)
 			        $TermLocalCustomPropertyKeys = $term.LocalCustomProperties.Keys
 			        foreach ($Key in $TermLocalCustomPropertyKeys)
                     {
 				        $TermLocalCustomPropertyElem = $resultInXml.CreateElement("LocalCustomProperty")
 				        $TermLocalCustomPropertyElem.SetAttribute("Name", $Key)
 				        $TermLocalCustomPropertyElem.SetAttribute("Value", $term.LocalCustomProperties[$Key])
-				        $tmp = $TermLocalCustomPropertiesElem.AppendChild($TermLocalCustomPropertyElem)
+				        $null = $TermLocalCustomPropertiesElem.AppendChild($TermLocalCustomPropertyElem)
 			        }
 			    }
 				
@@ -289,7 +289,7 @@ function Export-SPTermSet
 # Start looping through Term sets
 Write-Host "Looping termsets"
 $TermSetsElem = $resultInXml.CreateElement("TermSets");
-$tmp = $TermGroupElem.AppendChild($TermSetsElem);
+$null = $TermGroupElem.AppendChild($TermSetsElem);
 foreach ($termSet in $termGroup.TermSets)
 {        
     $ctx.Load($termSet)
@@ -307,11 +307,11 @@ foreach ($termSet in $termGroup.TermSets)
     $TermSetElem.SetAttribute("Contact", $termSet.Contact)
     $TermSetElem.SetAttribute("Id", $termSet.Id)
     $TermSetElem.SetAttribute("Name", $termSet.Name)
-    $tmp = $TermSetsElem.AppendChild($TermSetElem);
+    $null = $TermSetsElem.AppendChild($TermSetElem);
 
     #Create Custom Properties Subcategory on NavigationTermSet Element
     $TermSetCustomPropertiesElem = $resultInXml.CreateElement("CustomProperties")
-    $tmp = $TermSetElem.AppendChild($TermSetCustomPropertiesElem)
+    $null = $TermSetElem.AppendChild($TermSetCustomPropertiesElem)
 
     #activated CustomProperties of WebsitenavigationTermSet
     $TermSetCustomPropertyKeys = $termSet.CustomProperties.Keys
@@ -321,7 +321,7 @@ foreach ($termSet in $termGroup.TermSets)
 	    $TermSetCustomPropertyElem = $resultInXml.CreateElement("CustomProperty")
 	    $TermSetCustomPropertyElem.SetAttribute("Name", $Key)
 	    $TermSetCustomPropertyElem.SetAttribute("Value", $VariableValue)
-	    $tmp = $TermSetCustomPropertiesElem.AppendChild($TermSetCustomPropertyElem)
+	    $null = $TermSetCustomPropertiesElem.AppendChild($TermSetCustomPropertyElem)
     }
 
     # Start exporting the Terms of the TermSet

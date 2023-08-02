@@ -62,7 +62,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring sharing capability
 Write-Host "Configuring sharing capability" -ForegroundColor $CommandInfo
-$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings"
 
 # Checking sharing capability
 $SharingOption = "externalUserAndGuestSharing"
@@ -85,7 +85,7 @@ if ($setting.sharingCapability -ne $SharingOption){
     $newSettings = @{
         "sharingCapability" = $SharingOption
     }
-    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+    Invoke-MgGraphRequest -Method "Patch" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
 else {
     Write-host "Sharing capability was alreadyset to '$SharingOption'"

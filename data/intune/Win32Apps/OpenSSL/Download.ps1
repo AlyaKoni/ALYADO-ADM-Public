@@ -37,7 +37,7 @@ $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
 {
-    $tmp = New-Item -Path $contentRoot -ItemType Directory -Force
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
 
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get

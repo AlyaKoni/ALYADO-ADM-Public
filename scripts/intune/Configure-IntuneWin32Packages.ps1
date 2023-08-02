@@ -53,7 +53,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneWin32Package
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 
 # Checking modules
@@ -141,7 +141,7 @@ foreach($packageDir in $packages)
         {
             foreach ($actDependency in $actDependencies)
             {
-                $newDependency = @{ "@odata.type" = "#microsoft.graph.mobileAppDependency" }
+                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.Beta.mobileAppDependency" }
                 $newDependency.targetId = $actDependency.targetId
                 $newDependency.dependencyType = $actDependency.dependencyType
                 $newDependencies += $newDependency
@@ -160,7 +160,7 @@ foreach($packageDir in $packages)
             }
             if (-Not $fnd)
             {
-                $newDependency = @{ "@odata.type" = "#microsoft.graph.mobileAppDependency" }
+                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.Beta.mobileAppDependency" }
                 $newDependency.targetId = $dependency.appId
                 if ($dependency.autoInstall)
                 {
@@ -242,7 +242,7 @@ foreach($packageDir in $packages)
             # Adding category
             Write-Host "    Adding category $($defCategory.displayName)"
 	        $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
-            $body = "{ `"@odata.id`": `"https://graph.microsoft.com$caturi`" }"
+            $body = "{ `"@odata.id`": `"$AlyaGraphEndpoint$caturi`" }"
 	        $appCat = Post-MsGraph -Uri $uri -Body $body
         }
         else

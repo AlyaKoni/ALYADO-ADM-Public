@@ -104,9 +104,9 @@ Write-Host "Cloning" -ForegroundColor $CommandInfo
 $RepRoot = Join-Path ( Join-Path (Join-Path $AlyaRoot "tools") "powershell") "IntunePowershellSamples"
 if ((Test-Path $RepRoot))
 {
-    $tmp = Remove-Item -Path $RepRoot -Recurse -Force
+    $null = Remove-Item -Path $RepRoot -Recurse -Force
 }
-$tmp = New-Item -Path $RepRoot -ItemType Directory -Force
+$null = New-Item -Path $RepRoot -ItemType Directory -Force
 cmd /c "$AlyaGitRoot\cmd\git.exe" clone "$CloneUrl" "$RepRoot" -q
 Wait-UntilProcessEnds -processName "git"
 

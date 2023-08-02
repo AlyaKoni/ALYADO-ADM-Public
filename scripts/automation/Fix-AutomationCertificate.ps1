@@ -45,12 +45,12 @@ param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\automation\Fix-AutomationCertificate-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
-$RunAsConnectionName = "AzureRunAsConnection"
 $RunAsCertificateName = "AzureRunAsCertificate"
-$ConnectionTypeName = "AzureServicePrincipal"
 $AzureCertificateName = $AutomationAccountName + $RunAsCertificateName
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAutomation)"
 $AutomationAccountName = "$($AlyaNamingPrefix)aacc$($AlyaResIdAutomationAccount)"
+$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
+$KeyVaultResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -77,63 +77,99 @@ if (-Not $Context)
     Exit 1
 }
 
+# Checking key vault
+Write-Host "Checking key vault" -ForegroundColor $CommandInfo
+$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultResourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
+if (-Not $KeyVault)
+{
+    throw "Key Vault not found. Please create the Key Vault $KeyVaultName"
+}
+
+# Setting own key vault access
+Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
+$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+if ($KeyVault.EnableRbacAuthorization)
+{
+    $RoleAssignment = $null
+    $Retries = 0;
+    While ($null -eq $RoleAssignment -and $Retries -le 6)
+    {
+        $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+        Start-Sleep -s 10
+        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+        $Retries++;
+    }
+}
+else
+{
+    Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All"
+}
+
 # Find the application
-Write-Output ("Getting application $($ApplicationId)")
-$Application = Get-AzADApplication -DisplayName $AutomationAccountName
-if (-Not $Application) { throw "Application with name $($AutomationAccountName) not found" }
+Write-Host ("Getting application $($AzAdApplicationId)")
+$RunasAppName = "$($AutomationAccountName)RunAsApp"
+$AzAdApplication = Get-AzADApplication -DisplayName $RunasAppName
+if (-Not $AzAdApplication) { throw "Application with name $($RunasAppName) not found" }
 
 # Create RunAs certificate
-Write-Output ("Creating new certificate")
+Write-Host ("Creating new certificate")
+$AzureCertifcateAssetName = "AzureRunAsCertificate"
+$AzureCertificateName = $AutomationAccountName + $AzureCertifcateAssetName
 $SelfSignedCertNoOfMonthsUntilExpired = 6
 $SelfSignedCertPlainPassword = "-"+[Guid]::NewGuid().ToString()+"]"
 $PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".pfx")
-$CertPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
+$CerPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
 Clear-Variable -Name "SelfSignedCertPlainPassword" -Force -ErrorAction SilentlyContinue
 $Cert = New-SelfSignedCertificate -Subject "CN=$AzureCertificateName" -CertStoreLocation Cert:\CurrentUser\My `
 					-KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
 					-NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired) -HashAlgorithm SHA256
-Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CertPassword -Force | Write-Verbose
+Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
 $CerKeyValue = [System.Convert]::ToBase64String($Cert.GetRawCertData())
 $CerThumbprint = [System.Convert]::ToBase64String($Cert.GetCertHash())
 $CerThumbprintString = $Cert.Thumbprint
 $CerStartDate = $Cert.NotBefore
 $CerEndDate = $Cert.NotAfter
 
+# Updating certificate in key vault 
+Write-Host "Updating certificate in key vault"
+$AzureKeyVaultCertificate = Import-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword
+$AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName
+
 # Update the certificate in the Automation account with the new one 
-Write-Output ("Updating automation account certificate")
-Set-AzAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Path $PfxCertPathForRunAsAccount -Name $RunAsCertificateName `
-				-Password $CertPassword -Exportable:$true
-
-# Update the RunAs connection with the new certificate information
-Write-Output ("Updating automation account connection")
-$TenantId = $Context.Tenant.Id
-$SubscriptionId = $Context.Subscription.Id
-$ConnectionFieldValues = @{"ApplicationId" = $Application.AppId ; "TenantId" = $TenantId; "CertificateThumbprint" = $CerThumbprintString; "SubscriptionId" = $SubscriptionId }
-# Can't just update the thumbprint value due to bug https://github.com/Azure/azure-powershell/issues/5862 so deleting / creating connection 
-Remove-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName -Force
-New-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName `
-				-ConnectionFieldValues $ConnectionFieldValues -ConnectionTypeName $ConnectionTypeName | Write-Verbose
-
-# Add new certificate to application
-Write-Output ("Adding new certificate to application")
-$payload = @"
+Write-Host "Updating automation account certificate"
+$AutomationCertificate = Get-AzAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $AzureCertifcateAssetName -ErrorAction SilentlyContinue
+if (-Not $AutomationCertificate)
 {
-  "keyCredentials": [{
-    "@odata.type": "microsoft.graph.keyCredential",
-    "customKeyIdentifier": "$CerThumbprint",
-    "key": "$CerKeyValue",
-    "keyId": "$([System.Guid]::NewGuid().ToString())",
-    "type": "AsymmetricX509Cert",
-    "usage": "Verify",
-    "startDateTime": "$($CerStartDate.ToString("o"))",
-    "endDateTime": "$($CerEndDate.ToString("o"))"
-  }]
+    Write-Warning "Automation Certificate not found. Creating the Automation Certificate $AzureCertifcateAssetName"
+    New-AzAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $AzureCertifcateAssetName -Path $PfxCertPathForRunAsAccount -Password $CerPassword -Exportable:$true
 }
-"@
-$result = Invoke-AzRestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$($Application.Id)" -Method PATCH -Payload $payload
-if ($result.StatusCode -ge 400)
+else
 {
-	throw "$($result.StatusCode): $($result.Content)"
+    if ($AutomationCertificate.Thumbprint -ne $CerThumbprintString)
+    {
+        Write-Host "  Updating"
+        Set-AzAutomationCertificate -ResourceGroupName $ResourceGroupName `
+            -AutomationAccountName $AutomationAccountName -Name $AzureCertifcateAssetName `
+            -Path $PfxCertPathForRunAsAccount -Password $CerPassword -Exportable:$true
+    }
+}
+
+# Checking application credential
+Write-Host "Checking application credential" -ForegroundColor $CommandInfo
+$AppCredential = Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId -ErrorAction SilentlyContinue
+if (-Not $AppCredential)
+{
+    Write-Host "  Not found" -ForegroundColor $CommandWarning
+    $AppCredential = New-AzADAppCredential -ApplicationId $AzAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $CerKeyValue -StartDate $CerStartDate -EndDate $CerEndDate 
+}
+else
+{
+    if ([System.Convert]::ToBase64String($AppCredential.CustomKeyIdentifier) -ne $CerThumbprint)
+    {
+        Write-Host "  Updating"
+        Remove-AzADAppCredential -ObjectId $AzAdApplication.Id -KeyId $AppCredential.KeyId
+        $AppCredential = New-AzADAppCredential -ApplicationId $AzAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $CerKeyValue -StartDate $CerStartDate -EndDate $CerEndDate 
+    }
 }
 
 #Stopping Transscript

@@ -72,8 +72,8 @@ Write-Host "to get required consents." -ForegroundColor $CommandWarning
 
 # Getting user
 Write-Host "Getting user" -ForegroundColor $CommandInfo
-$actUser = (Get-MgContext).Account
-$user = Get-MgUser -UserId $actUser
+$actUser = (Get-MgBetaContext).Account
+$user = Get-MgBetaUser -UserId $actUser
 if (-Not $user)
 {
     throw "User $userPrincipalName not found!"
@@ -81,20 +81,25 @@ if (-Not $user)
 
 # Getting all built in roles
 Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
-$roleDefinitions = Get-MgRoleManagementDirectoryRoleDefinition -All
+$roleDefinitions = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
 
 # Getting  eligable role assignment
 Write-Host "Getting eligable role assignment" -ForegroundColor $CommandInfo
-$assignedRoles = Get-MgRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
+$assignedRoles = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
 $role = $roleDefinitions | Where-Object { $_.DisplayName -eq $roleName }
 if (-Not $role)
 {
     throw "Role '$roleName' not found"
 }
 $assigned = $assignedRoles | Where-Object { $_.RoleDefinitionId -eq $role.Id }
-if (-Not $role)
+if (-Not $assigned)
 {
     throw "User $userPrincipalName does not have role '$roleName' eligable assigned"
+}
+if ($assigned.Status -eq "Provisioned")
+{
+    Write-Host "Role is already provisioned. Nothing to do."
+    return
 }
 
 # Activating  eligable role assignment
@@ -115,7 +120,7 @@ $params = @{
 		}
 	}
 }
-New-MgRoleManagementDirectoryRoleAssignmentScheduleRequest -BodyParameter $params
+New-MgBetaRoleManagementDirectoryRoleAssignmentScheduleRequest -BodyParameter $params
 
 #Stopping Transscript
 Stop-Transcript

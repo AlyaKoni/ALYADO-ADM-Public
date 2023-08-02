@@ -80,13 +80,13 @@ $iosApps = Get-Content -Path $IOSAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $assBody = @"
 [
     {
-        "@odata.type": "#microsoft.graph.mobileAppAssignment",
+        "@odata.type": "#Microsoft.Graph.Beta.mobileAppAssignment",
         "intent": "available",
         "source": "direct",
         "sourceId": null,
         "target": {
             
-            "@odata.type": "#microsoft.graph.allLicensedUsersAssignmentTarget",
+            "@odata.type": "#Microsoft.Graph.Beta.allLicensedUsersAssignmentTarget",
             "deviceAndAppManagementAssignmentFilterId": null,
             "deviceAndAppManagementAssignmentFilterType": "none"
         }

@@ -64,10 +64,10 @@ if (-Not $groupsInputFileForDirectAssignment)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users.Actions"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users.Actions"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logging in
@@ -117,7 +117,7 @@ $licDefs | Foreach-Object {
                     $byGroup.$grpName.Users = @()
                 }
                 $byGroup.$grpName.Users += $licDef.Name
-                $exGrp = Get-MgGroup -Filter "DisplayName eq '$grpName'"
+                $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$grpName'"
                 if (-Not $exGrp)
                 {
                     Write-Warning "  Please add missing group $($grpName)"
@@ -138,7 +138,7 @@ for ($i = 1; $i -le 40; $i++)
         if (-Not $byGroup.$grpName) {
             $byGroup.$grpName = @{}
             $byGroup.$grpName.Users = @()
-            $exGrp = Get-MgGroup -Filter "DisplayName eq '$grpName'"
+            $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$grpName'"
             $byGroup.$grpName.Id = $exGrp.Id
         }
     }
@@ -160,14 +160,14 @@ if (-Not $useDirectAssignment)
         Write-Host "  Group '$group'"
         if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
         {
-            $members = Get-MgGroupMember -GroupId $byGroup[$group].Id
+            $members = Get-MgBetaGroupMember -GroupId $byGroup[$group].Id
             foreach ($member in $members)
             {
                 if (-Not $byGroup[$group].Users.Contains($member.AdditionalProperties.userPrincipalName))
                 {
                     #Remove member
                     Write-Host "    Removing member '$($member.AdditionalProperties.userPrincipalName)'"
-                    Remove-MgGroupMemberByRef -GroupId $byGroup[$group].Id -DirectoryObjectId $member.Id
+                    Remove-MgBetaGroupMemberByRef -GroupId $byGroup[$group].Id -DirectoryObjectId $member.Id
                 }
             }
             foreach ($user in $byGroup[$group].Users)
@@ -184,14 +184,14 @@ if (-Not $useDirectAssignment)
                 {
                     #Adding member
                     Write-Host "    Adding member '$user'"
-                    $adUser = Get-MgUser -UserId $user
+                    $adUser = Get-MgBetaUser -UserId $user
                     if (-Not $adUser)
                     {
                         Write-Warning "     Member '$user' not found in AAD"
                     }
                     else
                     {
-                        New-MgGroupMember -GroupId $byGroup[$group].Id -DirectoryObjectId $adUser.Id
+                        New-MgBetaGroupMember -GroupId $byGroup[$group].Id -DirectoryObjectId $adUser.Id
                     }
                 }
             }
@@ -223,21 +223,21 @@ else
             foreach ($user in $byGroup[$group].Users)
             {
                 Write-Host "    User '$user'"
-                $adUser = Get-MgUser -UserId $user
+                $adUser = Get-MgBetaUser -UserId $user
                 if ($null -eq $assignedLicenses."$($user)")
                 {
                     $assignedLicenses."$($user)" = [System.Collections.ArrayList]@()
                 }
                 $userLics = $assignedLicenses."$($user)"
-                $licDets = Get-MgUserLicenseDetail -UserId $adUser.Id
+                $licDets = Get-MgBetaUserLicenseDetail -UserId $adUser.Id
                 foreach($lic in $groupDef.Licenses)
                 {
                     if (-Not $userLics.Contains($lic)) { $userLics.Add($lic) | Out-Null }
                     if ($licDets.SkuPartNumber -notcontains $lic)
                     {
                         Write-Host "      Adding license '$lic'"
-                        $Sku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq $lic }
-                        Set-MgUserLicense -UserId $adUser.Id -AddLicenses @{SkuId = $Sku.SkuId} -RemoveLicenses @() | Out-Null
+                        $Sku = Get-MgBetaSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq $lic }
+                        Set-MgBetaUserLicense -UserId $adUser.Id -AddLicenses @{SkuId = $Sku.SkuId} -RemoveLicenses @() | Out-Null
                     }
                 }
             }
@@ -249,17 +249,17 @@ else
 
     foreach ($assLic in $assignedLicenses.GetEnumerator())
     {
-        $adUser = Get-MgUser -UserId $assLic.Name
+        $adUser = Get-MgBetaUser -UserId $assLic.Name
         Write-Host "  User '$($assLic.Name)'"
         $userLics = $assignedLicenses."$($assLic.Name)"
-        $licDets = Get-MgUserLicenseDetail -UserId $adUser.Id
+        $licDets = Get-MgBetaUserLicenseDetail -UserId $adUser.Id
         foreach($lic in $licDets.SkuPartNumber)
         {
             if (-Not $userLics.Contains($lic))
             {
                 Write-Host "    Removing license '$lic'"
-                $Sku = Get-MgSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq $lic }
-                Set-MgUserLicense -UserId $adUser.Id -AddLicenses @() -RemoveLicenses @($Sku.SkuId) | Out-Null
+                $Sku = Get-MgBetaSubscribedSku -All | Where-Object { $_.SkuPartNumber -eq $lic }
+                Set-MgBetaUserLicense -UserId $adUser.Id -AddLicenses @() -RemoveLicenses @($Sku.SkuId) | Out-Null
             }
         }
     }

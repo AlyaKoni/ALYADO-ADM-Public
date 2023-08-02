@@ -214,12 +214,12 @@ foreach($profile in $profiles)
 
     # Checking if poliy is applicable
     Write-Host "  Checking if profile is applicable"
-    if ($profile."@odata.type" -eq "#microsoft.graph.iosConfigurationProfile" -and -not $appleConfigured)
+    if ($profile."@odata.type" -eq "#Microsoft.Graph.Beta.iosConfigurationProfile" -and -not $appleConfigured)
     {
         Write-Warning "iosConfigurationProfile is not applicable"
         continue
     }
-    if ($profile."@odata.type" -eq "#microsoft.graph.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
+    if ($profile."@odata.type" -eq "#Microsoft.Graph.Beta.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
     {
         Write-Warning "androidConfigurationProfile is not applicable"
         continue
@@ -236,12 +236,12 @@ foreach($profile in $profiles)
     try {
         
         # Getting latest windows update
-        if ($profile.'@odata.type' -eq "#microsoft.graph.windowsQualityUpdateProfile" -and $null -eq $latestQualUpdate)
+        if ($profile.'@odata.type' -eq "#Microsoft.Graph.Beta.windowsQualityUpdateProfile" -and $null -eq $latestQualUpdate)
         {
             Write-Host "  Getting latest windows update"
-            $latestQualUpdate = (Get-MsGraphObject -Uri "https://graph.microsoft.com/beta/admin/windows/updates/catalog/entries?`$top=1&`$filter=isof('microsoft.graph.windowsUpdates.qualityUpdateCatalogEntry') and microsoft.graph.windowsUpdates.qualityUpdateCatalogEntry/isExpeditable eq true&`$orderby=releaseDateTime desc").value
+            $latestQualUpdate = (Get-MsGraphObject -Uri "$AlyaGraphEndpoint/beta/admin/windows/updates/catalog/entries?`$top=1&`$filter=isof('Microsoft.Graph.Beta.windowsUpdates.qualityUpdateCatalogEntry') and Microsoft.Graph.Beta.windowsUpdates.qualityUpdateCatalogEntry/isExpeditable eq true&`$orderby=releaseDateTime desc").value
         }
-        if ($profile.'@odata.type' -eq "#microsoft.graph.windowsQualityUpdateProfile")
+        if ($profile.'@odata.type' -eq "#Microsoft.Graph.Beta.windowsQualityUpdateProfile")
         {
             $profile.expeditedUpdateSettings.qualityUpdateRelease = $latestQualUpdate.releaseDateTime
         }

@@ -49,8 +49,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-DeviceAdmins-$($AlyaT
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -66,7 +66,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting group
 Write-Host "Getting group" -ForegroundColor $CommandInfo
-$devAdmGrp = Get-MgGroup -Filter "DisplayName eq '$($AlyaDeviceAdminsGroupName)'"
+$devAdmGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaDeviceAdminsGroupName)'"
 if (-Not $devAdmGrp)
 {
     Write-Host "Device admin group $AlyaDeviceAdminsGroupName not found. Please create it first!" -ForegroundColor $CommandError
@@ -75,13 +75,13 @@ if (-Not $devAdmGrp)
 
 # Checking role assignment
 Write-Host "Checking role assignment" -ForegroundColor $CommandInfo
-$role = Get-MgRoleManagementDirectoryRoleDefinition -Filter "DisplayName eq 'Azure AD Joined Device Local Administrator'"
-$actMembs = Get-MgRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
+$role = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "DisplayName eq 'Azure AD Joined Device Local Administrator'"
+$actMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($role.Id)'" -All -ExpandProperty Principal
 $memb = $actMembs | Where-Object { $_.PrincipalId -eq $devAdmGrp.Id }
 if (-Not $memb)
 {
     Write-Host "    adding group $($AlyaDeviceAdminsGroupName) to role 'Azure AD Joined Device Local Administrator'" -ForegroundColor $CommandWarning
-    $memb = New-MgRoleManagementDirectoryRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $devAdmGrp.Id -DirectoryScopeId "/"
+    $memb = New-MgBetaRoleManagementDirectoryRoleAssignment -RoleDefinitionId $role.Id -PrincipalId $devAdmGrp.Id -DirectoryScopeId "/"
 }
 
 #Stopping Transscript

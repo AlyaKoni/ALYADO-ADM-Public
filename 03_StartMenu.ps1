@@ -1408,7 +1408,7 @@ function Show-Menu
                         }
                     }
                     "" {
-                        $tmp = $global:lastMenu.Add($menu)
+                        $null = $global:lastMenu.Add($menu)
                         Show-Menu -menu $menuEntry[3] -level ($level+1)
                     }
                     default {

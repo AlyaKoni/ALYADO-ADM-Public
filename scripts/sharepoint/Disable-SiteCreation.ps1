@@ -64,7 +64,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Disabling site creation
 Write-Host "Disabling site creation" -ForegroundColor $CommandInfo
-$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings"
 
 # Checking site creation value
 if ($setting.isSiteCreationUIEnabled -ne $false){
@@ -72,7 +72,7 @@ if ($setting.isSiteCreationUIEnabled -ne $false){
     $newSettings = @{
         "isSiteCreationUIEnabled" = $false
     }
-    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+    Invoke-MgGraphRequest -Method "Patch" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
 else {
     Write-host "Site creation UI was alreadyset to '$false'"
@@ -84,7 +84,7 @@ if ($setting.isSiteCreationEnabled -ne $false){
     $newSettings = @{
         "isSiteCreationEnabled" = $false
     }
-    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+    Invoke-MgGraphRequest -Method "Patch" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
 else {
     Write-host "Site creation was alreadyset to '$false'"
@@ -96,7 +96,7 @@ if ($setting.isSitePagesCreationEnabled -ne $false){
     $newSettings = @{
         "isSitePagesCreationEnabled" = $false
     }
-    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+    Invoke-MgGraphRequest -Method "Patch" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
 else {
     Write-host "Site page creation was alreadyset to '$false'"

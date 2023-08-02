@@ -57,7 +57,7 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Checking office deploy tool installation" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$($AlyaTools)\Setups"))
 {
-    $tmp = New-Item -Path "$($AlyaTools)\Setups" -ItemType Directory -Force
+    $null = New-Item -Path "$($AlyaTools)\Setups" -ItemType Directory -Force
 }
 if (-Not (Test-Path "$($AlyaTools)\Setups\AzInfoProtection_UL.exe"))
 {

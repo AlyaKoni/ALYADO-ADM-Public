@@ -70,19 +70,81 @@ do
     }
 } while ($true)
 
+# Getting role groups
+$siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
+$web = Get-PnPWeb -Connection $siteCon
+
+$gauser = $web.EnsureUser("Company Administrator")
+$gauser.Context.Load($gauser)
+Invoke-PnPQuery -Connection $siteCon
+$gauserLoginName = $gauser.LoginName
+
+$spAdminRoleName = "SharePoint Service Administrator"
+try {
+    $sauser = $web.EnsureUser($spAdminRoleName)
+    $sauser.Context.Load($sauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $sauserLoginName = $sauser.LoginName
+}
+catch {
+    $spAdminRoleName = "SharePoint Administrator"
+    $sauser = $web.EnsureUser($spAdminRoleName)
+    $sauser.Context.Load($sauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $sauserLoginName = $sauser.LoginName
+}
+
 # Setting site admins
 Write-Host "Setting site admins" -ForegroundColor $CommandInfo
 foreach ($site in $sitesToProcess)
 {
     if ($site.Template -like "Redirect*") { continue }
+    if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
 
-    # Checking site admins
+    # Checking site owner
+    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners @($gauserLoginName,$sauserLoginName)
+
+    # Checking site owner
+    $siteCon = LoginTo-PnP -Url $site.Url
+    $web = Get-PnPWeb -Connection $siteCon
+    $site = Get-PnPSite -Connection $siteCon
+    $site.Context.Load($site.Owner)
+    Invoke-PnPQuery -Connection $siteCon
+
+    # Getting role groups for actual site
+    $gauser = $web.EnsureUser("Company Administrator")
+    $gauser.Context.Load($gauser)
+    Invoke-PnPQuery -Connection $siteCon
+
+    $sauser = $web.EnsureUser($spAdminRoleName)
+    $sauser.Context.Load($sauser)
+    Invoke-PnPQuery -Connection $siteCon
+
+    # Getting admins
+    $admins = @()
+    foreach($scAdmin in $AlyaSharePointNewSiteCollectionAdmins)
+    {
+        if (-Not [string]::IsNullOrEmpty($scAdmin) -and $scAdmin -ne "PleaseSpecify" -and $scAdmin -ne "Please Specify")
+        {
+            $user = $web.EnsureUser($scAdmin)
+            $user.Context.Load($user)
+            Invoke-PnPQuery -Connection $siteCon
+            $admins += $user
+        }
+    }
+    $admins += $sauser
+
     try {
-        Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $AlyaSharePointNewSiteCollectionAdmins
+        if ($site.Owner.LoginName -ne $gauser.LoginName) {
+            $admins += $site.Owner
+            $null = Add-PnPSiteCollectionAdmin -Connection $siteCon -PrimarySiteCollectionAdmin $gauser
+        }
+        $null = Add-PnPSiteCollectionAdmin -Connection $siteCon -Owners $admins
     }
     catch {
         Write-Error $_.Exception -ErrorAction Continue
         Write-Warning "Do you have the correct rights?"
+        pause
     }
 }
 

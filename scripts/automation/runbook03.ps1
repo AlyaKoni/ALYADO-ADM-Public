@@ -33,69 +33,50 @@
     14.11.2019 Konrad Brunner       Initial Version
     18.10.2021 Konrad Brunner       Move to Az
     10.02.2022 Konrad Brunner       fixed Add-AdAppCredential by replacing with REST call
+    01.06.2023 Konrad Brunner       fixed again Add-AdAppCredential by removing REST call, implemented new managed identity concept
 
 #>
 
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseApprovedVerbs", "")]
-param(
-    [Parameter(Mandatory = $true)]
-    [string] $ResourceGroupName,
+# Defaults
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$Global:ErrorActionPreference = "Stop"
+$Global:ProgressPreference = "SilentlyContinue"
 
-    [Parameter(Mandatory = $true)]
-    [string] $AutomationAccountName,
+# Runbook
+$AlyaResourceGroupName = "##AlyaResourceGroupName##"
+$AlyaAutomationAccountName = "##AlyaAutomationAccountName##"
+$AlyaRunbookName = "##AlyaRunbookName##"
 
-    [Parameter(Mandatory=$false)]
-    [string] $AzureEnvironment = 'AzureCloud'
-)
-$ErrorActionPreference = "Stop"
+# RunAsAccount
+$AlyaApplicationId = "##AlyaApplicationId##"
+$AlyaTenantId = "##AlyaTenantId##"
+$AlyaCertificateKeyVaultName = "##AlyaCertificateKeyVaultName##"
+$AlyaCertificateSecretName = "##AlyaCertificateSecretName##"
+$AlyaSubscriptionId = "##AlyaSubscriptionId##"
 
-<#
+# Mail settings
+$AlyaFromMail = "##AlyaFromMail##"
+$AlyaToMail = "##AlyaToMail##"
 
-    1. Add the RunAs service principal as an owner of the application created during Automation Account creation. You can get the application
-    id from the RunAs page in the Automation account and run the following commands locally after installly the AzureAD module from the PowerShellGallery.
-    Connect-AzureAD
-    $Application = Get-AzADApplication -Filter "AppId eq '123456789'"
-    $ServicePrincipal = Get-AzADServicePrincipal -Filter "AppId eq '123456789'"
-    Add-AzureADApplicationOwner -ObjectId $Application.ObjectId -RefObjectId $ServicePrincipal.ObjectId
-    2. Grant permissions to the Application to be able to update itself. Go to Azure AD in the portal and search for the RunAs application
-    in the App Registrations page (select all apps). 
-    3. Select the application and click Settings button -> Required Permissions -> Add button
-    Add the "Manage apps that this app creates or owns" permission from Windows Azure Active Directory.
-    4. Select Grant permissions (You may need to be an administrator in Azure AD to be able to perform this task).
-
-#>
-
-# Constants
-$RunAsConnectionName = "AzureRunAsConnection"
-$RunAsCertificateName = "AzureRunAsCertificate"
-$ConnectionTypeName = "AzureServicePrincipal"
-$AzureCertificateName = $AutomationAccountName + $RunAsCertificateName
-
-# Login-AzureAutomation
-try {
-    $RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
-    Write-Output "Logging in to Az ($AzureEnvironment)..."
-    Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
-    Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
-    Add-AzAccount `
-        -ServicePrincipal `
-        -TenantId $RunAsConnection.TenantId `
-        -ApplicationId $RunAsConnection.ApplicationId `
-        -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
-        -Environment $AzureEnvironment
-    Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
-} catch {
-	if (!$RunAsConnection) {
-		Write-Output $_.Exception
-		Write-Output "Connection $RunAsConnectionName not found."
-	}
-	throw
+# Login
+Write-Output "Login to Az using system-assigned managed identity"
+Disable-AzContextAutosave -Scope Process | Out-Null
+try
+{
+    $AzureContext = (Connect-AzAccount -Identity).Context
 }
+catch
+{
+    throw "There is no system-assigned user identity. Aborting."; 
+    exit 99
+}
+$AzureContext = Set-AzContext -Subscription $AlyaSubscriptionId -DefaultProfile $AzureContext
 
-try {
+try
+{
 
 	# Check AzureAutomationCertificate
-	$RunAsCert = Get-AutomationCertificate -Name $RunAsCertificateName
+	$RunAsCert = Get-AutomationCertificate -Name "AzureRunAsCertificate"
 	Write-Output ("Existing certificate will expire at " + $RunAsCert.NotAfter)
 	<#
 	if ($RunAsCert.NotAfter -gt (Get-Date).AddMonths(3))
@@ -106,70 +87,133 @@ try {
 	#>
 
 	# Find the application
-	Write-Output ("Getting application $($RunasConnection.ApplicationId)")
-	$Filter = "AppId eq '" + $RunasConnection.ApplicationId + "'"
-	$Application = Get-AzADApplication -Filter $Filter
-	if (-Not $Application) { throw "Application with id $($RunasConnection.ApplicationId) not found" }
+	Write-Output ("Getting application $($AlyaApplicationId)")
+	$Filter = "AppId eq '" + $AlyaApplicationId + "'"
+	$AzAdApplication = Get-AzADApplication -Filter $Filter
+	if (-Not $AzAdApplication) { throw "Application with id $($AlyaApplicationId) not found" }
 
 	# Create RunAs certificate
 	Write-Output ("Creating new certificate")
-	$SelfSignedCertNoOfMonthsUntilExpired = 6
+    $AzureCertifcateAssetName = "AzureRunAsCertificate"
+    $AzureCertificateName = $AlyaAutomationAccountName + $AzureCertifcateAssetName
+    $SelfSignedCertNoOfMonthsUntilExpired = 6
 	$SelfSignedCertPlainPassword = "-"+[Guid]::NewGuid().ToString()+"]"
 	$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".pfx")
-    $CertPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
+    $CerPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
 	Clear-Variable -Name "SelfSignedCertPlainPassword" -Force -ErrorAction SilentlyContinue
-	$Cert = New-SelfSignedCertificate -DnsName $AzureCertificateName -CertStoreLocation Cert:\LocalMachine\My `
+	$Cert = New-SelfSignedCertificate -DnsName $AzureCertificateName -CertStoreLocation Cert:\CurrentUser\My `
 						-KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
 						-NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired) -HashAlgorithm SHA256
-	Export-PfxCertificate -Cert ("Cert:\LocalMachine\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CertPassword -Force | Write-Verbose
+	Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
     $CerKeyValue = [System.Convert]::ToBase64String($Cert.GetRawCertData())
     $CerThumbprint = [System.Convert]::ToBase64String($Cert.GetCertHash())
     $CerThumbprintString = $Cert.Thumbprint
     $CerStartDate = $Cert.NotBefore
     $CerEndDate = $Cert.NotAfter
 
-	# Update the certificate in the Automation account with the new one 
-	Write-Output ("Updating automation account certificate")
-	Set-AzAutomationCertificate -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Path $PfxCertPathForRunAsAccount -Name $RunAsCertificateName `
-				 -Password $CertPassword -Exportable:$true
+    # Updating certificate in key vault 
+    Write-Output "Updating certificate in key vault"
+    $AzureKeyVaultCertificate = Import-AzKeyVaultCertificate -VaultName $AlyaCertificateKeyVaultName -Name $AlyaCertificateSecretName -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword
+    $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $AlyaCertificateKeyVaultName -Name $AlyaCertificateSecretName
 
-	# Update the RunAs connection with the new certificate information
-	Write-Output ("Updating automation account connection")
-	$ConnectionFieldValues = @{
-		"ApplicationId" = $RunasConnection.ApplicationId
-		"TenantId" = $RunAsConnection.TenantId
-		"CertificateThumbprint" = $CerThumbprintString
-		"SubscriptionId" = $RunAsConnection.SubscriptionId
-	}
-	# Can't just update the thumbprint value due to bug https://github.com/Azure/azure-powershell/issues/5862 so deleting / creating connection 
-	Remove-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName -Force
-	New-AzAutomationConnection -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name $RunAsConnectionName `
-				  -ConnectionFieldValues $ConnectionFieldValues -ConnectionTypeName $ConnectionTypeName
+    # Update the certificate in the Automation account with the new one 
+    Write-Output "Updating automation account certificate"
+    $AutomationCertificate = Get-AzAutomationCertificate -ResourceGroupName $AlyaResourceGroupName -AutomationAccountName $AlyaAutomationAccountName -Name $AzureCertifcateAssetName -ErrorAction SilentlyContinue
+    if (-Not $AutomationCertificate)
+    {
+        Write-Warning "Automation Certificate not found. Creating the Automation Certificate $AzureCertifcateAssetName"
+        New-AzAutomationCertificate -ResourceGroupName $AlyaResourceGroupName -AutomationAccountName $AlyaAutomationAccountName -Name $AzureCertifcateAssetName -Path $PfxCertPathForRunAsAccount -Password $CerPassword -Exportable:$true
+    }
+    else
+    {
+        if ($AutomationCertificate.Thumbprint -ne $CerThumbprintString)
+        {
+            Write-Output "  Updating"
+            Set-AzAutomationCertificate -ResourceGroupName $AlyaResourceGroupName `
+                -AutomationAccountName $AlyaAutomationAccountName -Name $AzureCertifcateAssetName `
+                -Path $PfxCertPathForRunAsAccount -Password $CerPassword -Exportable:$true
+        }
+    }
 
-	# Add new certificate to application
-	Write-Output ("Adding new certificate to application")
-	$payload = @"
-{
-"keyCredentials": [{
-	"@odata.type": "microsoft.graph.keyCredential",
-	"customKeyIdentifier": "$CerThumbprint",
-	"key": "$CerKeyValue",
-	"keyId": "$([System.Guid]::NewGuid().ToString())",
-	"type": "AsymmetricX509Cert",
-	"usage": "Verify",
-	"startDateTime": "$($CerStartDate.ToString("o"))",
-	"endDateTime": "$($CerEndDate.ToString("o"))"
-}]
+    # Checking application credential
+    Write-Output "Checking application credential"
+    $AppCredential = Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId -ErrorAction SilentlyContinue
+    if (-Not $AppCredential)
+    {
+        Write-Output "  Not found"
+        $AppCredential = New-AzADAppCredential -ApplicationId $AzAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $CerKeyValue -StartDate $CerStartDate -EndDate $CerEndDate 
+    }
+    else
+    {
+        if ([System.Convert]::ToBase64String($AppCredential.CustomKeyIdentifier) -ne $CerThumbprint)
+        {
+            Write-Output "  Updating"
+            Remove-AzADAppCredential -ObjectId $AzAdApplication.Id -KeyId $AppCredential.KeyId
+            $AppCredential = New-AzADAppCredential -ApplicationId $AzAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $CerKeyValue -StartDate $CerStartDate -EndDate $CerEndDate 
+        }
+    }
+
+    Write-output "Done"
 }
-"@
-	$result = Invoke-AzRestMethod -Uri "https://graph.microsoft.com/v1.0/applications/$($Application.Id)" -Method PATCH -Payload $payload
-	if ($result.StatusCode -ge 400)
-	{
-		throw "$($result.StatusCode): $($result.Content)"
-	}
+catch
+{
+    Write-Error $_ -ErrorAction Continue
+    try { Write-Error ($_ | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 
-	Write-Output ("RunAs certificate credentials have been updated")
-} catch {
-    Write-Error $_.Exception -ErrorAction Continue
+    # Login back
+    Write-Output "Login back to Az using system-assigned managed identity"
+    try { Disconnect-AzAccount }catch{}
+    $AzureContext = (Connect-AzAccount -Identity).Context
+    $AzureContext = Set-AzContext -Subscription $AlyaSubscriptionId -DefaultProfile $AzureContext
+
+    # Getting MSGraph Token
+    Write-Output "Getting MSGraph Token"
+    $token = Get-AzAccessToken -ResourceUrl "$AlyaGraphEndpoint" -TenantId $AlyaTenantId
+
+    # Sending email
+    Write-Output "Sending email"
+    Write-Output "  From: $AlyaFromMail"
+    Write-Output "  To: $AlyaToMail"
+    $subject = "Error in automation runbook '$AlyaRunbookName' in automation account '$AlyaAutomationAccountName'"
+    $contentType = "Text"
+    $content = "TenantId: $($AlyaTenantId)`n"
+    $content += "SubscriptionId: $($AlyaSubscriptionId)`n"
+    $content += "ResourceGroupName: $($AlyaResourceGroupName)`n"
+    $content += "AutomationAccountName: $($AlyaAutomationAccountName)`n"
+    $content += "RunbookName: $($AlyaRunbookName)`n"
+    $content += "Exception:`n$($_)`n`n"
+    $payload = @{
+        Message = @{
+            Subject = $subject
+            Body = @{ ContentType = $contentType; Content = $content }
+            ToRecipients = @( @{ EmailAddress = @{ Address = $AlyaToMail } } )
+        }
+        saveToSentItems = $false
+    }
+    $body = ConvertTo-Json $payload -Depth 99 -Compress
+    $HeaderParams = @{
+        'Accept' = "application/json;odata=nometadata"
+        'Content-Type' = "application/json"
+        'Authorization' = "$($token.Type) $($token.Token)"
+    }
+    $Result = ""
+    $StatusCode = ""
+    do {
+        try {
+            $Uri = "$AlyaGraphEndpoint/beta/users/$($AlyaFromMail)/sendMail"
+            Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json" -Body $body
+        } catch {
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
+                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                Start-Sleep -Seconds 45
+            }
+            else {
+                Write-Error $_.Exception -ErrorAction Continue
+                throw
+            }
+        }
+    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
+
     throw
 }

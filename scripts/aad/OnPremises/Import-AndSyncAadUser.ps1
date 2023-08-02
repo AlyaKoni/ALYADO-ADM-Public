@@ -48,15 +48,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Import-AndSyncAadUser-$(
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Check-Module ActiveDirectory
+Check-Module "ActiveDirectory"
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
 
 # =============================================================
 # O365 stuff
@@ -67,7 +65,7 @@ Write-Host "AD | Import-AndSyncAadUser | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$aadUser = Get-MsolUser -UserPrincipalName $userToImport -ErrorAction SilentlyContinue
+$aadUser = Get-AzAdUser -UserPrincipalName $userToImport -ErrorAction SilentlyContinue
 if (-Not $aadUser)
 {
     Write-Error "Can't find user with UPN '$($userToImport)' in online AAD" -ErrorAction Continue
@@ -90,13 +88,13 @@ if ($aadUser.ImmutableId.ToString() -ne $adUser.objectGUID.ToString())
 {
     $GUIDbyte = $adUser.objectGUID.ToByteArray()
     $immuID = [System.Convert]::ToBase64String($GUIDbyte)
-    Set-MsolUser -UserPrincipalName $userToImport -ImmutableId $immuID
+    Update-AzAdUser -UPNOrObjectId $userToImport -OnPremisesImmutableId $immuID
 }
 
 Start-ADSyncSyncCycle
 Start-Sleep -Seconds 30
 
-$aadUser = Get-MsolUser -UserPrincipalName $userToImport -ErrorAction SilentlyContinue
+$aadUser = Get-AzAdUser -UserPrincipalName $userToImport -Select "OnPremisesImmutableId" -ErrorAction SilentlyContinue
 $aadUser.ImmutableId
 $aadUser.Errors
 $aadUser.DirSyncProvisioningErrors

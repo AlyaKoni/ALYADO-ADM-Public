@@ -58,7 +58,7 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ImportExcel"
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Add-Type -AssemblyName System.Web
 
 # Logging in
@@ -81,7 +81,7 @@ $breaches | ConvertTo-Json | Set-Content -Path "$outputFile.Breaches.json" -Enco
 
 # Checking users
 Write-Host "Checking users" -ForegroundColor $CommandInfo
-$users = Get-MgUser -All -Property "id,mail,userPrincipalName,ProxyAddresses"
+$users = Get-MgBetaUser -All -Property "id,mail,userPrincipalName,ProxyAddresses"
 
 $HeaderParams = @{
     "hibp-api-key"  = $haveibeenpwnedApiKey

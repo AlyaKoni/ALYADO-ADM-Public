@@ -60,13 +60,12 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Teams"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Teams"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logins
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-LoginTo-Teams
 LoginTo-MgGraph -Scopes @(
     "Directory.ReadWrite.All",
     "Group.ReadWrite.All",
@@ -79,6 +78,8 @@ LoginTo-MgGraph -Scopes @(
     "TeamMember.ReadWrite.All",
     "ChannelMessage.Send"
 )
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+LoginTo-Teams
 
 # =============================================================
 # O365 stuff
@@ -90,7 +91,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking team
 Write-Host "Checking team" -ForegroundColor $CommandInfo
-$Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+$Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $TitleAndGroupName }
 $TeamHasBeenCreated = $false
 if (-Not $Team)
 {
@@ -106,7 +107,7 @@ else
 }
 do
 {
-    $Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+    $Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $TitleAndGroupName }
     if (-Not $Team -or -Not $Team.GroupId) { 
         Write-Host "Waiting for Teams..."
         Start-Sleep -Seconds 10
@@ -151,7 +152,7 @@ Set-Team -GroupId $Team.GroupId `
 
 # Getting groups
 Write-Host "Getting groups" -ForegroundColor $CommandInfo
-$allGroups = Get-MgGroup -All
+$allGroups = Get-MgBetaGroup -All
 
 # Checking team owners
 Write-Host "Checking team owners" -ForegroundColor $CommandInfo
@@ -161,7 +162,7 @@ foreach($memb in $Owners)
     if ($memb.IndexOf("@") -gt -1)
     {
         # is email
-        $user = Get-MgUser -UserId $memb
+        $user = Get-MgBetaUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.MailNickname -eq $memb.Substring(0,$memb.IndexOf("@")) }
@@ -171,7 +172,7 @@ foreach($memb in $Owners)
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+                Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewOwners += $_.AdditionalProperties.userPrincipalName
@@ -190,7 +191,7 @@ foreach($memb in $Owners)
     else
     {
         # is guid
-        $user = Get-MgUser -UserId $memb
+        $user = Get-MgBetaUser -UserId $memb
         if (-Not $user)
         {
             $group = $allGroups | Where-Object { $_.Id -eq $memb }
@@ -200,7 +201,7 @@ foreach($memb in $Owners)
             }
             else
             {
-                Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+                Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
                     if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*" -and $NewOwners -notcontains $_.AdditionalProperties.userPrincipalName)
                     {
                         $NewOwners += $_.AdditionalProperties.userPrincipalName
@@ -238,8 +239,8 @@ foreach($own in $NewOwners)
 
 # Checking team guest settings
 Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-MgDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
-$Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+$SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+$Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
@@ -247,8 +248,8 @@ if (-Not $Setting)
     foreach($dval in $SettingTemplate.Values) {
 	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
     }
-    $Setting = New-MgGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
-    $Setting = Get-MgGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+    $Setting = New-MgBetaGroupSetting -GroupId $Team.GroupId -DisplayName "Group.Unified.Guest" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
 if ($Value.Value -eq $true) {
@@ -258,7 +259,7 @@ else {
     Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
     ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $true
 }
-Update-MgGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
+Update-MgBetaGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 # Checking members
 Write-Host "Checking members" -ForegroundColor $CommandInfo
@@ -266,7 +267,7 @@ if (-Not $assignedGroups)
 {
     # Setting DynamicMembershipRule
     Write-Host "Setting DynamicMembershipRule" -ForegroundColor $CommandInfo
-    $group = Update-MgGroup -GroupId $Team.GroupId -GroupTypes "DynamicMembership", "Unified" `
+    $group = Update-MgBetaGroup -GroupId $Team.GroupId -GroupTypes "DynamicMembership", "Unified" `
         -MembershipRule $DynamicMembershipRule -MembershipRuleProcessingState "On"
 }
 else
@@ -280,7 +281,7 @@ else
     {
         $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Member
         $NewMembers = @()
-        Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+        Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
             if ($_.AdditionalProperties.userPrincipalName -notlike "*#EXT#*")
             {
                 $NewMembers += $_.AdditionalProperties.userPrincipalName
@@ -313,10 +314,10 @@ else
     {
         $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Guest
         $NewGuests = @()
-        Get-MgGroupMember -GroupId $group.Id | Foreach-Object {
+        Get-MgBetaGroupMember -GroupId $group.Id | Foreach-Object {
             if ($_.AdditionalProperties.userPrincipalName -like "*#EXT#*")
             {
-                $user = Get-MgUser -UserId $_.AdditionalProperties.userPrincipalName
+                $user = Get-MgBetaUser -UserId $_.AdditionalProperties.userPrincipalName
                 $NewGuests += $user.Mail
             }
         }
@@ -342,7 +343,9 @@ else
 }
 
 # Posting welcome message
-if ($TeamHasBeenCreated)
+$Channel = Get-TeamChannel -GroupId $Team.GroupId
+$msgs = Get-MgBetaTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id | Where-Object { $_.MessageType -eq "message" }
+if (-Not $msgs -or $msgs.Count -eq 0)
 {
     Write-Host "Posting welcome message" -ForegroundColor $CommandInfo
     $postMessageDE = "<h1>Willkommen</h1>"
@@ -363,9 +366,8 @@ if ($TeamHasBeenCreated)
             content = "$postMessageEN"
         }
     }
-    $Channel = Get-TeamChannel -GroupId $Team.GroupId
-    $message = New-MgTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyDE
-    $message = New-MgTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyEN
+    $message = New-MgBetaTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyDE
+    $message = New-MgBetaTeamChannelMessage -TeamId $Team.GroupId -ChannelId $Channel.Id -BodyParameter $bodyEN
 
     Write-Host "Please pin now the created messages and" -ForegroundColor $CommandWarning
     Write-Host "set channel to allow only owners posting messages" -ForegroundColor $CommandWarning
@@ -378,7 +380,7 @@ if ($TeamHasBeenCreated)
 # Setting SharePoint access
 Write-Host "Setting SharePoint access" -ForegroundColor $CommandInfo
 $Channel = Get-TeamChannel -GroupId $Team.GroupId
-$mgChannelFolder = Get-MgTeamChannelFileFolder -TeamId $Team.GroupId -ChannelId $Channel.Id
+$mgChannelFolder = Get-MgBetaTeamChannelFileFolder -TeamId $Team.GroupId -ChannelId $Channel.Id
 $mgChannelFolder = (Split-Path -Path (Split-Path -Path $mgChannelFolder.WebUrl -Parent) -Parent) -replace "\\", "/"
 $siteCon = LoginTo-PnP -Url $mgChannelFolder
 $mg = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup

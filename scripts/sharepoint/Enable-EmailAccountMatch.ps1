@@ -62,14 +62,14 @@ Write-Host "=====================================================`n" -Foreground
 
 # Enabling require account match invited email
 Write-Host "Enabling require account match invited email" -ForegroundColor $CommandInfo
-$setting = Invoke-MgGraphRequest -Method "Get" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings"
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings"
 
 if ($setting.isRequireAcceptingUserToMatchInvitedUserEnabled -ne $true){
     Write-Warning "Require account match was set to '$($setting.isRequireAcceptingUserToMatchInvitedUserEnabled)', setting to '$true'"
     $newSettings = @{
         "isRequireAcceptingUserToMatchInvitedUserEnabled" = $true
     }
-    Invoke-MgGraphRequest -Method "Patch" -Uri "https://graph.microsoft.com/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+    Invoke-MgGraphRequest -Method "Patch" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
 }
 else {
     Write-host "Require account match was alreadyset to '$true'"

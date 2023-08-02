@@ -52,4 +52,19 @@ Write-Host "AAD | Sync-Aad | LOCAL" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main
-Start-ADSyncSyncCycle
+$shd = Get-ADSyncScheduler
+if (-Not $shd.SyncCycleInProgress)
+{
+    Write-Host "Starting sync"
+    Start-ADSyncSyncCycle
+}
+else {
+    Write-Host "A sync is already running"
+}
+do
+{
+    Write-Host "Sync is running..."
+    Start-Sleep -Seconds 20
+    $shd = Get-ADSyncScheduler
+} while ($shd.SyncCycleInProgress)
+Write-Host "Sync done"

@@ -170,10 +170,10 @@ if (-Not $global:ocred)
 }
 
 Write-Output "Connecting to SPOService"
-$tmp = Connect-SPOService -Url $sharepointAdminUrl -Credential $global:ocred
+$null = Connect-SPOService -Url $sharepointAdminUrl -Credential $global:ocred
 
 Write-Output "Connecting to PnP"
-$tmp = Connect-PnPOnline -Url $sharepointUrl -Credential $global:ocred
+$null = Connect-PnPOnline -Url $sharepointUrl -Credential $global:ocred
 
 function ProcessNavNode($navNode)
 {

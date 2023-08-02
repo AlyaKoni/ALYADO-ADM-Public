@@ -51,7 +51,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneWebApps-$($A
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "WebApps"
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 
 # Checking modules
@@ -140,7 +140,7 @@ foreach($packageDir in $packages)
                 # Adding category
                 Write-Host "    Adding category $($defCategory.displayName)"
                 $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
-                $body = "{ `"@odata.id`": `"https://graph.microsoft.com$caturi`" }"
+                $body = "{ `"@odata.id`": `"$AlyaGraphEndpoint$caturi`" }"
                 $appCat = Post-MsGraph -Uri $uri -Body $body
             }
             else

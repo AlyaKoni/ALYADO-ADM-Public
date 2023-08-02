@@ -70,8 +70,8 @@ $tempMsi = "$temp" + $msiPath.Substring($msiPath.LastIndexOf("\"))
 $tempPck = $tempMsi.Replace(".msi", ".intunewin").Replace(".exe", ".intunewin")
 $detection = "$temp\IntuneWinPackage\Metadata\Detection.xml"
 
-$tmp = New-Item -Path $temp -ItemType Directory -Force
-$tmp = Copy-Item -Path $msiPath -Destination $tempMsi -Force
+$null = New-Item -Path $temp -ItemType Directory -Force
+$null = Copy-Item -Path $msiPath -Destination $tempMsi -Force
 
 Write-Host "Launching IntuneWinAppUtil" -ForegroundColor $CommandInfo
 $Command = "& `"$tool`" -c `"$temp`" -s `"$tempMsi`" -o `"$temp`" -q"

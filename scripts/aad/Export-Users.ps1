@@ -59,21 +59,20 @@ if (-Not (Test-Path $outputDirectory))
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ImportExcel"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes "Directory.Read.All"
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Export-Users | MSOL" -ForegroundColor $CommandInfo
+Write-Host "AAD | Export-Users | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Functions
@@ -85,7 +84,8 @@ function Convert-ObjectIdToSid
 
 # Getting users
 Write-Host "Getting users" -ForegroundColor $CommandInfo
-$users = Get-MsolUser -All
+#$users = Get-MsolUser -All
+$users = Get-MgBetaUser -Property "*" -All
 
 $propNames = @()
 foreach($user in $users)
@@ -98,7 +98,7 @@ foreach($user in $users)
         }
     }
 }
-$propNames += "SID"
+
 function MoveFront($propName)
 {
     $idx = $propNames.IndexOf($propName)
@@ -108,12 +108,13 @@ function MoveFront($propName)
     }
     $propNames[0] = $propName
 }
-MoveFront "ObjectId"
-MoveFront "SID"
-MoveFront "Licenses"
-MoveFront "LastName"
-MoveFront "FirstName"
-MoveFront "AlternateEmailAddresses"
+MoveFront "Id"
+MoveFront "SecurityIdentifier"
+MoveFront "LicenseDetails"
+MoveFront "Surname"
+MoveFront "GivenName"
+MoveFront "OtherMails"
+MoveFront "Mail"
 MoveFront "DisplayName"
 MoveFront "UserType"
 MoveFront "UserPrincipalName"
@@ -126,55 +127,83 @@ foreach($user in $users)
     $allProps = $user.PSObject.Properties
     foreach($prop in $propNames)
     {
-        if ($prop -eq "SID") { continue }
         $psProp = $allProps | Where-Object { $_.Name -eq $prop }
         if (-Not $psProp)
         {
             Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ""
             continue
         }
-        if ($prop -eq "ObjectId")
-        {
-            Add-Member -InputObject $psuser -MemberType NoteProperty -Name "SID" -Value (Convert-ObjectIdToSid -ObjectId $user."$prop")
-            continue
-        }
         switch ($psProp.TypeNameOfValue)
         {
-            "System.Runtime.Serialization.ExtensionDataObject" {
-                Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ""
-            }
             "System.Xml.XmlElement" {
                 Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value $user."$prop".OuterXml
             }
+            "System.String" {
+                Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value $user."$prop"
+            }
+            "System.String[]" {
+                Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ($user."$prop" -join ";")
+            }
             default {
-                if ($psProp.TypeNameOfValue.StartsWith("System.Collections.Generic.List"))
+                $val = ""
+                if ($psProp.TypeNameOfValue.Contains("DateTime"))
                 {
-                    Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ($user."$prop" | ConvertTo-Json -Compress)
+                    if ($null -ne $user."$prop")
+                    {
+                        $val = $user."$prop".ToString("s")
+                    }
+                }
+                elseif ($psProp.TypeNameOfValue.Contains("Microsoft.Graph.Beta.PowerShell.Models") -or `
+                $psProp.TypeNameOfValue.Contains("StrongAuthenticationUserDetails") -or `
+                $psProp.TypeNameOfValue.Contains("StrongAuthenticationMethod") -or `
+                $psProp.TypeNameOfValue.Contains("ExtensionDataObject"))
+                {
+                    $val = ($user."$prop" | ConvertTo-Json -Compress -Depth 1 -WarningAction SilentlyContinue)
+                }
+                elseif ($psProp.TypeNameOfValue.Contains("[]") -or `
+                    $psProp.TypeNameOfValue.Contains("System.Collections.Generic.Dictionary") -or `
+                    $psProp.TypeNameOfValue.Contains("System.Collections.Generic.List"))
+                {
+                    $val = ""
+                    foreach($prt in $user."$prop")
+                    {
+                        if ($null -ne $prt)
+                        {
+                            $val += $prt.ToString() + ";"
+                        }
+                    }
+                    $val = $val.TrimEnd(";")
+                }
+                elseif ($psProp.TypeNameOfValue.Contains("[[System.String") -and $psProp.TypeNameOfValue.Contains(",[System.Object") -and $psProp.TypeNameOfValue.Contains("System.Collections.Generic.IDictionary"))
+                {
+                    $val = ""
+                    foreach($prt in $user."$prop".GetEnumerator())
+                    {
+                        if ($null -ne $prt.Value)
+                        {
+                            $val += $prt.Key + "=" + $prt.Value.ToString() + ";"
+                        }
+                        else
+                        {
+                            $val += $prt.Key + "=;"
+                        }
+                    }
+                    $val = $val.TrimEnd(";")
                 }
                 else
                 {
-                    $val = ""
-                    if ($psProp.TypeNameOfValue.Contains("DateTime"))
+                    if ($null -ne $user."$prop")
                     {
-                        if ($user."$prop")
-                        {
-                            $val = $user."$prop".ToString("s")
-                        }
-                    }
-                    elseif ($psProp.TypeNameOfValue.Contains("StrongAuthenticationUserDetails") -or `
-                            $psProp.TypeNameOfValue.Contains("StrongAuthenticationMethod"))
-                    {
-                        $val = ($user."$prop" | ConvertTo-Json -Compress)
+                        $val = $user."$prop".ToString()
                     }
                     else
                     {
-                        $val = "$($user."$prop")"
+                        $val = ""
                     }
-                    Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value $val
                 }
+                Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value $val
             }
         }
-    
     }
     $psusers += $psuser
 }

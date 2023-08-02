@@ -51,7 +51,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Install-Office365-Ful
 Write-Host "Downloading office to $($AlyaTemp)\Office" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$AlyaTemp\Office"))
 {
-    $tmp = New-Item -Path "$AlyaTemp\Office" -ItemType Directory -Force
+    $null = New-Item -Path "$AlyaTemp\Office" -ItemType Directory -Force
 }
 Push-Location "$AlyaTemp\Office"
 cmd /c"$AlyaDeployToolRoot\setup.exe" /download "$AlyaData\client\office\office_full_deploy_config.xml"

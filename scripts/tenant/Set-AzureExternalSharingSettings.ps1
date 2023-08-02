@@ -103,7 +103,7 @@ if ($AlyaSharingPolicy -eq "AdminOnly")
 $body = $settings | ConvertTo-Json
 $apiToken = Get-AzAccessToken
 $header = @{'Authorization'='Bearer '+$apiToken;'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-$tmp = Invoke-RestMethod -Uri $url -Headers $header -Method PUT -Body $body -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
+$null = Invoke-RestMethod -Uri $url -Headers $header -Method PUT -Body $body -ContentType "application/json; charset=UTF-8" -ErrorAction Stop
 
 $ActualConfiguration = Invoke-RestMethod -Uri $url -Headers $header -Method GET -ErrorAction Stop
 Write-Host "New settings"

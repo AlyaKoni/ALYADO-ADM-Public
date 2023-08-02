@@ -165,7 +165,7 @@ foreach ($Group in $Groups)
     {
         Write-Host "  Checking Planner"
         $token = Get-AdalAccessToken
-        $uri = "https://graph.microsoft.com/Beta/groups/$($Grp.ExternalDirectoryObjectId)/planner/plans"
+        $uri = "$AlyaGraphEndpoint/Beta/groups/$($Grp.ExternalDirectoryObjectId)/planner/plans"
         $apps = $null
         try
         {
@@ -177,7 +177,7 @@ foreach ($Group in $Groups)
             if ($lastActivity -eq $null)
             {
                 #$pln = $plns[0]
-                $uri = "https://graph.microsoft.com/Beta/planner/plans/$($pln.id)/tasks"
+                $uri = "$AlyaGraphEndpoint/Beta/planner/plans/$($pln.id)/tasks"
                 $tasks = (Get-MsGraphObject -AccessToken $token -Uri $uri).value
                 foreach($task in $tasks)
                 {

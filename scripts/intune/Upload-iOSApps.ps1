@@ -120,7 +120,7 @@ foreach($iosApp in $appsIOS)
         $iosApp.publisher = $app.artistName
         $iosApp.description = $description
         $iosApp.largeIcon = @{
-            "@odata.type" = "#microsoft.graph.mimeContent"
+            "@odata.type" = "#Microsoft.Graph.Beta.mimeContent"
             type = $iconType
             value = $base64icon
         }

@@ -49,7 +49,7 @@ function Get-AudienceForHostName
         "api.powerapps.com" = "https://service.powerapps.com/";
         "tip1.api.powerapps.com" = "https://service.powerapps.com/";
         "tip2.api.powerapps.com" = "https://service.powerapps.com/";
-        "graph.windows.net" = "https://graph.windows.net/";
+        "graph.windows.net" = "$AlyaADGraphEndpoint/";
         "api.bap.microsoft.com" = "https://service.powerapps.com/";
         "tip1.api.bap.microsoft.com" = "https://service.powerapps.com/";
         "tip2.api.bap.microsoft.com" = "https://service.powerapps.com/";

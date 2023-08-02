@@ -44,7 +44,7 @@ $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
 {
-    $tmp = New-Item -Path $contentRoot -ItemType Directory -Force
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
 $zipFile = Join-Path $contentRoot (Split-Path -Path $newUrl -Leaf)
 Start-BitsTransfer -Source $newUrl -Destination $zipFile

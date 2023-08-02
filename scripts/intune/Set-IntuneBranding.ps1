@@ -105,7 +105,7 @@ if ($logo)
             $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoLight)).replace(".","")
             $iconType = "image/$iconExt"
-            $brandingConfig.intuneBrand.lightBackgroundLogo = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
+            $brandingConfig.intuneBrand.lightBackgroundLogo = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
             $brandingConfig.intuneBrand.lightBackgroundLogo.type = "$iconType"
             $brandingConfig.intuneBrand.lightBackgroundLogo.value = "$base64icon"
         }
@@ -140,7 +140,7 @@ if ($logo)
             $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoDark)).replace(".","")
             $iconType = "image/$iconExt"
-            $brandingConfig.intuneBrand.darkBackgroundLogo = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
+            $brandingConfig.intuneBrand.darkBackgroundLogo = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
             $brandingConfig.intuneBrand.darkBackgroundLogo.type = "$iconType"
             $brandingConfig.intuneBrand.darkBackgroundLogo.value = "$base64icon"
         }
@@ -175,7 +175,7 @@ if ($logo)
             $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoLandingPage)).replace(".","")
             $iconType = "image/$iconExt"
-            $brandingConfig.intuneBrand.landingPageCustomizedImage = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
+            $brandingConfig.intuneBrand.landingPageCustomizedImage = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
             $brandingConfig.intuneBrand.landingPageCustomizedImage.type = "$iconType"
             $brandingConfig.intuneBrand.landingPageCustomizedImage.value = "$base64icon"
         }

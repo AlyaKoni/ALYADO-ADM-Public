@@ -51,6 +51,8 @@
     10.04.2023 Konrad Brunner       Reuse connection in PnP Powershell
 	20.04.2023 Konrad Brunner		Added Mime Mapping function for PS7
 	14.05.2023 Konrad Brunner		Fixed package management update
+	12.06.2023 Konrad Brunner		Scripts path
+	22.07.2023 Konrad Brunner		Added non Public Cloud Environment Support
 
 #>
 
@@ -69,6 +71,19 @@ $MenuColor = "Magenta"
 $QuestionColor = "Magenta"
 
 <# ROOT PATHS #>
+$AlyaAzureEnvironment = "AzureCloud"
+$AlyaPnpEnvironment = "Production"
+$AlyaGraphEnvironment = "Global"
+$AlyaExchangeEnvironment = "O365Default"
+$AlyaSharePointEnvironment = "Default"
+$AlyaTeamsEnvironment = $null
+$AlyaGraphAppId = $null
+$AlyaPnPAppId = $null
+$AlyaGraphEndpoint = "https://graph.microsoft.com"
+$AlyaADGraphEndpoint = "https://graph.windows.net"
+$AlyaOpenIDEndpoint = "https://login.microsoftonline.com"
+$AlyaLoginEndpoint = "https://login.microsoftonline.com"
+$AlyaM365AdminPortalRoot = "https://admin.microsoft.com/AdminPortal"
 $AlyaRoot = "$PSScriptRoot"
 $AlyaLogs = "$AlyaRoot\_logs"
 $AlyaTemp = "$AlyaRoot\_temp"
@@ -77,17 +92,27 @@ $AlyaData = "$AlyaRoot\data"
 $AlyaScripts = "$AlyaRoot\scripts"
 $AlyaSolutions = "$AlyaRoot\solutions"
 $AlyaTools = "$AlyaRoot\tools"
+$AlyaEnvSwitch = ""
+
+# Switching env if required
+if ((Test-Path $AlyaLocal\EnvSwitch.ps1))
+{
+    Write-Host "Switching environment" -ForegroundColor $MenuColor
+    . $AlyaLocal\EnvSwitch.ps1
+    Write-Host " to $AlyaEnvSwitch" -ForegroundColor $MenuColor
+}
 
 # Loading custom configuration
-Write-Host "Loading configuration" -ForegroundColor Cyan
+Write-Host "Loading configuration" -ForegroundColor $CommandInfo
 if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
 {
-    . $PSScriptRoot\data\ConfigureEnv.ps1
+    . $PSScriptRoot\data\ConfigureEnv$AlyaEnvSwitch.ps1
 }
 
 <# POWERSHELL #>
 $Global:ErrorActionPreference = "Stop"
 $Global:ProgressPreference = "SilentlyContinue"
+$AlyaIsPsCore = ($PSVersionTable).PSEdition -eq "Core"
 
 <# TLS Connections #>
 [Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls12, [Net.SecurityProtocolType]::Tls13)
@@ -97,11 +122,10 @@ $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 <# OTHER PATHS #>
 $AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Modules"
 $AlyaDefaultModulePathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Modules"
-$AlyaIsPsCore = $PSVersionTable.PSVersion.Major -ge 6
-if (-Not $AlyaModulePath)
-{
-    $AlyaModulePath = $AlyaDefaultModulePath
-}
+$AlyaDefaultScriptPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Scripts"
+$AlyaDefaultScriptPathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Scripts"
+if (-Not $AlyaModulePath) { $AlyaModulePath = $AlyaDefaultModulePath }
+if (-Not $AlyaScriptPath) { $AlyaScriptPath = $AlyaDefaultScriptPath }
 $AlyaOfficeRoot = "C:\Program Files\Microsoft Office\root\Office16"
 $AlyaGitRoot = Join-Path (Join-Path $AlyaRoot "tools") "git"
 $AlyaDeployToolRoot = Join-Path (Join-Path $AlyaRoot "tools") "officedeploy"
@@ -132,7 +156,7 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
 # Loading local custom configuration
 if ((Test-Path $AlyaLocal\ConfigureEnv.ps1))
 {
-    Write-Host "Loading local configuration" -ForegroundColor Cyan
+    Write-Host "Loading local configuration" -ForegroundColor $CommandInfo
     . $AlyaLocal\ConfigureEnv.ps1
 }
 if ($AlyaModulePath -ne $AlyaDefaultModulePath -and $AlyaModulePath -ne $AlyaDefaultModulePathCore)
@@ -150,12 +174,33 @@ if ($AlyaModulePath -ne $AlyaDefaultModulePath -and $AlyaModulePath -ne $AlyaDef
     {
         New-Item -Path $AlyaModulePath -ItemType Directory -Force
     }
-    if (-Not $env:PSModulePath.StartsWith("$($AlyaModulePath)"))
+    if (-Not $env:PSModulePath.Contains("$($AlyaModulePath)"))
     {
         $env:PSModulePath = "$($AlyaModulePath);"+$env:PSModulePath
     }
 }
-$AlyaPsEdition = ($PSVersionTable).PSEdition
+if ($AlyaScriptPath -ne $AlyaDefaultScriptPath -and $AlyaScriptPath -ne $AlyaDefaultScriptPathCore)
+{
+    if (-Not (Test-Path $AlyaScriptPath))
+    {
+        New-Item -Path $AlyaScriptPath -ItemType Directory -Force
+    }
+    if (-Not $env:Path.Contains("$($AlyaScriptPath)"))
+    {
+        $env:Path = "$($AlyaScriptPath);$($env:Path)"
+    }
+}
+if ($AlyaIsPsCore)
+{
+    if (-Not $env:Path.Contains("$($AlyaDefaultScriptPathCore)"))
+    {
+        $env:Path = "$($AlyaDefaultScriptPathCore);$($env:Path)"
+    }
+    if (-Not $env:Path.Contains("$($AlyaScriptPath)"))
+    {
+        $env:Path = "$($AlyaScriptPath);$($env:Path)"
+    }
+}
 
 <# CLIENT SETTINGS #>
 $AlyaOfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE") #WINPROJ.EXE, VISIO.EXE, ONENOTE.EXE, MSPUB.EXE, MSACCESS.EXE
@@ -227,7 +272,171 @@ else
 <# OTHERS #>
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmss")
 
-<# FUNCTIONS #>
+<# MISC HELPER FUNCTIONS #>
+
+function Get-ActualLoadedLibraries ()
+{
+    [System.AppDomain]::CurrentDomain.GetAssemblies() | Select-Object -Property FullName,Location | Sort-Object -Property FullName | Format-List
+    [System.AppDomain]::CurrentDomain.GetAssemblies() | Select-Object -Property FullName,Location | Sort-Object -Property FullName | Format-Table
+}
+
+function Set-AllCallsToVerbose
+{
+    $PSDefaultParameterValues = @{"*:Verbose"=$True}
+}
+
+function Get-PowerShellDefaultEncoding
+{
+    [psobject].Assembly.GetTypes() | Where-Object { $_.Name -eq 'ClrFacade'} |
+    ForEach-Object {
+      $_.GetMethod('GetDefaultEncoding', [System.Reflection.BindingFlags]'nonpublic,static').Invoke($null, @())
+    }
+}
+
+function Get-PowerShellEncodingIfNoBom
+{
+    $badBytes = [byte[]]@(0xC3, 0x80)
+    $utf8Str = [System.Text.Encoding]::UTF8.GetString($badBytes)
+    $bytes = [System.Text.Encoding]::ASCII.GetBytes('Write-Output "') + [byte[]]@(0xC3, 0x80) + [byte[]]@(0x22)
+    $path = Join-Path ([System.IO.Path]::GetTempPath()) 'encodingtest.ps1'
+    try
+    {
+        [System.IO.File]::WriteAllBytes($path, $bytes)
+        switch (& $path)
+        {
+            $utf8Str
+            {
+                return 'UTF-8'
+                break
+            }
+            default
+            {
+                return 'Windows-1252'
+                break
+            }
+        }
+    }
+    finally
+    {
+        Remove-Item $path
+    }
+}
+
+function Invoke-WebRequestIndep ()
+{
+    [CmdletBinding()]
+    Param(
+        [Switch]$UseBasicParsing,
+        [System.Uri]$Uri,
+        [System.Version]$HttpVersion,
+        [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession,
+        [System.String]$SessionVariable,
+        [Switch]$AllowUnencryptedAuthentication,
+        [Object]$Authentication,
+        [System.Management.Automation.PSCredential]$Credential,
+        [Switch]$UseDefaultCredentials,
+        [System.String]$CertificateThumbprint,
+        [System.Security.Cryptography.X509Certificates.X509Certificate]$Certificate,
+        [Switch]$SkipCertificateCheck,
+        [Object]$SslProtocol,
+        [System.Security.SecureString]$Token,
+        [System.String]$UserAgent,
+        [Switch]$DisableKeepAlive,
+        [System.Int32]$TimeoutSec,
+        [System.Collections.IDictionary]$Headers,
+        [System.Int32]$MaximumRedirection,
+        [System.Int32]$MaximumRetryCount,
+        [System.Int32]$RetryIntervalSec,
+        [Object]$Method,
+        [System.String]$CustomMethod,
+        [Switch]$NoProxy,
+        [System.Uri]$Proxy,
+        [System.Management.Automation.PSCredential]$ProxyCredential,
+        [Switch]$ProxyUseDefaultCredentials,
+        [System.Object]$Body,
+        [System.Collections.IDictionary]$Form,
+        [System.String]$ContentType,
+        [System.String]$TransferEncoding,
+        [System.String]$InFile,
+        [System.String]$OutFile,
+        [Switch]$PassThru,
+        [Switch]$Resume,
+        [Switch]$SkipHttpErrorCheck
+    )
+    $parms = @{}
+    $pkeys = $PSBoundParameters.Keys
+    if ($pkeys -contains "UseBasicParsing") { $parms["UseBasicParsing"] = $null }
+    if ($pkeys -contains "Uri") { $parms["Uri"] = $Uri }
+    if ($pkeys -contains "HttpVersion") { $parms["HttpVersion"] = $HttpVersion }
+    if ($pkeys -contains "WebSession") { $parms["WebSession"] = $WebSession }
+    if ($pkeys -contains "SessionVariable") { $parms["SessionVariable"] = $SessionVariable }
+    if ($pkeys -contains "AllowUnencryptedAuthentication") { $parms["AllowUnencryptedAuthentication"] = $null }
+    if ($pkeys -contains "Authentication") { $parms["Authentication"] = $Authentication }
+    if ($pkeys -contains "Credential") { $parms["Credential"] = $Credential }
+    if ($pkeys -contains "UseDefaultCredentials") { $parms["UseDefaultCredentials"] = $null }
+    if ($pkeys -contains "CertificateThumbprint") { $parms["CertificateThumbprint"] = $CertificateThumbprint }
+    if ($pkeys -contains "Certificate") { $parms["Certificate"] = $Certificate }
+    if ($pkeys -contains "SkipCertificateCheck") { $parms["SkipCertificateCheck"] = $null }
+    if ($pkeys -contains "SslProtocol") { $parms["SslProtocol"] = $SslProtocol }
+    if ($pkeys -contains "Token") { $parms["Token"] = $Token }
+    if ($pkeys -contains "UserAgent") { $parms["UserAgent"] = $UserAgent }
+    if ($pkeys -contains "DisableKeepAlive") { $parms["DisableKeepAlive"] = $null }
+    if ($pkeys -contains "TimeoutSec") { $parms["TimeoutSec"] = $TimeoutSec }
+    if ($pkeys -contains "Headers") { $parms["Headers"] = $Headers }
+    if ($pkeys -contains "MaximumRedirection") { $parms["MaximumRedirection"] = $MaximumRedirection }
+    if ($pkeys -contains "MaximumRetryCount") { $parms["MaximumRetryCount"] = $MaximumRetryCount }
+    if ($pkeys -contains "RetryIntervalSec") { $parms["RetryIntervalSec"] = $RetryIntervalSec }
+    if ($pkeys -contains "Method") { $parms["Method"] = $Method }
+    if ($pkeys -contains "CustomMethod") { $parms["CustomMethod"] = $CustomMethod }
+    if ($pkeys -contains "NoProxy") { $parms["NoProxy"] = $null }
+    if ($pkeys -contains "Proxy") { $parms["Proxy"] = $Proxy }
+    if ($pkeys -contains "ProxyCredential") { $parms["ProxyCredential"] = $ProxyCredential }
+    if ($pkeys -contains "ProxyUseDefaultCredentials") { $parms["ProxyUseDefaultCredentials"] = $null }
+    if ($pkeys -contains "Body") { $parms["Body"] = $Body }
+    if ($pkeys -contains "Form") { $parms["Form"] = $Form }
+    if ($pkeys -contains "ContentType") { $parms["ContentType"] = $ContentType }
+    if ($pkeys -contains "TransferEncoding") { $parms["TransferEncoding"] = $TransferEncoding }
+    if ($pkeys -contains "InFile") { $parms["InFile"] = $InFile }
+    if ($pkeys -contains "OutFile") { $parms["OutFile"] = $OutFile }
+    if ($pkeys -contains "PassThru") { $parms["PassThru"] = $null }
+    if ($pkeys -contains "Resume") { $parms["Resume"] = $null }
+    if ($pkeys -contains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
+    if ($pkeys -contains "PreserveAuthorizationOnRedirect") { $parms["PreserveAuthorizationOnRedirect"] = $null }
+    if ($pkeys -contains "SkipHeaderValidation") { $parms["SkipHeaderValidation"] = $null }
+    if ($pkeys -contains "Verbose") { $parms["Verbose"] = $null }
+    if ($pkeys -contains "Debug") { $parms["Debug"] = $null }
+    if ($pkeys -contains "ErrorAction") { $parms["ErrorAction"] = $ErrorAction }
+    if ($pkeys -contains "WarningAction") { $parms["WarningAction"] = $WarningAction }
+    if ($pkeys -contains "InformationAction") { $parms["InformationAction"] = $InformationAction }
+    if ($pkeys -contains "ErrorVariable") { $parms["ErrorVariable"] = $ErrorVariable }
+    if ($pkeys -contains "WarningVariable") { $parms["WarningVariable"] = $WarningVariable }
+    if ($pkeys -contains "InformationVariable") { $parms["InformationVariable"] = $InformationVariable }
+    if ($pkeys -contains "OutVariable") { $parms["OutVariable"] = $OutVariable }
+    if ($pkeys -contains "OutBuffer") { $parms["OutBuffer"] = $OutBuffer }
+    if ($pkeys -contains "PipelineVariable") { $parms["PipelineVariable"] = $PipelineVariable }
+    if ($AlyaIsPsCore -and $pkeys -notcontains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
+    return Invoke-WebRequest @parms
+}
+
+function Get-MimeType()
+{
+    [CmdletBinding()]
+    Param(
+        [string]$Extension = $null
+    )
+    $mimeType = $null;
+    if ( $null -ne $extension )
+    {
+        $drive = Get-PSDrive "HKCR" -ErrorAction SilentlyContinue;
+        if ( $null -eq $drive )
+        {
+            $drive = New-PSDrive -Name "HKCR" -PSProvider Registry -Root HKEY_CLASSES_ROOT
+        }
+        $mimeType = (Get-ItemProperty "HKCR:$extension")."Content Type";
+    }
+    return $mimeType;
+}
+
 function Remove-OneDriveItemRecursive
 {
     [cmdletbinding()]
@@ -270,6 +479,7 @@ function Remove-OneDriveItemRecursive
         Write-Warning "Remove-OneDriveItemRecursive - Path $Path doesn't exists. Skipping. "
     }
 }
+
 function Is-InternetConnected()
 {
     $var = Get-Variable -Name "AlyaIsInternetConnected" -Scope "Global" -ErrorAction SilentlyContinue
@@ -394,24 +604,63 @@ function Wait-UntilProcessEnds(
     } while ($prc)
 }
 
+<# PACKAGE AND MODULE MANGEMENT FUNCTIONS #>
+
 function Get-PublishedModuleVersion(
-    [string] [Parameter(Mandatory = $true)] $moduleName
+    [string] [Parameter(Mandatory = $true)] $moduleName,
+    [Version] $exactVersion = "0.0.0.0",
+    [bool] $AllowPrerelease = $false
 )
 {
-   $url = "https://www.powershellgallery.com/packages/$moduleName/?dummy=$(Get-Random)"
-   $request = [System.Net.WebRequest]::Create($url)
-   $request.AllowAutoRedirect=$false
-   try
-   {
-     $response = $request.GetResponse()
-     $response.GetResponseHeader("Location").Split("/")[-1] -as [Version]
-     $response.Close()
-     $response.Dispose()
-   }
-   catch
-   {
-     Write-Warning $_.Exception.Message
-   }
+    $url = "https://www.powershellgallery.com/packages/$moduleName/?dummy=$(Get-Random)"
+    $request = [System.Net.WebRequest]::Create($url)
+    $request.AllowAutoRedirect=$false
+    [Version]$version = "0.0.0.0"
+    [string]$fullVersion = "0.0.0.0"
+    try
+    {
+        $response = $request.GetResponse()
+        $version = $response.GetResponseHeader("Location").Split("/")[-1].Trim()
+        $fullVersion = $version
+        $response.Close()
+        $response.Dispose()
+    }
+    catch
+    {
+        Write-Warning $_.Exception.Message
+        return $null
+    }
+    if ($AllowPrerelease -or $exactVersion -ne "0.0.0.0")
+    {
+        $url = "https://www.powershellgallery.com/packages/$moduleName/$version/?dummy=$(Get-Random)"
+        try
+        {
+            $response = Invoke-WebRequestIndep -Method "Get" -Uri $url -UseBasicParsing
+            if ($exactVersion -ne "0.0.0.0")
+            {
+                $versionUrl = $response.Links | where { $_.href -like "/packages/$moduleName/$exactVersion*" } | Select-Object -Property href -First 1 | Out-String
+            }
+            else
+            {
+                $versionUrl = $response.Links | where { $_.href -like "/packages/$moduleName/*-nightly" } | Select-Object -Property href -First 1 | Out-String
+            }
+            if ($versionUrl)
+            {
+            $version = $versionUrl.Split("/")[-1].Replace("-nightly", "").Trim()
+            $fullVersion = $versionUrl.Split("/")[-1].Trim()
+        }
+            else
+            {
+                $version = $version
+                $fullVersion = $fullVersion
+            }
+        }
+        catch
+        {
+            Write-Warning $_.Exception.Message
+        }
+    }
+    return @($version, $fullVersion)
 }
 
 function Check-Module (
@@ -483,179 +732,6 @@ function DownloadAndInstall-Package($packageName, $nuvrs, $nusrc)
     [System.IO.Compression.ZipFile]::ExtractToDirectory($fileName, "$($AlyaTools)\Packages\$packageName")
     Remove-Item $fileName
 }
-
-function Set-AllCallsToVerbose
-{
-    $PSDefaultParameterValues = @{"*:Verbose"=$True}
-}
-
-function Get-PowerShellDefaultEncoding
-{
-    [psobject].Assembly.GetTypes() | Where-Object { $_.Name -eq 'ClrFacade'} |
-    ForEach-Object {
-      $_.GetMethod('GetDefaultEncoding', [System.Reflection.BindingFlags]'nonpublic,static').Invoke($null, @())
-    }
-}
-
-function Get-PowerShellEncodingIfNoBom
-{
-    $badBytes = [byte[]]@(0xC3, 0x80)
-    $utf8Str = [System.Text.Encoding]::UTF8.GetString($badBytes)
-    $bytes = [System.Text.Encoding]::ASCII.GetBytes('Write-Output "') + [byte[]]@(0xC3, 0x80) + [byte[]]@(0x22)
-    $path = Join-Path ([System.IO.Path]::GetTempPath()) 'encodingtest.ps1'
-    try
-    {
-        [System.IO.File]::WriteAllBytes($path, $bytes)
-        switch (& $path)
-        {
-            $utf8Str
-            {
-                return 'UTF-8'
-                break
-            }
-            default
-            {
-                return 'Windows-1252'
-                break
-            }
-        }
-    }
-    finally
-    {
-        Remove-Item $path
-    }
-}
-
-function Invoke-WebRequestIndep ()
-{
-    [CmdletBinding()]
-    Param(
-        [Switch]$UseBasicParsing,
-        [System.Uri]$Uri,
-        [System.Version]$HttpVersion,
-        [Microsoft.PowerShell.Commands.WebRequestSession]$WebSession,
-        [System.String]$SessionVariable,
-        [Switch]$AllowUnencryptedAuthentication,
-        [Microsoft.PowerShell.Commands.WebAuthenticationType]$Authentication,
-        [System.Management.Automation.PSCredential]$Credential,
-        [Switch]$UseDefaultCredentials,
-        [System.String]$CertificateThumbprint,
-        [System.Security.Cryptography.X509Certificates.X509Certificate]$Certificate,
-        [Switch]$SkipCertificateCheck,
-        [Microsoft.PowerShell.Commands.WebSslProtocol]$SslProtocol,
-        [System.Security.SecureString]$Token,
-        [System.String]$UserAgent,
-        [Switch]$DisableKeepAlive,
-        [System.Int32]$TimeoutSec,
-        [System.Collections.IDictionary]$Headers,
-        [System.Int32]$MaximumRedirection,
-        [System.Int32]$MaximumRetryCount,
-        [System.Int32]$RetryIntervalSec,
-        [Microsoft.PowerShell.Commands.WebRequestMethod]$Method,
-        [System.String]$CustomMethod,
-        [Switch]$NoProxy,
-        [System.Uri]$Proxy,
-        [System.Management.Automation.PSCredential]$ProxyCredential,
-        [Switch]$ProxyUseDefaultCredentials,
-        [System.Object]$Body,
-        [System.Collections.IDictionary]$Form,
-        [System.String]$ContentType,
-        [System.String]$TransferEncoding,
-        [System.String]$InFile,
-        [System.String]$OutFile,
-        [Switch]$PassThru,
-        [Switch]$Resume,
-        [Switch]$SkipHttpErrorCheck,
-        [Switch]$SkipHeaderValidation
-    )
-    $parms = @{}
-    $pkeys = $PSBoundParameters.Keys
-    if ($pkeys -contains "UseBasicParsing") { $parms["UseBasicParsing"] = $null }
-    if ($pkeys -contains "Uri") { $parms["Uri"] = $Uri }
-    if ($pkeys -contains "HttpVersion") { $parms["HttpVersion"] = $HttpVersion }
-    if ($pkeys -contains "WebSession") { $parms["WebSession"] = $WebSession }
-    if ($pkeys -contains "SessionVariable") { $parms["SessionVariable"] = $SessionVariable }
-    if ($pkeys -contains "AllowUnencryptedAuthentication") { $parms["AllowUnencryptedAuthentication"] = $null }
-    if ($pkeys -contains "Authentication") { $parms["Authentication"] = $Authentication }
-    if ($pkeys -contains "Credential") { $parms["Credential"] = $Credential }
-    if ($pkeys -contains "UseDefaultCredentials") { $parms["UseDefaultCredentials"] = $null }
-    if ($pkeys -contains "CertificateThumbprint") { $parms["CertificateThumbprint"] = $CertificateThumbprint }
-    if ($pkeys -contains "Certificate") { $parms["Certificate"] = $Certificate }
-    if ($pkeys -contains "SkipCertificateCheck") { $parms["SkipCertificateCheck"] = $null }
-    if ($pkeys -contains "SslProtocol") { $parms["SslProtocol"] = $SslProtocol }
-    if ($pkeys -contains "Token") { $parms["Token"] = $Token }
-    if ($pkeys -contains "UserAgent") { $parms["UserAgent"] = $UserAgent }
-    if ($pkeys -contains "DisableKeepAlive") { $parms["DisableKeepAlive"] = $null }
-    if ($pkeys -contains "TimeoutSec") { $parms["TimeoutSec"] = $TimeoutSec }
-    if ($pkeys -contains "Headers") { $parms["Headers"] = $Headers }
-    if ($pkeys -contains "MaximumRedirection") { $parms["MaximumRedirection"] = $MaximumRedirection }
-    if ($pkeys -contains "MaximumRetryCount") { $parms["MaximumRetryCount"] = $MaximumRetryCount }
-    if ($pkeys -contains "RetryIntervalSec") { $parms["RetryIntervalSec"] = $RetryIntervalSec }
-    if ($pkeys -contains "Method") { $parms["Method"] = $Method }
-    if ($pkeys -contains "CustomMethod") { $parms["CustomMethod"] = $CustomMethod }
-    if ($pkeys -contains "NoProxy") { $parms["NoProxy"] = $null }
-    if ($pkeys -contains "Proxy") { $parms["Proxy"] = $Proxy }
-    if ($pkeys -contains "ProxyCredential") { $parms["ProxyCredential"] = $ProxyCredential }
-    if ($pkeys -contains "ProxyUseDefaultCredentials") { $parms["ProxyUseDefaultCredentials"] = $null }
-    if ($pkeys -contains "Body") { $parms["Body"] = $Body }
-    if ($pkeys -contains "Form") { $parms["Form"] = $Form }
-    if ($pkeys -contains "ContentType") { $parms["ContentType"] = $ContentType }
-    if ($pkeys -contains "TransferEncoding") { $parms["TransferEncoding"] = $TransferEncoding }
-    if ($pkeys -contains "InFile") { $parms["InFile"] = $InFile }
-    if ($pkeys -contains "OutFile") { $parms["OutFile"] = $OutFile }
-    if ($pkeys -contains "PassThru") { $parms["PassThru"] = $null }
-    if ($pkeys -contains "Resume") { $parms["Resume"] = $null }
-    if ($pkeys -contains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
-    if ($pkeys -contains "PreserveAuthorizationOnRedirect") { $parms["PreserveAuthorizationOnRedirect"] = $null }
-    if ($pkeys -contains "SkipHeaderValidation") { $parms["SkipHeaderValidation"] = $null }
-    if ($pkeys -contains "Verbose") { $parms["Verbose"] = $null }
-    if ($pkeys -contains "Debug") { $parms["Debug"] = $null }
-    if ($pkeys -contains "ErrorAction") { $parms["ErrorAction"] = $ErrorAction }
-    if ($pkeys -contains "WarningAction") { $parms["WarningAction"] = $WarningAction }
-    if ($pkeys -contains "InformationAction") { $parms["InformationAction"] = $InformationAction }
-    if ($pkeys -contains "ErrorVariable") { $parms["ErrorVariable"] = $ErrorVariable }
-    if ($pkeys -contains "WarningVariable") { $parms["WarningVariable"] = $WarningVariable }
-    if ($pkeys -contains "InformationVariable") { $parms["InformationVariable"] = $InformationVariable }
-    if ($pkeys -contains "OutVariable") { $parms["OutVariable"] = $OutVariable }
-    if ($pkeys -contains "OutBuffer") { $parms["OutBuffer"] = $OutBuffer }
-    if ($pkeys -contains "PipelineVariable") { $parms["PipelineVariable"] = $PipelineVariable }
-    if ($AlyaIsPsCore -and $pkeys -notcontains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
-    if ($AlyaIsPsCore -and $pkeys -notcontains "SkipHeaderValidation") { $parms["SkipHeaderValidation"] = $null }
-    return Invoke-WebRequest @parms
-}
-<#
-$parser = @()
-foreach($key in $other.Parameters.Keys)
-{
-    $par = $other.Parameters[$key]
-    $psets = @()
-    foreach ($pset in $par.ParameterSets.Keys)
-    {
-        if ($pset -ne "__AllParameterSets")
-        {
-            $psets += $pset
-        }
-    }
-    foreach($ps in $par.ParameterSets.Keys)
-    {
-        if ($par.Mandatory)
-        {
-            Write-Host "        [Parameter(Mandatory=`$true)]"
-        }
-    }
-    if ($par.SwitchParameter)
-    {
-        Write-Host "        [Switch]`$$($key),"
-        $parser += "    if ($pkeys -contains `"$($key)`") { `$parms[`"$($key)`"] = `$null }"
-    }
-    else
-    {
-        Write-Host "        [$($par.ParameterType.FullName)]`$$($key) = `$null,"
-        $parser += "    if ($pkeys -contains `"$($key)`") { `$parms[`"$($key)`"] = `$$($key) }"
-    }
-}
-$parser
-#>
 
 function Install-PackageIfNotInstalled (
     [string] [Parameter(Mandatory = $true)] $packageName,
@@ -766,12 +842,6 @@ function Uninstall-ModuleIfInstalled (
     }
 }
 
-function Get-ActualLoadedLibraries ()
-{
-    [System.AppDomain]::CurrentDomain.GetAssemblies() | Select-Object -Property FullName,Location | Sort-Object -Property FullName | Format-List
-    [System.AppDomain]::CurrentDomain.GetAssemblies() | Select-Object -Property FullName,Location | Sort-Object -Property FullName | Format-Table
-}
-
 function Install-ModuleIfNotInstalled (
     [string] [Parameter(Mandatory = $true)] $moduleName,
     [Version] $minimalVersion = "0.0.0.0",
@@ -842,13 +912,8 @@ function Install-ModuleIfNotInstalled (
         Write-Warning "Installing nuget"
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
     }
-    $requestedVersion = $minimalVersion
-    [Version] $newestVersion = Get-PublishedModuleVersion $moduleName
-    if (-Not $newestVersion)
-    {
-        Write-Warning "Module '$moduleName' does not looks like a module from Powershell Gallery"
-        return
-    }
+    [Version]$requestedVersion = $null
+    [string]$requestedVersionFullname = $null
     if ($exactVersion -ne "0.0.0.0")
     {
         $module = Get-Module -Name $moduleName -ListAvailable |`
@@ -868,13 +933,31 @@ function Install-ModuleIfNotInstalled (
             }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
         }
-        $autoUpdate = $false
-        $requestedVersion = $exactVersion
+        if ($null -ne $module)
+        {
+            $autoUpdate = $false
+            $requestedVersion = $exactVersion
+            $requestedVersionFullname = $exactVersion
+        }
+        else
+        {
+            $versionCheck = Get-PublishedModuleVersion $moduleName -AllowPrerelease $AllowPrerelease -exactVersion $exactVersion
+            if (-Not $versionCheck) {
+                Write-Warning "Module '$moduleName' does not looks like a module from Powershell Gallery"
+                $requestedVersion = $exactVersion
+                $requestedVersionFullname = $exactVersion
+            }
+            else {
+                $requestedVersion = $versionCheck[0]
+                $requestedVersionFullname = $versionCheck[1]
+            }
+        }
     }
-    else
+    if ($minimalVersion -ne "0.0.0.0")
     {
         $module = Get-Module -Name $moduleName -ListAvailable |`
             Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
@@ -893,19 +976,63 @@ function Install-ModuleIfNotInstalled (
             }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
         }
-        $requestedVersion = $newestVersion
+        if ($null -ne $module)
+        {
+            $autoUpdate = $false
+            $requestedVersion = $module.Version
+            $requestedVersionFullname = $module.Version
+        }
+    }
+    if ($null -eq $requestedVersion)
+    {
+        $versionCheck = Get-PublishedModuleVersion $moduleName -AllowPrerelease $AllowPrerelease
+        if (-Not $versionCheck) {
+            Write-Warning "Module '$moduleName' does not looks like a module from Powershell Gallery"
+            $module = Get-Module -Name $moduleName -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
+            $requestedVersion = $module.Version
+            $requestedVersionFullname = $module.Version
+        }
+        else {
+            $requestedVersion = $versionCheck[0]
+            $requestedVersionFullname = $versionCheck[1]
+        }
+    }
+    if ($null -eq $module -and $exactVersion -eq "0.0.0.0" -and $minimalVersion -eq "0.0.0.0")
+    {
+        $module = Get-Module -Name $moduleName -ListAvailable |`
+            Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        if (-Not $module)
+        {
+            try
+            {
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
+            catch
+            {
+                Import-Module -Name PowerShellGet
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
+            if (-Not $module)
+            {
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            }
+        }
     }
     if ($module)
     {
         Write-Host ('Module {0} is installed. Used:v{1} Requested:v{2}' -f $moduleName, $module.Version, $requestedVersion)
-        if ((-Not $autoUpdate) -and ($newestVersion -gt $module.Version))
+        if ((-Not $autoUpdate) -and ($requestedVersion -gt $module.Version))
         {
             Write-Warning ("A newer version (v{0}) is available. Consider upgrading!" -f $newestVersion)
         }
-        if ($newestVersion -eq $module.Version)
+        if ($requestedVersion -eq $module.Version)
         {
             $autoUpdate = $false
         }
@@ -923,13 +1050,29 @@ function Install-ModuleIfNotInstalled (
             throw "Please install the powershell package management"
         }
         $installModuleHasPrerelease = $null -ne ((Get-Command Install-Module).Parameters.GetEnumerator() | Where-Object { $_.Key -eq "AllowPrerelease" })
+        if (-Not $installModuleHasPrerelease)
+        {
+            $installModuleHasPrerelease = (Get-Command Install-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AllowPrerelease" }
+        }
         $installModuleHasAcceptLicense = $null -ne ((Get-Command Install-Module).Parameters.GetEnumerator() | Where-Object { $_.Key -eq "AcceptLicense" })
+        if (-Not $installModuleHasAcceptLicense)
+        {
+            $installModuleHasAcceptLicense = (Get-Command Install-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
+        }
         $saveModuleHasPrerelease = $null -ne ((Get-Command Save-Module).Parameters.GetEnumerator() | Where-Object { $_.Key -eq "AllowPrerelease" })
+        if (-Not $saveModuleHasPrerelease)
+        {
+            $saveModuleHasPrerelease = (Get-Command Save-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AllowPrerelease" }
+        }
+        $saveModuleHasAcceptLicense = $null -ne ((Get-Command Save-Module).Parameters.GetEnumerator() | Where-Object { $_.Key -eq "AcceptLicense" })
+        if (-Not $saveModuleHasAcceptLicense)
+        {
+            $saveModuleHasAcceptLicense = (Get-Command Save-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
+        }
         $optionalArgs = New-Object -TypeName Hashtable
-        $optionalArgs['RequiredVersion'] = $requestedVersion
+        $optionalArgs['RequiredVersion'] = $requestedVersionFullname
         Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
         #TODO Unload module
-        $installModuleHasAcceptLicense = (Get-Command Install-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
         if ($installModuleHasAcceptLicense)
         {
 	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
@@ -947,11 +1090,11 @@ function Install-ModuleIfNotInstalled (
 	        {
 	            if ($saveModuleHasPrerelease)
 	            {
-                    Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+                    Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
 	            }
 	            else
 	            {
-                    Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -Force -Verbose -AcceptLicense
+                    Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -Force -Verbose -AcceptLicense
 	            }
 	        }
         }
@@ -972,11 +1115,11 @@ function Install-ModuleIfNotInstalled (
 	        {
 	            if ($saveModuleHasPrerelease)
 	            {
-                    Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose
+                    Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose
 	            }
 	            else
 	            {
-                    Save-Module -Name $moduleName -RequiredVersion $requestedVersion -Path $AlyaModulePath -Force -Verbose
+                    Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -Force -Verbose
 	            }
 	        }
         }
@@ -997,7 +1140,8 @@ function Install-ModuleIfNotInstalled (
             }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | Sort-Object -Property Version | Select-Object -Last 1
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue |`
+                    Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
                 if (-Not $module)
 	            {
 	                Write-Error "Not able to install the module!" -ErrorAction Continue
@@ -1006,30 +1150,16 @@ function Install-ModuleIfNotInstalled (
 	        }
 	    }
     }
-    if ($exactVersion -ne "0.0.0.0")
+    if ($exactVersion -ne "0.0.0.0" -or $AllowPrerelease)
     {
-        $module = Get-Module -Name $moduleName
-        if ($module -and $module.Version -ne $exactVersion)
+        $tmodule = Get-Module -Name $moduleName
+        if ($tmodule -and $tmodule.Version -ne $requestedVersion)
         {
             Remove-Module -Name $moduleName
         }
-        if ($PSVersionTable.PSVersion.Major -ge 6 -and $moduleName -in @("Microsoft.Online.Sharepoint.PowerShell"))
-        {
-            Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking -NoClobber -SkipEditionCheck -Force
-        }
-        else
-        {
-            if ($PSVersionTable.PSVersion.Major -ge 6 -and $moduleName -in @("MSOnline", "AzureADPreview"))
-            {
-                Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking -UseWindowsPowershell
-            }
-            else
-            {
-                Import-Module -Name $moduleName -RequiredVersion $exactVersion -DisableNameChecking
-            }
-        }
+        Import-Module -Name $moduleName -MinimumVersion $requestedVersion -MaximumVersion $requestedVersion
     }
-    if ($PSVersionTable.PSVersion.Major -ge 6 -and $moduleName -in @("Microsoft.Online.Sharepoint.PowerShell", "MSOnline", "AzureADPreview", "AIPService"))
+    if ($AlyaIsPsCore -and $moduleName -in @("Microsoft.Online.Sharepoint.PowerShell", "MSOnline", "AzureADPreview", "AIPService", "AppX"))
     {
         Import-Module -Name $moduleName -UseWindowsPowershell
     }
@@ -1044,7 +1174,8 @@ function Install-ScriptIfNotInstalled (
     [string] [Parameter(Mandatory = $true)] $scriptName,
     [Version] $minimalVersion = "0.0.0.0",
     [Version] $exactVersion = "0.0.0.0",
-    [bool] $autoUpdate = $true
+    [bool] $autoUpdate = $true,
+    [bool] $AllowPrerelease = $false
 )
 {
     if (-Not (Is-InternetConnected))
@@ -1052,41 +1183,72 @@ function Install-ScriptIfNotInstalled (
         Write-Warning "No internet connection. Not able to check any script!"
         return
     }
-    $requestedVersion = $minimalVersion
-    [Version] $newestVersion = Get-PublishedModuleVersion $scriptName
-    if (-Not $newestVersion)
-    {
-        Write-Warning "This does not looks like a script from Powershell Gallery"
-        return
-    }
+    [Version]$requestedVersion = $null
+    [string]$requestedVersionFullname = $null
     if ($exactVersion -ne "0.0.0.0")
     {
         $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
             Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
-        $autoUpdate = $false
-        $requestedVersion = $exactVersion
+        if ($null -ne $script)
+        {
+            $autoUpdate = $false
+            $requestedVersion = $exactVersion
+            $requestedVersionFullname = $exactVersion
+        }
+        else
+        {
+            $versionCheck = Get-PublishedModuleVersion $scriptName -AllowPrerelease $AllowPrerelease -exactVersion $exactVersion
+            if (-Not $versionCheck)
+            {
+                Write-Warning "Script '$scriptName' does not looks like a script from Powershell Gallery"
+                return
+            }
+            $requestedVersion = $versionCheck[0]
+            $requestedVersionFullname = $versionCheck[1]
+        }
     }
-    else
+    if ($minimalVersion -ne "0.0.0.0")
     {
         $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
             Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
-        $requestedVersion = $newestVersion
+        if ($null -ne $script)
+        {
+            $autoUpdate = $false
+            $requestedVersion = $script.Version
+            $requestedVersionFullname = $script.Version
+        }
+    }
+    if ($null -eq $requestedVersion)
+    {
+        $versionCheck = Get-PublishedModuleVersion $scriptName -AllowPrerelease $AllowPrerelease
+        if (-Not $versionCheck)
+        {
+            Write-Warning "Script '$scriptName' does not looks like a script from Powershell Gallery"
+            return
+        }
+        $requestedVersion = $versionCheck[0]
+        $requestedVersionFullname = $versionCheck[1]
+    }
+    if ($null -eq $script -and $exactVersion -eq "0.0.0.0" -and $minimalVersion -eq "0.0.0.0")
+    {
+        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
+            Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
     }
     if ($script)
     {
-        Write-Host ('Module {0} is installed. Used:v{1} Requested:v{2}' -f $scriptName, $script.Version, $requestedVersion)
-        if ((-Not $autoUpdate) -and ($newestVersion -gt $script.Version))
+        Write-Host ('Script {0} is installed. Used:v{1} Requested:v{2}' -f $scriptName, $script.Version, $requestedVersion)
+        if ((-Not $autoUpdate) -and ($requestedVersion -gt $script.Version))
         {
             Write-Warning ("A newer version (v{0}) is available. Consider upgrading!" -f $script.Version)
         }
-        if ($newestVersion -eq $script.Version)
+        if ($requestedVersion -eq $script.Version)
         {
             $autoUpdate = $false
         }
     }
     else
     {
-        Write-Host ('Module {0} not found with requested version v{1}. Installing now...' -f $scriptName, $requestedVersion)
+        Write-Host ('Script {0} not found with requested version v{1}. Installing now...' -f $scriptName, $requestedVersion)
         $autoUpdate = $true
     }
     if ($autoUpdate)
@@ -1121,33 +1283,21 @@ function Install-ScriptIfNotInstalled (
             Install-Script -Name $scriptName @optionalArgs -Scope CurrentUser -Force -Verbose
         }
         $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
-        Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+            Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $script)
         {
             Write-Error "Not able to install the script!" -ErrorAction Continue
             exit
         }
+
+        if ($AlyaScriptPath -ne $AlyaDefaultScriptPath -and $AlyaScriptPath -ne $AlyaDefaultScriptPathCore)
+        {
+            #TODO move to $AlyaScriptPath
+
+        }
     }
 }
 #Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
-function Get-MimeType()
-{
-    [CmdletBinding()]
-    Param(
-        [string]$Extension = $null
-    )
-    $mimeType = $null;
-    if ( $null -ne $extension )
-    {
-        $drive = Get-PSDrive "HKCR" -ErrorAction SilentlyContinue;
-        if ( $null -eq $drive )
-        {
-            $drive = New-PSDrive -Name "HKCR" -PSProvider Registry -Root HKEY_CLASSES_ROOT
-        }
-        $mimeType = (Get-ItemProperty "HKCR:$extension")."Content Type";
-    }
-    return $mimeType;
-}
 
 <# LOGIN FUNCTIONS #>
 function LogoutAllFrom-Az()
@@ -1244,33 +1394,33 @@ function LoginTo-Az(
             {
                 if ($AuthScope)
                 {
-                    Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionId -AuthScope $AuthScope | Out-Null
+                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId -Subscription $SubscriptionId -AuthScope $AuthScope | Out-Null
                 }
                 else
                 {
-                    Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionId | Out-Null
+                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId -Subscription $SubscriptionId | Out-Null
                 }
             }
             elseif ($SubscriptionName)
             {
                 if ($AuthScope)
                 {
-                    Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionName -AuthScope $AuthScope | Out-Null
+                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId -Subscription $SubscriptionName -AuthScope $AuthScope | Out-Null
                 }
                 else
                 {
-                    Connect-AzAccount -Tenant $AlyaTenantId -Subscription $SubscriptionName | Out-Null
+                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId -Subscription $SubscriptionName | Out-Null
                 }
             }
             else
             {
                 if ($AuthScope)
                 {
-                    Connect-AzAccount -Tenant $AlyaTenantId -AuthScope $AuthScope | Out-Null
+                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId -AuthScope $AuthScope | Out-Null
                 }
                 else
                 {
-                    Connect-AzAccount -Tenant $AlyaTenantId | Out-Null
+                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId | Out-Null
                 }
             }
         }
@@ -1281,7 +1431,7 @@ function LoginTo-Az(
             $DEVOPS_CLIENT_SECRET_SEC = ConvertTo-SecureString $DEVOPS_CLIENT_SECRET -AsPlainText -Force
             $DEVOPS_CREDS = New-Object -TypeName System.Management.Automation.PSCredential($DEVOPS_CLIENT_ID, $DEVOPS_CLIENT_SECRET_SEC)
             Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
-            Connect-AzAccount -ServicePrincipal -Credential $DEVOPS_CREDS -Tenant $DEVOPS_TENANT_ID
+            Connect-AzAccount -Environment $AlyaAzureEnvironment -ServicePrincipal -Credential $DEVOPS_CREDS -Tenant $DEVOPS_TENANT_ID
         }    
         $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     }
@@ -1323,15 +1473,9 @@ function LoginTo-Az(
 function LoginTo-MgGraph(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
-    [string[]] [Parameter(Mandatory = $false)] $Scopes = $null,
-    [string] [Parameter(Mandatory = $false)] [ValidateSet("beta","v1.0")] $Profile = "beta")
+    [string[]] [Parameter(Mandatory = $false)] $Scopes = $null)
 {
     Write-Host "Login to Graph" -ForegroundColor $CommandInfo
-
-    if ((Get-MgProfile).Name -ne $Profile)
-    {
-        Select-MgProfile -Name $Profile
-    }
 
     $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
     if ($mgContext)
@@ -1349,14 +1493,22 @@ function LoginTo-MgGraph(
 
     if (-Not $mgContext)
     {
-        Connect-MGGraph -Scopes $Scopes -TenantId $AlyaTenantId
+        if ($null -ne $AlyaGraphAppId) {
+            Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId
+        } else {
+            Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId
+        }
         $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
         if (-Not $Global:AlyaMgContext)
         {
             #Required after a consent, otherwise you run into a login mess
             # TODO check bug still there, way to check if consent happended
             $mgContext = Disconnect-MgGraph
-            Connect-MGGraph -Scopes $Scopes -TenantId $AlyaTenantId
+            if ($null -ne $AlyaGraphAppId) {
+                Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId
+            } else {
+                Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId
+            }
             $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
             $Global:AlyaMgContext = $mgContext
         }
@@ -1428,8 +1580,8 @@ function Get-AdalAccessToken(
     }
     $dll = $module.FileList | Where-Object { $_ -like "*Microsoft.IdentityModel.Clients.ActiveDirectory.dll" }
     Add-Type -Path $dll
-    $resourceAppIdURI = "https://graph.microsoft.com"
-    $authority = "https://login.microsoftonline.com/$AlyaTenantName"
+    $resourceAppIdURI = $AlyaGraphEndpoint
+    $authority = "$AlyaLoginEndpoint/$AlyaTenantName"
     $authContext = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext" -ArgumentList $authority
     $platformParameters = New-Object "Microsoft.IdentityModel.Clients.ActiveDirectory.PlatformParameters" -ArgumentList "Auto"
     $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
@@ -1450,8 +1602,8 @@ function LoginTo-Ad(
     {
         throw "Please login first to Az to minimize number of logins"
     }
-    $graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.microsoft.com").AccessToken
-    $aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.windows.net").AccessToken
+    $graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, $AlyaGraphEndpoint).AccessToken
+    $aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, $AlyaADGraphEndpoint).AccessToken
     Connect-AzureAD -AadAccessToken $aadToken -MsAccessToken $graphToken -AccountId $AlyaContext.Account.Id -TenantId $AlyaContext.tenant.id -AzureEnvironmentName $AlyaContext.Environment.Name
     try { $TenantDetail = Get-AzureADTenantDetail -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
     if (-Not $TenantDetail)
@@ -1561,7 +1713,11 @@ function LoginTo-Teams()
     }
     else
     {
-        Connect-MicrosoftTeams
+        if ([string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
+            Connect-MicrosoftTeams
+        } else {
+            Connect-MicrosoftTeams -TeamsEnvironmentName $AlyaTeamsEnvironment
+        }
     }
 
     $TenantDetail = Get-CsTenant -ErrorAction SilentlyContinue
@@ -1578,11 +1734,11 @@ function LoginTo-EXO([String[]]$commandsToLoad = $null)
 
     if ($commandsToLoad)
     {
-        Connect-ExchangeOnline -ShowProgress $true -CommandName $commandsToLoad
+        Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowProgress $true -CommandName $commandsToLoad
     }
     else
     {
-        Connect-ExchangeOnline -ShowProgress $true
+        Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowProgress $true
     }
 }
 
@@ -1597,7 +1753,7 @@ function LoginTo-IPPS()
         {
             $extRunspace.Dispose()
         }
-        Connect-IPPSSession
+        Connect-IPPSSession -Environment $AlyaExchangeEnvironment
     }
 }
 
@@ -1634,13 +1790,18 @@ function LoginTo-Msol(
     if (-Not $AlyaContext)
     {
         Write-Warning "Please login first to Az to minimize number of logins"
-		Connect-MsolService
+		Connect-MsolService -AzureEnvironment $AlyaAzureEnvironment
     }
 	else
 	{
-		$graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.microsoft.com").AccessToken
-		$aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, "https://graph.windows.net").AccessToken
-		Connect-MsolService -AdGraphAccessToken $aadToken -MsGraphAccessToken $graphToken -AzureEnvironment $AlyaContext.Environment.Name
+        try {
+            $graphToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, $AlyaGraphEndpoint).AccessToken
+            $aadToken = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $AlyaContext.Tenant.Id, $null, "Never", $null, $AlyaADGraphEndpoint).AccessToken
+            Connect-MsolService -AdGraphAccessToken $aadToken -MsGraphAccessToken $graphToken -AzureEnvironment $AlyaContext.Environment.Name
+        }
+        catch {
+            Connect-MsolService -AzureEnvironment $AlyaContext.Environment.Name
+        }
     }
 	try { $TenantDetail = Get-MsolCompanyInformation -ErrorAction SilentlyContinue } catch [Microsoft.Open.Azure.AD.CommonLibrary.AadNeedAuthenticationException] {}
     if (-Not $TenantDetail)
@@ -1679,7 +1840,7 @@ function LoginTo-SPO()
     try { $Site = Get-SPOSite -Identity $AlyaSharePointAdminUrl -ErrorAction SilentlyContinue } catch {}
     if (-Not $Site)
     {
-        Connect-SPOService -Url $AlyaSharePointAdminUrl
+        Connect-SPOService -Region $AlyaSharePointEnvironment -Url $AlyaSharePointAdminUrl
     }
     try { $Site = Get-SPOSite -Identity $AlyaSharePointAdminUrl -ErrorAction SilentlyContinue } catch {}
     if (-Not $Site)
@@ -1740,6 +1901,18 @@ function LoginTo-PnP(
     )
 {
     Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
+
+    if ($AlyaPnpEnvironment -eq "China" -and [string]::IsNullOrEmpty($AlyaPnPAppId))
+    {
+        Write-Warning "We need to register the PnP app for China tenants"
+
+        $regApp = Register-PnPAzureADApp -ApplicationName "PnP Management Shell" -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment `
+            -Interactive -SharePointDelegatePermissions AllSites.FullControl -SharePointApplicationPermissions Sites.FullControl.All `
+            -GraphApplicationPermissions Group.ReadWrite.All -GraphDelegatePermissions Group.ReadWrite.All
+
+        Write-Warning "Please store the AppId from generated app in configureEnv.ps1 in variable AlyaPnPAppId"
+    }
+
     if ([string]::IsNullOrEmpty($TenantAdminUrl))
     {
         $TenantAdminUrl = $AlyaSharePointAdminUrl
@@ -1779,25 +1952,29 @@ function LoginTo-PnP(
     {
         if ($ClientId -and $Thumbprint)
         {
-            $AlyaConnection = Connect-PnPOnline -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName
+            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName
         }
         else
         {
             if (-Not $Global:AlyaPnpAdminConnection) {
                 try {
-                    $AlyaConnection = Connect-PnPOnline -Url $TenantAdminUrl -ReturnConnection -Interactive
+                    if ([string]::IsNullOrEmpty($AlyaPnPAppId)) {
+                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                    } else {
+                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive
+                    }
                 }
                 catch {
-                    Register-PnPManagementShellAccess -LaunchBrowser
+                    Register-PnPManagementShellAccess -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -LaunchBrowser
                     try {
-                        $AlyaConnection = Connect-PnPOnline -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
                     }
                     catch {
                         Write-Warning "Launch in browser: SharePoint, PowerApps, PowerAutomate, Teams, OneDrive"
                         Write-Warning "Try to register the PnP app with the following url in a browser. Check error messages in url."
-                        Register-PnPManagementShellAccess -ShowConsentUrl
+                        Register-PnPManagementShellAccess -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ShowConsentUrl
                         pause
-                        $AlyaConnection = Connect-PnPOnline -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
                     }
                 }
                 $Global:AlyaPnpAdminConnection = $AlyaConnection
@@ -1808,18 +1985,22 @@ function LoginTo-PnP(
             }
             if ($Url -ne $TenantAdminUrl) {
                 try {
-                    $AlyaConnection = Connect-PnPOnline -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                    if ([string]::IsNullOrEmpty($AlyaPnPAppId)) {
+                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                    } else {
+                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                    }
                 }
                 catch {
                     Register-PnPManagementShellAccess -LaunchBrowser
                     try {
-                        $AlyaConnection = Connect-PnPOnline -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
                     }
                     catch {
                         Write-Warning "Try to register the PnP app with the following url in a browser. Check error messages in url."
                         Register-PnPManagementShellAccess -ShowConsentUrl
                         pause
-                        $AlyaConnection = Connect-PnPOnline -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
                     }
                 }
             }
@@ -1892,12 +2073,6 @@ function LoginTo-AIP()
     }
 }
 
-<# MISC FUNCTIONS #>
-function Get-LastAzErrorDetails( )
-{
-    Resolve-AzError -Last
-}
-
 <# STRING FUNCTIONS #>
 function Make-PascalCase(
     [string]$string)
@@ -1913,8 +2088,8 @@ function Connect-MsGraphAsDelegated
         [string]$ClientID,
         [string]$ClientSecret
     )
-    $Resource = "https://graph.microsoft.com"
-    $RedirectUri = "https://login.microsoftonline.com/common/oauth2/nativeclient"
+    $Resource = $AlyaGraphEndpoint
+    $RedirectUri = "$AlyaLoginEndpoint/common/oauth2/nativeclient"
     Add-Type -AssemblyName System.Web
     $ClientSecretEncoded = [System.Web.HttpUtility]::UrlEncode($ClientSecret)
     $ResourceEncoded = [System.Web.HttpUtility]::UrlEncode($Resource)
@@ -1939,18 +2114,18 @@ function Connect-MsGraphAsDelegated
             $Output["$Key"] = $QueryOutput[$Key]
         }
     }
-    $Url = "https://login.microsoftonline.com/common/oauth2/authorize?response_type=code&redirect_uri=$RedirectUriEncoded&client_id=$ClientID&resource=$ResourceEncoded&prompt=admin_consent&scope=$ScopeEncoded"
+    $Url = "$AlyaLoginEndpoint/common/oauth2/authorize?response_type=code&redirect_uri=$RedirectUriEncoded&client_id=$ClientID&resource=$ResourceEncoded&prompt=admin_consent&scope=$ScopeEncoded"
     Get-AuthCode
     $Regex = '(?<=code=)(.*)(?=&)'
     $AuthCode = ($TokenUri | Select-string -pattern $Regex).Matches[0].Value
     $Body = "grant_type=authorization_code&redirect_uri=$RedirectUri&client_id=$ClientId&client_secret=$ClientSecretEncoded&code=$AuthCode&resource=$Resource"
-    $TokenResponse = Invoke-RestMethod https://login.microsoftonline.com/common/oauth2/token -Method Post -ContentType "application/x-www-form-urlencoded" -Body $Body -ErrorAction "Stop"
+    $TokenResponse = Invoke-RestMethod "$AlyaLoginEndpoint/common/oauth2/token" -Method Post -ContentType "application/x-www-form-urlencoded" -Body $Body -ErrorAction "Stop"
     $TokenResponse.access_token
 }
 
 function Get-MsGraphToken
 {
-    return Get-AzAccessToken("https://graph.microsoft.com/")
+    return Get-AzAccessToken("$AlyaGraphEndpoint/")
 }
 
 function Get-MsGraph
@@ -2117,8 +2292,8 @@ function SendBody-MsGraph
         $Method,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $false)]
-        $Body = $null
+        [parameter(Mandatory = $true)]
+        $Body
     )
     if ($AccessToken) {
         $HeaderParams = @{
@@ -2131,19 +2306,11 @@ function SendBody-MsGraph
     do {
         try {
             if ($AccessToken) {
-                if (-Not [string]::IsNullOrEmpty($Body)){
-                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
-                } else {
-                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method
-                }
+                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
                 $StatusCode = $Results.StatusCode
-            }
-            else{
-                if (-Not [string]::IsNullOrEmpty($Body)){
-                    $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
-                } else {
-                    $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri
                 }
+            else{
+                $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
             }
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
@@ -2173,8 +2340,8 @@ function Post-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $false)]
-        $Body = $null
+        [parameter(Mandatory = $true)]
+        $Body
     )
     SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Post"
 }
@@ -2186,8 +2353,8 @@ function Patch-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $false)]
-        $Body = $null
+        [parameter(Mandatory = $true)]
+        $Body
     )
     SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Patch"
 }
@@ -2199,8 +2366,8 @@ function Put-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $false)]
-        $Body = $null
+        [parameter(Mandatory = $true)]
+        $Body
     )
     SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Put"
 }
@@ -2447,6 +2614,7 @@ function Check-NetworkToNetwork ([int64]$un1, [int64]$un2)
         return $False
     }
 }
+
 function Check-SubnetInSubnet ([string]$isAddr, [string]$withinAddr)
 {
     if ($isAddr.IndexOf("/") -eq -1) { $isAddr += "/32" }
@@ -2511,6 +2679,7 @@ function Select-Item()
 }
 
 <# SELENIUM BROWSER #>
+$AlyaSeleniumBrowser = $null
 function Get-SeleniumBrowser()
 {
     Param(
@@ -2519,7 +2688,7 @@ function Get-SeleniumBrowser()
         $OptionSettings =  @{ browserName=""},
         $driverversion = ""
     )
-    $browser = $null
+    $AlyaSeleniumBrowser = $null
     Install-PackageIfNotInstalled "Selenium.WebDriver"
     Install-PackageIfNotInstalled "Selenium.WebDriver.MSEdgeDriver"
     Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
@@ -2527,25 +2696,29 @@ function Get-SeleniumBrowser()
     {
         $env:Path = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64;$($env:Path)"
     }
+
+    Install-ModuleIfNotInstalled "AppX"
     $edge = Get-AppXPackage | where { $_.Name -eq "Microsoft.MicrosoftEdge" }
     if (!$edge){
         throw "Microsoft Edge Browser not installed."
         return
     }
+
     $dService = [OpenQA.Selenium.Edge.EdgeDriverService]::CreateDefaultService()
     $dService.HideCommandPromptWindow = $HideCommandPrompt
     $options = New-Object -TypeName OpenQA.Selenium.Edge.EdgeOptions -Property $OptionSettings
     if($PrivateBrowsing) {$options.AddArguments('InPrivate')}
     if($Headless) {$options.AddArguments('headless')}
-    $browser = New-Object OpenQA.Selenium.Edge.EdgeDriver $dService, $options
-    $browser.Manage().window.position = '0,0'
-    return $browser
+    $AlyaSeleniumBrowser = New-Object OpenQA.Selenium.Edge.EdgeDriver $dService, $options
+    $AlyaSeleniumBrowser.Manage().window.position = '0,0'
+    return $AlyaSeleniumBrowser
 }
 function Close-SeleniumBrowser()
 {
     Param(
         $browser = $null
     )
+    if (-Not $browser) { $browser = $AlyaSeleniumBrowser }
     if ($browser) {
         try { $browser.Close() } catch {}
         try { $browser.Quit() } catch {}

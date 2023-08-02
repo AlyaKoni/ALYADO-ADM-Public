@@ -76,17 +76,21 @@ try
             Write-Warning "No DKIM config found to rotate in domain $dom"
         }
         else {
-            if (-Not (Get-Command "Rotate-DkimSigningConfig"))
-            {
-                Write-Error "Command Rotate-DkimSigningConfig not found! Do you have the right access active?" -ErrorAction Continue
+            if ($conf.RotateOnDate -ge (Get-Date)) {
+                Write-Warning "A rotation is already planned!"
+                return
             }
+            if (-Not (Get-Command "Rotate-DkimSigningConfig")) {
+                throw "Command Rotate-DkimSigningConfig not found! Do you have the right access active?"
+            }
+            Write-Warning "Rotating domain key."
             Rotate-DkimSigningConfig -KeySize $keySize -Identity $dom
         }
     }
 }
 catch
 {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 finally

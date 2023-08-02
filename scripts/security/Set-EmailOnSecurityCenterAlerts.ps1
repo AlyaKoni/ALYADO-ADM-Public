@@ -37,7 +37,8 @@
 
 [CmdletBinding()]
 Param(
-	[string]$emailAddress = "TenantAdmins"
+    [Parameter(Mandatory=$true)]
+	[string]$emailAddressToAdd
 )
 
 #Reading configuration
@@ -45,6 +46,9 @@ Param(
 
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-EmailOnSecurityCenterAlerts-$($AlyaTimeString).log" | Out-Null
+
+# Members
+$TenantAdmins = "TenantAdmins"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -162,14 +166,14 @@ try
 
                     Start-Sleep -Milliseconds 500
                     $existFields = $dlgField2.FindElements([OpenQA.Selenium.By]::XPath("//div[contains(@class,'ms-PickerPersona-container')]"))
-                    $existFound = $existFields | where { $_.Text -like "*security@rechtsanwalt-zuerich.ch*" }
+                    $existFound = $existFields | where { $_.Text -like "*$($emailAddressToAdd)*" }
 
                     if (-Not $existFound) {
                         Write-Host "  configuring"
                         $body = $browser.FindElement([OpenQA.Selenium.By]::XPath("//body"))
                         $body.SendKeys("`t")
                         $body.SendKeys("`t")
-                        $inputField.SendKeys("security@rechtsanwalt-zuerich.ch")
+                        $inputField.SendKeys("$emailAddressToAdd")
 
                         $suggField = $null
                         do
@@ -274,7 +278,7 @@ try
 }
 catch
 {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 3) -ErrorAction Continue } catch {}
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 finally

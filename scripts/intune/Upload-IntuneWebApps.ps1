@@ -51,7 +51,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-IntuneWebApps-$($Alya
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") "WebApps"
 if (-Not (Test-Path $DataRoot))
 {
-    $tmp = New-Item -Path $DataRoot -ItemType Directory -Force
+    $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 
 # Checking modules
@@ -209,7 +209,7 @@ foreach($packageDir in $packages)
         $base64icon = [System.Convert]::ToBase64String($iconResponse)
         $iconExt = ([System.IO.Path]::GetExtension($logo.FullName)).replace(".","")
         $iconType = "image/$iconExt"
-        $appConfig.largeIcon = @{ "@odata.type" = "#microsoft.graph.mimeContent" }
+        $appConfig.largeIcon = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
         $appConfig.largeIcon.type = "$iconType"
         $appConfig.largeIcon.value = "$base64icon"
     }

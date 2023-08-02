@@ -110,7 +110,7 @@ $proc.Start()
 $RepRoot = Join-Path $AlyaTools "IntuneWinAppUtil"
 if (-Not (Test-Path $RepRoot))
 {
-    $tmp = New-Item -Path $RepRoot -ItemType Directory -Force
+    $null = New-Item -Path $RepRoot -ItemType Directory -Force
     cmd /c "$AlyaGitRoot\cmd\git.exe" clone "$AlyaIntuneWinAppUtilDownload" "$RepRoot" -q
     Wait-UntilProcessEnds -processName "git"
 }

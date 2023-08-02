@@ -46,10 +46,10 @@ if (-Not $global:ocred)
 }
 
 Write-Output "Connecting to SPOService"
-$tmp = Connect-SPOService -Url $sharepointAdminUrl -Credential $global:ocred
+$null = Connect-SPOService -Url $sharepointAdminUrl -Credential $global:ocred
 
 Write-Output "Connecting to PnP"
-$tmp = Connect-PnPOnline -Url $sharepointUrl -Credential $global:ocred -ReturnConnection
+$null = Connect-PnPOnline -Url $sharepointUrl -Credential $global:ocred -ReturnConnection
 
 $migSites = Import-Csv -Delimiter "," -encoding UTF8 $PSScriptRoot\..\setupSites.csv
 if ([string]::IsNullOrEmpty($migSites[0].DstCol))

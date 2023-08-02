@@ -81,7 +81,7 @@ if ([string]::IsNullOrEmpty($AlyaLocalConfig.user.ssh))
     Write-Host "Generating new ssh key pair"
     if (-Not (Test-Path "$AlyaRoot\_local\ssh"))
     {
-        $tmp = New-Item -Path "$AlyaRoot\_local\ssh" -ItemType Directory -Force
+        $null = New-Item -Path "$AlyaRoot\_local\ssh" -ItemType Directory -Force
         $sshPath = [System.Environment]::ExpandEnvironmentVariables("%USERPROFILE%\.ssh")
         if (Test-Path $sshPath)
         {
@@ -111,7 +111,7 @@ if ([string]::IsNullOrEmpty($AlyaLocalConfig.user.ssh))
     Save-LocalConfig
     Write-Host "Please upload the following ssh key to DevOps and hit enter:" -ForegroundColor Red
     Get-Content -Path "$($AlyaLocalConfig.user.ssh).pub"
-    $tmp = Read-Host -Prompt 'Please press enter'
+    $null = Read-Host -Prompt 'Please press enter'
 }
 
 Write-Host "Checking devops url" -ForegroundColor $CommandInfo
@@ -132,7 +132,7 @@ Write-Host "Checking .ssh content" -ForegroundColor $CommandInfo
 $sshPath = [System.Environment]::ExpandEnvironmentVariables("%USERPROFILE%\.ssh")
 if (-Not (Test-Path $sshPath))
 {
-    $tmp = New-Item -Path $sshPath -ItemType Directory -Force
+    $null = New-Item -Path $sshPath -ItemType Directory -Force
 }
 #Checking kex in config
 $sshConfigPath = $sshPath + "\config"

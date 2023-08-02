@@ -45,6 +45,7 @@ Param(
     [string]$hub,
     [string]$siteDesignName = $null,
     [Parameter(Mandatory=$true)]
+    [ValidateSet("CommunicationSite","TeamSite")]
     [string]$siteTemplate,
     [Parameter(Mandatory=$true)]
     [string]$siteLocale,
@@ -71,11 +72,17 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Create-Site-$($AlyaTimeS
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell" # TODO Remove when null pointer bug is fixed
 
 # Login
 #Set-PnPTraceLog -On -WriteToConsole -Level Debug -AutoFlush $true
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+
+# Checking owners
+if ($siteTemplate -eq "TeamSite" -and ($null -eq $siteOwners -or $siteOwners.Length -eq 0))
+{
+    throw "For TeamSites you need to specify at least one owner"
+}
 
 # Constants
 if ($hubSitesConfigurationFile)
@@ -135,7 +142,7 @@ if (-Not $site)
     Write-Warning "Site not found. Creating now site $($title)"
     if ($siteTemplate -eq "TeamSite")
     {
-        $site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -Description $description -Wait
+        $site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -Description $description -Owners $siteOwners -Wait
     }
     else
     {
@@ -300,7 +307,7 @@ if ($siteTemplate -eq "TeamSite")
 {
     Write-Host "Setting M365 Group sharing capability " -ForegroundColor $CommandInfo
     $m365GroupId = $site.GroupId.Guid
-    $settingsValue = $true
+    $settingsValue = "true"
     if ($externalSharing -eq "None")
     {
         $settingsValue = "false"
