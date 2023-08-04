@@ -93,6 +93,8 @@ $AlyaScripts = "$AlyaRoot\scripts"
 $AlyaSolutions = "$AlyaRoot\solutions"
 $AlyaTools = "$AlyaRoot\tools"
 $AlyaEnvSwitch = ""
+$AlyaModuleVersionOverwrite = @( @{Name="PnP.PowerShell";Version="2.1.1"} )
+$AlyaPackageVersionOverwrite = @( @{Name="Selenium.WebDriver";Version="4.10.0"} )
 
 # Switching env if required
 if ((Test-Path $AlyaLocal\EnvSwitch.ps1))
@@ -735,9 +737,14 @@ function DownloadAndInstall-Package($packageName, $nuvrs, $nusrc)
 
 function Install-PackageIfNotInstalled (
     [string] [Parameter(Mandatory = $true)] $packageName,
-    [bool] $autoUpdate = $true
+    [bool] $autoUpdate = $true,
+    [string] $exactVersion = $null
 )
 {
+    if ($AlyaPackageVersionOverwrite.Name -contains $packageName)
+    {
+        $exactVersion = ($AlyaPackageVersionOverwrite | Where-Object { $_.name -eq $packageName}).Version
+    }
     if (-Not (Is-InternetConnected))
     {
         Write-Warning "No internet connection. Not able to check any package!"
@@ -747,26 +754,33 @@ function Install-PackageIfNotInstalled (
     {
         $tmp = New-Item -Path "$($AlyaTools)\Packages" -ItemType Directory -Force
     }
-    $resp = Invoke-WebRequestIndep -Uri "https://www.nuget.org/packages/$packageName" -UseBasicParsing
+    if ($exactVersion) {
+        $resp = Invoke-WebRequestIndep -Uri "https://www.nuget.org/packages/$packageName/$exactVersion" -UseBasicParsing
+    } else {
+        $resp = Invoke-WebRequestIndep -Uri "https://www.nuget.org/packages/$packageName" -UseBasicParsing
+    }
     $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Download package" -or $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$($AlyaTools)\Packages\$packageName\$packageName.nuspec"))
     {
+        Write-Host ('Package {0} is not installed. Installing v{1}' -f $packageName, $nuvrs)
         DownloadAndInstall-Package -packageName $packageName -nuvrs $nuvrs -nusrc $nusrc
     }
     else
     {
         # Checking package version, updating if required
+        $nuspec = [xml](Get-Content "$($AlyaTools)\Packages\$packageName\$packageName.nuspec")
+        $nuvrsInstalled = $nuspec.package.metadata.version
         if ($autoUpdate)
         {
-            $nuspec = [xml](Get-Content "$($AlyaTools)\Packages\$packageName\$packageName.nuspec")
-            if ($nuspec.package.metadata.version -ne $nuvrs)
+            if ($nuvrsInstalled -ne $nuvrs)
             {
-                Write-Host "    There is a newer '$packageName' package available. Downloading and installing it."
+                $nuvrsInstalled = $nuvrs
                 Remove-Item -Recurse -Force "$($AlyaTools)\Packages\$packageName"
                 DownloadAndInstall-Package -packageName $packageName -nuvrs $nuvrs -nusrc $nusrc
             }
         }
+        Write-Host ('Package {0} is installed. Used:v{1} Requested:v{2}' -f $packageName, $nuvrsInstalled, $nuvrs)
     }
     foreach($file in (Get-ChildItem -Path "$($AlyaTools)\Packages\$packageName" -Recurse))
     {
@@ -850,6 +864,10 @@ function Install-ModuleIfNotInstalled (
     [bool]$AllowPrerelease = $false
 )
 {
+    if ($AlyaModuleVersionOverwrite.Name -contains $moduleName)
+    {
+        $exactVersion = ($AlyaModuleVersionOverwrite | Where-Object { $_.name -eq $moduleName}).Version
+    }
     if (-Not (Is-InternetConnected))
     {
         Write-Warning "No internet connection. Not able to check any module!"
@@ -1959,22 +1977,39 @@ function LoginTo-PnP(
             if (-Not $Global:AlyaPnpAdminConnection) {
                 try {
                     if ([string]::IsNullOrEmpty($AlyaPnPAppId)) {
-                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        if ($AlyaPnpEnvironment -eq "Production") {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        } else {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        }
                     } else {
-                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        if ($AlyaPnpEnvironment -eq "Production") {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        } else {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        }
                     }
                 }
                 catch {
+                    Write-Warning $_.Exception
                     Register-PnPManagementShellAccess -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -LaunchBrowser
                     try {
-                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        if ($AlyaPnpEnvironment -eq "Production") {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        } else {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        }
                     }
                     catch {
                         Write-Warning "Launch in browser: SharePoint, PowerApps, PowerAutomate, Teams, OneDrive"
                         Write-Warning "Try to register the PnP app with the following url in a browser. Check error messages in url."
                         Register-PnPManagementShellAccess -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ShowConsentUrl
                         pause
-                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        if ($AlyaPnpEnvironment -eq "Production") {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        } else {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                        }
                     }
                 }
                 $Global:AlyaPnpAdminConnection = $AlyaConnection
@@ -1986,21 +2021,37 @@ function LoginTo-PnP(
             if ($Url -ne $TenantAdminUrl) {
                 try {
                     if ([string]::IsNullOrEmpty($AlyaPnPAppId)) {
-                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        if ($AlyaPnpEnvironment -eq "Production") {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        } else {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        }
                     } else {
-                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        if ($AlyaPnpEnvironment -eq "Production") {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        } else {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        }
                     }
                 }
                 catch {
                     Register-PnPManagementShellAccess -LaunchBrowser
                     try {
-                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        if ($AlyaPnpEnvironment -eq "Production") {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        } else {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        }
                     }
                     catch {
                         Write-Warning "Try to register the PnP app with the following url in a browser. Check error messages in url."
                         Register-PnPManagementShellAccess -ShowConsentUrl
                         pause
-                        $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        if ($AlyaPnpEnvironment -eq "Production") {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        } else {
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                        }
                     }
                 }
             }
@@ -2679,19 +2730,24 @@ function Select-Item()
 }
 
 <# SELENIUM BROWSER #>
-$AlyaSeleniumBrowser = $null
 function Get-SeleniumBrowser()
 {
     Param(
         [bool]$HideCommandPrompt = $true,
         [bool]$Headless = $false,
+        [bool]$PrivateBrowsing = $true,
         $OptionSettings =  @{ browserName=""},
-        $driverversion = ""
+        $seleniumVersion = $null,
+        $edgeDriverVersion = $null
     )
-    $AlyaSeleniumBrowser = $null
-    Install-PackageIfNotInstalled "Selenium.WebDriver"
-    Install-PackageIfNotInstalled "Selenium.WebDriver.MSEdgeDriver"
-    Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
+    $Global:AlyaSeleniumBrowser = $null
+    Install-PackageIfNotInstalled "Selenium.WebDriver" -exactVersion $seleniumVersion
+    Install-PackageIfNotInstalled "Selenium.WebDriver.MSEdgeDriver" -exactVersion $edgeDriverVersion
+    if($AlyaIsPsCore) {
+        Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll"
+    } else {
+        Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
+    }
     if ($env:Path.IndexOf("$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64") -eq -1)
     {
         $env:Path = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64;$($env:Path)"
@@ -2709,10 +2765,11 @@ function Get-SeleniumBrowser()
     $options = New-Object -TypeName OpenQA.Selenium.Edge.EdgeOptions -Property $OptionSettings
     if($PrivateBrowsing) {$options.AddArguments('InPrivate')}
     if($Headless) {$options.AddArguments('headless')}
-    $AlyaSeleniumBrowser = New-Object OpenQA.Selenium.Edge.EdgeDriver $dService, $options
-    $AlyaSeleniumBrowser.Manage().window.position = '0,0'
-    return $AlyaSeleniumBrowser
+    $Global:AlyaSeleniumBrowser = New-Object OpenQA.Selenium.Edge.EdgeDriver $dService, $options
+    $Global:AlyaSeleniumBrowser.Manage().window.position = '0,0'
+    return $Global:AlyaSeleniumBrowser
 }
+
 function Close-SeleniumBrowser()
 {
     Param(
@@ -2727,3 +2784,48 @@ function Close-SeleniumBrowser()
     Start-Sleep -Seconds 2
     Get-Process -Name msedgedriver -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
 }
+
+function Run-ScriptInRunspace()
+{
+    Param(
+        $scriptPath = $null
+    )
+    Write-Host "Run-ScriptInRunspace: $scriptPath" -ForegroundColor $CommandInfo
+    $ps = $null
+    try {
+        $ps = [powershell]::Create()
+        [void]$ps.AddCommand($scriptPath).Invoke()
+        Write-Host "Results" -ForegroundColor $CommandInfo
+        Write-Host "  Debug" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Debug)
+        {
+            Write-Debug $ps.Streams.Debug
+        }
+        Write-Host "  Verbose" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Verbose)
+        {
+            Write-Verbose $ps.Streams.Verbose
+        }
+        Write-Host "  Information" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Information)
+        {
+            Write-Host $ps.Streams.Information
+        }
+        Write-Host "  Error" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Error)
+        {
+            Write-Error $ps.Streams.Error
+        }
+        Write-Host "  Warning" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Warning)
+        {
+            foreach($record in $ps.Streams.Warning) {
+                Write-Warning $ps.Streams.Warning
+            }
+        }
+    }
+    catch {
+        if ($null -ne $ps) { $ps.Runspace.Close() }
+    }
+}
+#Run-ScriptInRunspace "$AlyaScripts\tenant\Set-AdHocSubscriptionsDisabled.ps1"

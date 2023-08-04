@@ -36,6 +36,7 @@
     26.08.2021 Konrad Brunner       Support for Communication Sites
     07.07.2022 Konrad Brunner       New PnP Login and some fixes
     20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
+    05.08.2023 Konrad Brunner       Added role admins
 
 #>
 
@@ -97,6 +98,36 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Configure-HubSites | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+# Getting role groups
+$siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
+$web = Get-PnPWeb -Connection $siteCon
+
+$gauser = $web.EnsureUser("Company Administrator")
+$gauser.Context.Load($gauser)
+Invoke-PnPQuery -Connection $siteCon
+$gauserLoginName = $gauser.LoginName
+
+$spAdminRoleName = "SharePoint Service Administrator"
+try {
+    $sauser = $web.EnsureUser($spAdminRoleName)
+    $sauser.Context.Load($sauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $sauserLoginName = $sauser.LoginName
+}
+catch {
+    $spAdminRoleName = "SharePoint Administrator"
+    try {
+        $sauser = $web.EnsureUser($spAdminRoleName)
+        $sauser.Context.Load($sauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $sauserLoginName = $sauser.LoginName
+    }
+    catch {
+        $sauserLoginName = $null
+    }
+}
+
+# Configuring hubs
 foreach($hubSite in $hubSites)
 {
     ###Processing site
@@ -123,9 +154,17 @@ foreach($hubSite in $hubSites)
     }
 
     # Setting admin access
-    Write-Host "Setting admin access" -ForegroundColor $CommandInfo
-    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -Owners $AlyaSharePointNewSiteCollectionAdmins
-    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$($hubSite.url)" -PrimarySiteCollectionAdmin $AlyaSharePointNewSiteOwner
+    Write-Host "Setting admin access" -ForegroundColor $TitleColor
+    $owners = @()
+    if ($null -ne $sauserLoginName) { $owners += $sauserLoginName }
+    foreach ($owner in $AlyaSharePointNewSiteCollectionAdmins)
+    {
+        if (-Not [string]::IsNullOrEmpty($owner) -and $owner -ne "PleaseSpecify")
+        {
+            $owners += $owner
+        }
+    }
+    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
 
     # Registering as hub
     if (-Not $site.IsHubSite)
@@ -513,16 +552,16 @@ foreach($hubSite in $hubSites)
 if (-Not $createHubSitesOnly)
 {
     $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
-    $group = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
-    Add-PnPGroupMember -Connection $siteCon -Group $group -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
-    Add-PnPGroupMember -Connection $siteCon -Group $group -EmailAddress "$AlyaAllExternals@$AlyaDomainName" -SendEmail:$false
-    $group = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
-    $members = Get-PnPGroupMember -Connection $siteCon -Group $group
+    $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
+    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
+    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllExternals@$AlyaDomainName" -SendEmail:$false
+    $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
+    $members = Get-PnPGroupMember -Connection $siteCon -Group $mgroup
     foreach($member in $members)
     {
         if ($member.LoginName.Contains("spo-grid-all-users"))
         {
-            Remove-PnPGroupMember -Connection $siteCon -Group $group -LoginName $member.LoginName
+            Remove-PnPGroupMember -Connection $siteCon -Group $mgroup -LoginName $member.LoginName
         }
     }
 }

@@ -33,12 +33,16 @@
     08.07.2022 Konrad Brunner       Initial Version
     25.03.2023 Konrad Brunner       Added assignedGroups parameter
     23.04.2023 Konrad Brunner       Switched to MgGraph module
+    05.08.2023 Konrad Brunner       Added browser param
 
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$assignedGroups = $false
+    [Parameter(Mandatory=$false)]
+    [bool]$assignedGroups = $false,
+    [Parameter(Mandatory=$false)]
+	[object]$browser
 )
 
 #Reading configuration
@@ -52,12 +56,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeam-$($Alya
 [string]$Description = "Haupt Team fuer alle Benutzer. Intern und Extern."
 [string]$Visibility = "Private"
 [string[]]$Owners = $AlyaTeamsNewAdmins
-[string]$TeamPicturePath = $AlyaLogoUrlQuad
+[string]$TeamPicturePath = $AlyaLogoUrlQuadDark
+if ([string]::IsNullOrEmpty($TeamPicturePath)) { $TeamPicturePath = $AlyaLogoUrlQuad }
 [string]$DynamicMembershipRule = "(user.accountEnabled -eq true)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
@@ -66,6 +70,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Teams"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logins
+LoginTo-Teams
 LoginTo-MgGraph -Scopes @(
     "Directory.ReadWrite.All",
     "Group.ReadWrite.All",
@@ -78,8 +83,6 @@ LoginTo-MgGraph -Scopes @(
     "TeamMember.ReadWrite.All",
     "ChannelMessage.Send"
 )
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-LoginTo-Teams
 
 # =============================================================
 # O365 stuff
@@ -88,6 +91,12 @@ LoginTo-Teams
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Teams | Configure-DefaultTeam | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+if (-Not $browser) {
+    if ($Global:AlyaSeleniumBrowser) {
+        $browser = $Global:AlyaSeleniumBrowser
+    }
+}
 
 # Checking team
 Write-Host "Checking team" -ForegroundColor $CommandInfo
@@ -373,18 +382,20 @@ if (-Not $msgs -or $msgs.Count -eq 0)
     Write-Host "set channel to allow only owners posting messages" -ForegroundColor $CommandWarning
     $teamLink = "https://teams.microsoft.com/_?tenantId=$($AlyaTenantId)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)2&ctx=channel"
     Write-Host "  $teamLink"
-    Start-Process "$teamLink"
+    if (-Not $browser) {
+        Start-Process "$teamLink"
+    } else {
+        $browser.Url =  "$teamLink"
+    }
     pause
 }
 
-# Setting SharePoint access
-Write-Host "Setting SharePoint access" -ForegroundColor $CommandInfo
+# Getting SharePoint url
+Write-Host "Getting SharePoint url" -ForegroundColor $CommandInfo
 $Channel = Get-TeamChannel -GroupId $Team.GroupId
 $mgChannelFolder = Get-MgBetaTeamChannelFileFolder -TeamId $Team.GroupId -ChannelId $Channel.Id
 $mgChannelFolder = (Split-Path -Path (Split-Path -Path $mgChannelFolder.WebUrl -Parent) -Parent) -replace "\\", "/"
-$siteCon = LoginTo-PnP -Url $mgChannelFolder
-$mg = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
-Set-PnPGroupPermissions -Connection $siteCon -Identity $mg -RemoveRole @("Contributor","Editor") -ErrorAction SilentlyContinue
+Write-Output $mgChannelFolder
 
 #Stopping Transscript
 Stop-Transcript

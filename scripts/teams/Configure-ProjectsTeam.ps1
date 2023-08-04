@@ -33,12 +33,16 @@
     18.10.2022 Konrad Brunner       Initial Version
     25.03.2023 Konrad Brunner       Added assignedGroups parameter
     23.04.2023 Konrad Brunner       Switched to MgGraph module
+    05.08.2023 Konrad Brunner       Added browser param
 
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$assignedGroups = $false
+    [Parameter(Mandatory=$false)]
+    [bool]$assignedGroups = $false,
+    [Parameter(Mandatory=$false)]
+	[object]$browser
 )
 
 #Reading configuration
@@ -52,7 +56,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-ProjectsTeam-$($Aly
 [string]$Description = "Projekt Team fuer interne Benutzer."
 [string]$Visibility = "Private"
 [string[]]$Owners = $AlyaTeamsNewAdmins
-[string]$TeamPicturePath = $AlyaLogoUrlQuad
+[string]$TeamPicturePath = $AlyaLogoUrlQuadDark
+if ([string]::IsNullOrEmpty($TeamPicturePath)) { $TeamPicturePath = $AlyaLogoUrlQuad }
 [string]$DynamicMembershipRule = "(user.userType -eq `"Member`")"
 
 # Checking modules
@@ -65,6 +70,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Teams"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logins
+LoginTo-Teams
 LoginTo-MgGraph -Scopes @(
     "Directory.ReadWrite.All",
     "Group.ReadWrite.All",
@@ -77,7 +83,6 @@ LoginTo-MgGraph -Scopes @(
     "TeamMember.ReadWrite.All",
     "ChannelMessage.Send"
 )
-LoginTo-Teams
 
 # =============================================================
 # O365 stuff
@@ -86,6 +91,12 @@ LoginTo-Teams
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Teams | Configure-ProjectsTeam | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+if (-Not $browser) {
+    if ($Global:AlyaSeleniumBrowser) {
+        $browser = $Global:AlyaSeleniumBrowser
+    }
+}
 
 # Checking team
 Write-Host "Checking team" -ForegroundColor $CommandInfo
@@ -250,12 +261,12 @@ if (-Not $Setting)
     $Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
 $Value = $Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }
-if ($Value.Value -eq $true) {
-    Write-Host "Setting 'AllowToAddGuests' was already set to '$true'"
+if ($Value.Value -eq $false) {
+    Write-Host "Setting 'AllowToAddGuests' was already set to '$false'"
 } 
 else {
-    Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$true'"
-    ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $true
+    Write-Warning "Setting 'AllowToAddGuests' was set to '$($Value.Value)' updating to '$false'"
+    ($Setting.Values | Where-Object { $_.Name -eq "AllowToAddGuests" }).Value = $false
 }
 Update-MgBetaGroupSetting -GroupId $Team.GroupId -DirectorySettingId $Setting.Id -Values $Setting.Values
 
@@ -334,7 +345,11 @@ if (-Not $msgs -or $msgs.Count -eq 0)
     Write-Host "set channel to allow only owners posting messages" -ForegroundColor $CommandWarning
     $teamLink = "https://teams.microsoft.com/_?tenantId=$($AlyaTenantId)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)2&ctx=channel"
     Write-Host "  $teamLink"
-    Start-Process "$teamLink"
+    if (-Not $browser) {
+        Start-Process "$teamLink"
+    } else {
+        $browser.Url =  "$teamLink"
+    }
     pause
 }
 

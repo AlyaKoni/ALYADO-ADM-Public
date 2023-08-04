@@ -33,6 +33,7 @@
     25.03.2021 Konrad Brunner       Initial Version
     07.07.2022 Konrad Brunner       New PnP Login and some fixes
     20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
+    05.08.2023 Konrad Brunner       Added role admins, changed internal access to visitors
 
 #>
 
@@ -113,6 +114,35 @@ if (-Not $admHubSite)
 }
 $hubCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$hubSiteName"
 
+# Getting role groups
+$siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
+$web = Get-PnPWeb -Connection $siteCon
+
+$gauser = $web.EnsureUser("Company Administrator")
+$gauser.Context.Load($gauser)
+Invoke-PnPQuery -Connection $siteCon
+$gauserLoginName = $gauser.LoginName
+
+$spAdminRoleName = "SharePoint Service Administrator"
+try {
+    $sauser = $web.EnsureUser($spAdminRoleName)
+    $sauser.Context.Load($sauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $sauserLoginName = $sauser.LoginName
+}
+catch {
+    $spAdminRoleName = "SharePoint Administrator"
+    try {
+        $sauser = $web.EnsureUser($spAdminRoleName)
+        $sauser.Context.Load($sauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $sauserLoginName = $sauser.LoginName
+    }
+    catch {
+        $sauserLoginName = $null
+    }
+}
+
 # Checking app catalog site collection
 Write-Host "Checking app catalog site collection" -ForegroundColor $CommandInfo
 $catalogSiteName = "$prefix-ADM-$catalogTitle"
@@ -134,7 +164,7 @@ if (-Not $site)
     }
 
     Write-Warning "App Catalog site not found. Creating now app catalog site $catalogSiteName"
-    Register-PnPAppCatalogSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owner $AlyaSharePointNewSiteOwner -TimeZoneId 4 -Force
+    Register-PnPAppCatalogSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owner $gauserLoginName -TimeZoneId 4 -Force
 
     do {
         Start-Sleep -Seconds 15
@@ -153,14 +183,21 @@ if (-Not $site)
 
     # Setting admin access
     Write-Host "Setting admin access" -ForegroundColor $CommandInfo
-    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owners $AlyaSharePointNewSiteCollectionAdmins
-    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteName" -PrimarySiteCollectionAdmin $AlyaSharePointNewSiteOwner
+    $owners = @()
+    if ($null -ne $sauserLoginName) { $owners += $sauserLoginName }
+    foreach ($owner in $AlyaSharePointNewSiteCollectionAdmins)
+    {
+        if (-Not [string]::IsNullOrEmpty($owner) -and $owner -ne "PleaseSpecify")
+        {
+            $owners += $owner
+        }
+    }
+    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
     
-    # Configuring access to catalog site for internals
+    # Configuring access to catalog site for internals and externals
     Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
-    $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
-    Add-PnPGroupMember -Connection $siteCon -Group $mgroup -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
     $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
+    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
     Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllExternals@$AlyaDomainName" -SendEmail:$false
 
     # Configuring permissions
@@ -194,6 +231,10 @@ if (-Not $site)
     Write-Host "Configuring site title" -ForegroundColor $CommandInfo
 	Set-PnPWeb -Connection $siteCon -Title "$catalogSiteName"
 }
+
+Write-Host "Configuring site title" -ForegroundColor $CommandInfo
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Title "$catalogSiteName"
 
 #Stopping Transscript
 Stop-Transcript

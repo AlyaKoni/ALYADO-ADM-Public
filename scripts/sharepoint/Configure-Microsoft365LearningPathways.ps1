@@ -32,13 +32,18 @@
     ---------- -------------------- ----------------------------
     25.03.2021 Konrad Brunner       Initial Version
     20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
+    05.08.2023 Konrad Brunner       Added role admins and browser param
 
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory=$false)]
     [string]$siteLocale = "de-CH",
-    [string]$hubSitesConfigurationFile = $null
+    [Parameter(Mandatory=$false)]
+    [string]$hubSitesConfigurationFile = $null,
+    [Parameter(Mandatory=$false)]
+	[object]$browser
 )
 
 #Reading configuration
@@ -101,6 +106,12 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Configure-Microsoft365LearningPathways | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+if (-Not $browser) {
+    if ($Global:AlyaSeleniumBrowser) {
+        $browser = $Global:AlyaSeleniumBrowser
+    }
+}
+
 # Checking ADM hub site
 Write-Host "Checking ADM hub site" -ForegroundColor $CommandInfo
 $hubSiteDef = $hubSites | Where-Object { $_.short -eq "ADM" }
@@ -111,6 +122,35 @@ if (-Not $admHubSite)
     Write-Error "ADM Hub site $hubSiteName not found. Please crate it first"
 }
 $hubCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$hubSiteName"
+
+# Getting role groups
+$siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
+$web = Get-PnPWeb -Connection $siteCon
+
+$gauser = $web.EnsureUser("Company Administrator")
+$gauser.Context.Load($gauser)
+Invoke-PnPQuery -Connection $siteCon
+$gauserLoginName = $gauser.LoginName
+
+$spAdminRoleName = "SharePoint Service Administrator"
+try {
+    $sauser = $web.EnsureUser($spAdminRoleName)
+    $sauser.Context.Load($sauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $sauserLoginName = $sauser.LoginName
+}
+catch {
+    $spAdminRoleName = "SharePoint Administrator"
+    try {
+        $sauser = $web.EnsureUser($spAdminRoleName)
+        $sauser.Context.Load($sauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $sauserLoginName = $sauser.LoginName
+    }
+    catch {
+        $sauserLoginName = $null
+    }
+}
 
 # Checking learning pathways site collection
 Write-Host "Checking learning pathways site collection" -ForegroundColor $CommandInfo
@@ -199,8 +239,16 @@ if (-Not $site)
 
     # Setting admin access
     Write-Host "Setting admin access" -ForegroundColor $CommandInfo
-    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -Owners $AlyaSharePointNewSiteCollectionAdmins
-    Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName" -PrimarySiteCollectionAdmin $AlyaSharePointNewSiteOwner
+    $owners = @()
+    if ($null -ne $sauserLoginName) { $owners += $sauserLoginName }
+    foreach ($owner in $AlyaSharePointNewSiteCollectionAdmins)
+    {
+        if (-Not [string]::IsNullOrEmpty($owner) -and $owner -ne "PleaseSpecify")
+        {
+            $owners += $owner
+        }
+    }
+    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
 }
 
 # Checking app catalog
@@ -389,7 +437,11 @@ Set-PnPHomePage -Connection $siteCon -RootFolderRelativeUrl "SitePages/CustomLea
 # Launching custom configuration
 Write-Host "Launching custom configuration" -ForegroundColor $CommandInfo
 Write-Host "  $($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
-Start-Process "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
+if (-Not $browser) {
+    Start-Process "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
+} else {
+    $browser.Url =  "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
+}
 
 #Stopping Transscript
 Stop-Transcript

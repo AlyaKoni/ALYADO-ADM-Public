@@ -88,10 +88,15 @@ try {
 }
 catch {
     $spAdminRoleName = "SharePoint Administrator"
-    $sauser = $web.EnsureUser($spAdminRoleName)
-    $sauser.Context.Load($sauser)
-    Invoke-PnPQuery -Connection $siteCon
-    $sauserLoginName = $sauser.LoginName
+    try {
+        $sauser = $web.EnsureUser($spAdminRoleName)
+        $sauser.Context.Load($sauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $sauserLoginName = $sauser.LoginName
+    }
+    catch {
+        $sauserLoginName = $null
+    }
 }
 
 # Setting site admins
@@ -116,9 +121,12 @@ foreach ($site in $sitesToProcess)
     $gauser.Context.Load($gauser)
     Invoke-PnPQuery -Connection $siteCon
 
-    $sauser = $web.EnsureUser($spAdminRoleName)
-    $sauser.Context.Load($sauser)
-    Invoke-PnPQuery -Connection $siteCon
+    if ($null -ne $sauserLoginName)
+    {
+        $sauser = $web.EnsureUser($spAdminRoleName)
+        $sauser.Context.Load($sauser)
+        Invoke-PnPQuery -Connection $siteCon
+    }
 
     # Getting admins
     $admins = @()
@@ -132,7 +140,7 @@ foreach ($site in $sitesToProcess)
             $admins += $user
         }
     }
-    $admins += $sauser
+    if ($null -ne $sauserLoginName) { $admins += $sauser }
 
     try {
         if ($site.Owner.LoginName -ne $gauser.LoginName) {
