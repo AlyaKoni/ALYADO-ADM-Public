@@ -33,21 +33,29 @@
     14.11.2019 Konrad Brunner       Initial Version
     18.10.2021 Konrad Brunner       Move to Az
     24.01.2022 Konrad Brunner       Fixed unwanted module updates
+    04.08.2023 Konrad Brunner       Changed from params to constants and new managed identity login
 
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseApprovedVerbs", "")]
-param(
-    [Parameter(Mandatory = $true)]
-    [string] $ResourceGroupName,
-
-    [Parameter(Mandatory = $true)]
-    [string] $AutomationAccountName,
-
-    [Parameter(Mandatory=$false)]
-    [string] $AzureEnvironment = 'AzureCloud'
-)
 $ErrorActionPreference = "Stop"
+
+# Runbook
+$AlyaResourceGroupName = "##AlyaResourceGroupName##"
+$AlyaAutomationAccountName = "##AlyaAutomationAccountName##"
+$AlyaRunbookName = "##AlyaRunbookName##"
+
+# RunAsAccount
+$AlyaAzureEnvironment = "##AlyaAzureEnvironment##"
+$AlyaApplicationId = "##AlyaApplicationId##"
+$AlyaTenantId = "##AlyaTenantId##"
+$AlyaCertificateKeyVaultName = "##AlyaCertificateKeyVaultName##"
+$AlyaCertificateSecretName = "##AlyaCertificateSecretName##"
+$AlyaSubscriptionId = "##AlyaSubscriptionId##"
+
+# Mail settings
+$AlyaFromMail = "##AlyaFromMail##"
+$AlyaToMail = "##AlyaToMail##"
 
 # Constants
 $RunAsConnectionName = "AzureRunAsConnection"
@@ -56,14 +64,14 @@ $ModulesToInstall = @( ##AlyaModules## ) #Version $null means latest
 # Functions
 Function GetModuleContentUrl
 {   
-param(
-    [Parameter(Mandatory=$true)]
-    [String] $ModuleName,
+    param(
+        [Parameter(Mandatory=$true)]
+        [String] $ModuleName,
 
-    [Parameter(Mandatory=$false)]
-    [String] $ModuleVersion
+        [Parameter(Mandatory=$false)]
+        [String] $ModuleVersion
 
-)
+    )
 
     $Url = "https://www.powershellgallery.com/api/v2/Search()?`$filter=IsLatestVersion&searchTerm=%27$ModuleName%27&targetFramework=%27%27&includePrerelease=false&`$skip=0&`$top=40"
     $SearchResult = Invoke-RestMethod -Method Get -Uri $Url -UseBasicParsing
@@ -131,6 +139,7 @@ function Update-ProfileAndAutomationVersionToLatest
     Import-Module (Join-Path $ProfileUnzipPath ($ProfileModuleName + ".psd1")) -Force -Verbose
     Import-Module (Join-Path $AutomationUnzipPath ($AutomationModuleName + ".psd1")) -Force -Verbose
 }
+
 try
 {
 	$Cmd = Get-Command -Name Get-AzAutomationModule -ErrorAction SilentlyContinue
@@ -142,30 +151,23 @@ try
 	Write-Warning $_.Exception
 }
 
-# Login-AzureAutomation
-try {
-    $RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
-    Write-Output "Logging in to Az ($AzureEnvironment)..."
-    Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
-    Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
-    Add-AzAccount `
-        -ServicePrincipal `
-        -TenantId $RunAsConnection.TenantId `
-        -ApplicationId $RunAsConnection.ApplicationId `
-        -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
-        -Environment $AzureEnvironment
-    Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
-} catch {
-    if (!$RunAsConnection) {
-        Write-Output $RunAsConnectionName
-        try { Write-Output ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-        Write-Output "Connection $RunAsConnectionName not found."
-    }
-    throw
+# Login
+Write-Output "Login to Az using system-assigned managed identity"
+Disable-AzContextAutosave -Scope Process | Out-Null
+try
+{
+    $AzureContext = (Connect-AzAccount -Identity -Environment $AlyaAzureEnvironment).Context
 }
+catch
+{
+    throw "There is no system-assigned user identity. Aborting."; 
+    exit 99
+}
+$AzureContext = Set-AzContext -Subscription $AlyaSubscriptionId -DefaultProfile $AzureContext
 
 # Import modules if they are not in the Automation account
 try {
+
 	foreach($ModuleToInstall in $ModulesToInstall)
 	{
 		$ModuleName = $ModuleToInstall.Name
@@ -177,8 +179,8 @@ try {
 			Write-Error "Can't find module $ModuleName" -ErrorAction Continue
 		}
 
-		$ADModule = Get-AzAutomationModule -ResourceGroupName $ResourceGroupName `
-					    -AutomationAccountName $AutomationAccountName `
+		$ADModule = Get-AzAutomationModule -ResourceGroupName $AlyaResourceGroupName `
+					    -AutomationAccountName $AlyaAutomationAccountName `
 					    -Name $ModuleName -ErrorAction SilentlyContinue
 
 		$toBeinstalled = $false
@@ -201,8 +203,8 @@ try {
 		{
 			Write-Output "    Importing $ModuleName module to Automation account"
 			$AutomationModule = New-AzAutomationModule `
-				-ResourceGroupName $ResourceGroupName `
-				-AutomationAccountName $AutomationAccountName `
+				-ResourceGroupName $AlyaResourceGroupName `
+				-AutomationAccountName $AlyaAutomationAccountName `
 				-Name $ModuleName `
 				-ContentLink $AzureADGalleryURL
 
@@ -219,10 +221,11 @@ try {
 			if($AutomationModule.ProvisioningState -eq "Failed") {
 				throw "Importing $ModuleName module to Automation failed."
 			}
-		}  
+		}
 	}
 } catch {
     Write-Error $_.Exception -ErrorAction Continue
     throw
 }
+
 Write-Output "Done"

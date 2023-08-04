@@ -82,10 +82,15 @@ $AlyaVMLicenseTypeServer = "PleaseSpecify" #Example:"None" #Windows_Server=Hybri
 $AlyaServerOuProd = $null #Example:"OU=PROD,OU=Avd,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
 $AlyaServerOuTest = $null #Example:"OU=TEST,OU=Avd,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
 
-<# LOGOS #>
-$AlyaLogoUrlQuad = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzQuadrat_256x248_wbg.png"
-$AlyaLogoUrlRect = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzRechteck_640x240.png"
-$AlyaLogoUrlLong = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/corporate/images/LogoSchwarzLang_640x240.png"
+<# LOGOS AND BACKGROUNDS #>
+$AlyaLogoUrlFavicon = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/logos/Favicon.png" # exact 32x32 and max 5KB
+$AlyaLogoUrlQuad = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/logos/LogoQuad.png" # exact 240x240 and max 50KB
+$AlyaLogoUrlQuadDark = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/logos/LogoQuadD.png" # exact 240x240 and max 50KB
+$AlyaLogoUrlRect = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/logos/LogoRect.png" # max 280×60 and max 10KB
+$AlyaLogoUrlRectDark = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/logos/LogoRectD.png" # max 280×60 and max 10KB
+$AlyaLogoUrlLong = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/logos/LogoLong.png" # max 560×60 and max 20KB
+$AlyaLogoUrlLongDark = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/logos/LogoLongD.png" # max 560×60 and max 20KB
+$AlyaLoginBackgroundUrl = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/backgrounds/CloudLogin.jpg" # exact 1920×1080 and max 300 KB
 
 <# SUPPORT #>
 $AlyaSupportTitle = "Alya Support"
@@ -111,10 +116,10 @@ $AlyaAzureBrandingUsernameHintTextEn = "first.last@$AlyaDomainName"
 $AlyaAzureBrandingUsernameHintTextFr = "prénom.nomDeFamille@$AlyaDomainName"
 $AlyaAzureBrandingUsernameHintTextIt = "nome.cognome@$AlyaDomainName"
 $AlyaAzureBrandingUsernameHintTextDefault = "vorname.nachname@$AlyaDomainName"
-$AlyaAzureBrandingBackgroundImage = "PleaseSpecify" # exact 1920×1080 and max 300 KB; local file path or url
-$AlyaAzureBrandingFavicon = "PleaseSpecify" # exact 32x32 and max 5KB; local file path or url
+$AlyaAzureBrandingBackgroundImage = $AlyaLoginBackgroundUrl # exact 1920×1080 and max 300 KB; local file path or url
+$AlyaAzureBrandingFavicon = $AlyaLogoUrlFavicon # exact 32x32 and max 5KB; local file path or url
 $AlyaAzureBrandingSquareLogo = $AlyaLogoUrlQuad # exact 240x240 and max 50KB; local file path or url
-$AlyaAzureBrandingSquareLogoDark = $AlyaLogoUrlQuad # exact 240x240 and max 50KB; local file path or url
+$AlyaAzureBrandingSquareLogoDark = $AlyaLogoUrlQuadDark # exact 240x240 and max 50KB; local file path or url
 $AlyaAzureBrandingBannerLogo = $AlyaLogoUrlLong # max 280×60 and max 10KB; local file path or url
 
 <# RESOURCE IDS #>

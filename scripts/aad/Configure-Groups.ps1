@@ -33,12 +33,14 @@
     04.03.2020 Konrad Brunner       Initial Version
     25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
     21.04.2023 Konrad Brunner       Switched to Graph and added guest access
+    04.08.2023 Konrad Brunner       Dynamic membership check
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$inputFile = $null #Defaults to "$AlyaData\aad\Gruppen.xlsx"
+    [string]$inputFile = $null, #Defaults to "$AlyaData\aad\Gruppen.xlsx"
+    [bool]$dynamicMembershipDisabled = $false
 )
 
 #Reading configuration
@@ -127,6 +129,7 @@ foreach ($group in $AllGroups)
                 }
                 else
                 {
+                    if ($dynamicMembershipDisabled) { throw "Dynamic membership is disabled. Please update sheet!" }
                     $groupTypes += @("DynamicMembership")
                     if ([string]::IsNullOrEmpty($group.Alias))
                     {
@@ -164,6 +167,7 @@ foreach ($group in $AllGroups)
                 }
                 else
                 {
+                    if ($dynamicMembershipDisabled) { throw "Dynamic membership is disabled. Please update sheet!" }
                     $groupTypes += @("DynamicMembership")
                     if ([string]::IsNullOrEmpty($group.Alias))
                     {
@@ -294,7 +298,6 @@ try
                         -SubscriptionEnabled:$SubscriptionEnabled `
                         -ModerationEnabled:$ModerationEnabled `
                         -HiddenFromExchangeClientsEnabled:$HiddenFromExchangeClientsEnabled
-                        -CalendarMemberReadOnly:$CalendarMemberReadOnly `
                 $Global:retryCount = -1
             }
             else

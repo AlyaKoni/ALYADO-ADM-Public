@@ -33,6 +33,7 @@
     14.11.2019 Konrad Brunner       Initial Version
     18.10.2021 Konrad Brunner       Move to Az
     23.01.2022 Konrad Brunner       Fixed issue with new found dependency module
+    04.08.2023 Konrad Brunner       Changed from params to constants and new managed identity login
 
 #>
 
@@ -87,36 +88,33 @@ https://docs.microsoft.com/en-us/azure/automation/automation-update-azure-module
 #>
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseApprovedVerbs", "")]
-param(
-    [Parameter(Mandatory = $true)]
-    [string] $ResourceGroupName,
-
-    [Parameter(Mandatory = $true)]
-    [string] $AutomationAccountName,
-
-    [Parameter(Mandatory=$false)]
-    [int] $SimultaneousModuleImportJobCount = 10,
-
-    [Parameter(Mandatory=$false)]
-    [string] $AzureModuleClass = 'Az',
-
-    [Parameter(Mandatory=$false)]
-    [string] $AzureEnvironment = 'AzureCloud',
-
-    [Parameter(Mandatory=$false)]
-    [bool] $Login = $true,
-    
-    [Parameter(Mandatory=$false)]
-    [string] $ModuleVersionOverrides = $null,
-    
-    [Parameter(Mandatory=$false)]
-    [string] $PsGalleryApiUrl = 'https://www.powershellgallery.com/api/v2'
-)
-
 $ErrorActionPreference = "Continue"
 
-#region Constants
+# Runbook
+$AlyaResourceGroupName = "##AlyaResourceGroupName##"
+$AlyaAutomationAccountName = "##AlyaAutomationAccountName##"
+$AlyaRunbookName = "##AlyaRunbookName##"
 
+# RunAsAccount
+$AlyaAzureEnvironment = "##AlyaAzureEnvironment##"
+$AlyaApplicationId = "##AlyaApplicationId##"
+$AlyaTenantId = "##AlyaTenantId##"
+$AlyaCertificateKeyVaultName = "##AlyaCertificateKeyVaultName##"
+$AlyaCertificateSecretName = "##AlyaCertificateSecretName##"
+$AlyaSubscriptionId = "##AlyaSubscriptionId##"
+
+# Mail settings
+$AlyaFromMail = "##AlyaFromMail##"
+$AlyaToMail = "##AlyaToMail##"
+
+# Other settings
+$SimultaneousModuleImportJobCount = 10
+$AzureModuleClass = "Az"
+$Login = $true
+$ModuleVersionOverrides = $null
+$PsGalleryApiUrl = "https://www.powershellgallery.com/api/v2"
+
+#region Constants
 $script:AzureRMProfileModuleName = "AzureRM.Profile"
 $script:AzureRMAutomationModuleName = "AzureRM.Automation"
 $script:GetAzureRmAutomationModule = "Get-AzureRmAutomationModule"
@@ -148,49 +146,24 @@ function ConvertJsonDictTo-HashTable($JsonString) {
     $Result
 }
 
-# Use the Run As connection to login to Azure
+# Use the managed identity to login to Azure
 function Login-AzureAutomation([bool] $AzModuleOnly) {
     try {
-        $RunAsConnection = Get-AutomationConnection -Name "AzureRunAsConnection"
-        Write-Output "Logging in to Azure ($AzureEnvironment)..."
-        
-        if (!$RunAsConnection.ApplicationId) {
-            $ErrorMessage = "Connection 'AzureRunAsConnection' is incompatible type."
-            throw $ErrorMessage            
+        # Login
+        Write-Output "Login to Az using system-assigned managed identity"
+        Disable-AzContextAutosave -Scope Process | Out-Null
+        try
+        {
+            $AzureContext = (Connect-AzAccount -Identity -Environment $AlyaAzureEnvironment).Context
         }
-        
-        if ($AzModuleOnly) {
-           Write-Output "  Az"
-           Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
-           Connect-AzAccount `
-                -ServicePrincipal `
-                -TenantId $RunAsConnection.TenantId `
-                -ApplicationId $RunAsConnection.ApplicationId `
-                -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
-                -Subscription $RunAsConnection.SubscriptionID `
-                -Environment $AzureEnvironment
-            Select-AzSubscription -SubscriptionId $RunAsConnection.SubscriptionID | Write-Verbose
-        } else {
-            Write-Output "  AzureRm..."
-            Write-Output "  Thumbprint $($RunAsConnection.CertificateThumbprint)"
-            Add-AzureRmAccount `
-                -ServicePrincipal `
-                -TenantId $RunAsConnection.TenantId `
-                -ApplicationId $RunAsConnection.ApplicationId `
-                -CertificateThumbprint $RunAsConnection.CertificateThumbprint `
-                -Environment $AzureEnvironment
-            Select-AzureRmSubscription -SubscriptionId $RunAsConnection.SubscriptionID  | Write-Verbose
+        catch
+        {
+            throw "There is no system-assigned user identity. Aborting."; 
+            exit 99
         }
+        $AzureContext = Set-AzContext -Subscription $AlyaSubscriptionId -DefaultProfile $AzureContext
     } catch {
-		if (!$RunAsConnection) {
-			Write-Output $RunAsConnectionName
-			try { Write-Output ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-			Write-Output "Connection 'AzureRunAsConnection' not found."
-		}
-		else
-		{
-            $RunAsConnection | Format-List | Write-Output
-		}
+        try { Write-Output ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 		throw
     }
 }
@@ -209,8 +182,25 @@ function Get-ModuleDependencyAndLatestVersion([string] $ModuleName) {
             $ModuleUrlFormat -f $ModuleName, 'IsLatestVersion'
         }
 
-    $SearchResult = Invoke-RestMethod -Method Get -Uri $CurrentModuleUrl -UseBasicParsing
-
+    Write-Warning $CurrentModuleUrl
+    $retries = 10
+    while ($true)
+    {
+        try {
+            $SearchResult = Invoke-RestMethod -Method Get -Uri $CurrentModuleUrl -UseBasicParsing
+            break
+        }
+        catch {
+            $retries--
+            if ($retries -lt 0)
+            {
+                throw $_
+            }
+            Write-Warning "Retrying"
+            Start-Sleep -Seconds 10
+        }
+    }
+    
     if (!$SearchResult) {
         Write-Verbose "Could not find module $ModuleName on PowerShell Gallery. This may be a module you imported from a different location. Ignoring this module"
     } else {
@@ -221,7 +211,24 @@ function Get-ModuleDependencyAndLatestVersion([string] $ModuleName) {
         if (!$SearchResult) {
             Write-Verbose "Could not find module $ModuleName on PowerShell Gallery. This may be a module you imported from a different location. Ignoring this module"
         } else {
-            $PackageDetails = Invoke-RestMethod -Method Get -UseBasicParsing -Uri $SearchResult.id
+            Write-Warning $SearchResult.id
+            $retries = 10
+            while ($true)
+            {
+                try {
+                    $PackageDetails = Invoke-RestMethod -Method Get -UseBasicParsing -Uri $SearchResult.id
+                    break
+                }
+                catch {
+                    $retries--
+                    if ($retries -lt 0)
+                    {
+                        throw $_
+                    }
+                    Write-Warning "Retrying"
+                    Start-Sleep -Seconds 10
+                }
+            }
 
             # Ignore the modules that are not published as part of the Azure SDK
             if ($PackageDetails.entry.properties.Owners -ne $script:AzureSdkOwnerName) {
@@ -272,8 +279,8 @@ function Import-AutomationModule([string] $ModuleName, [bool] $UseAzModule = $fa
 
     $CurrentModule = & $GetAutomationModule `
                         -Name $ModuleName `
-                        -ResourceGroupName $ResourceGroupName `
-                        -AutomationAccountName $AutomationAccountName
+                        -ResourceGroupName $AlyaResourceGroupName `
+                        -AutomationAccountName $AlyaAutomationAccountName
 
     if ($CurrentModule.Version -eq $LatestModuleVersionOnGallery) {
         Write-Output "Module : $ModuleName is already present with version $LatestModuleVersionOnGallery. Skipping Import"
@@ -281,8 +288,8 @@ function Import-AutomationModule([string] $ModuleName, [bool] $UseAzModule = $fa
         Write-Output "Importing $ModuleName module of version $LatestModuleVersionOnGallery to Automation"
 
         & $NewAutomationModule `
-            -ResourceGroupName $ResourceGroupName `
-            -AutomationAccountName $AutomationAccountName `
+            -ResourceGroupName $AlyaResourceGroupName `
+            -AutomationAccountName $AlyaAutomationAccountName `
             -Name $ModuleName `
             -ContentLink $ModuleContentUrl > $null
     }
@@ -364,8 +371,8 @@ function Create-ModuleImportMapOrder([bool] $AzModuleOnly) {
     # Get all the non-conflicting modules in the current automation account
 	#Write-Warning "$GetAutomationModule"
     $CurrentAutomationModuleList = & $GetAutomationModule `
-                                        -ResourceGroupName $ResourceGroupName `
-                                        -AutomationAccountName $AutomationAccountName |
+                                        -ResourceGroupName $AlyaResourceGroupName `
+                                        -AutomationAccountName $AlyaAutomationAccountName |
         ?{
             ($AzModuleOnly -and ($_.Name -eq 'Az' -or $_.Name -like 'Az.*')) -or
             (!$AzModuleOnly -and ($_.Name -eq 'AzureRM' -or $_.Name -like 'AzureRM.*' -or
@@ -408,7 +415,11 @@ function Create-ModuleImportMapOrder([bool] $AzModuleOnly) {
         	#Write-Warning "Checking $($Dependencies.Count) dependendencies"
 			foreach($Dependency in $Dependencies)
 			{
-				$Modulename = $Dependency.Substring(0, $Dependency.IndexOf(":"))
+                if ($Dependency.IndexOf(":") -gt -1) {
+				    $Modulename = $Dependency.Substring(0, $Dependency.IndexOf(":"))
+                } else {
+				    $Modulename = $Dependency
+                }
 	        	#Write-Warning "  Checking Modulename $Modulename"
 				$moduleExists = $CurrentAutomationModuleList -contains $Modulename
 				if (-Not $moduleExists)
@@ -473,8 +484,8 @@ function Wait-AllModulesImported(
         while ($true) {
             $AutomationModule = & $GetAutomationModule `
                                     -Name $Module `
-                                    -ResourceGroupName $ResourceGroupName `
-                                    -AutomationAccountName $AutomationAccountName
+                                    -ResourceGroupName $AlyaResourceGroupName `
+                                    -AutomationAccountName $AlyaAutomationAccountName
 
             Write-Output ("ProvisioningState: $($AutomationModule.ProvisioningState)")
             $IsTerminalProvisioningState = ($AutomationModule.ProvisioningState -eq "Succeeded") -or

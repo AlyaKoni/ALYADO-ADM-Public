@@ -35,13 +35,14 @@
     19.10.2021 Konrad Brunner       Changed LIC group names
     15.11.2021 Konrad Brunner       Fixed not existing group
     21.04.2023 Konrad Brunner       Switched to Graph, removed AzureAdPreview
+    03.08.2023 Konrad Brunner       Processing groups and users if useDirectAssignment
 
 #>
 
 [CmdletBinding()]
 Param(
     [string]$inputFile = $null, #Defaults to "$AlyaData\aad\Lizenzen.xlsx"
-    [bool]$useDirectAssignment = $true,
+    [bool]$useDirectAssignment = $false,
     [string]$groupsInputFileForDirectAssignment = $null #Defaults to "$AlyaData\aad\Gruppen.xlsx"
 )
 
@@ -150,56 +151,52 @@ if (-Not $useDirectAssignment -and $fndMissingGroup)
     exit
 }
 
-if (-Not $useDirectAssignment)
+# Syncing licensed users with license groups
+Write-Host "Syncing licensed users with license groups" -ForegroundColor $CommandInfo
+foreach ($group in $byGroup.Keys)
 {
-
-    # Syncing licensed users with license groups
-    Write-Host "Syncing licensed users with license groups" -ForegroundColor $CommandInfo
-    foreach ($group in $byGroup.Keys)
+    Write-Host "  Group '$group'"
+    if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
     {
-        Write-Host "  Group '$group'"
-        if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
+        $members = Get-MgBetaGroupMember -GroupId $byGroup[$group].Id
+        foreach ($member in $members)
         {
-            $members = Get-MgBetaGroupMember -GroupId $byGroup[$group].Id
+            if (-Not $byGroup[$group].Users.Contains($member.AdditionalProperties.userPrincipalName))
+            {
+                #Remove member
+                Write-Host "    Removing member '$($member.AdditionalProperties.userPrincipalName)'"
+                Remove-MgBetaGroupMemberByRef -GroupId $byGroup[$group].Id -DirectoryObjectId $member.Id
+            }
+        }
+        foreach ($user in $byGroup[$group].Users)
+        {
+            $fnd = $false
             foreach ($member in $members)
             {
-                if (-Not $byGroup[$group].Users.Contains($member.AdditionalProperties.userPrincipalName))
+                if ($member.AdditionalProperties.userPrincipalName -eq $user)
                 {
-                    #Remove member
-                    Write-Host "    Removing member '$($member.AdditionalProperties.userPrincipalName)'"
-                    Remove-MgBetaGroupMemberByRef -GroupId $byGroup[$group].Id -DirectoryObjectId $member.Id
+                    $fnd = $true
                 }
             }
-            foreach ($user in $byGroup[$group].Users)
+            if (-Not $fnd)
             {
-                $fnd = $false
-                foreach ($member in $members)
+                #Adding member
+                Write-Host "    Adding member '$user'"
+                $adUser = Get-MgBetaUser -UserId $user
+                if (-Not $adUser)
                 {
-                    if ($member.AdditionalProperties.userPrincipalName -eq $user)
-                    {
-                        $fnd = $true
-                    }
+                    Write-Warning "     Member '$user' not found in AAD"
                 }
-                if (-Not $fnd)
+                else
                 {
-                    #Adding member
-                    Write-Host "    Adding member '$user'"
-                    $adUser = Get-MgBetaUser -UserId $user
-                    if (-Not $adUser)
-                    {
-                        Write-Warning "     Member '$user' not found in AAD"
-                    }
-                    else
-                    {
-                        New-MgBetaGroupMember -GroupId $byGroup[$group].Id -DirectoryObjectId $adUser.Id
-                    }
+                    New-MgBetaGroupMember -GroupId $byGroup[$group].Id -DirectoryObjectId $adUser.Id
                 }
             }
         }
     }
-
 }
-else
+
+if ($useDirectAssignment)
 {
     
     # Reading groups file

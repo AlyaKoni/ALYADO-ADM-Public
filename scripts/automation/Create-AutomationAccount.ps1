@@ -38,7 +38,8 @@
 [CmdletBinding()]
 Param(
     [bool]$UpdateRunbooks = $true,
-    [bool]$DeployGroupUpdater = $false
+    [bool]$DeployGroupUpdater = $false,
+    [bool]$DeployStartStopVm = $true
 )
 
 # Loading configuration
@@ -210,7 +211,7 @@ if ($KeyVault.EnableRbacAuthorization)
 }
 else
 {
-    Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All"
+    Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All" -ErrorAction Continue
 }
 
 # Checking azure key vault certificate
@@ -354,7 +355,7 @@ try
     }
     else
     {
-        Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $AutomationAccount.Identity.PrincipalId -PermissionsToCertificates "All" -PermissionsToSecrets "All"
+        Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $AutomationAccount.Identity.PrincipalId -PermissionsToCertificates "All" -PermissionsToSecrets "All" -ErrorAction Continue
     }
     
     # Checking automation account identity access
@@ -411,7 +412,23 @@ try
 
         #Setting identity as owner (required for automated cert updates)
         Write-Host "Setting identity as owner"
-        $owner = Get-MgBetaApplicationOwner -ApplicationId $AzAdApplication.Id -All | Where-Object { $_.Id -eq $AcIdentity.Id}
+        $retries = 10
+        while ($true)
+        {
+            try {
+                $owner = Get-MgBetaApplicationOwner -ApplicationId $AzAdApplication.Id -All | Where-Object { $_.Id -eq $AcIdentity.Id}
+                break
+            }
+            catch {
+                $retries--
+                if ($retries -lt 0)
+                {
+                    throw $_
+                }
+                Write-Warning "Waiting for application"
+                Start-Sleep -Seconds 3
+            }
+        }
         if ($null -eq $owner)
         {
             $params = @{
@@ -426,6 +443,8 @@ try
         $SpAppRoleSite = $SpApp.AppRoles | Where-Object {$_.Value -eq "Sites.FullControl.All" -and $_.AllowedMemberTypes -contains "Application"}
         $SpAppRoleUser = $SpApp.AppRoles | Where-Object {$_.Value -eq "User.Read.All" -and $_.AllowedMemberTypes -contains "Application"}
         $GraphAppRoleReadAll = $GraphApp.AppRoles | Where-Object {$_.Value -eq "Directory.Read.All" -and $_.AllowedMemberTypes -contains "Application"}
+        $GraphAppRoleGroupMemberReadWriteAll = $GraphApp.AppRoles | Where-Object {$_.Value -eq "GroupMember.ReadWrite.All" -and $_.AllowedMemberTypes -contains "Application"}
+
         $params = @{
             RequiredResourceAccess = @(
                 @{
@@ -451,6 +470,40 @@ try
                     )
                 }
             )
+        }
+
+        if ($DeployGroupUpdater)
+        {
+            $params = @{
+                RequiredResourceAccess = @(
+                    @{
+                        ResourceAppId = "$($SpApp.AppId)"
+                        ResourceAccess = @(
+                            @{
+                                Id = "$($SpAppRoleSite.Id)"
+                                Type = "Role"
+                            },
+                            @{
+                                Id = "$($SpAppRoleUser.Id)"
+                                Type = "Role"
+                            }
+                        )
+                    },
+                    @{
+                        ResourceAppId = "$($GraphApp.AppId)"
+                        ResourceAccess = @(
+                            @{
+                                Id = "$($GraphAppRoleReadAll.Id)"
+                                Type = "Role"
+                            },
+                            @{
+                                Id = "$($GraphAppRoleGroupMemberReadWriteAll.Id)"
+                                Type = "Role"
+                            }
+                        )
+                    }
+                )
+            }
         }
         Update-MgBetaApplication -ApplicationId $AzAdApplication.Id -BodyParameter $params
 
@@ -553,9 +606,11 @@ try {
     }
 }
 catch {
-    Write-Warning "You need access to the root amangement group!"
+    Write-Warning "You need access to the root mangement group!"
     Write-Warning "Please go to https://portal.azure.com/?feature.msaljs=true#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/Properties"
-    Write-Warning "And enable 'Access management for Azure resources'"
+    Write-Warning "and enable 'Access management for Azure resources'"
+    Write-Warning "Also go to https://portal.azure.com/?feature.msaljs=true#view/Microsoft_Azure_ManagementGroups/ManagementGroupBrowseBlade/~/MGBrowse_overview"
+    Write-Warning "and press 'Start using management groups'"
     Write-Warning "Restart this script"
     pause
     exit
@@ -594,7 +649,7 @@ if ($KeyVault.EnableRbacAuthorization)
 }
 else
 {
-    Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $AzAdServicePrincipal.Id -PermissionsToCertificates "Get" -PermissionsToSecrets "Get"
+    Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $AzAdServicePrincipal.Id -PermissionsToCertificates "Get" -PermissionsToSecrets "Get" -ErrorAction Continue
 }
 
 # Checking if AVD is enabled
@@ -615,6 +670,7 @@ $runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccount
 if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
 {
     $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook01.ps1" -Raw -Encoding UTF8
+    $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
     $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
     $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
     $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb01"))
@@ -664,6 +720,7 @@ if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     $modules = "@{Name=`"Az.Accounts`"; Version=`$null}, @{Name=`"Az.Automation`"; Version=`$null}, @{Name=`"Az.Storage`"; Version=`$null}, @{Name=`"Az.Compute`"; Version=`$null}, @{Name=`"Az.Resources`"; Version=`$null}, @{Name=`"Az.KeyVault`"; Version=`$null}"
     if ($AvdEnabled) { $modules += ", @{Name=`"Az.DesktopVirtualization`"; Version=`$null}" }
     $rbContent = $rbContent.Replace("##AlyaModules##", $modules)
+    $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
     $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
     $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
     $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb02"))
@@ -710,6 +767,7 @@ $runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccount
 if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
 {
     $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook03.ps1" -Raw -Encoding UTF8
+    $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
     $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
     $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
     $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb03"))
@@ -751,76 +809,83 @@ else
         $null = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb03")
     }
 }
-Write-Host "Checking automation runbook 04" -ForegroundColor $CommandInfo
-$runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccountName)rb04.ps1"
-if ($AvdEnabled)
+
+if ($DeployStartStopVm)
 {
-    if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
+    Write-Host "Checking automation runbook 04" -ForegroundColor $CommandInfo
+    $runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccountName)rb04.ps1"
+    if ($AvdEnabled)
     {
-        $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04avd.ps1" -Raw -Encoding UTF8
-        $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
-        $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
-        $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb04"))
-        $rbContent = $rbContent.Replace("##AlyaLocalDomainName##", $AlyaLocalDomainName)
-        $rbContent = $rbContent.Replace("##AlyaApplicationId##", $AzAdApplication.AppId)
-        $rbContent = $rbContent.Replace("##AlyaTenantId##", $Context.Tenant.Id)
-        $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
-        $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
-        $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
-        $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
-        $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
-        $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
-        $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
-        $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
+        if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
+        {
+            $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04avd.ps1" -Raw -Encoding UTF8
+            $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
+            $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
+            $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
+            $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb04"))
+            $rbContent = $rbContent.Replace("##AlyaLocalDomainName##", $AlyaLocalDomainName)
+            $rbContent = $rbContent.Replace("##AlyaApplicationId##", $AzAdApplication.AppId)
+            $rbContent = $rbContent.Replace("##AlyaTenantId##", $Context.Tenant.Id)
+            $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
+            $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
+            $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+            $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
+            $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
+            $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
+            $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
+            $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
+        }
     }
-}
-else
-{
-    if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
+    else
     {
-        $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04.ps1" -Raw -Encoding UTF8
-        $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
-        $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
-        $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb04"))
-        $rbContent = $rbContent.Replace("##AlyaApplicationId##", $AzAdApplication.AppId)
-        $rbContent = $rbContent.Replace("##AlyaTenantId##", $Context.Tenant.Id)
-        $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
-        $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
-        $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
-        $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
-        $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
-        $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
-        $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
-        $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
+        if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
+        {
+            $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04.ps1" -Raw -Encoding UTF8
+            $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
+            $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
+            $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
+            $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb04"))
+            $rbContent = $rbContent.Replace("##AlyaApplicationId##", $AzAdApplication.AppId)
+            $rbContent = $rbContent.Replace("##AlyaTenantId##", $Context.Tenant.Id)
+            $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
+            $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
+            $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+            $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
+            $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
+            $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
+            $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
+            $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
+        }
     }
-}
-$Runnbook = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -ErrorAction SilentlyContinue
-if (-Not $Runnbook)
-{
-    Write-Warning "Automation Runbook 04 not found. Creating the Automation Runbook $($AutomationAccountName+"rb04")"
-    if (-Not (Test-Path $runbookPath))
+    $Runnbook = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -ErrorAction SilentlyContinue
+    if (-Not $Runnbook)
     {
-        Write-Error "Can't find runbook $($runbookPath)" -ErrorAction Continue 
-        Exit 5
-    }
-    $null = Import-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -Type PowerShell -Description "Starts and stops VMs based on specified times in Vm tags" -Tags @{displayName="Start/Stop VM"} -Path $runbookPath -Force
-    $null = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04")
-    $Schedule = Get-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name "Hourly" -ErrorAction SilentlyContinue
-    if (-Not $Schedule)
-    {
-        $Schedule = New-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name "Hourly" -StartTime ((Get-Date "00:10:00").AddDays(1)) -HourInterval 1 -TimeZone ([System.TimeZoneInfo]::Local).Id
-    }
-    $null = Register-AzAutomationScheduledRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb04") -ScheduleName "Hourly"
-}
-else
-{
-    if ($UpdateRunbooks)
-    {
-        Write-Host "Automation Runbook 04 found. Updating the Automation Runbook $($AutomationAccountName+"rb04")"
-        $null = Import-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -Type PowerShell -Description "Will be called, when a new item in sharepoint is created" -Tags @{displayName="New Item Received"} -Path $runbookPath -Force
+        Write-Warning "Automation Runbook 04 not found. Creating the Automation Runbook $($AutomationAccountName+"rb04")"
+        if (-Not (Test-Path $runbookPath))
+        {
+            Write-Error "Can't find runbook $($runbookPath)" -ErrorAction Continue 
+            Exit 5
+        }
+        $null = Import-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -Type PowerShell -Description "Starts and stops VMs based on specified times in Vm tags" -Tags @{displayName="Start/Stop VM"} -Path $runbookPath -Force
         $null = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04")
+        $Schedule = Get-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name "Hourly" -ErrorAction SilentlyContinue
+        if (-Not $Schedule)
+        {
+            $Schedule = New-AzAutomationSchedule -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name "Hourly" -StartTime ((Get-Date "00:10:00").AddDays(1)) -HourInterval 1 -TimeZone ([System.TimeZoneInfo]::Local).Id
+        }
+        $null = Register-AzAutomationScheduledRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -RunbookName ($AutomationAccountName+"rb04") -ScheduleName "Hourly"
+    }
+    else
+    {
+        if ($UpdateRunbooks)
+        {
+            Write-Host "Automation Runbook 04 found. Updating the Automation Runbook $($AutomationAccountName+"rb04")"
+            $null = Import-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04") -Type PowerShell -Description "Will be called, when a new item in sharepoint is created" -Tags @{displayName="New Item Received"} -Path $runbookPath -Force
+            $null = Publish-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb04")
+        }
     }
 }
+
 if ($DeployGroupUpdater)
 {
     Write-Host "Checking automation runbook 09" -ForegroundColor $CommandInfo
@@ -828,6 +893,7 @@ if ($DeployGroupUpdater)
     if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     {
         $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook09.ps1" -Raw -Encoding UTF8
+        $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
         $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
         $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
         $rbContent = $rbContent.Replace("##AlyaRunbookName##", ($AutomationAccountName+"rb09"))
@@ -840,6 +906,8 @@ if ($DeployGroupUpdater)
         $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
         $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
         $rbContent = $rbContent.Replace("##AlyaAllInternalsGroup##", $AlyaAllInternals)
+        $rbContent = $rbContent.Replace("##AlyaDefaultTeamsGroup##", "$($AlyaCompanyNameShortM365.ToUpper())TM")
+        $rbContent = $rbContent.Replace("##AlyaProjectTeamsGroup##", "$($AlyaCompanyNameShortM365.ToUpper())TM-PRJ-ProjekteIntern")
         $rbContent | Set-Content -Path $runbookPath -Force -Encoding UTF8
     }
     $Runnbook = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb09") -ErrorAction SilentlyContinue
@@ -882,8 +950,7 @@ Write-Host "=======================================`n" -ForegroundColor $Command
 #Running runbooks 01 and 02
 Write-Host "Starting module update" -ForegroundColor $CommandInfo
 Write-Host "  Please wait..."
-$JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureModuleClass"="Az";"AzureEnvironment"="AzureCloud"}
-$Job = Start-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb01") -Parameters $JobParams
+$Job = Start-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb01")
 $doLoop = $true
 While ($doLoop) {
     Start-Sleep -Seconds 15
@@ -896,8 +963,7 @@ Write-Host "  Job status: "$($Job.Status)
 
 Write-Host "Starting module installation" -ForegroundColor $CommandInfo
 Write-Host "  Please wait..."
-$JobParams = @{"ResourceGroupName"=$ResourceGroupName;"AutomationAccountName"=$AutomationAccountName;"AzureEnvironment"="AzureCloud"}
-$Job = Start-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02") -Parameters $JobParams
+$Job = Start-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -Name ($AutomationAccountName+"rb02")
 $doLoop = $true
 While ($doLoop) {
     Start-Sleep -Seconds 15

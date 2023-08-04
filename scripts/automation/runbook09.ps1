@@ -45,6 +45,7 @@ $AlyaAutomationAccountName = "##AlyaAutomationAccountName##"
 $AlyaRunbookName = "##AlyaRunbookName##"
 
 # RunAsAccount
+$AlyaAzureEnvironment = "##AlyaAzureEnvironment##"
 $AlyaApplicationId = "##AlyaApplicationId##"
 $AlyaTenantId = "##AlyaTenantId##"
 $AlyaCertificateKeyVaultName = "##AlyaCertificateKeyVaultName##"
@@ -58,13 +59,15 @@ $AlyaToMail = "##AlyaToMail##"
 # Group settings
 $grpNameAllExt = "##AlyaAllExternalsGroup##"
 $grpNameAllInt = "##AlyaAllInternalsGroup##"
+$grpNameDefTeam = "##AlyaDefaultTeamsGroup##"
+$grpNamePrjTeam = "##AlyaProjectTeamsGroup##"
 
 # Login
 Write-Output "Login to Az using system-assigned managed identity"
 Disable-AzContextAutosave -Scope Process | Out-Null
 try
 {
-    $AzureContext = (Connect-AzAccount -Identity).Context
+    $AzureContext = (Connect-AzAccount -Identity -Environment $AlyaAzureEnvironment).Context
 }
 catch
 {
@@ -83,7 +86,7 @@ try {
         -TenantId $AlyaTenantId `
         -ApplicationId $AlyaApplicationId `
         -CertificateThumbprint $RunAsCertificate.Thumbprint `
-        -Environment "AzureCloud"
+        -Environment $AlyaAzureEnvironment
     Select-AzSubscription -SubscriptionId $AlyaSubscriptionId  | Write-Verbose
 	$Context = Get-AzContext
 } catch {
@@ -103,25 +106,67 @@ try
 	Write-Output ("Existing certificate will expire at " + $RunAsCert.NotAfter)
 
     $grpAllExt = Get-AzAdGroup -DisplayName $grpNameAllExt -Select "Id, DisplayName"
-    Write-Output "Found $($grpAllExt.DisplayName) with id $($grpAllExt.Id)"
+    if ($grpAllExt) {
+        Write-Output "Found $($grpAllExt.DisplayName) with id $($grpAllExt.Id)"
 
-    $grpAllInt = Get-AzAdGroup -DisplayName $grpNameAllInt -Select "Id, DisplayName"
-    Write-Output "Found $($grpAllInt.DisplayName) with id $($grpAllInt.Id)"
+        $grpAllMembsExt = Get-AzADGroupMember -GroupObjectId $grpAllExt.Id -Select "Id, UserPrincipalName"
+        Write-Output "Existing external members: $($grpAllMembsExt.Count)"
+        $grpAllUsersExt = @()
+        foreach($memb in $grpAllMembsExt)
+        {
+            $grpAllUsersExt += Get-AzAdUser -ObjectId $memb.Id -Select "UserPrincipalName, OtherMail, UserType, Id"
+        }
 
-    $grpAllMembsExt = Get-AzADGroupMember -GroupObjectId $grpAllExt.Id -Select "Id, UserPrincipalName"
-    Write-Output "Existing external members: $($grpAllMembsExt.Count)"
-    $grpAllUsersExt = @()
-    foreach($memb in $grpAllMembsExt)
-    {
-        $grpAllUsersExt += Get-AzAdUser -ObjectId $memb.Id -Select "UserPrincipalName, OtherMail, UserType, Id"
+    } else {
+        Write-Warning "All externals group not found"
     }
 
-    $grpAllMembsInt = Get-AzADGroupMember -GroupObjectId $grpAllInt.Id -Select "Id, UserPrincipalName"
-    Write-Output "Existing internal members: $($grpAllMembsInt.Count)"
-    $grpAllUsersInt = @()
-    foreach($memb in $grpAllMembsInt)
-    {
-        $grpAllUsersInt += Get-AzAdUser -ObjectId $memb.Id -Select "UserPrincipalName, OtherMail, UserType, Id"
+    $grpAllInt = Get-AzAdGroup -DisplayName $grpNameAllInt -Select "Id, DisplayName"
+    if ($grpAllInt) {
+        Write-Output "Found $($grpAllInt.DisplayName) with id $($grpAllInt.Id)"
+
+        $grpAllMembsInt = Get-AzADGroupMember -GroupObjectId $grpAllInt.Id -Select "Id, UserPrincipalName"
+        Write-Output "Existing internal members: $($grpAllMembsInt.Count)"
+        $grpAllUsersInt = @()
+        foreach($memb in $grpAllMembsInt)
+        {
+            $grpAllUsersInt += Get-AzAdUser -ObjectId $memb.Id -Select "UserPrincipalName, OtherMail, UserType, Id"
+        }
+
+    } else {
+        Write-Warning "All internals group not found"
+    }
+
+    $grpDefTeam = Get-AzAdGroup -DisplayName $grpNameDefTeam -Select "Id, DisplayName"
+    if ($grpDefTeam) {
+        Write-Output "Found $($grpDefTeam.DisplayName) with id $($grpDefTeam.Id)"
+
+        $grpAllMembsDefTeam = Get-AzADGroupMember -GroupObjectId $grpDefTeam.Id -Select "Id, UserPrincipalName"
+        Write-Output "Existing internal members: $($grpAllMembsDefTeam.Count)"
+        $grpAllUsersDefTeam = @()
+        foreach($memb in $grpAllMembsDefTeam)
+        {
+            $grpAllUsersDefTeam += Get-AzAdUser -ObjectId $memb.Id -Select "UserPrincipalName, OtherMail, UserType, Id"
+        }
+
+    } else {
+        Write-Warning "Default teams group not found"
+    }
+
+    $grpPrjTeam = Get-AzAdGroup -DisplayName $grpNamePrjTeam -Select "Id, DisplayName"
+    if ($grpPrjTeam) {
+        Write-Output "Found $($grpPrjTeam.DisplayName) with id $($grpPrjTeam.Id)"
+
+        $grpAllMembsPrjTeam = Get-AzADGroupMember -GroupObjectId $grpPrjTeam.Id -Select "Id, UserPrincipalName"
+        Write-Output "Existing internal members: $($grpAllMembsPrjTeam.Count)"
+        $grpAllUsersPrjTeam = @()
+        foreach($memb in $grpAllMembsPrjTeam)
+        {
+            $grpAllUsersPrjTeam += Get-AzAdUser -ObjectId $memb.Id -Select "UserPrincipalName, OtherMail, UserType, Id"
+        }
+
+    } else {
+        Write-Warning "Pproject teams group not found"
     }
 
     $users = Get-AzAdUser -Select "UserPrincipalName, OtherMail, UserType, Id"
@@ -130,19 +175,34 @@ try
         if ($user.UserType -eq "Member")
         {
             Write-Output "Checking member user $($user.UserPrincipalName)"
-            if ($grpAllUsersInt.UserPrincipalName -notcontains $user.UserPrincipalName)
+            if ($grpAllUsersInt -and $grpAllUsersInt.UserPrincipalName -notcontains $user.UserPrincipalName)
             {
-                Write-Output "Adding internal user $($user.UserPrincipalName)"
+                Write-Output "Adding internal user $($user.UserPrincipalName) to all internals group"
                 Add-AzADGroupMember -TargetGroupObjectId $grpAllInt.Id -MemberObjectId $user.Id
+            }
+            if ($grpAllUsersDefTeam -and $grpAllUsersDefTeam.UserPrincipalName -notcontains $user.UserPrincipalName)
+            {
+                Write-Output "Adding internal user $($user.UserPrincipalName) to default team"
+                Add-AzADGroupMember -TargetGroupObjectId $grpDefTeam.Id -MemberObjectId $user.Id
+            }
+            if ($grpAllUsersPrjTeam -and $grpAllUsersPrjTeam.UserPrincipalName -notcontains $user.UserPrincipalName)
+            {
+                Write-Output "Adding internal user $($user.UserPrincipalName) to projects team"
+                Add-AzADGroupMember -TargetGroupObjectId $grpPrjTeam.Id -MemberObjectId $user.Id
             }
         }
         if ($user.UserType -eq "Guest")
         {
             Write-Output "Checking guest user $($user.UserPrincipalName)"
-            if ($grpAllUsersExt.UserPrincipalName -notcontains $user.UserPrincipalName)
+            if ($grpAllUsersExt -and $grpAllUsersExt.UserPrincipalName -notcontains $user.UserPrincipalName)
             {
-                Write-Output "Adding external user $($user.UserPrincipalName)"
+                Write-Output "Adding external user $($user.UserPrincipalName) to all externals group"
                 Add-AzADGroupMember -TargetGroupObjectId $grpAllExt.Id -MemberObjectId $user.Id
+            }
+            if ($grpAllUsersDefTeam -and $grpAllUsersDefTeam.UserPrincipalName -notcontains $user.UserPrincipalName)
+            {
+                Write-Output "Adding external user $($user.UserPrincipalName) to default team"
+                Add-AzADGroupMember -TargetGroupObjectId $grpDefTeam.Id -MemberObjectId $user.Id
             }
         }
     }

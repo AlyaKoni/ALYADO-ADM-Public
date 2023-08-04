@@ -32,13 +32,16 @@
     ---------- -------------------- ----------------------------
     28.05.2021 Konrad Brunner       Initial Creation
     08.05.2023 Konrad Brunner       WebDriver version
+    04.08.2023 Konrad Brunner       Browser parameter
 
 #>
 
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$true)]
-	[string]$emailAddressToAdd
+	[string]$emailAddressToAdd,
+    [Parameter(Mandatory=$false)]
+	[object]$browser
 )
 
 #Reading configuration
@@ -64,7 +67,15 @@ Write-Host "=====================================================`n" -Foreground
 
 try
 {
-    $browser = Get-SeleniumBrowser
+    $closeBrowser = $false
+    if (-Not $browser) {
+        if ($Global:AlyaSeleniumBrowser) {
+            $browser = $Global:AlyaSeleniumBrowser
+        } else {
+            $browser = Get-SeleniumBrowser
+            $closeBrowser = $true
+        }
+    }
     $browser.Url = "https://security.microsoft.com/"
     $navi = $browser.Navigate()
     do
@@ -284,7 +295,9 @@ catch
 finally
 {
     #DisconnectFrom-EXOandIPPS
-    Close-SeleniumBrowser -browser $browser
+    if ($closeBrowser) {
+        Close-SeleniumBrowser -browser $browser
+    }
 }
 
 #Stopping Transscript

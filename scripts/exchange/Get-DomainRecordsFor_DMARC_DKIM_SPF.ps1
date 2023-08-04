@@ -64,33 +64,34 @@ foreach ($dom in $AlyaAdditionalDomainNames)
     $domains += $dom
 }
 
-foreach ($dom in $domains)
+try
 {
-    Write-Host "DNS config for domain $dom" -ForegroundColor $CommandSuccess
+    LoginTo-EXO
 
-    # SPF generator https://dmarcly.com/tools/spf-record-generator
-    Write-Output "SPF"
-    Write-Output "Type:  TXT"
-    Write-Output "Name:  @"
-    Write-Output "Value: v=spf1 include:spf.protection.outlook.com -all"
-    # if sendgrid: v=spf1 include:sendgrid.net include:spf.protection.outlook.com –all
-    Write-Output "TTL:   1 hour"
-
-    Write-Output "`nDMARC"
-    Write-Output "Type:  TXT"
-    Write-Output "Name:  _dmarc"
-    Write-Output "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; rf=afrf; fo=0:s; aspf=r; adkim=r; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
-    Write-Output "TTL:   1 hour"
-
-    Write-Output "`nDMARC Reports"
-    Write-Output "Type:  TXT"
-    Write-Output "Name:  $($dom)._report._dmarc"
-    Write-Output "Value: v=DMARC1"
-    Write-Output "TTL:   1 hour"
-
-    try
+    foreach ($dom in $domains)
     {
-        LoginTo-EXO
+        Write-Output "`nDNS config for domain $dom" -ForegroundColor $CommandSuccess
+
+        # SPF generator https://dmarcly.com/tools/spf-record-generator
+        Write-Output "`nSPF"
+        Write-Output "Type:  TXT"
+        Write-Output "Name:  @"
+        Write-Output "Value: v=spf1 include:spf.protection.outlook.com -all"
+        # if sendgrid: v=spf1 include:sendgrid.net include:spf.protection.outlook.com –all
+        Write-Output "TTL:   1 hour"
+
+        Write-Output "`nDMARC"
+        Write-Output "Type:  TXT"
+        Write-Output "Name:  _dmarc"
+        Write-Output "Value: v=DMARC1; p=quarantine; sp=quarantine; pct=100; rf=afrf; fo=0:s; aspf=r; adkim=r; ruf=mailto:$($AlyaSecurityEmail); rua=mailto:$($AlyaSecurityEmail)"
+        Write-Output "TTL:   1 hour"
+
+        Write-Output "`nDMARC Reports"
+        Write-Output "Type:  TXT"
+        Write-Output "Name:  $($dom)._report._dmarc"
+        Write-Output "Value: v=DMARC1"
+        Write-Output "TTL:   1 hour"
+
         $cfg = Get-DkimSigningConfig -Identity $dom
         $Selector1CNAME = $cfg.Selector1CNAME
         $Selector2CNAME = $cfg.Selector2CNAME
@@ -107,22 +108,23 @@ foreach ($dom in $domains)
         Write-Output "Value: $Selector2CNAME"
         Write-Output "TTL:   1 hour"
 
-    }
-    catch
-    {
-        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	    Write-Error ($_.Exception) -ErrorAction Continue
-    }
-    finally
-    {
-        DisconnectFrom-EXOandIPPS
-    }
-    Write-Host "`n"
+        Write-Output "`n"
 
-    Write-Host "If you like to get a service for DMARC reports, you can get one for free here:"
-    Write-Host "https://dmarc.postmarkapp.com/?utm_source=dmarcdigests&utm_medium=web&utm_content=pricing"
-    Write-Host "`n"
+        Write-Host "If you like to get a service for DMARC reports, you can get one for free here:"
+        Write-Host "https://dmarc.postmarkapp.com/?utm_source=dmarcdigests&utm_medium=web&utm_content=pricing"
+        Write-Host "`n"
 
+    }
+
+}
+catch
+{
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+    Write-Error ($_.Exception) -ErrorAction Continue
+}
+finally
+{
+    DisconnectFrom-EXOandIPPS
 }
 
 #Stopping Transscript

@@ -31,11 +31,14 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     07.07.2022 Konrad Brunner       Initial Version
+    05.08.2023 Konrad Brunner       Added browser parameter
 
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory=$false)]
+	[object]$browser
 )
 
 #Reading configuration
@@ -52,9 +55,19 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Set-ClassicSettings | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+if (-Not $browser) {
+    if ($Global:AlyaSeleniumBrowser) {
+        $browser = $Global:AlyaSeleniumBrowser
+    }
+}
+
 Write-Warning "Please check the classic settings in the admin center."
 Write-Host "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
-Start-Process "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
+if (-Not $browser) {
+    Start-Process "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
+} else {
+    $browser.Url =  "$AlyaSharePointAdminUrl/_layouts/15/online/TenantSettings.aspx"
+}
 
 #Stopping Transscript
 Stop-Transcript
