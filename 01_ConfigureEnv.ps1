@@ -932,6 +932,7 @@ function Install-ModuleIfNotInstalled (
     }
     [Version]$requestedVersion = $null
     [string]$requestedVersionFullname = $null
+    $module = $null
     if ($exactVersion -ne "0.0.0.0")
     {
         $module = Get-Module -Name $moduleName -ListAvailable |`
@@ -1182,6 +1183,7 @@ function Install-ModuleIfNotInstalled (
         Import-Module -Name $moduleName -UseWindowsPowershell
     }
 }
+#Install-ModuleIfNotInstalled "ImportExcel"
 #Install-ModuleIfNotInstalled "PowerShellGet"
 #Install-ModuleIfNotInstalled "Az.Accounts"
 #Install-ModuleIfNotInstalled "Az.Resources"

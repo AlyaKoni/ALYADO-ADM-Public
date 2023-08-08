@@ -86,7 +86,7 @@ $url = "https://main.iam.ad.ext.azure.com/api/Directories/B2BDirectoryProperties
 $ActualConfiguration = Invoke-RestMethod -Uri $url -Headers $header -Method GET -ErrorAction Stop
 
 Write-Host "Actual settings"
-$ActualConfiguration
+Write-Host ($ActualConfiguration | Format-List | Out-String)
 
 $settings = @{
   restrictDirectoryAccess = $false
@@ -107,7 +107,7 @@ $null = Invoke-RestMethod -Uri $url -Headers $header -Method PUT -Body $body -Co
 
 $ActualConfiguration = Invoke-RestMethod -Uri $url -Headers $header -Method GET -ErrorAction Stop
 Write-Host "New settings"
-$ActualConfiguration
+Write-Host ($ActualConfiguration | Format-List | Out-String)
 
 #Stopping Transscript
 Stop-Transcript
