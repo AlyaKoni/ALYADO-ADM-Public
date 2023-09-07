@@ -83,7 +83,7 @@ $siteStrcuture = @(
         Title = "$($AlyaCompanyNameShortM365)SP-ADM-Daten"
         ExtSharing = $false
         Description = "Interne Dateiablage"
-        Type = "CommunicationSite"
+        Type = "TeamSite"
         Template = $homePageTemplateDocumentSiteADM
         Logo = $AlyaLogoUrlQuad
         HeaderLayout = "Compact"
@@ -95,7 +95,7 @@ $siteStrcuture = @(
         Title = "$($AlyaCompanyNameShortM365)SP-COL-Oeffentlich"
         ExtSharing = $true
         Description = "Öffentliche Dateiablage"
-        Type = "CommunicationSite"
+        Type = "TeamSite"
         Template = $homePageTemplateDocumentSiteCOL
         Logo = $AlyaLogoUrlQuad
         HeaderLayout = "Compact"
@@ -128,7 +128,8 @@ foreach($siteDef in $siteStrcuture)
         -homePageTemplate $siteDef.Template `
         -siteLogoUrl $siteDef.Logo `
         -overwritePages $overwritePages `
-        -hubSitesConfigurationFile $hubSitesConfigurationFile
+        -hubSitesConfigurationFile $hubSitesConfigurationFile `
+        -siteOwners $AlyaSharePointNewSiteCollectionAdmins
 }
 
 #Stopping Transscript

@@ -50,15 +50,15 @@ $apps | Foreach-Object {
     $_.PSObject.Properties.Remove("committedContentVersion")
     $_.PSObject.Properties.Remove("uploadState")
 }
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.androidManagedStoreApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-androidManagedStoreApps.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.managedAndroidStoreApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-managedAndroidStoreApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.managedIOSStoreApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-managedIOSStoreApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.iosStoreApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-iosStoreApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.microsoftStoreForBusinessApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-microsoftStoreForBusinessApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.macOSMdatpApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-macOSMdatpApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.macOSOfficeSuiteApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-macOSOfficeSuiteApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.macOSMicrosoftEdgeApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-macOSMicrosoftEdgeApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.webApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-webApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.win32LobApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-win32LobApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.officeSuiteApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-officeSuiteApp.json" -encoding UTF8 -Force
-$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.Beta.windowsMicrosoftEdgeApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-windowsMicrosoftEdgeApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.androidManagedStoreApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-androidManagedStoreApps.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.managedAndroidStoreApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-managedAndroidStoreApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.managedIOSStoreApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-managedIOSStoreApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.iosStoreApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-iosStoreApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.microsoftStoreForBusinessApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-microsoftStoreForBusinessApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.macOSMdatpApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-macOSMdatpApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.macOSOfficeSuiteApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-macOSOfficeSuiteApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.macOSMicrosoftEdgeApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-macOSMicrosoftEdgeApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.webApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-webApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.win32LobApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-win32LobApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.officeSuiteApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-officeSuiteApp.json" -encoding UTF8 -Force
+$apps | Where-Object { $_."@odata.type" -eq "#Microsoft.Graph.windowsMicrosoftEdgeApp"} | ConvertTo-Json -Depth 50 | Set-Content -Path "$PsScriptRoot\exp-windowsMicrosoftEdgeApp.json" -encoding UTF8 -Force

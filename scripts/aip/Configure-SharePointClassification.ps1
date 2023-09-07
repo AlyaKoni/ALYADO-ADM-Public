@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     15.10.2020 Konrad Brunner       Initial Version
+    06.09.2023 Konrad Brunner       Move to Graph
 
 #>
 
@@ -54,26 +55,24 @@ if (-Not $inputLabelFile)
 }
 if (-Not $defaultLabel)
 {
-    $defaultLabel = "Internal.External"
+    $defaultLabel = "Internal.Internal"
 }
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Configure-SharePointClassification | Azure" -ForegroundColor $CommandInfo
+Write-Host "AIP | Configure-SharePointClassification | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Preparing usage guidelines
@@ -104,31 +103,61 @@ $labelList
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Configure-SharePointClassification | Azure" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Configure-SharePointClassification | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo
-$SettingTemplate = Get-AzureADDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
-$Setting = Get-AzureADDirectorySetting | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified" }
+$Setting = Get-MgBetaDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 if (-Not $Setting)
 {
     Write-Warning "Setting not yet created. Creating one based on template."
-    $Setting = $SettingTemplate.CreateDirectorySetting()
-    $Setting["UsageGuidelinesUrl"] = "https://alyainfpstrg001.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
-    $Setting["GuestUsageGuidelinesUrl"] = "https://alyainfpstrg001.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
-    $setting["ClassificationList"] = $labelList
-    $setting["DefaultClassification"] = $defaultLabel
-    New-AzureADDirectorySetting -DirectorySetting $Setting
+    $Values = @()
+    foreach($dval in $SettingTemplate.Values) {
+	    $Values += @{Name = $dval.Name; Value = $dval.DefaultValue}
+    }
+    $Setting = New-MgBetaDirectorySetting -DisplayName "Group.Unified" -TemplateId $SettingTemplate.Id -Values $Values
+    $Setting = Get-MgBetaDirectorySetting | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
 }
-else
-{
-    $Setting["UsageGuidelinesUrl"] = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
-    $Setting["GuestUsageGuidelinesUrl"] = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
-    $setting["ClassificationList"] = $labelList
-    $setting["DefaultClassification"] = $defaultLabel
-    Set-AzureADDirectorySetting -Id $Setting.Id -DirectorySetting $Setting
+
+$Value = $Setting.Values | Where-Object { $_.Name -eq "UsageGuidelinesUrl" }
+if ($Value.Value -eq "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html") {
+    Write-Host "Setting 'UsageGuidelinesUrl' was already set to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html'"
+} 
+else {
+    Write-Warning "Setting 'UsageGuidelinesUrl' was set to '$($Value.Value)' updating to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html'"
+    ($Setting.Values | Where-Object { $_.Name -eq "UsageGuidelinesUrl" }).Value = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzung.html"
 }
+
+$Value = $Setting.Values | Where-Object { $_.Name -eq "GuestUsageGuidelinesUrl" }
+if ($Value.Value -eq "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html") {
+    Write-Host "Setting 'GuestUsageGuidelinesUrl' was already set to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html'"
+} 
+else {
+    Write-Warning "Setting 'GuestUsageGuidelinesUrl' was set to '$($Value.Value)' updating to 'https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html'"
+    ($Setting.Values | Where-Object { $_.Name -eq "GuestUsageGuidelinesUrl" }).Value = "https://$StorageAccountName.blob.core.windows.net/public/pages/OfficeGroupsNutzungExterne.html"
+}
+
+$Value = $Setting.Values | Where-Object { $_.Name -eq "ClassificationList" }
+if ($Value.Value -eq $labelList) {
+    Write-Host "Setting 'ClassificationList' was already set to '$labelList'"
+} 
+else {
+    Write-Warning "Setting 'ClassificationList' was set to '$($Value.Value)' updating to '$labelList'"
+    ($Setting.Values | Where-Object { $_.Name -eq "ClassificationList" }).Value = $labelList
+}
+
+$Value = $Setting.Values | Where-Object { $_.Name -eq "DefaultClassification" }
+if ($Value.Value -eq $defaultLabel) {
+    Write-Host "Setting 'DefaultClassification' was already set to '$defaultLabel'"
+} 
+else {
+    Write-Warning "Setting 'DefaultClassification' was set to '$($Value.Value)' updating to '$defaultLabel'"
+    ($Setting.Values | Where-Object { $_.Name -eq "DefaultClassification" }).Value = $defaultLabel
+}
+
+Update-MgBetaDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
 #Stopping Transscript
 Stop-Transcript

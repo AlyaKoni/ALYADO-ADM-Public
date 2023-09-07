@@ -47,7 +47,6 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-AzureCalculatorData-$
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "MSOnline"
 Install-ModuleIfNotInstalled "ImportExcel"
 
 # Main

@@ -30,52 +30,52 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    19.05.2021 Konrad Brunner       Initial Version
+    28.08.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [ValidateNotNull()]
-    [string]$userUpn
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Reset-SSPR-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-UserConsentForRiskyAppsDisabled-$($AlyaTimeString).log" | Out-Null
+
+# Constants
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.Authorization")
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Reset-SSPR | O365" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-UserConsentForRiskyAppsDisabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Actual AlternateEmailAddresses" -ForegroundColor $CommandInfo
-Get-MsolUser -UserPrincipalName $userUpn | Select-Object AlternateEmailAddresses
-Write-Host "Actual MobilePhone" -ForegroundColor $CommandInfo
-Get-MsolUser -UserPrincipalName $userUpn | Select-Object MobilePhone
-Write-Host "Actual PhoneNumber" -ForegroundColor $CommandInfo
-Get-MsolUser -UserPrincipalName $userUpn | Select-Object PhoneNumber
-
-Write-Host "Clearing values" -ForegroundColor $CommandInfo
-Set-MsolUser -UserPrincipalName $userUpn -AlternateEmailAddresses $null
-Set-MsolUser -UserPrincipalName $userUpn -MobilePhone $null
-Set-MsolUser -UserPrincipalName $userUpn -PhoneNumber $null
+$authorizationPolicy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
+if ($authorizationPolicy.AllowUserConsentForRiskyApps)
+{
+    Write-Warning "AllowUserConsentForRiskyApps was enabled. Disabling it."
+    $param = @{
+        AllowUserConsentForRiskyApps = $false
+    }
+    Update-MgPolicyAuthorizationPolicy -BodyParameter $param
+}
+else
+{
+    Write-Host "AllowUserConsentForRiskyApps was already disabled." -ForegroundColor $CommandSuccess
+}
 
 #Stopping Transscript
 Stop-Transcript

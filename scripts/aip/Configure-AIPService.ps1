@@ -64,7 +64,7 @@ $enabled = Get-AipService
 if ($enabled -ne "Enabled")
 {
     Write-Host "Enabling AipService"
-    $null = Configure-AIPService
+    $null = Enable-AIPService
 }
 else
 {
@@ -76,7 +76,7 @@ $enabled = Get-AipServiceIPCv3
 if ($enabled -ne "Enabled")
 {
     Write-Host "Enabling AipServiceIPCv3"
-    $null = Configure-AIPServiceIPCv3
+    $null = Enable-AIPServiceIPCv3
 }
 else
 {
@@ -158,6 +158,19 @@ if (-Not $actConfiguration.AzureRMSLicensingEnabled)
 if (-Not $actConfiguration.AutomaticServiceUpdateEnabled)
 {
     Write-Warning "AutomaticServiceUpdateEnabled was disbled. Enabling it now."
+    Set-IRMConfiguration -AutomaticServiceUpdateEnabled $true
+}
+if (-Not $actConfiguration.EnablePortalTrackingLogs)
+{
+    try {
+        #Only E5
+        Set-IRMConfiguration -EnablePortalTrackingLogs $true
+        Write-Warning "EnablePortalTrackingLogs was disbled. Enabling it now."
+    } catch {}
+}
+if (-Not $actConfiguration.AutomaticServiceUpdateEnabled)
+{
+    Write-Warning "EnablePortalTrackingLogs was disbled. Enabling it now."
     Set-IRMConfiguration -AutomaticServiceUpdateEnabled $true
 }
 #Test-IRMConfiguration -Sender first.last@domain.ch

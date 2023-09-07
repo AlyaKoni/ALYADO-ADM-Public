@@ -147,6 +147,42 @@ function MakeFsCompatiblePath()
 
     return $npath
 }
+function GetReportUri($reportname,$filter)
+{
+    $uri = "/beta/deviceManagement/reports/exportJobs"
+    if ([string]::IsNullOrEmpty($filter)) {
+        $body = @"
+{
+    "reportName": "$reportname",
+    "localizationType": "LocalizedValuesAsAdditionalColumn", 
+    "format": "json"
+}
+"@
+    } else {
+        $body = @"
+{
+    "reportName": "$reportname",
+    "filter": "$filter",
+    "localizationType": "LocalizedValuesAsAdditionalColumn", 
+    "format": "json"
+}
+"@
+    }
+    $rep = Post-MsGraph -Uri $uri -Body $body
+    $rep = "$uri('$($rep.id)')"
+    $null = Get-MsGraphObject -Uri $rep
+    return $rep
+}
+function DownloadReport($repUri, $repName, $repDir)
+{
+    $rep = Get-MsGraphObject -Uri $repUri
+    while ($rep.status -eq "inProgress" || $rep.status -eq "notStarted")
+    {
+        Start-Sleep -Seconds 10
+        $rep = Get-MsGraphObject -Uri $repUri
+    }
+    Invoke-WebRequestIndep -Method "Get" -Uri $rep.url -OutFile (MakeFsCompatiblePath("$DataRoot$repDir\$repName.zip"))
+}
 
 ##### Starting exports GeneralInformation
 #####
@@ -385,7 +421,7 @@ $groupPolicyConfigurations = Get-MsGraphCollection -Uri $uri
 foreach($policy in $groupPolicyConfigurations)
 {
     #$policy = $groupPolicyConfigurations[3]
-    $policy | Add-Member -MemberType NoteProperty -Name "@odata.type" -Value "#Microsoft.Graph.Beta.groupPolicyConfiguration" -Force
+    $policy | Add-Member -MemberType NoteProperty -Name "@odata.type" -Value "#Microsoft.Graph.groupPolicyConfiguration" -Force
 
     $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/assignments"
     $assignments = Get-MsGraphObject -Uri $uri
@@ -396,66 +432,73 @@ foreach($policy in $groupPolicyConfigurations)
     foreach($definitionValue in $definitionValues)
     {
         #$definitionValue = $definitionValues[0]
-        $definitionValue | Add-Member -MemberType NoteProperty -Name "@odata.type" -Value "#Microsoft.Graph.Beta.groupPolicyDefinitionValue" -Force
+        Add-Member -InputObject $definitionValue -MemberType NoteProperty -Name "@odata.type" -Value "#Microsoft.Graph.groupPolicyDefinitionValue" -Force
 
         $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/definition"
-        $definitionValueDefinition = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-        $definitionValue | Add-Member -MemberType NoteProperty -Name definition -Value $definitionValueDefinition -Force
-        $definitionValue | Add-Member -MemberType NoteProperty -Name "definition@odata.bind" -Value "$AlyaGraphEndpoint/beta/deviceManagement/groupPolicyDefinitions('$($definitionValueDefinition.id)')" -Force
+        $definitionValueDefinition = Get-MsGraphObject -Uri $uri -ErrorAction SilentlyContinue
+        Add-Member -InputObject $definitionValue -MemberType NoteProperty -Name "definition" -Value $definitionValueDefinition -Force
+        Add-Member -InputObject $definitionValue -MemberType NoteProperty -Name "definition@odata.bind" -Value "$AlyaGraphEndpoint/beta/deviceManagement/groupPolicyDefinitions('$($definitionValueDefinition.id)')" -Force
 
         $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues?`$expand=presentation"
-        $presentationValues = Get-MsGraphCollection -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
+        $presentationValues = Get-MsGraphCollection -Uri $uri -ErrorAction SilentlyContinue
         foreach($presentationValue in $presentationValues)
         {
-            $presentationValue | Add-Member -MemberType NoteProperty -Name "presentation@odata.bind" -Value "/beta/deviceManagement/groupPolicyDefinitions('$($definitionValueDefinition.id)')/presentations('$($presentationValue.presentation.id)')" -Force
+            Add-Member -InputObject $presentationValue -MemberType NoteProperty -Name "presentation@odata.bind" -Value "/beta/deviceManagement/groupPolicyDefinitions('$($definitionValueDefinition.id)')/presentations('$($presentationValue.presentation.id)')" -Force
+            
+            $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation"
+            $presentationValuePresentation = Get-MsGraphObject -Uri $uri -ErrorAction SilentlyContinue
+            Add-Member -InputObject $presentationValue -MemberType NoteProperty -Name "presentation" -Value $presentationValuePresentation -Force
+
+            <#
             try
             {
                 # TODO BadRequest
                 $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition"
-                $presentationValueDefinition = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-                $presentationValue | Add-Member -MemberType NoteProperty -Name definition -Value $presentationValueDefinition -Force
+                $presentationValueDefinition = Get-MsGraphObject -Uri $uri -ErrorAction SilentlyContinue
+                Add-Member -InputObject $presentationValue -MemberType NoteProperty -Name definition -Value $presentationValueDefinition -Force
             } catch { }
             try
             {
                 # TODO BadRequest
                 $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/nextVersionDefinition"
-                $presentationValueDefinitionNext = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-                $presentationValue | Add-Member -MemberType NoteProperty -Name definitionNext -Value $presentationValueDefinitionNext -Force
+                $presentationValueDefinitionNext = Get-MsGraphObject -Uri $uri -ErrorAction SilentlyContinue
+                Add-Member -InputObject $presentationValue -MemberType NoteProperty -Name definitionNext -Value $presentationValueDefinitionNext -Force
             } catch { }
             try
             {
                 # TODO BadRequest
                 $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/previousVersionDefinition"
-                $presentationValueDefinitionPrev = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-                $presentationValue | Add-Member -MemberType NoteProperty -Name definitionPrev -Value $presentationValueDefinitionPrev -Force
+                $presentationValueDefinitionPrev = Get-MsGraphObject -Uri $uri -ErrorAction SilentlyContinue
+                Add-Member -InputObject $presentationValue -MemberType NoteProperty -Name definitionPrev -Value $presentationValueDefinitionPrev -Force
             } catch { }
             try
             {
                 # TODO BadRequest
                 $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/category/definitions"
-                $presentationValueCategories = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-                $presentationValue | Add-Member -MemberType NoteProperty -Name categories -Value $presentationValueCategories -Force
+                $presentationValueCategories = Get-MsGraphObject -Uri $uri -ErrorAction SilentlyContinue
+                Add-Member -InputObject $presentationValue -MemberType NoteProperty -Name categories -Value $presentationValueCategories -Force
             } catch { }
             try
             {
                 # TODO BadRequest
                 $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/definitionFile/definitions"
-                $presentationValueFiles = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-                $presentationValue | Add-Member -MemberType NoteProperty -Name files -Value $presentationValueFiles -Force
+                $presentationValueFiles = Get-MsGraphObject -Uri $uri -ErrorAction SilentlyContinue
+                Add-Member -InputObject $presentationValue -MemberType NoteProperty -Name files -Value $presentationValueFiles -Force
             } catch { }
             try
             {
                 # TODO BadRequest
                 $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($policy.id)/definitionValues/$($definitionValue.id)/presentationValues/$($presentationValue.id)/presentation/definition/presentations"
-                $presentationValuePresentations = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400 -ErrorAction SilentlyContinue
-                $presentationValue | Add-Member -MemberType NoteProperty -Name presentations -Value $presentationValuePresentations.value -Force
+                $presentationValuePresentations = Get-MsGraphObject -Uri $uri -ErrorAction SilentlyContinue
+                Add-Member -InputObject $presentationValue -MemberType NoteProperty -Name presentations -Value $presentationValuePresentations.value -Force
             } catch { }
+            #>
             <#
             GET /deviceManagement/groupPolicyConfigurations/{groupPolicyConfigurationId}/definitionValues/{groupPolicyDefinitionValueId}/presentationValues/{groupPolicyPresentationValueId}/presentation/definition/category/definitions/{groupPolicyDefinitionId}
             GET /deviceManagement/groupPolicyConfigurations/{groupPolicyConfigurationId}/definitionValues/{groupPolicyDefinitionValueId}/presentationValues/{groupPolicyPresentationValueId}/presentation/definition/definitionFile/definitions/{groupPolicyDefinitionId}
             #>
         }
-        $definitionValue | Add-Member -MemberType NoteProperty -Name presentationValues -Value $presentationValues -Force
+        Add-Member -InputObject $definitionValue -MemberType NoteProperty -Name presentationValues -Value $presentationValues -Force
     }
     $policy | Add-Member -MemberType NoteProperty -Name definitionValues -Value $definitionValues -Force
 }
@@ -521,25 +564,43 @@ $uri = "/beta/deviceAppManagement/mobileApps"
 $intuneApplications = Get-MsGraphCollection -Uri $uri
 $intuneApplications | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplications.json")) -Force
 if (-Not (Test-Path "$DataRoot\Applications\Data")) { $null = New-Item -Path "$DataRoot\Applications\Data" -ItemType Directory -Force }
+$DeviceInstallStatusByAppUris = @()
+$UserInstallStatusAggregateByAppUris = @()
 foreach($application in $intuneApplications)
 {
     $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)"
     $application = Get-MsGraphObject -Uri $uri
     $application | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_application.json")) -Force
+
     $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/assignments"
     $applicationAssignments = Get-MsGraphObject -Uri $uri
-    $applicationAssignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_applicationAssignments.json")) -Force
-    $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/installSummary"
-    $installSummary = Get-MsGraphObject -Uri $uri
-    $installSummary | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_installSummary.json")) -Force
-    $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/deviceStatuses"
-    $deviceStatuses = Get-MsGraphObject -Uri $uri
-    $deviceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_deviceStatuses.json")) -Force
-    $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/userStatuses"
-    $userStatuses = Get-MsGraphObject -Uri $uri
-    $userStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_userStatuses.json")) -Force
+    if ($applicationAssignments -and $applicationAssignments.value.Count -gt 0)
+    {
+        $applicationAssignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_applicationAssignments.json")) -Force
+        $uri = GetReportUri -reportname "DeviceInstallStatusByApp" -filter "ApplicationId eq '$($application.id)'"
+        $DeviceInstallStatusByAppUris += @{app=$application.id;uri=$uri}
+        $uri = GetReportUri -reportname "UserInstallStatusAggregateByApp" -filter "ApplicationId eq '$($application.id)'"
+        $UserInstallStatusAggregateByAppUris += @{app=$application.id;uri=$uri}
+    }
+    
+    <#
+    $uri = "/beta/deviceManagement/reports/getAppStatusOverviewReport"
+    $getAppStatusOverviewReport = Post-MsGraph -Uri $uri -Body "{`"filter`":`"(ApplicationId eq '$($application.id)')`"}" -OutputFile (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_appStatusOverviewReport.json"))
+    
+    $uri = "/beta/deviceManagement/reports/getAppsInstallSummaryReport"
+    $getAppStatusOverviewReport = Post-MsGraph -Uri $uri -Body "{`"filter`":`"(ApplicationId eq '$($application.id)')`"}" -OutputFile (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_appsInstallSummaryReport.json"))
+    #>
 }
-$mdmApps = $intuneApplications | Where-Object { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.Beta.iosVppApp")) }
+foreach($appUri in $DeviceInstallStatusByAppUris)
+{
+    DownloadReport -repUri $appUri.uri -repName "app_$($appUri.app)_deviceInstallStatusByApp" -repDir "\Applications\Data"
+}
+foreach($appUri in $UserInstallStatusAggregateByAppUris)
+{
+    DownloadReport -repUri $appUri.uri -repName "app_$($appUri.app)_userInstallStatusAggregateByApp" -repDir "\Applications\Data"
+}
+
+$mdmApps = $intuneApplications | Where-Object { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.iosVppApp")) }
 foreach($mdmApp in $mdmApps)
 {
     $uri = "/beta/deviceAppManagement/mobileApps/$($mdmApp.id)?`$select=largeIcon"
@@ -549,7 +610,7 @@ foreach($mdmApp in $mdmApps)
 
 $intuneApplications | Where-Object { ($_.'@odata.type').Contains("managed") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMAM.json")) -Force
 $mdmApps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDMfull.json")) -Force
-$intuneApplications | Where-Object { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.Beta.iosVppApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.Beta.windowsAppX")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.Beta.androidForWorkApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.Beta.windowsMobileMSI")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.Beta.androidLobApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.Beta.iosLobApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.Beta.microsoftStoreForBusinessApp")) } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDM.json")) -Force
+$intuneApplications | Where-Object { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.iosVppApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.windowsAppX")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.androidForWorkApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.windowsMobileMSI")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.androidLobApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.iosLobApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.microsoftStoreForBusinessApp")) } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDM.json")) -Force
 $intuneApplications | Where-Object { ($_.'@odata.type').Contains("win32") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsWIN32.json")) -Force
 $intuneApplications | Where-Object { ($_.'@odata.type').Contains("managedAndroidStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsAndroid.json")) -Force
 $intuneApplications | Where-Object { ($_.'@odata.type').Contains("managedIOSStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsIos.json")) -Force
@@ -589,35 +650,135 @@ $mdmWindowsInformationProtectionPolicies | ConvertTo-Json -Depth 50 | Set-Conten
 $uri = "/beta/deviceAppManagement/managedAppPolicies"
 $managedAppPolicies = Get-MsGraphCollection -Uri $uri
 $managedAppPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicies.json")) -Force
-foreach($policy in $managedAppPolicies)
+foreach($managedAppPolicy in $managedAppPolicies)
 {
-    $policy = $policies[0]
     try {
         #TODO
-        $uri = "/beta/deviceAppManagement/androidManagedAppProtections('$($policy.id)')?`$expand=apps"
-        $policy = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400
+        $uri = "/beta/deviceAppManagement/androidManagedAppProtections('$($managedAppPolicy.id)')?`$expand=apps"
+        $policy = Get-MsGraphObject -Uri $uri
         $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_android.json")) -Force
     } catch {}
     try {
         #TODO
-        $uri = "/beta/deviceAppManagement/iosManagedAppProtections('$($policy.id)')?`$expand=apps"
-        $policy = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400
+        $uri = "/beta/deviceAppManagement/iosManagedAppProtections('$($managedAppPolicy.id)')?`$expand=apps"
+        $policy = Get-MsGraphObject -Uri $uri
         $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_ios.json")) -Force
     } catch {}
     try {
         #TODO
-        $uri = "/beta/deviceAppManagement/windowsInformationProtectionPolicies('$($policy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
-        $policy = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400
+        $uri = "/beta/deviceAppManagement/windowsInformationProtectionPolicies('$($managedAppPolicy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
+        $policy = Get-MsGraphObject -Uri $uri
         $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_windows.json")) -Force
     } catch {}
     try {
         #TODO
-        $uri = "/beta/deviceAppManagement/mdmWindowsInformationProtectionPolicies('$($policy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
-        $policy = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 400
+        $uri = "/beta/deviceAppManagement/mdmWindowsInformationProtectionPolicies('$($managedAppPolicy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
+        $policy = Get-MsGraphObject -Uri $uri
         $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_mdm.json")) -Force
     } catch {}
 }
 
+##### Starting exports Reports
+#####
+Write-Host "Exporting Reports" -ForegroundColor $CommandInfo
+if (-Not (Test-Path "$DataRoot\Reports")) { $null = New-Item -Path "$DataRoot\Reports" -ItemType Directory -Force }
+
+$DeviceComplianceUri = GetReportUri -reportname "DeviceCompliance"
+$DeviceNonComplianceUri = GetReportUri -reportname "DeviceNonCompliance"
+$DevicesUri = GetReportUri -reportname "Devices"
+$FeatureUpdatePolicyFailuresAggregateUri = GetReportUri -reportname "FeatureUpdatePolicyFailuresAggregate"
+$UnhealthyDefenderAgentsUri = GetReportUri -reportname "UnhealthyDefenderAgents"
+$DefenderAgentsUri = GetReportUri -reportname "DefenderAgents"
+$ActiveMalwareUri = GetReportUri -reportname "ActiveMalware"
+$MalwareUri = GetReportUri -reportname "Malware"
+$AllAppsListUri = GetReportUri -reportname "AllAppsList"
+$AppInstallStatusAggregateUri = GetReportUri -reportname "AppInstallStatusAggregate"
+$ComanagedDeviceWorkloadsUri = GetReportUri -reportname "ComanagedDeviceWorkloads"
+$ComanagementEligibilityTenantAttachedDevicesUri = GetReportUri -reportname "ComanagementEligibilityTenantAttachedDevices"
+$DevicesWithInventoryUri = GetReportUri -reportname "DevicesWithInventory"
+$FirewallStatusUri = GetReportUri -reportname "FirewallStatus"
+$GPAnalyticsSettingMigrationReadinessUri = GetReportUri -reportname "GPAnalyticsSettingMigrationReadiness"
+$MAMAppProtectionStatusUri = GetReportUri -reportname "MAMAppProtectionStatus"
+$MAMAppConfigurationStatusUri = GetReportUri -reportname "MAMAppConfigurationStatus"
+$AppInvAggregateUri = GetReportUri -reportname "AppInvAggregate"
+$AppInvRawDataUri = GetReportUri -reportname "AppInvRawData"
+
+$uri = "/beta/deviceManagement/reports/getReportFilters"
+$temp = New-TemporaryFile
+Invoke-MgGraphRequest -Method "POST" -Uri $uri -Body "{`"name`": `"FeatureUpdatePolicy`"}" -OutputFilePath $temp
+$fpolicies = (Get-Content -Path $temp -Raw -Encoding utf8 | ConvertFrom-Json).Values
+Remove-Item -Path $temp -Force
+$DeviceFailuresByFeatureUpdatePolicyUris = @()
+foreach($policy in $fpolicies)
+{
+    $uri = GetReportUri -reportname "DeviceFailuresByFeatureUpdatePolicy" -filter "PolicyId eq '$($policy[0])'"
+    $DeviceFailuresByFeatureUpdatePolicyUris += @{name=$policy[1];uri=$uri}
+}
+$FeatureUpdateDeviceStateUris = @()
+foreach($policy in $fpolicies)
+{
+    $uri = GetReportUri -reportname "FeatureUpdateDeviceState" -filter "PolicyId eq '$($policy[0])'"
+    $FeatureUpdateDeviceStateUris += @{name=$policy[1];uri=$uri}
+}
+
+$uri = "/beta/deviceManagement/reports/getReportFilters"
+$temp = New-TemporaryFile
+Invoke-MgGraphRequest -Method "POST" -Uri $uri -Body "{`"name`": `"QualityUpdatePolicy`"}" -OutputFilePath $temp
+$qpolicies = (Get-Content -Path $temp -Raw -Encoding utf8 | ConvertFrom-Json).Values
+Remove-Item -Path $temp -Force
+$QualityUpdateDeviceErrorsByPolicyUris = @()
+foreach($policy in $qpolicies)
+{
+    $uri = GetReportUri -reportname "QualityUpdateDeviceErrorsByPolicy" -filter "PolicyId eq '$($policy[0])'"
+    $QualityUpdateDeviceErrorsByPolicyUris += @{name=$policy[1];uri=$uri}
+}
+$QualityUpdateDeviceStatusByPolicyUris = @()
+foreach($policy in $qpolicies)
+{
+    $uri = GetReportUri -reportname "QualityUpdateDeviceStatusByPolicy" -filter "PolicyId eq '$($policy[0])'"
+    $QualityUpdateDeviceStatusByPolicyUris += @{name=$policy[1];uri=$uri}
+}
+
+DownloadReport -repUri $DeviceComplianceUri -repName "DeviceCompliance" -repDir "\Reports"
+DownloadReport -repUri $DeviceNonComplianceUri -repName "DeviceNonCompliance" -repDir "\Reports"
+DownloadReport -repUri $DevicesUri -repName "Devices" -repDir "\Reports"
+DownloadReport -repUri $FeatureUpdatePolicyFailuresAggregateUri -repName "FeatureUpdatePolicyFailuresAggregate" -repDir "\Reports"
+DownloadReport -repUri $UnhealthyDefenderAgentsUri -repName "UnhealthyDefenderAgents" -repDir "\Reports"
+DownloadReport -repUri $DefenderAgentsUri -repName "DefenderAgents" -repDir "\Reports"
+DownloadReport -repUri $ActiveMalwareUri -repName "ActiveMalware" -repDir "\Reports"
+DownloadReport -repUri $MalwareUri -repName "Malware" -repDir "\Reports"
+DownloadReport -repUri $AllAppsListUri -repName "AllAppsList" -repDir "\Reports"
+DownloadReport -repUri $AppInstallStatusAggregateUri -repName "AppInstallStatusAggregate" -repDir "\Reports"
+DownloadReport -repUri $ComanagedDeviceWorkloadsUri -repName "ComanagedDeviceWorkloads" -repDir "\Reports"
+DownloadReport -repUri $ComanagementEligibilityTenantAttachedDevicesUri -repName "ComanagementEligibilityTenantAttachedDevices" -repDir "\Reports"
+DownloadReport -repUri $DevicesWithInventoryUri -repName "DevicesWithInventory" -repDir "\Reports"
+DownloadReport -repUri $FirewallStatusUri -repName "FirewallStatus" -repDir "\Reports"
+DownloadReport -repUri $GPAnalyticsSettingMigrationReadinessUri -repName "GPAnalyticsSettingMigrationReadiness" -repDir "\Reports"
+DownloadReport -repUri $MAMAppProtectionStatusUri -repName "MAMAppProtectionStatus" -repDir "\Reports"
+DownloadReport -repUri $MAMAppConfigurationStatusUri -repName "MAMAppConfigurationStatus" -repDir "\Reports"
+DownloadReport -repUri $AppInvAggregateUri -repName "AppInvAggregate" -repDir "\Reports"
+DownloadReport -repUri $AppInvRawDataUri -repName "AppInvRawData" -repDir "\Reports"
+foreach($puriPolicy in $DeviceFailuresByFeatureUpdatePolicyUris)
+{
+    DownloadReport -repUri $puriPolicy.uri -repName "DeviceFailuresByFeatureUpdatePolicy-$($puriPolicy.name)" -repDir "\Reports"
+}
+foreach($puriPolicy in $FeatureUpdateDeviceStateUris)
+{
+    DownloadReport -repUri $puriPolicy.uri -repName "FeatureUpdateDeviceState-$($puriPolicy.name)" -repDir "\Reports"
+}
+foreach($puriPolicy in $QualityUpdateDeviceErrorsByPolicyUris)
+{
+    DownloadReport -repUri $puriPolicy.uri -repName "QualityUpdateDeviceErrorsByPolicy-$($puriPolicy.name)" -repDir "\Reports"
+}
+foreach($puriPolicy in $QualityUpdateDeviceStatusByPolicyUris)
+{
+    DownloadReport -repUri $puriPolicy.uri -repName "QualityUpdateDeviceStatusByPolicy-$($puriPolicy.name)" -repDir "\Reports"
+}
+
+#TODO
+#$DeviceRunStatesByProactiveRemediationUri = GetReportUri -reportname "DeviceRunStatesByProactiveRemediation"
+#$DevicesByAppInvUri = GetReportUri -reportname "DevicesByAppInv"
+#$AppInvByDeviceUri = GetReportUri -reportname "AppInvByDevice"
 
 ##### Starting exports ManagedDevices
 #####
@@ -680,12 +841,12 @@ Write-Host "Exporting SoftwareUpdates" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$DataRoot\SoftwareUpdates")) { $null = New-Item -Path "$DataRoot\SoftwareUpdates" -ItemType Directory -Force }
 
 #softwareUpdatePoliciesWin
-$uri = "/beta/deviceManagement/deviceConfigurations?`$filter=isof('Microsoft.Graph.Beta.windowsUpdateForBusinessConfiguration')&`$expand=groupAssignments"
+$uri = "/beta/deviceManagement/deviceConfigurations?`$filter=isof('Microsoft.Graph.windowsUpdateForBusinessConfiguration')&`$expand=groupAssignments"
 $softwareUpdatePoliciesWin = Get-MsGraphObject -Uri $uri
 $softwareUpdatePoliciesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\softwareUpdatePoliciesWin.json")) -Force
 
 #softwareUpdatePoliciesIos
-$uri = "/beta/deviceManagement/deviceConfigurations?`$filter=isof('Microsoft.Graph.Beta.iosUpdateConfiguration')&`$expand=groupAssignments"
+$uri = "/beta/deviceManagement/deviceConfigurations?`$filter=isof('Microsoft.Graph.iosUpdateConfiguration')&`$expand=groupAssignments"
 $softwareUpdatePoliciesIos = Get-MsGraphObject -Uri $uri
 $softwareUpdatePoliciesIos | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\softwareUpdatePoliciesIos.json")) -Force
 
@@ -715,10 +876,19 @@ $windowsQualityUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encod
 Write-Host "Exporting TermsAndConditions" -ForegroundColor $CommandInfo
 if (-Not (Test-Path "$DataRoot\TermsAndConditions")) { $null = New-Item -Path "$DataRoot\TermsAndConditions" -ItemType Directory -Force }
 
-#softwareUpdatePoliciesWin
+#termsAndConditions
 $uri = "/beta/deviceManagement/termsAndConditions"
 $termsAndConditions = Get-MsGraphObject -Uri $uri
 $termsAndConditions | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\TermsAndConditions\termsAndConditions.json")) -Force
+
+
+#termsAndConditionsAcceptanceStatuses
+foreach ($termsAndCondition in $termsAndConditions.value)
+{
+    $uri = "/beta/deviceManagement/termsAndConditions/$($termsAndCondition.id)/acceptanceStatuses"
+    $acceptanceStatuses = Get-MsGraphObject -Uri $uri
+    $acceptanceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\TermsAndConditions\termsAndConditionsAcceptanceStatuses_$($termsAndCondition.id).json")) -Force
+}
 
 
 ##### Starting exports IntuneDataExport
@@ -750,24 +920,12 @@ foreach($script in $deviceManagementScripts)
 }
 $uri = "/beta/deviceAppManagement/mobileApps"
 $intuneApplications = Get-MsGraphCollection -Uri $uri
-foreach($application in $intuneApplications)
-{
-    $application | Add-Member -Name "deviceStatuses" -Value @() -MemberType NoteProperty
-    $application | Add-Member -Name "userStatuses" -Value @() -MemberType NoteProperty
-    $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/deviceStatuses"
-    $deviceStatuses = Get-MsGraphObject -Uri $uri
-    $application.deviceStatuses = $deviceStatuses
-    $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/userStatuses"
-    $userStatuses = Get-MsGraphObject -Uri $uri
-    $application.userStatuses = $userStatuses
-}
 if ($doUserDataExport)
 {
     foreach ($user in $users)
     {
         $upn = $user.userPrincipalName
         Write-Host "Exporting user $upn"
-        $token = Get-AdalAccessToken
         if (-Not (Test-Path "$DataRoot\IntuneDataExport\$upn")) { $null = New-Item -Path "$DataRoot\IntuneDataExport\$upn" -ItemType Directory -Force }
         $mobileAppConfigurationsForUser = $mobileAppConfigurations | ConvertTo-Json -Depth 50 | ConvertFrom-Json
         $configs = $mobileAppConfigurationsForUser
@@ -799,7 +957,7 @@ if ($doUserDataExport)
         try
         {
             #memberOf
-            $uri = "/beta/users/$($user.id)/memberOf/Microsoft.Graph.Beta.group"
+            $uri = "/beta/users/$($user.id)/memberOf/Microsoft.Graph.group"
             $members = Get-MsGraphObject -Uri $uri
             $members | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\groups.json")) -Force
         } catch {}
@@ -841,10 +999,8 @@ if ($doUserDataExport)
         try
         {
             #termsAndConditionsAcceptanceStatuses
-            $uri = "/beta/deviceManagement/termsAndConditions"
-            $termsAndConditions = Get-MsGraphObject -Uri $uri
             $termsAndConditionsAcceptanceStatuses = @()
-            foreach ($termsAndCondition in $termsAndConditions)
+            foreach ($termsAndCondition in $termsAndConditions.value)
             {
                 $uri = "/beta/deviceManagement/termsAndConditions/$($termsAndCondition.id)/acceptanceStatuses"
                 $acceptanceStatuses = Get-MsGraphObject -Uri $uri

@@ -85,12 +85,12 @@ $winGetApps = Get-Content -Path $WinGetAppsFile -Raw -Encoding UTF8 | ConvertFro
 $assBody = @"
 [
     {
-        "@odata.type": "#Microsoft.Graph.Beta.mobileAppAssignment",
+        "@odata.type": "#Microsoft.Graph.mobileAppAssignment",
         "intent": "available",
         "source": "direct",
         "sourceId": null,
         "target": {
-            "@odata.type": "#Microsoft.Graph.Beta.allLicensedUsersAssignmentTarget",
+            "@odata.type": "#Microsoft.Graph.allLicensedUsersAssignmentTarget",
             "deviceAndAppManagementAssignmentFilterId": null,
             "deviceAndAppManagementAssignmentFilterType": "none"
         }
@@ -98,9 +98,25 @@ $assBody = @"
 ]
 "@
 $assignments = $assBody | ConvertFrom-Json
+$assBodyReq = @"
+[
+    {
+        "@odata.type": "#Microsoft.Graph.mobileAppAssignment",
+        "intent": "required",
+        "source": "direct",
+        "sourceId": null,
+        "target": {
+            "@odata.type": "#Microsoft.Graph.allLicensedUsersAssignmentTarget",
+            "deviceAndAppManagementAssignmentFilterId": null,
+            "deviceAndAppManagementAssignmentFilterType": "none"
+        }
+    }
+]
+"@
+$assignmentsReq = $assBodyReq | ConvertFrom-Json
 $catBody = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.mobileAppCategory",
+    "@odata.type": "#Microsoft.Graph.mobileAppCategory",
     "id": "ed899483-3019-425e-a470-28e901b9790e",
     "displayName": "Productivity"
 }
@@ -177,7 +193,13 @@ foreach($winGetApp in $winGetApps)
         $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
         $actAssignments = Get-MsGraphCollection -Uri $uri
         $cnt = 0
-        foreach ($assignment in $assignments)
+
+        $asses = $assignments
+        if ($winGetApp.displayName -like "*Company Portal*") {
+            $asses = $assignmentsReq
+        }
+
+        foreach ($assignment in $asses)
         {
             $cnt++
             Write-Host "      Assignment $cnt with target $($assignment.target)"

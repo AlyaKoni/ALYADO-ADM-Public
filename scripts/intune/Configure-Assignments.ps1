@@ -142,7 +142,7 @@ foreach($policy in $compliancePolicies)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
                     groupId  = $exGrp.Id          
                 }
             }
@@ -162,13 +162,25 @@ foreach($profile in $configurationProfiles)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
+    if ($profile.displayName.StartsWith("WIN10 "))
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
+    }
+    if ($profile.displayName.StartsWith("WIN11 "))
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+    }
     if ($profile.displayName.StartsWith("MAC "))
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-MACMDM"
     }
-    if ($profile.displayName.StartsWith("AND "))
+    if ($profile.displayName.StartsWith("AND ") -and $profile.displayName -like "*Personal*")
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDM"
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL"
+    }
+    if ($profile.displayName.StartsWith("AND ") -and $profile.displayName -like "*Owned*")
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED"
     }
     if ($profile.displayName.StartsWith("IOS "))
     {
@@ -189,7 +201,7 @@ foreach($profile in $configurationProfiles)
     $assignment = @{
         deviceConfigurationGroupAssignments = @(
             @{
-                "@odata.type" = "#Microsoft.Graph.Beta.deviceConfigurationGroupAssignment"
+                "@odata.type" = "#Microsoft.Graph.deviceConfigurationGroupAssignment"
                 targetGroupId = $exGrp.Id
                 excludeGroup = $false
             }
@@ -205,6 +217,10 @@ foreach($profile in $featureProfiles)
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
     Write-Host "$($profile.displayName)"
+    if ($profile.displayName.StartsWith("WIN "))
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+    }
     if ($profile.displayName.StartsWith("WIN10 "))
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
@@ -229,7 +245,7 @@ foreach($profile in $featureProfiles)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
                     groupId = $exGrp.Id
                     deviceAndAppManagementAssignmentFilterId = $null
                 }
@@ -250,6 +266,14 @@ foreach($profile in $qualityProfiles)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
+    if ($profile.displayName.StartsWith("WIN10 "))
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
+    }
+    if ($profile.displayName.StartsWith("WIN11 "))
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+    }
     $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
@@ -262,7 +286,7 @@ foreach($profile in $qualityProfiles)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
                     groupId = $exGrp.Id
                     deviceAndAppManagementAssignmentFilterId = $null
                 }
@@ -279,6 +303,10 @@ foreach($profile in $updateProfiles)
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
     Write-Host "$($profile.displayName)"
+    if ($profile.displayName.StartsWith("WIN "))
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+    }
     if ($profile.displayName.StartsWith("WIN10 "))
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
@@ -307,7 +335,7 @@ foreach($profile in $updateProfiles)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
                     groupId = $exGrp.Id
                     deviceAndAppManagementAssignmentFilterId = $null
                 }
@@ -328,6 +356,14 @@ foreach($profile in $grouPolicyProfiles)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
+    if ($profile.displayName.StartsWith("WIN10 "))
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
+    }
+    if ($profile.displayName.StartsWith("WIN11 "))
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+    }
     $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
@@ -344,7 +380,7 @@ foreach($profile in $grouPolicyProfiles)
         assignments = @(
             @{
                 target = @{
-                    "@odata.type" = "#Microsoft.Graph.Beta.groupAssignmentTarget"
+                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
                     groupId  = $exGrp.Id          
                 }
             }
@@ -363,6 +399,10 @@ foreach($script in $scripts)
     {
         $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
+    if ($script.Name  -eq "ConfigureFirewallForClickShareInProfiles.ps1")
+    {
+        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+    }
     $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
         Write-Error "Can't find group $assGrp"
@@ -378,7 +418,7 @@ foreach($script in $scripts)
     $assignment = @{
         deviceManagementScriptGroupAssignments = @(
             @{
-                "@odata.type" = "#Microsoft.Graph.Beta.deviceManagementScriptGroupAssignment"
+                "@odata.type" = "#Microsoft.Graph.deviceManagementScriptGroupAssignment"
                 targetGroupId = $exGrp.Id
                 id = $actScript.id
             }

@@ -261,6 +261,20 @@ $body = @"
                     "enabled": false,
                     "days": 0
                 }
+            }, {
+                "category": "EnrichedOffice365AuditLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "MicrosoftGraphActivityLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
             }
         ],
     "metrics": [],
@@ -276,6 +290,22 @@ $response = Invoke-WebRequestIndep -Method $method -Uri $uri -Body $body -Header
 if ($response.StatusCode -ne 200) {
     throw "An error occured setting diagnostic settings on azure active directory: $($response | out-string)"
 }
+
+# Checking missing logs
+Write-Host "Checking missing logs" -ForegroundColor $CommandInfo
+$method = "Get"
+$uri = "https://management.azure.com/providers/microsoft.aadiam/diagnosticSettings/{0}?api-version=2017-04-01-preview" -f $DiagnosticRuleName
+$response = Invoke-WebRequestIndep -Method $method -Uri $uri -Headers $headers
+$cats = $response.Content | ConvertFrom-Json
+foreach($log in ($cats.properties.logs | Where-Object { $_.enabled -eq $false}))
+{
+    Write-Warning "Log $($log.Category) was not enabled. Please update this script!"
+    $log.enabled = $true
+}
+$body = $cats | ConvertTo-Json -Depth 10
+$method = "Put"
+$uri = "https://management.azure.com/providers/microsoft.aadiam/diagnosticSettings/{0}?api-version=2017-04-01-preview" -f $DiagnosticRuleName
+$response = Invoke-WebRequestIndep -Method $method -Uri $uri -Body $body -Headers $headers
 
 #Stopping Transscript
 Stop-Transcript

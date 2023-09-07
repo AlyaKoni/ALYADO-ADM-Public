@@ -621,7 +621,7 @@
         }
     }, {
         "@odata.type": "#microsoft.graph.iosStoreApp",
-        "displayName": "IOS QR Code Scanner ·",
+        "displayName": "IOS QR Code Scanner",
         "description": "The best app to scan QR Code and Barcode!\n\nMore than 15 types supported : QR Code, Barcode, Datamatrix, Code128, Code39, EAN-8, EAN-13, Google Auth\n\nWith powerful features :\n- Products \u0026 food detailed informations\n- QR Code detailed data cards\n- Scan history\n- Folders to stay organized\n- Batch Scan\n- CSV Export\n\nSUBSCRIPTIONS\n\n- You can subscribe for PRO account with unlimited scans, products infos and no ads\n- Subscription options are: 1-month with 3-day trial, 3-month, 1-year \n- Subscription automatically renews for the same price and duration period as the original \"one month\", \"one quarter\", \"one year\" package unless auto-renew is turned off at least 24-hours before the end of the current period\n- Payment will be charged to iTunes Account at confirmation of purchase\n- Subscriptions may be managed by the user and auto-renewal may be turned off by going to the user\u0027s Account Settings after purchase\n- Any unused portion of a free trial period, if offered, will be forfeited when the user purchases a subscription to that publication, where applicable\n\nLinks to our Terms of Service and Privacy Policy can be found below\nhttps://sites.google.com/view/qrcodeios/home",
         "publisher": "TinyLab",
         "largeIcon": null,

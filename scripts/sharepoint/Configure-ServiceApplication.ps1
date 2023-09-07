@@ -105,7 +105,7 @@ Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -Permissi
 
 # Checking azure key vault certificate
 Write-Host "Checking azure key vault certificate" -ForegroundColor $CommandInfo
-$AzureCertifcateAssetName = "SharePointRunAsCertificate"
+$AzureCertifcateAssetName = "AlyaSharePointRunAsCertificate"
 $AzureCertificateName = $AzureCertifcateAssetName
 $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -ErrorAction SilentlyContinue
 if (-Not $AzureKeyVaultCertificate)
@@ -194,11 +194,6 @@ if (-Not $AzureAdApplication)
     #Add-Type -Path "$instLoc\Microsoft.Open.AzureAD16.Graph.Client.dll"
 
     #Granting permissions
-    $AppPermissionAdGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "824c81eb-e3f8-4ee6-8f6d-de7f50d565b7","Role"
-    $RequiredResourceAccessAdGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
-    $RequiredResourceAccessAdGraph.ResourceAppId = "00000002-0000-0000-c000-000000000000"
-    $RequiredResourceAccessAdGraph.ResourceAccess = $AppPermissionAdGraph
-
     $AppPermissionMsGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "18a4783c-866b-4cc7-a460-3d5e5662c884","Role"
     $RequiredResourceAccessMsGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
     $RequiredResourceAccessMsGraph.ResourceAppId = "00000003-0000-0000-c000-000000000000"
@@ -214,7 +209,7 @@ if (-Not $AzureAdApplication)
     $RequiredResourceAccessSharePoint.ResourceAppId = "00000003-0000-0ff1-ce00-000000000000"
     $RequiredResourceAccessSharePoint.ResourceAccess = $AppPermissionSharePoint1, $AppPermissionSharePoint2, $AppPermissionSharePoint3, $AppPermissionSharePoint4, $AppPermissionSharePoint5, $AppPermissionSharePoint6
 
-    Set-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId -RequiredResourceAccess $RequiredResourceAccessAdGraph, $RequiredResourceAccessMsGraph, $RequiredResourceAccessSharePoint
+    Set-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId -RequiredResourceAccess $RequiredResourceAccessMsGraph, $RequiredResourceAccessSharePoint
     $tmp = Get-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId
     while ($tmp.RequiredResourceAccess.Count -lt 3)
     {

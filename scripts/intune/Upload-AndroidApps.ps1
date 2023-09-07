@@ -99,7 +99,7 @@ foreach($androidApp in $appsAndroid)
             $base64icon = [System.Convert]::ToBase64String($iconResponse.Content)
             $iconType = ($iconResponse.Headers["Content-Type"] | Out-String).Trim()
             $androidApp.largeIcon = @{
-                "@odata.type" = "#Microsoft.Graph.Beta.mimeContent"
+                "@odata.type" = "#Microsoft.Graph.mimeContent"
                 type = $iconType
                 value = $base64icon
             }
@@ -112,7 +112,7 @@ foreach($androidApp in $appsAndroid)
         $actApp = (Get-MsGraphObject -Uri $uri).value
         if (-Not $actApp.id)
         {
-            if ($androidApp.'@odata.type' -eq "#Microsoft.Graph.Beta.androidManagedStoreApp")
+            if ($androidApp.'@odata.type' -eq "#Microsoft.Graph.androidManagedStoreApp")
             {
                 Write-Warning "Upload of managed store apps aren't supported"
                 Write-Warning "Please create the app within the portal"

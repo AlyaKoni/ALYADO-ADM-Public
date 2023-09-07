@@ -168,7 +168,7 @@ $AlyaResEnableInsightsAndAlerts = $false
 
 <# SHARING SETTINGS #>
 $AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" #  # None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)
-$AlyaOnlyEmailVerifiedUsers = "PleaseSpecify" #Example:$true
+$AlyaAllowEmailVerifiedUsers = "PleaseSpecify" #Example:$true
 $AlyaFullTrustCrossTenantDirectConnectAccess = $null #@(@{Name = "Alya Consulting";Id = "5757de31-29c4-4f39-9bd1-478cec348035"})
 
 <# APPLICATION SETTINGS #>
@@ -257,6 +257,7 @@ $AlyaTeamsNewAdmins = $AlyaSharePointNewSiteCollectionAdmins
 
 <# OFFICE GROUP SETTINGS #>
 $AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERS" # Only members can create groups
+$AlyaGroupManagerGroupNameOnPrem = "PleaseSpecify"
 #TODO $AlyaGroupManagerMembers = @()
 $AlyaOfficeGroupsNewGroupOwner = $AlyaSharePointNewSiteOwner
 $AlyaOfficeGroupsNewGroupAdditionalOwner = $AlyaSharePointNewSiteOwner
@@ -292,6 +293,9 @@ $AlyaOrderEmailAlya = "PleaseSpecify"
 $AlyaPstnGateway = "PleaseSpecify" #Example:"pstn.provider.ch"
 $AlyaPstnPort = "PleaseSpecify" #Example:"5080"
 $AlyaPstnPolicyName = "PleaseSpecify" #Example:"ProviderName"
+$AlyaPstnVoiceRouteName = $AlyaPstnPolicyName
+$AlyaPstnUsageRecordsName = $AlyaPstnPolicyName
+$AlyaPstnVoiceRoutePolicyName = $AlyaPstnPolicyName
 
 <# COLORS #>
 $CommandInfo = "Cyan"

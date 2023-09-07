@@ -100,13 +100,9 @@ $cusSubSiteScript = @"
       "addNavLink": true,
       "subactions": [
         {
-          "displayName": "Projektname",
-          "internalName": "Title",
-          "isRequired": false,
-          "addToDefaultView": false,
-          "fieldType": "Text",
-          "enforceUnique": true,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Name des Projekts\" DisplayName=\"Projektname\" Required=\"TRUE\" Type=\"Text\" Name=\"Title\" SourceID=\"http://schemas.microsoft.com/sharepoint/v3\" StaticName=\"Title\" FromBaseType=\"TRUE\" ShowInNewForm=\"TRUE\" ShowInEditForm=\"TRUE\" />",
+          "addToDefaultView": true
         },
         {
           "displayName": "Referenz",
@@ -143,13 +139,9 @@ $cusSubSiteScript = @"
       "templateType": 100,
       "subactions": [
         {
-          "displayName": "Beschreibung",
-          "internalName": "Title",
-          "isRequired": true,
-          "addToDefaultView": false,
-          "fieldType": "Text",
-          "enforceUnique": false,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Beschreibung des Aufwandes\" DisplayName=\"Beschreibung\" Required=\"TRUE\" Type=\"Text\" Name=\"Title\" SourceID=\"http://schemas.microsoft.com/sharepoint/v3\" StaticName=\"Title\" FromBaseType=\"TRUE\" ShowInNewForm=\"TRUE\" ShowInEditForm=\"TRUE\" />",
+          "addToDefaultView": true
         },
         {
           "verb": "addSPLookupFieldXml",
@@ -259,13 +251,9 @@ $prtSubSiteScript = @"
       "addNavLink": true,
       "subactions": [
         {
-          "displayName": "Projektname",
-          "internalName": "Title",
-          "isRequired": false,
-          "addToDefaultView": false,
-          "fieldType": "Text",
-          "enforceUnique": true,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Name des Projekts\" DisplayName=\"Projektname\" Required=\"TRUE\" Type=\"Text\" Name=\"Title\" SourceID=\"http://schemas.microsoft.com/sharepoint/v3\" StaticName=\"Title\" FromBaseType=\"TRUE\" ShowInNewForm=\"TRUE\" ShowInEditForm=\"TRUE\" />",
+          "addToDefaultView": true
         },
         {
           "schemaXml": "<Field Type=\"Lookup\" DisplayName=\"Kunde\" Required=\"TRUE\" EnforceUniqueValues=\"FALSE\" ShowField=\"Title\" UnlimitedLengthInDocumentLibrary=\"FALSE\" RelationshipDeleteBehavior=\"None\" ID=\"{5ea49afa-f77e-11ea-adc1-0242ac120003}\" StaticName=\"Kunde\" Name=\"Kunde\" />",
@@ -308,13 +296,9 @@ $prtSubSiteScript = @"
       "templateType": 100,
       "subactions": [
         {
-          "displayName": "Beschreibung",
-          "internalName": "Title",
-          "isRequired": true,
-          "addToDefaultView": false,
-          "fieldType": "Text",
-          "enforceUnique": false,
-          "verb": "addSPField"
+          "verb": "addSPFieldXml",
+          "schemaXml": "<Field Description=\"Beschreibung des Aufwandes\" DisplayName=\"Beschreibung\" Required=\"TRUE\" Type=\"Text\" Name=\"Title\" SourceID=\"http://schemas.microsoft.com/sharepoint/v3\" StaticName=\"Title\" FromBaseType=\"TRUE\" ShowInNewForm=\"TRUE\" ShowInEditForm=\"TRUE\" />",
+          "addToDefaultView": true
         },
         {
           "verb": "addSPLookupFieldXml",

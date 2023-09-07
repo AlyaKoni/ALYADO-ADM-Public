@@ -124,13 +124,13 @@ if ($configurePIM)
                 $memberName = $actMemb.PrincipalId
                 switch ($actMemb.Principal.AdditionalProperties.'@odata.type')
                 {
-                    "#Microsoft.Graph.Beta.user" {
+                    "#Microsoft.Graph.user" {
                         $memberName = "USR:"+$actMemb.Principal.AdditionalProperties.userPrincipalName
                     }
-                    "#Microsoft.Graph.Beta.servicePrincipal" {
+                    "#Microsoft.Graph.servicePrincipal" {
                         $memberName = "APP:"+$actMemb.Principal.AdditionalProperties.appId
                     }
-                    "#Microsoft.Graph.Beta.group" {
+                    "#Microsoft.Graph.group" {
                         $memberName = "GRP:"+$memberName
                     }
                 }

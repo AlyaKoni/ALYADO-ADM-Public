@@ -1,6 +1,6 @@
 ﻿[{
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Adobe Acrobat Reader: PDF bearbeiten \u0026 erstellen",
+        "displayName": "Adobe Acrobat Reader für PDF",
         "description": "Mit Adobe Acrobat Reader Dokumente direkt von deinem Gerät ausdrucken.",
         "publisher": "Adobe",
         "largeIcon": null,
@@ -102,7 +102,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft Edge",
+        "displayName": "Microsoft Edge: Mit KI browsen",
         "description": "Erstklassige Leistung, bessere Privatsphäre, höhere Produktivität, mehr Wert.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,
@@ -119,7 +119,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft Excel: Tabellen anzeigen und erstellen",
+        "displayName": "Microsoft Excel: Spreadsheets",
         "description": "Aussagekräftige Tabellen erstellen. Dokumente unterwegs komfortabel bearbeiten.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,
@@ -170,7 +170,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft OneNote: Notizen speichern und ordnen",
+        "displayName": "Microsoft OneNote: Save Notes",
         "description": "Leistungsstarker Notizblock zum Erfassen von Ideen.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,
@@ -272,7 +272,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft SwiftKey-Tastatur",
+        "displayName": "Microsoft SwiftKey KI-Tastatur",
         "description": "Die beste Tastatur mit Text-Vorhersagen – Android Central",
         "publisher": "SwiftKey",
         "largeIcon": null,
@@ -306,7 +306,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft To Do: Liste, Aufgabe und Erinnerung",
+        "displayName": "Microsoft To Do: Lists & Tasks",
         "description": "Eine einfache, intelligente Aufgabenliste mit Ihrem Tag im Mittelpunkt.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,

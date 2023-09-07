@@ -70,7 +70,7 @@ try
 
     foreach ($dom in $domains)
     {
-        Write-Output "`nDNS config for domain $dom" -ForegroundColor $CommandSuccess
+        Write-Output "`nDNS config for domain $dom"
 
         # SPF generator https://dmarcly.com/tools/spf-record-generator
         Write-Output "`nSPF"

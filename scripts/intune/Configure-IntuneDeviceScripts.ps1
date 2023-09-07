@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     20.10.2020 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    05.09.2023 Konrad Brunner       Added assignment
 
 #>
 
@@ -47,6 +48,10 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneDeviceScripts-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
+$AppPrefix = "Win10 "
+if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
+    $AppPrefix = "$AlyaAppPrefix "
+}
 if (-Not $ScriptDir)
 {
     $ScriptDir = "$($AlyaData)\intune\Scripts"
@@ -55,6 +60,7 @@ if (-Not $ScriptDir)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logins
 LoginTo-MgGraph -Scopes @(
@@ -86,13 +92,13 @@ foreach($script in $scripts)
         
         # Loading script
         Write-Host "  Loading script"
-        $scriptResponse = [System.IO.File]::ReadAllBytes("$($brandingLogoLight)")
+        $scriptResponse = [System.IO.File]::ReadAllBytes($script)
         $base64script = [System.Convert]::ToBase64String($scriptResponse)
         #TODO Description out of the script?
-        $scriptName = "WIN $($script.BaseName)"
+        $scriptName = "$AppPrefix$($script.BaseName)"
+        #"@odata.type": "#Microsoft.Graph.deviceManagementScript",
         $body = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.deviceManagementScript",
     "displayName": "$scriptName",
     "description": "",
     "runSchedule": {
@@ -100,7 +106,8 @@ foreach($script in $scripts)
     },
     "scriptContent": "$base64script",
     "runAsAccount": "system",
-    "enforceSignatureCheck": "false",
+    "runAs32Bit": false,
+    "enforceSignatureCheck": false,
     "fileName": "$($script.Name)"
 }
 "@
@@ -130,6 +137,56 @@ foreach($script in $scripts)
 if ($hadError)
 {
     Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
+}
+
+# Assigning defined profiles
+foreach($script in $scripts)
+{
+    if ($script.Name.IndexOf("_unused") -gt -1) { continue }
+    Write-Host "Assigning script '$($script.Name)'" -ForegroundColor $CommandInfo
+
+    try {
+        
+        # Checking if script exists
+        Write-Host "  Checking if script exists"
+        $scriptName = "$AppPrefix$($script.BaseName)"
+        $uri = "/beta/deviceManagement/deviceManagementScripts"
+        $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
+        if ($actScript.id)
+        {
+
+            $tGroup = $null
+            $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
+            if (-Not $sGroup) {
+                Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+            } else {
+                $tGroup = $sGroup
+            }
+
+            if ($tGroup) {
+                $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)/assignments"
+                $asses = (Get-MsGraphObject -Uri $uri).value
+                $ass = $asses | Where-Object { $_.target.groupId -eq $tGroup.Id }
+                if (-Not $ass) {
+                    $GroupAssignment = New-Object -TypeName PSObject -Property @{
+                        "@odata.type" = "#Microsoft.Graph.deviceManagementScriptGroupAssignment"
+                        "targetGroupId" = $tGroup.Id
+                        "id" = $actScript.id
+                    }
+                    $Assignment = New-Object -TypeName PSObject -Property @{
+                        "deviceManagementScriptGroupAssignments" = $GroupAssignment
+                    }
+                    $body = ConvertTo-Json -InputObject $Assignment -Depth 10
+                    $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)/assign"
+                    Post-MsGraph -Uri $uri -Body $body
+                }
+            }
+        }
+    }
+    catch {
+        $hadError = $true
+    }
+
 }
 
 #Stopping Transscript

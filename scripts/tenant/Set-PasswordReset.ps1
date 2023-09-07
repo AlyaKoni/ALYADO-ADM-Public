@@ -32,11 +32,15 @@
     ---------- -------------------- ----------------------------
     27.02.2020 Konrad Brunner       Initial Version
     10.07.2022 Konrad Brunner       Added AlyaSsprEnabledGroup
+    04.08.2023 Konrad Brunner       Browser parameter
+    28.08.2023 Konrad Brunner       Switch to MgGraph
 
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory=$false)]
+	[object]$browser
 )
 
 #Reading configuration
@@ -49,14 +53,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-PasswordReset-$($AlyaTim
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.Authorization")
 
 # =============================================================
 # O365 stuff
@@ -66,15 +68,24 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-PasswordReset | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$MsolCompanySettings = Get-MsolCompanyInformation
-if ($MsolCompanySettings.SelfServePasswordResetEnabled -ne $AlyaPasswordResetEnabled)
+if (-Not $browser) {
+    if ($Global:AlyaSeleniumBrowser) {
+        $browser = $Global:AlyaSeleniumBrowser
+    }
+}
+
+$authorizationPolicy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
+if ($authorizationPolicy.AllowedToUseSspr -ne $AlyaPasswordResetEnabled)
 {
-    Write-Warning "SelfServePasswordReset was set to $($MsolCompanySettings.SelfServePasswordResetEnabled). Setting it now to $($AlyaPasswordResetEnabled)."
-    Set-MsolCompanySettings -SelfServePasswordResetEnabled $AlyaPasswordResetEnabled
+    Write-Warning "AllowedToUseSspr was set to $($authorizationPolicy.AllowedToUseSspr). Setting it now to $($AlyaPasswordResetEnabled)."
+    $param = @{
+        AllowedToUseSspr = $AlyaPasswordResetEnabled
+    }
+    Update-MgPolicyAuthorizationPolicy -BodyParameter $param
 }
 else
 {
-    Write-Host "SelfServePasswordReset was already set to $($AlyaPasswordResetEnabled)." -ForegroundColor $CommandSuccess
+    Write-Host "AllowedToUseSspr was already set to $($AlyaPasswordResetEnabled)." -ForegroundColor $CommandSuccess
 }
 
 if ($AlyaPasswordResetEnabled)
@@ -91,7 +102,11 @@ if ($AlyaPasswordResetEnabled)
         Write-Host "and allow password reset for group $AlyaSsprEnabledGroupName. Also configure reset options."
     }
     Write-Host "Also configure reset options."
-    Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+    if (-Not $browser) {
+        Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+    } else {
+        $browser.Url =  "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+    }
     pause
 }
 

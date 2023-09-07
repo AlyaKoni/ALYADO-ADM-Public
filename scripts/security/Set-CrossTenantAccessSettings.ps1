@@ -65,9 +65,9 @@ Write-Host "=====================================================`n" -Foreground
 $policies = Get-MgBetaPolicyCrossTenantAccessPolicy
 $partners = Get-MgBetaPolicyCrossTenantAccessPolicyPartner
 
-Write-Warning "Actually we do not have an api to check if the"
-Write-Warning "'Microsoft cloud settings' are configured. Please check"
-Write-Warning "if the cloud env is active your partners relies to."
+Write-Warning "Actually we do not have an api to check if the 'Microsoft cloud settings' are configured."
+Write-Warning "Please check if the cloud env is active your partners relies to:"
+Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/CrossTenantAccessSettings"
 
 foreach($tenant in $AlyaFullTrustCrossTenantAccess)
 {

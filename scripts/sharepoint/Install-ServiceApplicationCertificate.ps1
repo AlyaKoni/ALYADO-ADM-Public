@@ -104,7 +104,7 @@ Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -Permissi
 
 # Checking azure key vault certificate
 Write-Host "Checking azure key vault certificate" -ForegroundColor $CommandInfo
-$AzureCertifcateAssetName = "SharePointRunAsCertificate"
+$AzureCertifcateAssetName = "AlyaSharePointRunAsCertificate"
 $AzureCertificateName = $AzureCertifcateAssetName
 $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -ErrorAction SilentlyContinue
 if (-Not $AzureKeyVaultCertificate)

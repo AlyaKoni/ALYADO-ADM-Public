@@ -42,25 +42,14 @@ Param(
     [ValidateNotNullOrEmpty()]
     $upn = "konrad.brunner@alyaconsulting.ch",
     [ValidateNotNullOrEmpty()]
-    $number = "tel:+41625620460"
+    $number = "+41625620460"
 )
 
 #Checking parms
-if ($type -eq "User")
+if ($number.StartsWith("tel:"))
 {
-    if (-Not $number.StartsWith("tel:"))
-    {
-        Write-Error "If type 'User', the number has to start with 'tel:'" -ErrorAction Continue
-        exit
-    }
-}
-if ($type -eq "AutoAttendant" -or $type -eq "CallQueue")
-{
-    if ($number.StartsWith("tel:"))
-    {
-        Write-Error "If type is not 'User', the number must not start with 'tel:'" -ErrorAction Continue
-        exit
-    }
+    Write-Error "The number must not start with 'tel:'" -ErrorAction Continue
+    exit
 }
 
 #Reading configuration
@@ -88,8 +77,11 @@ Write-Host "=====================================================`n" -Foreground
 if ($type -eq "User")
 {
     Write-Host "Setting user $upn lineuri to $number" -ForegroundColor $CommandInfo
-    Set-CsUser -Identity $upn -LineURI $number -EnterpriseVoiceEnabled $true -HostedVoiceMail $true
+    Set-CsPhoneNumberAssignment -Identity $upn -PhoneNumber $number -PhoneNumberType DirectRouting
     Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName $AlyaPstnVoiceRoutePolicyName
+    #Set-CsTenantDialPlan -Identity $upn -PolicyName "Global"
+    Set-CsUserCallingSettings -Identity $upn -IsUnansweredenabled $False
+    Get-CsUserCallingSettings -Identity $upn
 }
 if ($type -eq "AutoAttendant" -or $type -eq "CallQueue")
 {

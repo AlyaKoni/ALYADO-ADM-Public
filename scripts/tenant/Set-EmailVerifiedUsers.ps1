@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     04.03.2020 Konrad Brunner       Initial Version
+    28.08.2023 Konrad Brunner       Switch to MgGraph
 
 #>
 
@@ -48,14 +49,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-EmailVerifiedUsers-$($Al
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.Authorization")
 
 # =============================================================
 # O365 stuff
@@ -65,15 +64,24 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-EmailVerifiedUsers | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$MsolCompanySettings = Get-MsolCompanyInformation
-if ($MsolCompanySettings.AllowEmailVerifiedUsers -ne $AlyaOnlyEmailVerifiedUsers)
+if ($AlyaAllowEmailVerifiedUsers -eq "PleaseSpecify")
 {
-    Write-Warning "AllowEmailVerifiedUsers was $($MsolCompanySettings.AllowEmailVerifiedUsers). Setting it to $($AlyaOnlyEmailVerifiedUsers)."
-    Set-MsolCompanySettings -AllowEmailVerifiedUsers $AlyaOnlyEmailVerifiedUsers
+    Write-Warning "Please configure variable `$AlyaAllowEmailVerifiedUsers in ConfigureEnv.ps1"
+    exit
+}
+
+$authorizationPolicy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
+if ($authorizationPolicy.AllowEmailVerifiedUsersToJoinOrganization -ne $AlyaAllowEmailVerifiedUsers)
+{
+    Write-Warning "AllowEmailVerifiedUsersToJoinOrganization was $($authorizationPolicy.AllowEmailVerifiedUsersToJoinOrganization). Setting it to $($AlyaAllowEmailVerifiedUsers)."
+    $param = @{
+        allowEmailVerifiedUsersToJoinOrganization = $AlyaAllowEmailVerifiedUsers
+    }
+    Update-MgPolicyAuthorizationPolicy -BodyParameter $param
 }
 else
 {
-    Write-Host "AllowEmailVerifiedUsers was already $($AlyaOnlyEmailVerifiedUsers)." -ForegroundColor $CommandSuccess
+    Write-Host "AllowEmailVerifiedUsersToJoinOrganization was already set to $($AlyaAllowEmailVerifiedUsers)." -ForegroundColor $CommandSuccess
 }
 
 #Stopping Transscript

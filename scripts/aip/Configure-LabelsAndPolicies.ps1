@@ -164,7 +164,7 @@ try
                 $encryptionProtectionType = "Template"
                 $encryptionPromptUser = $false
                 $encryptionContentExpiredOnDateInDaysOrNever = "Never"
-                $encryptionOfflineAccessDays = 14
+                [int]$encryptionOfflineAccessDays = 14
                 if ($labelDef.EncryptionTarget -eq "User defined")
                 {
                     $encryptionProtectionType = "UserDefined"
@@ -198,7 +198,7 @@ try
                 }
                 if ($labelDef.EncryptionOfflineAccessType -eq "Only for a number of days")
                 {
-                    $encryptionOfflineAccessDays = $labelDef.EncryptionOfflineAccessDays
+                    $encryptionOfflineAccessDays = [int]$labelDef.EncryptionOfflineAccessDays
                 }
                 if (-Not [string]::IsNullOrEmpty($labelDef.EncryptionContentExpiration) -and $labelDef.EncryptionContentExpiration -ne "Never")
                 {
@@ -439,7 +439,7 @@ finally
 {
     DisconnectFrom-EXOandIPPS
 }
-
+<#
 # Logins
 LoginTo-AIP
 
@@ -455,12 +455,13 @@ $actTemplates = Get-AipServiceTemplate
 foreach ($actTemplate in $actTemplates)
 {
     #$actTemplate = $actTemplates[1]
+    $actTemplate = Get-AipServiceTemplate -TemplateId $actTemplate.TemplateId
     if (($actTemplate.Names | Where-Object { $_.Key -eq 1033 }).Value.StartsWith("Highly Confidential") -or `
         ($actTemplate.Names | Where-Object { $_.Key -eq 1033 }).Value.StartsWith("Confidential"))
     {
         Remove-AipServiceTemplate -TemplateId $actTemplate.TemplateId
     }
 }
-
+#>
 #Stopping Transscript
 Stop-Transcript

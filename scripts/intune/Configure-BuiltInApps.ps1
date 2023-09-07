@@ -86,12 +86,12 @@ $builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding UTF8 | ConvertF
 $assBody = @"
 [
     {
-        "@odata.type": "#Microsoft.Graph.Beta.mobileAppAssignment",
+        "@odata.type": "#Microsoft.Graph.mobileAppAssignment",
         "intent": "available",
         "source": "direct",
         "sourceId": null,
         "target": {
-            "@odata.type": "#Microsoft.Graph.Beta.allLicensedUsersAssignmentTarget",
+            "@odata.type": "#Microsoft.Graph.allLicensedUsersAssignmentTarget",
             "deviceAndAppManagementAssignmentFilterId": null,
             "deviceAndAppManagementAssignmentFilterType": "none"
         }
@@ -101,7 +101,7 @@ $assBody = @"
 $assignments = $assBody | ConvertFrom-Json
 $catBody = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.mobileAppCategory",
+    "@odata.type": "#Microsoft.Graph.mobileAppCategory",
     "id": "ed899483-3019-425e-a470-28e901b9790e",
     "displayName": "Productivity"
 }

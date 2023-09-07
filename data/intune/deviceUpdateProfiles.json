@@ -4,8 +4,8 @@
         "Comment3": "================================================="
     }, {
         "@odata.type": "#microsoft.graph.windowsUpdateForBusinessConfiguration",
-        "displayName": "WIN10 Upgrade Configuration",
-        "description": "Configures upgrades on windows10 devices",
+        "displayName": "WIN10 Update Configuration",
+        "description": "Configures updates on windows10 devices",
         "roleScopeTagIds": ["0"],
         "deliveryOptimizationMode": "userDefined",
         "prereleaseFeatures": "userDefined",
@@ -44,8 +44,8 @@
         }
     }, {
         "@odata.type": "#microsoft.graph.windowsUpdateForBusinessConfiguration",
-        "displayName": "WIN11 Upgrade Configuration",
-        "description": "Configures upgrades on windows11 devices",
+        "displayName": "WIN11 Update Configuration",
+        "description": "Configures updates on windows11 devices",
         "roleScopeTagIds": ["0"],
         "allowWindows11Upgrade": true,
         "deliveryOptimizationMode": "userDefined",

@@ -57,7 +57,9 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
 LoginTo-MgGraph -Scopes @(
-    "Organization.ReadWrite.All"
+    "Organization.ReadWrite.All",
+    "DeviceManagementApps.ReadWrite.All",
+    "DeviceManagementServiceConfig.ReadWrite.All"
 )
 
 # =============================================================
@@ -105,9 +107,9 @@ if ($logo)
             $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoLight)).replace(".","")
             $iconType = "image/$iconExt"
-            $brandingConfig.intuneBrand.lightBackgroundLogo = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
-            $brandingConfig.intuneBrand.lightBackgroundLogo.type = "$iconType"
-            $brandingConfig.intuneBrand.lightBackgroundLogo.value = "$base64icon"
+            $brandingConfig.lightBackgroundLogo = @{ "@odata.type" = "#Microsoft.Graph.mimeContent" }
+            $brandingConfig.lightBackgroundLogo.type = "$iconType"
+            $brandingConfig.lightBackgroundLogo.value = "$base64icon"
         }
         $image.Dispose()
     }
@@ -140,9 +142,9 @@ if ($logo)
             $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoDark)).replace(".","")
             $iconType = "image/$iconExt"
-            $brandingConfig.intuneBrand.darkBackgroundLogo = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
-            $brandingConfig.intuneBrand.darkBackgroundLogo.type = "$iconType"
-            $brandingConfig.intuneBrand.darkBackgroundLogo.value = "$base64icon"
+            $brandingConfig.darkBackgroundLogo = @{ "@odata.type" = "#Microsoft.Graph.mimeContent" }
+            $brandingConfig.darkBackgroundLogo.type = "$iconType"
+            $brandingConfig.darkBackgroundLogo.value = "$base64icon"
         }
         $image.Dispose()
     }
@@ -175,9 +177,9 @@ if ($logo)
             $base64icon = [System.Convert]::ToBase64String($iconResponse)
             $iconExt = ([System.IO.Path]::GetExtension($brandingLogoLandingPage)).replace(".","")
             $iconType = "image/$iconExt"
-            $brandingConfig.intuneBrand.landingPageCustomizedImage = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
-            $brandingConfig.intuneBrand.landingPageCustomizedImage.type = "$iconType"
-            $brandingConfig.intuneBrand.landingPageCustomizedImage.value = "$base64icon"
+            $brandingConfig.landingPageCustomizedImage = @{ "@odata.type" = "#Microsoft.Graph.mimeContent" }
+            $brandingConfig.landingPageCustomizedImage.type = "$iconType"
+            $brandingConfig.landingPageCustomizedImage.value = "$base64icon"
         }
         $image.Dispose()
     }
@@ -188,7 +190,11 @@ else
 }
 
 Write-Host "Configuring branding" -ForegroundColor $CommandInfo
-$uri = "/beta/deviceManagement"
+$uri = "/beta/deviceManagement/intuneBrandingProfiles"
+$intuneBrand = Get-MsGraphObject -Uri $uri
+$intuneBrandId = $intuneBrand.value.id
+
+$uri = "/beta/deviceManagement/intuneBrandingProfiles/$intuneBrandId"
 $intuneBrand = Patch-MsGraph -Uri $uri -Body ($brandingConfig | ConvertTo-Json -Depth 50)
 
 #Stopping Transscript

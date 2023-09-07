@@ -80,12 +80,12 @@ $androidApps = Get-Content -Path $AndroidAppsFile -Raw -Encoding UTF8 | ConvertF
 $assBody = @"
 [
     {
-        "@odata.type": "#Microsoft.Graph.Beta.mobileAppAssignment",
+        "@odata.type": "#Microsoft.Graph.mobileAppAssignment",
         "intent": "available",
         "source": "direct",
         "sourceId": null,
         "target": {
-            "@odata.type": "#Microsoft.Graph.Beta.allLicensedUsersAssignmentTarget",
+            "@odata.type": "#Microsoft.Graph.allLicensedUsersAssignmentTarget",
             "deviceAndAppManagementAssignmentFilterId": null,
             "deviceAndAppManagementAssignmentFilterType": "none"
         }
@@ -93,6 +93,22 @@ $assBody = @"
 ]
 "@
 $assignments = $assBody | ConvertFrom-Json
+$assBodyReq = @"
+[
+    {
+        "@odata.type": "#Microsoft.Graph.mobileAppAssignment",
+        "intent": "required",
+        "source": "direct",
+        "sourceId": null,
+        "target": {
+            "@odata.type": "#Microsoft.Graph.allLicensedUsersAssignmentTarget",
+            "deviceAndAppManagementAssignmentFilterId": null,
+            "deviceAndAppManagementAssignmentFilterType": "none"
+        }
+    }
+]
+"@
+$assignmentsReq = $assBodyReq | ConvertFrom-Json
 
 # Processing defined androidApps
 $hadError = $false
@@ -110,9 +126,14 @@ foreach($androidApp in $androidApps)
         $app = (Get-MsGraphObject -Uri $uri).value
         if (-Not $app.id)
         {
-            Write-Error "The app with name $($androidApp.displayName) does not exist. Please create it first." -ErrorAction Continue
-            $hadError = $true
-            continue
+            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=startsWith(displayName,'$searchValue')"
+            $app = (Get-MsGraphObject -Uri $uri).value
+            if (-Not $app.id)
+            {
+                Write-Error "The app with name $($androidApp.displayName) does not exist. Please create it first." -ErrorAction Continue
+                $hadError = $true
+                continue
+            }
         }
         $appId = $app.id
         Write-Host "    appId: $appId"
@@ -125,7 +146,9 @@ foreach($androidApp in $androidApps)
         $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
         $actAssignments = Get-MsGraphCollection -Uri $uri
         $cnt = 0
-        foreach ($assignment in $assignments)
+        $asses = $assignments
+        if ($iosApp.displayName -like "*Untern.-Portal*") { $asses = $assignmentsReq }
+        foreach ($assignment in $asses)
         {
             $cnt++
             Write-Host "      Assignment $cnt with target $($assignment.target)"

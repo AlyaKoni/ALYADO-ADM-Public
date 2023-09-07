@@ -340,6 +340,7 @@ function Invoke-WebRequestIndep ()
         [System.String]$CertificateThumbprint,
         [System.Security.Cryptography.X509Certificates.X509Certificate]$Certificate,
         [Switch]$SkipCertificateCheck,
+        [Switch]$SkipHeaderValidation,
         [Object]$SslProtocol,
         [System.Security.SecureString]$Token,
         [System.String]$UserAgent,
@@ -367,44 +368,46 @@ function Invoke-WebRequestIndep ()
     )
     $parms = @{}
     $pkeys = $PSBoundParameters.Keys
+    if ($AlyaIsPsCore) {
+        if ($pkeys -contains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
+        if ($pkeys -contains "HttpVersion") { $parms["HttpVersion"] = $HttpVersion }
+        if ($pkeys -contains "AllowUnencryptedAuthentication") { $parms["AllowUnencryptedAuthentication"] = $null }
+        if ($pkeys -contains "Authentication") { $parms["Authentication"] = $Authentication }
+        if ($pkeys -contains "SkipCertificateCheck") { $parms["SkipCertificateCheck"] = $null }
+        if ($pkeys -contains "SslProtocol") { $parms["SslProtocol"] = $SslProtocol }
+        if ($pkeys -contains "Token") { $parms["Token"] = $Token }
+        if ($pkeys -contains "MaximumRetryCount") { $parms["MaximumRetryCount"] = $MaximumRetryCount }
+        if ($pkeys -contains "RetryIntervalSec") { $parms["RetryIntervalSec"] = $RetryIntervalSec }
+        if ($pkeys -contains "CustomMethod") { $parms["CustomMethod"] = $CustomMethod }
+        if ($pkeys -contains "NoProxy") { $parms["NoProxy"] = $null }
+        if ($pkeys -contains "Form") { $parms["Form"] = $Form }
+        if ($pkeys -contains "Resume") { $parms["Resume"] = $null }
+        if ($pkeys -contains "SkipHeaderValidation") { $parms["SkipHeaderValidation"] = $null }
+        if ($pkeys -contains "PreserveAuthorizationOnRedirect") { $parms["PreserveAuthorizationOnRedirect"] = $null }
+    }
     if ($pkeys -contains "UseBasicParsing") { $parms["UseBasicParsing"] = $null }
     if ($pkeys -contains "Uri") { $parms["Uri"] = $Uri }
-    if ($pkeys -contains "HttpVersion") { $parms["HttpVersion"] = $HttpVersion }
     if ($pkeys -contains "WebSession") { $parms["WebSession"] = $WebSession }
     if ($pkeys -contains "SessionVariable") { $parms["SessionVariable"] = $SessionVariable }
-    if ($pkeys -contains "AllowUnencryptedAuthentication") { $parms["AllowUnencryptedAuthentication"] = $null }
-    if ($pkeys -contains "Authentication") { $parms["Authentication"] = $Authentication }
     if ($pkeys -contains "Credential") { $parms["Credential"] = $Credential }
     if ($pkeys -contains "UseDefaultCredentials") { $parms["UseDefaultCredentials"] = $null }
     if ($pkeys -contains "CertificateThumbprint") { $parms["CertificateThumbprint"] = $CertificateThumbprint }
     if ($pkeys -contains "Certificate") { $parms["Certificate"] = $Certificate }
-    if ($pkeys -contains "SkipCertificateCheck") { $parms["SkipCertificateCheck"] = $null }
-    if ($pkeys -contains "SslProtocol") { $parms["SslProtocol"] = $SslProtocol }
-    if ($pkeys -contains "Token") { $parms["Token"] = $Token }
     if ($pkeys -contains "UserAgent") { $parms["UserAgent"] = $UserAgent }
     if ($pkeys -contains "DisableKeepAlive") { $parms["DisableKeepAlive"] = $null }
     if ($pkeys -contains "TimeoutSec") { $parms["TimeoutSec"] = $TimeoutSec }
     if ($pkeys -contains "Headers") { $parms["Headers"] = $Headers }
     if ($pkeys -contains "MaximumRedirection") { $parms["MaximumRedirection"] = $MaximumRedirection }
-    if ($pkeys -contains "MaximumRetryCount") { $parms["MaximumRetryCount"] = $MaximumRetryCount }
-    if ($pkeys -contains "RetryIntervalSec") { $parms["RetryIntervalSec"] = $RetryIntervalSec }
     if ($pkeys -contains "Method") { $parms["Method"] = $Method }
-    if ($pkeys -contains "CustomMethod") { $parms["CustomMethod"] = $CustomMethod }
-    if ($pkeys -contains "NoProxy") { $parms["NoProxy"] = $null }
     if ($pkeys -contains "Proxy") { $parms["Proxy"] = $Proxy }
     if ($pkeys -contains "ProxyCredential") { $parms["ProxyCredential"] = $ProxyCredential }
     if ($pkeys -contains "ProxyUseDefaultCredentials") { $parms["ProxyUseDefaultCredentials"] = $null }
     if ($pkeys -contains "Body") { $parms["Body"] = $Body }
-    if ($pkeys -contains "Form") { $parms["Form"] = $Form }
     if ($pkeys -contains "ContentType") { $parms["ContentType"] = $ContentType }
     if ($pkeys -contains "TransferEncoding") { $parms["TransferEncoding"] = $TransferEncoding }
     if ($pkeys -contains "InFile") { $parms["InFile"] = $InFile }
     if ($pkeys -contains "OutFile") { $parms["OutFile"] = $OutFile }
     if ($pkeys -contains "PassThru") { $parms["PassThru"] = $null }
-    if ($pkeys -contains "Resume") { $parms["Resume"] = $null }
-    if ($pkeys -contains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
-    if ($pkeys -contains "PreserveAuthorizationOnRedirect") { $parms["PreserveAuthorizationOnRedirect"] = $null }
-    if ($pkeys -contains "SkipHeaderValidation") { $parms["SkipHeaderValidation"] = $null }
     if ($pkeys -contains "Verbose") { $parms["Verbose"] = $null }
     if ($pkeys -contains "Debug") { $parms["Debug"] = $null }
     if ($pkeys -contains "ErrorAction") { $parms["ErrorAction"] = $ErrorAction }
@@ -416,7 +419,6 @@ function Invoke-WebRequestIndep ()
     if ($pkeys -contains "OutVariable") { $parms["OutVariable"] = $OutVariable }
     if ($pkeys -contains "OutBuffer") { $parms["OutBuffer"] = $OutBuffer }
     if ($pkeys -contains "PipelineVariable") { $parms["PipelineVariable"] = $PipelineVariable }
-    if ($AlyaIsPsCore -and $pkeys -notcontains "SkipHttpErrorCheck") { $parms["SkipHttpErrorCheck"] = $null }
     return Invoke-WebRequest @parms
 }
 
@@ -634,6 +636,7 @@ function Get-PublishedModuleVersion(
     }
     if ($AllowPrerelease -or $exactVersion -ne "0.0.0.0")
     {
+        if ($exactVersion -ne "0.0.0.0") { $version = $exactVersion }
         $url = "https://www.powershellgallery.com/packages/$moduleName/$version/?dummy=$(Get-Random)"
         try
         {
@@ -648,9 +651,9 @@ function Get-PublishedModuleVersion(
             }
             if ($versionUrl)
             {
-            $version = $versionUrl.Split("/")[-1].Replace("-nightly", "").Trim()
-            $fullVersion = $versionUrl.Split("/")[-1].Trim()
-        }
+                $version = $versionUrl.Split("/")[-1].Replace("-nightly", "").Trim()
+                $fullVersion = $versionUrl.Split("/")[-1].Trim()
+            }
             else
             {
                 $version = $version
@@ -932,6 +935,7 @@ function Install-ModuleIfNotInstalled (
     }
     [Version]$requestedVersion = $null
     [string]$requestedVersionFullname = $null
+    [bool]$moduleNotOnline = $false
     $module = $null
     if ($exactVersion -ne "0.0.0.0")
     {
@@ -969,6 +973,7 @@ function Install-ModuleIfNotInstalled (
                 Write-Warning "Module '$moduleName' does not looks like a module from Powershell Gallery"
                 $requestedVersion = $exactVersion
                 $requestedVersionFullname = $exactVersion
+                $moduleNotOnline = $true
             }
             else {
                 $requestedVersion = $versionCheck[0]
@@ -1014,6 +1019,7 @@ function Install-ModuleIfNotInstalled (
             $module = Get-Module -Name $moduleName -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
             $requestedVersion = $module.Version
             $requestedVersionFullname = $module.Version
+            $moduleNotOnline = $true
         }
         else {
             $requestedVersion = $versionCheck[0]
@@ -1088,59 +1094,62 @@ function Install-ModuleIfNotInstalled (
         {
             $saveModuleHasAcceptLicense = (Get-Command Save-Module).ParameterSets | Select-Object -ExpandProperty Parameters | Where-Object { $_.Name -eq "AcceptLicense" }
         }
-        $optionalArgs = New-Object -TypeName Hashtable
-        $optionalArgs['RequiredVersion'] = $requestedVersionFullname
-        Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
-        #TODO Unload module
-        if ($installModuleHasAcceptLicense)
+        if (-Not $moduleNotOnline)
         {
-	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
-	        {
-	            if ($installModuleHasPrerelease)
-	            {
-	                Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
-	            }
-	            else
-	            {
-	                Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose -AcceptLicense
-	            }
-	        }
-	        else
-	        {
-	            if ($saveModuleHasPrerelease)
-	            {
-                    Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
-	            }
-	            else
-	            {
-                    Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -Force -Verbose -AcceptLicense
-	            }
-	        }
-        }
-        else
-        {
-	        if ($AlyaModulePath -eq $AlyaDefaultModulePath)
-	        {
-	            if ($installModuleHasPrerelease)
-	            {
-	                Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose
-	            }
-	            else
-	            {
-	                Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose
-	            }
-	        }
-	        else
-	        {
-	            if ($saveModuleHasPrerelease)
-	            {
-                    Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose
-	            }
-	            else
-	            {
-                    Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -Force -Verbose
-	            }
-	        }
+            $optionalArgs = New-Object -TypeName Hashtable
+            $optionalArgs['RequiredVersion'] = $requestedVersionFullname
+            Write-Warning ('Installing/Updating module {0} to version [{1}] within scope of the current user.' -f $moduleName, $requestedVersion)
+            #TODO Unload module
+            if ($installModuleHasAcceptLicense)
+            {
+                if ($AlyaModulePath -eq $AlyaDefaultModulePath)
+                {
+                    if ($installModuleHasPrerelease)
+                    {
+                        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+                    }
+                    else
+                    {
+                        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose -AcceptLicense
+                    }
+                }
+                else
+                {
+                    if ($saveModuleHasPrerelease)
+                    {
+                        Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+                    }
+                    else
+                    {
+                        Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -Force -Verbose -AcceptLicense
+                    }
+                }
+            }
+            else
+            {
+                if ($AlyaModulePath -eq $AlyaDefaultModulePath)
+                {
+                    if ($installModuleHasPrerelease)
+                    {
+                        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose
+                    }
+                    else
+                    {
+                        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -Force -Verbose
+                    }
+                }
+                else
+                {
+                    if ($saveModuleHasPrerelease)
+                    {
+                        Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose
+                    }
+                    else
+                    {
+                        Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -Force -Verbose
+                    }
+                }
+            }
         }
         $module = Get-Module -Name $moduleName -ListAvailable |`
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
@@ -1163,8 +1172,7 @@ function Install-ModuleIfNotInstalled (
                     Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
                 if (-Not $module)
 	            {
-	                Write-Error "Not able to install the module!" -ErrorAction Continue
-	                exit
+	                Write-Warning "Not able to install the module $moduleName!" -ErrorAction Continue
 	            }
 	        }
 	    }
@@ -1183,6 +1191,7 @@ function Install-ModuleIfNotInstalled (
         Import-Module -Name $moduleName -UseWindowsPowershell
     }
 }
+#Install-ModuleIfNotInstalled "AppX"
 #Install-ModuleIfNotInstalled "ImportExcel"
 #Install-ModuleIfNotInstalled "PowerShellGet"
 #Install-ModuleIfNotInstalled "Az.Accounts"
@@ -1514,9 +1523,9 @@ function LoginTo-MgGraph(
     if (-Not $mgContext)
     {
         if ($null -ne $AlyaGraphAppId) {
-            Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId
+            Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
         } else {
-            Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId
+            Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
         }
         $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
         if (-Not $Global:AlyaMgContext)
@@ -1525,9 +1534,9 @@ function LoginTo-MgGraph(
             # TODO check bug still there, way to check if consent happended
             $mgContext = Disconnect-MgGraph
             if ($null -ne $AlyaGraphAppId) {
-                Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId
+                Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
             } else {
-                Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId
+                Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
             }
             $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
             $Global:AlyaMgContext = $mgContext
@@ -1773,7 +1782,11 @@ function LoginTo-IPPS()
         {
             $extRunspace.Dispose()
         }
-        Connect-IPPSSession -Environment $AlyaExchangeEnvironment
+        if ($AlyaLoginEndpoint -eq "https://login.microsoftonline.com") {
+            Connect-IPPSSession
+        } else {
+            Connect-IPPSSession -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+        }
     }
 }
 
@@ -2211,7 +2224,8 @@ function Get-MsGraphCollection
     $NextLink = $Uri
     $QueryResults = [System.Collections.ArrayList]@()
     do {
-        $Results = ""
+        $LastLink = $NextLink
+        $Results = $null
         $StatusCode = 200
         do {
             try {
@@ -2220,7 +2234,7 @@ function Get-MsGraphCollection
                     $StatusCode = $Results.StatusCode
                 }
                 else{
-                    $Results = Invoke-MgGraphRequest -Method "Get" -Uri $Uri
+                    $Results = Invoke-MgGraphRequest -Method "Get" -Uri $NextLink
                 }
             } catch {
                 $StatusCode = $_.Exception.Response.StatusCode.value__
@@ -2239,14 +2253,11 @@ function Get-MsGraphCollection
             }
         } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
         if ($Results.value) {
-            $QueryResults += $Results.value
+            $QueryResults.AddRange($Results.value)
         }
-        if ($Results.'@odata.nextLink' -ne $NextLink)
-        {
-            $NextLink = $Results.'@odata.nextLink'
-        }
-    } while ($null -ne $NextLink )
-    return $QueryResults
+        $NextLink = $Results.'@odata.nextLink'
+    } while ($null -ne $NextLink -and $LastLink -ne $NextLink)
+    return $QueryResults.ToArray()
 }
 
 function Get-MsGraphObject
@@ -2346,7 +2357,9 @@ function SendBody-MsGraph
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
         [parameter(Mandatory = $true)]
-        $Body
+        $Body,
+        [parameter(Mandatory = $false)]
+        $OutputFile = $null
     )
     if ($AccessToken) {
         $HeaderParams = @{
@@ -2359,11 +2372,22 @@ function SendBody-MsGraph
     do {
         try {
             if ($AccessToken) {
-                $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
-                $StatusCode = $Results.StatusCode
+                if ($OutputFile) {
+                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body -OutFile $OutputFile
+                    $StatusCode = $Results.StatusCode
                 }
+                else{
+                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
+                    $StatusCode = $Results.StatusCode
+                }
+            }
             else{
-                $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
+                if ($OutputFile) {
+                    $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body -OutputFilePath $OutputFile
+                }
+                else{
+                    $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
+                }
             }
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
@@ -2394,9 +2418,11 @@ function Post-MsGraph
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
         [parameter(Mandatory = $true)]
-        $Body
+        $Body,
+        [parameter(Mandatory = $false)]
+        $OutputFile = $null
     )
-    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Post"
+    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Post" -OutputFile $OutputFile
 }
 
 function Patch-MsGraph
@@ -2407,9 +2433,11 @@ function Patch-MsGraph
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
         [parameter(Mandatory = $true)]
-        $Body
+        $Body,
+        [parameter(Mandatory = $false)]
+        $OutputFile = $null
     )
-    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Patch"
+    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Patch" -OutputFile $OutputFile
 }
 
 function Put-MsGraph
@@ -2420,9 +2448,11 @@ function Put-MsGraph
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
         [parameter(Mandatory = $true)]
-        $Body
+        $Body,
+        [parameter(Mandatory = $false)]
+        $OutputFile = $null
     )
-    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Put"
+    SendBody-MsGraph -Uri $Uri -AccessToken $AccessToken -Body $Body -Method "Put" -OutputFile $OutputFile
 }
 
 

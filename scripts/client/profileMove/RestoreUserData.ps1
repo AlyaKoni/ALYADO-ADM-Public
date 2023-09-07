@@ -135,10 +135,14 @@ if (Test-Path $edgeDir)
     do
     {
         $process = Get-Process -Name "edge.exe" -ErrorAction SilentlyContinue
-        if ($process)
+        if (-Not $process)
         {
-            Write-Warning "Bitte den Edge Browser schliessen!"
-            pause
+			$process = Get-Process -Name "msedge.exe" -ErrorAction SilentlyContinue
+			if ($process)
+			{
+				Write-Warning "Bitte den Edge Browser schliessen!"
+				pause
+			}
         }
     }
     while ($process -ne $null)

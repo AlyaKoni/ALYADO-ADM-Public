@@ -80,13 +80,13 @@ $iosApps = Get-Content -Path $IOSAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
 $assBody = @"
 [
     {
-        "@odata.type": "#Microsoft.Graph.Beta.mobileAppAssignment",
+        "@odata.type": "#Microsoft.Graph.mobileAppAssignment",
         "intent": "available",
         "source": "direct",
         "sourceId": null,
         "target": {
             
-            "@odata.type": "#Microsoft.Graph.Beta.allLicensedUsersAssignmentTarget",
+            "@odata.type": "#Microsoft.Graph.allLicensedUsersAssignmentTarget",
             "deviceAndAppManagementAssignmentFilterId": null,
             "deviceAndAppManagementAssignmentFilterType": "none"
         }
@@ -94,6 +94,23 @@ $assBody = @"
 ]
 "@
 $assignments = $assBody | ConvertFrom-Json
+$assBodyReq = @"
+[
+    {
+        "@odata.type": "#Microsoft.Graph.mobileAppAssignment",
+        "intent": "required",
+        "source": "direct",
+        "sourceId": null,
+        "target": {
+            
+            "@odata.type": "#Microsoft.Graph.allLicensedUsersAssignmentTarget",
+            "deviceAndAppManagementAssignmentFilterId": null,
+            "deviceAndAppManagementAssignmentFilterType": "none"
+        }
+    }
+]
+"@
+$assignmentsReq = $assBodyReq | ConvertFrom-Json
 
 # Processing defined iosApps
 $hadError = $false
@@ -126,7 +143,9 @@ foreach($iosApp in $iosApps)
         $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
         $actAssignments = Get-MsGraphCollection -Uri $uri
         $cnt = 0
-        foreach ($assignment in $assignments)
+        $asses = $assignments
+        if ($iosApp.displayName -like "*Unternehmensportal*") { $asses = $assignmentsReq }
+        foreach ($assignment in $asses)
         {
             $cnt++
             Write-Host "      Assignment $cnt with target $($assignment.target)"

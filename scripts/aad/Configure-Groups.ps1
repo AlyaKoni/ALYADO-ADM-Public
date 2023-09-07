@@ -114,6 +114,7 @@ foreach ($group in $AllGroups)
         {
             if ($group.Type -eq "ADGroup") {
                 Write-Host "   - AD group. Skipping update."
+                
             } else {
                 Write-Host "   - Group already exists! Updating."
                 if ([string]::IsNullOrEmpty($group.DanymicRule))
@@ -145,7 +146,7 @@ foreach ($group in $AllGroups)
         else
         {
             if ($group.Type -eq "ADGroup") {
-                Write-Host "   - AD group. Skipping creation. Please create this group in AD."
+                Write-Warning "   - AD group is missing. Please create this group in AD."
             } else {
                 Write-Host "   - Group doesn't exists! Creating." -ForegroundColor $CommandSuccess
                 $isAssignableToRole = $false
@@ -340,12 +341,13 @@ foreach ($group in $AllGroups)
 Write-Host "Checking disabled groups" -ForegroundColor $CommandInfo
 foreach ($group in $GroupsToDisable)
 {
+    if ($group.Type -eq "ADGroup") { continue }
     $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
     if ($exGrp)
     {
         Write-Host "  Group '$($group.DisplayName)'"
         Write-Host "    disabling"
-        $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -MailEnabled:$false -SecurityEnabled:$false -MailEnabled:$false
+        $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -MailEnabled:$false -SecurityEnabled:$false
     }
 }
 

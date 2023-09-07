@@ -233,6 +233,20 @@ if (-Not $missFound)
 }
 $missFound = $false
 
+$errorFound = $false
+foreach($roleName in $allRoles.Keys)
+{
+    if ($allBuiltinRoles.DisplayName -notcontains $roleName)
+    {
+        Write-Warning "The role '$($roleName)' present in the excel sheet is not available any more. Please update it!"
+        $errorFound = $true
+    }
+}
+if ($errorFound)
+{
+    throw "Unused role found. Please fix!"
+}
+
 if ($configurePIM)
 {
   # Checking role settings
@@ -255,7 +269,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyApprovalRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyApprovalRule",
     "setting": {
         "isApprovalRequired": false,
         "isApprovalRequiredForExtension": false,
@@ -281,7 +295,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyAuthenticationContextRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyAuthenticationContextRule",
     "isEnabled": false,
     "claimValue": ""
 }
@@ -292,7 +306,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyExpirationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyExpirationRule",
     "isExpirationRequired": false,
     "maximumDuration": "P180D"
 }
@@ -304,7 +318,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyExpirationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyExpirationRule",
     "isExpirationRequired": false,
     "maximumDuration": "P365D"
 }
@@ -316,7 +330,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyExpirationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyExpirationRule",
     "isExpirationRequired": true,
     "maximumDuration": "PT8H"
 }
@@ -329,7 +343,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyEnablementRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyEnablementRule",
     "enabledRules": []
 }
 "@
@@ -340,7 +354,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyEnablementRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyEnablementRule",
     "enabledRules": [
         "Justification"
     ]
@@ -353,7 +367,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyEnablementRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyEnablementRule",
     "enabledRules": [
       "MultiFactorAuthentication",
         "Justification"
@@ -364,7 +378,7 @@ if ($configurePIM)
           {
               $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyEnablementRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyEnablementRule",
     "enabledRules": [
         "Justification"
     ]
@@ -378,7 +392,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Admin",
     "notificationLevel": "All",
@@ -395,7 +409,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Admin",
     "notificationLevel": "All",
@@ -412,7 +426,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Admin",
     "notificationLevel": "All",
@@ -429,7 +443,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Approver",
     "notificationLevel": "All",
@@ -446,7 +460,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Approver",
     "notificationLevel": "All",
@@ -463,7 +477,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Approver",
     "notificationLevel": "All",
@@ -478,7 +492,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Requestor",
     "notificationLevel": "All",
@@ -495,7 +509,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Requestor",
     "notificationLevel": "All",
@@ -512,7 +526,7 @@ if ($configurePIM)
           #$rul.AdditionalProperties | ConvertTo-Json -Depth 99
           $json = @"
 {
-    "@odata.type": "#Microsoft.Graph.Beta.unifiedRoleManagementPolicyNotificationRule",
+    "@odata.type": "#Microsoft.Graph.unifiedRoleManagementPolicyNotificationRule",
     "notificationType": "Email",
     "recipientType": "Requestor",
     "notificationLevel": "All",
@@ -658,7 +672,7 @@ foreach($roleName in $allRoles.Keys)
                       }
                     }
 
-                    if ((Get-MgBetaContext).Account -eq $principal.UserPrincipalName)
+                    if ((Get-MgContext).Account -eq $principal.UserPrincipalName)
                     {
                         Write-Host "    you can't remove yourself!!!" -ForegroundColor $CommandError
                     }

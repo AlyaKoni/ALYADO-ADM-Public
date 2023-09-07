@@ -107,6 +107,15 @@ foreach($winGetApp in $winGetApps)
             $actApp = Post-MsGraph -Uri $uri -Body ($winGetApp | ConvertTo-Json -Depth 50)
         }
 
+        # Waiting until published
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $retries = 30
+        do {
+            $retries--
+            Start-Sleep -Seconds 1
+            $actApp = (Get-MsGraphObject -Uri $uri).value
+        } while ($actApp.publishingState -ne "published" -and $retries -ge 0)
+
         # Updating the WinGetApp
         Write-Host "    Updating the WinGetApp"
         $winGetApp.PSObject.Properties.Remove("developer")

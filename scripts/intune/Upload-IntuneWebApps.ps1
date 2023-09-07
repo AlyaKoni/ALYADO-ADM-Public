@@ -83,6 +83,7 @@ function Replace-AlyaString($str)
     $str =  $str.Replace("##AlyaLockScreenBackgroundUrl##", $AlyaLockScreenBackgroundUrl)
     $str =  $str.Replace("##AlyaWelcomeScreenBackgroundUrl##", $AlyaWelcomeScreenBackgroundUrl)
     $str =  $str.Replace("##AlyaWebPage##", $AlyaWebPage)
+    $str =  $str.Replace("##AlyaPrivacyUrl##", $AlyaPrivacyUrl)
     $str =  $str.Replace("##AlyaCompanyNameShort##", $AlyaCompanyNameShort)
     $str =  $str.Replace("##AlyaCompanyName##", $AlyaCompanyName)
     $str =  $str.Replace("##AlyaTenantId##", $AlyaTenantId)
@@ -93,7 +94,8 @@ function Replace-AlyaString($str)
     $str =  $str.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
     $domPrts = $AlyaWebPage.Split("./")
     $AlyaWebDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
-    $str =  $str.Replace("##AlyaWebDomains##", $AlyaWebDomains)
+    $str =  $str.Replace("##AlyaWebDomains##", $AlyaLocalDomains)
+    $str =  $str.Replace("##AlyaLocalDomains##", $AlyaLocalDomains)
     return $str
 }
 
@@ -209,7 +211,7 @@ foreach($packageDir in $packages)
         $base64icon = [System.Convert]::ToBase64String($iconResponse)
         $iconExt = ([System.IO.Path]::GetExtension($logo.FullName)).replace(".","")
         $iconType = "image/$iconExt"
-        $appConfig.largeIcon = @{ "@odata.type" = "#Microsoft.Graph.Beta.mimeContent" }
+        $appConfig.largeIcon = @{ "@odata.type" = "#Microsoft.Graph.mimeContent" }
         $appConfig.largeIcon.type = "$iconType"
         $appConfig.largeIcon.value = "$base64icon"
     }

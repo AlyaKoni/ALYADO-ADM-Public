@@ -78,8 +78,11 @@ if ($softDeletedGroups -and $softDeletedGroups.Count -gt 0)
     }
 
     $AlyaComingFromGroup = $true
-    Write-Host "Running $($AlyaScripts)\sharepoint\Clean-DeletedSites.ps1"
-    & "$($AlyaScripts)\sharepoint\Clean-DeletedSites.ps1"
+    if (-Not $AlyaComingFromSharePoint)
+    {
+        Write-Host "Running $($AlyaScripts)\sharepoint\Clean-DeletedSites.ps1"
+        & "$($AlyaScripts)\sharepoint\Clean-DeletedSites.ps1"
+    }
 }
 else
 {

@@ -242,10 +242,14 @@ if (Test-Path $edgeDir)
     do
     {
         $process = Get-Process -Name "edge.exe" -ErrorAction SilentlyContinue
-        if ($process)
+        if (-Not $process)
         {
-            Write-Warning "Bitte den Edge Browser schliessen!"
-            pause
+			$process = Get-Process -Name "msedge.exe" -ErrorAction SilentlyContinue
+			if ($process)
+			{
+				Write-Warning "Bitte den Edge Browser schliessen!"
+				pause
+			}
         }
     }
     while ($process -ne $null)
@@ -253,7 +257,7 @@ if (Test-Path $edgeDir)
     {
         $null = New-Item -Path "$userHostDir\Edge" -ItemType Directory -Force
     }
-    robocopy /mir /r:1 /w:1 /xj $edgeDir "$userHostDir\Edge"
+    robocopy $edgeDir "$userHostDir\Edge" /mir /r:1 /w:1 /xj /xd CacheStorage /xd Cache_Data /xd Cache /xd "Code Cache"
 }
 else
 {

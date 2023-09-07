@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     04.03.2020 Konrad Brunner       Initial Version
+    28.08.2023 Konrad Brunner       Switch to MgGraph
 
 #>
 
@@ -48,14 +49,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-AdHocSubscriptionsDisabl
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.Authorization")
 
 # =============================================================
 # O365 stuff
@@ -65,15 +64,18 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-AdHocSubscriptionsDisabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$MsolCompanySettings = Get-MsolCompanyInformation
-if ($MsolCompanySettings.AllowAdHocSubscriptions)
+$authorizationPolicy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
+if ($authorizationPolicy.AllowedToSignUpEmailBasedSubscriptions)
 {
-    Write-Warning "AllowAdHocSubscriptions was enabled. Disabling it."
-    Set-MsolCompanySettings -AllowAdHocSubscriptions $false
+    Write-Warning "AllowedToSignUpEmailBasedSubscriptions was enabled. Disabling it."
+    $param = @{
+        allowedToSignUpEmailBasedSubscriptions = $false
+    }
+    Update-MgPolicyAuthorizationPolicy -BodyParameter $param
 }
 else
 {
-    Write-Host "AllowAdHocSubscriptions was already disabled." -ForegroundColor $CommandSuccess
+    Write-Host "AllowedToSignUpEmailBasedSubscriptions was already disabled." -ForegroundColor $CommandSuccess
 }
 
 #Stopping Transscript

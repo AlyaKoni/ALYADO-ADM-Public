@@ -67,6 +67,7 @@ if ($RecycleBinItems -and $RecycleBinItems.Count -gt 0)
         Clear-PnPTenantRecycleBinItem -Connection $adminCon -Url $RecycleBinItem.Url -Wait -Force
     }
 
+    $AlyaComingFromSharePoint = $true
     if (-Not $AlyaComingFromGroup)
     {
         Write-Host "Running $($AlyaScripts)\exchange\Delete-OfficeGroupPermanently.ps1"

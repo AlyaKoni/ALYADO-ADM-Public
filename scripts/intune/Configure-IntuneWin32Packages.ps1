@@ -141,7 +141,7 @@ foreach($packageDir in $packages)
         {
             foreach ($actDependency in $actDependencies)
             {
-                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.Beta.mobileAppDependency" }
+                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.mobileAppDependency" }
                 $newDependency.targetId = $actDependency.targetId
                 $newDependency.dependencyType = $actDependency.dependencyType
                 $newDependencies += $newDependency
@@ -160,7 +160,7 @@ foreach($packageDir in $packages)
             }
             if (-Not $fnd)
             {
-                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.Beta.mobileAppDependency" }
+                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.mobileAppDependency" }
                 $newDependency.targetId = $dependency.appId
                 if ($dependency.autoInstall)
                 {

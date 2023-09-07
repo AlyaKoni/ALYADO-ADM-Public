@@ -118,10 +118,25 @@ $hubCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$hubSiteName"
 $siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
 $web = Get-PnPWeb -Connection $siteCon
 
-$gauser = $web.EnsureUser("Company Administrator")
-$gauser.Context.Load($gauser)
-Invoke-PnPQuery -Connection $siteCon
-$gauserLoginName = $gauser.LoginName
+$spAdminRoleName = "Company Administrator"
+try {
+    $gauser = $web.EnsureUser($spAdminRoleName)
+    $gauser.Context.Load($gauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $gauserLoginName = $gauser.LoginName
+}
+catch {
+    $spAdminRoleName = "Global Administrator"
+    try {
+        $gauser = $web.EnsureUser($spAdminRoleName)
+        $gauser.Context.Load($gauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $gauserLoginName = $gauser.LoginName
+    }
+    catch {
+        $gauserLoginName = $null
+    }
+}
 
 $spAdminRoleName = "SharePoint Service Administrator"
 try {
@@ -164,7 +179,7 @@ if (-Not $site)
     }
 
     Write-Warning "App Catalog site not found. Creating now app catalog site $catalogSiteName"
-    Register-PnPAppCatalogSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owner $gauserLoginName -TimeZoneId 4 -Force
+    Register-PnPAppCatalogSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owner $AlyaSharePointNewSiteOwner -TimeZoneId 4 -Force
 
     do {
         Start-Sleep -Seconds 15

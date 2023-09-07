@@ -70,7 +70,7 @@ foreach($categoryName in $AlyaDeviceCategories)
 
     $body = @"
 {
-  "@odata.type": "#Microsoft.Graph.Beta.deviceCategory",
+  "@odata.type": "#Microsoft.Graph.deviceCategory",
   "displayName": "$categoryName",
   "description": "Device category to manage devices of type $categoryName"
 }

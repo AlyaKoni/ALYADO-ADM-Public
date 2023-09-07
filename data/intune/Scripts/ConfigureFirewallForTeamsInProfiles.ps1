@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     01.04.2020 Konrad Brunner       Initial Version
     21.10.2020 Konrad Brunner       64bit and better logging
+    24.08.2023 Konrad Brunner       Multi startup script support
 
 #>
 
@@ -78,7 +79,7 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-ConfigureFirewall-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-Teams-ConfigureFirewall-$($AlyaTimeString).log" -Force
 
     try
     {
@@ -100,20 +101,17 @@ else
             Write-Host "  to $ScriptPath"
             Copy-Item -Path $ActPath -Destination $ScriptPath -Force -Confirm:$false
 
-            Write-Host "Preparing registry paths"
-            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
-            "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
-                ForEach-Object { 
-                    if (-not (Test-Path $_)) {
-                        New-Item -path $_ -force
-                    }
-                }
-
-            Write-Host "Preparing registry values"
-            #TODO support already existing other script!!
-            $prop = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0" -Name Script -ErrorAction SilentlyContinue
+            Write-Host "Preparing registry parent"
+            $prop = Get-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0" -ErrorAction SilentlyContinue
             if (-Not $prop)
             {
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0",
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0" |
+                    ForEach-Object { 
+                        if (-not (Test-Path $_)) {
+                            New-Item -path $_ -force
+                        }
+                    }
                 "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0",
                 "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0" |
                     ForEach-Object {
@@ -123,14 +121,6 @@ else
                         New-ItemProperty -path "$_" -name GPOName -propertyType String -value "Local Group Policy"
                         New-ItemProperty -path "$_" -name PSScriptOrder -propertyType DWord -value 2 
                         New-ItemProperty -path "$_" -name SOM-ID -propertyType String -value "Local"
-                    }
-                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
-                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
-                    ForEach-Object {
-                        New-ItemProperty -path "$_" -name Script -propertyType String -value $ScriptName
-                        New-ItemProperty -path "$_" -name Parameters -propertyType String -value "-StartFrom ScheduledJob"
-                        New-ItemProperty -path "$_" -name IsPowershell -propertyType DWord -value 1
-                        New-ItemProperty -path "$_" -name ExecTime -propertyType QWord -value ([Int64]0)
                     }
             }
             else
@@ -145,8 +135,49 @@ else
                         Set-ItemProperty -path "$_" -name PSScriptOrder -value 2 
                         Set-ItemProperty -path "$_" -name SOM-ID -value "Local"
                     }
-                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\0",
-                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\0" |
+            }
+
+            Write-Host "Preparing registry script"
+            $existScripts = @()
+            while ($true)
+            {
+                $cnt = $existScripts.Count
+                $prop = Get-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\$cnt" -ErrorAction SilentlyContinue
+                if ($prop)
+                {
+                    $existScripts += $prop
+                }
+                else
+                {
+                    break
+                }
+            }
+
+            $prop = $existScripts | Where-Object { $_.GetValue("Script") -eq $ScriptName }
+            if (-Not $prop)
+            {
+                $scriptId = $existScripts.Count
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\$scriptId",
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\$scriptId" |
+                    ForEach-Object { 
+                        if (-not (Test-Path $_)) {
+                            New-Item -path $_ -force
+                        }
+                    }
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\$scriptId",
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\$scriptId" |
+                    ForEach-Object {
+                        New-ItemProperty -path "$_" -name Script -propertyType String -value $ScriptName
+                        New-ItemProperty -path "$_" -name Parameters -propertyType String -value "-StartFrom ScheduledJob"
+                        New-ItemProperty -path "$_" -name IsPowershell -propertyType DWord -value 1
+                        New-ItemProperty -path "$_" -name ExecTime -propertyType QWord -value ([Int64]0)
+                    }
+            }
+            else
+            {
+                $scriptId = $prop.PSChildName
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\$scriptId",
+                "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Startup\0\$scriptId" |
                     ForEach-Object {
                         Set-ItemProperty -path "$_" -name Script -value $ScriptName
                         Set-ItemProperty -path "$_" -name Parameters -value "-StartFrom ScheduledJob"
@@ -154,13 +185,79 @@ else
                         Set-ItemProperty -path "$_" -name ExecTime -value ([Int64]0)
                     }
             }
+            $existScripts = @()
+            while ($true)
+            {
+                $cnt = $existScripts.Count
+                $prop = Get-Item -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Startup\0\$cnt" -ErrorAction SilentlyContinue
+                if ($prop)
+                {
+                    $existScripts += $prop
+                }
+                else
+                {
+                    break
+                }
+            }
+
             $StartupIniPath = "$($env:systemRoot)\System32\GroupPolicy\Machine\Scripts\psscripts.ini"
-            $iniContent = @"
+            if (-Not (Test-Path $StartupIniPath))
+            {
+                $iniContent = @"
 
 [Startup]
 0CmdLine=$($ScriptName)
 0Parameters=-StartFrom ScheduledJob
 "@
+                $iniContent | Set-Content -Path $StartupIniPath -Force -Encoding Unicode
+            }
+            $iniContent = Get-Content -Path $StartupIniPath -Encoding Unicode
+
+            $inStartup = $false
+            $pos = 0
+            $insPos = 0
+            foreach($existScript in $existScripts)
+            {
+                $scriptId = $existScript.PSChildName
+                $fnd = $false
+                $lastLine = ""
+                foreach($line in $iniContent)
+                {
+                    $pos++
+                    if ($inStartup)
+                    {
+                        if ($line.StartsWith("$($scriptId)CmdLine")) {
+                            $line = $existScript.GetValue("Script")
+                            $fnd = $true
+                        }
+                        if ($line.StartsWith("$($scriptId)Parameters")) { $line = $existScript.GetValue("Parameters") }
+                        if ($line.StartsWith("[")) {
+                            $inStartup = $false
+                            $insPos = $pos-1
+                            if ([string]::IsNullOrEmpty($lastLine)) { $insPos = $pos-2 }
+                        }
+                    }
+                    if ($line.StartsWith("[Startup")) { $inStartup = $true }
+                    $lastLine = $line
+                }
+                if ($insPos -eq 0) { $insPos = $pos }
+                if (-Not $fnd)
+                {
+                    $iniContent += ""
+                    for ($p=($iniContent.Length-1); $p -gt $insPos; $p--)
+                    {
+                        $iniContent[$p] = $iniContent[$p-1]
+                    }
+                    $iniContent += ""
+                    for ($p=($iniContent.Length-1); $p -gt $insPos; $p--)
+                    {
+                        $iniContent[$p] = $iniContent[$p-1]
+                    }
+                    $iniContent[$insPos] = "$($scriptId)CmdLine=$($existScript.GetValue("Script"))"
+                    $iniContent[$insPos+1] = "$($scriptId)Parameters=$($existScript.GetValue("Parameters"))"
+                }
+            }
+
             $iniContent | Set-Content -Path $StartupIniPath -Force -Encoding Unicode
             (Get-Item -Path $StartupIniPath -Force).Attributes += "Hidden"
         }
@@ -182,8 +279,8 @@ else
                 } catch { $err = $true }
                 if ($fnd -or $err)
                 {
-                    if ($fnd) { Write-Host "Found teams in $($teamsExe.FullName)" }
-                    if ($err) { Write-Host "Guessed teams in $($teamsExe.FullName)" }
+                    if ($fnd) { Write-Host "Found teams in $($progPath)" }
+                    if ($err) { Write-Host "Guessed teams in $($progPath)" }
                     foreach ($prot in $protcols)
                     {
                         $ruleName = "Teams.exe-Inbound-$($prot)-$($user.Name)"

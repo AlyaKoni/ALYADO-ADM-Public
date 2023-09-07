@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     15.10.2020 Konrad Brunner       Initial Version
     06.07.2022 Konrad Brunner       Change to AzureAdPreview
+    28.08.2023 Konrad Brunner       Switch to MgGraph
 
 #>
 
@@ -50,14 +51,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserPasswordNeverExpire-$($
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All")
 
 # =============================================================
 # O365 stuff
@@ -68,18 +67,19 @@ Write-Host "AAD | Set-UserPasswordNeverExpire | Azure" -ForegroundColor $Command
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Getting user" -ForegroundColor $CommandInfo
-$user = Get-AzureADUser -ObjectId $userUpn
-
-if ($user)
-{
-    if (-Not $user.PasswordPolicies -contains "DisablePasswordExpiration")
-    {
-        Write-Host "Diasabling password expiration"
-        Set-AzureADUser -ObjectId $userUpn -PasswordPolicies DisablePasswordExpiration
-    }
-    else
-    {
+$user = Get-MgBetaUser -UserId $userUpn -Property UserPrincipalName, PasswordPolicies
+if ($user) {
+    if ($user.PasswordPolicies -contains "DisablePasswordExpiration") {
         Write-Host "Password expiration was already disabled"
+    }
+    else {
+        Write-Host "Disabling password expiration"
+        $policies = @()
+        foreach($policy in $user.PasswordPolicies) {
+            $policies += $policy
+        }
+        $policies += "DisablePasswordExpiration"
+        Update-MgBetaUser -UserId $userUpn -PasswordPolicies $policies
     }
 }
 else

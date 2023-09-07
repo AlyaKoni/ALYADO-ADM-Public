@@ -136,10 +136,25 @@ Write-Host "=====================================================`n" -Foreground
 $siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
 $web = Get-PnPWeb -Connection $siteCon
 
-$gauser = $web.EnsureUser("Company Administrator")
-$gauser.Context.Load($gauser)
-Invoke-PnPQuery -Connection $siteCon
-$gauserLoginName = $gauser.LoginName
+$spAdminRoleName = "Company Administrator"
+try {
+    $gauser = $web.EnsureUser($spAdminRoleName)
+    $gauser.Context.Load($gauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $gauserLoginName = $gauser.LoginName
+}
+catch {
+    $spAdminRoleName = "Global Administrator"
+    try {
+        $gauser = $web.EnsureUser($spAdminRoleName)
+        $gauser.Context.Load($gauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $gauserLoginName = $gauser.LoginName
+    }
+    catch {
+        $gauserLoginName = $null
+    }
+}
 
 $spAdminRoleName = "SharePoint Service Administrator"
 try {
@@ -247,8 +262,7 @@ if ([string]::IsNullOrEmpty($web.SiteLogoUrl) -and $siteLogoUrl)
 
 # Setting admin access
 Write-Host "Setting admin access" -ForegroundColor $CommandInfo
-Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -Owners $AlyaSharePointNewSiteCollectionAdmins
-Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -PrimarySiteCollectionAdmin $AlyaSharePointNewSiteOwner
+Set-PnPTenantSite -Connection $adminCon -Identity $absSiteUrl -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
 
 #Processing site design
 Write-Host "Processing site design" -ForegroundColor $CommandInfo
@@ -358,12 +372,12 @@ if ($siteTemplate -eq "TeamSite")
     $settings = Get-PnPMicrosoft365GroupSettings -Connection $adminCon -Identity $m365GroupId
     if (-Not $settings)
     {
-        Write-Warning "Created new team guest settings to disable Guests"
+        Write-Warning "Created new team guest settings"
         $settings = New-PnPMicrosoft365GroupSettings -Connection $adminCon -Identity $m365GroupId -DisplayName "Group.Unified.Guest" -TemplateId "08d542b9-071f-4e16-94b0-74abb372e3d9" -Values @{"AllowToAddGuests"=$settingsValue}
     }
     if (($settings.Values | Where-Object { $_.Name -eq "AllowToAddGuests"}).Value.ToString() -ne $settingsValue.ToString())
     {
-        Write-Warning "Existing team guest settings changed to disable Guests"
+        Write-Warning "Existing team guest settings changed"
         $settings = Set-PnPMicrosoft365GroupSettings -Connection $adminCon -Identity $settings.ID -Group $m365GroupId -Values @{"AllowToAddGuests"=$settingsValue}
     }
 }

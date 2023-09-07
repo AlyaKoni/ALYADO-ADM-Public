@@ -72,7 +72,7 @@ Write-Host "to get required consents." -ForegroundColor $CommandWarning
 
 # Getting user
 Write-Host "Getting user" -ForegroundColor $CommandInfo
-$actUser = (Get-MgBetaContext).Account
+$actUser = (Get-MgContext).Account
 $user = Get-MgBetaUser -UserId $actUser
 if (-Not $user)
 {

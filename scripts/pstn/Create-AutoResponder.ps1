@@ -40,9 +40,9 @@ Param(
     [ValidateNotNullOrEmpty()]
     $attendantName = "Alya Zentrale",
     [ValidateNotNullOrEmpty()]
-    $attendantUpn = "zentrale@alyaconsulting.ch",
+    $attendantUpn = "Alya.Zentrale@alyaconsulting.ch",
     [ValidateNotNullOrEmpty()]
-    $attendantNumber = "+41625620460",
+    $attendantNumber = "+41625620462",
     [ValidateNotNullOrEmpty()]
     $callGroupUserUpns = @("konrad.brunner@alyaconsulting.ch"),
     $redirectToExternalNumber = $null,

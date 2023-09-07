@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     23.11.2021 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    05.09.2023 Konrad Brunner       Added assignment
 
 #>
 
@@ -56,6 +57,7 @@ $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logins
 LoginTo-MgGraph -Scopes @(
@@ -80,13 +82,19 @@ $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaDesktopBackgroundUrl##
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaLockScreenBackgroundUrl##", $AlyaLockScreenBackgroundUrl)
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaWelcomeScreenBackgroundUrl##", $AlyaWelcomeScreenBackgroundUrl)
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaWebPage##", $AlyaWebPage)
+$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaPrivacyUrl##", $AlyaPrivacyUrl)
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaCompanyNameShort##", $AlyaCompanyNameShort)
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaCompanyName##", $AlyaCompanyName)
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaTenantId##", $AlyaTenantId)
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaKeyVaultName##", $KeyVaultName)
+$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaSupportTitle##", $AlyaSupportTitle)
+$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaSupportTel##", $AlyaSupportTel)
+$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaSupportMail##", $AlyaSupportMail)
+$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
 $domPrts = $AlyaWebPage.Split("./")
-$AlyaWebDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaWebDomains##", $AlyaWebDomains)
+$AlyaLocalDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
+$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaWebDomains##", $AlyaLocalDomains)
+$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaLocalDomains##", $AlyaLocalDomains)
 if ($definedProfilesStr.IndexOf("##Alya") -gt -1)
 {
     throw "Some replacement did not work!"
@@ -207,6 +215,116 @@ foreach($definedProfile in $definedProfiles)
 if ($hadError)
 {
     Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
+}
+
+# Assigning defined profiles
+foreach($profile in $definedProfiles)
+{
+    if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
+    if ($profile.displayName.EndsWith("_unused")) { continue }
+    Write-Host "Assigning GroupPolicy profile '$($profile.displayName)'" -ForegroundColor $CommandInfo
+
+    try {
+        
+        # Checking if profile exists
+        Write-Host "  Checking if profile exists"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($definedProfile.displayName)
+        $uri = "/beta/deviceManagement/groupPolicyConfigurations?`$filter=displayName eq '$searchValue'"
+        $actProfile = (Get-MsGraphObject -Uri $uri).value
+        if ($actProfile.id)
+        {
+
+            $tGroup = $null
+            if ($profile.displayName.StartsWith("WIN"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("WIN10"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("WIN11"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("AND") -and $profile.displayName -like "*Personal*")
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("AND") -and $profile.displayName -like "*Owned*")
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("IOS"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-IOSMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("MAC"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-MACMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-MACMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+
+            if ($tGroup) {
+                $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($actProfile.id)/assignments"
+                $asses = (Get-MsGraphObject -Uri $uri).value
+                $ass = $asses | Where-Object { $_.target.groupId -eq $tGroup.Id }
+                if (-Not $ass) {
+                    $GroupAssignment = New-Object -TypeName PSObject -Property @{
+                        "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                        "groupId" = $tGroup.Id
+                    }
+                    $Target = New-Object -TypeName PSObject -Property @{
+                        "target" = $GroupAssignment
+                    }
+                    $Assignment = New-Object -TypeName PSObject -Property @{
+                        "assignments" = @($Target)
+                    }
+                    $body = ConvertTo-Json -InputObject $Assignment -Depth 10
+                    $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($actProfile.id)/assign"
+                    Post-MsGraph -Uri $uri -Body $body
+                }
+            }
+        }
+    }
+    catch {
+        $hadError = $true
+    }
+
 }
 
 #Stopping Transscript

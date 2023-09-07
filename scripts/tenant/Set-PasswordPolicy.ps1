@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     07.12.2020 Konrad Brunner       Initial Version
+    28.08.2023 Konrad Brunner       Switch to MgGraph
 
 #>
 
@@ -48,14 +49,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-PasswordPolicy-$($AlyaTi
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Domain.ReadWrite.All")
 
 # =============================================================
 # O365 stuff
@@ -66,27 +66,30 @@ Write-Host "Tenant | Set-PasswordPolicy | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Setting domain password policy" -ForegroundColor $CommandInfo
-$MsolPasswordPolicy = Get-MsolPasswordPolicy -TenantId $AlyaTenantId -DomainName $AlyaDomainName
-if ($MsolPasswordPolicy.ValidityPeriod -ne $ValidityPeriod -or $MsolPasswordPolicy.NotificationDays -ne $NotificationDays)
+$domain = Get-MgBetaDomain -DomainId $AlyaTenantName
+if ($domain.ValidityPeriod -ne $ValidityPeriod -or $domain.NotificationDays -ne $NotificationDays)
 {
     Write-Warning "SelfServePasswordReset was set to"
-    Write-Warning "  ValidityPeriod: $($MsolPasswordPolicy.ValidityPeriod)"
-    Write-Warning "  NotificationDays: $($MsolPasswordPolicy.NotificationDays)"
+    Write-Warning "  ValidityPeriod: $($domain.PasswordValidityPeriodInDays)"
+    Write-Warning "  NotificationDays: $($domain.PasswordNotificationWindowInDays)"
     Write-Warning "Setting now to"
     Write-Warning "  ValidityPeriod: $($ValidityPeriod)"
     Write-Warning "  NotificationDays: $($NotificationDays)"
-    Set-MsolPasswordPolicy -ValidityPeriod $ValidityPeriod -NotificationDays $NotificationDays -TenantId $AlyaTenantId -DomainName $AlyaDomainName
+    Update-MgBetaDomain -DomainId $AlyaTenantName -PasswordNotificationWindowInDays $NotificationDays -PasswordValidityPeriodInDays $ValidityPeriod
 }
 else
 {
     Write-Host "SelfServePasswordReset was already correctly configured." -ForegroundColor $CommandSuccess
 }
 
-Write-Host "Setting PasswordNeverExpires=false for domain users to" -ForegroundColor $CommandInfo
-$users = Get-MsolUser -DomainName $AlyaDomainName
+Write-Host "Users with password expiration disabled" -ForegroundColor $CommandInfo
+$users = Get-MgBetaUser -All -Property UserPrincipalName, PasswordPolicies
 foreach($user in $users)
 {
-    Set-MsolUser -ObjectId $user.ObjectId -PasswordNeverExpires $false
+    if ($user.PasswordPolicies -contains "DisablePasswordExpiration")
+    {
+        Write-Host "$($user.UserPrincipalName)"
+    }
 }
 
 #Stopping Transscript

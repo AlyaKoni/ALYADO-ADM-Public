@@ -116,11 +116,11 @@ foreach($iosApp in $appsIOS)
         if($app.supportedDevices -match "iPhone6"){ $iPhone = $true } else { $iPhone = $false }
         $description = $app.description # -replace "[^\x00-\x7F]+",""
 
-        $iosApp.displayName = "IOS " + $app.trackName
+        #$iosApp.displayName = "IOS " + $app.trackName
         $iosApp.publisher = $app.artistName
         $iosApp.description = $description
         $iosApp.largeIcon = @{
-            "@odata.type" = "#Microsoft.Graph.Beta.mimeContent"
+            "@odata.type" = "#Microsoft.Graph.mimeContent"
             type = $iconType
             value = $base64icon
         }
@@ -154,12 +154,19 @@ foreach($iosApp in $appsIOS)
             $actApp = Post-MsGraph -Uri $uri -Body ($iosApp | ConvertTo-Json -Depth 50)
         }
 
-        <#
+        # Waiting until published
+        $uri = "/beta/deviceAppManagement/mobileApps/$($actApp.id)"
+        $retries = 30
+        do {
+            $retries--
+            Start-Sleep -Seconds 1
+            $actApp = Get-MsGraphObject -Uri $uri
+        } while ($actApp.publishingState -ne "published" -and $retries -ge 0)
+        
         # Updating the iosApp
         Write-Host "    Updating the iosApp"
         $uri = "/beta/deviceAppManagement/mobileApps/$($actApp.id)"
-        $actApp = Patch-MsGraph -Uri $uri -Body ($iosApp | ConvertTo-Json -Depth 50)
-        #>
+        $actApp = Patch-MsGraph -Uri $uri -Body "{`"@odata.type`": `"#microsoft.graph.iosStoreApp`",`"displayName`": `"$($iosApp.displayName)`"}"
 
     }
     catch {

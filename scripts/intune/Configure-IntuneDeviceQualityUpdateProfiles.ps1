@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     26.08.2021 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    05.09.2023 Konrad Brunner       Added assignment
 
 #>
 
@@ -55,6 +56,7 @@ if (-Not $ProfileFile)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logins
 LoginTo-MgGraph -Scopes @(
@@ -84,11 +86,18 @@ function Replace-AlyaString($str)
     $str =  $str.Replace("##AlyaLockScreenBackgroundUrl##", $AlyaLockScreenBackgroundUrl)
     $str =  $str.Replace("##AlyaWelcomeScreenBackgroundUrl##", $AlyaWelcomeScreenBackgroundUrl)
     $str =  $str.Replace("##AlyaWebPage##", $AlyaWebPage)
+    $str =  $str.Replace("##AlyaPrivacyUrl##", $AlyaPrivacyUrl)
     $str =  $str.Replace("##AlyaCompanyNameShort##", $AlyaCompanyNameShort)
     $str =  $str.Replace("##AlyaCompanyName##", $AlyaCompanyName)
     $str =  $str.Replace("##AlyaTenantId##", $AlyaTenantId)
+    $str =  $str.Replace("##AlyaKeyVaultName##", $KeyVaultName)
+    $str =  $str.Replace("##AlyaSupportTitle##", $AlyaSupportTitle)
+    $str =  $str.Replace("##AlyaSupportTel##", $AlyaSupportTel)
+    $str =  $str.Replace("##AlyaSupportMail##", $AlyaSupportMail)
+    $str =  $str.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
     $domPrts = $AlyaWebPage.Split("./")
     $AlyaLocalDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
+    $str =  $str.Replace("##AlyaWebDomains##", $AlyaLocalDomains)
     $str =  $str.Replace("##AlyaLocalDomains##", $AlyaLocalDomains)
     return $str
 }
@@ -214,12 +223,12 @@ foreach($profile in $profiles)
 
     # Checking if poliy is applicable
     Write-Host "  Checking if profile is applicable"
-    if ($profile."@odata.type" -eq "#Microsoft.Graph.Beta.iosConfigurationProfile" -and -not $appleConfigured)
+    if ($profile."@odata.type" -eq "#Microsoft.Graph.iosConfigurationProfile" -and -not $appleConfigured)
     {
         Write-Warning "iosConfigurationProfile is not applicable"
         continue
     }
-    if ($profile."@odata.type" -eq "#Microsoft.Graph.Beta.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
+    if ($profile."@odata.type" -eq "#Microsoft.Graph.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
     {
         Write-Warning "androidConfigurationProfile is not applicable"
         continue
@@ -236,12 +245,12 @@ foreach($profile in $profiles)
     try {
         
         # Getting latest windows update
-        if ($profile.'@odata.type' -eq "#Microsoft.Graph.Beta.windowsQualityUpdateProfile" -and $null -eq $latestQualUpdate)
+        if ($profile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile" -and $null -eq $latestQualUpdate)
         {
-            Write-Host "  Getting latest windows update"
-            $latestQualUpdate = (Get-MsGraphObject -Uri "$AlyaGraphEndpoint/beta/admin/windows/updates/catalog/entries?`$top=1&`$filter=isof('Microsoft.Graph.Beta.windowsUpdates.qualityUpdateCatalogEntry') and Microsoft.Graph.Beta.windowsUpdates.qualityUpdateCatalogEntry/isExpeditable eq true&`$orderby=releaseDateTime desc").value
+            Write-Host "  Getting latest windows securityupdate"
+            $latestQualUpdate = (Get-MsGraphObject -Uri "$AlyaGraphEndpoint/beta/admin/windows/updates/catalog/entries?`$top=1&`$filter=isof('Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry') and Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry/isExpeditable eq true and Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry/qualityUpdateClassification eq 'security'&`$orderby=releaseDateTime desc").value
         }
-        if ($profile.'@odata.type' -eq "#Microsoft.Graph.Beta.windowsQualityUpdateProfile")
+        if ($profile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile")
         {
             $profile.expeditedUpdateSettings.qualityUpdateRelease = $latestQualUpdate.releaseDateTime
         }
@@ -275,6 +284,116 @@ foreach($profile in $profiles)
 if ($hadError)
 {
     Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
+}
+
+# Assigning defined profiles
+foreach($profile in $profiles)
+{
+    if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
+    if ($profile.displayName.EndsWith("_unused")) { continue }
+    Write-Host "Assigning profile '$($profile.displayName)'" -ForegroundColor $CommandInfo
+
+    try {
+        
+        # Checking if profile exists
+        Write-Host "  Checking if profile exists"
+        $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
+        $actProfiles = (Get-MsGraphObject -Uri $uri).value
+        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
+        if ($actProfile.id)
+        {
+
+            $tGroup = $null
+            if ($profile.displayName.StartsWith("WIN "))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("WIN10"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("WIN11"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("AND") -and $profile.displayName -like "*Personal*")
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("AND") -and $profile.displayName -like "*Owned*")
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("IOS"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-IOSMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($profile.displayName.StartsWith("MAC"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-MACMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-MACMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+
+            if ($tGroup) {
+                $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles/$($actProfile.id)/assignments"
+                $asses = (Get-MsGraphObject -Uri $uri).value
+                $ass = $asses | Where-Object { $_.target.groupId -eq $tGroup.Id }
+                if (-Not $ass) {
+                    $GroupAssignment = New-Object -TypeName PSObject -Property @{
+                        "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                        "groupId" = $tGroup.Id
+                    }
+                    $Target = New-Object -TypeName PSObject -Property @{
+                        "target" = $GroupAssignment
+                    }
+                    $Assignment = New-Object -TypeName PSObject -Property @{
+                        "assignments" = @($Target)
+                    }
+                    $body = ConvertTo-Json -InputObject $Assignment -Depth 10
+                    $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles/$($actProfile.id)/assign"
+                    Post-MsGraph -Uri $uri -Body $body
+                }
+            }
+        }
+    }
+    catch {
+        $hadError = $true
+    }
+
 }
 
 #Stopping Transscript

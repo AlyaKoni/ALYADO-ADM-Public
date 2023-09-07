@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     04.03.2020 Konrad Brunner       Initial Version
+    28.08.2023 Konrad Brunner       Switch to MgGraph
 
 #>
 
@@ -44,18 +45,14 @@ Param(
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-UserConsentEnabled-$($AlyaTimeString).log" | Out-Null
 
-# Constants
-
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.Authorization","Policy.ReadWrite.PermissionGrant")
 
 # =============================================================
 # O365 stuff
@@ -65,43 +62,28 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-UserConsentEnabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$MsolCompanySettings = Get-MsolCompanyInformation
-if (-Not $MsolCompanySettings.UsersPermissionToUserConsentToAppEnabled)
+$grantPolicy = Get-MgBetaPolicyPermissionGrantPolicy -PermissionGrantPolicyId "microsoft-user-default-recommended"
+if (-Not $grantPolicy)
 {
-    Write-Warning "UsersPermissionToUserConsentToApp was disabled. Enabling it."
-    Set-MsolCompanySettings -UsersPermissionToUserConsentToAppEnabled $true
+    throw "Grant policy microsoft-user-default-recommended not found!"
+}
+
+$authorizationPolicy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
+if (-Not $authorizationPolicy.PermissionGrantPolicyIdsAssignedToDefaultUserRole -or `
+    $authorizationPolicy.PermissionGrantPolicyIdsAssignedToDefaultUserRole -ne "ManagePermissionGrantsForSelf.microsoft-user-default-recommended")
+{
+    Write-Warning "PermissionGrantPolicyIdsAssignedToDefaultUserRole was disabled. Enabling it."
+    $param = @{
+        "permissionGrantPolicyIdsAssignedToDefaultUserRole" = @(
+            "managePermissionGrantsForSelf.microsoft-user-default-recommended"
+        )
+    }
+    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -BodyParameter $param
 }
 else
 {
-    Write-Host "UsersPermissionToUserConsentToApp was already enabled." -ForegroundColor $CommandSuccess
+    Write-Host "PermissionGrantPolicyIdsAssignedToDefaultUserRole was already enabled." -ForegroundColor $CommandSuccess
 }
-
-<#
-$policy = Get-MgBetaPolicyAuthorizationPolicy -All | Where-Object { $_.Id -eq "authorizationPolicy" }
-if ($policy.AllowUserConsentForRiskyApps)
-{
-    Write-Warning "App consent for users was disabled. Enabling it now"
-    $RolePermissions = @{}
-    $RolePermissions["allowedToReadOtherUsers"] = $true
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions @{
-        "PermissionGrantPoliciesAssigned" = @("managePermissionGrantsForSelf.microsoft-user-default-low") }
-}
-Get-MgBetaPolicyAuthorizationPolicy -All | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
-#>
-<#
-$policies = Get-MgBetaPolicyPermissionGrantPolicy -All
-$policy = $policies | Where-Object { $_.DisplayName -eq "Default User Low Risk Policy" }
-$policy = $policies | Where-Object { $_.DisplayName -eq "Application Admin Policy" }
-$policy = $policies | Where-Object { $_.DisplayName -eq "Default User Legacy Policy" }
-if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
-{
-    Write-Warning "App consent for users was disabled. Enabling it now"
-    $RolePermissions = @{}
-    $RolePermissions["allowedToReadOtherUsers"] = $true
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
-}
-$policy | ConvertTo-Json -Depth 5
-#>
 
 #Stopping Transscript
 Stop-Transcript

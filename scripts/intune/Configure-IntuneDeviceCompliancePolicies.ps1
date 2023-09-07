@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     06.10.2020 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    05.09.2023 Konrad Brunner       Added assignment
 
 #>
 
@@ -55,6 +56,7 @@ if (-Not $PolicyFile)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logins
 LoginTo-MgGraph -Scopes @(
@@ -125,12 +127,12 @@ foreach($policy in $policies)
 
     # Checking if poliy is applicable
     Write-Host "  Checking if policy is applicable"
-    if ($policy."@odata.type" -eq "#Microsoft.Graph.Beta.iosCompliancePolicy" -and -not $appleConfigured)
+    if ($policy."@odata.type" -eq "#Microsoft.Graph.iosCompliancePolicy" -and -not $appleConfigured)
     {
         Write-Warning "iosCompliancePolicy is not applicable"
         continue
     }
-    if ($policy."@odata.type" -eq "#Microsoft.Graph.Beta.androidCompliancePolicy" -and -not $androidConfigured)
+    if ($policy."@odata.type" -eq "#Microsoft.Graph.androidCompliancePolicy" -and -not $androidConfigured)
     {
         Write-Warning "androidCompliancePolicy is not applicable"
         continue
@@ -167,6 +169,114 @@ foreach($policy in $policies)
 if ($hadError)
 {
     Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
+}
+
+# Assigning defined policies
+foreach($policy in $policies)
+{
+    Write-Host "Assigning policy '$($policy.displayName)'" -ForegroundColor $CommandInfo
+
+    try {
+        
+        # Checking if policy exists
+        Write-Host "  Checking if policy exists"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($policy.displayName)
+        $uri = "/beta/deviceManagement/deviceCompliancePolicies?`$filter=displayName eq '$searchValue'"
+        $actPolicy = (Get-MsGraphObject -Uri $uri).value
+        if ($actPolicy.id)
+        {
+
+            $tGroup = $null
+            if ($policy.displayName.StartsWith("WIN"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($policy.displayName.StartsWith("WIN10"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($policy.displayName.StartsWith("WIN11"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($policy.displayName.StartsWith("AND") -and $policy.displayName -like "*Personal*")
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($policy.displayName.StartsWith("AND") -and $policy.displayName -like "*Owned*")
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($policy.displayName.StartsWith("IOS"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-IOSMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+            if ($policy.displayName.StartsWith("MAC"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-MACMDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-MACMDM not found. Can't create assignment."
+                } else {
+                    $tGroup = $sGroup
+                }
+            }
+
+            if ($tGroup) {
+                $uri = "/beta/deviceManagement/deviceCompliancePolicies/$($actPolicy.id)/assignments"
+                $asses = (Get-MsGraphObject -Uri $uri).value
+                $ass = $asses | Where-Object { $_.target.groupId -eq $tGroup.Id }
+                if (-Not $ass) {
+                    $GroupAssignment = New-Object -TypeName PSObject -Property @{
+                        "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
+                        "groupId" = $tGroup.Id
+                    }
+                    $Target = New-Object -TypeName PSObject -Property @{
+                        "target" = $GroupAssignment
+                    }
+                    $Assignment = New-Object -TypeName PSObject -Property @{
+                        "assignments" = @($Target)
+                    }
+                    $body = ConvertTo-Json -InputObject $Assignment -Depth 10
+                    $uri = "/beta/deviceManagement/deviceCompliancePolicies/$($actPolicy.id)/assign"
+                    Post-MsGraph -Uri $uri -Body $body
+                }
+            }
+        }
+    }
+    catch {
+        $hadError = $true
+    }
+
 }
 
 #Stopping Transscript

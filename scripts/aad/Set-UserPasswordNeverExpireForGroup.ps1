@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     10.07.2022 Konrad Brunner       Initial Version
+    28.08.2023 Konrad Brunner       Switch to MgGraph
 
 #>
 
@@ -49,14 +50,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserPasswordNeverExpireForG
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All")
 
 # =============================================================
 # O365 stuff
@@ -67,22 +67,32 @@ Write-Host "AAD | Set-UserPasswordNeverExpireForGroup | O365" -ForegroundColor $
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Getting group" -ForegroundColor $CommandInfo
-$group = Get-MsolGroup -SearchString $groupUpn
-
+try {
+    $group = Get-MgBetaGroup -GroupId $groupUpn
+} catch {}
+if (-Not $group) {
+    $group = Get-MgBetaGroup -Filter "DisplayName eq '$($groupUpn)'"
+}
 if ($group)
 {
-    Write-Host "Password never expires is set to $($group.PasswordNeverExpires)"
-    if (-Not $group.PasswordNeverExpires)
+    Write-Warning "Please rerun this script, if group members change!"
+    $members = Get-MgBetaGroupMember -GroupId $group.Id -All
+    foreach($member in $members)
     {
-        Write-Host "Setting to $true"
-        $members = Get-MsolGroupMember -GroupObjectId $group.ObjectId
-        foreach($user in $members)
-        {
-            Write-Host "Password never expires is set to $($user.PasswordNeverExpires)"
-            if (-Not $user.PasswordNeverExpires)
-            {
-                Write-Host "Setting to $true"
-                $user | Set-MsolUser -PasswordNeverExpires $true
+        $user = Get-MgBetaUser -UserId $member.Id -Property UserPrincipalName, PasswordPolicies
+        Write-Host "Member $($user.UserPrincipalName)"
+        if ($user) {
+            if ($user.PasswordPolicies -contains "DisablePasswordExpiration") {
+                Write-Host "  Password expiration was already disabled"
+            }
+            else {
+                Write-Host "  Disabling password expiration"
+                $policies = @()
+                foreach($policy in $user.PasswordPolicies) {
+                    $policies += $policy
+                }
+                $policies += "DisablePasswordExpiration"
+                Update-MgBetaUser -UserId $userUpn -PasswordPolicies $policies
             }
         }
     }

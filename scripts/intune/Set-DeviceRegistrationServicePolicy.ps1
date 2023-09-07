@@ -49,6 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServic
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -71,11 +72,33 @@ $policy = Get-MgBetaPolicyDeviceRegistrationPolicy
 $policy | ConvertTo-Json -Depth 5
 
 Write-Host "Setting DeviceRegistrationServicePolicy" -ForegroundColor $CommandInfo
-$allowedGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaDeviceAdminsGroupName)'"
+$allowedGroups = @()
+if ($AlyaAllowDeviceRegistration -and -Not [string]::IsNullOrEmpty($AlyaAllowDeviceRegistration) -and `
+    $AlyaAllowDeviceRegistration -is [System.Array]) {
+    foreach ($grpName in $AlyaAllowDeviceRegistration) {
+        $allowedGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($grpName)'"
+        if ($allowedGroup) {
+            $allowedGroups += $allowedGroup
+        } else {
+            Write-Wrning "Group $grpName not found!"
+        }
+    }
+}
+if ($AlyaAllowDeviceRegistration -and -Not [string]::IsNullOrEmpty($AlyaAllowDeviceRegistration) -and `
+    $AlyaAllowDeviceRegistration -isnot [System.Array] -and $AlyaAllowDeviceRegistration -ne "None" -and $AlyaAllowDeviceRegistration -ne "All") {
+    $allowedGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaAllowDeviceRegistration)'"
+    if ($allowedGroup) {
+        $allowedGroups += $allowedGroup
+    } else {
+        Write-Wrning "Group $AlyaAllowDeviceRegistration not found!"
+    }
+}
+
 try
 {
-    if ($AlyaAllowDeviceRegistration -and $AlyaAllowDeviceRegistration -ne "None" -and $AlyaAllowDeviceRegistration -ne "All")
+    if ($allowedGroups.Count -gt 0)
     {
+        $allowedIds = "`"" + ($allowedGroups.Id -join "`",`"") + "`""
         $body = @"
     {
         "Id": "deviceRegistrationPolicy",
@@ -84,7 +107,7 @@ try
         "MultiFactorAuthConfiguration": "0",
         "UserDeviceQuota": 50,
         "AzureAdJoin": {
-            "AllowedGroups": [`"$($allowedGroup.Id)`"],
+            "AllowedGroups": [$($allowedIds)],
             "AllowedUsers": [],
             "AppliesTo": "2",
             "IsAdminConfigurable": true
@@ -137,7 +160,6 @@ catch
     Write-Host "We have actually an issue, configuring the DeviceRegistrationOption by script."
     Write-Host "Please go to https://portal.azure.com/#view/Microsoft_AAD_Devices/DevicesMenuBlade/~/DeviceSettings/menuId~/null"
     Write-Host " - Select Join allowed for $AlyaDeviceAdminsGroupName"
-    Write-Host " - Enable MFA"
     Write-Host " - 50 devices per user"
     Write-Host " - Enable LAPS"
     Write-Host " - Save"

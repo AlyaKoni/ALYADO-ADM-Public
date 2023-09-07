@@ -102,10 +102,25 @@ Write-Host "=====================================================`n" -Foreground
 $siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
 $web = Get-PnPWeb -Connection $siteCon
 
-$gauser = $web.EnsureUser("Company Administrator")
-$gauser.Context.Load($gauser)
-Invoke-PnPQuery -Connection $siteCon
-$gauserLoginName = $gauser.LoginName
+$spAdminRoleName = "Company Administrator"
+try {
+    $gauser = $web.EnsureUser($spAdminRoleName)
+    $gauser.Context.Load($gauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $gauserLoginName = $gauser.LoginName
+}
+catch {
+    $spAdminRoleName = "Global Administrator"
+    try {
+        $gauser = $web.EnsureUser($spAdminRoleName)
+        $gauser.Context.Load($gauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $gauserLoginName = $gauser.LoginName
+    }
+    catch {
+        $gauserLoginName = $null
+    }
+}
 
 $spAdminRoleName = "SharePoint Service Administrator"
 try {
