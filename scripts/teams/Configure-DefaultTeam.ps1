@@ -395,7 +395,7 @@ Write-Host "Getting SharePoint url" -ForegroundColor $CommandInfo
 $Channel = Get-TeamChannel -GroupId $Team.GroupId
 $mgChannelFolder = Get-MgBetaTeamChannelFileFolder -TeamId $Team.GroupId -ChannelId $Channel.Id
 $mgChannelFolder = (Split-Path -Path (Split-Path -Path $mgChannelFolder.WebUrl -Parent) -Parent) -replace "\\", "/"
-Write-Output $mgChannelFolder
+Write-Output "¬"+$mgChannelFolder+"¬"
 
 #Stopping Transscript
 Stop-Transcript

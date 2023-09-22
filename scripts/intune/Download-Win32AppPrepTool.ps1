@@ -57,8 +57,14 @@ $RepRoot = Join-Path (Join-Path $AlyaTools "IntuneWinAppUtil") "IntuneWinAppUtil
 if (Test-Path $RepRoot)
 {
     Write-Host "IntuneWinAppUtil is present at:" -ForegroundColor $CommandSuccess
-    Write-Host "$RepRoot" -ForegroundColor $CommandSuccess
-    Write-Host "Will be updated" -ForegroundColor $CommandSuccess
+    Write-Host "  $RepRoot" -ForegroundColor $CommandSuccess
+    $dir = Get-Item -Path $RepRoot
+    if ([DateTime]::Now.Subtract($dir.CreationTime).TotalDays -lt 7) {
+        return
+    }
+    else {
+        Write-Host "Will be updated" -ForegroundColor $CommandSuccess
+    }
 }
 $RepRoot = Join-Path $AlyaTools "IntuneWinAppUtil"
 
@@ -107,18 +113,17 @@ $proc.StartInfo.CreateNoWindow = $true
 $proc.Start()
 
 #Getting repository
+Write-Host "Getting repository" -ForegroundColor $CommandInfo #Adding host to known_hosts
 $RepRoot = Join-Path $AlyaTools "IntuneWinAppUtil"
-if (-Not (Test-Path $RepRoot))
+if (Test-Path $RepRoot)
 {
-    $null = New-Item -Path $RepRoot -ItemType Directory -Force
-    cmd /c "$AlyaGitRoot\cmd\git.exe" clone "$AlyaIntuneWinAppUtilDownload" "$RepRoot" -q
-    Wait-UntilProcessEnds -processName "git"
+    Remove-Item -Path $RepRoot -Recurse -Force
 }
-else
-{
-    cmd /c "$($AlyaGitRoot)\cmd\git.exe" pull 2>&1 3>&1 4>&1 5>&1 6>&1
-    Wait-UntilProcessEnds -processName "git"
-}
+$null = New-Item -Path $RepRoot -ItemType Directory -Force
+Push-Location $RepRoot
+cmd /c "$AlyaGitRoot\cmd\git.exe" clone "$AlyaIntuneWinAppUtilDownload" "$RepRoot" -q
+Wait-UntilProcessEnds -processName "git"
+Pop-Location
 
 Write-Host "IntuneWinAppUtil is present at:" -ForegroundColor $CommandSuccess
 Write-Host "$RepRoot" -ForegroundColor $CommandSuccess

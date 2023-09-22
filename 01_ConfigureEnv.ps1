@@ -272,7 +272,7 @@ else
 }
 
 <# OTHERS #>
-$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmss")
+$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 
 <# MISC HELPER FUNCTIONS #>
 

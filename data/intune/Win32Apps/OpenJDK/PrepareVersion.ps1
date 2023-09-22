@@ -51,6 +51,7 @@ $zip = Get-ChildItem -Path $contentPath -Filter "*.zip"
 $versionStr = [regex]::Match($zip[0].Name, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Groups[1].Value
 
 Write-Host "      new: $versionStr"
+if (-Not $versionStr.Contains(".")) { $versionStr = $versionStr + ".0" }
 $versionObj.version = $versionStr
 $versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
 Copy-Item -Path $versionFile -Destination $contentPath

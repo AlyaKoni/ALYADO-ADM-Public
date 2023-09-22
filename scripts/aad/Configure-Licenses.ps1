@@ -36,6 +36,7 @@
     15.11.2021 Konrad Brunner       Fixed not existing group
     21.04.2023 Konrad Brunner       Switched to Graph, removed AzureAdPreview
     03.08.2023 Konrad Brunner       Processing groups and users if useDirectAssignment
+    13.09.2023 Konrad Brunner       Handling OnPrem and Cloud Licenses
 
 #>
 
@@ -93,6 +94,7 @@ $licDefs = Import-Excel $inputFile -ErrorAction Stop
 
 # Configured licenses
 Write-Host "Configured licenses:" -ForegroundColor $CommandInfo
+$grpSuffixes = @("", "ONPREM", "CLOUD")
 $licNames = $null
 $fndMissingGroup = $false
 $byGroup = @{}
@@ -111,20 +113,26 @@ $licDefs | Foreach-Object {
             if ($licDef.$propName -eq 1)
             {
                 $outStr += "$($licNames.$propName),"
-
-                $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-LIC-" + $licNames.$propName
-                if (-Not $byGroup.$grpName) {
-                    $byGroup.$grpName = @{}
-                    $byGroup.$grpName.Users = @()
+                $exist = $false
+                foreach($grpSuffix in $grpSuffixes)
+                {
+                    $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-LIC-" + $licNames.$propName + $grpSuffix
+                    if (-Not $byGroup.$grpName) {
+                        $byGroup.$grpName = @{}
+                        $byGroup.$grpName.Users = @()
+                    }
+                    $byGroup.$grpName.Users += $licDef.Name
+                    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$grpName'"
+                    if ($exGrp) {
+                        $exist = $true
+                        $byGroup.$grpName.Id = $exGrp.Id
+                    }
                 }
-                $byGroup.$grpName.Users += $licDef.Name
-                $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$grpName'"
-                if (-Not $exGrp)
+                if (-Not $exist)
                 {
                     Write-Warning "  Please add missing group $($grpName)"
                     $fndMissingGroup = $true
                 }
-                $byGroup.$grpName.Id = $exGrp.Id
             }
         }
         Write-Host $outStr.TrimEnd(",")
@@ -135,12 +143,17 @@ for ($i = 1; $i -le 40; $i++)
     $propName = "Lic"+$i
     if ($licNames.$propName)
     {
-        $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-LIC-" + $licNames.$propName
-        if (-Not $byGroup.$grpName) {
-            $byGroup.$grpName = @{}
-            $byGroup.$grpName.Users = @()
-            $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$grpName'"
-            $byGroup.$grpName.Id = $exGrp.Id
+        foreach($grpSuffix in $grpSuffixes)
+        {
+            $grpName = $AlyaCompanyNameShort.ToUpper() + "SG-LIC-" + $licNames.$propName + $grpSuffix
+            if (-Not $byGroup.$grpName) {
+                $byGroup.$grpName = @{}
+                $byGroup.$grpName.Users = @()
+                $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$grpName'"
+                if ($exGrp) {
+                    $byGroup.$grpName.Id = $exGrp.Id
+                }
+            }
         }
     }
 }
@@ -155,9 +168,9 @@ if (-Not $useDirectAssignment -and $fndMissingGroup)
 Write-Host "Syncing licensed users with license groups" -ForegroundColor $CommandInfo
 foreach ($group in $byGroup.Keys)
 {
-    Write-Host "  Group '$group'"
-    if ($byGroup[$group] -ne $null -and $byGroup[$group].Id -ne $null)
+    if ($byGroup.$group -ne $null -and $byGroup.$group.Id -ne $null)
     {
+        Write-Host "  Group '$group'"
         $members = Get-MgBetaGroupMember -GroupId $byGroup[$group].Id
         foreach ($member in $members)
         {
@@ -170,6 +183,14 @@ foreach ($group in $byGroup.Keys)
         }
         foreach ($user in $byGroup[$group].Users)
         {
+            $adUser = Get-MgBetaUser -UserId $user
+            if (-Not $adUser)
+            {
+                Write-Warning "     Member '$user' not found in AAD"
+                continue
+            }
+            if ($group.EndsWith("ONPREM") -and $null -eq $adUser.OnPremisesSyncEnabled) { continue }
+            if ($group.EndsWith("CLOUD") -and $null -ne $adUser.OnPremisesSyncEnabled) { continue }
             $fnd = $false
             foreach ($member in $members)
             {
@@ -181,14 +202,10 @@ foreach ($group in $byGroup.Keys)
             if (-Not $fnd)
             {
                 #Adding member
-                Write-Host "    Adding member '$user'"
-                $adUser = Get-MgBetaUser -UserId $user
-                if (-Not $adUser)
-                {
-                    Write-Warning "     Member '$user' not found in AAD"
-                }
-                else
-                {
+                if ($group.EndsWith("ONPREM")) {
+                    Write-Host "    Please add member '$user' in local AD"
+                } else {
+                    Write-Host "    Adding member '$user'"
                     New-MgBetaGroupMember -GroupId $byGroup[$group].Id -DirectoryObjectId $adUser.Id
                 }
             }

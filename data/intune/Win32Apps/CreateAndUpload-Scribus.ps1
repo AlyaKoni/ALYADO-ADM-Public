@@ -41,7 +41,7 @@ Write-Warning "Please Update first Ghostscript"
 Write-Warning "Otherwise you could have installation failures"
 Start-Sleep -Seconds 10
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\Scribus\Package" -PathType Container)))
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\Scribus\Package\*.intunewin" -PathType Leaf)))
 {
 	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "Scribus"
 }

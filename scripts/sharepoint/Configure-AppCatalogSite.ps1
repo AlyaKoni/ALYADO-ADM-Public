@@ -179,73 +179,73 @@ if (-Not $site)
     }
 
     Write-Warning "App Catalog site not found. Creating now app catalog site $catalogSiteName"
-    Register-PnPAppCatalogSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owner $AlyaSharePointNewSiteOwner -TimeZoneId 4 -Force
+    Register-PnPAppCatalogSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owner $gauserLoginName -TimeZoneId 4 -Force
 
     do {
         Start-Sleep -Seconds 15
         $site = Get-PnPTenantSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Detailed -ErrorAction SilentlyContinue
     } while (-Not $site)
 
-    # Login to app catalog
-    Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
-	$siteCon = LoginTo-PnP "$($AlyaSharePointUrl)/sites/$catalogSiteName"
-
-    # Adding site to hub
-    Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
-    $hubSite = Get-PnPSite -Connection $hubCon
-    $siteSite = Get-PnPSite -Connection $siteCon
-    Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
-
-    # Setting admin access
-    Write-Host "Setting admin access" -ForegroundColor $CommandInfo
-    $owners = @()
-    if ($null -ne $sauserLoginName) { $owners += $sauserLoginName }
-    foreach ($owner in $AlyaSharePointNewSiteCollectionAdmins)
-    {
-        if (-Not [string]::IsNullOrEmpty($owner) -and $owner -ne "PleaseSpecify")
-        {
-            $owners += $owner
-        }
-    }
-    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
-    
-    # Configuring access to catalog site for internals and externals
-    Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
-    $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
-    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
-    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllExternals@$AlyaDomainName" -SendEmail:$false
-
-    # Configuring permissions
-    Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
-    $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
-    $aRoles = Get-PnPRoleDefinition -Connection $siteCon
-    $eRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Editor" }
-    $cRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Contributor" }
-    $perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
-    if (-Not ($perms | Where-Object { $_.Id -eq $cRole.Id }))
-    {
-        Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
-    }
-    if (($perms | Where-Object { $_.Id -eq $eRole.Id }))
-    {
-        Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
-    }
-
-    # Configuring site logo
-    Write-Host "Configuring site logo" -ForegroundColor $CommandInfo
-    $web = Get-PnPWeb -Connection $siteCon -Includes SiteLogoUrl
-    if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
-    {
-        $fname = Split-Path -Path $AlyaLogoUrlQuad -Leaf
-        $tempFile = [System.IO.Path]::GetTempFileName()+$fname
-        Invoke-RestMethod -Method GET -UseBasicParsing -Uri $AlyaLogoUrlQuad -OutFile $tempFile
-        Set-PnPSite -Connection $siteCon -LogoFilePath $tempFile
-        Remove-Item -Path $tempFile
-    }
-
-    Write-Host "Configuring site title" -ForegroundColor $CommandInfo
-	Set-PnPWeb -Connection $siteCon -Title "$catalogSiteName"
 }
+# Login to app catalog
+Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
+$siteCon = LoginTo-PnP "$($AlyaSharePointUrl)/sites/$catalogSiteName"
+
+# Adding site to hub
+Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
+$hubSite = Get-PnPSite -Connection $hubCon
+$siteSite = Get-PnPSite -Connection $siteCon
+Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
+
+# Setting admin access
+Write-Host "Setting admin access" -ForegroundColor $CommandInfo
+$owners = @()
+if ($null -ne $sauserLoginName) { $owners += $sauserLoginName }
+foreach ($owner in $AlyaSharePointNewSiteCollectionAdmins)
+{
+    if (-Not [string]::IsNullOrEmpty($owner) -and $owner -ne "PleaseSpecify")
+    {
+        $owners += $owner
+    }
+}
+Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
+
+# Configuring access to catalog site for internals and externals
+Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
+$vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
+Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
+Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllExternals@$AlyaDomainName" -SendEmail:$false
+
+# Configuring permissions
+Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
+$mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
+$aRoles = Get-PnPRoleDefinition -Connection $siteCon
+$eRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Editor" }
+$cRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Contributor" }
+$perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
+if (-Not ($perms | Where-Object { $_.Id -eq $cRole.Id }))
+{
+    Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
+}
+if (($perms | Where-Object { $_.Id -eq $eRole.Id }))
+{
+    Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
+}
+
+# Configuring site logo
+Write-Host "Configuring site logo" -ForegroundColor $CommandInfo
+$web = Get-PnPWeb -Connection $siteCon -Includes SiteLogoUrl
+if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
+{
+    $fname = Split-Path -Path $AlyaLogoUrlQuad -Leaf
+    $tempFile = [System.IO.Path]::GetTempFileName()+$fname
+    Invoke-RestMethod -Method GET -UseBasicParsing -Uri $AlyaLogoUrlQuad -OutFile $tempFile
+    Set-PnPSite -Connection $siteCon -LogoFilePath $tempFile
+    Remove-Item -Path $tempFile
+}
+
+Write-Host "Configuring site title" -ForegroundColor $CommandInfo
+Set-PnPWeb -Connection $siteCon -Title "$catalogSiteName"
 
 Write-Host "Configuring site title" -ForegroundColor $CommandInfo
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl

@@ -248,9 +248,13 @@ foreach($profile in $profiles)
         if ($profile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile" -and $null -eq $latestQualUpdate)
         {
             Write-Host "  Getting latest windows securityupdate"
-            $latestQualUpdate = (Get-MsGraphObject -Uri "$AlyaGraphEndpoint/beta/admin/windows/updates/catalog/entries?`$top=1&`$filter=isof('Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry') and Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry/isExpeditable eq true and Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry/qualityUpdateClassification eq 'security'&`$orderby=releaseDateTime desc").value
+            try {
+                $latestQualUpdate = (Get-MsGraphObject -Uri "$AlyaGraphEndpoint/beta/admin/windows/updates/catalog/entries?`$top=1&`$filter=isof('Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry') and Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry/isExpeditable eq true and Microsoft.Graph.windowsUpdates.qualityUpdateCatalogEntry/qualityUpdateClassification eq 'security'&`$orderby=releaseDateTime desc").value
+            } catch {
+                $_
+            }
         }
-        if ($profile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile")
+        if ($profile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile" -and $null -ne $latestQualUpdate)
         {
             $profile.expeditedUpdateSettings.qualityUpdateRelease = $latestQualUpdate.releaseDateTime
         }
@@ -388,6 +392,8 @@ foreach($profile in $profiles)
                     Post-MsGraph -Uri $uri -Body $body
                 }
             }
+        } else {
+            Write-Host "Not found!" -ForegroundColor $CommandError
         }
     }
     catch {

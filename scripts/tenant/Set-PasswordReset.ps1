@@ -93,13 +93,14 @@ if ($AlyaPasswordResetEnabled)
     Write-Host "Enabling password reset options" -ForegroundColor $CommandInfo
     Write-Host "You have now to configure password reset options. Pleas browse to"
     Write-Host "  https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
-    if ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName))
+    if ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName) -or $AlyaSsprEnabledGroupName -eq "PleaseSpecify"-or $AlyaSsprEnabledGroupName.Count -eq 0 )
     {
+        #TODO get groups enabling password reset by licenses
         Write-Host "and allow password reset for all users."
     }
     else
     {
-        Write-Host "and allow password reset for group $AlyaSsprEnabledGroupName. Also configure reset options."
+        Write-Host "and allow password reset for group(s) $AlyaSsprEnabledGroupName. "
     }
     Write-Host "Also configure reset options."
     if (-Not $browser) {

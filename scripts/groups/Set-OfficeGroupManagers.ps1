@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     28.02.2020 Konrad Brunner       Initial Version
     22.04.2023 Konrad Brunner       Switched to Graph
+    13.09.2023 Konrad Brunner       Handling ONPREM group
 
 #>
 
@@ -138,6 +139,24 @@ else {
 }
 
 Update-MgBetaDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
+
+# Configuring on-premises group
+if (-Not [string]::IsNullOrEmpty($AlyaGroupManagerGroupNameOnPrem) -and $AlyaGroupManagerGroupNameOnPrem -ne "PleaseSpecify")
+{
+    Write-Host "Configuring on-premises group" -ForegroundColor $CommandInfo
+    $GroupOP = Get-MgBetaGroup -Filter "DisplayName eq '$AlyaGroupManagerGroupNameOnPrem'"
+    if (-Not $GroupOP)
+    {
+        throw "Group '$AlyaGroupManagerGroupNameOnPrem' not found"
+    }
+    $members = Get-MgBetaGroupMember -GroupId $Group.Id -All
+    $member = $members | Where-Object { $_.AdditionalProperties.displayName -eq $AlyaGroupManagerGroupNameOnPrem }
+    if (-Not $Member)
+    {
+        Write-Warning "Adding group '$AlyaGroupManagerGroupNameOnPrem' as member to groupd '$AlyaGroupManagerGroupName'"
+        New-MgBetaGroupMember -GroupId $Group.Id -DirectoryObjectId $GroupOP.Id
+    }
+} 
 
 #Stopping Transscript
 Stop-Transcript

@@ -50,7 +50,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Activate-MyEligableRole-$($Alya
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
+#Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -73,7 +75,7 @@ Write-Host "to get required consents." -ForegroundColor $CommandWarning
 # Getting user
 Write-Host "Getting user" -ForegroundColor $CommandInfo
 $actUser = (Get-MgContext).Account
-$user = Get-MgBetaUser -UserId $actUser
+$user = Get-MgBetaUser -UserId $actUser -Property "Id"
 if (-Not $user)
 {
     throw "User $userPrincipalName not found!"
@@ -82,25 +84,26 @@ if (-Not $user)
 # Getting all built in roles
 Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
 $roleDefinitions = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
-
-# Getting  eligable role assignment
-Write-Host "Getting eligable role assignment" -ForegroundColor $CommandInfo
-$assignedRoles = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
 $role = $roleDefinitions | Where-Object { $_.DisplayName -eq $roleName }
 if (-Not $role)
 {
     throw "Role '$roleName' not found"
 }
+
+# Getting  eligable role assignment
+Write-Host "Getting eligable role assignment" -ForegroundColor $CommandInfo
+$assignedRoles = Get-MgBetaRoleManagementDirectoryRoleEligibilitySchedule -Filter "principalId eq '$($user.Id)'"
 $assigned = $assignedRoles | Where-Object { $_.RoleDefinitionId -eq $role.Id }
 if (-Not $assigned)
 {
     throw "User $userPrincipalName does not have role '$roleName' eligable assigned"
 }
-if ($assigned.Status -eq "Provisioned")
+if ($assigned.Status -ne "Provisioned")
 {
-    Write-Host "Role is already provisioned. Nothing to do."
-    return
+    throw "Role is not provisioned. Nothing to do."
 }
+#TODO check if assignment is already active
+#Get-MgBetaRoleManagementDirectoryRoleAssignmentScheduleRequest -Filter 
 
 # Activating  eligable role assignment
 Write-Host "Activating eligable role assignment" -ForegroundColor $CommandInfo

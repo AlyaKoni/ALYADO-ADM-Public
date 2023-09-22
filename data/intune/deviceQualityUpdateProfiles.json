@@ -1,6 +1,6 @@
 ﻿[{
         "Comment1": "=================================================",
-        "Comment2": "WIN Update Profiles",
+        "Comment2": "WIN Profiles",
         "Comment3": "================================================="
     }, {
         "@odata.type": "#microsoft.graph.windowsQualityUpdateProfile",

@@ -33,6 +33,7 @@
     30.09.2020 Konrad Brunner       Initial Version
     23.10.2021 Konrad Brunner       Added apps path
     24.04.2023 Konrad Brunner       Switched to Graph
+    21.09.2023 Konrad Brunner       Version check
 
 #>
 
@@ -164,6 +165,7 @@ foreach($packageDir in $packages)
         if ($packageInfo.ApplicationInfo.MsiInfo)
         {
             $version = $packageInfo.ApplicationInfo.MsiInfo.MsiProductVersion
+            Write-Host "    got version from msi product version: $version"
             $msiPackageType = "DualPurpose";
             $msiExecutionContext = $packageInfo.ApplicationInfo.MsiInfo.MsiExecutionContext
             if($msiExecutionContext -eq "System") { $msiPackageType = "PerMachine" }
@@ -207,10 +209,22 @@ foreach($packageDir in $packages)
                 if ($toInstall.VersionInfo.FileVersion -And -Not [string]::IsNullOrEmpty($toInstall.VersionInfo.FileVersion.Trim()))
                 {
                     $version = $toInstall.VersionInfo.FileVersion
+                    Write-Host "    got version from file version: $version"
                 }
                 elseif ($toInstall.VersionInfo.ProductVersion)
                 {
                     $version = $toInstall.VersionInfo.ProductVersion
+                    Write-Host "    got version from product version: $version"
+                }
+                else
+                {
+                    [regex]$regex = "(\d+\.)?(\d+\.)?(\d+\.)?(\*|\d+)"
+                    $versionStr = [regex]::Match($toInstall.Name, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+                    Write-Host "    got version from file name: $versionStr"
+                    if (-Not [string]::IsNullOrEmpty($versionStr))
+                    {
+                        $version = [Version]$versionStr
+                    }
                 }
             }
             else
@@ -268,15 +282,29 @@ foreach($packageDir in $packages)
 
     # Checking if app exists
     Write-Host "  Checking if app exists"
+    if ([string]::IsNullOrEmpty($appConfig.displayName))
+    {
+        throw "No displayName configured in appConfig!"
+    }
     $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
     $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
     $app = (Get-MsGraphObject -Uri $uri).value
+    if ($app.Count -gt 1)
+    {
+        throw "Search returned to many apps: $($app.Count)!"
+    }
     if (-Not $app.id)
     {
         # Creating app
         Write-Host "  Creating app"
         $uri = "/beta/deviceAppManagement/mobileApps"
         $app = Post-MsGraph -Uri $uri -Body $appConfigJson
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        do
+        {
+            Start-Sleep -Seconds 5
+            $app = (Get-MsGraphObject -Uri $uri).value
+        } while (-Not $app.id)
     }
 
     # Extracting intunewin file
@@ -293,23 +321,38 @@ foreach($packageDir in $packages)
 	$appId = $app.id
     Write-Host "    appId: $($app.id)"
 	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
-    $existVersion = $null
+    $existVersions = $null
+    $maxVersion = 0
     try {
-        $existVersion = Get-MsGraph -Uri $uri
+        $existVersions = Get-MsGraphCollection -Uri $uri
     }
     catch {
     }
-    if ($existVersion)
+    if ($existVersions)
     {
-        $maxVersion = ($existVersion.Id | Measure-Object -Maximum).Maximum
+        $maxVersion = ($existVersions.Id | Measure-Object -Maximum).Maximum
         $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$maxVersion/files"
-        $file = Get-MsGraph -Uri $uri
+        $file = Get-MsGraphCollection -Uri $uri
         if ($file -and -Not $file.isCommitted)
         {
             Write-Warning "Existing failed upload found! So far, we don't know how to fix such stuff. Please wait and try later!"
             pause
             continue
         }
+    }
+
+    # Checking Version
+    Write-Host "  Checking Version"
+    if ($maxVersion -gt 1 -and $null -ne $app.detectionRules -and $null -ne $app.detectionRules.detectionValue -and [Version]$app.detectionRules.detectionValue -ge [Version]$version)
+    {
+        Write-Host "    Looks like this version has already been uploaded!" -ForegroundColor $CommandWarning
+        Write-Host "      Existing version: $($app.detectionRules.detectionValue)" -ForegroundColor $CommandWarning
+        Write-Host "      Version to upload: $($version)" -ForegroundColor $CommandWarning
+        $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
+        $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
+        $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
+        $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
+        if ($resp -eq 0) { continue }
     }
 
     # Creating Content Version

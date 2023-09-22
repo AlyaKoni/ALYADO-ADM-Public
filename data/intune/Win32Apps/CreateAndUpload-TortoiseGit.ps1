@@ -41,7 +41,7 @@ Write-Warning "Please Update first Git"
 Write-Warning "Otherwise you could have installation failures"
 Start-Sleep -Seconds 10
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\TortoiseGit\Package" -PathType Container)))
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\TortoiseGit\Package\*.intunewin" -PathType Leaf)))
 {
 	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "TortoiseGit"
 }

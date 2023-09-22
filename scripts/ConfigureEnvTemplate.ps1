@@ -39,6 +39,21 @@ Param(
 
 Write-Host "Loading custom configuration" -ForegroundColor Cyan
 
+<# ENVIRONMENT SETTINGS #>
+#$AlyaAzureEnvironment = "AzureChinaCloud"
+#$AlyaPnpEnvironment = "China"
+#$AlyaGraphEnvironment = "China"
+#$AlyaExchangeEnvironment = "O365China"
+#$AlyaSharePointEnvironment = "China"
+#$AlyaTeamsEnvironment = "TeamsChina"
+#$AlyaGraphAppId = "91564448-b99e-469a-b588-8b50fd0bd82d"
+#$AlyaPnPAppId = "3431e8bc-3d7e-45f9-9b3b-4864ddabd23a"
+#$AlyaGraphEndpoint = "https://microsoftgraph.chinacloudapi.cn"
+#$AlyaADGraphEndpoint = "https://graph.chinacloudapi.cn"
+#$AlyaOpenIDEndpoint = "https://login.chinacloudapi.cn"
+#$AlyaLoginEndpoint = "https://login.partner.microsoftonline.cn"
+#$AlyaM365AdminPortalRoot = "https://portal.partner.microsoftonline.cn/AdminPortal"
+
 <# TENANT SETTINGS #>
 $AlyaTenantId = "PleaseSpecify" #Example:"11111111-2222-3333-4444-555555555555"
 $AlyaTenantNameId = "PleaseSpecify" #Example:"alyaconsulting"
@@ -116,11 +131,11 @@ $AlyaAzureBrandingUsernameHintTextEn = "first.last@$AlyaDomainName"
 $AlyaAzureBrandingUsernameHintTextFr = "prénom.nomDeFamille@$AlyaDomainName"
 $AlyaAzureBrandingUsernameHintTextIt = "nome.cognome@$AlyaDomainName"
 $AlyaAzureBrandingUsernameHintTextDefault = "vorname.nachname@$AlyaDomainName"
-$AlyaAzureBrandingBackgroundImage = $AlyaLoginBackgroundUrl # exact 1920×1080 and max 300 KB; local file path or url
+$AlyaAzureBrandingBackgroundImage = $AlyaLoginBackgroundUrl # exact 1920x1080 and max 300 KB; local file path or url
 $AlyaAzureBrandingFavicon = $AlyaLogoUrlFavicon # exact 32x32 and max 5KB; local file path or url
 $AlyaAzureBrandingSquareLogo = $AlyaLogoUrlQuad # exact 240x240 and max 50KB; local file path or url
 $AlyaAzureBrandingSquareLogoDark = $AlyaLogoUrlQuadDark # exact 240x240 and max 50KB; local file path or url
-$AlyaAzureBrandingBannerLogo = $AlyaLogoUrlLong # max 280×60 and max 10KB; local file path or url
+$AlyaAzureBrandingBannerLogo = $AlyaLogoUrlRect # max 280x60 and max 10KB; local file path or url
 
 <# RESOURCE IDS #>
 $AlyaResIdMainNetwork = "PleaseSpecify" #Example:"000"
@@ -169,7 +184,12 @@ $AlyaResEnableInsightsAndAlerts = $false
 <# SHARING SETTINGS #>
 $AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" #  # None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)
 $AlyaAllowEmailVerifiedUsers = "PleaseSpecify" #Example:$true
-$AlyaFullTrustCrossTenantDirectConnectAccess = $null #@(@{Name = "Alya Consulting";Id = "5757de31-29c4-4f39-9bd1-478cec348035"})
+$AlyaFullTrustCrossTenantAccess = @( 
+    @{ Name = "Alya Consulting"; TenantId = "5757de31-29c4-4f39-9bd1-478cec348035";
+        EnableCollaboration = $true; EnableDirectConnect = $true; 
+        IsMfaAccepted = $true; IsCompliantDeviceAccepted = $false; IsHybridAzureADJoinedDeviceAccepted = $false;
+        AllowUsersSync = $false; AutomaticRedemption = $false } 
+)
 
 <# APPLICATION SETTINGS #>
 $AlyaAllowUsersToCreateLOBApps = "PleaseSpecify" #Example:$false
@@ -185,10 +205,11 @@ $AlyaJumpHostBackupPolicy = "PleaseSpecify" #Example:"NightlyPolicy"
 
 <# GROUP SETTINGS #>
 $AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFADISABLED"
+$AlyaMfaDisabledGroupNameOnPrem = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFADISABLEDONPREM"
+$AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen")
 $AlyaMfaEnabledGroupName = $null #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFAENABLED"
 $AlyaSsprEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-SSPRENABLED"
 $AlyaPwdResetDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-PWDCHNGDISABLED"
-$AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen")
 $AlyaAllInternals = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)MG-ADM-AlleInternen"
 $AlyaAllExternals = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen"
 
@@ -226,28 +247,28 @@ $AlyaSharePointNewSiteAdditionalOwner = "PleaseSpecify" #Example:"konrad.brunner
 $AlyaSharePointNewSiteCollectionAdmins = @( $AlyaSharePointNewSiteOwner, $AlyaSharePointNewSiteAdditionalOwner )
 #https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/7.0/theming-designer/index.html
 $AlyaSpThemeDef = @{ 
-    "themePrimary" = "#000000";
-    "themeLighterAlt" = "#898989";
-    "themeLighter" = "#737373";
-    "themeLight" = "#595959";
-    "themeTertiary" = "#373737";
-    "themeSecondary" = "#2f2f2f";
-    "themeDarkAlt" = "#252525";
-    "themeDark" = "#151515";
-    "themeDarker" = "#0b0b0b";
-    "neutralLighterAlt" = "#faf9f8";
-    "neutralLighter" = "#f3f2f1";
-    "neutralLight" = "#edebe9";
-    "neutralQuaternaryAlt" = "#e1dfdd";
-    "neutralQuaternary" = "#d0d0d0";
-    "neutralTertiaryAlt" = "#c8c6c4";
-    "neutralTertiary" = "#595959";
-    "neutralSecondary" = "#373737";
-    "neutralPrimaryAlt" = "#2f2f2f";
-    "neutralPrimary" = "#000000";
-    "neutralDark" = "#151515";
-    "black" = "#0b0b0b";
-    "white" = "#ffffff";
+    "themePrimary" = "#000000"
+    "themeLighterAlt" = "#898989"
+    "themeLighter" = "#737373"
+    "themeLight" = "#595959"
+    "themeTertiary" = "#373737"
+    "themeSecondary" = "#2f2f2f"
+    "themeDarkAlt" = "#252525"
+    "themeDark" = "#151515"
+    "themeDarker" = "#0b0b0b"
+    "neutralLighterAlt" = "#faf9f8"
+    "neutralLighter" = "#f3f2f1"
+    "neutralLight" = "#edebe9"
+    "neutralQuaternaryAlt" = "#e1dfdd"
+    "neutralQuaternary" = "#d0d0d0"
+    "neutralTertiaryAlt" = "#c8c6c4"
+    "neutralTertiary" = "#595959"
+    "neutralSecondary" = "#373737"
+    "neutralPrimaryAlt" = "#2f2f2f"
+    "neutralPrimary" = "#000000"
+    "neutralDark" = "#151515"
+    "black" = "#0b0b0b"
+    "white" = "#ffffff"
 }
 
 <# TEAMS SETTINGS #>
@@ -270,6 +291,7 @@ $AlyaAipCustomPageUrl = "PleaseSpecify"
 <# INTUNE SETTINGS #>
 $AlyaDeviceCategories = @("Standard")
 $AlyaDeviceAdminsGroupName = "PleaseSpecify" # Only these members can manage devices #Example:"$($AlyaCompanyNameShortM365)SG-DEV-ADMINS"
+$AlyaDeviceAdminsGroupNameOnPrem = "PleaseSpecify"
 $AlyaAllowDeviceRegistration = "PleaseSpecify" # All, None or a group name
 $AlyaWinPEBackgroundJpgImage = "PleaseSpecify"
 $AlyaDesktopBackgroundUrl = "PleaseSpecify"
@@ -282,8 +304,8 @@ $AlyaWormStorageAccountName = "PleaseSpecify"
 $AlyaWormCreateBackupWebHookUrl = "PleaseSpecify"
 $AlyaWormDoneBackupWebHookUrl = "PleaseSpecify"
 $AlyaWormStartMergingWebHookUrl = "PleaseSpecify"
-$AlyaWormSasTokenContainer = "PleaseSpecify"
-$AlyaWormSasTokenBlob = "PleaseSpecify"
+$AlyaWormReportLocalsWebHookUrl = "PleaseSpecify"
+$AlyaWormReportLocalsMissingWebHookUrl = "PleaseSpecify"
 
 <# ORDER CATALOG SETTINGS #>
 $AlyaOrderEmailCustomer = "PleaseSpecify"

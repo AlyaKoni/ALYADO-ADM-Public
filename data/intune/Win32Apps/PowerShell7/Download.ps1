@@ -29,29 +29,24 @@
 
 #>
 
-Write-Host "    Preparing version"
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
+#
+# Downloading Msi
+#
+
+$pageUrl = "https://raw.githubusercontent.com/PowerShell/PowerShell/master/tools/metadata.json"
+$req = Invoke-RestMethod -Uri $pageUrl
+$release = $req.ReleaseTag -replace '^v'
+$blobName = $req.BlobName
+$packageName = "PowerShell-${release}-win-x64.msi"
+$downloadURL = "https://github.com/PowerShell/PowerShell/releases/download/v${release}/${packageName}"
+
 $packageRoot = "$PSScriptRoot"
-$versionFile = Join-Path $packageRoot "version.json"
-if ((Test-Path $versionFile))
-{
-    $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
-    $version = $versionObj.version
-}
-else
-{
-    $versionObj = @{}
-    $versionObj.version = "1.0"
-    $versionObj.regPath = "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{ProductGuid}"
-    $versionObj.regValue = "DisplayVersion"
-    $version = $versionObj.version
-}
-Write-Host "      actual: $version"
-
 $contentPath = Join-Path $packageRoot "Content"
-$patch = Get-ChildItem -Path $contentPath -Filter "*.msi"
-$versionStr =  $patch[0].Name -replace '\D+(\d+)\D+','$1'
-$version =  $versionStr.Insert(2,".").Insert(6,".")
-
-Write-Host "      new: $version"
-$versionObj.version = $version
-$versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
+if (-Not (Test-Path $contentPath))
+{
+    New-Item -Path $contentPath -ItemType Directory
+}
+$filePath = Join-Path $contentPath $packageName
+$req = Invoke-WebRequestIndep -Uri $downloadURL -UseBasicParsing -Method Get -OutFile $filePath

@@ -36,7 +36,7 @@ Param(
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\Git\Package" -PathType Container)))
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\Git\Package\*.intunewin" -PathType Leaf)))
 {
 	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "Git"
 }

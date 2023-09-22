@@ -865,11 +865,19 @@ $windowsFeatureUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encod
 #####
 Write-Host "Exporting QualityUpdateProfiles" -ForegroundColor $CommandInfo
 
-#windowsFeatureUpdateProfiles
+#QualityUpdateProfiles
 $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
 $windowsQualityUpdateProfilesWin = Get-MsGraphObject -Uri $uri
 $windowsQualityUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\windowsQualityUpdateProfiles.json")) -Force
 
+##### Starting exports DriverUpdateProfiles
+#####
+Write-Host "Exporting DriverUpdateProfiles" -ForegroundColor $CommandInfo
+
+#DriverUpdateProfiles
+$uri = "/beta/deviceManagement/windowsDriverUpdateProfiles"
+$windowsDriverUpdateProfilesWin = Get-MsGraphObject -Uri $uri
+$windowsDriverUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\windowsDriverUpdateProfiles.json")) -Force
 
 ##### Starting exports TermsAndConditions
 #####

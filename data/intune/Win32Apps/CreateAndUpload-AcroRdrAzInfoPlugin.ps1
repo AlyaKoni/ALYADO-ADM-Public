@@ -41,7 +41,7 @@ Write-Warning "Please Update first AAcrobat Reader DC and AZ Info Protection"
 Write-Warning "Otherwise you will have installation failures"
 Start-Sleep -Seconds 10
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\AcroRdrAzInfoPlugin\Package" -PathType Container)))
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\AcroRdrAzInfoPlugin\Package\*.intunewin" -PathType Leaf)))
 {
 	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "AcroRdrAzInfoPlugin"
 }

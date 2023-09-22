@@ -56,24 +56,6 @@ $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 $DateString = (Get-Date -Format "_yyyyMMdd_HHmmss")
 $VMDiskName = "$($VmToImage)osdisk"
 
-Write-Host "Please prepare first the source host ($VmToImage) like described in PrepareVmImage.pdf"
-Write-Host '  - Start a PowerShell as Administrator'
-Write-Host '  - Run commands:'
-Write-Host '      sfc.exe /scannow'
-Write-Host '      Set-TimeZone -Id "UTC"'
-#Write-Host '      Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation -Name RealTimeIsUniversal -Value 1 -Type DWord -Force'
-#Write-Host '      Set-Service -Name w32time -StartupType Automatic'
-#Write-Host '      Remove-Item -Path C:\Windows\Panther -Recurse -Force'
-Write-Host '      cmd /c "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
-Write-Host '  - Wait until the vm has stopped state'
-Write-Host '  - In case of troubles, follow this guide: https://learn.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image'
-<#
-Bei Fehler Logdatei untersuchen:
-%WINDIR%\System32\Sysprep\Panther\setupact.log
-Unter Umständen müssen Packages entfernt werden. Siehe hierzu cleanImage.ps1
-#>
-pause
-
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
@@ -128,25 +110,88 @@ foreach($actLock in $actLocks)
     }
 }
 
-# Checking if source vm is stopped
-Write-Host "Checking if source vm is stopped" -ForegroundColor $CommandInfo
-$Vm = Get-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage -Status -ErrorAction SilentlyContinue
+# Checking the source vm
+Write-Host "Checking the source vm '$VmToImage'" -ForegroundColor $CommandInfo
+$Vm = Get-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage -ErrorAction SilentlyContinue
 if (-Not $Vm)
 {
     throw "VM not found. Please create the VM $VmToImage"
 }
-$isStopped = $false
-foreach ($VmStat in $Vm.Statuses)
-{ 
-    if($VmStat.Code -eq "PowerState/stopped" -or $VmStat.Code -eq "PowerState/deallocated")
-    {
-        $isStopped = $true
-        break
-    }
-}
-if (-not $isStopped)
+
+# Stopping the source vm
+Write-Host "Stopping the source vm '$VmToImage'" -ForegroundColor $CommandInfo
+Stop-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage -Force
+
+# Creating new VM Disk Snapshot
+Write-Host "Creating new VM Disk Snapshot" -ForegroundColor $CommandInfo
+$SnapshotName = $VmToImage + "-snapshot"
+$Snapshot = Get-AzSnapshot -SnapshotName $SnapshotName -ResourceGroupName $VmResourceGroupName -ErrorAction SilentlyContinue
+if ($Snapshot)
 {
-    throw "Vm is not in stopped state!"
+    Write-Warning "Deleting existing snapshot $SnapshotName"
+    Remove-AzSnapshot -SnapshotName $SnapshotName -ResourceGroupName $VmResourceGroupName -Force
+}
+$SnapshotConfig = New-AzSnapshotConfig -SourceUri $Vm.StorageProfile.OsDisk.ManagedDisk.Id -Location $AlyaLocation -CreateOption "Copy"
+$Snapshot = New-AzSnapshot -Snapshot $SnapshotConfig -SnapshotName $SnapshotName -ResourceGroupName $VmResourceGroupName
+
+# Starting the source vm
+Write-Host "Starting the source vm '$VmToImage'" -ForegroundColor $CommandInfo
+Start-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage
+
+# Preparing the source vm
+Write-Host "Please prepare now the source host ($VmToImage):"
+Write-Host '  - Start a PowerShell as Administrator'
+Write-Host '  - Run commands:'
+Write-Host '      sfc.exe /scannow'
+Write-Host '      Set-TimeZone -Id "UTC"'
+#Write-Host '      Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation -Name RealTimeIsUniversal -Value 1 -Type DWord -Force'
+#Write-Host '      Set-Service -Name w32time -StartupType Automatic'
+#Write-Host '      Remove-Item -Path C:\Windows\Panther -Recurse -Force'
+Write-Host '      $state = (Get-ItemProperty -Path HKLM:\SYSTEM\Setup\Status\SysprepStatus -Name GeneralizationState).GeneralizationState'
+Write-Host '      if ($state -ne 7) { throw "wrong GeneralizationState" }'
+Write-Host '      for ($i=0; $i -le 2; $i++) {'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "Microsoft.LanguageExperiencePack*"} | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "AdobeNotificationClient_*"} | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "Adobe.CC.XD_*"} | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "Adobe.Fresco_*" } | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "InputApp_*" } | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxPackage -AllUser | where {$_.PackageFullName -like "Microsoft.PPIProjection_*" } | Remove-AppxPackage -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Microsoft.LanguageExperiencePack*"} | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "AdobeNotificationClient_*"} | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Adobe.CC.XD_*"} | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Adobe.Fresco_*" } | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "InputApp_*" } | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Microsoft.PPIProjection_*" } | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
+Write-Host '      }'
+Write-Host '      & "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
+Write-Host '  - Wait until the vm has stopped state'
+Write-Host '  - In case of troubles, follow this guide: https://learn.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image'
+<#
+Bei Fehler Logdatei untersuchen:
+%WINDIR%\System32\Sysprep\Panther\setupact.log
+Unter Umständen müssen Packages entfernt werden. Siehe hierzu cleanImage.ps1
+#>
+pause
+
+# Checking if source vm is stopped
+Write-Host "Checking if source vm $($VmToImage) is stopped" -ForegroundColor $CommandInfo
+$isStopped = $false
+while (-Not $isStopped)
+{
+    $Vm = Get-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage -Status -ErrorAction SilentlyContinue
+    foreach ($VmStat in $Vm.Statuses)
+    { 
+        if($VmStat.Code -eq "PowerState/stopped" -or $VmStat.Code -eq "PowerState/deallocated")
+        {
+            $isStopped = $true
+            break
+        }
+    }
+    if (-Not $isStopped)
+    {
+        Write-Host "Please stop the VM $($VmToImage)"
+        Start-Sleep -Seconds 15
+    }
 }
 
 # Preparing the source vm

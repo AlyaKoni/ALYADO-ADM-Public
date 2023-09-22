@@ -35,6 +35,7 @@
     24.04.2023 Konrad Brunner       Switched to Graph, removed MSOL
     27.04.2023 Konrad Brunner       Calling script to disable security defaults
     23.07.2023 Konrad Brunner       Power BI Administrator sometimes not there
+    13.09.2023 Konrad Brunner       Handling OnPrem groups
 
 #>
 
@@ -70,23 +71,55 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking no mfa group
 Write-Host "Checking MFA exclude group" -ForegroundColor $CommandInfo
-if (-Not $AlyaMfaDisabledGroupName)
+if (-Not $AlyaMfaDisabledGroupName -or $AlyaMfaDisabledGroupName -eq "PleaseSpecify")
 {
     Write-Host "Please specify the AlyaMfaDisabledGroupName variable in data\ConfigureEnv.ps1" -ForegroundColor $CommandError
     exit 1
 }
-else
-{
-    $NoMfaGroupName = $AlyaMfaDisabledGroupName
-}
 
-$GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($NoMfaGroupName)'"
+$GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaMfaDisabledGroupName)'"
 if (-Not $GrpRslt)
 {
-    Write-Host "No MFA group not found. Creating the No MFA group $NoMfaGroupName" -ForegroundColor $CommandError
+    Write-Host "No MFA group '$AlyaMfaDisabledGroupName' not found" -ForegroundColor $CommandError
     exit 2
 }
-$ExcludeGroupId = $GrpRslt.Id
+$ExcludeGroupIdNoMfaCloud = $GrpRslt.Id
+
+$ExcludeGroupIdNoMfaOnPrem = $null
+if ($AlyaMfaDisabledGroupNameOnPrem -and $AlyaMfaDisabledGroupNameOnPrem -ne "PleaseSpecify")
+{
+    $GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaMfaDisabledGroupNameOnPrem)'"
+    if (-Not $GrpRslt)
+    {
+        Write-Host "No MFA group '$AlyaMfaDisabledGroupNameOnPrem' not found" -ForegroundColor $CommandError
+        exit 2
+    }
+    $ExcludeGroupIdNoMfaOnPrem = $GrpRslt.Id
+}
+
+$GroupIdMfa = $null
+if ($AlyaMfaEnabledGroupName -and $AlyaMfaEnabledGroupName -ne "PleaseSpecify")
+{
+    $GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaMfaEnabledGroupName)'"
+    if (-Not $GrpRslt)
+    {
+        Write-Host "No MFA group '$AlyaMfaEnabledGroupName' not found" -ForegroundColor $CommandError
+        exit 2
+    }
+    $GroupIdMfa = $GrpRslt.Id
+}
+
+$GroupIdMfaOnPrem = $null
+if ($AlyaMfaEnabledGroupNameOnPrem -and $AlyaMfaEnabledGroupNameOnPrem -ne "PleaseSpecify")
+{
+    $GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaMfaEnabledGroupNameOnPrem)'"
+    if (-Not $GrpRslt)
+    {
+        Write-Host "No MFA group '$AlyaMfaEnabledGroupNameOnPrem' not found" -ForegroundColor $CommandError
+        exit 2
+    }
+    $GroupIdMfaOnPrem = $GrpRslt.Id
+}
 
 # Getting role assignments
 Write-Host "Getting role assignments" -ForegroundColor $CommandInfo
@@ -107,7 +140,6 @@ $roleDefs = @(
     "License Administrator",
     "Groups Administrator",
     "Office Apps Administrator",
-    "Power BI Administrator",
     "Power Platform Administrator",
     "Printer Administrator",
     "Privileged Authentication Administrator",
@@ -164,7 +196,8 @@ foreach($groupName in $AlyaMfaDisabledForGroups)
     }
     $ExcludeGroupIds += $GrpRslt.Id
 }
-$ExcludeGroupIds += $ExcludeGroupId #NOMFAGroup
+$ExcludeGroupIds += $ExcludeGroupIdNoMfaCloud
+if ($null -ne $ExcludeGroupIdNoMfaOnPrem) { $ExcludeGroupIds += $ExcludeGroupIdNoMfaOnPrem }
 
 # Checking all admins access policy
 Write-Host "Checking all admins access policy" -ForegroundColor $CommandInfo
@@ -203,7 +236,7 @@ else
 
 # Checking all users access policy
 Write-Host "Checking all users access policy" -ForegroundColor $CommandInfo
-if ([string]::IsNullOrEmpty($AlyaMfaEnabledGroupName) -or $AlyaMfaEnabledGroupName -eq "PleaseSpecify")
+if ($null -eq $GroupIdMfa)
 {
     $conditions = @{ 
         Applications = @{
@@ -215,12 +248,12 @@ if ([string]::IsNullOrEmpty($AlyaMfaEnabledGroupName) -or $AlyaMfaEnabledGroupNa
             excludeGroups = $ExcludeGroupIds
         }
     }
-    }
+}
 else
 {
     $IncludeGroupIds = @()
-    $GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaMfaEnabledGroupName)'"
-    $IncludeGroupIds += $GrpRslt.Id
+    $IncludeGroupIds += $GroupIdMfa
+    if ($null -ne $GroupIdMfaOnPrem) { $IncludeGroupIds += $GroupIdMfaOnPrem }
     $conditions = @{ 
         Applications = @{
             includeApplications = "All"
@@ -258,13 +291,15 @@ else
 
 # Checking all admins session policy
 Write-Host "Checking all admins session policy" -ForegroundColor $CommandInfo
+$excludeGroups = @($ExcludeGroupIdNoMfaCloud)
+if ($null -ne $ExcludeGroupIdNoMfaOnPrem) { $excludeGroups += $ExcludeGroupIdNoMfaOnPrem }
 $conditions = @{ 
     Applications = @{
         includeApplications = "All"
     }
     Users = @{
         includeRoles = $IncludeRoleIds
-        excludeGroups = @("$ExcludeGroupId")
+        excludeGroups = $excludeGroups
     }
 }
 $sessioncontrols  = @{

@@ -158,13 +158,14 @@ foreach($packageDir in $packageDirs)
                 Start-Process $downloadUrl
                 do
                 {
-                    Start-Sleep -Seconds 10
+                    Start-Sleep -Seconds 5
                     $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
                     if ($file)
                     {
                         $filename = $file.Name
                         if ($filename.Contains("crdownload")) { $filename = $lastfilename }
                         if ($filename.Contains("partial")) { $filename = $lastfilename }
+                        if ($filename.Contains(".tmp")) { $filename = $lastfilename }
                     }
                 } while ($lastfilename -eq $filename)
                 $attempts = -1

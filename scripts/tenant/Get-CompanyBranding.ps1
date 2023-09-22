@@ -66,7 +66,7 @@ $org | Format-List
 
 $token = Get-AzAccessToken -Audience "$AlyaGraphEndpoint"
 $headers = @{
-    "Accept-Language" = 0
+    "Accept-Language" = "*"
     "Authorization" = "Bearer $token"
 }
 $uri = "$AlyaGraphEndpoint/beta/organization('$AlyaTenantId')/branding"

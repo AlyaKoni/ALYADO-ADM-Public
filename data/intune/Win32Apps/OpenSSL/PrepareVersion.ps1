@@ -52,6 +52,7 @@ $versionStr = [regex]::Match($bin[0].Name, $regex, [Text.RegularExpressions.Rege
 $versionStr = $versionStr.Replace("_", ".")
 
 Write-Host "      new: $versionStr"
+if (-Not $versionStr.Contains(".")) { $versionStr = $versionStr + ".0" }
 $versionObj.version = $versionStr
 $versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
 Copy-Item -Path $versionFile -Destination $contentPath

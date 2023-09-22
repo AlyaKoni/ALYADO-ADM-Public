@@ -1,0 +1,26 @@
+[{
+        "Comment1": "=================================================",
+        "Comment2": "WIN Profiles",
+        "Comment3": "================================================="
+    }, {
+        "@odata.type": "#microsoft.graph.windowsDriverUpdateProfile",
+		"displayName": "WIN DriverUpdate Configuration",
+        "description": "Configures driver updates on windows devices",
+        "roleScopeTagIds": ["0"],
+        "deploymentDeferralInDays": 7,
+        "inventorySyncStatus": null,
+        "approvalType": "automatic"
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "MAC Profiles",
+        "Comment3": "================================================="
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "ANDROID Profiles",
+        "Comment3": "================================================="
+    }, {
+        "Comment1": "=================================================",
+        "Comment2": "IOS Profiles",
+        "Comment3": "================================================="
+    }
+]

@@ -132,7 +132,7 @@ foreach ($site in $sitesToProcess)
     Invoke-PnPQuery -Connection $siteCon
 
     # Getting role groups for actual site
-    $gauser = $web.EnsureUser("Company Administrator")
+    $gauser = $web.EnsureUser($gauserLoginName)
     $gauser.Context.Load($gauser)
     Invoke-PnPQuery -Connection $siteCon
 
@@ -160,7 +160,7 @@ foreach ($site in $sitesToProcess)
     try {
         if ($site.Owner.LoginName -ne $gauser.LoginName) {
             $admins += $site.Owner
-            $null = Add-PnPSiteCollectionAdmin -Connection $siteCon -PrimarySiteCollectionAdmin $gauser
+            $null = Add-PnPSiteCollectionAdmin -Connection $siteCon -PrimarySiteCollectionAdmin $gauser -Owners $admins
         }
         $null = Add-PnPSiteCollectionAdmin -Connection $siteCon -Owners $admins
     }

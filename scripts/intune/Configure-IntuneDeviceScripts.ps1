@@ -174,13 +174,15 @@ foreach($script in $scripts)
                         "id" = $actScript.id
                     }
                     $Assignment = New-Object -TypeName PSObject -Property @{
-                        "deviceManagementScriptGroupAssignments" = $GroupAssignment
+                        "deviceManagementScriptGroupAssignments" = @($GroupAssignment)
                     }
                     $body = ConvertTo-Json -InputObject $Assignment -Depth 10
                     $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)/assign"
                     Post-MsGraph -Uri $uri -Body $body
                 }
             }
+        } else {
+            Write-Host "Not found!" -ForegroundColor $CommandError
         }
     }
     catch {

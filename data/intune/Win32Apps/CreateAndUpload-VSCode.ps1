@@ -36,7 +36,7 @@ Param(
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\VSCode\Package" -PathType Container)))
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\VSCode\Package\*.intunewin" -PathType Leaf)))
 {
 	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "VSCode"
 }

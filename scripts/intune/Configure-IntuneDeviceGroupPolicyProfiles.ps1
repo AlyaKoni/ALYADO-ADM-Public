@@ -319,6 +319,8 @@ foreach($profile in $definedProfiles)
                     Post-MsGraph -Uri $uri -Body $body
                 }
             }
+        } else {
+            Write-Host "Not found!" -ForegroundColor $CommandError
         }
     }
     catch {
