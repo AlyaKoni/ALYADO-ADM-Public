@@ -74,7 +74,7 @@ Write-Host "Intune | Configure-MsStoreApps | Graph" -ForegroundColor $CommandInf
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$msStoreApps = Get-Content -Path $MsStorev -Raw -Encoding UTF8 | ConvertFrom-Json
+$msStoreApps = Get-Content -Path $MsStorev -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Defining bodies
 $assBody = @"

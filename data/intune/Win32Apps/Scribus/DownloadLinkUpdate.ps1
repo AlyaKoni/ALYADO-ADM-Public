@@ -31,7 +31,7 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://www.scribus.net/downloads/stable-branch/"
+$pageUrl = "https://www.scribus.net/downloads/"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*http://sourceforge.net/projects/scribus[^`"]*"
 $prjUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value

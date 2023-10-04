@@ -1,0 +1,16 @@
+<Configuration ID="82fa76ea-4bd0-473d-9920-a162ef2cebb7">
+  <Info Description="Office Projects Client Uninstallation" />
+  <Remove>
+    <Product ID="ProjectProRetail">
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+      <Language ID="it-it" />
+    </Product>
+  </Remove>
+  <Display Level="None" CompletionNotice="no" SuppressModal="yes" AcceptEULA="TRUE"/>
+  <Property Name="AUTOACTIVATE" Value="0"/>
+  <Property Name="FORCEAPPSHUTDOWN" Value="TRUE"/>
+  <Property Name="SharedComputerLicensing" Value="0"/>
+  <Property Name="PinIconsToTaskbar" Value="FALSE"/>
+</Configuration>

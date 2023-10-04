@@ -49,7 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\UninstallOffice365-$(
 
 #Uninstalling office
 Write-Host "Uninstalling office" -ForegroundColor $CommandInfo
-cmd /c"$AlyaDeployToolRoot\setup.exe" /configure "$AlyaRoot\data\client\office\office_remove_config.xml"
+cmd /c "$AlyaDeployToolRoot\setup.exe" /configure "$AlyaRoot\data\client\office\office_remove_config.xml"
 
 #Stopping Transscript
 Stop-Transcript

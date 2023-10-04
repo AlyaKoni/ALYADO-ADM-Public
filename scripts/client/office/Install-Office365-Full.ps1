@@ -54,15 +54,15 @@ if (-Not (Test-Path "$AlyaTemp\Office"))
     $null = New-Item -Path "$AlyaTemp\Office" -ItemType Directory -Force
 }
 Push-Location "$AlyaTemp\Office"
-cmd /c"$AlyaDeployToolRoot\setup.exe" /download "$AlyaData\client\office\office_full_deploy_config.xml"
+cmd /c "$AlyaDeployToolRoot\setup.exe" /download "$AlyaData\client\office\office_full_deploy_config.xml"
 
 Write-Host "Installing office" -ForegroundColor $CommandInfo
-cmd /c"$AlyaDeployToolRoot\setup.exe" /configure "$AlyaData\client\office\office_full_deploy_config.xml"
+cmd /c "$AlyaDeployToolRoot\setup.exe" /configure "$AlyaData\client\office\office_full_deploy_config.xml"
 Pop-Location
 
 if (-Not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Word.lnk"))
 {
-    Write-Error "Something went wrong. Please install office by hand with the following command: '$AlyaDeployToolRoot\setup.exe' /configure '$AlyaData\client\office\office_Only_deploy_config.xml'" -ErrorAction Continue
+    Write-Error "Something went wrong. Please install office by hand with the following command: '$AlyaDeployToolRoot\setup.exe' /configure '$AlyaData\client\office\office_full_deploy_config.xml'" -ErrorAction Continue
     exit 99
 }
 

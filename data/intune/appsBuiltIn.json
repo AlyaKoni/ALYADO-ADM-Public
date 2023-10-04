@@ -4,7 +4,7 @@
         "Comment3": "================================================="
     }, {
         "@odata.type": "#microsoft.graph.officeSuiteApp",
-        "displayName": "WIN MS365Apps Full",
+        "displayName": "WIN MS365Apps Full_unused",
         "description": "Microsoft 365-Apps für Windows 10",
         "publisher": "Microsoft",
         "isFeatured": false,
@@ -21,7 +21,7 @@
         "officeConfigurationXml": "PENvbmZpZ3VyYXRpb24gSUQ9IjAwMDAwMDAwLTExMTEtMjIyMi0zMzMzLTExMTExMTExMTExMSI+CiAgPEluZm8gRGVzY3JpcHRpb249Ik9mZmljZSBQcm9QbHVzIENsaWVudCBDb25maWd1cmF0aW9uIiAvPgogIDxBZGQgT2ZmaWNlQ2xpZW50RWRpdGlvbj0iNjQiIENoYW5uZWw9IkJyb2FkIiBGb3JjZVVwZ3JhZGU9IlRSVUUiIE1pZ3JhdGVBcmNoPSJUUlVFIj4KICAgIDxQcm9kdWN0IElEPSJPMzY1UHJvUGx1c1JldGFpbCI+CiAgICAgIDxMYW5ndWFnZSBJRD0iZW4tdXMiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZGUtZGUiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZnItZnIiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iaXQtaXQiIC8+CiAgICAgIDxFeGNsdWRlQXBwIElEPSJHcm9vdmUiIC8+CiAgICAgIDxFeGNsdWRlQXBwIElEPSJMeW5jIiAvPgogICAgPC9Qcm9kdWN0PgogICAgPFByb2R1Y3QgSUQ9IlZpc2lvUHJvUmV0YWlsIj4KICAgICAgPExhbmd1YWdlIElEPSJlbi11cyIgLz4KICAgICAgPExhbmd1YWdlIElEPSJkZS1kZSIgLz4KICAgICAgPExhbmd1YWdlIElEPSJmci1mciIgLz4KICAgICAgPExhbmd1YWdlIElEPSJpdC1pdCIgLz4KICAgICAgPEV4Y2x1ZGVBcHAgSUQ9Ikdyb292ZSIgLz4KICAgICAgPEV4Y2x1ZGVBcHAgSUQ9Ikx5bmMiIC8+CiAgICA8L1Byb2R1Y3Q+CiAgICA8UHJvZHVjdCBJRD0iUHJvamVjdFByb1JldGFpbCI+CiAgICAgIDxMYW5ndWFnZSBJRD0iZW4tdXMiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZGUtZGUiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZnItZnIiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iaXQtaXQiIC8+CiAgICAgIDxFeGNsdWRlQXBwIElEPSJHcm9vdmUiIC8+CiAgICAgIDxFeGNsdWRlQXBwIElEPSJMeW5jIiAvPgogICAgPC9Qcm9kdWN0PgogICAgPFByb2R1Y3QgSUQ9Ikxhbmd1YWdlUGFjayI+CiAgICAgIDxMYW5ndWFnZSBJRD0iZW4tdXMiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZGUtZGUiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZnItZnIiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iaXQtaXQiIC8+CiAgICA8L1Byb2R1Y3Q+CiAgICA8UHJvZHVjdCBJRD0iUHJvb2ZpbmdUb29scyI+CiAgICAgIDxMYW5ndWFnZSBJRD0iZW4tdXMiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZGUtZGUiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZnItZnIiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iaXQtaXQiIC8+CiAgICA8L1Byb2R1Y3Q+CiAgPC9BZGQ+CiAgPFByb3BlcnR5IE5hbWU9IlNoYXJlZENvbXB1dGVyTGljZW5zaW5nIiBWYWx1ZT0iMCIgLz4KICA8UHJvcGVydHkgTmFtZT0iUGluSWNvbnNUb1Rhc2tiYXIiIFZhbHVlPSJUUlVFIiAvPgogIDxQcm9wZXJ0eSBOYW1lPSJTQ0xDYWNoZU92ZXJyaWRlIiBWYWx1ZT0iMCIgLz4KICA8UHJvcGVydHkgTmFtZT0iQVVUT0FDVElWQVRFIiBWYWx1ZT0iRkFMU0UiIC8+CiAgPFByb3BlcnR5IE5hbWU9IkZPUkNFQVBQU0hVVERPV04iIFZhbHVlPSJUUlVFIiAvPgogIDxQcm9wZXJ0eSBOYW1lPSJEZXZpY2VCYXNlZExpY2Vuc2luZyIgVmFsdWU9IjAiIC8+CiAgPFVwZGF0ZXMgRW5hYmxlZD0iVFJVRSIgLz4KICA8UmVtb3ZlTVNJIC8+CiAgPEFwcFNldHRpbmdzPgogICAgPFVzZXIgS2V5PSJzb2Z0d2FyZVxtaWNyb3NvZnRcb2ZmaWNlXDE2LjBcZXhjZWxcb3B0aW9ucyIgTmFtZT0iZGV2ZWxvcGVydG9vbHMiIFZhbHVlPSIxIiBUeXBlPSJSRUdfRFdPUkQiIEFwcD0iZXhjZWwxNiIgSWQ9IkxfRGlzcGxheURldmVsb3BlclRhYiIgLz4KICAgIDxVc2VyIEtleT0ic29mdHdhcmVcbWljcm9zb2Z0XG9mZmljZVwxNi4wXGV4Y2VsXG9wdGlvbnMiIE5hbWU9ImRlZmF1bHRmb3JtYXQiIFZhbHVlPSI1MSIgVHlwZT0iUkVHX0RXT1JEIiBBcHA9ImV4Y2VsMTYiIElkPSJMX1NhdmVFeGNlbGZpbGVzYXMiIC8+CiAgICA8VXNlciBLZXk9InNvZnR3YXJlXG1pY3Jvc29mdFxvZmZpY2Vcb3V0bG9va1xzb2NpYWxjb25uZWN0b3IiIE5hbWU9InJ1bm9zYyIgVmFsdWU9IjAiIFR5cGU9IlJFR19EV09SRCIgQXBwPSJvdXRsazE2IiBJZD0iTF9UdXJuT2ZmT3V0bG9va1NvY2lhbENvbm5lY3RvciIgLz4KICAgIDxVc2VyIEtleT0ic29mdHdhcmVcbWljcm9zb2Z0XG9mZmljZVxvdXRsb29rXHNvY2lhbGNvbm5lY3RvciIgTmFtZT0idW5tYW5hZ2VkaW5mb2JhcnMiIFZhbHVlPSIxIiBUeXBlPSJSRUdfRFdPUkQiIEFwcD0ib3V0bGsxNiIgSWQ9IkxfRG9Ob3RTaG93U29jaWFsTmV0d29ya0luZm9CYXJzIiAvPgogICAgPFVzZXIgS2V5PSJzb2Z0d2FyZVxtaWNyb3NvZnRcb2ZmaWNlXDE2LjBccG93ZXJwb2ludFxvcHRpb25zIiBOYW1lPSJkZWZhdWx0Zm9ybWF0IiBWYWx1ZT0iMjciIFR5cGU9IlJFR19EV09SRCIgQXBwPSJwcHQxNiIgSWQ9IkxfU2F2ZVBvd2VyUG9pbnRmaWxlc2FzIiAvPgogICAgPFVzZXIgS2V5PSJzb2Z0d2FyZVxtaWNyb3NvZnRcb2ZmaWNlXDE2LjBcd29yZFxvcHRpb25zIiBOYW1lPSJkZWZhdWx0Zm9ybWF0IiBWYWx1ZT0iIiBUeXBlPSJSRUdfU1oiIEFwcD0id29yZDE2IiBJZD0iTF9TYXZlV29yZGZpbGVzYXMiIC8+CiAgPC9BcHBTZXR0aW5ncz4KICA8RGlzcGxheSBMZXZlbD0iTm9uZSIgQWNjZXB0RVVMQT0iVFJVRSIgLz4KICA8TG9nZ2luZyBMZXZlbD0iU3RhbmRhcmQiIFBhdGg9IkM6XFByb2dyYW1EYXRhXEFseWFDb25zdWx0aW5nXExvZ3MiIC8+CjwvQ29uZmlndXJhdGlvbj4K"
     }, {
         "@odata.type": "#microsoft.graph.officeSuiteApp",
-        "displayName": "WIN MS365Apps Office",
+        "displayName": "WIN MS365Apps Office_unused",
         "description": "Microsoft 365-Apps für Windows 10",
         "publisher": "Microsoft",
         "isFeatured": true,
@@ -38,7 +38,7 @@
         "officeConfigurationXml": "PENvbmZpZ3VyYXRpb24gSUQ9IjAwMDAwMDAwLTExMTEtMjIyMi0zMzMzLTExMTExMTExMTExMSI+CiAgPEluZm8gRGVzY3JpcHRpb249Ik9mZmljZSBQcm9QbHVzIENsaWVudCBDb25maWd1cmF0aW9uIiAvPgogIDxBZGQgT2ZmaWNlQ2xpZW50RWRpdGlvbj0iNjQiIENoYW5uZWw9IkJyb2FkIiBGb3JjZVVwZ3JhZGU9IlRSVUUiIE1pZ3JhdGVBcmNoPSJUUlVFIj4KICAgIDxQcm9kdWN0IElEPSJPMzY1UHJvUGx1c1JldGFpbCI+CiAgICAgIDxMYW5ndWFnZSBJRD0iZW4tdXMiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZGUtZGUiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZnItZnIiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iaXQtaXQiIC8+CiAgICAgIDxFeGNsdWRlQXBwIElEPSJHcm9vdmUiIC8+CiAgICAgIDxFeGNsdWRlQXBwIElEPSJMeW5jIiAvPgogICAgPC9Qcm9kdWN0PgogICAgPFByb2R1Y3QgSUQ9Ikxhbmd1YWdlUGFjayI+CiAgICAgIDxMYW5ndWFnZSBJRD0iZW4tdXMiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZGUtZGUiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZnItZnIiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iaXQtaXQiIC8+CiAgICA8L1Byb2R1Y3Q+CiAgICA8UHJvZHVjdCBJRD0iUHJvb2ZpbmdUb29scyI+CiAgICAgIDxMYW5ndWFnZSBJRD0iZW4tdXMiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZGUtZGUiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iZnItZnIiIC8+CiAgICAgIDxMYW5ndWFnZSBJRD0iaXQtaXQiIC8+CiAgICA8L1Byb2R1Y3Q+CiAgPC9BZGQ+CiAgPFByb3BlcnR5IE5hbWU9IlNoYXJlZENvbXB1dGVyTGljZW5zaW5nIiBWYWx1ZT0iMCIgLz4KICA8UHJvcGVydHkgTmFtZT0iUGluSWNvbnNUb1Rhc2tiYXIiIFZhbHVlPSJUUlVFIiAvPgogIDxQcm9wZXJ0eSBOYW1lPSJTQ0xDYWNoZU92ZXJyaWRlIiBWYWx1ZT0iMCIgLz4KICA8UHJvcGVydHkgTmFtZT0iQVVUT0FDVElWQVRFIiBWYWx1ZT0iRkFMU0UiIC8+CiAgPFByb3BlcnR5IE5hbWU9IkZPUkNFQVBQU0hVVERPV04iIFZhbHVlPSJUUlVFIiAvPgogIDxQcm9wZXJ0eSBOYW1lPSJEZXZpY2VCYXNlZExpY2Vuc2luZyIgVmFsdWU9IjAiIC8+CiAgPFVwZGF0ZXMgRW5hYmxlZD0iVFJVRSIgLz4KICA8UmVtb3ZlTVNJIC8+CiAgPEFwcFNldHRpbmdzPgogICAgPFVzZXIgS2V5PSJzb2Z0d2FyZVxtaWNyb3NvZnRcb2ZmaWNlXDE2LjBcZXhjZWxcb3B0aW9ucyIgTmFtZT0iZGV2ZWxvcGVydG9vbHMiIFZhbHVlPSIxIiBUeXBlPSJSRUdfRFdPUkQiIEFwcD0iZXhjZWwxNiIgSWQ9IkxfRGlzcGxheURldmVsb3BlclRhYiIgLz4KICAgIDxVc2VyIEtleT0ic29mdHdhcmVcbWljcm9zb2Z0XG9mZmljZVwxNi4wXGV4Y2VsXG9wdGlvbnMiIE5hbWU9ImRlZmF1bHRmb3JtYXQiIFZhbHVlPSI1MSIgVHlwZT0iUkVHX0RXT1JEIiBBcHA9ImV4Y2VsMTYiIElkPSJMX1NhdmVFeGNlbGZpbGVzYXMiIC8+CiAgICA8VXNlciBLZXk9InNvZnR3YXJlXG1pY3Jvc29mdFxvZmZpY2Vcb3V0bG9va1xzb2NpYWxjb25uZWN0b3IiIE5hbWU9InJ1bm9zYyIgVmFsdWU9IjAiIFR5cGU9IlJFR19EV09SRCIgQXBwPSJvdXRsazE2IiBJZD0iTF9UdXJuT2ZmT3V0bG9va1NvY2lhbENvbm5lY3RvciIgLz4KICAgIDxVc2VyIEtleT0ic29mdHdhcmVcbWljcm9zb2Z0XG9mZmljZVxvdXRsb29rXHNvY2lhbGNvbm5lY3RvciIgTmFtZT0idW5tYW5hZ2VkaW5mb2JhcnMiIFZhbHVlPSIxIiBUeXBlPSJSRUdfRFdPUkQiIEFwcD0ib3V0bGsxNiIgSWQ9IkxfRG9Ob3RTaG93U29jaWFsTmV0d29ya0luZm9CYXJzIiAvPgogICAgPFVzZXIgS2V5PSJzb2Z0d2FyZVxtaWNyb3NvZnRcb2ZmaWNlXDE2LjBccG93ZXJwb2ludFxvcHRpb25zIiBOYW1lPSJkZWZhdWx0Zm9ybWF0IiBWYWx1ZT0iMjciIFR5cGU9IlJFR19EV09SRCIgQXBwPSJwcHQxNiIgSWQ9IkxfU2F2ZVBvd2VyUG9pbnRmaWxlc2FzIiAvPgogICAgPFVzZXIgS2V5PSJzb2Z0d2FyZVxtaWNyb3NvZnRcb2ZmaWNlXDE2LjBcd29yZFxvcHRpb25zIiBOYW1lPSJkZWZhdWx0Zm9ybWF0IiBWYWx1ZT0iIiBUeXBlPSJSRUdfU1oiIEFwcD0id29yZDE2IiBJZD0iTF9TYXZlV29yZGZpbGVzYXMiIC8+CiAgPC9BcHBTZXR0aW5ncz4KICA8RGlzcGxheSBMZXZlbD0iTm9uZSIgQWNjZXB0RVVMQT0iVFJVRSIgLz4KICA8TG9nZ2luZyBMZXZlbD0iU3RhbmRhcmQiIFBhdGg9IkM6XFByb2dyYW1EYXRhXEFseWFDb25zdWx0aW5nXExvZ3MiIC8+CjwvQ29uZmlndXJhdGlvbj4K"
     }, {
         "@odata.type": "#microsoft.graph.officeSuiteApp",
-        "displayName": "WIN MS365Apps Project",
+        "displayName": "WIN MS365Apps Project_unused",
         "description": "Microsoft 365-Apps für Windows 10",
         "publisher": "Microsoft",
         "isFeatured": false,
@@ -55,7 +55,7 @@
         "officeConfigurationXml": "PENvbmZpZ3VyYXRpb24gSUQ9IjAwMDAwMDAwLTExMTEtMjIyMi0zMzMzLTExMTExMTExMTExMSI+CiAgPEluZm8gRGVzY3JpcHRpb249Ik9mZmljZSBQcm9QbHVzIENsaWVudCBDb25maWd1cmF0aW9uIiAvPgogIDxBZGQgT2ZmaWNlQ2xpZW50RWRpdGlvbj0iNjQiIENoYW5uZWw9IkJyb2FkIiBGb3JjZVVwZ3JhZGU9IlRSVUUiIE1pZ3JhdGVBcmNoPSJUUlVFIj4KICAgIDxQcm9kdWN0IElEPSJQcm9qZWN0UHJvUmV0YWlsIj4KICAgICAgPExhbmd1YWdlIElEPSJlbi11cyIgLz4KICAgICAgPExhbmd1YWdlIElEPSJkZS1kZSIgLz4KICAgICAgPExhbmd1YWdlIElEPSJmci1mciIgLz4KICAgICAgPExhbmd1YWdlIElEPSJpdC1pdCIgLz4KICAgICAgPEV4Y2x1ZGVBcHAgSUQ9Ikdyb292ZSIgLz4KICAgICAgPEV4Y2x1ZGVBcHAgSUQ9Ikx5bmMiIC8+CiAgICA8L1Byb2R1Y3Q+CiAgICA8UHJvZHVjdCBJRD0iTGFuZ3VhZ2VQYWNrIj4KICAgICAgPExhbmd1YWdlIElEPSJlbi11cyIgLz4KICAgICAgPExhbmd1YWdlIElEPSJkZS1kZSIgLz4KICAgICAgPExhbmd1YWdlIElEPSJmci1mciIgLz4KICAgICAgPExhbmd1YWdlIElEPSJpdC1pdCIgLz4KICAgIDwvUHJvZHVjdD4KICAgIDxQcm9kdWN0IElEPSJQcm9vZmluZ1Rvb2xzIj4KICAgICAgPExhbmd1YWdlIElEPSJlbi11cyIgLz4KICAgICAgPExhbmd1YWdlIElEPSJkZS1kZSIgLz4KICAgICAgPExhbmd1YWdlIElEPSJmci1mciIgLz4KICAgICAgPExhbmd1YWdlIElEPSJpdC1pdCIgLz4KICAgIDwvUHJvZHVjdD4KICA8L0FkZD4KICA8UHJvcGVydHkgTmFtZT0iU2hhcmVkQ29tcHV0ZXJMaWNlbnNpbmciIFZhbHVlPSIwIiAvPgogIDxQcm9wZXJ0eSBOYW1lPSJQaW5JY29uc1RvVGFza2JhciIgVmFsdWU9IlRSVUUiIC8+CiAgPFByb3BlcnR5IE5hbWU9IlNDTENhY2hlT3ZlcnJpZGUiIFZhbHVlPSIwIiAvPgogIDxQcm9wZXJ0eSBOYW1lPSJBVVRPQUNUSVZBVEUiIFZhbHVlPSJGQUxTRSIgLz4KICA8UHJvcGVydHkgTmFtZT0iRk9SQ0VBUFBTSFVURE9XTiIgVmFsdWU9IlRSVUUiIC8+CiAgPFByb3BlcnR5IE5hbWU9IkRldmljZUJhc2VkTGljZW5zaW5nIiBWYWx1ZT0iMCIgLz4KICA8VXBkYXRlcyBFbmFibGVkPSJUUlVFIiAvPgogIDxSZW1vdmVNU0kgLz4KICA8QXBwU2V0dGluZ3M+CiAgPC9BcHBTZXR0aW5ncz4KICA8RGlzcGxheSBMZXZlbD0iTm9uZSIgQWNjZXB0RVVMQT0iVFJVRSIgLz4KICA8TG9nZ2luZyBMZXZlbD0iU3RhbmRhcmQiIFBhdGg9IkM6XFByb2dyYW1EYXRhXEFseWFDb25zdWx0aW5nXExvZ3MiIC8+CjwvQ29uZmlndXJhdGlvbj4K"
     }, {
         "@odata.type": "#microsoft.graph.officeSuiteApp",
-        "displayName": "WIN MS365Apps Visio",
+        "displayName": "WIN MS365Apps Visio_unused",
         "description": "Microsoft 365-Apps für Windows 10",
         "publisher": "Microsoft",
         "isFeatured": false,
@@ -76,7 +76,7 @@
         "Comment3": "================================================="
     }, {
         "@odata.type": "#microsoft.graph.macOSOfficeSuiteApp",
-        "displayName": "Mac Ms365Apps",
+        "displayName": "MAC Ms365Apps",
         "description": "Microsoft 365-Apps für macOS",
         "publisher": "Microsoft",
         "largeIcon": null,
@@ -89,7 +89,7 @@
         "roleScopeTagIds": []
     }, {
         "@odata.type": "#microsoft.graph.macOSMdatpApp",
-        "displayName": "Mac Microsoft Defender ATP für macOS",
+        "displayName": "MAC Microsoft Defender ATP für macOS",
         "description": "Microsoft Defender Advanced Threat Protection (Microsoft Defender ATP) ist eine einheitliche Plattform für den präventiven Schutz, die Erkennung von Bedrohungen nach einem Angriff, die automatische Untersuchung und die Reaktion darauf. Microsoft Defender ATP schützt Endgeräte vor Cyberbedrohungen, erkennt komplexe Angriffe und Datenverletzungen, automatisiert Sicherheitsvorfälle und verbessert den Sicherheitsstatus.",
         "publisher": "Microsoft",
         "largeIcon": null,
@@ -102,7 +102,7 @@
         "roleScopeTagIds": []
     }, {
         "@odata.type": "#microsoft.graph.macOSMicrosoftEdgeApp",
-        "displayName": "Mac MsEdge",
+        "displayName": "MAC MsEdge",
         "description": "Microsoft Edge ist der Browser für Unternehmen mit moderner und Legacy-Webkompatibilität, neuen Datenschutzfeatures wie z. B. Nachverfolgungsschutz sowie integrierten Produktivitätstools wie PDF-Unterstützung auf Unternehmensniveau und Zugriff auf Office und die Unternehmenssuche direkt über eine neue Registerkarte.",
         "publisher": "Microsoft",
         "largeIcon": null,

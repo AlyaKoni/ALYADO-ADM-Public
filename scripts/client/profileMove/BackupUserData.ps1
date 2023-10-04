@@ -216,7 +216,7 @@ if (Test-Path $chromeDir)
                 }
             }
         }
-        $data = Get-content $pathToJsonFile -Encoding UTF8 | out-string | ConvertFrom-Json
+        $data = Get-content $pathToJsonFile -Encoding $AlyaUtf8Encoding | out-string | ConvertFrom-Json
         $sections = $data.roots.PSObject.Properties | Select-Object -ExpandProperty name
         ForEach ($entry in $sections)
         {

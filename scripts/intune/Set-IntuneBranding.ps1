@@ -73,7 +73,7 @@ Write-Host "=====================================================`n" -Foreground
 # Reading branding configuration
 Write-Host "Reading branding configuration" -ForegroundColor $CommandInfo
 Write-Host "  from $brandingJson"
-$brandingConfig = Get-Content -Path $brandingJson -Raw -Encoding UTF8
+$brandingConfig = Get-Content -Path $brandingJson -Raw -Encoding $AlyaUtf8Encoding
 $brandingConfig = $brandingConfig.Replace("##AlyaCompanyNameFull##", $AlyaCompanyNameFull)
 $brandingConfig = $brandingConfig.Replace("##AlyaSupportTitle##", $AlyaSupportTitle)
 $brandingConfig = $brandingConfig.Replace("##AlyaSupportTel##", $AlyaSupportTel)

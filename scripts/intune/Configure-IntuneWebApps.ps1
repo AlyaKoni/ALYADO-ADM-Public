@@ -96,9 +96,9 @@ foreach($packageDir in $packages)
     $category = $null
     $assignments = $null
 
-    $config = Get-Content -Path $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $category = Get-Content -Path $categoryPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json
-    $assignments = Get-Content -Path $assignmentsPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json
+    $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+    $category = Get-Content -Path $categoryPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
+    $assignments = Get-Content -Path $assignmentsPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
 
     try {
         

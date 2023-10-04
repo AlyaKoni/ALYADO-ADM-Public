@@ -113,7 +113,7 @@ New-Item -Path "$($AlyaData)\wvd\autoscale\Creds" -ItemType Directory -Force | O
 if ($ConfigFile -eq "Autoscaling_Config.json")
 {
     Write-Warning "$ConfigFile is just a template. We have to create a new config file in data directory"
-    $Variable = Get-Content "$PSScriptRoot\$ConfigFile" -Raw -Encoding UTF8 | ConvertFrom-Json
+    $Variable = Get-Content "$PSScriptRoot\$ConfigFile" -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
     Install-ModuleIfNotInstalled Az
     LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -157,7 +157,7 @@ if (Test-Path $JsonPath) {
   Write-Verbose "Found $JsonPath"
   Write-Verbose "Validating file..."
   try {
-    $Variable = Get-Content $JsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    $Variable = Get-Content $JsonPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
   }
   catch {
     #$Validate = $false
@@ -172,7 +172,7 @@ else {
 }
 ##### Load Json Configuration values as variables #########
 Write-Verbose "Loading values from Config.Json"
-$Variable = Get-Content $JsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$Variable = Get-Content $JsonPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 $Variable.WVDScale.Azure | ForEach-Object { $_.Variables } | Where-Object { $_.Name -ne $null } | ForEach-Object { Set-ScriptVariable -Name $_.Name -Value $_.Value }
 $Variable.WVDScale.WVDScaleSettings | ForEach-Object { $_.Variables } | Where-Object { $_.Name -ne $null } | ForEach-Object { Set-ScriptVariable -Name $_.Name -Value $_.Value }
 $Variable.WVDScale.Deployment | ForEach-Object { $_.Variables } | Where-Object { $_.Name -ne $null } | ForEach-Object { Set-ScriptVariable -Name $_.Name -Value $_.Value }

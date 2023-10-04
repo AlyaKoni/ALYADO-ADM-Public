@@ -76,7 +76,7 @@ Write-Host "Intune | Configure-IntuneDeviceGroupPolicyProfiles | Graph" -Foregro
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$definedProfilesStr = Get-Content -Path $definedProfileFile -Raw -Encoding UTF8
+$definedProfilesStr = Get-Content -Path $definedProfileFile -Raw -Encoding $AlyaUtf8Encoding
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaDomainName##", $AlyaDomainName)
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaDesktopBackgroundUrl##", $AlyaDesktopBackgroundUrl)
 $definedProfilesStr =  $definedProfilesStr.Replace("##AlyaLockScreenBackgroundUrl##", $AlyaLockScreenBackgroundUrl)

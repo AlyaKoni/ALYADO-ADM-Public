@@ -45,6 +45,26 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Change-IntuneWinAppPrefix-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
+$renamers = @(
+    @{
+        "B" = "Win10"
+        "A" = "WIN"
+    },
+    @{
+        "B" = "Android"
+        "A" = "AND"
+    },
+    @{
+        "B" = "Mac"
+        "A" = "MAC"
+    },
+    @{
+        "B" = "iOS"
+        "A" = "IOS"
+    }
+)
+
+
 $ActAppPrefix = "Win10 "
 if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
     $ActAppPrefix = "$AlyaAppPrefix "
@@ -57,10 +77,10 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
 LoginTo-MgGraph -Scopes @(
-    "Directory.Read.All",
-    "DeviceManagementManagedDevices.Read.All",
-    "DeviceManagementServiceConfig.Read.All",
-    "DeviceManagementConfiguration.Read.All",
+    "Directory.ReadWrite.All",
+    "DeviceManagementManagedDevices.ReadWrite.All",
+    "DeviceManagementServiceConfig.ReadWrite.All",
+    "DeviceManagementConfiguration.ReadWrite.All",
     "DeviceManagementApps.ReadWrite.All"
 )
 
@@ -85,20 +105,227 @@ if (-Not $apps -or $apps.Count -eq 0)
 Write-Host "Renaming apps" -ForegroundColor $CommandInfo
 foreach($app in $apps)
 {
-    if ($app.displayName -like "$($ActAppPrefix)*")
+    $dirty = $false
+    foreach($renamer in $renamers)
     {
-        $newName = $app.displayName.Replace($ActAppPrefix, $NewAppPrefix)
+        if ($app.displayName.StartsWith($renamer.B+" "))
+        {
+            $newName = $renamer.A + $app.displayName.Substring($renamer.B.Length)
+            $dirty = $true
+        }
+    }
+    if ($dirty -and $app.displayName -eq $newName)
+    {
+        $dirty = $false
+    }
+    if ($dirty)
+    {
         Write-Host "Renaming app '$($app.displayName)' to '$($newName)'"
-        $app.displayName = $newName
-        $app."@odata.type"
-        $appId = $app.id
-        $app = $app | Select-Object -Property * -ExcludeProperty Owner,Publisher,Developer,updateChannel,autoAcceptEula,targetVersion,officeSuiteAppDefaultFileFormat,officeConfigurationXml,useSharedComputerActivation,updateVersion,officePlatformArchitecture,installProgressDisplayLevel,shouldUninstallOlderVersionsOfOffice,productIds,localesToInstall,excludedApps,Channel,PackageIdentifier,ManifestHash,installExperience,largeIcon,isAssigned,dependentAppCount,supersedingAppCount,supersededAppCount,committedContentVersion,size,id,createdDateTime,lastModifiedDateTime,version,'@odata.context',uploadState,packageId,appIdentifier,publishingState,usedLicenseCount,totalLicenseCount,productKey,licenseType,packageIdentityName
+        $body = @"
+{
+    "@odata.type": "$($app."@odata.type")",
+    "displayName": "$($newName)"
+}
+"@
         $uri = "/beta/deviceAppManagement/mobileApps/$appId"
-        $null = Patch-MsGraph -Uri $uri -Body ($app | ConvertTo-Json -Depth 50)
+        $null = Patch-MsGraph -Uri $uri -Body $body
     }
 }
 
-Write-Warning "Please change `$AlyaAppPrefix to WIN in $($AlyaData)\ConfigureEnv.ps1"
+# Getting list of all configuration profiles
+Write-Host "Getting list of all configuration profiles" -ForegroundColor $CommandInfo
+$uri = "/beta/deviceManagement/deviceConfigurations"
+$profs = (Get-MsGraphCollection -Uri $uri)
+if (-Not $profs -or $profs.Count -eq 0)
+{
+    throw "No profiles found!."
+}
+
+# Renaming configuration profiles
+Write-Host "Renaming profiles" -ForegroundColor $CommandInfo
+foreach($prof in $profs)
+{
+    $dirty = $false
+    foreach($renamer in $renamers)
+    {
+        if ($prof.displayName.StartsWith($renamer.B+" "))
+        {
+            $newName = $renamer.A + $prof.displayName.Substring($renamer.B.Length)
+            $dirty = $true
+        }
+    }
+    if ($dirty)
+    {
+        Write-Host "Renaming profile '$($prof.displayName)' to '$($newName)'"
+        $prof.displayName = $newName
+        $prof."@odata.type"
+        $profId = $prof.id
+        $body = @"
+{
+    "@odata.type": "$($prof."@odata.type")",
+    "displayName": "$($newName)"
+}
+"@
+        $uri = "/beta/deviceManagement/deviceConfigurations/$profId"
+        $null = Patch-MsGraph -Uri $uri -Body $body
+    }
+}
+
+# Getting list of all policy configurations
+Write-Host "Getting list of all policy configurations" -ForegroundColor $CommandInfo
+$uri = "/beta/deviceManagement/groupPolicyConfigurations"
+$profs = (Get-MsGraphCollection -Uri $uri)
+if (-Not $profs -or $profs.Count -eq 0)
+{
+    throw "No profiles found!."
+}
+
+# Renaming policy configurations
+Write-Host "Renaming policy configurations" -ForegroundColor $CommandInfo
+foreach($prof in $profs)
+{
+    $dirty = $false
+    foreach($renamer in $renamers)
+    {
+        if ($prof.displayName.StartsWith($renamer.B+" "))
+        {
+            $newName = $renamer.A + $prof.displayName.Substring($renamer.B.Length)
+            $dirty = $true
+        }
+    }
+    if ($dirty)
+    {
+        Write-Host "Renaming policy configuration '$($prof.displayName)' to '$($newName)'"
+        $prof.displayName = $newName
+        $prof."@odata.type"
+        $profId = $prof.id
+        $body = @"
+{
+    "displayName": "$($newName)"
+}
+"@
+        $uri = "/beta/deviceManagement/groupPolicyConfigurations/$profId"
+        $null = Patch-MsGraph -Uri $uri -Body $body
+    }
+}
+
+# Getting list of all quality update profiles
+Write-Host "Getting list of all quality update profiles" -ForegroundColor $CommandInfo
+$uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
+$profs = (Get-MsGraphCollection -Uri $uri)
+if (-Not $profs -or $profs.Count -eq 0)
+{
+    throw "No profiles found!."
+}
+
+# Renaming quality update profiles
+Write-Host "Renaming quality update profiles" -ForegroundColor $CommandInfo
+foreach($prof in $profs)
+{
+    $dirty = $false
+    foreach($renamer in $renamers)
+    {
+        if ($prof.displayName.StartsWith($renamer.B+" "))
+        {
+            $newName = $renamer.A + $prof.displayName.Substring($renamer.B.Length)
+            $dirty = $true
+        }
+    }
+    if ($dirty)
+    {
+        Write-Host "Renaming quality update profile '$($prof.displayName)' to '$($newName)'"
+        $prof.displayName = $newName
+        $prof."@odata.type"
+        $profId = $prof.id
+        $body = @"
+{
+    "displayName": "$($newName)",
+}
+"@
+        $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles/$profId"
+        $null = Patch-MsGraph -Uri $uri -Body $body
+    }
+}
+
+# Getting list of all compliance policies
+Write-Host "Getting list of all compliance policies" -ForegroundColor $CommandInfo
+$uri = "/beta/deviceManagement/deviceCompliancePolicies"
+$profs = (Get-MsGraphCollection -Uri $uri)
+if (-Not $profs -or $profs.Count -eq 0)
+{
+    throw "No profiles found!."
+}
+
+# Renaming compliance policies
+Write-Host "Renaming compliance policies" -ForegroundColor $CommandInfo
+foreach($prof in $profs)
+{
+    $dirty = $false
+    foreach($renamer in $renamers)
+    {
+        if ($prof.displayName.StartsWith($renamer.B+" "))
+        {
+            $newName = $renamer.A + $prof.displayName.Substring($renamer.B.Length)
+            $dirty = $true
+        }
+    }
+    if ($dirty)
+    {
+        Write-Host "Renaming compliance policy '$($prof.displayName)' to '$($newName)'"
+        $prof.displayName = $newName
+        $prof.PSObject.Properties.Remove("localActions")
+        $prof.PSObject.Properties.Remove("scheduledActionsForRule")
+        $prof."@odata.type"
+        $profId = $prof.id
+        $uri = "/beta/deviceManagement/deviceCompliancePolicies/$profId"
+        $null = Patch-MsGraph -Uri $uri -Body ($prof | ConvertTo-Json -Depth 50)
+    }
+}
+
+# Getting list of all device scripts
+Write-Host "Getting list of all device scripts" -ForegroundColor $CommandInfo
+$uri = "/beta/deviceManagement/deviceManagementScripts"
+$profs = (Get-MsGraphCollection -Uri $uri)
+if (-Not $profs -or $profs.Count -eq 0)
+{
+    throw "No profiles found!."
+}
+
+# Renaming device scripts
+Write-Host "Renaming device scripts" -ForegroundColor $CommandInfo
+foreach($prof in $profs)
+{
+    $dirty = $false
+    foreach($renamer in $renamers)
+    {
+        if ($prof.displayName.StartsWith($renamer.B+" "))
+        {
+            $newName = $renamer.A + $prof.displayName.Substring($renamer.B.Length)
+            $dirty = $true
+        }
+    }
+    if ($dirty)
+    {
+        Write-Host "Renaming device script '$($prof.displayName)' to '$($newName)'"
+        $prof.displayName = $newName
+        $prof.PSObject.Properties.Remove("localActions")
+        $prof.PSObject.Properties.Remove("scheduledActionsForRule")
+        $prof."@odata.type"
+        $profId = $prof.id
+        $body = @"
+{
+    "displayName": "$($newName)",
+}
+"@
+        $uri = "/beta/deviceManagement/deviceManagementScripts/$profId"
+        $null = Patch-MsGraph -Uri $uri -Body $body
+    }
+}
+
+if ($AlyaAppPrefix -ne "WIN")
+{
+    Write-Warning "Please change `$AlyaAppPrefix to WIN in $($AlyaData)\ConfigureEnv.ps1"
+}
 
 #Stopping Transscript
 Stop-Transcript

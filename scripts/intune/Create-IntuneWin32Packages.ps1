@@ -145,7 +145,7 @@ foreach($packageDir in $packageDirs)
             $lastfilename = $file.Name
         }
         $filename = $null
-        $content = $downloadShortcut | Get-Content -Raw -Encoding UTF8
+        $content = $downloadShortcut | Get-Content -Raw -Encoding $AlyaUtf8Encoding
         [regex]$regex = "URL=.*"
         $downloadUrl = [regex]::Match($content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Substring(4)
         $attempts = 10

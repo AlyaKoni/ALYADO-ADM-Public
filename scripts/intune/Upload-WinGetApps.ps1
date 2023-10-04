@@ -79,7 +79,7 @@ Write-Host "Intune | Upload-WinGetApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$winGetApps = Get-Content -Path $winGetAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$winGetApps = Get-Content -Path $winGetAppsFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Processing defined WinGetApps
 $hadError = $false

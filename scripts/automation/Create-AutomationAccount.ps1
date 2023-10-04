@@ -669,7 +669,7 @@ Write-Host "Checking automation runbook 01" -ForegroundColor $CommandInfo
 $runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccountName)rb01.ps1"
 if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
 {
-    $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook01.ps1" -Raw -Encoding UTF8
+    $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook01.ps1" -Raw -Encoding $AlyaUtf8Encoding
     $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
     $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
     $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
@@ -716,7 +716,7 @@ Write-Host "Checking automation runbook 02" -ForegroundColor $CommandInfo
 $runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccountName)rb02.ps1"
 if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
 {
-    $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook02.ps1" -Raw -Encoding UTF8
+    $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook02.ps1" -Raw -Encoding $AlyaUtf8Encoding
     $modules = "@{Name=`"Az.Accounts`"; Version=`$null}, @{Name=`"Az.Automation`"; Version=`$null}, @{Name=`"Az.Storage`"; Version=`$null}, @{Name=`"Az.Compute`"; Version=`$null}, @{Name=`"Az.Resources`"; Version=`$null}, @{Name=`"Az.KeyVault`"; Version=`$null}"
     if ($AvdEnabled) { $modules += ", @{Name=`"Az.DesktopVirtualization`"; Version=`$null}" }
     $rbContent = $rbContent.Replace("##AlyaModules##", $modules)
@@ -766,7 +766,7 @@ Write-Host "Checking automation runbook 03" -ForegroundColor $CommandInfo
 $runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccountName)rb03.ps1"
 if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
 {
-    $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook03.ps1" -Raw -Encoding UTF8
+    $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook03.ps1" -Raw -Encoding $AlyaUtf8Encoding
     $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
     $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
     $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
@@ -818,7 +818,7 @@ if ($DeployStartStopVm)
     {
         if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
         {
-            $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04avd.ps1" -Raw -Encoding UTF8
+            $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04avd.ps1" -Raw -Encoding $AlyaUtf8Encoding
             $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
             $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
             $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
@@ -840,7 +840,7 @@ if ($DeployStartStopVm)
     {
         if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
         {
-            $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04.ps1" -Raw -Encoding UTF8
+            $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook04.ps1" -Raw -Encoding $AlyaUtf8Encoding
             $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
             $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
             $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)
@@ -892,7 +892,7 @@ if ($DeployGroupUpdater)
     $runbookPath = "$SolutionDataRoot\$($AutomationAccountName)\$($AutomationAccountName)rb09.ps1"
     if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     {
-        $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook09.ps1" -Raw -Encoding UTF8
+        $rbContent = Get-Content -Path "$SolutionScriptsRoot\runbook09.ps1" -Raw -Encoding $AlyaUtf8Encoding
         $rbContent = $rbContent.Replace("##AlyaAzureEnvironment##", $AlyaAzureEnvironment)
         $rbContent = $rbContent.Replace("##AlyaResourceGroupName##", $ResourceGroupName)
         $rbContent = $rbContent.Replace("##AlyaAutomationAccountName##", $AutomationAccountName)

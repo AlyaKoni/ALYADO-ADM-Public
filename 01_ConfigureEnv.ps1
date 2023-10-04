@@ -115,6 +115,8 @@ if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
 $Global:ErrorActionPreference = "Stop"
 $Global:ProgressPreference = "SilentlyContinue"
 $AlyaIsPsCore = ($PSVersionTable).PSEdition -eq "Core"
+$AlyaUtf8Encoding = "UTF8"
+if ($AlyaIsPsCore) { $AlyaUtf8Encoding = "utf8BOM" }
 
 <# TLS Connections #>
 [Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls12, [Net.SecurityProtocolType]::Tls13)
@@ -229,7 +231,7 @@ Function Save-LocalConfig()
 }
 Function Read-LocalConfig()
 {
-    $Global:AlyaLocalConfig = Get-Content -Path "$AlyaLocal\LocalConfig.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+    $Global:AlyaLocalConfig = Get-Content -Path "$AlyaLocal\LocalConfig.json" -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 }
 if (-Not (Test-Path "$AlyaLocal\LocalConfig.json"))
 {
@@ -256,7 +258,7 @@ Function Save-GlobalConfig()
 }
 Function Read-GlobalConfig()
 {
-    $Global:AlyaGlobalConfig = Get-Content -Path "$AlyaData\GlobalConfig.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+    $Global:AlyaGlobalConfig = Get-Content -Path "$AlyaData\GlobalConfig.json" -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 }
 if (-Not (Test-Path "$AlyaData\GlobalConfig.json"))
 {

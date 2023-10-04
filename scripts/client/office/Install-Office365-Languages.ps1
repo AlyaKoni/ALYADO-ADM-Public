@@ -54,10 +54,10 @@ if (-Not (Test-Path "$AlyaTemp\Office"))
     $null = New-Item -Path "$AlyaTemp\Office" -ItemType Directory -Force
 }
 Push-Location "$AlyaTemp\Office"
-cmd /c"$AlyaDeployToolRoot\setup.exe" /download "$AlyaData\client\office\office_add_languages.xml"
+cmd /c "$AlyaDeployToolRoot\setup.exe" /download "$AlyaData\client\office\office_add_languages.xml"
 
 Write-Host "Installing office" -ForegroundColor $CommandInfo
-cmd /c"$AlyaDeployToolRoot\setup.exe" /configure "$AlyaData\client\office\office_add_languages.xml"
+cmd /c "$AlyaDeployToolRoot\setup.exe" /configure "$AlyaData\client\office\office_add_languages.xml"
 Pop-Location
 
 if (-Not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Word.lnk"))

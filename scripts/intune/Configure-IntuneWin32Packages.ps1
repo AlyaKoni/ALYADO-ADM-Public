@@ -96,7 +96,7 @@ foreach($packageDir in $packages)
         Write-Host "Dependencies for package $($packageDir.Name)" -ForegroundColor $CommandInfo
 
         $configPath = Join-Path $packageDir.FullName "config.json"
-        $config = Get-Content -Path $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
         # Checking if app exists
         Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
@@ -111,14 +111,14 @@ foreach($packageDir in $packages)
         Write-Host "    appId: $appId"
 
         $dependencies = $null
-        $dependencies = Get-Content -Path $dependenciesPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json
+        $dependencies = Get-Content -Path $dependenciesPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
 
         Write-Host "  Checking dependencies"
         foreach ($dependency in $dependencies)
         {
             $depPath = Join-Path $DataRoot $dependency.app
             $configPath = Join-Path $depPath "config.json"
-            $config = Get-Content -Path $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
             # Checking if app exists
             Write-Host "  Checking if app $($config.displayName) exists"
@@ -201,9 +201,9 @@ foreach($packageDir in $packages)
     $category = $null
     $assignments = $null
 
-    $config = Get-Content -Path $configPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    $category = Get-Content -Path $categoryPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json
-    $assignments = Get-Content -Path $assignmentsPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue | ConvertFrom-Json
+    $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+    $category = Get-Content -Path $categoryPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
+    $assignments = Get-Content -Path $assignmentsPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
 
     # Checking if app exists
     Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
@@ -267,7 +267,7 @@ foreach($packageDir in $packages)
         foreach ($actAssignment in $actAssignments)
         {
             #TODO better handling here
-            if ($actAssignment.target."@odata.type" -eq $assignment.target."@odata.type")
+            if ($actAssignment.intent -eq $assignment.intent -and $actAssignment.target."@odata.type" -eq $assignment.target."@odata.type")
             {
                 $fnd = $actAssignment
                 break
@@ -287,6 +287,106 @@ foreach($packageDir in $packages)
             Write-Host "      Found existing assignment"
         }
         #TODO Update
+    }
+
+    ####################################### Update app
+
+    # Checking if update app exists
+    Write-Host "  Checking if update app exists" -ForegroundColor $CommandInfo
+    $config.displayName = $config.displayName+" UPD"
+    $searchValue = [System.Web.HttpUtility]::UrlEncode($config.displayName)
+    $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+    $app = (Get-MsGraphObject -Uri $uri).value
+    if (-Not $app.id)
+    {
+        continue
+    }
+    $appId = $app.id
+    Write-Host "    appId: $appId"
+
+    # Configuring category
+    Write-Host "  Configuring category" -ForegroundColor $CommandInfo
+    if ($category)
+    {
+        # Checking if category exists
+        Write-Host "    Checking if category exists"
+	    $caturi = "/beta/deviceAppManagement/mobileAppCategories/$($category.id)"
+	    $defCategory = Get-MsGraphObject -Uri $caturi
+        if (-Not $defCategory)
+        {
+            Write-Error "Can't find the category $($category.displayName)." -ErrorAction Continue
+            continue
+        }
+
+        # Getting existing categories
+        Write-Host "    Getting existing categories"
+	    $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories"
+	    $actCategories = Get-MsGraphCollection -Uri $uri
+        $isPresent = $actCategories | Where-Object { $_.id -eq $category.id }
+        if (-Not $isPresent)
+        {
+            # Adding category
+            Write-Host "    Adding category $($defCategory.displayName)"
+	        $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
+            $body = "{ `"@odata.id`": `"$AlyaGraphEndpoint$caturi`" }"
+	        $appCat = Post-MsGraph -Uri $uri -Body $body
+        }
+        else
+        {
+            Write-Host "    Category $($defCategory.displayName) already exists"
+        }
+    }
+
+    # Configuring assignments
+    Write-Host "  Configuring assignments" -ForegroundColor $CommandInfo
+
+    # Getting existing assignments
+    Write-Host "    Getting existing assignments"
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
+	$actAssignments = Get-MsGraphCollection -Uri $uri
+    $cnt = 0
+    $fnd = $false
+    $assignment = @"
+{
+    "@odata.type": "#microsoft.graph.mobileAppAssignment",
+    "intent": "required",
+    "source": "direct",
+    "sourceId": null,
+    "target": {
+        "@odata.type": "#microsoft.graph.allDevicesAssignmentTarget",
+        "deviceAndAppManagementAssignmentFilterId": null,
+        "deviceAndAppManagementAssignmentFilterType": "none"
+    },
+    "settings": {
+        "@odata.type": "#microsoft.graph.win32LobAppAssignmentSettings",
+        "notifications": "showAll",
+        "restartSettings": null,
+        "installTimeSettings": null,
+        "deliveryOptimizationPriority": "notConfigured"
+    }
+}
+"@ | ConvertFrom-Json
+
+    foreach ($actAssignment in $actAssignments)
+    {
+        #TODO better handling here
+        if ($actAssignment.intent -eq $assignment.intent -and $actAssignment.target."@odata.type" -eq $assignment.target."@odata.type")
+        {
+            $fnd = $actAssignment
+            break
+        }
+    }
+    if (-Not $fnd)
+    {
+        # Adding assignment
+        Write-Host "        Adding assignment $($assignment.target."@odata.type")"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
+        $body = $assignment | ConvertTo-Json -Depth 50
+        $appCat = Post-MsGraph -Uri $uri -Body $body
+    }
+    else
+    {
+        Write-Host "      Found existing assignment"
     }
 }
 

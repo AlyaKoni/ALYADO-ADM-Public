@@ -74,7 +74,7 @@ Write-Host "Intune | Configure-iOSApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$iosApps = Get-Content -Path $IOSAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$iosApps = Get-Content -Path $IOSAppsFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Defining bodies
 $assBody = @"

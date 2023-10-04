@@ -76,7 +76,7 @@ Write-Host "Intune | Configure-IntuneDeviceQualityUpdateProfiles | Graph" -Foreg
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$profiles = Get-Content -Path $ProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$profiles = Get-Content -Path $ProfileFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Functions
 function Replace-AlyaString($str)

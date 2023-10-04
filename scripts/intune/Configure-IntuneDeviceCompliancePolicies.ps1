@@ -75,7 +75,7 @@ Write-Host "Intune | Configure-IntuneDeviceCompliancePolicies | Graph" -Foregrou
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$policies = Get-Content -Path $PolicyFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$policies = Get-Content -Path $PolicyFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Getting iOS configuration
 Write-Host "Getting iOS configuration" -ForegroundColor $CommandInfo

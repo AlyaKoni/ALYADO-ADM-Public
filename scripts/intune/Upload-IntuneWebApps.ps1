@@ -193,7 +193,7 @@ foreach($packageDir in $packages)
 
     # Reading and preparing app configuration
     Write-Host "  Reading and preparing app configuration"
-    $appConfig = Get-Content -Path $configPath -Raw -Encoding UTF8
+    $appConfig = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding
     $appConfig = $appConfig | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty isAssigned,dependentAppCount,supersedingAppCount,supersededAppCount,committedContentVersion,size,id,createdDateTime,lastModifiedDateTime,version,'@odata.context',uploadState,packageId,appIdentifier,publishingState,usedLicenseCount,totalLicenseCount,productKey,licenseType,packageIdentityName
 
     # Replacing constants

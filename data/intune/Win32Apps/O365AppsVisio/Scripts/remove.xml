@@ -1,0 +1,16 @@
+<Configuration ID="4fce0c51-79dd-43f2-adab-e82282b8d3fd">
+  <Info Description="Office Visio Client Uninstallation" />
+  <Remove>
+    <Product ID="VisioProRetail">
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+      <Language ID="it-it" />
+    </Product>
+  </Remove>
+  <Display Level="None" CompletionNotice="no" SuppressModal="yes" AcceptEULA="TRUE"/>
+  <Property Name="AUTOACTIVATE" Value="0"/>
+  <Property Name="FORCEAPPSHUTDOWN" Value="TRUE"/>
+  <Property Name="SharedComputerLicensing" Value="0"/>
+  <Property Name="PinIconsToTaskbar" Value="FALSE"/>
+</Configuration>

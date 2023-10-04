@@ -79,7 +79,7 @@ Write-Host "Intune | Configure-WinGetApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$winGetApps = Get-Content -Path $WinGetAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$winGetApps = Get-Content -Path $WinGetAppsFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Defining bodies
 $assBody = @"

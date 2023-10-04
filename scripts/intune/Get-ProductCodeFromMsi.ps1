@@ -90,7 +90,7 @@ $zip = [System.IO.Compression.ZipFile]::OpenRead($tempPck)
 $entry = $zip.Entries | Where-Object { $_.Name -eq "Detection.xml" }
 [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, "$temp\$($entry.Name)", $true)
 $zip.Dispose()
-$xml = [xml](Get-Content -Path "$temp\$($entry.Name)" -Raw -Encoding UTF8)
+$xml = [xml](Get-Content -Path "$temp\$($entry.Name)" -Raw -Encoding $AlyaUtf8Encoding)
 Write-Host "MsiProductCode:                $($xml.ApplicationInfo.MsiInfo.MsiProductCode)"
 Write-Host "MsiProductVersion:             $($xml.ApplicationInfo.MsiInfo.MsiProductVersion)"
 Write-Host "MsiPackageCode:                $($xml.ApplicationInfo.MsiInfo.MsiPackageCode)"

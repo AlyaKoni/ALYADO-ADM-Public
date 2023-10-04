@@ -74,7 +74,7 @@ Write-Host "Intune | Configure-AndroidApps | Graph" -ForegroundColor $CommandInf
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$androidApps = Get-Content -Path $AndroidAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$androidApps = Get-Content -Path $AndroidAppsFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Defining bodies
 $assBody = @"

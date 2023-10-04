@@ -82,6 +82,266 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Upload-IntuneWin32Packages | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+# Functions
+function UploadPackage($detectVersion = $null, $appConfig)
+{
+
+    # Checking existing failed upload
+    Write-Host "  Checking existing failed upload"
+	$appId = $app.id
+    Write-Host "    appId: $($app.id)"
+	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
+    $existVersions = $null
+    $maxVersion = 0
+    try {
+        $existVersions = Get-MsGraphCollection -Uri $uri
+    }
+    catch {
+    }
+    if ($existVersions)
+    {
+        $maxVersion = ($existVersions.Id | Measure-Object -Maximum).Maximum
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$maxVersion/files"
+        $file = Get-MsGraphCollection -Uri $uri
+        if ($file -and -Not $file.isCommitted)
+        {
+            Write-Warning "Existing failed upload found! So far, we don't know how to fix such stuff. Please wait and try later!"
+            pause
+            return
+        }
+    }
+
+    # Checking Version
+    Write-Host "  Checking Version"
+    if ($null -eq $detectVersion -and $null -ne $app.detectionRules -and $null -ne $app.detectionRules.detectionValue)
+    {
+        $detectVersion = [Version]$app.detectionRules.detectionValue
+    }
+    $doUpload = $true
+    if ($maxVersion -gt 1 -and $detectVersion -ge [Version]$version)
+    {
+        Write-Host "    Looks like this version has already been uploaded!" -ForegroundColor $CommandWarning
+        Write-Host "      Existing version: $($detectVersion)" -ForegroundColor $CommandWarning
+        Write-Host "      Version to upload: $($version)" -ForegroundColor $CommandWarning
+        $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
+        $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
+        $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
+        $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
+        if ($resp -eq 0) { $doUpload = $false }
+    }
+
+    if ($doUpload)
+    {
+        $attr = Get-Member -InputObject $appConfig -MemberType NoteProperty -Name "committedContentVersion" -ErrorAction SilentlyContinue
+        if ($attr) { $appConfig.PSObject.Properties.Remove("committedContentVersion") }
+
+        # Creating Content Version
+        Write-Host "  Creating Content Version"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
+        $contentVersion = Post-MsGraph -Uri $uri -Body "{}"
+        Write-Host "    contentVersion: $($contentVersion.id)"
+
+        # Creating Content Version file
+        Write-Host "  Creating Content Version file"
+        $fileBody = @{ "@odata.type" = "#Microsoft.Graph.mobileAppContentFile" }
+        $fileBody.name = $package.Name
+        $fileBody.size = [long]$packageInfo.ApplicationInfo.UnencryptedContentSize
+        $fileBody.sizeEncrypted = [long]$bytes.Length
+        $fileBody.manifest = $null
+        $fileBody.isDependency = $false
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files"
+        $file = Post-MsGraph -Uri $uri -Body ($fileBody | ConvertTo-Json -Depth 50)
+
+        # Waiting for file uri
+        Write-Host "  Waiting for file uri"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
+        $stage = "AzureStorageUriRequest"
+        $successState = "$($stage)Success"
+        $pendingState = "$($stage)Pending"
+        $failedState = "$($stage)Failed"
+        $timedOutState = "$($stage)TimedOut"
+        $Global:attempts = 100
+        while ($Global:attempts -gt 0)
+        {
+            Start-Sleep -Seconds 3
+            $file = Get-MsGraphObject -Uri $uri
+            if ($file.uploadState -eq $successState)
+            {
+                break
+            }
+            elseif ($file.uploadState -ne $pendingState)
+            {
+                throw "File upload state has not succeeded: $($file.uploadState)"
+            }
+            $Global:attempts--
+        }
+        if ($file -eq $null -or $file.uploadState -ne $successState)
+        {
+            throw "File request did not complete within $Global:attempts attempts"
+        }
+
+        # Uploading intunewin content
+        Write-Host "  Uploading intunewin content"
+        $OldProgressPreference = $ProgressPreference
+        $ProgressPreference = "Continue"
+        Start-Sleep -Seconds 10 # first chunk has often 403
+        $chunkSizeInBytes = 1024 * 1024 * 6
+        $sasRenewalTimer = [System.Diagnostics.Stopwatch]::StartNew()
+        $chunks = [Math]::Ceiling($bytes.Length / $chunkSizeInBytes)
+        $enc = [System.Text.Encoding]::GetEncoding("iso-8859-1")
+        $ids = @()
+        for ($chunk = 0; $chunk -lt $chunks; $chunk++)
+        {
+            $id = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($chunk.ToString("0000")))
+            $ids += $id
+            $start = $chunk * $chunkSizeInBytes
+            $end = [Math]::Min($start + $chunkSizeInBytes - 1, $bytes.Length - 1)
+            $body = $bytes[$start..$end]
+            $encodedBody = $enc.GetString($body)
+            $headers = @{
+                "x-ms-blob-type" = "BlockBlob"
+            }
+            $currentChunk = $chunk + 1
+            Write-Host "    Uploading chunk $currentChunk of $chunks ($([int]$sasRenewalTimer.Elapsed.TotalSeconds)sec)"
+            Write-Progress -Activity "    Uploading intunewin from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
+            $curi = "$($file.azureStorageUri)&comp=block&blockid=$id"
+            $Global:attempts = 10
+            while ($Global:attempts -ge 0)
+            {
+                try {
+                    do {
+                        try {
+                            $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Headers $headers -Body $encodedBody
+                            $StatusCode = $response.StatusCode
+                        } catch {
+                            $StatusCode = $_.Exception.Response.StatusCode.value__
+                            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
+                                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                                Start-Sleep -Seconds 45
+                            }
+                            else {
+                                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                                throw
+                            }
+                        }
+                    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
+                    $Global:attempts = -1
+                } catch {
+                    Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
+                    Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
+                    $Global:attempts--
+                    if ($Global:attempts -lt 0) { throw }
+                    Start-Sleep -Seconds 10
+                }
+            }
+            if ($currentChunk -lt $chunks -and $sasRenewalTimer.ElapsedMilliseconds -ge 450000)
+            {
+                Write-Host "    Upload renewal"
+                $renewalUri = "$uri/renewUpload"
+                $rewnewUriResult = Post-MsGraph -Uri $renewalUri	
+                $stage = "AzureStorageUriRenewal"
+                $successState = "$($stage)Success"
+                $pendingState = "$($stage)Pending"
+                $Global:attempts = 10
+                while ($Global:attempts -gt 0)
+                {
+                    Start-Sleep -Seconds 3
+                    $file = Get-MsGraphObject -Uri $uri
+                    if ($file.uploadState -eq $successState)
+                    {
+                        break
+                    }
+                    elseif ($file.uploadState -ne $pendingState)
+                    {
+                        throw "File upload state has not succeeded: $($file.uploadState)"
+                    }
+                    $Global:attempts--
+                }
+                if ($file -eq $null -or $file.uploadState -ne $successState)
+                {
+                    throw "File request renewel did not complete within $Global:attempts attempts"
+                }
+                $sasRenewalTimer.Restart()
+            }
+        }
+        Write-Progress -Completed -Activity "    Uploading intunewin"
+        $ProgressPreference = $OldProgressPreference
+
+        # Finalize the upload.
+        $curi = "$($file.azureStorageUri)&comp=blocklist"
+        $xml = '<?xml version="1.0" encoding="utf-8"?><BlockList>'
+        foreach ($id in $ids)
+        {
+            $xml += "<Latest>$id</Latest>"
+        }
+        $xml += '</BlockList>'
+        do {
+            try {
+                $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Body $xml
+                $StatusCode = $response.StatusCode
+            } catch {
+                $StatusCode = $_.Exception.Response.StatusCode.value__
+                if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
+                    Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                    Start-Sleep -Seconds 45
+                }
+                else {
+                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                    throw
+                }
+            }
+        } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
+
+        # Committing the file
+        Write-Host "  Committing the file"
+        $fileEncryptionInfo = @{}
+        $fileEncryptionInfo.fileEncryptionInfo = @{
+            encryptionKey        = $packageInfo.ApplicationInfo.EncryptionInfo.EncryptionKey
+            macKey               = $packageInfo.ApplicationInfo.EncryptionInfo.MacKey
+            initializationVector = $packageInfo.ApplicationInfo.EncryptionInfo.InitializationVector
+            mac                  = $packageInfo.ApplicationInfo.EncryptionInfo.Mac
+            profileIdentifier    = $packageInfo.ApplicationInfo.EncryptionInfo.ProfileIdentifier
+            fileDigest           = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigest
+            fileDigestAlgorithm  = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigestAlgorithm
+        }
+        $curi = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
+        $file = Post-MsGraph -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json -Depth 50)
+
+        # Waiting for file commit
+        Write-Host "  Waiting for file commit"
+        $stage = "CommitFile"
+        $successState = "$($stage)Success"
+        $pendingState = "$($stage)Pending"
+        $failedState = "$($stage)Failed"
+        $timedOutState = "$($stage)TimedOut"
+        $Global:attempts = 100
+        while ($Global:attempts -gt 0)
+        {
+            Start-Sleep -Seconds 3
+            $file = Get-MsGraphObject -Uri $uri
+            if ($file.uploadState -eq $successState)
+            {
+                break
+            }
+            elseif ($file.uploadState -ne $pendingState)
+            {
+                throw "File upload state has not succeeded: $($file.uploadState)"
+            }
+            $Global:attempts--
+        }
+        if ($file -eq $null -or $file.uploadState -ne $successState)
+        {
+            throw "File request commit did not complete within $Global:attempts attempts"
+        }
+        Add-Member -InputObject $appConfig -MemberType NoteProperty -Name "committedContentVersion" -Value $contentVersion.id
+    }
+
+    # Committing the app
+    Write-Host "  Committing the app"
+    $uri = "/beta/deviceAppManagement/mobileApps/$appId"
+    $appP = Patch-MsGraph -Uri $uri -Body ($appConfig | ConvertTo-Json -Depth 50)
+}
+
 # Main
 $packages = Get-ChildItem -Path $DataRoot -Directory
 $continue = $true
@@ -97,6 +357,7 @@ foreach($packageDir in $packages)
     $packagePath = Join-Path $packageDir.FullName "Package"
     $configPath = Join-Path $packageDir.FullName "config.json"
     $contentPath = Join-Path $packageDir.FullName "Content"
+    $requirementDetectionPath = Join-Path $packageDir.FullName "RequirementDetection.ps1"
 
     # Checking intunewin package
     Write-Host "  Checking intunewin package"
@@ -121,12 +382,12 @@ foreach($packageDir in $packages)
     $entry = $zip.Entries | Where-Object { $_.Name -eq "Detection.xml" }
     [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, "$($package.FullName).Detection.xml", $true)
     $zip.Dispose()
-    $packageInfo = [xml](Get-Content -Path "$($package.FullName).Detection.xml" -Raw -Encoding UTF8)
+    $packageInfo = [xml](Get-Content -Path "$($package.FullName).Detection.xml" -Raw -Encoding $AlyaUtf8Encoding)
     Remove-Item -Path "$($package.FullName).Detection.xml" -Force
 
     # Reading and preparing app configuration
     Write-Host "  Reading and preparing app configuration"
-    $appConfig = Get-Content -Path $configPath -Raw -Encoding UTF8
+    $appConfig = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding
     $appConfig = $appConfig | ConvertFrom-Json | Select-Object -Property * -ExcludeProperty isAssigned,dependentAppCount,supersedingAppCount,supersededAppCount,committedContentVersion,size,id,createdDateTime,lastModifiedDateTime,version,'@odata.context',uploadState,packageId,appIdentifier,publishingState,usedLicenseCount,totalLicenseCount,productKey,licenseType,packageIdentityName
 
     $appConfig.displayName = "$AppPrefix" + $packageDir.Name
@@ -241,26 +502,34 @@ foreach($packageDir in $packages)
         {
             foreach($ruleWVersion in $appConfig.detectionRules)
             {
-                $ruleWVersion.detectionValue = $version
-                $ruleWVersion.keyPath = $regPath
-                $ruleWVersion.valueName = $regValue
+                if ($ruleWVersion.detectionType -eq "version") {
+                    $ruleWVersion.detectionValue = $version
+                    $ruleWVersion.keyPath = $regPath
+                    $ruleWVersion.valueName = $regValue
+                }
             }
             foreach($ruleWVersion in $appConfig.rules)
             {
-                $ruleWVersion.comparisonValue = $version
-                $ruleWVersion.keyPath = $regPath
-                $ruleWVersion.valueName = $regValue
+                if ($ruleWVersion.operationType -eq "version") {
+                    $ruleWVersion.comparisonValue = $version
+                    $ruleWVersion.keyPath = $regPath
+                    $ruleWVersion.valueName = $regValue
+                }
             }
         }
         else
         {
             foreach($ruleWVersion in $appConfig.detectionRules)
             {
-                $ruleWVersion.detectionValue = ([Version]$version).ToString()
+                if ($ruleWVersion.detectionType -eq "version") {
+                    $ruleWVersion.detectionValue = ([Version]$version).ToString()
+                }
             }
             foreach($ruleWVersion in $appConfig.rules)
             {
-                $ruleWVersion.comparisonValue = ([Version]$version).ToString()
+                if ($ruleWVersion.operationType -eq "version") {
+                    $ruleWVersion.comparisonValue = ([Version]$version).ToString()
+                }
             }
         }
     }
@@ -316,249 +585,110 @@ foreach($packageDir in $packages)
     $bytes = [System.IO.File]::ReadAllBytes("$($package.FullName).Extracted")
     Remove-Item -Path "$($package.FullName).Extracted" -Force
 
-    # Checking existing failed upload
-    Write-Host "  Checking existing failed upload"
-	$appId = $app.id
-    Write-Host "    appId: $($app.id)"
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
-    $existVersions = $null
-    $maxVersion = 0
-    try {
-        $existVersions = Get-MsGraphCollection -Uri $uri
-    }
-    catch {
-    }
-    if ($existVersions)
+    # Uploading base app package
+    Write-Host "  Uploading base app package"
+    UploadPackage -detectVersion $null -appConfig $appConfig
+
+    # Checking update package if required
+    Write-Host "  Checking update package if required"
+    if (Test-Path $requirementDetectionPath)
     {
-        $maxVersion = ($existVersions.Id | Measure-Object -Maximum).Maximum
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$maxVersion/files"
-        $file = Get-MsGraphCollection -Uri $uri
-        if ($file -and -Not $file.isCommitted)
+
+        # Checking if update app exists
+        Write-Host "  Checking if update app exists"
+        $appConfig.displayName = $appConfig.displayName+" UPD"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $app = (Get-MsGraphObject -Uri $uri).value
+        if ($app.Count -gt 1)
         {
-            Write-Warning "Existing failed upload found! So far, we don't know how to fix such stuff. Please wait and try later!"
-            pause
-            continue
+            throw "Search returned to many apps: $($app.Count)!"
         }
+
+        $detectContent = Get-Content -Path $requirementDetectionPath -Encoding $AlyaUtf8Encoding -Raw
+        $detectVersion = [Version]$appConfig.detectionRules[0].detectionValue
+        if ($appConfig.detectionRules -and $appConfig.detectionRules[0]."@odata.type" -eq "#microsoft.graph.win32LobAppFileSystemDetection")
+        {
+            $detectContent = $detectContent.Replace("##FILEPATH##", $appConfig.detectionRules[0].path)
+            $detectContent = $detectContent.Replace("##FILENAME##", $appConfig.detectionRules[0].fileOrFolderName)
+            $detectContent = $detectContent.Replace("##FILEVERSION##", $appConfig.detectionRules[0].detectionValue)
+            $detectContent = [Regex]::Replace($detectContent, "%programfiles%", "`$(`$env:ProgramFiles)", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+            $detectContent = [Regex]::Replace($detectContent, "%programfiles\(x86\)%", "`$(`${env:ProgramFiles(x86)})", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+        }
+        if ($appConfig.detectionRules -and $appConfig.detectionRules[0]."@odata.type" -eq "#microsoft.graph.win32LobAppRegistryDetection")
+        {
+            $detectContent = $detectContent.Replace("##KEYPATH##", $appConfig.detectionRules[0].keyPath)
+            $detectContent = $detectContent.Replace("##KEYNAME##", $appConfig.detectionRules[0].valueName)
+            $detectContent = $detectContent.Replace("##KEYVERSION##", $appConfig.detectionRules[0].detectionValue)
+        }
+        $scriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($detectContent))
+
+        $appConfig.requirementRules = @(
+            @{
+                "detectionValue" = "Required"
+                "scriptContent" = $scriptContent
+                "detectionType" = "string"
+                "runAs32Bit" = $false
+                "runAsAccount" = "system"
+                "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptRequirement"
+                "enforceSignatureCheck" = $false
+                "displayName" = "RequirementDetection.ps1"
+                "operator" = "equal"
+            }
+        )
+        $appConfig.rules += @{
+            "comparisonValue" = "Required"
+            "operationType" = "string"
+            "scriptContent" = $scriptContent
+            "operator" = "equal"
+            "ruleType" = "requirement"
+            "runAs32Bit" = $false
+            "runAsAccount" = "system"
+            "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptRule"
+            "displayName" = "RequirementDetection.ps1"
+            "enforceSignatureCheck" = $false
+        }
+        # $appConfig.detectionRules = @(
+        #     @{
+        #         "scriptContent" = $scriptContent
+        #         "runAs32Bit" = $false
+        #         "enforceSignatureCheck" = $false
+        #         "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptDetection"
+        #     }
+        # )
+        # $appConfig.rules += @{
+        #     "comparisonValue" = $null
+        #     "operationType" = "notConfigured"
+        #     "scriptContent" = $scriptContent
+        #     "operator" = "notConfigured"
+        #     "ruleType" = "detection"
+        #     "runAs32Bit" = $false
+        #     "runAsAccount" = $null
+        #     "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptRule"
+        #     "displayName" = $null
+        #     "enforceSignatureCheck" = $false
+        # }
+        $appConfigJson = $appConfig | ConvertTo-Json
+
+        if (-Not $app.id)
+        {
+            # Creating app
+            Write-Host "  Creating app"
+            $uri = "/beta/deviceAppManagement/mobileApps"
+            $app = Post-MsGraph -Uri $uri -Body $appConfigJson
+            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+            do
+            {
+                Start-Sleep -Seconds 5
+                $app = (Get-MsGraphObject -Uri $uri).value
+            } while (-Not $app.id)
+        }
+
+        # Uploading update app package
+        Write-Host "  Uploading update app package"
+        UploadPackage -detectVersion $detectVersion -appConfig $appConfig
     }
 
-    # Checking Version
-    Write-Host "  Checking Version"
-    if ($maxVersion -gt 1 -and $null -ne $app.detectionRules -and $null -ne $app.detectionRules.detectionValue -and [Version]$app.detectionRules.detectionValue -ge [Version]$version)
-    {
-        Write-Host "    Looks like this version has already been uploaded!" -ForegroundColor $CommandWarning
-        Write-Host "      Existing version: $($app.detectionRules.detectionValue)" -ForegroundColor $CommandWarning
-        Write-Host "      Version to upload: $($version)" -ForegroundColor $CommandWarning
-        $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
-        $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
-        $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
-        $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
-        if ($resp -eq 0) { continue }
-    }
-
-    # Creating Content Version
-    Write-Host "  Creating Content Version"
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
-	$contentVersion = Post-MsGraph -Uri $uri -Body "{}"
-    Write-Host "    contentVersion: $($contentVersion.id)"
-
-    # Creating Content Version file
-    Write-Host "  Creating Content Version file"
-	$fileBody = @{ "@odata.type" = "#Microsoft.Graph.mobileAppContentFile" }
-	$fileBody.name = $package.Name
-	$fileBody.size = [long]$packageInfo.ApplicationInfo.UnencryptedContentSize
-	$fileBody.sizeEncrypted = [long]$bytes.Length
-	$fileBody.manifest = $null
-    $fileBody.isDependency = $false
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files"
-	$file = Post-MsGraph -Uri $uri -Body ($fileBody | ConvertTo-Json -Depth 50)
-
-    # Waiting for file uri
-    Write-Host "  Waiting for file uri"
-    $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
-    $stage = "AzureStorageUriRequest"
-	$successState = "$($stage)Success"
-	$pendingState = "$($stage)Pending"
-	$failedState = "$($stage)Failed"
-	$timedOutState = "$($stage)TimedOut"
-	$Global:attempts = 100
-	while ($Global:attempts -gt 0)
-	{
-		Start-Sleep -Seconds 3
-		$file = Get-MsGraphObject -Uri $uri
-		if ($file.uploadState -eq $successState)
-		{
-			break
-		}
-		elseif ($file.uploadState -ne $pendingState)
-		{
-            throw "File upload state has not succeeded: $($file.uploadState)"
-		}
-		$Global:attempts--
-	}
-	if ($file -eq $null -or $file.uploadState -ne $successState)
-	{
-		throw "File request did not complete within $Global:attempts attempts"
-	}
-
-    # Uploading intunewin content
-    Write-Host "  Uploading intunewin content"
-    $OldProgressPreference = $ProgressPreference
-    $ProgressPreference = "Continue"
-    Start-Sleep -Seconds 10 # first chunk has often 403
-    $chunkSizeInBytes = 1024 * 1024 * 6
-	$sasRenewalTimer = [System.Diagnostics.Stopwatch]::StartNew()
-	$chunks = [Math]::Ceiling($bytes.Length / $chunkSizeInBytes)
-    $enc = [System.Text.Encoding]::GetEncoding("iso-8859-1")
-	$ids = @()
-	for ($chunk = 0; $chunk -lt $chunks; $chunk++)
-    {
-		$id = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($chunk.ToString("0000")))
-		$ids += $id
-        $start = $chunk * $chunkSizeInBytes
-        $end = [Math]::Min($start + $chunkSizeInBytes - 1, $bytes.Length - 1)
-        $body = $bytes[$start..$end]
-        $encodedBody = $enc.GetString($body)
-        $headers = @{
-	        "x-ms-blob-type" = "BlockBlob"
-        }
-		$currentChunk = $chunk + 1
-        Write-Host "    Uploading chunk $currentChunk of $chunks ($([int]$sasRenewalTimer.Elapsed.TotalSeconds)sec)"
-        Write-Progress -Activity "    Uploading intunewin from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
-        $curi = "$($file.azureStorageUri)&comp=block&blockid=$id"
-        $Global:attempts = 10
-        while ($Global:attempts -ge 0)
-        {
-            try {
-                do {
-                    try {
-                        $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Headers $headers -Body $encodedBody
-                        $StatusCode = $response.StatusCode
-                    } catch {
-                        $StatusCode = $_.Exception.Response.StatusCode.value__
-                        if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
-                            Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                            Start-Sleep -Seconds 45
-                        }
-                        else {
-                            try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
-                            throw
-                        }
-                    }
-                } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
-                $Global:attempts = -1
-            } catch {
-                Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-                Write-Host "Retrying $Global:attempts times" -ForegroundColor $CommandError
-                $Global:attempts--
-                if ($Global:attempts -lt 0) { throw }
-                Start-Sleep -Seconds 10
-            }
-        }
-		if ($currentChunk -lt $chunks -and $sasRenewalTimer.ElapsedMilliseconds -ge 450000)
-        {
-            Write-Host "    Upload renewal"
-	        $renewalUri = "$uri/renewUpload"
-	        $rewnewUriResult = Post-MsGraph -Uri $renewalUri	
-            $stage = "AzureStorageUriRenewal"
-	        $successState = "$($stage)Success"
-	        $pendingState = "$($stage)Pending"
-	        $Global:attempts = 10
-	        while ($Global:attempts -gt 0)
-	        {
-		        Start-Sleep -Seconds 3
-		        $file = Get-MsGraphObject -Uri $uri
-		        if ($file.uploadState -eq $successState)
-		        {
-			        break
-		        }
-		        elseif ($file.uploadState -ne $pendingState)
-		        {
-                    throw "File upload state has not succeeded: $($file.uploadState)"
-		        }
-		        $Global:attempts--
-	        }
-	        if ($file -eq $null -or $file.uploadState -ne $successState)
-	        {
-		        throw "File request renewel did not complete within $Global:attempts attempts"
-	        }
-			$sasRenewalTimer.Restart()
-        }
-	}
-    Write-Progress -Completed -Activity "    Uploading intunewin"
-	$ProgressPreference = $OldProgressPreference
-
-	# Finalize the upload.
-	$curi = "$($file.azureStorageUri)&comp=blocklist"
-	$xml = '<?xml version="1.0" encoding="utf-8"?><BlockList>'
-	foreach ($id in $ids)
-	{
-		$xml += "<Latest>$id</Latest>"
-	}
-	$xml += '</BlockList>'
-    do {
-        try {
-            $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Body $xml
-            $StatusCode = $response.StatusCode
-        } catch {
-            $StatusCode = $_.Exception.Response.StatusCode.value__
-            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
-                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
-                Start-Sleep -Seconds 45
-            }
-            else {
-                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
-                throw
-            }
-        }
-    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
-
-    # Committing the file
-    Write-Host "  Committing the file"
-    $fileEncryptionInfo = @{}
-    $fileEncryptionInfo.fileEncryptionInfo = @{
-        encryptionKey        = $packageInfo.ApplicationInfo.EncryptionInfo.EncryptionKey
-        macKey               = $packageInfo.ApplicationInfo.EncryptionInfo.MacKey
-        initializationVector = $packageInfo.ApplicationInfo.EncryptionInfo.InitializationVector
-        mac                  = $packageInfo.ApplicationInfo.EncryptionInfo.Mac
-        profileIdentifier    = $packageInfo.ApplicationInfo.EncryptionInfo.ProfileIdentifier
-        fileDigest           = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigest
-        fileDigestAlgorithm  = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigestAlgorithm
-    }
-    $curi = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
-	$file = Post-MsGraph -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json -Depth 50)
-
-    # Waiting for file commit
-    Write-Host "  Waiting for file commit"
-    $stage = "CommitFile"
-	$successState = "$($stage)Success"
-	$pendingState = "$($stage)Pending"
-	$failedState = "$($stage)Failed"
-	$timedOutState = "$($stage)TimedOut"
-	$Global:attempts = 100
-	while ($Global:attempts -gt 0)
-	{
-		Start-Sleep -Seconds 3
-		$file = Get-MsGraphObject -Uri $uri
-		if ($file.uploadState -eq $successState)
-		{
-			break
-		}
-		elseif ($file.uploadState -ne $pendingState)
-		{
-            throw "File upload state has not succeeded: $($file.uploadState)"
-		}
-		$Global:attempts--
-	}
-	if ($file -eq $null -or $file.uploadState -ne $successState)
-	{
-		throw "File request commit did not complete within $Global:attempts attempts"
-	}
-
-    # Committing the app
-    Write-Host "  Committing the app"
-    Add-Member -InputObject $appConfig -MemberType NoteProperty -Name "committedContentVersion" -Value $contentVersion.id
-    $uri = "/beta/deviceAppManagement/mobileApps/$appId"
-    $appP = Patch-MsGraph -Uri $uri -Body ($appConfig | ConvertTo-Json -Depth 50)
 }
 
 #Stopping Transscript

@@ -1,0 +1,16 @@
+<Configuration ID="0c7394ed-6078-4fb2-9dec-5d5f8a4f3587">
+  <Info Description="Office Business Client Uninstallation" />
+  <Remove>
+    <Product ID="O365ProPlusRetail">
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+      <Language ID="it-it" />
+    </Product>
+  </Remove>
+  <Display Level="None" CompletionNotice="no" SuppressModal="yes" AcceptEULA="TRUE"/>
+  <Property Name="AUTOACTIVATE" Value="0"/>
+  <Property Name="FORCEAPPSHUTDOWN" Value="TRUE"/>
+  <Property Name="SharedComputerLicensing" Value="0"/>
+  <Property Name="PinIconsToTaskbar" Value="FALSE"/>
+</Configuration>

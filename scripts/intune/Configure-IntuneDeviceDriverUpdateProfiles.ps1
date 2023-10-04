@@ -73,7 +73,7 @@ Write-Host "Intune | Configure-IntuneDeviceDriverUpdateProfiles | Graph" -Foregr
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$profiles = Get-Content -Path $ProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$profiles = Get-Content -Path $ProfileFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Functions
 function Replace-AlyaString($str)
@@ -163,51 +163,50 @@ function Replace-AlyaStrings($obj, $depth)
     }
 }
 
-# Getting iOS configuration
-Write-Host "Getting iOS configuration" -ForegroundColor $CommandInfo
-$appleConfigured = $false
-$uri = "/beta/devicemanagement/applePushNotificationCertificate"
-$appleConfiguration = Get-MsGraphObject -Uri $uri
-$appleConfigured = $false
-if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
-{
-    Write-Host "  Apple token is configured"
-    $appleConfigured = $true
-}
-else
-{
-    $appleConfiguration = $appleConfiguration.value
-    if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
-    {
-        Write-Host "  Apple token is configured"
-        $appleConfigured = $true
-    }
-}
+# # Getting iOS configuration
+# Write-Host "Getting iOS configuration" -ForegroundColor $CommandInfo
+# $appleConfigured = $false
+# $uri = "/beta/devicemanagement/applePushNotificationCertificate"
+# $appleConfiguration = Get-MsGraphObject -Uri $uri
+# $appleConfigured = $false
+# if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
+# {
+#     Write-Host "  Apple token is configured"
+#     $appleConfigured = $true
+# }
+# else
+# {
+#     $appleConfiguration = $appleConfiguration.value
+#     if ($appleConfiguration -and $appleConfiguration.certificateSerialNumber)
+#     {
+#         Write-Host "  Apple token is configured"
+#         $appleConfigured = $true
+#     }
+# }
 
-# Getting Android configuration
-Write-Host "Getting Android configuration" -ForegroundColor $CommandInfo
-$androidConfigured = $false
-$uri = "/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
-$androidConfiguration = Get-MsGraphObject -Uri $uri
-$androidConfigured = $false
-if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
-{
-    Write-Host "  Android token is configured"
-    $androidConfigured = $true
-}
-else
-{
-    Write-Host "  Android token is configured"
-    $androidConfigured = $androidConfigured.Value
-    if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
-    {
-        $androidConfigured = $true
-    }
-}
+# # Getting Android configuration
+# Write-Host "Getting Android configuration" -ForegroundColor $CommandInfo
+# $androidConfigured = $false
+# $uri = "/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
+# $androidConfiguration = Get-MsGraphObject -Uri $uri
+# $androidConfigured = $false
+# if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
+# {
+#     Write-Host "  Android token is configured"
+#     $androidConfigured = $true
+# }
+# else
+# {
+#     Write-Host "  Android token is configured"
+#     $androidConfigured = $androidConfigured.Value
+#     if ($androidConfiguration -and $androidConfiguration.deviceOwnerManagementEnabled)
+#     {
+#         $androidConfigured = $true
+#     }
+# }
 
 # Processing defined profiles
 $hadError = $false
-$latestQualUpdate = $null
 foreach($profile in $profiles)
 {
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
@@ -219,17 +218,17 @@ foreach($profile in $profiles)
     Write-Host "Configuring profile '$($profile.displayName)'" -ForegroundColor $CommandInfo
 
     # Checking if poliy is applicable
-    Write-Host "  Checking if profile is applicable"
-    if ($profile."@odata.type" -eq "#Microsoft.Graph.iosConfigurationProfile" -and -not $appleConfigured)
-    {
-        Write-Warning "iosConfigurationProfile is not applicable"
-        continue
-    }
-    if ($profile."@odata.type" -eq "#Microsoft.Graph.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
-    {
-        Write-Warning "androidConfigurationProfile is not applicable"
-        continue
-    }
+    # Write-Host "  Checking if profile is applicable"
+    # if ($profile."@odata.type" -eq "#Microsoft.Graph.iosConfigurationProfile" -and -not $appleConfigured)
+    # {
+    #     Write-Warning "iosConfigurationProfile is not applicable"
+    #     continue
+    # }
+    # if ($profile."@odata.type" -eq "#Microsoft.Graph.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
+    # {
+    #     Write-Warning "androidConfigurationProfile is not applicable"
+    #     continue
+    # }
 
     # Replacing constants
     Replace-AlyaStrings -obj $profile -depth 1
@@ -260,6 +259,8 @@ foreach($profile in $profiles)
         $uri = "/beta/deviceManagement/windowsDriverUpdateProfiles/$($actProfile.id)"
         $profile.PSObject.Properties.Remove("releaseDateDisplayName")
         $profile.PSObject.Properties.Remove("deployableContentDisplayName")
+        $profile.PSObject.Properties.Remove("approvalType")
+        $profile.PSObject.Properties.Remove("inventorySyncStatus")
         $actProfile = Patch-MsGraph -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
     }
     catch {

@@ -75,7 +75,7 @@ if (-Not (Test-Path $bannedPasswordFile)) {
 else {
     Write-Host "Using banned password file $bannedPasswordFile"
 }
-$bannedPasswords = Get-Content -Path $bannedPasswordFile -Encoding utf8 -Raw
+$bannedPasswords = Get-Content -Path $bannedPasswordFile -Encoding $AlyaUtf8Encoding -Raw
 
 # Configuring settings template
 Write-Host "Configuring settings template" -ForegroundColor $CommandInfo

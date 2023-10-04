@@ -80,7 +80,7 @@ Write-Host "Intune | Upload-BuiltInApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Processing defined builtInApps
 $hadError = $false

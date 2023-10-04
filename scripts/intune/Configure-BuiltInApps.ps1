@@ -80,7 +80,7 @@ Write-Host "Intune | Configure-BuiltInApps | Graph" -ForegroundColor $CommandInf
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$builtInApps = Get-Content -Path $BuiltInAppsFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Defining bodies
 $assBody = @"

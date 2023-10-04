@@ -29,7 +29,7 @@
 
 #>
 
-$apps = (Get-Content -Path "$PsScriptRoot\Configuration\Applications\intuneApplications.json" -Raw -Encoding UTF8 | ConvertFrom-Json).value
+$apps = (Get-Content -Path "$PsScriptRoot\Configuration\Applications\intuneApplications.json" -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json).value
 $apps = $apps | Where-Object { $_.isAssigned -eq $true }
 $apps | Foreach-Object { 
     $_.PSObject.Properties.Remove("id")

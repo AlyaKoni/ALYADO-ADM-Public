@@ -47,7 +47,7 @@ Write-Host "      actual: $version"
 
 $contentPath = Join-Path $packageRoot "Content"
 $setupTxtPath = (Join-Path $contentPath "SetupName.txt")
-$setupName = Get-Content -Path $setupTxtPath -Encoding UTF8 -Force
+$setupName = Get-Content -Path $setupTxtPath -Encoding $AlyaUtf8Encoding -Force
 $patch = Get-ChildItem -Path $contentPath -Filter "*.msp"
 if ($patch)
 {

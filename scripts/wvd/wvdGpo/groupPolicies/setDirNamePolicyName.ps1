@@ -38,7 +38,7 @@ $Dirs = Get-ChildItem -Path $RootDir
 foreach($Dir in $Dirs)
 {
 	if ($Dir.GetType().Name -eq "FileInfo") {continue;}
-    $Rep = [XML](Get-Content -Path ($Dir.FullName+"\gpreport.xml") -Encoding UTF8)
+    $Rep = [XML](Get-Content -Path ($Dir.FullName+"\gpreport.xml") -Encoding $AlyaUtf8Encoding)
     $Name = $Rep.GPO.Name.Trim()
     Write-Host "Dir: $($Dir.Name)   NewName: $($Name)"
     Rename-Item -Path $Dir.FullName -NewName $Name -Force

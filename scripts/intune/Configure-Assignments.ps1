@@ -104,12 +104,12 @@ Write-Host "Intune | Configure-Assignments | Graph" -ForegroundColor $CommandInf
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$compliancePolicies = Get-Content -Path $CompliancePolicyFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$configurationProfiles = Get-Content -Path $ConfigurationProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$featureProfiles = Get-Content -Path $FeatureProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$qualityProfiles = Get-Content -Path $QualityProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$updateProfiles = Get-Content -Path $UpdateProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
-$grouPolicyProfiles = Get-Content -Path $GrouPolicyProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$compliancePolicies = Get-Content -Path $CompliancePolicyFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+$configurationProfiles = Get-Content -Path $ConfigurationProfileFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+$featureProfiles = Get-Content -Path $FeatureProfileFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+$qualityProfiles = Get-Content -Path $QualityProfileFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+$updateProfiles = Get-Content -Path $UpdateProfileFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+$grouPolicyProfiles = Get-Content -Path $GrouPolicyProfileFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 $scripts = Get-ChildItem -Path $ScriptDir -Filter "*.ps1"
 
 Write-Host "Configuring assignments for compliance policies" -ForegroundColor $CommandInfo

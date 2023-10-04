@@ -1,0 +1,28 @@
+<Configuration ID="cea02d44-9a4d-4ac6-a30a-6b03773c302d">
+  <Info Description="Office Business Client Uninstallation" />
+  <Remove>
+    <Product ID="O365BusinessRetail">
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+      <Language ID="it-it" />
+    </Product>
+    <Product ID="VisioProRetail">
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+      <Language ID="it-it" />
+    </Product>
+    <Product ID="ProjectProRetail">
+      <Language ID="en-us" />
+      <Language ID="de-de" />
+      <Language ID="fr-fr" />
+      <Language ID="it-it" />
+    </Product>
+  </Remove>
+  <Display Level="None" CompletionNotice="no" SuppressModal="yes" AcceptEULA="TRUE"/>
+  <Property Name="AUTOACTIVATE" Value="0"/>
+  <Property Name="FORCEAPPSHUTDOWN" Value="TRUE"/>
+  <Property Name="SharedComputerLicensing" Value="0"/>
+  <Property Name="PinIconsToTaskbar" Value="FALSE"/>
+</Configuration>

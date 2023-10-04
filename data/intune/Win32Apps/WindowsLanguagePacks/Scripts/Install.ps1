@@ -108,7 +108,7 @@ else
 
         # Reading language definitions
         Write-Host "Reading language definitions"
-        $languagesToInstall = Get-Content -Path "$AlyaScriptDir\localesToInstall.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+        $languagesToInstall = Get-Content -Path "$AlyaScriptDir\localesToInstall.json" -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
         
         # Trigger package installation
         Write-Host "Trigger package installation"

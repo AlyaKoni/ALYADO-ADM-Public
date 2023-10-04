@@ -30,32 +30,19 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    21.09.2023 Konrad Brunner       Initial Version
+    03.10.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$AppName = $null,
-    [string]$AppsPath = "Win32Apps"
 )
 
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneWin32App-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
-
-# Constants
-$AppPrefix = "Win10 "
-if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
-    $AppPrefix = "$AlyaAppPrefix "
-}
-$DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
-if (-Not (Test-Path $DataRoot))
-{
-    $null = New-Item -Path $DataRoot -ItemType Directory -Force
-}
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-Win32AppDefinitions-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -64,10 +51,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 # Logins
 LoginTo-MgGraph -Scopes @(
     "Directory.Read.All",
-    "DeviceManagementManagedDevices.Read.All",
-    "DeviceManagementServiceConfig.Read.All",
-    "DeviceManagementConfiguration.Read.All",
-    "DeviceManagementApps.ReadWrite.All"
+    "DeviceManagementApps.Read.All"
 )
 
 # =============================================================
@@ -75,26 +59,23 @@ LoginTo-MgGraph -Scopes @(
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Delete-IntuneWin32App | Graph" -ForegroundColor $CommandInfo
+Write-Host "Intune | Export-Win32AppDefinitions | Win32" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking if app exists
-Write-Host "Checking if app exists" -ForegroundColor $CommandInfo
-$searchValue = [System.Web.HttpUtility]::UrlEncode($AppPrefix+$AppName)
-$uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-$app = (Get-MsGraphObject -Uri $uri).value
-if (-Not $app.id)
+$DataRoot = Join-Path (Join-Path $AlyaData "intune") "Configuration"
+$filePath ="$DataRoot\Applications\intuneApplicationsWIN32.json"
+$uri = "/beta/deviceAppManagement/mobileApps"
+$intuneApplications = Get-MsGraphCollection -Uri $uri
+$win32Apps = $intuneApplications | Where-Object { ($_.'@odata.type').Contains("win32") }
+foreach($win32App in $win32Apps)
 {
-    Write-Warning "The app with name $($AppPrefix+$AppName) does not exist."
-    return
+    $uri = "/beta/deviceAppManagement/mobileApps/$($win32App.id)?`$select=largeIcon"
+    $appIcon = Get-MsGraphObject -Uri $uri
+    $win32App.largeIcon = $appIcon.largeIcon
 }
-$appId = $app.id
-Write-Host "    appId: $appId"
+$win32Apps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path $filePath -Force
 
-# Deleting app
-Write-Host "Deleting app" -ForegroundColor $CommandInfo
-$uri = "/beta/deviceAppManagement/mobileApps/$appId"
-$appCat = Delete-MsGraphObject -Uri $uri
+Write-Host "Win32 apps exported to: $filePath" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript

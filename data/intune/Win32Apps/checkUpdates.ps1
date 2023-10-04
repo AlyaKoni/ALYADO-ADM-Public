@@ -37,14 +37,14 @@ foreach ($dir in $dirs)
     $downloadShortcut = Get-Item -Path (Join-Path $dir.FullName "Download.url") -ErrorAction SilentlyContinue
     if ($downloadShortcut)
     {
-        $content = $downloadShortcut | Get-Content -Raw -Encoding UTF8
+        $content = $downloadShortcut | Get-Content -Raw -Encoding $AlyaUtf8Encoding
         [regex]$regex = "URL=.*"
         $downloadUrl = [regex]::Match($content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Substring(4)
         $downloadUpdateScript = Get-Item -Path (Join-Path $dir.FullName "DownloadLinkUpdate.ps1") -ErrorAction SilentlyContinue
         if ($downloadUpdateScript)
         {
             & "$($downloadUpdateScript.FullName)"
-            $content = $downloadShortcut | Get-Content -Raw -Encoding UTF8
+            $content = $downloadShortcut | Get-Content -Raw -Encoding $AlyaUtf8Encoding
             $newDownloadUrl = [regex]::Match($content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Substring(4)
             if ($downloadUrl -ne $newDownloadUrl)
             {

@@ -58,7 +58,7 @@ $zip = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
 $entry = $zip.Entries | Where-Object { $_.Name -eq "Detection.xml" }
 [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, "$($package.FullName).Detection.xml", $true)
 $zip.Dispose()
-$packageInfo = [xml](Get-Content -Path "$($package.FullName).Detection.xml" -Raw -Encoding UTF8)
+$packageInfo = [xml](Get-Content -Path "$($package.FullName).Detection.xml" -Raw -Encoding $AlyaUtf8Encoding)
 Remove-Item -Path "$($package.FullName).Detection.xml" -Force
 
 if ($versionObj.version -ne $packageInfo.ApplicationInfo.MsiInfo.MsiProductVersion)

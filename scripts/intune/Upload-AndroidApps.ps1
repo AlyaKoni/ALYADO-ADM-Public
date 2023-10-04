@@ -75,7 +75,7 @@ Write-Host "Intune | Upload-AndroidApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$appsAndroid = Get-Content -Path $appsAndroidFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$appsAndroid = Get-Content -Path $appsAndroidFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Processing defined appsAndroid
 $hadError = $false

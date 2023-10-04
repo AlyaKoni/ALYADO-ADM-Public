@@ -142,7 +142,7 @@ $subscription = Get-AzSubscription -SubscriptionName $AlyaSubscriptionNameTest
 Write-Host "Configuring deployment parameters" -ForegroundColor $CommandInfo
 $TemplateFilePath = "$($RootDir)\template\templateUpdate.json"
 $ParametersFilePath = "$($RootDir)\template\parametersUpdate.json"
-$params = Get-Content -Path $ParametersFilePath -Raw -Encoding UTF8 | ConvertFrom-Json
+$params = Get-Content -Path $ParametersFilePath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 $ParametersObject = @{}
 $params.parameters.psobject.properties | Foreach-Object { $ParametersObject[$_.Name] = $_.Value.value }
 $ParametersObject["rdshCustomImageSourceName"] = $ImageSourceName
@@ -223,7 +223,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     $null = Copy-Item "$($RootDir)\..\..\WvdTheme\$($AlyaCompanyName)Test.theme" "\\$($actHostName)\C$\Windows\resources\Themes\$($AlyaCompanyName).theme" -Force
 
     Write-Host "    Adding diagnostics"
-    $diagConfig = Get-Content -Path "$($RootDir)\diagnosticConfig.xml" -Encoding UTF8 -Raw
+    $diagConfig = Get-Content -Path "$($RootDir)\diagnosticConfig.xml" -Encoding $AlyaUtf8Encoding -Raw
     $vmResourceId = "/subscriptions/$($subscription)/resourceGroups/$($ResourceGroupName)/providers/Microsoft.Compute/virtualMachines/$($actHostName)"
     $diagConfig = $diagConfig.Replace("##VMRESOURCEID##", $vmResourceId).Replace("##DIAGSTORAGEACCOUNTNAME##", $DiagnosticStorageAccountName)
     $tmpFile = New-TemporaryFile

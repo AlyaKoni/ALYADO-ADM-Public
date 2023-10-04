@@ -198,7 +198,7 @@ if (-Not $ReattachToReportsDir)
 
 	# Health check sfc
 	Write-Host "Health check sfc" -ForegroundColor Cyan
-	$check = (Get-Content -Path "$reportDir\sfcscan.txt" -Encoding UTF8 -Raw).Replace("`0", "")
+	$check = (Get-Content -Path "$reportDir\sfcscan.txt" -Encoding $AlyaUtf8Encoding -Raw).Replace("`0", "")
 	if (-Not ($check -like "*Der Windows-Ressourcenschutz hat keine Integrit?tsverletzungen gefunden.*" -or $check -like "*Windows Resource Protection did not find any integrity violations.*"))
 	{
 		Write-Host "sfc.exe has reported an error. Please see $reportDir\sfcscan.txt" -ForegroundColor Red
@@ -214,7 +214,7 @@ if (-Not $ReattachToReportsDir)
 
 	# Health check Dism ScanHealth
 	Write-Host "Health check Dism ScanHealth" -ForegroundColor Cyan
-	$check = Get-Content -Path "$reportDir\dismScanHealth.txt" -Encoding UTF8 -Raw
+	$check = Get-Content -Path "$reportDir\dismScanHealth.txt" -Encoding $AlyaUtf8Encoding -Raw
 	if (-Not ($check -like "*Es wurde keine Komponentenspeicherbesch?digung erkannt.*" -or $check -like "*No component store corruption detected.*")) 
 	{
 		Write-Host "Dism ScanHealth has reported an error. Please see $reportDir\dismScanHealth.txt" -ForegroundColor Red
@@ -231,7 +231,7 @@ if (-Not $ReattachToReportsDir)
 
 	# Health check Dism CheckHealth
 	Write-Host "Health check Dism CheckHealth" -ForegroundColor Cyan
-	$check = Get-Content -Path "$reportDir\dismCheckHealth.txt" -Encoding UTF8 -Raw
+	$check = Get-Content -Path "$reportDir\dismCheckHealth.txt" -Encoding $AlyaUtf8Encoding -Raw
 	if (-Not ($check -like "*Es wurde keine Komponentenspeicherbesch?digung erkannt.*" -or $check -like "*No component store corruption detected.*"))
 	{
 		Write-Host "Dism CheckHealth has reported an error. Please see $reportDir\dismCheckHealth.txt" -ForegroundColor Red
@@ -248,7 +248,7 @@ if (-Not $ReattachToReportsDir)
 
 # Reading systeminfo
 Write-Host "Reading systeminfo" -ForegroundColor Cyan
-$sysInfo = Get-Content -Path "$reportDir\systeminfo.txt" -Encoding UTF8
+$sysInfo = Get-Content -Path "$reportDir\systeminfo.txt" -Encoding $AlyaUtf8Encoding
 $OsName = ($sysInfo | Where-Object { $_ -like "*Betriebssystemname:*" -or $_ -like "*OS Name:*" }).Split(":")[1].Trim()
 $OsVersion = ($sysInfo | Where-Object { $_ -like "*Betriebssystemversion:*" -or $_ -like "*OS Version:*" }).Split(":")[1].Trim()
 $OsConfiguration = ($sysInfo | Where-Object { $_ -like "*Betriebssystemkonfiguration:*" -or $_ -like "*OS Configuration:*" }).Split(":")[1].Trim()
@@ -623,10 +623,10 @@ else
 	{
 		throw "Not able to find first run directory!"
 	}
-	$firstServices = Get-Content -Path "$firstReportDir\services.txt" -Encoding utf8
-	$firstProcesses = Get-Content -Path "$firstReportDir\processes.txt" -Encoding utf8
-	$actualServices = Get-Content -Path "$reportDir\services.txt" -Encoding utf8
-	$actualProcesses = Get-Content -Path "$reportDir\processes.txt" -Encoding utf8
+	$firstServices = Get-Content -Path "$firstReportDir\services.txt" -Encoding $AlyaUtf8Encoding
+	$firstProcesses = Get-Content -Path "$firstReportDir\processes.txt" -Encoding $AlyaUtf8Encoding
+	$actualServices = Get-Content -Path "$reportDir\services.txt" -Encoding $AlyaUtf8Encoding
+	$actualProcesses = Get-Content -Path "$reportDir\processes.txt" -Encoding $AlyaUtf8Encoding
 
 	if (Test-Path "$firstReportDir\hadDefenderEndpoint.txt")
 	{
@@ -651,7 +651,7 @@ else
 	{
 		#Move dc roles back
 		Write-Host "Checking domain controller roles" -ForegroundColor Cyan
-		$movedRoles = Get-Content -Path "$firstReportDir\domainControllerRolesMoved.txt" -Encoding UTF8 -ErrorAction SilentlyContinue
+		$movedRoles = Get-Content -Path "$firstReportDir\domainControllerRolesMoved.txt" -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue
 		foreach($movedRole in $movedRoles)
 		{
 			switch($movedRole) #TODO check if a move from remote works

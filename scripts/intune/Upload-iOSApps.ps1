@@ -76,7 +76,7 @@ Write-Host "Intune | Upload-iOSApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$appsIOS = Get-Content -Path $appsIOSFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$appsIOS = Get-Content -Path $appsIOSFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Processing defined appsIOS
 $hadError = $false

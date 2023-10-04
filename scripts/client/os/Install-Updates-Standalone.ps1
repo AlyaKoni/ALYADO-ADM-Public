@@ -475,7 +475,7 @@ else
         $toBeUpgraded = $true
         if ((Test-Path "$exeFile.$($env:COMPUTERNAME).txt"))
         {
-            $actVersion = Get-Content -Path "$exeFile.$($env:COMPUTERNAME).txt" -Raw -Encoding UTF8
+            $actVersion = Get-Content -Path "$exeFile.$($env:COMPUTERNAME).txt" -Raw -Encoding $AlyaUtf8Encoding
             if ($file.VersionInfo.ProductVersion.Trim() -eq $actVersion.Trim())
             {
                 $toBeUpgraded = $false

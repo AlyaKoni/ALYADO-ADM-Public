@@ -1,0 +1,47 @@
+<Configuration ID="0c7394ed-6078-4fb2-9dec-5d5f8a4f3587">
+  <Info Description="Office Business Client Configuration" />
+  <Add OfficeClientEdition="64" Channel="Current" ForceUpgrade="TRUE" MigrateArch="TRUE">
+    <Product ID="O365ProPlusRetail">
+      <Language ID="MatchOS" />
+      <Language ID="en-us" />
+      <Language ID="fr-fr" />
+      <Language ID="de-de" />
+      <Language ID="it-it" />
+      <Language ID="MatchPreviousMSI" />
+      <ExcludeApp ID="Groove" />
+      <ExcludeApp ID="Lync" />
+    </Product>
+    <Product ID="LanguagePack">
+      <Language ID="MatchOS" />
+      <Language ID="en-us" />
+      <Language ID="fr-fr" />
+      <Language ID="de-de" />
+      <Language ID="it-it" />
+      <Language ID="MatchPreviousMSI" />
+    </Product>
+    <Product ID="ProofingTools">
+      <Language ID="en-us" />
+      <Language ID="fr-fr" />
+      <Language ID="de-de" />
+      <Language ID="it-it" />
+    </Product>
+  </Add>
+  <Property Name="SharedComputerLicensing" Value="0" />
+  <Property Name="PinIconsToTaskbar" Value="TRUE" />
+  <Property Name="SCLCacheOverride" Value="0" />
+  <Property Name="AUTOACTIVATE" Value="FALSE" />
+  <Property Name="FORCEAPPSHUTDOWN" Value="TRUE" />
+  <Property Name="DeviceBasedLicensing" Value="0" />
+  <Updates Enabled="TRUE" />
+  <RemoveMSI />
+  <AppSettings>
+    <User Key="software\microsoft\office\16.0\excel\options" Name="developertools" Value="1" Type="REG_DWORD" App="excel16" Id="L_DisplayDeveloperTab" />
+    <User Key="software\microsoft\office\16.0\excel\options" Name="defaultformat" Value="51" Type="REG_DWORD" App="excel16" Id="L_SaveExcelfilesas" />
+    <User Key="software\microsoft\office\outlook\socialconnector" Name="runosc" Value="0" Type="REG_DWORD" App="outlk16" Id="L_TurnOffOutlookSocialConnector" />
+    <User Key="software\microsoft\office\outlook\socialconnector" Name="unmanagedinfobars" Value="1" Type="REG_DWORD" App="outlk16" Id="L_DoNotShowSocialNetworkInfoBars" />
+    <User Key="software\microsoft\office\16.0\powerpoint\options" Name="defaultformat" Value="27" Type="REG_DWORD" App="ppt16" Id="L_SavePowerPointfilesas" />
+    <User Key="software\microsoft\office\16.0\word\options" Name="defaultformat" Value="" Type="REG_SZ" App="word16" Id="L_SaveWordfilesas" />
+  </AppSettings>
+  <Display Level="None" CompletionNotice="no" SuppressModal="yes" AcceptEULA="TRUE"/>
+  <Logging Level="Standard" Path="%TEMP%" />
+</Configuration>

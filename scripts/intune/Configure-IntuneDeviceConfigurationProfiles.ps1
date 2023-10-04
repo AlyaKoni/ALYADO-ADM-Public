@@ -76,7 +76,7 @@ Write-Host "Intune | Configure-IntunedeviceConfigurations | Graph" -ForegroundCo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$profiles = Get-Content -Path $ProfileFile -Raw -Encoding UTF8 | ConvertFrom-Json
+$profiles = Get-Content -Path $ProfileFile -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
 # Functions
 function Replace-AlyaString($str)
@@ -262,6 +262,13 @@ foreach($profile in $profiles)
         }
     }
     if ($profile.displayName.Contains("WIN Defender ATP"))
+    {
+        if ($AlyaLicenseType -ne "BusinessPremium" -and $AlyaLicenseType -ne "EnterpriseME5orOE5EMS")
+        {
+            continue
+        }
+    }
+    if ($profile.displayName.Contains("MAC Defender ATP"))
     {
         if ($AlyaLicenseType -ne "BusinessPremium" -and $AlyaLicenseType -ne "EnterpriseME5orOE5EMS")
         {

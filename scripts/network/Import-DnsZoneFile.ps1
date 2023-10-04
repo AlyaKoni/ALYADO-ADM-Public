@@ -107,7 +107,7 @@ if (-Not (Test-Path $ZoneFile))
     throw "Zone file $($ZoneFile) not found"
 }
 
-$entries = Get-Content -Path $ZoneFile -Encoding utf8
+$entries = Get-Content -Path $ZoneFile -Encoding $AlyaUtf8Encoding
 $firstEntry = $true
 foreach($entry in $entries)
 {
