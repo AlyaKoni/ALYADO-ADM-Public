@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     22.10.2020 Konrad Brunner       Initial Version
+    06.10.2023 Konrad Brunner       WinGet version
 
 #>
 
@@ -108,47 +109,14 @@ else
 
         # Reading language definitions
         Write-Host "Reading language definitions"
-        $languagesToInstall = Get-Content -Path "$AlyaScriptDir\localesToInstall.json" -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+        $languagesToInstall = Get-Content -Path "$AlyaScriptDir\localesToInstall.json" -Raw -Encoding UTF8 | ConvertFrom-Json
         
         # Trigger package installation
         Write-Host "Trigger package installation"
-        $namespaceName = "root\cimv2\mdm\dmmap"
-        $session = New-CimSession
-        $omaUri = "./Vendor/MSFT/EnterpriseModernAppManagement/AppInstallation"
-        $packages = Get-AppxPackage -AllUsers
         foreach($languageToInstall in $languagesToInstall)
         {
-            $packageFamilyName = $languageToInstall.PackageFamilyName
-            $pkg = $packages | Where-Object { $_.PackageFamilyName -eq $packageFamilyName }
-            if (-Not $pkg)
-            {
-                $applicationId = $languageToInstall.ProductId.ToLower()
-                $skuId = $languageToInstall.SkuId
-                Write-Host "Submitting Language Experience Pack '$packageFamilyName' for installation"
-                $newInstance = New-Object Microsoft.Management.Infrastructure.CimInstance "MDM_EnterpriseModernAppManagement_AppInstallation01_01", $namespaceName
-                $property = [Microsoft.Management.Infrastructure.CimProperty]::Create("ParentID", $omaUri, "string", "Key")
-                $newInstance.CimInstanceProperties.Add($property)
-                $property = [Microsoft.Management.Infrastructure.CimProperty]::Create("InstanceID", $packageFamilyName, "String", "Key")
-                $newInstance.CimInstanceProperties.Add($property)
-                $flags = 0
-                $paramValue = [Security.SecurityElement]::Escape($('<Application id="{0}" flags="{1}" skuid="{2}"/>' -f $applicationId, $flags, $skuId))
-                $params = New-Object Microsoft.Management.Infrastructure.CimMethodParametersCollection
-                $param = [Microsoft.Management.Infrastructure.CimMethodParameter]::Create("param", $paramValue, "String", "In")
-                $params.Add($param)
-                $instance = $session.CreateInstance($namespaceName, $newInstance)
-                $result = $session.InvokeMethod($namespaceName, $instance, "StoreInstallMethod", $params)
-                if ($result.ReturnValue.Value -eq 0)
-                {
-                    Write-Host "  install process triggered via MDM/StoreInstall method"
-                }
-                else
-                {
-                    throw "Problems triggering install process via MDM/StoreInstall method for '$($packageFamilyName)'"
-                }
-                $session.DeleteInstance($namespaceName, $instance) | Out-Null
-            }
+            winget install $languageToInstall.ProductId --disable-interactivity --accept-package-agreements --accept-source-agreements --force
         }
-        Remove-CimSession -CimSession $session
 
         # Waiting 1 hour for package installation
         Write-Host "Waiting 1 hour for package installation"
@@ -161,13 +129,10 @@ else
             {
                 throw "Was not able to install packages within 1 hour. Please retry."
             }
-            $packages = Get-AppxPackage -AllUsers
             foreach($languageToInstall in $languagesToInstall)
             {
-                $packageFamilyName = $languageToInstall.PackageFamilyName
-                $pkg = $packages | Where-Object { $_.PackageFamilyName -eq $packageFamilyName }
-                $pkg
-                if (-Not $pkg -or $pkg.Status -ne "Ok")
+                $pkg = winget list $languageToInstall.ProductId | Out-String
+                if (-Not $pkg.Contains($languageToInstall.ProductId))
                 {
                     $allFound = $false
                     break
@@ -175,13 +140,11 @@ else
             }
         } while (-Not $allFound)
 
-        # Listing installed packages
-        Write-Host "Listing installed packages"
-        $packages = Get-AppxPackage -AllUsers
+        # Trigger package updates
+        Write-Host "Trigger package updates"
         foreach($languageToInstall in $languagesToInstall)
         {
-            $packageFamilyName = $languageToInstall.PackageFamilyName
-            $packages | Where-Object { $_.PackageFamilyName -eq $packageFamilyName }
+            winget upgrade -h --id $languageToInstall.ProductId --disable-interactivity --accept-package-agreements --accept-source-agreements --force
         }
 
         # Trigger install for language FOD packages"
@@ -195,10 +158,6 @@ else
             & DISM.exe /Online /Add-Capability /CapabilityName:Language.Speech~~~$language~0.0.1.0
             & DISM.exe /Online /Add-Capability /CapabilityName:Language.TextToSpeech~~~$language~0.0.1.0
         }
-
-        # Trigger store updates, there might be new app versions due to the language change
-        Write-Host "Trigger store updates"
-        Get-CimInstance -Namespace $namespaceName -ClassName "MDM_EnterpriseModernAppManagement_AppManagement01" | Invoke-CimMethod -MethodName "UpdateScanMethod"
 
         # Setting version in registry
         Write-Host "Setting version in registry"

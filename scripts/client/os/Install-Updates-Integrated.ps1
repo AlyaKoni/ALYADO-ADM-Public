@@ -164,7 +164,7 @@ else
 	        Remove-Item -Path $exeFile -Force | Out-Null
 	    }
 	    $url = "https://go.microsoft.com/fwlink/?LinkID=799445"
-	    Invoke-WebRequest -UseBasicParsing -Uri $url -OutFile $exeFile
+	    Invoke-WebRequestIndep -UseBasicParsing -Uri $url -OutFile $exeFile
 	    $file = Get-Item -Path $exeFile -Force
 	    $toBeUpgraded = $true
 	    if ((Test-Path "$exeFile.$($env:COMPUTERNAME).txt"))

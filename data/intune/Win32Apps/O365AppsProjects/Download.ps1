@@ -31,10 +31,13 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$dir = Get-Item -Path $AlyaDeployToolRoot
-if ((Get-Date).Subtract($dir.CreationTime).TotalHours -gt 24)
+if (Test-Path $AlyaDeployToolRoot)
 {
-    Remove-Item -Path $AlyaDeployToolRoot -Recurse -Force
+    $dir = Get-Item -Path $AlyaDeployToolRoot
+    if ((Get-Date).Subtract($dir.CreationTime).TotalHours -gt 24)
+    {
+        Remove-Item -Path $AlyaDeployToolRoot -Recurse -Force
+    }
 }
 & "$AlyaScripts\client\office\Prepare-DeployTool.ps1"
 

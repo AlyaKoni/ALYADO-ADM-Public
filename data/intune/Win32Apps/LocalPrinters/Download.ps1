@@ -29,6 +29,8 @@
 
 #>
 
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
 $hpPclDownloadUrl = "https://ftp.hp.com/pub/softlib/software13/COL40842/ds-99374-23/upd-pcl6-x64-7.0.0.24832.exe"
 $hpPsDownloadUrl = "https://ftp.hp.com/pub/softlib/software13/COL40842/ds-99376-23/upd-ps-x64-7.0.0.24832.exe"
 $sharpPclDownloadUrl = "http://global.sharp/restricted/products/copier/downloads/search/files/021418/SH_D09_PCL6_PS_2005a_German_64bit.exe"
@@ -45,7 +47,7 @@ if ((Test-Path $instPath))
 }
 $null = New-Item -Path $instPath -ItemType Directory -Force
 $unpackFile = Join-Path $contentRoot "driver.zip"
-$req = Invoke-WebRequest -Uri $hpPclDownloadUrl -Method Get -OutFile $unpackFile
+$req = Invoke-WebRequestIndep -Uri $hpPclDownloadUrl -Method Get -OutFile $unpackFile
 $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
 if ($cmdTst)
 {
@@ -65,7 +67,7 @@ if ((Test-Path $instPath))
 }
 $null = New-Item -Path $instPath -ItemType Directory -Force
 $unpackFile = Join-Path $contentRoot "driver.zip"
-$req = Invoke-WebRequest -Uri $hpPsDownloadUrl -Method Get -OutFile $unpackFile
+$req = Invoke-WebRequestIndep -Uri $hpPsDownloadUrl -Method Get -OutFile $unpackFile
 $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
 if ($cmdTst)
 {
@@ -85,7 +87,7 @@ if ((Test-Path $instPath))
 }
 $null = New-Item -Path $instPath -ItemType Directory -Force
 $unpackFile = Join-Path $contentRoot "innoextract.zip"
-$req = Invoke-WebRequest -Uri $innoextractDownloadUrl -Method Get -OutFile $unpackFile
+$req = Invoke-WebRequestIndep -Uri $innoextractDownloadUrl -Method Get -OutFile $unpackFile
 $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
 if ($cmdTst)
 {
@@ -107,7 +109,7 @@ if ((Test-Path $instPath))
 }
 $null = New-Item -Path $instPath -ItemType Directory -Force
 $unpackFile = Join-Path $contentRoot "driver.exe"
-$req = Invoke-WebRequest -Uri $sharpPclDownloadUrl -Method Get -OutFile $unpackFile
+$req = Invoke-WebRequestIndep -Uri $sharpPclDownloadUrl -Method Get -OutFile $unpackFile
 Push-Location -Path $instPath
 & "$innoextract" $unpackFile
 Pop-Location

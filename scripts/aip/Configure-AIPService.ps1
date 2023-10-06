@@ -142,7 +142,7 @@ if (-Not $actConfiguration.InternalLicensingEnabled)
     {
         Set-IRMConfiguration -RMSOnlineKeySharingLocation "https://sp-rms.eu.aadrm.com/TenantManagement/ServicePartner.svc"
     }
-    Import-RMSTrustedPublishingDomain -RMSOnline -Name "RMS Online"
+    #Import-RMSTrustedPublishingDomain -RMSOnline -Name "RMS Online"
     Set-IRMConfiguration -InternalLicensingEnabled $true
 }
 if (-Not $actConfiguration.ExternalLicensingEnabled)

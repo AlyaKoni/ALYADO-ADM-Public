@@ -31,22 +31,25 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$version = 30
-do
-{
-    $version--
-    $pageUrl = "https://jdk.java.net/$version/"
-    $check = $null
-    try
-    {
-        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-        [regex]$regex = "<h1>.*?General-Availability Release.*?</h1>"
-        $check = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-    } catch {}
-} while (-Not $check -and $version -gt 16)
+$pageUrl = "https://www.jam-software.de/treesize_free"
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+[regex]$regex = "<a\s*href=`"([^`"]*)`"\s*class=`"button`"\s*>\s*Download\s*</a>"
+$matches = [regex]::Matches($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant')
+$newUrl = $matches[0].Groups[1].Value
+$uri = [Uri]::new($newUrl)
 
-[regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64_bin\.zip"
-$newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+$req = Invoke-WebRequestIndep -Uri $newUrl -UseBasicParsing -Method Get
+[regex]$regex = "<option\s*value=`"([^`"]*)`"\s*>TreeSizeFreeSetup\.*"
+$matches = [regex]::Matches($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant')
+
+$path = $uri.AbsolutePath.Replace("downloadTrial.php", "downloadTrialProcess.php")
+$newUrl = $uri.Scheme+"://"+$uri.Authority+$path+"?download_x=Download&download_path="+$matches[0].Groups[1].Value
+$req = Invoke-WebRequestIndep -Uri $newUrl -UseBasicParsing -Method Post
+
+[regex]$regex = "<a\s*href=`"([^`"]*\.exe)`"\s*>"
+$matches = [regex]::Matches($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant')
+$newUrl = $matches[0].Groups[1].Value
+
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"

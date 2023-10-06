@@ -31,23 +31,19 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$version = 30
-do
-{
-    $version--
-    $pageUrl = "https://jdk.java.net/$version/"
-    $check = $null
-    try
-    {
-        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-        [regex]$regex = "<h1>.*?General-Availability Release.*?</h1>"
-        $check = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-    } catch {}
-} while (-Not $check -and $version -gt 16)
+$pageUrl = "https://go.microsoft.com/fwlink/?linkid=2068602"
+$request = [System.Net.WebRequest]::Create($pageUrl)
+$request.AllowAutoRedirect = $false
+$response = $request.GetResponse()
+$newUrl = $response.GetResponseHeader("Location")
+$response.Close()
 
-[regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64_bin\.zip"
-$newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-$fileName = Split-Path -Path $newUrl -Leaf
+$request = [System.Net.WebRequest]::Create($newUrl)
+$request.AllowAutoRedirect = $false
+$response = $request.GetResponse()
+$fileName = $response.GetResponseHeader("Content-Disposition").Split("=")[1]
+$response.Close()
+
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))

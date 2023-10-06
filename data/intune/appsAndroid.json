@@ -221,7 +221,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft Power BI - Geschäftsdatenanalyse",
+        "displayName": "Microsoft Power BI",
         "description": "Ihre Daten sind jederzeit griffbereit - ganz gleich, wo Sie gerade sind.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,
@@ -238,7 +238,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft PowerPoint: Präsentationsfolien",
+        "displayName": "Microsoft PowerPoint",
         "description": "Die echte Microsoft PowerPoint-App für Android-Smartphones und Tablets.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,
@@ -357,7 +357,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft Word: Dokumente verfassen und bearbeiten",
+        "displayName": "Microsoft Word: Edit Documents",
         "description": "App zum mobilen Schreiben. Mit Office Dokumente leicht erstellen und bearbeiten.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,
@@ -391,7 +391,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Power Automate—Business workflow automation",
+        "displayName": "Power Automate",
         "description": "Erstellen Sie automatisierte Workflows Benachrichtigungen zu erhalten, synchronisieren Dateien und vieles mehr.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,
@@ -425,7 +425,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Surface Audio",
+        "displayName": "Microsoft Surface",
         "description": "Aktualisieren Sie Surface Earbuds und Surface Headphones und passen Sie die Einstellungen an.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,

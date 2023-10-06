@@ -908,7 +908,7 @@ function Install-ModuleIfNotInstalled (
         }
         else
         {
-            Expand-Archive -Path $ModuleContentZip -OutputPath v -Force
+            Expand-Archive -Path $ModuleContentZip -OutputPath $ModuleContentDir -Force
         }
         Import-Module "$ModuleContentDir\PackageManagement.psd1" -Force -Verbose
     }
@@ -2130,12 +2130,13 @@ function LoginTo-AIP()
     Write-Host "Login to AIP" -ForegroundColor $CommandInfo
     $ServiceDetail = $null
     try { $ServiceDetail = Get-AipService -ErrorAction SilentlyContinue } catch [Microsoft.RightsManagementServices.Online.Admin.PowerShell.AdminClientException] {}
-    if (-Not $ServiceDetail)
+    if ($null -eq $ServiceDetail)
     {
-        Connect-AipService
+        Connect-AipService -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId
     }
+    $ServiceDetail = $null
     try { $ServiceDetail = Get-AipService -ErrorAction SilentlyContinue } catch [Microsoft.RightsManagementServices.Online.Admin.PowerShell.AdminClientException] {}
-    if (-Not $ServiceDetail)
+    if ($null -eq $ServiceDetail)
     {
         throw "Not logged in to AIP!"
     }

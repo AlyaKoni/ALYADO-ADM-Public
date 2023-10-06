@@ -190,7 +190,7 @@ else
         $fileName = Split-Path -Path $AlyaAzureBrandingBackgroundImage -Leaf
         $uplFile = Join-Path $env:TEMP $fileName
         if (Test-Path $uplFile) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
-        Invoke-WebRequest -Uri $AlyaAzureBrandingBackgroundImage -OutFile $uplFile
+        Invoke-WebRequestIndep -Uri $AlyaAzureBrandingBackgroundImage -OutFile $uplFile
     }
     try
     {
@@ -227,7 +227,7 @@ else
         $fileName = Split-Path -Path $AlyaAzureBrandingSquareLogo -Leaf
         $uplFile = Join-Path $env:TEMP $fileName
         if (Test-Path $uplFile) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
-        Invoke-WebRequest -Uri $AlyaAzureBrandingSquareLogo -OutFile $uplFile
+        Invoke-WebRequestIndep -Uri $AlyaAzureBrandingSquareLogo -OutFile $uplFile
     }
     try
     {
@@ -264,7 +264,7 @@ else
         $fileName = Split-Path -Path $AlyaAzureBrandingSquareLogoDark -Leaf
         $uplFile = Join-Path $env:TEMP $fileName
         if (Test-Path $uplFile) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
-        Invoke-WebRequest -Uri $AlyaAzureBrandingSquareLogoDark -OutFile $uplFile
+        Invoke-WebRequestIndep -Uri $AlyaAzureBrandingSquareLogoDark -OutFile $uplFile
     }
     try
     {
@@ -301,7 +301,7 @@ else
         $fileName = Split-Path -Path $AlyaAzureBrandingBannerLogo -Leaf
         $uplFile = Join-Path $env:TEMP $fileName
         if (Test-Path $uplFile) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
-        Invoke-WebRequest -Uri $AlyaAzureBrandingBannerLogo -OutFile $uplFile
+        Invoke-WebRequestIndep -Uri $AlyaAzureBrandingBannerLogo -OutFile $uplFile
     }
     #$stream = [System.IO.File]::Open($uplFile,[System.IO.FileMode]::Open)
     #Set-MgBetaOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile
@@ -342,7 +342,7 @@ else
         $fileName = Split-Path -Path $AlyaAzureBrandingFavicon -Leaf
         $uplFile = Join-Path $env:TEMP $fileName
         if (Test-Path $uplFile) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
-        Invoke-WebRequest -Uri $AlyaAzureBrandingFavicon -OutFile $uplFile
+        Invoke-WebRequestIndep -Uri $AlyaAzureBrandingFavicon -OutFile $uplFile
     }
     try
     {

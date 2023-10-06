@@ -31,22 +31,10 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$version = 30
-do
-{
-    $version--
-    $pageUrl = "https://jdk.java.net/$version/"
-    $check = $null
-    try
-    {
-        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-        [regex]$regex = "<h1>.*?General-Availability Release.*?</h1>"
-        $check = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-    } catch {}
-} while (-Not $check -and $version -gt 16)
-
-[regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64_bin\.zip"
-$newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+$pageUrl = "https://www.mythicsoft.com/agentransack/download/"
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+[regex]$regex = "[^`"]*agentransack[^`"]*x64[^`"]*msi[^`"]*\.zip"
+$newUrl = "https:"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
@@ -55,3 +43,13 @@ if (-Not (Test-Path $contentRoot))
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
 Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+$cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+if ($cmdTst)
+{
+    Expand-Archive -Path "$contentRoot\$fileName" -DestinationPath $contentRoot -Force
+}
+else
+{
+    Expand-Archive -Path "$contentRoot\$fileName" -OutputPath $contentRoot -Force
+}
+Remove-Item -Path "$contentRoot\$fileName" -Force

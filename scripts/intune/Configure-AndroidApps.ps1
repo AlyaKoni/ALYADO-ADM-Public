@@ -124,6 +124,10 @@ foreach($androidApp in $androidApps)
         $searchValue = [System.Web.HttpUtility]::UrlEncode($androidApp.displayName)
         $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         $app = (Get-MsGraphObject -Uri $uri).value
+        if ($app.Count -gt 1)
+        {
+            $app = $app | where { $_."@odata.type" -eq $androidApp."@odata.type" }
+        }
         if (-Not $app.id)
         {
             $uri = "/beta/deviceAppManagement/mobileApps?`$filter=startsWith(displayName,'$searchValue')"

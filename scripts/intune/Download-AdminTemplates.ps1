@@ -66,7 +66,7 @@ $req = Invoke-WebRequestIndep -Uri $url -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*admintemplates_x64[^`"]*.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $fileName = Split-Path $newUrl -Leaf
-Invoke-WebRequest -Uri $newUrl -OutFile "$dataRoot\$fileName"
+Invoke-WebRequestIndep -Uri $newUrl -OutFile "$dataRoot\$fileName"
 if (-Not (Test-Path "$dataRoot\OfficeApps"))
 {
     New-Item -Path "$dataRoot\OfficeApps" -ItemType Directory -Force | Out-Null

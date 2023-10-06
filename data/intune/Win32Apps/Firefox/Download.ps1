@@ -31,27 +31,19 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$version = 30
-do
-{
-    $version--
-    $pageUrl = "https://jdk.java.net/$version/"
-    $check = $null
-    try
-    {
-        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-        [regex]$regex = "<h1>.*?General-Availability Release.*?</h1>"
-        $check = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-    } catch {}
-} while (-Not $check -and $version -gt 16)
-
-[regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64_bin\.zip"
-$newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-$fileName = Split-Path -Path $newUrl -Leaf
+$pageUrl = "https://download.mozilla.org/?product=firefox-msi-latest-ssl&os=win64&lang=en-US"
+$fileName = "Firefox Setup.msi"
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\$fileName"
+
+Get-Item -Path "$contentRoot\$fileName" | fl
+$shell = New-Object -COMObject Shell.Application
+$shellFolder = $Shell.NameSpace($contentRoot)
+$shellFile   = $ShellFolder.ParseName($fileName)
+$Version = $shellFolder.GetDetailsOf($shellFile,22).Split()[2]
+Rename-Item -Path "$contentRoot\$fileName" -NewName "Firefox Setup $Version.msi"

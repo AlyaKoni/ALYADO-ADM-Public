@@ -95,28 +95,28 @@ if (-Not $VNet)
 
 # Getting my ip
 Write-Host "Getting my ip" -ForegroundColor $CommandInfo
-$myIpTest = (Invoke-WebRequest "https://myexternalip.com/raw?$($guid)=1" -ErrorAction SilentlyContinue).content
+$myIpTest = (Invoke-WebRequestIndep "https://myexternalip.com/raw?$($guid)=1" -ErrorAction SilentlyContinue).content
 $myIp = $null
 if (-not $myIpTest -or $myIp -ne $myIpTest)
 {
     $myIp = $myIpTest
-    $myIpTest = (Invoke-WebRequest "https://api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
+    $myIpTest = (Invoke-WebRequestIndep "https://api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
     if (-not $myIpTest -or $myIp -ne $myIpTest)
     {
         $myIp = $myIpTest
-        $myIpTest = (Invoke-WebRequest "https://ifconfig.me/ip?$($guid)=1" -ErrorAction SilentlyContinue).content
+        $myIpTest = (Invoke-WebRequestIndep "https://ifconfig.me/ip?$($guid)=1" -ErrorAction SilentlyContinue).content
         if (-not $myIpTest -or $myIp -ne $myIpTest)
         {
             $myIp = $myIpTest
-            $myIpTest = (Invoke-WebRequest "http://checkip.amazonaws.com/?$($guid)=1" -ErrorAction SilentlyContinue).content
+            $myIpTest = (Invoke-WebRequestIndep "http://checkip.amazonaws.com/?$($guid)=1" -ErrorAction SilentlyContinue).content
             if (-not $myIpTest -or $myIp -ne $myIpTest)
             {
                 $myIp = $myIpTest
-                $myIpTest = (Invoke-WebRequest "http://checkip.dyndns.org/?$($guid)=1" -ErrorAction SilentlyContinue).content
+                $myIpTest = (Invoke-WebRequestIndep "http://checkip.dyndns.org/?$($guid)=1" -ErrorAction SilentlyContinue).content
                 $myIpTest = ($myIpTest  |  Select-String -Pattern "\d{1,3}(\.\d{1,3}){3}" -AllMatches).Matches.Value
                 if (-not $myIpTest -or $myIp -ne $myIpTest)
                 {
-                    $myIpTest = (Invoke-WebRequest "http://www.myip.ch/?$($guid)=1" -ErrorAction SilentlyContinue).content
+                    $myIpTest = (Invoke-WebRequestIndep "http://www.myip.ch/?$($guid)=1" -ErrorAction SilentlyContinue).content
                     $myIp = ($myIpTest  |  Select-String -Pattern "\d{1,3}(\.\d{1,3}){3}" -AllMatches).Matches.Value
                 }
             }

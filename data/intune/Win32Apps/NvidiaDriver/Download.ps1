@@ -108,7 +108,7 @@ if (-Not (Test-Path $dFile))
 {
     try
     {
-        Invoke-WebRequest -Uri $dflt_url -Method Get -UseBasicParsing -OutFile $dFile
+        Invoke-WebRequestIndep -Uri $dflt_url -Method Get -UseBasicParsing -OutFile $dFile
     }
     catch {
         Write-Warning "win10/11 driver download failed. Trying win10"
@@ -117,7 +117,7 @@ if (-Not (Test-Path $dFile))
     {
         try
         {
-            Invoke-WebRequest -Uri $df10_url -Method Get -UseBasicParsing -OutFile $dFile
+            Invoke-WebRequestIndep -Uri $df10_url -Method Get -UseBasicParsing -OutFile $dFile
         }
         catch {}
     }

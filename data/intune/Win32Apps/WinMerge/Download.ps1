@@ -31,22 +31,10 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$version = 30
-do
-{
-    $version--
-    $pageUrl = "https://jdk.java.net/$version/"
-    $check = $null
-    try
-    {
-        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-        [regex]$regex = "<h1>.*?General-Availability Release.*?</h1>"
-        $check = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-    } catch {}
-} while (-Not $check -and $version -gt 16)
-
-[regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64_bin\.zip"
-$newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+$pageUrl = "https://winmerge.org/downloads"
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+[regex]$regex = "[^`"]*WinMerge[^`"]*x64[^`"]*Setup[^`"]*\.exe"
+$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"

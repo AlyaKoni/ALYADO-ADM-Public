@@ -118,7 +118,7 @@ if ($states.Count -eq $numSamples)
         Add-Content -Path $logFile -Value "`"$($actDate.ToString("s"))`",`"100`",`"100`",`"100000`",`"True`",`"True`",`"Shutdown`""
         Add-Content -Path $stateFile -Value "`"$($actDate.ToString("s"))`",`"100`",`"100`",`"100000`",`"True`",`"True`""
         #place here VM shutdown part, as an example a call to a webhook
-        #Invoke-WebRequest -Method POST -Uri UriToStopThisVm
+        #Invoke-WebRequestIndep -Method POST -Uri UriToStopThisVm
     }
 }
 else

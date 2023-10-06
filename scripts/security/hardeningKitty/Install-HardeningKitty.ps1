@@ -17,13 +17,13 @@
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
-    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
+    Die Alya Basis Konfiguration ist eine Freie Software: Sie kï¿½nnen sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
-    veröffentlichten Version, weiter verteilen und/oder modifizieren.
-    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
-    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
-    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    verï¿½ffentlichten Version, weiter verteilen und/oder modifizieren.
+    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nï¿½tzlich sein wird,
+    aber OHNE JEDE GEWï¿½HRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewï¿½hrleistung der MARKTFï¿½HIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
     Siehe die GNU General Public License fuer weitere Details:
     https://www.gnu.org/licenses/gpl-3.0.txt
 
@@ -53,10 +53,10 @@ Write-Host "HardeningKitty | Install-HardeningKitty | Local" -ForegroundColor $C
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Function InstallHardeningKitty() {
-    $Version = ((Invoke-WebRequest "https://api.github.com/repos/0x6d69636b/windows_hardening/releases/latest" -UseBasicParsing) | ConvertFrom-Json).Name
-    $HardeningKittyLatestVersionDownloadLink = ((Invoke-WebRequest "https://api.github.com/repos/0x6d69636b/windows_hardening/releases/latest" -UseBasicParsing) | ConvertFrom-Json).zipball_url
+    $Version = ((Invoke-WebRequestIndep "https://api.github.com/repos/0x6d69636b/windows_hardening/releases/latest" -UseBasicParsing) | ConvertFrom-Json).Name
+    $HardeningKittyLatestVersionDownloadLink = ((Invoke-WebRequestIndep "https://api.github.com/repos/0x6d69636b/windows_hardening/releases/latest" -UseBasicParsing) | ConvertFrom-Json).zipball_url
     $ProgressPreference = 'SilentlyContinue'
-    Invoke-WebRequest $HardeningKittyLatestVersionDownloadLink -Out HardeningKitty$Version.zip
+    Invoke-WebRequestIndep $HardeningKittyLatestVersionDownloadLink -Out HardeningKitty$Version.zip
     if (-Not (Test-Path ".\HardeningKitty$Version"))
     {
         New-Item -Path ".\HardeningKitty$Version" -ItemType Directory

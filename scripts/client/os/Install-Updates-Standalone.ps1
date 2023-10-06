@@ -162,7 +162,7 @@ function Install-ModuleIfNotInstalled (
         }
         else
         {
-            Expand-Archive -Path $ModuleContentZip -OutputPath v -Force
+            Expand-Archive -Path $ModuleContentZip -OutputPath $ModuleContentDir -Force
         }
         Import-Module "$ModuleContentDir\PackageManagement.psd1" -Force -Verbose
     }
