@@ -187,6 +187,23 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
+        "displayName": "Microsoft 365 (Office)",
+        "description": "Eine App für Dokumente, Kalkulationstabellen, Präsentationen, PDFs und mehr.",
+        "publisher": "Microsoft Corporation",
+        "largeIcon": null,
+        "isFeatured": false,
+        "privacyInformationUrl": null,
+        "informationUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.officehubrow&hl=de-CH",
+        "owner": null,
+        "developer": null,
+        "notes": null,
+        "roleScopeTagIds": [],
+        "packageId": "com.microsoft.office.officehubrow",
+        "appIdentifier": "com.microsoft.office.officehubrow",
+        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.officehubrow&hl=de-CH",
+        "appTracks": []
+    }, {
+        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "displayName": "Microsoft Outlook",
         "description": "Die offizielle App von Microsoft Outlook für Android-Handys und Tablets.",
         "publisher": "Microsoft Corporation",

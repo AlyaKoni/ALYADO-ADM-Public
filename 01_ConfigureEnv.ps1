@@ -53,6 +53,7 @@
 	14.05.2023 Konrad Brunner		Fixed package management update
 	12.06.2023 Konrad Brunner		Scripts path
 	22.07.2023 Konrad Brunner		Added non Public Cloud Environment Support
+    16.10.2023 Konrad Brunner       Install-ModuleIfNotInstalled new param: doNotLoadModules
 
 #>
 
@@ -93,7 +94,7 @@ $AlyaScripts = "$AlyaRoot\scripts"
 $AlyaSolutions = "$AlyaRoot\solutions"
 $AlyaTools = "$AlyaRoot\tools"
 $AlyaEnvSwitch = ""
-$AlyaModuleVersionOverwrite = @( @{Name="PnP.PowerShell";Version="2.1.1"} )
+$AlyaModuleVersionOverwrite = @( <#@{Name="PnP.PowerShell";Version="2.1.1"}#> )
 $AlyaPackageVersionOverwrite = @( @{Name="Selenium.WebDriver";Version="4.10.0"} )
 
 # Switching env if required
@@ -615,7 +616,7 @@ function Wait-UntilProcessEnds(
 function Get-PublishedModuleVersion(
     [string] [Parameter(Mandatory = $true)] $moduleName,
     [Version] $exactVersion = "0.0.0.0",
-    [bool] $AllowPrerelease = $false
+    [bool] $allowPrerelease = $false
 )
 {
     $url = "https://www.powershellgallery.com/packages/$moduleName/?dummy=$(Get-Random)"
@@ -636,7 +637,7 @@ function Get-PublishedModuleVersion(
         Write-Warning $_.Exception.Message
         return $null
     }
-    if ($AllowPrerelease -or $exactVersion -ne "0.0.0.0")
+    if ($allowPrerelease -or $exactVersion -ne "0.0.0.0")
     {
         if ($exactVersion -ne "0.0.0.0") { $version = $exactVersion }
         $url = "https://www.powershellgallery.com/packages/$moduleName/$version/?dummy=$(Get-Random)"
@@ -866,7 +867,8 @@ function Install-ModuleIfNotInstalled (
     [Version] $minimalVersion = "0.0.0.0",
     [Version] $exactVersion = "0.0.0.0",
     [bool] $autoUpdate = $true,
-    [bool]$AllowPrerelease = $false
+    [bool]$allowPrerelease = $false,
+    [bool]$doNotLoadModules = $false
 )
 {
     if ($AlyaModuleVersionOverwrite.Name -contains $moduleName)
@@ -910,7 +912,10 @@ function Install-ModuleIfNotInstalled (
         {
             Expand-Archive -Path $ModuleContentZip -OutputPath $ModuleContentDir -Force
         }
-        Import-Module "$ModuleContentDir\PackageManagement.psd1" -Force -Verbose
+        if (-Not $doNotLoadModules)
+        {
+            Import-Module "$ModuleContentDir\PackageManagement.psd1" -Force -Verbose
+        }
     }
     $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
     if (-Not $regRep)
@@ -952,7 +957,10 @@ function Install-ModuleIfNotInstalled (
             }
             catch
             {
-                Import-Module -Name PowerShellGet
+                if (-Not $doNotLoadModules)
+                {
+                    Import-Module -Name PowerShellGet
+                }
                 $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
                     Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
@@ -970,7 +978,7 @@ function Install-ModuleIfNotInstalled (
         }
         else
         {
-            $versionCheck = Get-PublishedModuleVersion $moduleName -AllowPrerelease $AllowPrerelease -exactVersion $exactVersion
+            $versionCheck = Get-PublishedModuleVersion $moduleName -AllowPrerelease $allowPrerelease -exactVersion $exactVersion
             if (-Not $versionCheck) {
                 Write-Warning "Module '$moduleName' does not looks like a module from Powershell Gallery"
                 $requestedVersion = $exactVersion
@@ -996,7 +1004,10 @@ function Install-ModuleIfNotInstalled (
             }
             catch
             {
-                Import-Module -Name PowerShellGet
+                if (-Not $doNotLoadModules)
+                {
+                    Import-Module -Name PowerShellGet
+                }
                 $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
                     Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
@@ -1015,7 +1026,7 @@ function Install-ModuleIfNotInstalled (
     }
     if ($null -eq $requestedVersion)
     {
-        $versionCheck = Get-PublishedModuleVersion $moduleName -AllowPrerelease $AllowPrerelease
+        $versionCheck = Get-PublishedModuleVersion $moduleName -AllowPrerelease $allowPrerelease
         if (-Not $versionCheck) {
             Write-Warning "Module '$moduleName' does not looks like a module from Powershell Gallery"
             $module = Get-Module -Name $moduleName -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
@@ -1041,7 +1052,10 @@ function Install-ModuleIfNotInstalled (
             }
             catch
             {
-                Import-Module -Name PowerShellGet
+                if (-Not $doNotLoadModules)
+                {
+                    Import-Module -Name PowerShellGet
+                }
                 $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
                     Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
@@ -1108,7 +1122,7 @@ function Install-ModuleIfNotInstalled (
                 {
                     if ($installModuleHasPrerelease)
                     {
-                        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+                        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$allowPrerelease -Force -Verbose -AcceptLicense
                     }
                     else
                     {
@@ -1119,7 +1133,7 @@ function Install-ModuleIfNotInstalled (
                 {
                     if ($saveModuleHasPrerelease)
                     {
-                        Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose -AcceptLicense
+                        Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$allowPrerelease -Force -Verbose -AcceptLicense
                     }
                     else
                     {
@@ -1133,7 +1147,7 @@ function Install-ModuleIfNotInstalled (
                 {
                     if ($installModuleHasPrerelease)
                     {
-                        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$AllowPrerelease -Force -Verbose
+                        Install-Module -Name $moduleName @optionalArgs -Scope CurrentUser -AllowClobber -AllowPrerelease:$allowPrerelease -Force -Verbose
                     }
                     else
                     {
@@ -1144,7 +1158,7 @@ function Install-ModuleIfNotInstalled (
                 {
                     if ($saveModuleHasPrerelease)
                     {
-                        Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$AllowPrerelease -Force -Verbose
+                        Save-Module -Name $moduleName -RequiredVersion $requestedVersionFullname -Path $AlyaModulePath -AllowPrerelease:$allowPrerelease -Force -Verbose
                     }
                     else
                     {
@@ -1179,18 +1193,24 @@ function Install-ModuleIfNotInstalled (
 	        }
 	    }
     }
-    if ($exactVersion -ne "0.0.0.0" -or $AllowPrerelease)
+    if ($exactVersion -ne "0.0.0.0" -or $allowPrerelease)
     {
         $tmodule = Get-Module -Name $moduleName
         if ($tmodule -and $tmodule.Version -ne $requestedVersion)
         {
             Remove-Module -Name $moduleName
         }
-        Import-Module -Name $moduleName -MinimumVersion $requestedVersion -MaximumVersion $requestedVersion
+        if (-Not $doNotLoadModules)
+        {
+            Import-Module -Name $moduleName -MinimumVersion $requestedVersion -MaximumVersion $requestedVersion
+        }
     }
     if ($AlyaIsPsCore -and $moduleName -in @("Microsoft.Online.Sharepoint.PowerShell", "MSOnline", "AzureADPreview", "AIPService", "AppX"))
     {
-        Import-Module -Name $moduleName -UseWindowsPowershell
+        if (-Not $doNotLoadModules)
+        {
+            Import-Module -Name $moduleName -UseWindowsPowershell
+        }
     }
 }
 #Install-ModuleIfNotInstalled "AppX"
@@ -1206,7 +1226,7 @@ function Install-ScriptIfNotInstalled (
     [Version] $minimalVersion = "0.0.0.0",
     [Version] $exactVersion = "0.0.0.0",
     [bool] $autoUpdate = $true,
-    [bool] $AllowPrerelease = $false
+    [bool] $allowPrerelease = $false
 )
 {
     if (-Not (Is-InternetConnected))
@@ -1228,7 +1248,7 @@ function Install-ScriptIfNotInstalled (
         }
         else
         {
-            $versionCheck = Get-PublishedModuleVersion $scriptName -AllowPrerelease $AllowPrerelease -exactVersion $exactVersion
+            $versionCheck = Get-PublishedModuleVersion $scriptName -AllowPrerelease $allowPrerelease -exactVersion $exactVersion
             if (-Not $versionCheck)
             {
                 Write-Warning "Script '$scriptName' does not looks like a script from Powershell Gallery"
@@ -1251,7 +1271,7 @@ function Install-ScriptIfNotInstalled (
     }
     if ($null -eq $requestedVersion)
     {
-        $versionCheck = Get-PublishedModuleVersion $scriptName -AllowPrerelease $AllowPrerelease
+        $versionCheck = Get-PublishedModuleVersion $scriptName -AllowPrerelease $allowPrerelease
         if (-Not $versionCheck)
         {
             Write-Warning "Script '$scriptName' does not looks like a script from Powershell Gallery"

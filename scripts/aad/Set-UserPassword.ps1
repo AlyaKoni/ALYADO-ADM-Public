@@ -30,9 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    15.10.2020 Konrad Brunner       Initial Version
-    06.07.2022 Konrad Brunner       Change to AzureAdPreview
-    28.08.2023 Konrad Brunner       Switch to MgGraph
+    16.10.2023 Konrad Brunner       Initial Version
 
 #>
 
@@ -40,42 +38,51 @@
 Param(
     [Parameter(Mandatory = $true)]
     [ValidateNotNull()]
-    [string]$userUpn
+    [string]$userUpn,
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNull()]
+    [string]$password,
+    [bool]$changePasswordNextLogon = $true,
+    [bool]$passwordNeverExpires = $false
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserPasswordNeverExpire-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserPassword-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All")
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","UserAuthenticationMethod.ReadWrite.All","Directory.AccessAsUser.All")
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AAD | Set-UserPasswordNeverExpire | Graph" -ForegroundColor $CommandInfo
+Write-Host "AAD | Set-UserPassword | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Getting user" -ForegroundColor $CommandInfo
-$user = Get-MgBetaUser -UserId $userUpn -Property UserPrincipalName, PasswordPolicies
+$user = Get-MgBetaUser -UserId $userUpn -Property Id, UserPrincipalName, PasswordPolicies
 if ($user) {
+    
+    Write-Host "Resetting password" -ForegroundColor $CommandInfo
+    $mthd = Get-MgBetaUserAuthenticationPasswordMethod -UserId $userUpn
+    Reset-MgBetaUserAuthenticationMethodPassword -UserId $userUpn -AuthenticationMethodId $mthd.id -NewPassword $password
+    
     $policies = $null
     if ($user.PasswordPolicies -ne "None") {
         $policies = $user.PasswordPolicies
     }
-    if ($null -ne $policies -and $policies.Contains("DisablePasswordExpiration")){
-        Write-Host "Password expiration was already disabled" -ForegroundColor $CommandInfo
-    } else {
+    if ($passwordNeverExpires){
         Write-Host "Disabling password expiration" -ForegroundColor $CommandInfo
         if ($null -ne $policies) {
             if (-Not $policies.Contains("DisablePasswordExpiration")){
@@ -84,8 +91,22 @@ if ($user) {
         } else {
             $policies = "DisablePasswordExpiration"
         }
-        Update-MgBetaUser -UserId $userUpn -PasswordPolicies $policies
+    } else {
+        Write-Host "Enabling password expiration" -ForegroundColor $CommandInfo
+        if ($null -ne $policies) {
+            if ($policies.Contains("DisablePasswordExpiration")){
+                $policies = $policies.Replace(",DisablePasswordExpiration", "").Replace(", DisablePasswordExpiration", "").Replace("DisablePasswordExpiration,", "").Trim()
+            }
+        }
     }
+    Update-MgBetaUser -UserId $userUpn -PasswordPolicies $policies
+
+    Write-Host "Setting change password at next logon to $changePasswordNextLogon" -ForegroundColor $CommandInfo
+    $passwordProfile = @{
+        ForceChangePasswordNextSignIn = $changePasswordNextLogon
+    }
+    Update-MgBetaUser -UserId $userUpn -PasswordProfile $passwordProfile
+
 }
 else
 {

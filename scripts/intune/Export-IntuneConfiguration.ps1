@@ -38,7 +38,8 @@
 
 [CmdletBinding()]
 Param(
-    [bool]$doUserDataExport = $false
+    [bool]$doUserDataExport = $false,
+    [bool]$doAppReportExport = $false
 )
 
 # Loading configuration
@@ -572,15 +573,18 @@ foreach($application in $intuneApplications)
     $application = Get-MsGraphObject -Uri $uri
     $application | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_application.json")) -Force
 
-    $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/assignments"
-    $applicationAssignments = Get-MsGraphObject -Uri $uri
-    if ($applicationAssignments -and $applicationAssignments.value.Count -gt 0)
+    if ($doAppReportExport)
     {
-        $applicationAssignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_applicationAssignments.json")) -Force
-        $uri = GetReportUri -reportname "DeviceInstallStatusByApp" -filter "ApplicationId eq '$($application.id)'"
-        $DeviceInstallStatusByAppUris += @{app=$application.id;uri=$uri}
-        $uri = GetReportUri -reportname "UserInstallStatusAggregateByApp" -filter "ApplicationId eq '$($application.id)'"
-        $UserInstallStatusAggregateByAppUris += @{app=$application.id;uri=$uri}
+        $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)/assignments"
+        $applicationAssignments = Get-MsGraphObject -Uri $uri
+        if ($applicationAssignments -and $applicationAssignments.value.Count -gt 0)
+        {
+            $applicationAssignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_applicationAssignments.json")) -Force
+            $uri = GetReportUri -reportname "DeviceInstallStatusByApp" -filter "ApplicationId eq '$($application.id)'"
+            $DeviceInstallStatusByAppUris += @{app=$application.id;uri=$uri}
+            $uri = GetReportUri -reportname "UserInstallStatusAggregateByApp" -filter "ApplicationId eq '$($application.id)'"
+            $UserInstallStatusAggregateByAppUris += @{app=$application.id;uri=$uri}
+        }
     }
     
     <#

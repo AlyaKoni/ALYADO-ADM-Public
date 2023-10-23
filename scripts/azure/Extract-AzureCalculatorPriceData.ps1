@@ -36,8 +36,105 @@
 
 [CmdletBinding()]
 Param(
-    $exportCurrency = "chf"
+    $exportCurrencyName = "chf"
 )
+
+$azuresqldatabaseCsv = [System.Collections.ArrayList]@()
+foreach ($region in $azuresqldatabase.regions)
+{
+    #$region = $azuresqldatabase.regions | Where-Object { $_.slug -eq "switzerland-north" }
+    #Write-Host "Region: $($region.displayName)"
+    $doneSku = @()
+    foreach ($dbType in $dbTypes)
+    {
+        foreach ($dbPurchaseModel in $dbPurchaseModels)
+        {
+            if (-Not [string]::IsNullOrEmpty($dbPurchaseModel)) { $dbPurchaseModel = "-"+$dbPurchaseModel }
+            foreach ($dbTier in $dbTiers)
+            {
+                if (-Not [string]::IsNullOrEmpty($dbTier)) { $dbTier = "-"+$dbTier }
+                foreach ($dbComputeTier in $dbComputeTiers)
+                {
+                    if (-Not [string]::IsNullOrEmpty($dbComputeTier)) { $dbComputeTier = "-"+$dbComputeTier }
+                    $skuName = "$dbType$dbPurchaseModel$dbTier$dbComputeTier"
+                    $sku = Get-Member -InputObject $azuresqldatabase.skus -Name $skuName
+                    $skus = @()
+                    if ($sku)
+                    {
+                        $skus += @($skuName)
+                    }
+                    else
+                    {
+                        $sks = $azuresqldatabase.skus.PSObject.Properties | Where-Object { $_.Name.StartsWith($skuName) }
+                        foreach($sk in $sks)
+                        {
+                            $skus += @($sk.Name)
+                        }
+                    }
+                    foreach($skun in $skus)
+                    {
+                        if ($doneSku -notcontains $skun)
+                        {
+                            $instance = $skun.Replace($skuName, "").Trim("-")
+                            Write-Host "    "
+                            Write-Host "    SkuName: $($skun)"
+                            Write-Host "      Instance: $($instance)"
+                            $sku = $azuresqldatabase.skus."$skun"
+
+                            $obj = [pscustomobject]@{
+                                deploymentOption = $deploymentOptionName
+                                dbType = $dbType.Trim("-")
+                                dbPurchaseModel = $dbPurchaseModel.Trim("-")
+                                dbTier = $dbTier.Trim("-")
+                                dbComputeTier = $dbComputeTier.Trim("-")
+                                instance = $instance.Trim("-")
+                                region = $region.displayName
+                            }
+                            $onePriceFound = $false
+                            #foreach($skuPriceNameToFind in $allSkus)
+                            #{
+                                #$skuPriceNameToFindCsv = $skuPriceNameToFind -replace "reserved", ""
+                                foreach($skuPriceName in (Get-Member -InputObject $sku))
+                                {
+                                    if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $skuPriceName.Name)
+                                    {
+                                        Write-Host "      Price: $($skuPriceName.Name)"
+                                        $priceName = "price$($skuPriceName.Name)"
+                                        $price = 0.0
+                                        $offers = $sku."$($skuPriceName.Name)"
+                                        $priceType = $null
+                                        foreach($offer in $offers)
+                                        {
+                                            Write-Host "        Offer: $($offer)"
+                                            if ($null -eq $priceType)
+                                            {
+                                                $priceType = $offer.Replace($skun, "").Trim("-")
+                                                $priceName = "price-$priceType-$($skuPriceName.Name)"
+                                            }
+                                            $prices = $allOffers[$offer]
+                                            $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
+                                            if ($memb)
+                                            {
+                                                $price += $prices."$($region.slug)".value * $exportCurrency.conversion
+                                                $onePriceFound = $true
+                                            }
+                                            $offerName = $offer.Substring(0, $offer.LastIndexOf("-") - 1)
+                                        }
+                                        if ($price -eq 0.0) { $price = $null }
+                                        Add-Member -InputObject $obj -MemberType NoteProperty -Name $priceName -Value $price
+                                    }
+                                }
+                            #}
+                            if ($onePriceFound) { $azuresqldatabaseCsv.Add($obj) | Out-Null }
+                                    
+                            $doneSku += $skun
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
@@ -60,7 +157,7 @@ $culture = "en-us"
 $discount = "mosp"
 $csvDelemiter = ";"
 $query = "?culture=$culture&discount=$discount&v=$version"
-$exportCurrency = $exportCurrencyData."$exportCurrency"
+$exportCurrency = $exportCurrencyData."$exportCurrencyName"
 
 Write-Host "Getting data"
 $support = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/support/calculator/$query"
@@ -74,6 +171,15 @@ $storage = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.mi
 $bandwidth = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/bandwidth/calculator/$query"
 $virtualmachines = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/virtual-machines/calculator/$query"
 $postgresql = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/postgresql/calculator/$query"
+$config = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/calculator/config/$query"
+$azuresqldatabase = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v3/pricing/azure-sql-database/calculator/$query"
+$functions = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/functions/calculator/$query"
+$backup = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/backup/calculator/$query"
+$monitor = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/monitor/calculator/$query"
+$automation = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/automation/calculator/$query"
+$keyvault = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/key-vault/calculator/$query"
+$analysisservices = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/analysis-services/calculator/$query"
+
 
 $computeWinBenchmarks = Invoke-WebRequestIndep -UseBasicParsing -Method GET -Uri "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/compute-benchmark-scores"
 
@@ -603,8 +709,219 @@ foreach($benchmark in $benchmarks)
 }
 Write-Host "Exporting Excel - Sheet BenchmarkVMs" -ForegroundColor $CommandInfo
 $excel = $benchmarksCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "BenchmarkVMs" -TableName "BenchmarkVMs" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
-Close-ExcelPackage $excel -Show
+Close-ExcelPackage $excel
 Clear-Variable -Name "benchmarksCsv" -Force -ErrorAction SilentlyContinue
+
+Write-Host "Building azuresqldatabase table" -ForegroundColor $CommandInfo
+$azuresqldatabaseCsv = [System.Collections.ArrayList]@()
+$allOffers = @{}
+foreach ($offerName in (Get-Member -InputObject $azuresqldatabase.offers))
+{
+    if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $offerName.Name)
+    {
+        $offer = $azuresqldatabase.offers."$($offerName.Name)"
+        $membs = Get-Member -InputObject $offer.prices
+        foreach($memb in $membs)
+        {
+            if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $memb.Name)
+            {
+                $fullOfferPriceName = $offerName.Name+"--"+$memb.Name
+                $allOffers.Add($fullOfferPriceName, $offer.prices."$($memb.Name)") | Out-Null
+            }
+        }
+    }
+}
+$allSkus = [System.Collections.ArrayList]@()
+foreach ($sku in (Get-Member -InputObject $azuresqldatabase.skus))
+{
+    if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $sku.Name)
+    {
+        $membs = Get-Member -InputObject $azuresqldatabase.skus."$($sku.Name)"
+        foreach($memb in $membs)
+        {
+            if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $memb.Name)
+            {
+                $offers = $azuresqldatabase.skus."$($sku.Name)"."$($memb.Name)"
+                foreach($offer in $offers)
+                {
+                    $priceName = $offer.Substring($offer.LastIndexOf("-") + 1, $offer.Length - $offer.LastIndexOf("-") - 1)
+                    if (-Not $allSkus.Contains($priceName))
+                    {
+                        $allSkus.Add($priceName) | Out-Null
+                    }
+                }
+            }
+        }
+    }
+}
+
+$dbTypes = @(
+    "managed",
+    "standard",
+    "retention",
+    "premium",
+    "hyperscale"
+)
+foreach ($atype in $azuresqldatabase.types)
+{
+    $dbTypes += $atype.slug
+}
+
+$dbPurchaseModels = @(
+    "backup",
+    "compute",
+    "compute-vcore",
+    "storage",
+    "instance",
+    "elastic-pool"
+)
+foreach ($atype in $azuresqldatabase.purchaseModels)
+{
+    $dbPurchaseModels += $atype.slug
+}
+
+$dbTiers = @(
+    "instance-pools",
+    "business-critical-storage",
+    "general-purpose-storage",
+    "pitr-storage-hyperscale",
+    "pitr-backup-storage",
+    "operations",
+    "backup",
+    "backup-storage-point",
+    "ltr-backup-storage"
+)
+foreach ($atype in $azuresqldatabase.dtuTiers)
+{
+    $dbTiers += $atype.slug
+}
+foreach ($atype in $azuresqldatabase.vcoreTiers)
+{
+    $dbTiers += $atype.slug
+}
+
+$dbComputeTiers = @("")
+foreach ($atype in $azuresqldatabase.computeTiers)
+{
+    $dbComputeTiers += $atype.slug
+}
+$priceMembers = @()
+foreach ($region in $azuresqldatabase.regions)
+{
+    #$region = $azuresqldatabase.regions | Where-Object { $_.slug -eq "switzerland-north" }
+    #Write-Host "Region: $($region.displayName)"
+    $doneSku = @()
+    foreach ($dbType in $dbTypes)
+    {
+        foreach ($dbPurchaseModel in $dbPurchaseModels)
+        {
+            if (-Not [string]::IsNullOrEmpty($dbPurchaseModel)) { $dbPurchaseModel = "-"+$dbPurchaseModel }
+            foreach ($dbTier in $dbTiers)
+            {
+                if (-Not [string]::IsNullOrEmpty($dbTier)) { $dbTier = "-"+$dbTier }
+                foreach ($dbComputeTier in $dbComputeTiers)
+                {
+                    if (-Not [string]::IsNullOrEmpty($dbComputeTier)) { $dbComputeTier = "-"+$dbComputeTier }
+                    $skuName = "$dbType$dbPurchaseModel$dbTier$dbComputeTier"
+                    $sku = Get-Member -InputObject $azuresqldatabase.skus -Name $skuName
+                    $skus = @()
+                    if ($sku)
+                    {
+                        $skus += @($skuName)
+                    }
+                    else
+                    {
+                        $sks = $azuresqldatabase.skus.PSObject.Properties | Where-Object { $_.Name.StartsWith($skuName) }
+                        foreach($sk in $sks)
+                        {
+                            $skus += @($sk.Name)
+                        }
+                    }
+                    foreach($skun in $skus)
+                    {
+                        if ($doneSku -notcontains $skun)
+                        {
+                            $instance = $skun.Replace($skuName, "").Trim("-")
+                            #Write-Host "    "
+                            #Write-Host "    SkuName: $($skun)"
+                            #Write-Host "      Instance: $($instance)"
+                            $sku = $azuresqldatabase.skus."$skun"
+
+                            $obj = [pscustomobject]@{
+                                deploymentOption = $deploymentOptionName
+                                dbType = $dbType.Trim("-")
+                                dbPurchaseModel = $dbPurchaseModel.Trim("-")
+                                dbTier = $dbTier.Trim("-")
+                                dbComputeTier = $dbComputeTier.Trim("-")
+                                instance = $instance.Trim("-")
+                                region = $region.displayName
+                            }
+                            $onePriceFound = $false
+                            foreach($skuPriceName in (Get-Member -InputObject $sku))
+                            {
+                                if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $skuPriceName.Name)
+                                {
+                                    #Write-Host "      Price: $($skuPriceName.Name)"
+                                    $priceName = "price$($skuPriceName.Name)"
+                                    $price = 0.0
+                                    $offers = $sku."$($skuPriceName.Name)"
+                                    $priceType = $null
+                                    foreach($offer in $offers)
+                                    {
+                                        #Write-Host "        Offer: $($offer)"
+                                        if ($null -eq $priceType)
+                                        {
+                                            $priceType = $offer.Replace($skun, "").Trim("-")
+                                            $priceName = "price-$priceType-$($skuPriceName.Name)"
+                                        }
+                                        $prices = $allOffers[$offer]
+                                        $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
+                                        if ($memb)
+                                        {
+                                            $price += $prices."$($region.slug)".value * $exportCurrency.conversion
+                                            $onePriceFound = $true
+                                        }
+                                        $offerName = $offer.Substring(0, $offer.LastIndexOf("-") - 1)
+                                    }
+                                    if ($price -eq 0.0) { $price = $null }
+                                    if ($priceMembers -notcontains $priceName) { $priceMembers += $priceName }
+                                    Add-Member -InputObject $obj -MemberType NoteProperty -Name $priceName -Value $price
+                                }
+                            }
+                            if ($onePriceFound) { $azuresqldatabaseCsv.Add($obj) | Out-Null }
+                                    
+                            $doneSku += $skun
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+foreach($row in $azuresqldatabaseCsv)
+{
+    foreach($memberName in $priceMembers)
+    {
+        $memb = Get-Member -InputObject $row -Name $memberName -ErrorAction SilentlyContinue
+        if (-Not $memb)
+        {
+            Add-Member -InputObject $row -MemberType NoteProperty -Name $memberName -Value $null
+        }
+    }
+}
+
+Write-Host "Exporting Excel - Sheet PricesAzureSqlDatabase" -ForegroundColor $CommandInfo
+$excel = $azuresqldatabaseCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesAzureSqlDatabase" -TableName "PricesAzureSqlDatabase" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
+Close-ExcelPackage $excel -Show
+Clear-Variable -Name "azuresqldatabaseCsv" -Force -ErrorAction SilentlyContinue
+
+#TODO
+#   functions
+#   backup
+#   monitor
+#   automation
+#   keyvault
+#   analysisservices
 
 #Stopping Transscript
 Stop-Transcript

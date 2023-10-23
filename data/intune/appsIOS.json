@@ -270,6 +270,45 @@
         }
     }, {
         "@odata.type": "#microsoft.graph.iosStoreApp",
+        "displayName": "IOS Microsoft 365 (Office)",
+        "description": "Microsoft 365 is the ultimate everyday productivity app that helps you create, edit, and share on the go. With Word, Excel, and PowerPoint all in one app, Microsoft 365 is the destination for creating and editing documents on the fly when you need them most.\n \nIt’s easy to draft a blog in Word, manage your budget in Excel, or practice your next business pitch in PowerPoint. And with integrated editing features, Microsoft 365 is a complete documents editor right at your fingertips. You can also scan and sign important documents, create PDFs, and update your resume anywhere, in just a few taps.\n\nWith intelligent cloud services and trusted security, the Microsoft 365 app can help maximize your productivity in both work and life.\n\nWord, Excel, and PowerPoint all in one app:\n• Your go-to mobile app for productivity with Word, Excel, and PowerPoint all in one app.\n• Use Microsoft 365 as your cover letter or CV creator with professional templates.\n• Easily store and access Word, Excel, and PowerPoint files in the cloud.\n• Share, edit and collaborate with others in real time.\n• Practice presenting with Presenter Coach.\n• Excel can create or instantly modify worksheets with one of the many in-app templates available.\n\nConvert Pictures and Documents\n• Create docs by snapping a picture or uploading a photo from your camera roll.\n• Transform a photo of a table into an editable Excel spreadsheet.\n• Enhance digital images of whiteboards, spreadsheets, and documents.\n \nPDF Scanning & Editing Capabilities:\n• Scan PDF files and convert them into Word documents instantaneously—and vice versa—with the PDF converter tool.\n• Edit PDF files on your device quickly and easily while on the go.\n• PDF Reader allows you to access and sign PDFs.\n \nUnique Office Mobile Functions:\n• Quickly jot down thoughts and ideas, and then save or share them via Sticky Notes.\n• QR Scanner enables your device to scan QR codes and open attached links.\n• Office documents and spreadsheets can be transferred instantly to nearby mobile devices.\n \nAnyone can download the Microsoft 365 app for free and start using it right away. Access and save documents to the cloud by connecting a Microsoft Account (for OneDrive or SharePoint) or by connecting to a third-party cloud storage provider. Logging in with a personal Microsoft account or a work or school account connected to a Microsoft 365 subscription will unlock premium features within the app.\n\nSubscription & Privacy Disclaimer \nUnlock the full Microsoft 365 experience with a qualifying Microsoft 365 subscription for your phone, tablet, PC and Mac. \n\nMonthly Microsoft 365 subscriptions purchased from the app will be charged to your App Store account and will automatically renew within 24 hours prior to the end of the current subscription period unless auto-renewal is disabled beforehand. You can manage your subscriptions in your App Store account settings. \n\nThis app is provided by either Microsoft or a third-party app publisher and is subject to a separate privacy statement and terms and conditions. Data provided through the use of this store and this app may be accessible to Microsoft or the third-party app publisher, as applicable, and transferred to, stored and processed in the United States or any other country where Microsoft or the app publisher and their affiliates or service providers maintain facilities. \n\nPlease refer to the Microsoft Software License Terms for Microsoft Office. See “License Agreement” link under Information. By installing the app, you agree to these terms and conditions.",
+        "roleScopeTagIds": [],
+        "createdDateTime": "2023-10-06T06:26:08Z",
+        "supersedingAppCount": 0,
+        "privacyInformationUrl": "",
+        "publisher": "Microsoft Corporation",
+        "developer": "",
+        "applicableDeviceType": {
+            "iPhoneAndIPod": true,
+            "iPad": true
+        },
+        "isAssigned": true,
+        "isFeatured": false,
+        "notes": "",
+        "bundleId": "com.microsoft.officemobile",
+        "dependentAppCount": 0,
+        "lastModifiedDateTime": "2023-10-06T06:26:08Z",
+        "uploadState": 1,
+        "supersededAppCount": 0,
+        "largeIcon": null,
+        "informationUrl": null,
+        "owner": "",
+        "appStoreUrl": "https://apps.apple.com/us/app/microsoft-365-office/id541164041?uo=4",
+        "publishingState": "published",
+        "minimumSupportedOperatingSystem": {
+            "v12_0": false,
+            "v16_0": false,
+            "v13_0": false,
+            "v15_0": false,
+            "v17_0": false,
+            "v9_0": false,
+            "v10_0": false,
+            "v11_0": false,
+            "v8_0": true,
+            "v14_0": false
+        }
+    }, {
+        "@odata.type": "#microsoft.graph.iosStoreApp",
         "displayName": "IOS Microsoft Outlook",
         "description": "Outlook lets you bring all your email accounts and calendars in one convenient spot. Whether it\u0027s staying on top of your inbox or scheduling the next big thing, we make it easy to be your most productive, organized, and connected self.\n\nHere\u0027s what you\u0027ll love about Outlook for iOS:\n\n- Focus on the right things with our smart inbox - we help you sort between messages you need to act on straight away and everything else.\n\n- Swipe to quickly schedule, delete and archive messages.\n\n- Share your meeting availability with just a tap and easily find times to meet with others.\n\n- Find everything you\u0027re looking for with our new search experience, including files, contacts, and your upcoming trips.\n\n- View and attach any file from your email, OneDrive, Dropbox, and more, without having to download them to your phone.\n\n- Bring all the apps you love in Outlook, including Facebook, Evernote, Trello, and more.\n\n- Open Word, Excel, or other Office document attachments to edit them directly in the corresponding app and attach them back to an email.\n\n--\n\nOutlook for iOS works with Microsoft Exchange, Office 365, Outlook.com (including Hotmail and MSN), Gmail, Yahoo Mail, and iCloud.\n\n--\n\nTo make an in-app purchase of a Microsoft 365 Family or Personal subscription, open the app, go to Settings, and tap on Upgrade next to your Outlook.com or Hotmail.com account. Subscriptions begin at $6.99 a month in the US, and can vary by region. With a Microsoft 365 subscription, you get 1TB of storage for each user, access to all features in Word, Excel, and PowerPoint on iPad, iPhone, and iPod touch, and you can install Word, Excel, PowerPoint, Outlook and OneNote on PCs or Macs.\n\nMicrosoft 365 subscriptions purchased from the app will be charged to your iTunes account and will automatically renew within 24 hours prior to the end of the current subscription period, unless auto-renewal is disabled beforehand. To manage your subscriptions or to disable auto-renewal, after purchase, go to your iTunes account settings. A subscription cannot be cancelled during the active subscription period. Any unused portion of a free trial period, if offered will be forfeited when the user purchases a subscription to that publication, where applicable.\n\nPrivacy and Cookies: https://go.microsoft.com/fwlink/?LinkId=521839\nTerms of Use: http://go.microsoft.com/fwlink/?LinkID=530144",
         "publisher": "Microsoft Corporation",

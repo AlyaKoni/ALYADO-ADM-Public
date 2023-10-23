@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2023
@@ -30,56 +30,73 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    15.10.2020 Konrad Brunner       Initial Version
-    11.10.2023 Konrad Brunner       Switched to PnP
+    11.10.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string] [Parameter(Mandatory=$true)]
-    $Url
+    $adminGroups = @("TRAILASP-Admins")
+    <#[string[]] [Parameter(Mandatory=$true, ParameterSetName="Groups")]
+    $adminGroups,
+    [string[]] [Parameter(Mandatory=$true, ParameterSetName="Users")]
+    $adminUsers#>
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-ModernSiteEnableScripts-$($AlyaTimeString).log" | Out-Null
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-AdminsToAllSites-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-# Logins
+# Login
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
-# =============================================================
-# O365 stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Set-ModernSiteEnableScripts | O365" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Checking site
-Write-Host "Checking site" -ForegroundColor $CommandInfo
-$Site = Get-PnPTenantSite -Connection $adminCon -Identity $Url
-if (-Not $Site)
+# Getting site collections
+Write-Host "Getting site collections" -ForegroundColor $CommandInfo
+$retries = 10
+do
 {
-    throw "Site not found on url $($Url)!"
-}
-Write-Host "Atcual DenyAddAndCustomizePages setting: $($Site.DenyAddAndCustomizePages)"
+    try
+    {
+        $sitesToProcess = Get-PnPTenantSite -Connection $adminCon -Detailed
+        break
+    }
+    catch
+    {
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Warning "Retrying $retries times"
+        Start-Sleep -Seconds 15
+        $retries--
+        if ($retries -lt 0) { throw }
+    }
+} while ($true)
 
-if ($Site.DenyAddAndCustomizePages -eq "Enabled")
+# Defining admins
+$owners = @()
+foreach($owner in $adminGroups)
 {
-    Set-PnPTenantSite -Connection $adminCon -Identity $Url -DenyAddAndCustomizePages:$false
-    $Site = Get-PnPTenantSite -Connection $adminCon -Identity $Url
-    Write-Host "New DenyAddAndCustomizePages setting: $($Site.DenyAddAndCustomizePages)"
+    $owners += $owner
 }
-else
+foreach($owner in $adminUsers)
 {
-    Write-Host "  Setting was already set to:  $($Site.DenyAddAndCustomizePages)"
+    $owners += $owner
 }
 
-#Stopping Transscript
+# Setting site admins
+Write-Host "Setting site admins" -ForegroundColor $CommandInfo
+foreach ($site in $sitesToProcess)
+{
+    if ($site.Template -like "Redirect*") { continue }
+    if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
+    Write-Host "$($site.Url)"
+
+    # Checking site owner
+    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $owners
+}
+
+# Stopping Transscript
 Stop-Transcript
