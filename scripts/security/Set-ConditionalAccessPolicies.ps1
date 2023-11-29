@@ -36,12 +36,13 @@
     27.04.2023 Konrad Brunner       Calling script to disable security defaults
     23.07.2023 Konrad Brunner       Power BI Administrator sometimes not there
     13.09.2023 Konrad Brunner       Handling OnPrem groups
+    08.11.2023 Konrad Brunner       Key Authentication
 
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$ReportOnly = $false
+    [bool]$ReportOnly = $true
 )
 
 #Reading configuration
@@ -56,10 +57,11 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
 
 
 # Logins
-LoginTo-MgGraph -Scopes "Directory.ReadWrite.All","Policy.ReadWrite.ConditionalAccess","Policy.Read.All"
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Policy.ReadWrite.ConditionalAccess","Policy.Read.All")
 
 # =============================================================
 # Azure stuff
@@ -199,8 +201,75 @@ foreach($groupName in $AlyaMfaDisabledForGroups)
 $ExcludeGroupIds += $ExcludeGroupIdNoMfaCloud
 if ($null -ne $ExcludeGroupIdNoMfaOnPrem) { $ExcludeGroupIds += $ExcludeGroupIdNoMfaOnPrem }
 
+# Checking key group to exclude
+Write-Host "Checking key group to exclude" -ForegroundColor $CommandInfo
+$IncludeKeyGroupIds = @()
+if ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne "PleaseSpecify")
+{
+    $GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaKeyAuthEnabledGroupName)'"
+    if (-Not $GrpRslt)
+    {
+        throw "Group $AlyaKeyAuthEnabledGroupName not found!"
+    }
+    $ExcludeGroupIds += $GrpRslt.Id
+    $IncludeKeyGroupIds += $GrpRslt.Id
+}
+
+# Getting AuthenticationStrengthPolicy
+Write-Host "Getting AuthenticationStrengthPolicy" -ForegroundColor $CommandInfo
+$authenticationStrengthPolicy = Get-MgBetaPolicyAuthenticationStrengthPolicy | Where-Object { $_.DisplayName -eq "Phishing-resistant MFA" }
+if (-Not $authenticationStrengthPolicy)
+{
+    throw "AuthenticationStrengthPolicy 'Phishing-resistant MFA' not found!"
+}
+
+# Checking specific key access policy
+Write-Host "Checking specific key access policy" -ForegroundColor $CommandInfo
+if ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne "PleaseSpecify")
+{
+    $conditions = @{ 
+        Applications = @{
+            includeApplications = "All"
+        }
+        Users = @{
+            includeGroups = $IncludeKeyGroupIds
+        }
+        Platforms = @{
+            includePlatforms = @("windows", "macOS", "linux")
+        }
+    }
+    $grantcontrols  = @{
+        AuthenticationStrength = @{
+            Id = $authenticationStrengthPolicy.Id
+        }
+        Operator = "OR"
+    }
+    $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "KEY: Required for specific users" }
+    if (-Not $policyObj)
+    {
+        Write-Warning "Conditional access policy not found. Creating the policy 'KEY: Required for specific users'"
+        $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
+            -DisplayName "KEY: Required for specific users" `
+            -State $procState `
+            -Conditions $conditions `
+            -GrantControls $grantcontrols
+    }
+    else
+    {
+        Write-Host "Updating policy $PolicyName"
+        $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+            -DisplayName "KEY: Required for specific users" `
+            -Conditions $conditions `
+            -GrantControls $grantcontrols
+    }
+}
+else
+{
+    Write-Warning "$AlyaKeyAuthEnabledGroupName`is not set in ConfigureEnv.ps1. Skipping!"
+}
+
 # Checking all admins access policy
-Write-Host "Checking all admins access policy" -ForegroundColor $CommandInfo
+Write-Host "Checking all admins MFA access policy" -ForegroundColor $CommandInfo
 $conditions = @{ 
     Applications = @{
         includeApplications = "All"
@@ -229,13 +298,12 @@ else
     Write-Host "Updating policy $PolicyName"
     $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "MFA: Required for all admins" `
-        -State $procState `
         -Conditions $conditions `
         -GrantControls $grantcontrols
 }
 
 # Checking all users access policy
-Write-Host "Checking all users access policy" -ForegroundColor $CommandInfo
+Write-Host "Checking all users MFA access policy" -ForegroundColor $CommandInfo
 if ($null -eq $GroupIdMfa)
 {
     $conditions = @{ 
@@ -284,7 +352,6 @@ else
     Write-Host "Updating policy $PolicyName"
     $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "MFA: Required for all users" `
-        -State $procState `
         -Conditions $conditions `
         -GrantControls $grantcontrols
 }
@@ -328,7 +395,6 @@ else
     Write-Host "Updating policy $PolicyName"
     $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "SESSION: For all admins" `
-        -State $procState `
         -Conditions $conditions `
         -SessionControls $sessioncontrols
 }
@@ -371,7 +437,6 @@ else
     Write-Host "Updating policy $PolicyName"
     $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "SESSION: For all users" `
-        -State $procState `
         -Conditions $conditions `
         -SessionControls $sessioncontrols
 }

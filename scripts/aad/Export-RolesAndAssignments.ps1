@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     02.02.2021 Konrad Brunner       Initial Version
+    27.11.2023 Konrad Brunner       Switch to Graph
 
 #>
 
@@ -54,11 +55,13 @@ if (-Not (Test-Path "$AlyaData\aad"))
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
 # Azure stuff
@@ -79,31 +82,43 @@ if (-Not $Context)
 # Getting defined AD roles
 Write-Host "Getting defined AD roles" -ForegroundColor $CommandInfo
 $roleMappings = @()
-$adRoleDefs = Get-AzureADDirectoryRoleTemplate | Sort-Object -Property DisplayName
-$adRoleDefs | Format-Table ObjectType, DisplayName, Description
-$defRoles = Get-AzureADDirectoryRole | Sort-Object -Property DisplayName
+$adRoleDefs = Get-MgBetaDirectoryRoleTemplate -All
+$adRoleDefs | Format-Table DisplayName, Description
+$defRoles = Get-MgBetaDirectoryRole -All | Sort-Object -Property DisplayName
 foreach($roleDef in $adRoleDefs)
 {
     $role = $defRoles | Where-Object { $_.DisplayName -eq $roleDef.DisplayName }
     if ($role)
     {
         Write-Host "Role: $($role.DisplayName)"
-        $members = Get-AzureADDirectoryRoleMember -ObjectId $role.ObjectId
+        $members = Get-MgBetaDirectoryRoleMember -DirectoryRoleId $role.Id
         foreach($member in $members)
         {
-            Write-Host "  Member: $($member.DisplayName) $($member.Mail)"
+            Write-Host "  Member: $($member.AdditionalProperties.userPrincipalName)"
             $extProp = $member.ExtensionProperty
             $objUser = New-Object psObject
             $objUser | Add-Member RoleName $role.DisplayName
-            $objUser | Add-Member UserName $member.DisplayName
-            $objUser | Add-Member JobTitle $member.JobTitle
-            $objUser | Add-Member EMail $member.Mail
-            $objUser | Add-Member AccountEnabled $member.AccountEnabled
-            $objUser | Add-Member Department $member.Department
-            $objUser | Add-Member ObjectType $member.ObjectType
-            $objUser | Add-Member CreationDate $extProp.createdDateTime
-            $objUser | Add-Member EmployeeId  $extProp.employeeId
+            $objUser | Add-Member UserName $member.AdditionalProperties.displayName
+            if (-Not [string]::IsNullOrEmpty($member.AdditionalProperties.userPrincipalName)) {
+                $objUser | Add-Member UserPrincipalName $member.AdditionalProperties.userPrincipalName
+                $objUser | Add-Member UserType $member.AdditionalProperties.userType
+            } else {
+                $objUser | Add-Member UserPrincipalName $member.AdditionalProperties.appId
+                $objUser | Add-Member UserType $member.AdditionalProperties.servicePrincipalType
+            }
+            $objUser | Add-Member EMail $member.AdditionalProperties.mail
+            $objUser | Add-Member AccountEnabled $member.AdditionalProperties.accountEnabled
+            $objUser | Add-Member GivenName $member.AdditionalProperties.givenName
+            $objUser | Add-Member Surname $member.AdditionalProperties.surname
+            $objUser | Add-Member UsageLocation $member.AdditionalProperties.usageLocation
+            $objUser | Add-Member PreferredLanguage $member.AdditionalProperties.preferredLanguage
+            $objUser | Add-Member CreationDate $extProp.AdditionalProperties.createdDateTime
+            $objUser | Add-Member SecurityIdentifier  $extProp.AdditionalProperties.securityIdentifier
             $roleMappings += $objUser
+            if ($role.DisplayName -eq "Directory Readers")
+            {
+                return
+            }
         }
     }
 }

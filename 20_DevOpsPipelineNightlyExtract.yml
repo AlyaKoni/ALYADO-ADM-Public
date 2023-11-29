@@ -20,22 +20,10 @@ steps:
   displayName: Checkout Repo
   persistCredentials: true
   clean: true
-- task: AzureCLI@2
-  displayName: Store Credentials
-  inputs:
-    azureSubscription: 'alyainfp(0a0c6885-d808-4c08-a806-38bd8e0df182)'
-    scriptType: 'ps'
-    scriptLocation: 'inlineScript'
-    inlineScript: |
-      Write-Host "##vso[task.setvariable variable=DEVOPS_CLIENT_ID]$($env:servicePrincipalId)"
-      Write-Host "##vso[task.setvariable variable=DEVOPS_CLIENT_SECRET]$($env:servicePrincipalKey)"
-      Write-Host "##vso[task.setvariable variable=DEVOPS_TENANT_ID]$($env:tenantId)"
-    addSpnToEnvironment: true
-    failOnStandardError: true
 - task: AzurePowerShell@5
   displayName: Extract Templates
   inputs:
-    azureSubscription: 'alyainfp(0a0c6885-d808-4c08-a806-38bd8e0df182)'
+    azureSubscription: '!!!PleaseSpecify!!!'
     ScriptType: 'FilePath'
     ScriptPath: '.\20_ExtractAll.ps1'
     FailOnStandardError: true

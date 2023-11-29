@@ -62,7 +62,7 @@ Write-Host "=====================================================`n" -Foreground
 # Checking MeetingSettings
 Write-Host "Checking MeetingSettings" -ForegroundColor $CommandInfo
 $Configuration = Get-CsTeamsMeetingConfiguration
-Set-CsTeamsMeetingConfiguration -LogoURL $AlyaLogoUrlRect -LegalURL $AlyaPrivacyUrl
+Set-CsTeamsMeetingConfiguration -Identity $Configuration.Identity -LogoURL $AlyaLogoUrlRect -LegalURL $AlyaPrivacyUrl
 
 #Stopping Transscript
 Stop-Transcript

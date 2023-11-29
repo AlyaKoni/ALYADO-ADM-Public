@@ -1,6 +1,6 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
-  "displayName": "Win10 PowerShell7",
+  "displayName": "WIN PowerShell7",
   "description": "Installs PowerShell 7-x64",
   "publisher": "Microsoft",
   "largeIcon": {
@@ -15,7 +15,7 @@
   "developer": "Microsoft Corporation",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "PowerShell-7.3.7-win-x64.intunewin",
+  "fileName": "PowerShell-7.4.0-win-x64.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,15 +24,15 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
+    "productCode": "{AD700148-DD32-4283-8C07-ED1F8AF876CD}",
     "productName": "PowerShell 7-x64",
-    "requiresReboot": "false",
-    "upgradeCode": "{31AB5147-9A97-4452-8443-D9709F0516E1}",
     "publisher": "Microsoft Corporation",
-    "productCode": "{14844184-695A-4B90-82CC-01F55AD80778}",
-    "productVersion": "7.3.7.0",
-    "packageType": "PerMachine"
+    "packageType": "PerMachine",
+    "productVersion": "7.4.0.0",
+    "upgradeCode": "{31AB5147-9A97-4452-8443-D9709F0516E1}",
+    "requiresReboot": "false"
   },
-  "setupFilePath": "PowerShell-7.3.7-win-x64.msi",
+  "setupFilePath": "PowerShell-7.4.0-win-x64.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "7.3.7.0"
+      "detectionValue": "7.4.0.0"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "7.3.7.0"
+      "comparisonValue": "7.4.0.0"
     }
   ],
   "installExperience": {

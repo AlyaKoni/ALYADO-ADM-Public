@@ -188,6 +188,7 @@ foreach($packageDir in $packages)
         }
     }
     catch {
+        Write-Error $_.Exception -ErrorAction Continue
         $hadError = $true
     }
 

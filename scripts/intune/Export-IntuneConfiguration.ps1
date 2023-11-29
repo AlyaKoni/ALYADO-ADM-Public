@@ -220,7 +220,7 @@ if (-Not (Test-Path "$DataRoot\AndroidEnterprise")) { $null = New-Item -Path "$D
 $uri = "/beta/deviceManagement/deviceEnrollmentConfigurations"
 $deviceEnrollmentConfigurations = Get-MsGraphCollection -Uri $uri
 $deviceEnrollmentConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AndroidEnterprise\deviceEnrollmentConfigurations.json")) -Force
-$androidEnterpriseConfig = $deviceEnrollmentConfigurations | ? { $_.androidForWorkRestriction.platformBlocked -eq $false } | Sort-Object priority
+$androidEnterpriseConfig = $deviceEnrollmentConfigurations | Where-Object { $_.androidForWorkRestriction.platformBlocked -eq $false }
 foreach($androidConfig in $androidEnterpriseConfig)
 {
     $uri = "/beta/deviceManagement/deviceEnrollmentConfigurations/$($androidConfig.id)/assignments"
@@ -254,6 +254,24 @@ foreach($profile in $profiles)
 $uri = "/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
 $androidManagedStoreAccountEnterpriseSettings = Get-MsGraphObject -Uri $uri
 $androidManagedStoreAccountEnterpriseSettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AndroidEnterprise\androidManagedStoreAccountEnterpriseSettings.json")) -Force
+
+
+##### Starting exports ConfigurationPolicy
+#####
+Write-Host "Exporting ConfigurationPolicy" -ForegroundColor $CommandInfo
+if (-Not (Test-Path "$DataRoot\ConfigurationPolicy")) { $null = New-Item -Path "$DataRoot\ConfigurationPolicy" -ItemType Directory -Force }
+
+#configurationPolicies
+$uri = "/beta/deviceManagement/configurationPolicies"
+$configurationPolicies = Get-MsGraphCollection -Uri $uri
+foreach($configurationPolicy in $configurationPolicies)
+{
+    $uri = "/beta/deviceManagement/configurationPolicies/$($configurationPolicy.Id)/settings"
+    $configurationPolicySettings = Get-MsGraphCollection -Uri $uri
+    $configurationPolicySettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ConfigurationPolicy\$($configurationPolicy.Id).json")) -Force
+    $configurationPolicy["settings"] = $configurationPolicySettings
+}
+$configurationPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ConfigurationPolicy\configurationPolicies.json")) -Force
 
 
 ##### Starting exports AppConfigurationPolicy

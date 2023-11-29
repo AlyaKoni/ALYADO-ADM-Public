@@ -48,10 +48,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Create-AzureServiceHealthAler
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 
 $ActionGroupNameGeneral = "Send general service alerts"
+$ActionGroupNameGeneralShort = "SndGSrvcAlrt"
+if ($ActionGroupNameGeneralShort.Length -gt 12) { throw "`$ActionGroupNameGeneralShort is too long. max 12 chars allowed." }
 $ActionGroupNameGeneralEmails = @($AlyaGeneralInformEmail)
 $ServiceHealthLogAlertNameGeneral = "Send general service alerts"
 
 $ActionGroupNameSecurity = "Send security service alerts"
+$ActionGroupNameSecurityShort = "SndSSrvcAlrt"
+if ($ActionGroupNameSecurityShort.Length -gt 12) { throw "`$ActionGroupNameSecurityShort is too long. max 12 chars allowed." }
 $ActionGroupNameSecurityEmails = @($AlyaSecurityEmail)
 $ServiceHealthLogAlertNameSecurity = "Send security service alerts"
 
@@ -105,23 +109,27 @@ if (-Not $ResGrp)
 # Checking action group general
 Write-Host "Checking action group $ActionGroupNameGeneral" -ForegroundColor $CommandInfo
 $actionGroup = Get-AzActionGroup -ResourceGroupName $ResourceGroupName -Name $ActionGroupNameGeneral -ErrorAction SilentlyContinue
-if (-Not $actionGroup) {
-    Write-Warning "    Does not exist. Creating it now"
-} else {
-    Write-Host "    Updating"
-}
 $recvrs = @()
 foreach($recvr in $ActionGroupNameGeneralEmails)
 {
-    $recvrs += New-AzActionGroupReceiver -Name ("EmailTo-"+$recvr) `
-                    -EmailReceiver `
-                    -EmailAddress $recvr `
-                    -UseCommonAlertSchema:$true
+    $recvrs += New-AzActionGroupEmailReceiverObject -Name ("EmailTo-"+$recvr) `
+      -EmailAddress $recvr `
+      -UseCommonAlertSchema $true
 }
-Set-AzActionGroup -Name $ActionGroupNameGeneral `
-    -ResourceGroup $ResourceGroupName `
-    -ShortName "Send alerts" `
-    -Receiver $recvrs
+if (-Not $actionGroup) {
+  Write-Warning "    Does not exist. Creating it now"
+  New-AzActionGroup -Name $ActionGroupNameGeneral `
+      -ResourceGroup $ResourceGroupName `
+      -ShortName $ActionGroupNameGeneralShort `
+      -EmailReceiver $recvrs `
+      -Location "Global"
+} else {
+  Write-Host "    Updating"
+  Update-AzActionGroup -Name $ActionGroupNameGeneral `
+      -ResourceGroup $ResourceGroupName `
+      -ShortName $ActionGroupNameGeneralShort `
+      -EmailReceiver $recvrs
+}
 $actionGroup = Get-AzActionGroup -ResourceGroupName $ResourceGroupName -Name $ActionGroupNameGeneral
 
 # Checking ServiceHealth log alert general
@@ -210,23 +218,27 @@ Remove-Item -Path $tempFile.FullName -Force -ErrorAction SilentlyContinue
 # Checking action group security
 Write-Host "Checking action group $ActionGroupNameSecurity" -ForegroundColor $CommandInfo
 $actionGroup = Get-AzActionGroup -ResourceGroupName $ResourceGroupName -Name $ActionGroupNameSecurity -ErrorAction SilentlyContinue
-if (-Not $actionGroup) {
-    Write-Warning "    Does not exist. Creating it now"
-} else {
-    Write-Host "    Updating"
-}
 $recvrs = @()
 foreach($recvr in $ActionGroupNameSecurityEmails)
 {
-    $recvrs += New-AzActionGroupReceiver -Name ("EmailTo-"+$recvr) `
-                    -EmailReceiver `
-                    -EmailAddress $recvr `
-                    -UseCommonAlertSchema:$true
+    $recvrs += New-AzActionGroupEmailReceiverObject -Name ("EmailTo-"+$recvr) `
+      -EmailAddress $recvr `
+      -UseCommonAlertSchema $true
 }
-Set-AzActionGroup -Name $ActionGroupNameSecurity `
-    -ResourceGroup $ResourceGroupName `
-    -ShortName "Send alerts" `
-    -Receiver $recvrs
+if (-Not $actionGroup) {
+  Write-Warning "    Does not exist. Creating it now"
+  New-AzActionGroup -Name $ActionGroupNameSecurity `
+      -ResourceGroup $ResourceGroupName `
+      -ShortName $ActionGroupNameSecurityShort `
+      -EmailReceiver $recvrs `
+      -Location "Global"
+} else {
+  Write-Host "    Updating"
+  Update-AzActionGroup -Name $ActionGroupNameSecurity `
+      -ResourceGroup $ResourceGroupName `
+      -ShortName $ActionGroupNameSecurityShort `
+      -EmailReceiver $recvrs
+}
 $actionGroup = Get-AzActionGroup -ResourceGroupName $ResourceGroupName -Name $ActionGroupNameSecurity
 
 # Checking ServiceHealth log alert security

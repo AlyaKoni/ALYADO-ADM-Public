@@ -381,6 +381,7 @@ foreach($profile in $profiles)
         }
     }
     catch {
+        Write-Error $_.Exception -ErrorAction Continue
         $hadError = $true
     }
 

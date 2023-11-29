@@ -102,7 +102,7 @@
         "appTracks": []
     }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "displayName": "Microsoft Edge: Mit KI browsen",
+        "displayName": "Microsoft Edge: KI-Browser",
         "description": "Erstklassige Leistung, bessere Privatsphäre, höhere Produktivität, mehr Wert.",
         "publisher": "Microsoft Corporation",
         "largeIcon": null,

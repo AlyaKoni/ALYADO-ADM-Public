@@ -206,15 +206,39 @@ try
                 }
                 if (-Not $labelDef.SiteAndGroupProtection -or $labelDef.SiteAndGroupProtection -eq "Off")
                 {
-                    Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
+                    if ($encryptionProtectionType -eq "UserDefined")
+                    {
+                        Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
+                        -EncryptionPromptUser $encryptionPromptUser -EncryptionEncryptOnly $false -EncryptionDoNotForward $true `
+                        -EncryptionContentExpiredOnDateInDaysOrNever $encryptionContentExpiredOnDateInDaysOrNever `
+                        -EncryptionOfflineAccessDays $encryptionOfflineAccessDays -EncryptionRightsDefinitions $encryptionRightsDefinitions `
+                        -SiteAndGroupProtectionEnabled $false
+                    }
+                    else
+                    {
+                        Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
                         -EncryptionPromptUser $encryptionPromptUser -EncryptionDoNotForward $false `
                         -EncryptionContentExpiredOnDateInDaysOrNever $encryptionContentExpiredOnDateInDaysOrNever `
                         -EncryptionOfflineAccessDays $encryptionOfflineAccessDays -EncryptionRightsDefinitions $encryptionRightsDefinitions `
                         -SiteAndGroupProtectionEnabled $false
+                    }
                 }
                 else
                 {
-                    Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
+                    if ($encryptionProtectionType -eq "UserDefined")
+                    {
+                        Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
+                        -EncryptionPromptUser $encryptionPromptUser -EncryptionEncryptOnly $false -EncryptionDoNotForward $true `
+                        -EncryptionContentExpiredOnDateInDaysOrNever $encryptionContentExpiredOnDateInDaysOrNever `
+                        -EncryptionOfflineAccessDays $encryptionOfflineAccessDays -EncryptionRightsDefinitions $encryptionRightsDefinitions `
+                        -SiteAndGroupProtectionEnabled $true -SiteAndGroupProtectionAllowAccessToGuestUsers $AllowGuests `
+                        -SiteAndGroupProtectionAllowEmailFromGuestUsers $AllowGuests -SiteAndGroupProtectionAllowFullAccess $AllowGuests `
+                        -SiteAndGroupProtectionAllowLimitedAccess $AllowGuests -SiteAndGroupProtectionBlockAccess $false `
+                        -SiteAndGroupProtectionPrivacy $Privacy -SiteExternalSharingControlType $SharingOption
+                    }
+                    else
+                    {
+                        Set-Label -Identity $labelName -EncryptionEnabled $true -EncryptionProtectionType $encryptionProtectionType `
                         -EncryptionPromptUser $encryptionPromptUser -EncryptionDoNotForward $false `
                         -EncryptionContentExpiredOnDateInDaysOrNever $encryptionContentExpiredOnDateInDaysOrNever `
                         -EncryptionOfflineAccessDays $encryptionOfflineAccessDays -EncryptionRightsDefinitions $encryptionRightsDefinitions `
@@ -222,6 +246,7 @@ try
                         -SiteAndGroupProtectionAllowEmailFromGuestUsers $AllowGuests -SiteAndGroupProtectionAllowFullAccess $AllowGuests `
                         -SiteAndGroupProtectionAllowLimitedAccess $AllowGuests -SiteAndGroupProtectionBlockAccess $false `
                         -SiteAndGroupProtectionPrivacy $Privacy -SiteExternalSharingControlType $SharingOption
+                    }
                 }
             }
             else

@@ -51,7 +51,8 @@ if (-Not (Test-Path "$AlyaDeployToolRoot"))
     [regex]$regex = "[^`"]*officedeploymenttool_[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     $req = Invoke-WebRequestIndep -Uri $url -Method Get -OutFile ".\officedeploymenttool.exe"
-    cmd /c".\officedeploymenttool.exe" /extract:"$AlyaDeployToolRoot" /quiet
+    Write-Warning "Attention: UAC window!"
+    cmd /c ".\officedeploymenttool.exe" /extract:"$AlyaDeployToolRoot" /quiet
     do
     {
         Start-Sleep -Seconds 5

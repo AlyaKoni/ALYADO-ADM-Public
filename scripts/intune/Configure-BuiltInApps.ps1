@@ -209,6 +209,7 @@ foreach($builtInApp in $builtInApps)
         }
     }
     catch {
+        Write-Error $_.Exception -ErrorAction Continue
         $hadError = $true
     }
 

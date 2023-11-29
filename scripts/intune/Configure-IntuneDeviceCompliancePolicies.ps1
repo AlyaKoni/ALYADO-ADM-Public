@@ -276,6 +276,7 @@ foreach($policy in $policies)
         }
     }
     catch {
+        Write-Error $_.Exception -ErrorAction Continue
         $hadError = $true
     }
 

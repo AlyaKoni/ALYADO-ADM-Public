@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     28.09.2020 Konrad Brunner       Initial Version
     01.05.2023 Konrad Brunner       Switched to Graph, removed MSOL
+    20.11.2023 Konrad Brunner       New concept
 
 #>
 
@@ -63,15 +64,15 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AAD | Configure-Admins | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking Company Administrator role
-Write-Host "Checking Company Administrator role:" -ForegroundColor $CommandInfo
+# Checking Global Administrator role
+Write-Host "Checking Global Administrator role" -ForegroundColor $CommandInfo
 $gaRole = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Global Administrator'"
 $gaRoleMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($gaRole.Id)'" -All -ExpandProperty Principal
-Write-Host "Company Administrators:"
+Write-Host "Global Administrators:"
 $gaRoleMembs
 if ($gaRoleMembs.Count -gt 1)
 {
-    Write-Warning "We suggest to have only one single Company Administrator"
+    Write-Warning "We suggest to have only one single Global Administrator"
 }
 foreach($memb in $gaRoleMembs)
 {
@@ -83,20 +84,49 @@ foreach($memb in $gaRoleMembs)
     {
         $name = -Join ([System.Security.Cryptography.HashAlgorithm]::Create("MD5").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($AlyaDomainName)) | % { $_.ToString("x2") } )
         $AlyaGlobalAdmin = "$name@$($AlyaDomainName)"
-        Write-Warning "We suggest strong names for Company Administrators"
+        Write-Warning "We suggest strong names for Global Administrators"
         Write-Warning "Example: $AlyaGlobalAdmin"
     }
 }
 
+# Checking breaking glass admin
+Write-Host "Checking breaking glass admin $AlyaBreakingGlassUserName" -ForegroundColor $CommandInfo
+if ($null -eq $AlyaBreakingGlassUserName -or $AlyaBreakingGlassUserName -eq "PleaseSpecify")
+{
+    Write-Error "Please specify the breaking glass admin in ConfigureEnv.ps1!"
+    exit 1
+}
+else
+{
+    $bgAdmin = $null
+    try {
+        $bgAdmin = Get-MgBetaUser -UserId $AlyaBreakingGlassUserName
+    } catch {}
+    if (-Not $bgAdmin)
+    {
+        Write-Host "  Breaking glass account not found. Creating it now."
+        $PasswordProfile = @{
+            Password = Get-Password -length 36
+            ForceChangePasswordNextSignIn = $false
+            ForceChangePasswordNextSignInWithMfa = $false
+        }
+        $bgAdmin = New-MgBetaUser -DisplayName 'John Doe' -PasswordProfile $PasswordProfile -AccountEnabled -MailNickName $AlyaBreakingGlassUserName.Substring(0, $AlyaBreakingGlassUserName.IndexOf("@")) -UserPrincipalName $AlyaBreakingGlassUserName
+    }
+    else
+    {
+        Write-Host "  Breaking glass account already exists"
+    }
+}
+
 # Checking Privileged Role Administrator role
-Write-Host "Checking Privileged Role Administrator role:" -ForegroundColor $CommandInfo
+Write-Host "Checking Privileged Role Administrator role" -ForegroundColor $CommandInfo
 $paRole = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Privileged Role Administrator'"
 $paRoleMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($paRole.Id)'" -All -ExpandProperty Principal
 Write-Host "Privileged Role Administrators:"
 $paRoleMembs
 if ($paRoleMembs.Count -eq 0)
 {
-    Write-Warning "We suggest to specify at least one Privileged Role Administrator"
+    Write-Warning "We suggest to specify at least one Privileged Role Administrator. Ideally the breaking glass account."
     Write-Warning "He will be able to solve Global Administrator rights if something goes wrong"
 }
 

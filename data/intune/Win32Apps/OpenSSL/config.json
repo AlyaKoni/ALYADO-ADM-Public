@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
-  "displayName": "Win10 OpenSSL",
-  "description": "Installs OpenSSL 3.1.2 (64-bit)",
+  "displayName": "WIN OpenSSL",
+  "description": "Installs OpenSSL 3.1.4 (64-bit)",
   "publisher": "OpenSSL.org",
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
@@ -15,7 +15,7 @@
   "developer": "Shining Light Productions",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "Win64OpenSSL-3_1_2.intunewin",
+  "fileName": "Win64OpenSSL-3_1_4.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -32,7 +32,7 @@
     "productName": "OpenSSL (64-bit)",
     "packageType": "PerUser"
   },
-  "setupFilePath": "Win64OpenSSL-3_1_2.msi",
+  "setupFilePath": "Win64OpenSSL-3_1_4.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "3.1.2"
+      "detectionValue": "3.1.4"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "3.1.2"
+      "comparisonValue": "3.1.4"
     }
   ],
   "installExperience": {

@@ -41,7 +41,8 @@
 Param(
     [string]$UploadOnlyAppWithName = $null,
     [string]$ContinueAtAppWithName = $null,
-    [string]$AppsPath = "Win32Apps"
+    [string]$AppsPath = "Win32Apps",
+    [bool]$AskForSameVersionPackages = $true
 )
 
 # Loading configuration
@@ -123,11 +124,18 @@ function UploadPackage($detectVersion = $null, $appConfig)
         Write-Host "    Looks like this version has already been uploaded!" -ForegroundColor $CommandWarning
         Write-Host "      Existing version: $($detectVersion)" -ForegroundColor $CommandWarning
         Write-Host "      Version to upload: $($version)" -ForegroundColor $CommandWarning
-        $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
-        $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
-        $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
-        $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
-        if ($resp -eq 0) { $doUpload = $false }
+        if ($AskForSameVersionPackages -eq $false)
+        {
+            $doUpload = $false
+        }
+        else
+        {
+            $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
+            $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
+            $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
+            $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
+            if ($resp -eq 0) { $doUpload = $false }
+        }
     }
 
     if ($doUpload)
@@ -171,7 +179,7 @@ function UploadPackage($detectVersion = $null, $appConfig)
             }
             elseif ($file.uploadState -ne $pendingState)
             {
-                throw "File upload state has not succeeded: $($file.uploadState)"
+                throw "Get file uri state has not succeeded: $($file.uploadState)"
             }
             $Global:attempts--
         }
@@ -253,7 +261,7 @@ function UploadPackage($detectVersion = $null, $appConfig)
                     }
                     elseif ($file.uploadState -ne $pendingState)
                     {
-                        throw "File upload state has not succeeded: $($file.uploadState)"
+                        throw "Upload renewal state has not succeeded: $($file.uploadState)"
                     }
                     $Global:attempts--
                 }

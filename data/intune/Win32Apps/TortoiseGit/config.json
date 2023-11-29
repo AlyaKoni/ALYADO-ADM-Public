@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
-  "displayName": "Win10 TortoiseGit",
-  "description": "Installs TortoiseGit 2.14.0.1 (64 bit)",
+  "displayName": "WIN TortoiseGit",
+  "description": "Installs TortoiseGit 2.15.0.0 (64 bit)",
   "publisher": "tortoisegit.org",
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
@@ -15,7 +15,7 @@
   "developer": "TortoiseGit",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "TortoiseGit-2.14.0.1-64bit.intunewin",
+  "fileName": "TortoiseGit-2.15.0.0-64bit.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,15 +24,15 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "productName": "TortoiseGit 2.14.0.1 (64 bit)",
-    "requiresReboot": "false",
-    "upgradeCode": "{F46D0E11-F71A-48A0-8A7B-FD8669B5080C}",
+    "productCode": "{10C9547F-876F-4CD2-8A4D-1053B823BA64}",
+    "productName": "TortoiseGit 2.15.0.0 (64 bit)",
     "publisher": "TortoiseGit",
-    "productCode": "{8E9851A6-6504-4D81-9AA4-60385F388AD9}",
-    "productVersion": "2.14.0.1",
-    "packageType": "PerMachine"
+    "packageType": "PerMachine",
+    "productVersion": "2.15.0.0",
+    "upgradeCode": "{F46D0E11-F71A-48A0-8A7B-FD8669B5080C}",
+    "requiresReboot": "false"
   },
-  "setupFilePath": "TortoiseGit-2.14.0.1-64bit.msi",
+  "setupFilePath": "TortoiseGit-2.15.0.0-64bit.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "2.14.0.1"
+      "detectionValue": "2.15.0.0"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "2.14.0.1"
+      "comparisonValue": "2.15.0.0"
     }
   ],
   "installExperience": {

@@ -104,12 +104,17 @@ $StrgAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name 
 if (-Not $StrgAccount)
 {
     Write-Warning "Storage account not found. Creating the storage account $StorageAccountName"
-    $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind StorageV2 -AccessTier Hot -Tag @{displayName="Public Storage"}
+    $StrgAccount = New-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $ResourceGroupName -Location $AlyaLocation -SkuName "Standard_LRS" -Kind StorageV2 -AccessTier Hot -AllowBlobPublicAccess $true -Tag @{displayName="Public Storage"}
     if (-Not $StrgAccount)
     {
         Write-Error "Storage account $StorageAccountName creation failed. Please fix and start over again" -ErrorAction Continue
         Exit 1
     }
+}
+else
+{
+    Write-Host "Updating storage account $StorageAccountName"
+    $null = Set-AzStorageAccount -Name $StorageAccountName -ResourceGroupName $ResourceGroupName -SkuName "Standard_LRS" -AccessTier Hot -AllowBlobPublicAccess $true -Tag @{displayName="Public Storage"} -Force
 }
 $StrgKeys = Get-AzStorageAccountKey -ResourceGroupName $ResourceGroupName -Name $StorageAccountName
 $StrgContext = New-AzStorageContext -StorageAccountName $StorageAccountName -StorageAccountKey $StrgKeys[0].Value

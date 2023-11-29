@@ -279,6 +279,12 @@ $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 
 <# MISC HELPER FUNCTIONS #>
 
+function IIf($If, $Then, $Else) {
+    If ($If -IsNot "Boolean") {$_ = $If}
+    If ($If) {If ($Then -is "ScriptBlock") {&$Then} Else {$Then}}
+    Else {If ($Else -is "ScriptBlock") {&$Else} Else {$Else}}
+}
+
 function Get-ActualLoadedLibraries ()
 {
     [System.AppDomain]::CurrentDomain.GetAssemblies() | Select-Object -Property FullName,Location | Sort-Object -Property FullName | Format-List
@@ -1399,48 +1405,55 @@ function LoginTo-Az(
     try { Update-AzConfig -Scope Process -DisplaySurveyMessage $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -EnableDataCollection $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
 
-    $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
-    if ($AlyaContext)
+    $AZURE_DEVOPS_CACHE_DIR = $env:AZURE_DEVOPS_CACHE_DIR
+    if (-Not [string]::IsNullOrEmpty($AZURE_DEVOPS_CACHE_DIR))
     {
-        Write-Host "  checking existing context"
-        if ($AlyaContext.Count -gt 1)
+        Write-Host "  within DevOps"
+        $AlyaContext = Get-CustomersContext
+        if (-Not $AlyaContext)
         {
-            $AlyaContext = Select-Item -message "Please select an existing context" -list $AlyaContext
+            throw "Not able to get devOps az context. Please select a connection in the pipeline task."
         }
-        if ($AlyaContext.Tenant.Id -ne $AlyaTenantId)
+    }
+    else 
+    {
+        $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+        if ($AlyaContext)
         {
-            Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
-            Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
-            Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
-            $AlyaContext = $null
-        }
-        else
-        {
-            $actContext = Get-AzContext
-            if ($actContext.Name -ne $AlyaContext.Name)
+            Write-Host "  checking existing az context"
+            if ($AlyaContext.Count -gt 1)
             {
-                Set-AzContext -Context $AlyaContext -Force | Out-Null
+                $AlyaContext = Select-Item -message "Please select an existing context" -list $AlyaContext
             }
-            $chk = Get-AzADServicePrincipal -First 1 -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
-            if (-Not $chk)
+            if ($AlyaContext.Tenant.Id -ne $AlyaTenantId)
             {
                 Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
                 Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
                 Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
                 $AlyaContext = $null
             }
+            else
+            {
+                $actContext = Get-AzContext
+                if ($actContext.Name -ne $AlyaContext.Name)
+                {
+                    Set-AzContext -Context $AlyaContext -Force | Out-Null
+                }
+                $chk = Get-AzADServicePrincipal -First 1 -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
+                if (-Not $chk)
+                {
+                    Write-Host "  existing context not working"
+                    Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+                    Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+                    Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
+                    $AlyaContext = $null
+                }
+            }
         }
-    }
-    if (-Not $AlyaContext)
-    {
-        $DEVOPS_CLIENT_ID = $env:DEVOPS_CLIENT_ID
-        $DEVOPS_CLIENT_SECRET = $env:DEVOPS_CLIENT_SECRET
-        $DEVOPS_TENANT_ID = $env:DEVOPS_TENANT_ID
-        if ([string]::IsNullOrEmpty($DEVOPS_CLIENT_ID) -or `
-            [string]::IsNullOrEmpty($DEVOPS_CLIENT_SECRET) -or `
-            [string]::IsNullOrEmpty($DEVOPS_TENANT_ID))
+        if (-Not $AlyaContext)
         {
             #PowerShell login
+            #Write-Host "  PowerShell login"
             if ($SubscriptionId)
             {
                 if ($AuthScope)
@@ -1477,18 +1490,8 @@ function LoginTo-Az(
         }
         else
         {
-            #DevOps login
-            Write-Host "  within DevOps"
-            $DEVOPS_CLIENT_SECRET_SEC = ConvertTo-SecureString $DEVOPS_CLIENT_SECRET -AsPlainText -Force
-            $DEVOPS_CREDS = New-Object -TypeName System.Management.Automation.PSCredential($DEVOPS_CLIENT_ID, $DEVOPS_CLIENT_SECRET_SEC)
-            Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
-            Connect-AzAccount -Environment $AlyaAzureEnvironment -ServicePrincipal -Credential $DEVOPS_CREDS -Tenant $DEVOPS_TENANT_ID
-        }    
-        $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
-    }
-    else
-    {
-        Set-AzContext -Context $AlyaContext | Out-Null
+            Set-AzContext -Context $AlyaContext | Out-Null
+        }
     }
     if (-Not $AlyaContext)
     {
@@ -1496,26 +1499,48 @@ function LoginTo-Az(
         Exit 1
     }
     $sameSub = $false
-    if ($SubscriptionId)
+    if (-Not [string]::IsNullOrEmpty($SubscriptionId))
     {
         $sameSub = ($AlyaContext.Subscription.Id -eq $SubscriptionId)
     }
     else
     {
-        $sameSub = ($AlyaContext.Subscription.Name -eq $SubscriptionName)
+        if (-Not [string]::IsNullOrEmpty($SubscriptionName))
+        {
+            $sameSub = ($AlyaContext.Subscription.Name -eq $SubscriptionName)
+        }
+        else
+        {
+            $sameSub = $true #Doesn't matter
+        }
     }
     if (-Not $sameSub)
     {
         Write-Host "Selecting subscription" -ForegroundColor $CommandInfo
-        if ($SubscriptionId)
+        $sub = $null
+        if (-Not [string]::IsNullOrEmpty($SubscriptionId))
         {
-            $sub = Get-AzSubscription -SubscriptionId $SubscriptionId -ErrorAction Stop
+            $sub = Get-AzSubscription | Where-Object { $_.Id -eq $SubscriptionId }
+        }
+        else
+        {
+            if (-Not [string]::IsNullOrEmpty($SubscriptionName))
+            {
+                $sub = Get-AzSubscription | Where-Object { $_.Name -eq $SubscriptionName }
+            }
+            else
+            {
+                $sub = $AlyaContext.Subscription
+            }
+        }
+        if ($sub)
+        {
             Set-AzContext -SubscriptionObject $sub  | Out-Null
         }
-        elseif ($SubscriptionName)
+        else
         {
-            $sub = Get-AzSubscription -SubscriptionName $SubscriptionName -ErrorAction Stop | Out-Null
-            Set-AzContext -SubscriptionObject $sub  | Out-Null
+            Get-AzSubscription -ErrorAction SilentlyContinue
+            throw "Subscription $($SubscriptionId)$($SubscriptionName) not found"
         }
     }
 }
@@ -1531,7 +1556,7 @@ function LoginTo-MgGraph(
     $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
     if ($mgContext)
     {
-        Write-Host "  checking existing context"
+        Write-Host "  checking existing graph context"
         foreach($Scope in $Scopes)
         {
             if ($mgContext.Scopes -notcontains $Scope)
@@ -2791,7 +2816,7 @@ function Get-SeleniumBrowser()
         [bool]$HideCommandPrompt = $true,
         [bool]$Headless = $false,
         [bool]$PrivateBrowsing = $true,
-        $OptionSettings =  @{ browserName=""},
+        $OptionSettings =  @{ },
         $seleniumVersion = $null,
         $edgeDriverVersion = $null
     )
@@ -2809,7 +2834,7 @@ function Get-SeleniumBrowser()
     }
 
     Install-ModuleIfNotInstalled "AppX"
-    $edge = Get-AppXPackage | where { $_.Name -eq "Microsoft.MicrosoftEdge" }
+    $edge = Get-AppXPackage | Where-Object { $_.Name -like "Microsoft.MicrosoftEdge*" }
     if (!$edge){
         throw "Microsoft Edge Browser not installed."
         return

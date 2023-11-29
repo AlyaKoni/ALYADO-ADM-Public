@@ -39,103 +39,6 @@ Param(
     $exportCurrencyName = "chf"
 )
 
-$azuresqldatabaseCsv = [System.Collections.ArrayList]@()
-foreach ($region in $azuresqldatabase.regions)
-{
-    #$region = $azuresqldatabase.regions | Where-Object { $_.slug -eq "switzerland-north" }
-    #Write-Host "Region: $($region.displayName)"
-    $doneSku = @()
-    foreach ($dbType in $dbTypes)
-    {
-        foreach ($dbPurchaseModel in $dbPurchaseModels)
-        {
-            if (-Not [string]::IsNullOrEmpty($dbPurchaseModel)) { $dbPurchaseModel = "-"+$dbPurchaseModel }
-            foreach ($dbTier in $dbTiers)
-            {
-                if (-Not [string]::IsNullOrEmpty($dbTier)) { $dbTier = "-"+$dbTier }
-                foreach ($dbComputeTier in $dbComputeTiers)
-                {
-                    if (-Not [string]::IsNullOrEmpty($dbComputeTier)) { $dbComputeTier = "-"+$dbComputeTier }
-                    $skuName = "$dbType$dbPurchaseModel$dbTier$dbComputeTier"
-                    $sku = Get-Member -InputObject $azuresqldatabase.skus -Name $skuName
-                    $skus = @()
-                    if ($sku)
-                    {
-                        $skus += @($skuName)
-                    }
-                    else
-                    {
-                        $sks = $azuresqldatabase.skus.PSObject.Properties | Where-Object { $_.Name.StartsWith($skuName) }
-                        foreach($sk in $sks)
-                        {
-                            $skus += @($sk.Name)
-                        }
-                    }
-                    foreach($skun in $skus)
-                    {
-                        if ($doneSku -notcontains $skun)
-                        {
-                            $instance = $skun.Replace($skuName, "").Trim("-")
-                            Write-Host "    "
-                            Write-Host "    SkuName: $($skun)"
-                            Write-Host "      Instance: $($instance)"
-                            $sku = $azuresqldatabase.skus."$skun"
-
-                            $obj = [pscustomobject]@{
-                                deploymentOption = $deploymentOptionName
-                                dbType = $dbType.Trim("-")
-                                dbPurchaseModel = $dbPurchaseModel.Trim("-")
-                                dbTier = $dbTier.Trim("-")
-                                dbComputeTier = $dbComputeTier.Trim("-")
-                                instance = $instance.Trim("-")
-                                region = $region.displayName
-                            }
-                            $onePriceFound = $false
-                            #foreach($skuPriceNameToFind in $allSkus)
-                            #{
-                                #$skuPriceNameToFindCsv = $skuPriceNameToFind -replace "reserved", ""
-                                foreach($skuPriceName in (Get-Member -InputObject $sku))
-                                {
-                                    if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $skuPriceName.Name)
-                                    {
-                                        Write-Host "      Price: $($skuPriceName.Name)"
-                                        $priceName = "price$($skuPriceName.Name)"
-                                        $price = 0.0
-                                        $offers = $sku."$($skuPriceName.Name)"
-                                        $priceType = $null
-                                        foreach($offer in $offers)
-                                        {
-                                            Write-Host "        Offer: $($offer)"
-                                            if ($null -eq $priceType)
-                                            {
-                                                $priceType = $offer.Replace($skun, "").Trim("-")
-                                                $priceName = "price-$priceType-$($skuPriceName.Name)"
-                                            }
-                                            $prices = $allOffers[$offer]
-                                            $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
-                                            if ($memb)
-                                            {
-                                                $price += $prices."$($region.slug)".value * $exportCurrency.conversion
-                                                $onePriceFound = $true
-                                            }
-                                            $offerName = $offer.Substring(0, $offer.LastIndexOf("-") - 1)
-                                        }
-                                        if ($price -eq 0.0) { $price = $null }
-                                        Add-Member -InputObject $obj -MemberType NoteProperty -Name $priceName -Value $price
-                                    }
-                                }
-                            #}
-                            if ($onePriceFound) { $azuresqldatabaseCsv.Add($obj) | Out-Null }
-                                    
-                            $doneSku += $skun
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
@@ -180,9 +83,9 @@ $automation = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure
 $keyvault = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/key-vault/calculator/$query"
 $analysisservices = Invoke-RestMethod -Method GET -UseBasicParsing -Uri "https://azure.microsoft.com/api/v2/pricing/analysis-services/calculator/$query"
 
-
 $computeWinBenchmarks = Invoke-WebRequestIndep -UseBasicParsing -Method GET -Uri "https://learn.microsoft.com/en-us/azure/virtual-machines/windows/compute-benchmark-scores"
 
+############################################################################################
 Write-Host "Building products table" -ForegroundColor $CommandInfo
 $productsCsv = [System.Collections.ArrayList]@()
 foreach ($categorySlug in $categories.slug)
@@ -194,11 +97,11 @@ foreach ($categorySlug in $categories.slug)
         $product = $category.products | Where-Object { $_.slug -eq $productSlug }
         #Write-Host "  Product: $($product.displayName)"
 
-        $pricingUrl = $product.links.pricingUrl
-        $documentationUrl = $product.links.documentationUrl
-        $url = $product.links.url
-        $slaUrl = $product.links.slaUrl
-        $roadmapUrl = $product.links.roadmapUrl
+        $pricingUrl = Iif ($null -eq $product.links -or [string]::IsNullOrEmpty($product.links.pricingUrl)) $null {$product.links.pricingUrl.Replace("acom:", "https://azure.microsoft.com").Replace("docs:", "https://learn.microsoft.com")}
+        $documentationUrl = Iif ($null -eq $product.links -or [string]::IsNullOrEmpty($product.links.documentationUrl)) $null {$product.links.documentationUrl.Replace("acom:", "https://azure.microsoft.com").Replace("docs:", "https://learn.microsoft.com")}
+        $url = Iif ($null -eq $product.links -or [string]::IsNullOrEmpty($product.links.url)) $null {$product.links.url.Replace("acom:", "https://azure.microsoft.com").Replace("docs:", "https://learn.microsoft.com")}
+        $slaUrl = Iif ($null -eq $product.links -or [string]::IsNullOrEmpty($product.links.slaUrl)) $null {$product.links.slaUrl.Replace("acom:", "https://azure.microsoft.com").Replace("docs:", "https://learn.microsoft.com")}
+        $roadmapUrl = Iif ($null -eq $product.links -or [string]::IsNullOrEmpty($product.links.roadmapUrl)) $null {$product.links.roadmapUrl.Replace("acom:", "https://azure.microsoft.com").Replace("docs:", "https://learn.microsoft.com")}
         if ($pricingUrl -eq "#") { $pricingUrl = "" }
         if ($documentationUrl -eq "#") { $documentationUrl = "" }
         if ($url -eq "#") { $url = "" }
@@ -227,10 +130,10 @@ foreach ($categorySlug in $categories.slug)
 Write-Host "Exporting Excel - Sheet PricesProducts" -ForegroundColor $CommandInfo
 $excel = $productsCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesProducts" -TableName "PricesProducts" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
 Close-ExcelPackage $excel
-Clear-Variable -Name "productsCsv" -Force -ErrorAction SilentlyContinue
+#Clear-Variable -Name "productsCsv" -Force -ErrorAction SilentlyContinue
 
+############################################################################################
 Write-Host "Building postgresql table" -ForegroundColor $CommandInfo
-$postgresqlCsv = [System.Collections.ArrayList]@()
 $allOffers = @{}
 foreach ($offerName in (Get-Member -InputObject $postgresql.offers))
 {
@@ -247,44 +150,6 @@ foreach ($offerName in (Get-Member -InputObject $postgresql.offers))
             }
         }
     }
-}
-$allTypes = @()
-$allTypes += "compute"
-foreach ($ctype in $postgresql.computeTypes.slug)
-{
-    foreach ($vcores in $postgresql.vCores.slug)
-    {
-        $allTypes += "compute-"+$ctype+"-"+$vcores
-    }
-}
-$allVms = @()
-foreach ($sku in (Get-Member -InputObject $postgresql.skus))
-{
-    if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $sku.Name)
-    {
-        if ($sku.Name.StartsWith("flexible-server"))
-        {
-            $vmName = $sku.Name.Substring($sku.Name.LastIndexOf("-") + 1, $sku.Name.Length - $sku.Name.LastIndexOf("-") - 1)
-            if ($allVms -notcontains $vmName -and $vmName -ne "backup" -and $vmName -ne "storage")
-            {
-                $allVms += $vmName
-            }
-        }
-    }
-}
-foreach ($vmName in $allVms)
-{
-    $allTypes += "compute-"+$vmName
-}
-$allTypes += "storage"
-foreach ($stype in $postgresql.hyperscaleStorageOptions.slug)
-{
-    $allTypes += "storage-"+$stype
-}
-$allTypes += "backup"
-foreach ($btype in $postgresql.backupRedundancies.slug)
-{
-    $allTypes += "backup-"+$btype
 }
 $allSkus = [System.Collections.ArrayList]@()
 foreach ($sku in (Get-Member -InputObject $postgresql.skus))
@@ -309,130 +174,192 @@ foreach ($sku in (Get-Member -InputObject $postgresql.skus))
         }
     }
 }
+
+$dbTypes = @()
+foreach ($atype in $postgresql.types)
+{
+    $dbTypes += $atype.slug
+}
+$dbTypes += @(
+    "hyperscalecitus",
+    "flexible-server",
+    ""
+)
+$dbTypes = $dbTypes | Sort-Object { -($_.length) }
+
+$dbTiers = @()
+foreach ($atype in $postgresql.tiers)
+{
+    $dbTiers += $atype.slug
+}
+$dbTiers += @(
+    "basic-generalpurpose",
+    "standard-generalpurpose",
+    "standard",
+    "momoryoptimized",
+    ""
+)
+$dbTiers = $dbTiers | Sort-Object { -($_.length) }
+
+$dbPurchaseModels = @()
+foreach ($atype in $postgresql.purchaseModels)
+{
+    $dbPurchaseModels += $atype.slug
+}
+$dbPurchaseModels += @(
+    "compute",
+    "backup",
+    "storage",
+    "amd-compute",
+    ""
+)
+$dbPurchaseModels = $dbPurchaseModels | Sort-Object { -($_.length) }
+
+$priceMembers = @()
+$postgresqlCsv = [System.Collections.ArrayList]@()
 foreach ($region in $postgresql.regions)
 {
     #$region = $postgresql.regions | Where-Object { $_.slug -eq "switzerland-north" }
+    #if ($region.slug -ne "europe-west") { continue }
     #Write-Host "Region: $($region.displayName)"
-    $tierSlugs =  $postgresql.tiers.slug
-    $tierSlugs += ""
-    foreach ($tierSlug in $tierSlugs)
+    $doneSku = @()
+    foreach ($dbType in $dbTypes)
     {
-        $tier = $postgresql.tiers | Where-Object { $_.slug -eq $tierSlug }
-        $tierName = $tier.displayName
-        if ([string]::IsNullOrEmpty($tierName)) { $tierName = $tierSlug }
-        #$tier = $postgresql.tiers | Where-Object { $_.slug -eq "standardssd" }
-        #Write-Host "  Tier: $($tierName)"
-        if (-Not [string]::IsNullOrEmpty($tierSlug)) { $tierSlug += "-" }
-        $deploymentOptionSlugs = $postgresql.deploymentOptions.slug
-        foreach ($deploymentOptionSlug in $deploymentOptionSlugs)
+        foreach ($dbTier in $dbTiers)
         {
-            $deploymentOption = $postgresql.deploymentOptions | Where-Object { $_.slug -eq $deploymentOptionSlug }
-            $deploymentOptionName = $deploymentOption.displayName
-            if ([string]::IsNullOrEmpty($deploymentOptionName)) { $deploymentOptionName = $deploymentOptionSlug }
-            #Write-Host "    DeploymentOption: $($deploymentOptionSlug)"
-            $deploymentOptionSlug = $deploymentOptionSlug -replace "flexibleserver", "flexible-server"
-            if ($deploymentOptionSlug -eq "server") { $deploymentOptionSlug = "" }
-            if (-Not [string]::IsNullOrEmpty($deploymentOptionSlug)) { $deploymentOptionSlug += "-" }
-            foreach ($skuType in $allTypes)
+            if (-Not [string]::IsNullOrEmpty($dbType) -and -Not [string]::IsNullOrEmpty($dbTier)) { $dbTier = "-"+$dbTier }
+            foreach ($dbPurchaseModel in $dbPurchaseModels)
             {
-                #Write-Host "    Type: $($skuType)"
-                $skuName = "$deploymentOptionSlug$tierSlug$skuType"
-                #Write-Host "    SkuName: $($skuName)"
-                $sku = Get-Member -InputObject $postgresql.skus -Name $skuName
-                if ($sku)
+                if (-Not [string]::IsNullOrEmpty($dbTier) -and -Not [string]::IsNullOrEmpty($dbPurchaseModel)) { $dbPurchaseModel = "-"+$dbPurchaseModel }
+                $skuName = "$dbType$dbTier$dbPurchaseModel"
+                #Write-Host "  skuName: $($skuName)"
+                if ([string]::IsNullOrEmpty($skuName)) { continue }
+                $skus = @()
+                $sks = $postgresql.skus.PSObject.Properties | Where-Object { $_.Name.StartsWith($skuName) }
+                foreach($sk in $sks)
                 {
-                    $obj = [pscustomobject]@{
-                        deploymentOption = $deploymentOptionName
-                        tier = $tierName
-                        type = $skuType
-                        region = $region.displayName
-                        memory = $null
-                        storageGb = $null
-                    }
-                    $memory = $null
-                    $storageGb = $null
-                    $onePriceFound = $false
-                    foreach($skuPriceNameToFind in $allSkus)
+                    $instance = $sk.Name.Replace($sk.Name, "").Trim("-")
+                    $dashCnt = $instance.Length - $instance.Replace("-", "").Count
+                    #Write-Host "  sk: $($sk.Name)"
+                    #Write-Host "  dashCnt: $($dashCnt)"
+                    if ($dashCnt -lt 2)
                     {
-                        $skuPriceNameToFindCsv = $skuPriceNameToFind -replace "reserved", ""
-                        $price = 0.0
-                        foreach($skuPriceName in (Get-Member -InputObject $postgresql.skus.$skuName))
+                        $skus += @($sk.Name)
+                    }
+                }
+                foreach($skun in $skus)
+                {
+                    if ($doneSku -notcontains $skun)
+                    {
+                        $instance = $skun.Replace($skuName, "").Trim("-")
+                        #Write-Host "    "
+                        #Write-Host "    SkuName: $($skun)"
+                        #Write-Host "      Instance: $($instance)"
+                        $sku = $postgresql.skus."$skun"
+
+                        $serverType = $dbType.Trim("-")
+                        if ([string]::IsNullOrEmpty($serverType)) { $serverType = "server" }
+                        $obj = [pscustomobject]@{
+                            dbType = $serverType
+                            dbTier = $dbTier.Trim("-").Replace("momoryoptimized", "memoryoptimized")
+                            dbPurchaseModel = $dbPurchaseModel.Trim("-")
+                            instance = $instance.Trim("-")
+                            region = $region.displayName
+                        }
+                        $onePriceFound = $false
+                        foreach($skuPriceName in (Get-Member -InputObject $sku))
                         {
                             if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $skuPriceName.Name)
                             {
-                                $offers = $postgresql.skus.$skuName."$($skuPriceName.Name)"
+                                #Write-Host "      Price: $($skuPriceName.Name)"
+                                $priceName = "price$($skuPriceName.Name)"
+                                $price = 0.0
+                                $offers = $sku."$($skuPriceName.Name)"
+                                $priceType = $null
                                 foreach($offer in $offers)
                                 {
-                                    if ($offer -like "*$skuPriceNameToFind")
+                                    #Write-Host "        Offer: $($offer)"
+                                    if ($null -eq $priceType)
                                     {
-                                        $prices = $allOffers[$offer]
-                                        $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
-                                        if ($memb)
-                                        {
-                                            $price += $prices."$($region.slug)".value * $exportCurrency.conversion
-                                            $onePriceFound = $true
-                                        }
-                                        $offerName = $offer.Substring(0, $offer.LastIndexOf("-") - 1)
-                                        $mem = $postgresql.offers.$offerName.memory
-                                        $gb = $postgresql.offers.$offerName.storageGb
-                                        if ($memory -and $memory -notlike "*$mem*")
-                                        {
-                                            $memory += ",$mem"
-                                        }
-                                        else
-                                        {
-                                            $memory = $mem
-                                        }
-                                        if ($storageGb -and $storageGb -notlike "*$gb*")
-                                        {
-                                            $storageGb += ",$gb"
-                                        }
-                                        else
-                                        {
-                                            $storageGb = $gb
-                                        }
+                                        $priceType = $offer.Replace($skun, "").Trim("-")
+                                        $priceName = "price-$priceType-$($skuPriceName.Name)"
                                     }
+                                    $prices = $allOffers[$offer]
+                                    $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
+                                    if ($memb)
+                                    {
+                                        $price += $prices."$($region.slug)".value * $exportCurrency.modernConversion
+                                        $onePriceFound = $true
+                                    }
+                                    $offerName = $offer.Substring(0, $offer.LastIndexOf("-") - 1)
                                 }
+                                if ($price -eq 0.0) { $price = $null }
+                                if ($priceMembers -notcontains $priceName) { $priceMembers += $priceName }
+                                Add-Member -InputObject $obj -MemberType NoteProperty -Name $priceName -Value $price
                             }
                         }
-                        if ($price -eq 0.0) { $price = $null }
-                        Add-Member -InputObject $obj -MemberType NoteProperty -Name $skuPriceNameToFindCsv -Value $price
+                        if ($onePriceFound) { $postgresqlCsv.Add($obj) | Out-Null }
+                                
+                        $doneSku += $skun
                     }
-                    $obj.memory = $memory
-                    $obj.storageGb = $storageGb
-                    if ($onePriceFound) { $postgresqlCsv.Add($obj) | Out-Null }
                 }
             }
+        }
+    }
+}
+foreach($row in $postgresqlCsv)
+{
+    foreach($memberName in $priceMembers)
+    {
+        $memb = Get-Member -InputObject $row -Name $memberName -ErrorAction SilentlyContinue
+        if (-Not $memb)
+        {
+            Add-Member -InputObject $row -MemberType NoteProperty -Name $memberName -Value $null
         }
     }
 }
 Write-Host "Exporting Excel - Sheet PricesPostgreSql" -ForegroundColor $CommandInfo
 $excel = $postgresqlCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesPostgreSql" -TableName "PricesPostgreSql" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
 Close-ExcelPackage $excel
-Clear-Variable -Name "postgresqlCsv" -Force -ErrorAction SilentlyContinue
+#Clear-Variable -Name "postgresqlCsv" -Force -ErrorAction SilentlyContinue
 
+############################################################################################
 Write-Host "Building disk table" -ForegroundColor $CommandInfo
+
+$tierSlugs =  $manageddisks.tiers.slug
+$tierSlugs += "burstable"
+$tierSlugs += "transactions"
+$tierSlugs += "premiumssd-v2"
+$tierSlugs = $tierSlugs | Sort-Object { $_ }
+
+$sizeSlugs =  $manageddisks.sizes.slug
+$sizeSlugs += "hdd"
+$sizeSlugs += "ssd"
+$sizeSlugs += "snapshot"
+$sizeSlugs += "enablement"
+$sizeSlugs += "transaction"
+$sizeSlugs = $sizeSlugs | Sort-Object { $_ }
+
+$redundancySlugs =  $manageddisks.tierRedundancies.slug
+$redundancySlugs += ""
+$redundancySlugs = $redundancySlugs | Sort-Object { $_ }
+
+$addTypes = @("-disk-mount", "-one-year", "")
+$addTypes = $addTypes | Sort-Object { $_ }
+
 $diskCsv = [System.Collections.ArrayList]@()
 foreach ($region in $manageddisks.regions)
 {
     #$region = $manageddisks.regions | Where-Object { $_.slug -eq "switzerland-north" }
     #Write-Host "Region: $($region.displayName)"
-    $tierSlugs =  $manageddisks.tiers.slug
-    $tierSlugs += "burstable"
-    $tierSlugs += "transactions"
     foreach ($tierSlug in $tierSlugs)
     {
+        #$tierSlug = $tierSlugs | Where-Object { $_ -eq "premiumssd" }
         $tier = $manageddisks.tiers | Where-Object { $_.slug -eq $tierSlug }
         $tierName = $tier.displayName
         if ([string]::IsNullOrEmpty($tierName)) { $tierName = $tierSlug }
         #$tier = $manageddisks.tiers | Where-Object { $_.slug -eq "standardssd" }
         #Write-Host "  Tier: $($tierName)"
-        $sizeSlugs =  $manageddisks.sizes.slug
-        $sizeSlugs += "hdd"
-        $sizeSlugs += "ssd"
-        $sizeSlugs += "snapshot"
-        $sizeSlugs += "enablement"
-        $sizeSlugs += "transaction"
         foreach ($sizeSlug in $sizeSlugs)
         {
             $size = $manageddisks.sizes | Where-Object { $_.slug -eq $sizeSlug }
@@ -440,14 +367,12 @@ foreach ($region in $manageddisks.regions)
             if ([string]::IsNullOrEmpty($sizeName)) { $sizeName = $sizeSlug }
             #Write-Host "    Size: $($sizeName)"
             $sizeSlug = $sizeSlug -replace "ultra", ""
-            $redundancySlugs =  $manageddisks.tierRedundancies.slug
-            $redundancySlugs += ""
             foreach ($redundancySlug in $redundancySlugs)
             {
                 $redundancy = $manageddisks.tierRedundancies | Where-Object { $_.slug -eq $redundancySlug }
                 #$redundancy = $manageddisks.tierRedundancies | Where-Object { $_.slug -eq "lrs" }
                 #Write-Host "      Redundancy: $($redundancy.displayName)"
-                foreach ($addType in @("", "-disk-mount", "-one-year"))
+                foreach ($addType in $addTypes)
                 {
                     $offerName = "$tierSlug-$sizeSlug-$redundancySlug$addType"
                     if ([string]::IsNullOrEmpty($redundancySlug))
@@ -461,7 +386,7 @@ foreach ($region in $manageddisks.regions)
                         $memb = Get-Member -InputObject $offer.prices -Name $region.slug -ErrorAction SilentlyContinue
                         if ($memb)
                         {
-                            $price = $offer.prices."$($region.slug)".value * $exportCurrency.conversion
+                            $price = $offer.prices."$($region.slug)".value * $exportCurrency.modernConversion
                             $obj = [pscustomobject]@{
                                 tier = $tierName
                                 sizeName = $sizeName
@@ -474,6 +399,7 @@ foreach ($region in $manageddisks.regions)
                                 pricingTypes = $offer.pricingTypes
                                 burstingIops = $offer.burstingIops
                                 burstingThroughput = $offer.burstingThroughput
+                                maxPaidTransaction = $offer.maxPaidTransaction
                                 price = $price
                             }
                             $diskCsv.Add($obj) | Out-Null
@@ -487,17 +413,16 @@ foreach ($region in $manageddisks.regions)
 Write-Host "Exporting Excel - Sheet PricesDisks" -ForegroundColor $CommandInfo
 $excel = $diskCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesDisks" -TableName "PricesDisks" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
 Close-ExcelPackage $excel
-Clear-Variable -Name "diskCsv" -Force -ErrorAction SilentlyContinue
+#Clear-Variable -Name "diskCsv" -Force -ErrorAction SilentlyContinue
 
+############################################################################################
 Write-Host "Building compute table" -ForegroundColor $CommandInfo
-$computeCsv = [System.Collections.ArrayList]@()
 $allSkus = [System.Collections.ArrayList]@()
-foreach ($sku in (Get-Member -InputObject $virtualmachines.skus))
+foreach ($sku in $virtualmachines.skus.PSObject.Properties)
 {
     if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $sku.Name)
     {
-        $membs = Get-Member -InputObject $virtualmachines.skus."$($sku.Name)"
-        foreach($memb in $membs)
+        foreach($memb in $virtualmachines.skus."$($sku.Name)".PSObject.Properties)
         {
             if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $memb.Name)
             {
@@ -509,14 +434,31 @@ foreach ($sku in (Get-Member -InputObject $virtualmachines.skus))
         }
     }
 }
-$allOffers = @{}
-foreach ($offerName in (Get-Member -InputObject $virtualmachines.offers))
+$allPrices = [System.Collections.ArrayList]@()
+foreach ($offerName in $virtualmachines.offers.PSObject.Properties)
 {
     if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $offerName.Name)
     {
         $offer = $virtualmachines.offers."$($offerName.Name)"
-        $membs = Get-Member -InputObject $offer.prices
-        foreach($memb in $membs)
+        foreach($memb in $offer.prices.PSObject.Properties)
+        {
+            if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $memb.Name)
+            {
+                if (-Not $allPrices.Contains($memb.Name))
+                {
+                    $allPrices.Add($memb.Name) | Out-Null
+                }
+            }
+        }
+    }
+}
+$allOffers = @{}
+foreach ($offerName in $virtualmachines.offers.PSObject.Properties)
+{
+    if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $offerName.Name)
+    {
+        $offer = $virtualmachines.offers."$($offerName.Name)"
+        foreach($memb in $offer.prices.PSObject.Properties)
         {
             if (@("Equals","GetHashCode","GetType","ToString","Copy","Invoke","IsInstance","MemberType","Name","OverloadDefinitions","TypeNameOfValue","Value") -notcontains $memb.Name)
             {
@@ -528,6 +470,8 @@ foreach ($offerName in (Get-Member -InputObject $virtualmachines.offers))
 }
 $slugCount = $virtualmachines.tiers.Count * $virtualmachines.regions.Count * $virtualmachines.dropdown.slug.Count
 $slugsDone = 0
+$allPriceCols = [System.Collections.ArrayList]@()
+$computeCsv = [System.Collections.ArrayList]@()
 Write-Host "  Processing $($slugCount) items"
 foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -Property "displayName" -Descending))
 {
@@ -537,22 +481,32 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
     {
         #$tier = $virtualmachines.tiers | Where-Object { $_.slug -eq "standard" }
         #Write-Host "  Tier: $($tier.displayName)"
+        $virtualmachines.regions += @{
+            slug = "global"
+            displayName = "Global"
+        }
         foreach ($region in $virtualmachines.regions)
         {
             #$region = $virtualmachines.regions | Where-Object { $_.slug -eq "switzerland-north" }
             #Write-Host "    Region: $($region.displayName)"
             foreach ($groupSlug in ($virtualmachines.dropdown.slug | Sort-Object))
             {
+
+                #not sku ends with one of the
+
+
+                #$groupSlug = $virtualmachines.dropdown.slug | Where-Object { $_ -eq "memoryoptimized" }
                 $slugsDone++
                 if (($slugsDone % 50) -eq 0) { Write-Host "$($slugsDone)..." -NoNewLine }
                 $group = $virtualmachines.dropdown | Where-Object { $_.slug -eq $groupSlug }
                 $groupName = $group.displayName
                 if ([string]::IsNullOrEmpty($groupName)) { $groupName = $groupSlug }
-                if (-Not $groupName) { $groupName = "All" }
+                if ([string]::IsNullOrEmpty($groupName)) { $groupName = "All" }
                 #Write-Host "      Group: $($groupName)"
                 $groupSeries = $group.series
                 foreach ($subgroupSlug in ($groupSeries.slug | Sort-Object))
                 {
+                    #$subgroupSlug = ($groupSeries.slug | Sort-Object) | Where-Object { $_ -eq "esv5" }
                     $subgroup = $groupSeries | Where-Object { $_.slug -eq $subgroupSlug }
                     $subgroupName = $subgroup.displayName
                     if ([string]::IsNullOrEmpty($subgroupName)) { $subgroupName = $subgroupSlug }
@@ -560,14 +514,148 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
                     $instances = $subgroup.instances
                     foreach ($instance in $instances)
                     {
+                        #$instance = $instances | Where-Object { $_.slug -eq "e8sv5" }
+                        #Write-Host "          Instance: $($operatingSystem.slug)-$slug-$($tier.slug)"
                         $slug = $instance.slug
-                        $memb = Get-Member -InputObject $virtualmachines.skus -Name "$($operatingSystem.slug)-$slug-$($tier.slug)" -ErrorAction SilentlyContinue
+                        $instanceName = $instance.displayName.Split(":")[0]
+                        $instanceDesc = $instance.displayName.Split(":")[1]
+                        $skuName = "$($operatingSystem.slug)-$slug-$($tier.slug)"
+                        $features = $null
+                        if (($instanceName -match '^[a-zA-Z]+(?:\d+-\d+|\d+)([a-zA-Z]*)'))
+                        {
+                            $features = $Matches[1]
+                        }
+                        $obj = [pscustomobject]@{
+                            operatingSystem = $operatingSystem.displayName
+                            tier = $tier.displayName
+                            region = $region.displayName
+                            group = $groupName
+                            subgroup = $subgroupName
+                            series = $null
+                            instance = $skuName
+                            name = $instanceName
+                            desc = $instanceDesc
+                            cores = $null
+                            ram = $null
+                            diskSize = $null
+                            isVcpu = $null
+                            gpu = $null
+                            features = $features
+                            isHidden = $null
+                            pricingTypes = $null
+                            offerType = $null
+                        }
+                        $prices = @{}
+                        $memb = Get-Member -InputObject $virtualmachines.skus -Name $skuName -ErrorAction SilentlyContinue
                         if ($memb)
                         {
-                            #Write-Host "          Instance: $($operatingSystem.slug)-$slug-$($tier.slug)"
+
+                            # $virtualmachines.skus."windows-e8dv4-standard"
+                            # $virtualmachines.offers."windows-e8dv4-standard"
+                            # $virtualmachines.offers."linux-e8dv4-standard"
+                            # $virtualmachines.offers."windows-ri-8-core"
+
+                            # $virtualmachines.offers."windows-e8dv4-standard".prices.perhour."switzerland-north" 1.1292
+                            # $virtualmachines.offers."linux-e8dv4-standard".prices.perhouroneyearreserved."switzerland-north" 0.44909
+                            # $virtualmachines.offers."windows-ri-8-core".prices.perhour."global" 0.368
+
+                            # payg 1.1292
+                            # one-year 0.81709
+
+                            foreach ($priceName in $virtualmachines.skus."$skuName".PSObject.Properties.Name)
+                            {
+                                #"$priceName"
+                                if ($priceName.StartsWith("sv-") -or $priceName.StartsWith("ahbsv-")) { continue }
+
+                                $priceColName = "price-$priceName"
+                                if ($allPriceCols -notcontains $priceColName) {
+                                    $allPriceCols.Add($priceColName) | Out-Null
+                                }
+                                if (-Not $prices.Keys -contains $priceColName) { $prices."$priceColName" = 0 }
+
+
+                                foreach ($offerNameFull in $virtualmachines.skus."$skuName"."$priceName")
+                                {
+                                    $offerName = $offerNameFull.Substring(0,$offerNameFull.IndexOf("--"))
+                                    $offerPriceName = $offerNameFull.Substring($offerNameFull.IndexOf("--")+2)
+                                    $offer = $virtualmachines.offers."$offerName"
+                                    if ($offer)
+                                    {
+                                        #"  $offerName $offerPriceName $($region.slug)"
+                                        if ($null -eq $obj.cores -and $null -ne $offer.cores) { $obj.cores = $offer.cores }
+                                        if ($null -eq $obj.ram -and $null -ne $offer.ram) { $obj.ram = $offer.ram }
+                                        if ($null -eq $obj.diskSize -and $null -ne $offer.diskSize) { $obj.diskSize = $offer.diskSize }
+                                        if ($null -eq $obj.series -and $null -ne $offer.series) { $obj.series = $offer.series }
+                                        if ($null -eq $obj.isVcpu -and $null -ne $offer.isVcpu) { $obj.isVcpu = $offer.isVcpu }
+                                        if ($null -eq $obj.gpu -and $null -ne $offer.gpu) { $obj.gpu = $offer.gpu }
+                                        if ($null -eq $obj.isHidden -and $null -ne $offer.isHidden) { $obj.isHidden = $offer.isHidden }
+                                        if ($null -ne $offer.pricingTypes) { 
+                                            if ($null -eq $obj.pricingTypes) { $obj.pricingTypes = $offer.pricingTypes }
+                                            else { 
+                                                if (-Not $obj.pricingTypes.Contains($offer.pricingTypes)) {
+                                                    $obj.pricingTypes += ","+$offer.pricingTypes 
+                                                }
+                                            }
+                                        }
+                                        if ($null -ne $offer.offerType) { 
+                                            if ($null -eq $obj.offerType) { $obj.offerType = $offer.offerType }
+                                            else { 
+                                                if (-Not $obj.pricingTypes.Contains($offer.offerType)) {
+                                                    $obj.offerType += ","+$offer.offerType
+                                                }
+                                            }
+                                        }
+                                        $pmemb = Get-Member -InputObject $offer.prices."$offerPriceName" -Name "$($region.slug)" -ErrorAction SilentlyContinue
+                                        if ($pmemb) {
+                                            #"    $($offer.prices."$offerPriceName"."$($region.slug)".value)"
+                                            $prices."$priceColName" += $offer.prices."$offerPriceName"."$($region.slug)".value * $exportCurrency.modernConversion
+                                        }
+                                        else {
+                                            $pmemb = Get-Member -InputObject $offer.prices."$offerPriceName" -Name "global" -ErrorAction SilentlyContinue
+                                            if ($pmemb) {
+                                                #"    $($offer.prices."$offerPriceName"."global".value)"
+                                                $prices."$priceColName" += $offer.prices."$offerPriceName"."global".value * $exportCurrency.modernConversion
+                                            }
+                                            else {
+                                                #Write-Warning "    No price for region $($region.slug) in sku $skuName"
+                                            }
+                                        }
+                                        #Add-Member -InputObject $obj -MemberType NoteProperty -Name $priceColName -Value $price
+                                    }
+                                    else {
+                                        Write-Warning "    No offer $offerName in sku $skuName"
+                                    }
+                                }
+                            }
+                            <#
+                            $virtualmachines.skus."ubuntu-pro-e96adsv5-standard"
+                            payg          : {linux-e96adsv5-standard--perhour, ubuntu-pro-96-core--perhour}
+                            one-year      : {linux-e96adsv5-standard--perhouroneyearreserved, ubuntu-pro-96-core--perhour}
+                            three-year    : {linux-e96adsv5-standard--perhourthreeyearreserved, ubuntu-pro-96-core--perhour}
+                            sv-one-year   : {linux-e96adsv5-standard--perunitoneyearsavings, ubuntu-pro-96-core--perhour}
+                            sv-three-year : {linux-e96adsv5-standard--perunitthreeyearsavings, ubuntu-pro-96-core--perhour}
+                            spot          : {linux-e96adsv5-standard--perhourspot, ubuntu-pro-96-core--perhour}
+
+                            $virtualmachines.offers."ubuntu-pro-96-core".prices.PSObject.Properties.Name
+                            $virtualmachines.offers."linux-e96adsv5-standard".prices.PSObject.Properties.Name
+                            perhour
+                            perhouroneyearreserved
+                            perhourthreeyearreserved
+                            perunitoneyearsavings
+                            perunitthreeyearsavings
+                            perhourspot
+
+                            $virtualmachines.offers."linux-e96adsv5-standard"
+                            
+                            $virtualmachines.offers."linux-e96adsv5-standard".prices
+                            @{australia-central=; australia-central-2=; australia-east=; australia-southeast=; brazil-south=; brazil-southeast=; canada-central=; canada-east=; central-india=; us-ce… 
+                            
+                            
+
+
                             $instanceName = $instance.displayName.Split(":")[0]
                             $instanceDesc = $instance.displayName.Split(":")[1]
-                            $offer = $virtualmachines.offers."$($operatingSystem.slug)-$slug-$($tier.slug)"
+                            $offer = $virtualmachines.offers."$skuName"
                             if ($offer)
                             {
                                 $cores = $offer.cores
@@ -592,7 +680,7 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
                                     group = $groupName
                                     subgroup = $subgroupName
                                     series = $series
-                                    instance = "$($operatingSystem.slug)-$slug-$($tier.slug)"
+                                    instance = $skuName
                                     name = $instanceName
                                     desc = $instanceDesc
                                     cores = $cores
@@ -606,21 +694,37 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
                                     offerType = $offerType
                                 }
                                 $onePriceFound = $false
+                                foreach($sku in $offer.prices.PSObject.Properties.Name)
+                                {
+                                    if ($allSkus -notcontains $sku)
+                                    {
+                                        $allSkus += $sku
+                                    }
+                                    $prices = $offer."$sku"
+                                }
+                                <#
+                                foreach($sku in $offer.prices.PSObject.Properties.Name)
+                                {
+                                    if ($allSkus -notcontains $offP)
+                                    {
+                                        $allSkus += $offP
+                                    }
+                                }
                                 foreach($sku in $allSkus)
                                 {
                                     $priceName = "price" + $sku
-                                    $memb = Get-Member -InputObject $virtualmachines.skus."$($operatingSystem.slug)-$slug-$($tier.slug)" -Name $sku -ErrorAction SilentlyContinue
+                                    $memb = Get-Member -InputObject $virtualmachines.skus."$skuName" -Name $sku -ErrorAction SilentlyContinue
                                     if ($memb)
                                     {
                                         $price = 0.0
-                                        $offers = $virtualmachines.skus."$($operatingSystem.slug)-$slug-$($tier.slug)"."$sku"
+                                        $offers = $virtualmachines.skus."$skuName"."$sku"
                                         foreach($offer in $offers)
                                         {
                                             $prices = $allOffers[$offer]
                                             $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
                                             if ($memb)
                                             {
-                                                $price += $prices."$($region.slug)".value * $exportCurrency.conversion
+                                                $price += $prices."$($region.slug)".value * $exportCurrency.modernConversion
                                                 $onePriceFound = $true
                                             }
                                         }
@@ -637,23 +741,44 @@ foreach ($operatingSystem in ($virtualmachines.operatingSystems | Sort-Object -P
                             else
                             {
                                 #Write-Warning "Offer not found: $($operatingSystem.slug)-$slug-$($tier.slug)"
-                            }
+                            }#>
                         }
                         else
                         {
-                            #Write-Warning "SKU not found: $($operatingSystem.slug)-$slug-$($tier.slug)"
+                            #Write-Warning "SKU not found: $($operatingSystem.slug)-$slug-$($tier.slug) on $($instance.slug)"
                         }
+                        foreach($price in $prices.Keys)
+                        {
+                            if ($prices."$price" -eq 0) {
+                                Add-Member -InputObject $obj -MemberType NoteProperty -Name $price -Value $null
+                            } else {
+                                Add-Member -InputObject $obj -MemberType NoteProperty -Name $price -Value $prices."$price"
+                            }
+                        }
+                        $computeCsv.Add($obj) | Out-Null
                     }
                 }
             }
         }
     }
 }
+foreach($row in $computeCsv)
+{
+    foreach($memberName in $allPriceCols)
+    {
+        $memb = Get-Member -InputObject $row -Name $memberName -ErrorAction SilentlyContinue
+        if (-Not $memb)
+        {
+            Add-Member -InputObject $row -MemberType NoteProperty -Name $memberName -Value $null
+        }
+    }
+}
 Write-Host "Exporting Excel - Sheet PricesVMs" -ForegroundColor $CommandInfo
 $excel = $computeCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesVMs" -TableName "PricesVMs" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
 Close-ExcelPackage $excel
-Clear-Variable -Name "computeCsv" -Force -ErrorAction SilentlyContinue
+#Clear-Variable -Name "computeCsv" -Force -ErrorAction SilentlyContinue
 
+############################################################################################
 Write-Host "Building compute benchmark table" -ForegroundColor $CommandInfo
 $benchmarksCsv = [System.Collections.ArrayList]@()
 $benchmarks = @(
@@ -710,10 +835,10 @@ foreach($benchmark in $benchmarks)
 Write-Host "Exporting Excel - Sheet BenchmarkVMs" -ForegroundColor $CommandInfo
 $excel = $benchmarksCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "BenchmarkVMs" -TableName "BenchmarkVMs" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
 Close-ExcelPackage $excel
-Clear-Variable -Name "benchmarksCsv" -Force -ErrorAction SilentlyContinue
+#Clear-Variable -Name "benchmarksCsv" -Force -ErrorAction SilentlyContinue
 
+############################################################################################
 Write-Host "Building azuresqldatabase table" -ForegroundColor $CommandInfo
-$azuresqldatabaseCsv = [System.Collections.ArrayList]@()
 $allOffers = @{}
 foreach ($offerName in (Get-Member -InputObject $azuresqldatabase.offers))
 {
@@ -766,6 +891,7 @@ foreach ($atype in $azuresqldatabase.types)
 {
     $dbTypes += $atype.slug
 }
+$dbTypes = $dbTypes | Sort-Object { -($_.length) }
 
 $dbPurchaseModels = @(
     "backup",
@@ -779,6 +905,7 @@ foreach ($atype in $azuresqldatabase.purchaseModels)
 {
     $dbPurchaseModels += $atype.slug
 }
+$dbPurchaseModels = $dbPurchaseModels | Sort-Object { -($_.length) }
 
 $dbTiers = @(
     "instance-pools",
@@ -799,13 +926,17 @@ foreach ($atype in $azuresqldatabase.vcoreTiers)
 {
     $dbTiers += $atype.slug
 }
+$dbTiers = $dbTiers | Sort-Object { -($_.length) }
 
 $dbComputeTiers = @("")
 foreach ($atype in $azuresqldatabase.computeTiers)
 {
     $dbComputeTiers += $atype.slug
 }
+$dbComputeTiers = $dbComputeTiers | Sort-Object { -($_.length) }
+
 $priceMembers = @()
+$azuresqldatabaseCsv = [System.Collections.ArrayList]@()
 foreach ($region in $azuresqldatabase.regions)
 {
     #$region = $azuresqldatabase.regions | Where-Object { $_.slug -eq "switzerland-north" }
@@ -815,24 +946,24 @@ foreach ($region in $azuresqldatabase.regions)
     {
         foreach ($dbPurchaseModel in $dbPurchaseModels)
         {
-            if (-Not [string]::IsNullOrEmpty($dbPurchaseModel)) { $dbPurchaseModel = "-"+$dbPurchaseModel }
+            if (-Not [string]::IsNullOrEmpty($dbType) -and -Not [string]::IsNullOrEmpty($dbPurchaseModel)) { $dbPurchaseModel = "-"+$dbPurchaseModel }
             foreach ($dbTier in $dbTiers)
             {
-                if (-Not [string]::IsNullOrEmpty($dbTier)) { $dbTier = "-"+$dbTier }
+                if (-Not [string]::IsNullOrEmpty($dbPurchaseModel) -and -Not [string]::IsNullOrEmpty($dbTier)) { $dbTier = "-"+$dbTier }
                 foreach ($dbComputeTier in $dbComputeTiers)
                 {
-                    if (-Not [string]::IsNullOrEmpty($dbComputeTier)) { $dbComputeTier = "-"+$dbComputeTier }
+                    if (-Not [string]::IsNullOrEmpty($dbTier) -and -Not [string]::IsNullOrEmpty($dbComputeTier)) { $dbComputeTier = "-"+$dbComputeTier }
                     $skuName = "$dbType$dbPurchaseModel$dbTier$dbComputeTier"
-                    $sku = Get-Member -InputObject $azuresqldatabase.skus -Name $skuName
+                    if ([string]::IsNullOrEmpty($skuName)) { continue }
                     $skus = @()
-                    if ($sku)
+                    $sks = $azuresqldatabase.skus.PSObject.Properties | Where-Object { $_.Name.StartsWith($skuName) }
+                    foreach($sk in $sks)
                     {
-                        $skus += @($skuName)
-                    }
-                    else
-                    {
-                        $sks = $azuresqldatabase.skus.PSObject.Properties | Where-Object { $_.Name.StartsWith($skuName) }
-                        foreach($sk in $sks)
+                        $instance = $sk.Name.Replace($sk.Name, "").Trim("-")
+                        $dashCnt = $instance.Length - $instance.Replace("-", "").Count
+                        #Write-Host "  sk: $($sk.Name)"
+                        #Write-Host "  dashCnt: $($dashCnt)"
+                        if ($dashCnt -lt 2)
                         {
                             $skus += @($sk.Name)
                         }
@@ -848,7 +979,6 @@ foreach ($region in $azuresqldatabase.regions)
                             $sku = $azuresqldatabase.skus."$skun"
 
                             $obj = [pscustomobject]@{
-                                deploymentOption = $deploymentOptionName
                                 dbType = $dbType.Trim("-")
                                 dbPurchaseModel = $dbPurchaseModel.Trim("-")
                                 dbTier = $dbTier.Trim("-")
@@ -878,7 +1008,7 @@ foreach ($region in $azuresqldatabase.regions)
                                         $memb = Get-Member -InputObject $prices -Name $region.slug -ErrorAction SilentlyContinue
                                         if ($memb)
                                         {
-                                            $price += $prices."$($region.slug)".value * $exportCurrency.conversion
+                                            $price += $prices."$($region.slug)".value * $exportCurrency.modernConversion
                                             $onePriceFound = $true
                                         }
                                         $offerName = $offer.Substring(0, $offer.LastIndexOf("-") - 1)
@@ -909,11 +1039,10 @@ foreach($row in $azuresqldatabaseCsv)
         }
     }
 }
-
 Write-Host "Exporting Excel - Sheet PricesAzureSqlDatabase" -ForegroundColor $CommandInfo
 $excel = $azuresqldatabaseCsv | Export-Excel -Path "$AlyaData\azure\PricesAndBenchmarks.xlsx" -WorksheetName "PricesAzureSqlDatabase" -TableName "PricesAzureSqlDatabase" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru -NoNumberConversion *
 Close-ExcelPackage $excel -Show
-Clear-Variable -Name "azuresqldatabaseCsv" -Force -ErrorAction SilentlyContinue
+#Clear-Variable -Name "azuresqldatabaseCsv" -Force -ErrorAction SilentlyContinue
 
 #TODO
 #   functions
@@ -922,6 +1051,9 @@ Clear-Variable -Name "azuresqldatabaseCsv" -Force -ErrorAction SilentlyContinue
 #   automation
 #   keyvault
 #   analysisservices
+
+############################################################################################
+Write-Host "Building keyvault table" -ForegroundColor $CommandInfo
 
 #Stopping Transscript
 Stop-Transcript

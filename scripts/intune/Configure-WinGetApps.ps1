@@ -230,6 +230,7 @@ foreach($winGetApp in $winGetApps)
         }
     }
     catch {
+        Write-Error $_.Exception -ErrorAction Continue
         $hadError = $true
     }
 

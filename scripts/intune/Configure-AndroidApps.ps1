@@ -183,6 +183,7 @@ foreach($androidApp in $androidApps)
         }
     }
     catch {
+        Write-Error $_.Exception -ErrorAction Continue
         $hadError = $true
     }
 

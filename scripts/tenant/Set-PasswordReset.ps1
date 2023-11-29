@@ -55,10 +55,11 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-PasswordReset-$($AlyaTim
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes @("Policy.ReadWrite.Authorization")
+LoginTo-MgGraph -Scopes @("Directory.Read.All","Policy.ReadWrite.Authorization")
 
 # =============================================================
 # O365 stuff
@@ -90,25 +91,131 @@ else
 
 if ($AlyaPasswordResetEnabled)
 {
-    Write-Host "Enabling password reset options" -ForegroundColor $CommandInfo
-    Write-Host "You have now to configure password reset options. Pleas browse to"
-    Write-Host "  https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
-    if ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName) -or $AlyaSsprEnabledGroupName -eq "PleaseSpecify"-or $AlyaSsprEnabledGroupName.Count -eq 0 )
+    $apiToken = Get-AzAccessToken
+    $hadError = $false
+    if (-Not $apiToken)
     {
-        #TODO get groups enabling password reset by licenses
-        Write-Host "and allow password reset for all users."
+        Write-Error "Can't aquire an access token."
+        $hadError = $true
     }
     else
     {
-        Write-Host "and allow password reset for group(s) $AlyaSsprEnabledGroupName. "
+        if ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName) -or $AlyaSsprEnabledGroupName -eq "PleaseSpecify"-or $AlyaSsprEnabledGroupName.Count -eq 0 )
+        {
+            Write-Host "allow password reset for all users."
+            $body = @"
+{
+    "objectId": "default",
+    "enablementType": 2,
+    "numberOfAuthenticationMethodsRequired": 2,
+    "emailOptionEnabled": true,
+    "mobilePhoneOptionEnabled": true,
+    "officePhoneOptionEnabled": true,
+    "securityQuestionsOptionEnabled": false,
+    "mobileAppNotificationEnabled": true,
+    "mobileAppCodeEnabled": true,
+    "numberOfQuestionsToRegister": 5,
+    "numberOfQuestionsToReset": 3,
+    "registrationRequiredOnSignIn": true,
+    "registrationReconfirmIntevalInDays": 180,
+    "skipRegistrationAllowed": true,
+    "skipRegistrationMaxAllowedDays": 7,
+    "customizeHelpdeskLink": false,
+    "customHelpdeskEmailOrUrl": "",
+    "notifyUsersOnPasswordReset": true,
+    "notifyOnAdminPasswordReset": false,
+    "passwordResetEnabledGroupIds": ["00000000-0000-0000-0000-000000000000"],
+    "passwordResetEnabledGroupName": "",
+    "securityQuestions": [],
+    "registrationConditionalAccessPolicies": [],
+    "emailOptionAllowed": true,
+    "mobilePhoneOptionAllowed": true,
+    "officePhoneOptionAllowed": true,
+    "securityQuestionsOptionAllowed": true,
+    "mobileAppNotificationOptionAllowed": true,
+    "mobileAppCodeOptionAllowed": true
+}
+"@
+        }
+        else
+        {
+            Write-Host "  allow password reset for group(s) $AlyaSsprEnabledGroupName. "
+            $aGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaSsprEnabledGroupName)'"
+            if (-Not $aGrp)
+            {
+                Write-Warning "Not able to find group '$($AlyaSsprEnabledGroupName)'"
+                $hadError = $true
+            }
+            $body = @"
+{
+    "objectId": "default",
+    "enablementType": 1,
+    "numberOfAuthenticationMethodsRequired": 2,
+    "emailOptionEnabled": true,
+    "mobilePhoneOptionEnabled": true,
+    "officePhoneOptionEnabled": true,
+    "securityQuestionsOptionEnabled": false,
+    "mobileAppNotificationEnabled": true,
+    "mobileAppCodeEnabled": true,
+    "numberOfQuestionsToRegister": 5,
+    "numberOfQuestionsToReset": 3,
+    "registrationRequiredOnSignIn": true,
+    "registrationReconfirmIntevalInDays": 180,
+    "skipRegistrationAllowed": true,
+    "skipRegistrationMaxAllowedDays": 7,
+    "customizeHelpdeskLink": false,
+    "customHelpdeskEmailOrUrl": "",
+    "notifyUsersOnPasswordReset": true,
+    "notifyOnAdminPasswordReset": false,
+    "passwordResetEnabledGroupIds": ["$($aGrp.id)"],
+    "passwordResetEnabledGroupName": "$($AlyaSsprEnabledGroupName)",
+    "securityQuestions": [],
+    "registrationConditionalAccessPolicies": [],
+    "emailOptionAllowed": true,
+    "mobilePhoneOptionAllowed": true,
+    "officePhoneOptionAllowed": true,
+    "securityQuestionsOptionAllowed": true,
+    "mobileAppNotificationOptionAllowed": true,
+    "mobileAppCodeOptionAllowed": true
+}
+"@
+        }
+        if (-Not $hadError)
+        {
+            $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json; charset=utf-8';'X-Ms-Command-Name'='PasswordReset - UpdatePasswordResetPolicy';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
+            $url = "https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies?byPassMethodCountCheck=true"
+            try {
+                $resp = Invoke-WebRequestIndep -Uri $url -Headers $header -Method PUT -Body $body
+            } catch {
+                $_.Exception
+                $_.Exception.Response
+                $hadError = $true
+            }
+        }
     }
-    Write-Host "Also configure reset options."
-    if (-Not $browser) {
-        Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
-    } else {
-        $browser.Url =  "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+    
+    if ($hadError)
+    {
+        Write-Host "Enabling password reset options" -ForegroundColor $CommandInfo
+        Write-Host "You have now to configure password reset options. Pleas browse to"
+        Write-Host "  https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+        if ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName) -or $AlyaSsprEnabledGroupName -eq "PleaseSpecify"-or $AlyaSsprEnabledGroupName.Count -eq 0 )
+        {
+            #TODO get groups enabling password reset by licenses
+            Write-Host "and allow password reset for all users."
+        }
+        else
+        {
+            Write-Host "and allow password reset for group(s) $AlyaSsprEnabledGroupName. "
+        }
+        Write-Host "Also configure reset options."
+        if (-Not $browser) {
+            Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+        } else {
+            $browser.Url =  "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+        }
+        pause
     }
-    pause
 }
 
 #Stopping Transscript

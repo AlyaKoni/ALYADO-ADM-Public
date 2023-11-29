@@ -78,10 +78,10 @@ $AlyaAllSubscriptions = @(
 $AlyaLocation = "PleaseSpecify" #Example:"westeurope"
 $AlyaWebPage = "PleaseSpecify" #Example:"https://alyaconsulting.ch"
 $AlyaPrivacyUrl = "PleaseSpecify" #Example:"https://alyaconsulting.ch/Home/Privacy"
-$AlyaPrivacyEmail = "PleaseSpecify" #Example:"datenschutz@$($AlyaDomainName)"
-$AlyaSecurityEmail = "PleaseSpecify" #Example:"security@$($AlyaDomainName)"
-$AlyaGeneralInformEmail = "PleaseSpecify" #Example:"cloud@$($AlyaDomainName)"
-$AlyaSupportEmail = "PleaseSpecify" #Example:"support@$($AlyaDomainName)"
+$AlyaPrivacyEmail = "PleaseSpecify" #Example:"cloud.privacy@$($AlyaDomainName)"
+$AlyaSecurityEmail = "PleaseSpecify" #Example:"cloud.security@$($AlyaDomainName)"
+$AlyaGeneralInformEmail = "PleaseSpecify" #Example:"cloud.general@$($AlyaDomainName)"
+$AlyaSupportEmail = "PleaseSpecify" #Example:"cloud.support@$($AlyaDomainName)"
 $AlyaGeneralPhoneNumber = "PleaseSpecify" #Example:"+41625620462"
 $AlyaSecurityPhoneNumber = $AlyaGeneralPhoneNumber
 $AlyaTimeZone = "PleaseSpecify" #Example:"W. Europe Standard Time"
@@ -203,15 +203,28 @@ $AlyaJumpHostStartTime = "PleaseSpecify" #Example:$null
 $AlyaJumpHostStopTime = "PleaseSpecify" #Example:"20:00"
 $AlyaJumpHostBackupPolicy = "PleaseSpecify" #Example:"NightlyPolicy"
 
+<# SECURITY SETTINGS #>
+$AlyaBreakingGlassUserName = "PleaseSpecify" #Example:"john.doe@$($AlyaDomainName)"
+
 <# GROUP SETTINGS #>
+$AlyaNoMfaDefaultsGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-NOMFADEFAULTS"
 $AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFADISABLED"
 $AlyaMfaDisabledGroupNameOnPrem = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFADISABLEDONPREM"
 $AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen")
-$AlyaMfaEnabledGroupName = $null #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFAENABLED"
+$AlyaMfaEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFAENABLED"
+$AlyaKeyAuthEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-KEYAUTHENABLED"
+$AlyaKeyAuthEnabledKeys = @("d8522d9f-575b-4866-88a9-ba99fa02f35b") #d8522d9f-575b-4866-88a9-ba99fa02f35b: Biometric Series 5
 $AlyaSsprEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-SSPRENABLED"
 $AlyaPwdResetDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-PWDCHNGDISABLED"
 $AlyaAllInternals = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)MG-ADM-AlleInternen"
 $AlyaAllExternals = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen"
+
+<# OFFICE GROUP SETTINGS #>
+$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERS" # Only members can create groups
+$AlyaGroupManagerGroupNameOnPrem = "PleaseSpecify"
+#TODO $AlyaGroupManagerMembers = @()
+$AlyaOfficeGroupsNewGroupOwner = $AlyaSharePointNewSiteOwner
+$AlyaOfficeGroupsNewGroupAdditionalOwner = $AlyaSharePointNewSiteOwner
 
 <# NETWORK SETTINGS #>
 $AlyaAzureNetwork = "PleaseSpecify" #Example:"172.16.0.0/16"
@@ -275,13 +288,6 @@ $AlyaSpThemeDef = @{
 $AlyaTeamsNewTeamOwner = $AlyaSharePointNewSiteOwner
 $AlyaTeamsNewTeamAdditionalOwner = $AlyaSharePointNewSiteAdditionalOwner
 $AlyaTeamsNewAdmins = $AlyaSharePointNewSiteCollectionAdmins
-
-<# OFFICE GROUP SETTINGS #>
-$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERS" # Only members can create groups
-$AlyaGroupManagerGroupNameOnPrem = "PleaseSpecify"
-#TODO $AlyaGroupManagerMembers = @()
-$AlyaOfficeGroupsNewGroupOwner = $AlyaSharePointNewSiteOwner
-$AlyaOfficeGroupsNewGroupAdditionalOwner = $AlyaSharePointNewSiteOwner
 
 <# AIP SETTINGS #>
 $AlyaAipApiServiceLocation = "PleaseSpecify" #Example:

@@ -185,6 +185,7 @@ foreach($iosApp in $iosApps)
         }
     }
     catch {
+        Write-Error $_.Exception -ErrorAction Continue
         $hadError = $true
     }
 

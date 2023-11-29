@@ -72,7 +72,7 @@ if (-Not (Test-Path $BgDst))
     New-Item -Path $BgDst -ItemType Directory -Force
 }
 
-Copy-Item -Path "$BgSrc\*.*" -Destination $BgDst -Recurse -Force
+Copy-Item -Path "$BgSrc\*" -Destination $BgDst -Recurse -Force
 
 #Stopping Transscript
 Stop-Transcript

@@ -156,6 +156,7 @@ foreach($msStoreApp in $msStoreApps)
         }
     }
     catch {
+        Write-Error $_.Exception -ErrorAction Continue
         $hadError = $true
     }
 

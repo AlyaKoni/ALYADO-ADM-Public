@@ -66,6 +66,10 @@ foreach($list in $lists)
 }
 
 # Export
+if (-Not (Test-Path "$AlyaData\sharepoint"))
+{
+    New-Item -Path "$AlyaData\sharepoint" -ItemType Directory -Force
+}
 $extracted = Get-PnPSiteScriptFromWeb -Connection $siteCon -IncludeAll
 $scriptFile = "$AlyaData\sharepoint\SiteScript_" + $SiteUrl.Replace("https://", "").Replace("/", "_") + ".json"
 Set-Content -Path $scriptFile -Value $extracted

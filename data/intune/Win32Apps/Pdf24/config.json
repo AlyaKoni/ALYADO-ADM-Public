@@ -1,6 +1,6 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
-  "displayName": "Win10 Pdf24",
+  "displayName": "WIN Pdf24",
   "description": "Installs PDF24 Creator",
   "publisher": "pdf24.org",
   "largeIcon": {
@@ -15,7 +15,7 @@
   "developer": "geek software GmbH",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "pdf24-creator-11.13.2-x64.intunewin",
+  "fileName": "pdf24-creator-11.14.0-x64.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,15 +24,15 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
+    "productCode": "{F6261828-C2B9-49CF-BDC8-B5C9451F8353}",
     "productName": "PDF24 Creator",
-    "requiresReboot": "false",
-    "upgradeCode": "{8D2DF301-CE53-4939-81C2-D659E7B857BE}",
     "publisher": "geek software GmbH",
-    "productCode": "{E8F0E49C-04E7-4F25-AE88-A2AA05AB8DFD}",
-    "productVersion": "11.13.2",
-    "packageType": "PerMachine"
+    "packageType": "PerMachine",
+    "productVersion": "11.14.0",
+    "upgradeCode": "{8D2DF301-CE53-4939-81C2-D659E7B857BE}",
+    "requiresReboot": "false"
   },
-  "setupFilePath": "pdf24-creator-11.13.2-x64.msi",
+  "setupFilePath": "pdf24-creator-11.14.0-x64.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "11.13.2"
+      "detectionValue": "11.14.0"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "11.13.2"
+      "comparisonValue": "11.14.0"
     }
   ],
   "installExperience": {

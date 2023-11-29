@@ -47,12 +47,13 @@ Start-Transcript -Path "$($AlyaLogs)\data\security\Onboard-SubscriptionsToDefend
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdAuditStorage)"
 $LogAnaWrkspcName = "$($AlyaNamingPrefix)loga$($AlyaResIdLogAnalytics)"
-$DefenderOnboardedServices = @("KeyVaults", "Dns", "Arm")
+$DefenderOnboardedServices = @("KeyVaults")
 $DefenderOnboardedPolicies = @(
-    @{Name="CIS Benchmark v1.4.0"; Policy="CIS Microsoft Azure Foundations Benchmark v1.4.0"},
+    @{Name="CIS Benchmark v2.0.0"; Policy="CIS Microsoft Azure Foundations Benchmark v2.0.0"},
     @{Name="Azure Security Benchmark"; Policy="[Preview]: Windows machines should meet requirements for the Azure compute security baseline"}
     #"ISO 27001:2013",
     #"Enable Azure Monitor for VMs"
+    #(Get-AzPolicySetDefinition).Properties.displayName | Where-Object { $_ -notlike "*Deprecated*" }
 )
 
 # Checking modules
@@ -181,7 +182,16 @@ foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique
         if ($pricing.PricingTier -eq "Free")
         {
             Write-Warning "Changed pricing tier of service '$enabledService' to 'Standard'"
-            Set-AzSecurityPricing -Name $enabledService -PricingTier "Standard"
+            try {
+                if ($enabledService -eq "KeyVaults") {
+                    Set-AzSecurityPricing -Name $enabledService -PricingTier "Standard" -SubPlan "PerKeyVault"
+                } else {
+                    Set-AzSecurityPricing -Name $enabledService -PricingTier "Standard"
+                }
+            } catch {
+                Write-Error $_.Exception -ErrorAction Continue
+                Write-Error "Not able to set pricing tier of service $enabledService to Standard" -ErrorAction Continue
+            }
         }
     }
 
@@ -197,7 +207,7 @@ foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique
     Set-AzSecuritySetting -SettingName "WDATP" -SettingKind "DataExportSettings" -Enabled $true
 
     # Setting securit contact
-    Write-Host "  Setting securit contact to $AlyaSecurityEmail" -ForegroundColor $CommandInfo
+    Write-Host "  Setting security contact to $AlyaSecurityEmail" -ForegroundColor $CommandInfo
     Set-AzSecurityContact -Name "default" -Email $AlyaSecurityEmail -AlertAdmin -NotifyOnAlert
 
     # Registering policies

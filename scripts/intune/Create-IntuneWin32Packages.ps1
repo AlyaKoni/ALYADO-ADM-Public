@@ -39,7 +39,8 @@
 Param(
     [string]$CreateOnlyAppWithName = $null,
     [string]$ContinueAtAppWithName = $null,
-    [string]$AppsPath = "Win32Apps"
+    [string]$AppsPath = "Win32Apps",
+    [bool]$ReuseExistingPackages = $false
 )
 
 # Loading configuration
@@ -73,220 +74,226 @@ foreach($packageDir in $packageDirs)
     if ($ContinueAtAppWithName -and $continue) { continue }
     if ($CreateOnlyAppWithName -and $packageDir.Name -ne $CreateOnlyAppWithName) { continue }
     if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
-    Write-Host "Updating package $($packageDir.Name)" -ForegroundColor $CommandInfo
 
-    Write-Host "  Cleaning content directory"
+    Write-Host "Updating package $($packageDir.Name)" -ForegroundColor $CommandInfo
     $contentPath = Join-Path $packageDir.FullName "Content"
     $contentZipPath = Join-Path $packageDir.FullName "ContentZip"
     $scriptPath = Join-Path $packageDir.FullName "Scripts"
     $packagePath = Join-Path $packageDir.FullName "Package"
-    if ((Test-Path $contentPath))
-    {
-        try
-        {
-            $null = Remove-Item -Path $contentPath -Recurse -Force -Confirm:$false
-        } catch
-        {
-            Write-Warning "Was not able to delete directory. Please delete $contentPath.deleteMe by hand"
-            $null = Move-Item -Path $contentPath -Destination "$contentPath.deleteMe"
-        }
-    }
-    $null = New-Item -Path $contentPath -ItemType Directory
-    if ((Test-Path $packagePath))
-    {
-        try
-        {
-            $null = Remove-Item -Path $packagePath -Recurse -Force -Confirm:$false
-        } catch
-        {
-            Write-Warning "Was not able to delete directory. Please delete $packagePath.deleteMe by hand"
-            $null = Move-Item -Path $packagePath -Destination "$packagePath.deleteMe"
-        }
-    }
-    $null = New-Item -Path $packagePath -ItemType Directory
+    $intunewinFile = Get-ChildItem -Path $packagePath -Filter "*.intunewin" -ErrorAction SilentlyContinue
 
-    Write-Host "  Updating scripts if required"
-    $prepareScript = Get-Item -Path (Join-Path $packageDir.FullName "PrepareScripts.ps1") -ErrorAction SilentlyContinue
-    if ($prepareScript)
+    if (-Not $intunewinFile -or $ReuseExistingPackages -eq $false)
     {
-        & "$($prepareScript.FullName)"
-        Start-Sleep -Seconds 2
-    }
-
-    Write-Host "  Copying scripts"
-    if ((Test-Path $scriptPath))
-    {
-        Get-ChildItem -Path $scriptPath | Copy-Item -Destination $contentPath
-    }
-
-    Write-Host "  Downloading installer"
-    $downloadShortcut = Get-Item -Path (Join-Path $packageDir.FullName "Download.url") -ErrorAction SilentlyContinue
-    if (-Not $downloadShortcut)
-    {
-        $downloadScript = Get-Item -Path (Join-Path $packageDir.FullName "Download.ps1") -ErrorAction SilentlyContinue
-        if ($downloadScript)
+        if ((Test-Path $contentPath))
         {
-            & "$($downloadScript.FullName)"
-        }
-    }
-    else
-    {
-        $downloadUpdateScript = Get-Item -Path (Join-Path $packageDir.FullName "DownloadLinkUpdate.ps1") -ErrorAction SilentlyContinue
-        if ($downloadUpdateScript)
-        {
-            & "$($downloadUpdateScript.FullName)"
-        }
-        $profile = [Environment]::GetFolderPath("UserProfile")
-        $downloads = $profile+"\downloads"
-        $lastfilename = $null
-        $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
-        if ($file)
-        {
-            $lastfilename = $file.Name
-        }
-        $filename = $null
-        $content = $downloadShortcut | Get-Content -Raw -Encoding $AlyaUtf8Encoding
-        [regex]$regex = "URL=.*"
-        $downloadUrl = [regex]::Match($content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Substring(4)
-        $attempts = 10
-        while ($attempts -ge 0)
-        {
-            Write-Host "    from $downloadUrl"
-            Write-Host "      please don't start any other download!" -ForegroundColor $CommandWarning
-            try {
-                #TODO Better download!
-                Start-Process $downloadUrl
-                do
-                {
-                    Start-Sleep -Seconds 5
-                    $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
-                    if ($file)
-                    {
-                        $filename = $file.Name
-                        if ($filename.Contains("crdownload")) { $filename = $lastfilename }
-                        if ($filename.Contains("partial")) { $filename = $lastfilename }
-                        if ($filename.Contains(".tmp")) { $filename = $lastfilename }
-                    }
-                } while ($lastfilename -eq $filename)
-                $attempts = -1
-            } catch {
-                Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
-                Write-Host "Retrying $attempts times" -ForegroundColor $CommandError
-                $attempts--
-                if ($attempts -lt 0) { throw }
-                Start-Sleep -Seconds 10
+            Write-Host "  Cleaning content directory"
+            try
+            {
+                $null = Remove-Item -Path $contentPath -Recurse -Force -Confirm:$false
+            } catch
+            {
+                Write-Warning "Was not able to delete directory. Please delete $contentPath.deleteMe by hand"
+                $null = Move-Item -Path $contentPath -Destination "$contentPath.deleteMe"
             }
         }
-        Start-Sleep -Seconds 3
-        if ($filename)
+        $null = New-Item -Path $contentPath -ItemType Directory
+        if ((Test-Path $packagePath))
         {
-            $sourcePath = $downloads+"\"+$filename
-            $filename = $filename -replace "\s\(.*\)", ""
-            $destPath = $contentPath+"\"+$filename
-            Move-Item -Path $sourcePath -Destination $destPath -Force
-            if ($filename.EndsWith(".zip"))
+            Write-Host "  Cleaning package directory"
+            try
             {
-                Add-Type -AssemblyName System.IO.Compression.FileSystem
-                $zip = [System.IO.Compression.ZipFile]::OpenRead($destPath)
-                $entries = $zip.Entries | Where-Object { $_.Name -like "*.msi" }
-                if ($entries.Count -gt 0)
-                {
-                    foreach($entry in $entries)
-                    {
-                        $entryPath = $contentPath+"\"+$entry.Name
-                        [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $entryPath, $true)
-                    }
-                    $zip.Dispose()
-                    Remove-Item -Path $destPath -Force
-                }
+                $null = Remove-Item -Path $packagePath -Recurse -Force -Confirm:$false
+            } catch
+            {
+                Write-Warning "Was not able to delete directory. Please delete $packagePath.deleteMe by hand"
+                $null = Move-Item -Path $packagePath -Destination "$packagePath.deleteMe"
+            }
+        }
+        $null = New-Item -Path $packagePath -ItemType Directory
+
+        Write-Host "  Updating scripts if required"
+        $prepareScript = Get-Item -Path (Join-Path $packageDir.FullName "PrepareScripts.ps1") -ErrorAction SilentlyContinue
+        if ($prepareScript)
+        {
+            & "$($prepareScript.FullName)"
+            Start-Sleep -Seconds 2
+        }
+
+        Write-Host "  Copying scripts"
+        if ((Test-Path $scriptPath))
+        {
+            Get-ChildItem -Path $scriptPath | Copy-Item -Destination $contentPath
+        }
+
+        Write-Host "  Downloading installer"
+        $downloadShortcut = Get-Item -Path (Join-Path $packageDir.FullName "Download.url") -ErrorAction SilentlyContinue
+        if (-Not $downloadShortcut)
+        {
+            $downloadScript = Get-Item -Path (Join-Path $packageDir.FullName "Download.ps1") -ErrorAction SilentlyContinue
+            if ($downloadScript)
+            {
+                & "$($downloadScript.FullName)"
             }
         }
         else
         {
-            Write-Error "Was not able to download installer" -ErrorAction Continue
+            $downloadUpdateScript = Get-Item -Path (Join-Path $packageDir.FullName "DownloadLinkUpdate.ps1") -ErrorAction SilentlyContinue
+            if ($downloadUpdateScript)
+            {
+                & "$($downloadUpdateScript.FullName)"
+            }
+            $profile = [Environment]::GetFolderPath("UserProfile")
+            $downloads = $profile+"\downloads"
+            $lastfilename = $null
+            $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
+            if ($file)
+            {
+                $lastfilename = $file.Name
+            }
+            $filename = $null
+            $content = $downloadShortcut | Get-Content -Raw -Encoding $AlyaUtf8Encoding
+            [regex]$regex = "URL=.*"
+            $downloadUrl = [regex]::Match($content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Substring(4)
+            $attempts = 10
+            while ($attempts -ge 0)
+            {
+                Write-Host "    from $downloadUrl"
+                Write-Host "      please don't start any other download!" -ForegroundColor $CommandWarning
+                try {
+                    #TODO Better download!
+                    Start-Process $downloadUrl
+                    do
+                    {
+                        Start-Sleep -Seconds 5
+                        $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
+                        if ($file)
+                        {
+                            $filename = $file.Name
+                            if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
+                            if ($filename.Contains(".partial")) { $filename = $lastfilename }
+                            if ($filename.Contains(".tmp")) { $filename = $lastfilename }
+                        }
+                    } while ($lastfilename -eq $filename)
+                    $attempts = -1
+                } catch {
+                    Write-Host "Catched exception $($_.Exception.Message)" -ForegroundColor $CommandError
+                    Write-Host "Retrying $attempts times" -ForegroundColor $CommandError
+                    $attempts--
+                    if ($attempts -lt 0) { throw }
+                    Start-Sleep -Seconds 10
+                }
+            }
+            Start-Sleep -Seconds 3
+            if ($filename)
+            {
+                $sourcePath = $downloads+"\"+$filename
+                $filename = $filename -replace "\s\(.*\)", ""
+                $destPath = $contentPath+"\"+$filename
+                Move-Item -Path $sourcePath -Destination $destPath -Force
+                if ($filename.EndsWith(".zip"))
+                {
+                    Add-Type -AssemblyName System.IO.Compression.FileSystem
+                    $zip = [System.IO.Compression.ZipFile]::OpenRead($destPath)
+                    $entries = $zip.Entries | Where-Object { $_.Name -like "*.msi" }
+                    if ($entries.Count -gt 0)
+                    {
+                        foreach($entry in $entries)
+                        {
+                            $entryPath = $contentPath+"\"+$entry.Name
+                            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $entryPath, $true)
+                        }
+                        $zip.Dispose()
+                        Remove-Item -Path $destPath -Force
+                    }
+                }
+            }
+            else
+            {
+                Write-Error "Was not able to download installer" -ErrorAction Continue
+            }
         }
-    }
 
-    Write-Host "  Preparing content zip"
-    if ((Test-Path $contentZipPath))
-    {
-        $zipPath = Join-Path $contentPath "Content.zip"
-        Compress-Archive -Path $contentZipPath -DestinationPath $zipPath
-        $zipFile = Get-Item -Path $zipPath
-    }
-
-    Write-Host "  Preparing version if required"
-    $incrementScript = Get-Item -Path (Join-Path $packageDir.FullName "PrepareVersion.ps1") -ErrorAction SilentlyContinue
-    if ($incrementScript)
-    {
-        & "$($incrementScript.FullName)"
-        Start-Sleep -Seconds 2
-        $versionFile = Get-Item -Path (Join-Path $packageDir.FullName "version.json") -ErrorAction SilentlyContinue
-        Copy-Item -Path $versionFile -Destination $contentPath -Force
-    }
-
-    Write-Host "  Packaging"
-    $tool = Join-Path (Join-Path $AlyaTools "IntuneWinAppUtil") "IntuneWinAppUtil.exe"
-
-    $firstTry = "msi"
-    $secondTry = "exe"
-    $packagePreference = Get-Item -Path (Join-Path $packageDir.FullName "PackagePreference.txt") -ErrorAction SilentlyContinue
-    if ($packagePreference)
-    {
-        $packagePreference = $packagePreference | Get-Content
-        if ($packagePreference -eq "exe")
+        Write-Host "  Preparing content zip"
+        if ((Test-Path $contentZipPath))
         {
-            $firstTry = "exe"
-            $secondTry = "msi"
+            $zipPath = Join-Path $contentPath "Content.zip"
+            Compress-Archive -Path $contentZipPath -DestinationPath $zipPath
+            $zipFile = Get-Item -Path $zipPath
         }
-    }
 
-    $toInstall = Get-ChildItem -Path $contentPath -Filter "*.$firstTry" | Sort-Object -Property Name
-    if (-Not $toInstall)
-    {
-        $toInstall = Get-ChildItem -Path $contentPath -Filter "*.$secondTry" | Sort-Object -Property Name
+        Write-Host "  Preparing version if required"
+        $incrementScript = Get-Item -Path (Join-Path $packageDir.FullName "PrepareVersion.ps1") -ErrorAction SilentlyContinue
+        if ($incrementScript)
+        {
+            & "$($incrementScript.FullName)"
+            Start-Sleep -Seconds 2
+            $versionFile = Get-Item -Path (Join-Path $packageDir.FullName "version.json") -ErrorAction SilentlyContinue
+            Copy-Item -Path $versionFile -Destination $contentPath -Force
+        }
+
+        Write-Host "  Packaging"
+        $tool = Join-Path (Join-Path $AlyaTools "IntuneWinAppUtil") "IntuneWinAppUtil.exe"
+
+        $firstTry = "msi"
+        $secondTry = "exe"
+        $packagePreference = Get-Item -Path (Join-Path $packageDir.FullName "PackagePreference.txt") -ErrorAction SilentlyContinue
+        if ($packagePreference)
+        {
+            $packagePreference = $packagePreference | Get-Content
+            if ($packagePreference -eq "exe")
+            {
+                $firstTry = "exe"
+                $secondTry = "msi"
+            }
+        }
+
+        $toInstall = Get-ChildItem -Path $contentPath -Filter "*.$firstTry" | Sort-Object -Property Name
         if (-Not $toInstall)
         {
-            $toInstall = Get-ChildItem -Path $contentPath -Filter "Install.cmd"
+            $toInstall = Get-ChildItem -Path $contentPath -Filter "*.$secondTry" | Sort-Object -Property Name
             if (-Not $toInstall)
             {
-                $toInstall = Get-ChildItem -Path $contentPath -Filter "Install.ps1"
+                $toInstall = Get-ChildItem -Path $contentPath -Filter "Install.cmd"
                 if (-Not $toInstall)
                 {
-                    Write-Error "Can't find installer file for this package" -ErrorAction Continue
-                    continue
+                    $toInstall = Get-ChildItem -Path $contentPath -Filter "Install.ps1"
+                    if (-Not $toInstall)
+                    {
+                        Write-Error "Can't find installer file for this package" -ErrorAction Continue
+                        continue
+                    }
                 }
             }
         }
-    }
-    if ($toInstall.Count -gt 1)
-    {
-        $toInstall = $toInstall[0]
-    }
+        if ($toInstall.Count -gt 1)
+        {
+            $toInstall = $toInstall[0]
+        }
 
-    $Command = "& `"$tool`" -c `"$contentPath`" -s `"$($toInstall.Name)`" -o `"$packagePath`" -q"
-    $Bytes = [System.Text.Encoding]::Unicode.GetBytes($Command)
-    $EncodedCommand =[Convert]::ToBase64String($Bytes)
-    Start-Process PowerShell.exe -ArgumentList "-EncodedCommand $EncodedCommand" -Wait -NoNewWindow
-    
-    $intunewinFile = Get-ChildItem -Path $packagePath -Filter "*.intunewin"
-    if (-Not $intunewinFile)
-    {
-        Write-Error "Intune package not created!" -ErrorAction Continue
-    }
-    if ($intunewinFile.Count -gt 1)
-    {
-        Write-Warning "Found more than 1 Intune packages!"
-        Write-Warning "Please delete older once"
-    }
+        $Command = "& `"$tool`" -c `"$contentPath`" -s `"$($toInstall.Name)`" -o `"$packagePath`" -q"
+        $Bytes = [System.Text.Encoding]::Unicode.GetBytes($Command)
+        $EncodedCommand =[Convert]::ToBase64String($Bytes)
+        Start-Process PowerShell.exe -ArgumentList "-EncodedCommand $EncodedCommand" -Wait -NoNewWindow
+        
+        $intunewinFile = Get-ChildItem -Path $packagePath -Filter "*.intunewin"
+        if (-Not $intunewinFile)
+        {
+            Write-Error "Intune package not created!" -ErrorAction Continue
+        }
+        if ($intunewinFile.Count -gt 1)
+        {
+            Write-Warning "Found more than 1 Intune packages!"
+            Write-Warning "Please delete older once"
+        }
 
-    Write-Host "  Running post package task if required"
-    $incrementScript = Get-Item -Path (Join-Path $packageDir.FullName "PostPackageTask.ps1") -ErrorAction SilentlyContinue
-    if ($incrementScript)
-    {
-        & "$($incrementScript.FullName)"
-    }
+        Write-Host "  Running post package task if required"
+        $incrementScript = Get-Item -Path (Join-Path $packageDir.FullName "PostPackageTask.ps1") -ErrorAction SilentlyContinue
+        if ($incrementScript)
+        {
+            & "$($incrementScript.FullName)"
+        }
 
+    }
 }
 
 #Stopping Transscript

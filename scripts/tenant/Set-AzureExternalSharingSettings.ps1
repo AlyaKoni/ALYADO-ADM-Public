@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     04.03.2020 Konrad Brunner       Initial Version
+    27.11.2023 Konrad Brunner       Removed AzureAdPreview module
 
 #>
 
@@ -48,11 +49,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-AzureExternalSharingSett
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
     
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
 
 # =============================================================
 # Azure stuff
@@ -64,18 +63,17 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring B2B domain policy
 Write-Host "Configuring B2B domain policy" -ForegroundColor $CommandInfo
-$Policy = Get-AzureADPolicy | Where-Object { $_.DisplayName -eq "B2BManagementPolicy" }
-if (-Not $Policy)
+$policyReq = Invoke-AzRestMethod -Uri "https://graph.microsoft.com/beta/legacy/policies"
+$policies = ($policyReq.Content | ConvertFrom-Json).value
+$b2bPolicy = $policies | Where-Object { $_.displayName -eq "B2BManagementPolicy" }
+if (-Not $b2bPolicy)
 {
-    Write-Warning "B2B domain policy not found. Creating the B2B domain policy B2BManagementPolicy"
-    $policyValue = @("{`"B2BManagementPolicy`":{`"InvitationsAllowedAndBlockedDomainsPolicy`":{`"AllowedDomains`": [],`"BlockedDomains`": []}}}")
-    New-AzureADPolicy -Definition $policyValue -DisplayName "B2BManagementPolicy" -Type "B2BManagementPolicy" -IsOrganizationDefault $true
-}
-else
-{
-    $PolicyDef = $Policy.Definition
-    #TODO AllowedDomains BlockedDomains
-    Set-AzureADPolicy -Definition $PolicyDef -Id $Policy.Id 
+    $policyDef = @{
+        displayName = "B2BManagementPolicy"
+        type = "B2BManagementPolicy"
+        definition = "{`"B2BManagementPolicy`":{`"InvitationsAllowedAndBlockedDomainsPolicy`":{`"BlockedDomains`":[]},`"AutoRedeemPolicy`":{`"AdminConsentedForUsersIntoTenantIds`":[],`"NoAADConsentForUsersFromTenantsIds`":[]}}}"
+    }
+    $policyReq = Invoke-AzRestMethod -Method Post -Uri "https://graph.microsoft.com/beta/legacy/policies" -Payload $policyDef
 }
 
 # Configuring B2B settings
@@ -89,10 +87,11 @@ Write-Host "Actual settings"
 Write-Host ($ActualConfiguration | Format-List | Out-String)
 
 $settings = @{
-  restrictDirectoryAccess = $false
+  restrictDirectoryAccess = $true
   allowInvitations = $true
   usersCanAddExternalUsers = $true
   limitedAccessCanAddExternalUsers = $false
+  allowExternalIdentitiesToLeave = $true
 }
 if ($AlyaSharingPolicy -eq "AdminOnly")
 {

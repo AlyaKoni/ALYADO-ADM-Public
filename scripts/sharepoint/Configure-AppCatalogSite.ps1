@@ -179,7 +179,7 @@ if (-Not $site)
     }
 
     Write-Warning "App Catalog site not found. Creating now app catalog site $catalogSiteName"
-    Register-PnPAppCatalogSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owner $gauserLoginName -TimeZoneId 4 -Force
+    Register-PnPAppCatalogSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Owner $AlyaSharePointNewSiteOwner -TimeZoneId 4 -Force
 
     do {
         Start-Sleep -Seconds 15
@@ -187,18 +187,9 @@ if (-Not $site)
     } while (-Not $site)
 
 }
-# Login to app catalog
-Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
-$siteCon = LoginTo-PnP "$($AlyaSharePointUrl)/sites/$catalogSiteName"
-
-# Adding site to hub
-Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
-$hubSite = Get-PnPSite -Connection $hubCon
-$siteSite = Get-PnPSite -Connection $siteCon
-Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
 
 # Setting admin access
-Write-Host "Setting admin access" -ForegroundColor $CommandInfo
+Write-Host "Setting admin access" -ForegroundColor $TitleColor
 $owners = @()
 if ($null -ne $sauserLoginName) { $owners += $sauserLoginName }
 foreach ($owner in $AlyaSharePointNewSiteCollectionAdmins)
@@ -208,7 +199,17 @@ foreach ($owner in $AlyaSharePointNewSiteCollectionAdmins)
         $owners += $owner
     }
 }
-Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
+Set-PnPTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$catalogSiteName" -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
+
+# Login to app catalog
+Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
+$siteCon = LoginTo-PnP "$($AlyaSharePointUrl)/sites/$catalogSiteName"
+
+# Adding site to hub
+Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
+$hubSite = Get-PnPSite -Connection $hubCon
+$siteSite = Get-PnPSite -Connection $siteCon
+Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
 
 # Configuring access to catalog site for internals and externals
 Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
@@ -246,9 +247,6 @@ if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
 
 Write-Host "Configuring site title" -ForegroundColor $CommandInfo
 Set-PnPWeb -Connection $siteCon -Title "$catalogSiteName"
-
-Write-Host "Configuring site title" -ForegroundColor $CommandInfo
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Title "$catalogSiteName"
 
 #Stopping Transscript

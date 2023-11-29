@@ -48,6 +48,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Create-AzureResourceHealthAle
 # Constants
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
 $ActionGroupNameGeneral = "Send resource alerts"
+$ActionGroupNameGeneralShort = "SndResrcAlrt"
+if ($ActionGroupNameGeneralShort.Length -gt 12) { throw "`$ActionGroupNameGeneralShort is too long. max 12 chars allowed." }
 $ActionGroupNameGeneralEmails = @($AlyaGeneralInformEmail)
 $ResourceHealthLogAlertNameGeneral = "Send resource alerts"
 
@@ -101,23 +103,27 @@ if (-Not $ResGrp)
 # Checking action group general
 Write-Host "Checking action group $ActionGroupNameGeneral" -ForegroundColor $CommandInfo
 $actionGroup = Get-AzActionGroup -ResourceGroupName $ResourceGroupName -Name $ActionGroupNameGeneral -ErrorAction SilentlyContinue
-if (-Not $actionGroup) {
-    Write-Warning "    Does not exist. Creating it now"
-} else {
-    Write-Host "    Updating"
-}
 $recvrs = @()
 foreach($recvr in $ActionGroupNameGeneralEmails)
 {
-    $recvrs += New-AzActionGroupReceiver -Name ("EmailTo-"+$recvr) `
-                    -EmailReceiver `
+    $recvrs += New-AzActionGroupEmailReceiverObject -Name ("EmailTo-"+$recvr) `
                     -EmailAddress $recvr `
-                    -UseCommonAlertSchema:$true
+                    -UseCommonAlertSchema $true
 }
-Set-AzActionGroup -Name $ActionGroupNameGeneral `
-    -ResourceGroup $ResourceGroupName `
-    -ShortName "Send alerts" `
-    -Receiver $recvrs
+if (-Not $actionGroup) {
+    Write-Warning "    Does not exist. Creating it now"
+    New-AzActionGroup -Name $ActionGroupNameGeneral `
+        -ResourceGroup $ResourceGroupName `
+        -ShortName $ActionGroupNameGeneralShort `
+        -EmailReceiver $recvrs `
+        -Location "Global"
+} else {
+    Write-Host "    Updating"
+    Update-AzActionGroup -Name $ActionGroupNameGeneral `
+        -ResourceGroup $ResourceGroupName `
+        -ShortName $ActionGroupNameGeneralShort `
+        -EmailReceiver $recvrs
+}
 $actionGroup = Get-AzActionGroup -ResourceGroupName $ResourceGroupName -Name $ActionGroupNameGeneral
 
 # Checking ResourceHealth log alert general

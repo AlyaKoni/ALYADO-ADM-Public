@@ -1,6 +1,6 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
-  "displayName": "Win10 OpenJDK",
+  "displayName": "WIN OpenJDK",
   "description": "Installs OpenJDK",
   "publisher": "oracle.com",
   "largeIcon": {
@@ -45,7 +45,7 @@
       "valueName": "OpenJDK",
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "21.0"
+      "detectionValue": "21.0.1"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "valueName": "OpenJDK",
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "21.0"
+      "comparisonValue": "21.0.1"
     }
   ],
   "installExperience": {

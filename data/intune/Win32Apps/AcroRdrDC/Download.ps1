@@ -78,8 +78,9 @@ while ($attempts -ge 0)
             if ($file)
             {
                 $filename = $file.Name
-                if ($filename.Contains("crdownload")) { $filename = $lastfilename }
-                if ($filename.Contains("partial")) { $filename = $lastfilename }
+                if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
+                if ($filename.Contains(".partial")) { $filename = $lastfilename }
+                if ($filename.Contains(".tmp")) { $filename = $lastfilename }
             }
         } while ($lastfilename -eq $filename)
         $attempts = -1
@@ -157,8 +158,9 @@ while ($attempts -ge 0)
             if ($file)
             {
                 $filename = $file.Name
-                if ($filename.Contains("crdownload")) { $filename = $lastfilename }
-                if ($filename.Contains("partial")) { $filename = $lastfilename }
+                if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
+                if ($filename.Contains(".partial")) { $filename = $lastfilename }
+                if ($filename.Contains(".tmp")) { $filename = $lastfilename }
             }
         } while ($lastfilename -eq $filename)
         $attempts = -1

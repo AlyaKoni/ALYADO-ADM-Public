@@ -183,6 +183,41 @@ foreach ($group in $AllGroups)
             }
         }
 
+        # Memberships
+        $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+        if (-Not [string]::IsNullOrEmpty($group.ParentGroup))
+        {
+            $groupsToAssign = $group.ParentGroup.Split(",")
+            foreach($groupToAssign in $groupsToAssign)
+            {
+                $aGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($groupToAssign)'"
+                if ($aGrp)
+                {
+                    $members = Get-MgBetaGroupMember -GroupId $aGrp.Id -All
+                    $fnd = $false
+                    foreach ($member in $members)
+                    {
+                        if ($member.Id -eq $exGrp.Id)
+                        {
+                            $fnd = $true
+                            break
+                        }
+                    }
+                    if (-Not $fnd)
+                    {
+                        Write-Warning "Adding group '$($group.DisplayName)' as member to group '$groupToAssign'"
+                        New-MgBetaGroupMember -GroupId $aGrp.Id -DirectoryObjectId $exGrp.Id
+                    }
+                }
+                else
+                {
+                    Write-Warning "Not able to assign group '$($groupToAssign)' to '$($group.DisplayName)'"
+                    Write-Warning "Reason: '$($group.DisplayName)' does not exist"
+                    pause
+                }
+            }
+        }
+
         # License
         if (-Not [string]::IsNullOrEmpty($group.Licenses))
         {
