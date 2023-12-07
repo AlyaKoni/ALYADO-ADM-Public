@@ -1487,6 +1487,7 @@ function LoginTo-Az(
                     Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId | Out-Null
                 }
             }
+            $AlyaContext = Get-CustomersContext -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
         }
         else
         {

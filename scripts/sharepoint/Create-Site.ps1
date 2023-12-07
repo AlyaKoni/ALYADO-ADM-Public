@@ -185,13 +185,52 @@ $site = Get-PnPTenantSite -Connection $adminCon -Url $absSiteUrl -ErrorAction Si
 if (-Not $site)
 {
     Write-Warning "Site not found. Creating now site $($title)"
+    $spLang = $siteLocale.Split("-")[0]
+    $spLocale = "$spLang-$spLang"
+    $lcid = (Get-Culture -Name $spLocale).LCID
+    $tmz = Get-TimeZone -Id $AlyaTimeZone
+    $tmzP = $tmz.BaseUtcOffset.ToString().Split(":")
+    $tmzOs = "UTC+$($tmzP[0]):$($tmzP[1])"
+    $cities = $tmz.DisplayName.Split(" ,".ToCharArray(),[System.StringSplitOptions]::RemoveEmptyEntries) | Select-Object -Skip 1
+    $cnt = 0
+    $tmzId = $null
+    while ($null -eq $tmzId)
+    {
+        $tmzId = Get-PnPTimeZoneId -Match $cities[$cnt]
+        $cnt++
+        if ($tmzId.Identifier -ne $tmzOs)
+        {
+            $tmzId = $null
+        }
+    }
+    if ($null -eq $tmzId)
+    {
+        Write-Warning "Getting first timezone with identifier $tmzOs"
+        $tmzId = Get-PnPTimeZoneId | Where-Object { $_.Identifier -eq $tmzOs } | Select-Object -First 1
+    }
+    if ($null -eq $tmzId)
+    {
+        throw "Can't find your configured timezone!"
+    }
+
     if ($siteTemplate -eq "TeamSite")
     {
-        $site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -Description $description -Owners $siteOwners -Wait
+        Write-Warning "PnP has actually an issue. please createt he TeamSite by hand"
+        Write-Warning "  Type: TeamSite"
+        Write-Warning "  Title: $title"
+        Write-Warning "  Url: $siteUrl"
+        Write-Warning "  TimeZone: $tmzP"
+        Write-Warning "  Description: $description"
+        pause
+        #Set-PnPTraceLog -On -LogFile "C:\Temp\traceoutput.txt" -WriteToConsole -Level "Debug" -AutoFlush $true
+        #Keine Gruppe! $site = New-PnPTenantSite -Connection $adminCon -Url $absSiteUrl -Title $title -Lcid $lcid -TimeZone $tmzId.Id -Template "STS#3" -Owner $AlyaSharePointNewSiteOwner
+        #$site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -SiteAlias "$($siteUrl)" -Lcid $lcid -TimeZone $tmzId.Id -Description $description -Wait
+        #$site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -SiteAlias "$($siteUrl)" -Lcid $lcid -TimeZone $tmzId.Id -Description $description -Owners @($AlyaSharePointNewSiteOwner) -Wait -HubSiteId 
+        #Set-PnPTraceLog -Off
     }
     else
     {
-        $site = New-PnPSite -Connection $adminCon -Type $siteTemplate -Title $title -Url $absSiteUrl -Description $description -Wait
+        $site = New-PnPSite -Connection $adminCon -Type $siteTemplate -Title $title -Url $absSiteUrl -Lcid $lcid -TimeZone $tmzId.Id -Description $description -Wait
     }
     do {
         Start-Sleep -Seconds 15
@@ -228,11 +267,15 @@ if ($hub)
     {
         throw "Hub site $($hub) not found"
     }
-    $hubCon = LoginTo-PnP -Url $hubSiteUrl
-    $hubSite = Get-PnPSite -Connection $hubCon
-    $siteCon = LoginTo-PnP -Url $absSiteUrl
-    $siteSite = Get-PnPSite -Connection $siteCon
-    Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
+    try {
+        $hubCon = LoginTo-PnP -Url $hubSiteUrl
+        $hubSite = Get-PnPSite -Connection $hubCon
+        $siteCon = LoginTo-PnP -Url $absSiteUrl
+        $siteSite = Get-PnPSite -Connection $siteCon
+        Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
+    } catch {
+        Write-Error $_ -ErrorAction Continue
+    }
 }
 
 # Updating site logo
@@ -242,14 +285,23 @@ if (-Not $siteCon)
     $siteCon = LoginTo-PnP -Url $absSiteUrl
 }
 $web = Get-PnPWeb -Connection $siteCon -Includes HeaderEmphasis,HeaderLayout,SiteLogoUrl,QuickLaunchEnabled
-if ([string]::IsNullOrEmpty($web.SiteLogoUrl) -and $siteLogoUrl)
+if (([string]::IsNullOrEmpty($web.SiteLogoUrl) -or $web.SiteLogoUrl.ToLower().Contains("getgroupimage")) -and $siteLogoUrl)
 {
     if ($siteTemplate -eq "TeamSite")
     {
         $fname = Split-Path -Path $siteLogoUrl -Leaf
         $tempFile = [System.IO.Path]::GetTempFileName()+$fname
         Invoke-RestMethod -Method GET -UseBasicParsing -Uri $siteLogoUrl -OutFile $tempFile
-        Set-PnPSite -Connection $siteCon -LogoFilePath $tempFile
+        $retries = 5
+        do {
+            $retries--
+            try {
+                Set-PnPSite -Connection $siteCon -LogoFilePath $tempFile
+                $retries = -1
+            } catch {
+                Start-Sleep -Seconds 10
+            }
+        } while ($retries -ge 0)
         Remove-Item -Path $tempFile
     }
     if ($siteTemplate -eq "CommunicationSite")
@@ -391,6 +443,9 @@ if ($overwritePages -and $homePageTemplate)
     $homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
     $tmp = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
     Remove-Item -Path $tempFile
+
+    # Setting home page
+    Set-PnPHomePage -RootFolderRelativeUrl "SitePages/Home.aspx" -Connection $siteCon
 }
 
 # OneDrive Sync Url

@@ -36,6 +36,7 @@
 
 [CmdletBinding()]
 Param(
+    [bool]$ProcessSharePoint = $true
 )
 
 #Reading configuration
@@ -44,7 +45,7 @@ Param(
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\groups\Delete-OfficeGroupPermanently-$($AlyaTimeString).log" | Out-Null
 
-& "$($AlyaScripts)\exchange\Delete-OfficeGroupPermanently.ps1"
+& "$($AlyaScripts)\exchange\Delete-OfficeGroupPermanently.ps1" -ProcessSharePoint $ProcessSharePoint
 
 #Stopping Transscript
 Stop-Transcript

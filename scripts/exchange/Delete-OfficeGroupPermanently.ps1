@@ -31,11 +31,13 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     15.01.2021 Konrad Brunner       Initial Creation
+    29.11.2023 Konrad Brunner       Switch to Graph
 
 #>
 
 [CmdletBinding()]
 Param(
+    [bool]$ProcessSharePoint = $true
 )
 
 #Reading configuration
@@ -46,42 +48,41 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Delete-OfficeGroupPermanen
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
-# Exchange stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Delete-OfficeGroupPermanently | Azure" -ForegroundColor $CommandInfo
+Write-Host "AZURE | Delete-OfficeGroupPermanently | GRAPH" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$softDeletedGroups = Get-AzureADMSDeletedGroup
+$filterUrl = "https://graph.microsoft.com/beta/directory/deletedItems/microsoft.graph.group"
+$softDeletedGroups = Get-MsGraphCollection -Uri $filterUrl
 if ($softDeletedGroups -and $softDeletedGroups.Count -gt 0)
 {
     Write-Host "Following groups are soft deleted and will be deleted permanently:" -ForegroundColor $CommandInfo
     foreach($softDeletedGroup in $softDeletedGroups)
     {
-        Write-Host " - $($softDeletedGroup.DisplayName)"
+        Write-Host " - $($softDeletedGroup.displayName)"
     }
     pause
     foreach($softDeletedGroup in $softDeletedGroups)
     {
-        Write-Host "Removing $($softDeletedGroup.DisplayName)"
-        Remove-AzureADMSDeletedDirectoryObject -Id $softDeletedGroup.Id
+        Write-Host "Removing $($softDeletedGroup.displayName)"
+        $filterUrl = "https://graph.microsoft.com/beta/directory/deletedItems/$($softDeletedGroup.id)"
+        $null = Delete-MsGraphObject -Uri $filterUrl
     }
 
-    $AlyaComingFromGroup = $true
-    if (-Not $AlyaComingFromSharePoint)
+    if ($ProcessSharePoint)
     {
         Write-Host "Running $($AlyaScripts)\sharepoint\Clean-DeletedSites.ps1"
-        & "$($AlyaScripts)\sharepoint\Clean-DeletedSites.ps1"
+        & "$($AlyaScripts)\sharepoint\Clean-DeletedSites.ps1" -ProcessGroups $false
     }
 }
 else

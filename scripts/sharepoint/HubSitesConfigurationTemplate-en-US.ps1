@@ -959,7 +959,7 @@ $homePageTemplateDocumentSiteADM = @"
 </pnp:Provisioning>
 "@
 $hubSites = @(
-    @{
+    <#@{
         short = "PRS"
         title = "$prefix-PRS-Hub"
         url = "$prefix-PRS-Hub"
@@ -975,7 +975,7 @@ $hubSites = @(
         headerEmphasis = "None"  # None, Neutral, Soft, Strong
         siteLogoUrl = $AlyaLogoUrlQuad
         homePageTemplate = $homePageTemplateGenHubTeamSite
-    },
+    },#>
     @{
         short = "ADM"
         title = "$prefix-ADM-Hub"
@@ -993,7 +993,7 @@ $hubSites = @(
         siteLogoUrl = $AlyaLogoUrlQuad
         homePageTemplate = $homePageTemplateGenHubTeamSite
     },
-    @{
+    <#@{
         short = "CUS"
         title = "$prefix-CUS-Hub"
         url = "$prefix-CUS-Hub"
@@ -1026,7 +1026,7 @@ $hubSites = @(
         headerEmphasis = "None"  # None, Neutral, Soft, Strong
         siteLogoUrl = $AlyaLogoUrlQuad
         homePageTemplate = $homePageTemplateGenHubTeamSite
-    },
+    },#>
     @{
         short = "COL"
         title = "$prefix-COL-Hub"
