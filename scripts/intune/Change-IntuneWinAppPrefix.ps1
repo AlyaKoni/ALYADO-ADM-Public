@@ -114,7 +114,7 @@ foreach($app in $apps)
             $dirty = $true
         }
     }
-    if ($dirty -and $app.displayName -eq $newName)
+    if ($dirty -and $app.displayName -ceq $newName)
     {
         $dirty = $false
     }
@@ -127,7 +127,7 @@ foreach($app in $apps)
     "displayName": "$($newName)"
 }
 "@
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId"
+        $uri = "/beta/deviceAppManagement/mobileApps/$($app.id)"
         $null = Patch-MsGraph -Uri $uri -Body $body
     }
 }

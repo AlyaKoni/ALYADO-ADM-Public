@@ -29,6 +29,9 @@
 
 #>
 
+Write-Host "Please update version by hand if required!"
+exit
+
 Write-Host "    Preparing version"
 $packageRoot = "$PSScriptRoot"
 $versionFile = Join-Path $packageRoot "version.json"

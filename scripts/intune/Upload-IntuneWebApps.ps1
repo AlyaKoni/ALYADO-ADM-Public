@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     05.10.2020 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -223,9 +224,9 @@ foreach($packageDir in $packages)
         
         # Checking if app exists
         Write-Host "  Checking if app exists"
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $app = (Get-MsGraphObject -Uri $uri).value
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $allApps = Get-MsGraphCollection -Uri $uri
+        $app = $allApps | where { $_.displayName -eq $appConfig.displayName }
         if (-Not $app.id)
         {
             # Creating app

@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     26.05.2023 Konrad Brunner       Initial Version
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -96,9 +97,9 @@ foreach($winGetApp in $winGetApps)
         {   
             $winGetApp.displayName = $winGetApp.displayName.Replace("WIN ", $AppPrefix)
         }
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($winGetApp.displayName)
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $actApp = (Get-MsGraphObject -Uri $uri).value
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $allApps = Get-MsGraphCollection -Uri $uri
+        $actApp = $allApps | where { $_.displayName -eq $winGetApp.displayName }
         if (-Not $actApp.id)
         {
             # Creating the WinGetApp
@@ -108,12 +109,13 @@ foreach($winGetApp in $winGetApps)
         }
 
         # Waiting until published
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
+        $uri = "/beta/deviceAppManagement/mobileApps"
         $retries = 30
         do {
             $retries--
-            Start-Sleep -Seconds 1
-            $actApp = (Get-MsGraphObject -Uri $uri).value
+            Start-Sleep -Seconds 5
+            $allApps = Get-MsGraphCollection -Uri $uri
+            $actApp = $allApps | where { $_.displayName -eq $winGetApp.displayName }
         } while ($actApp.publishingState -ne "published" -and $retries -ge 0)
 
         # Updating the WinGetApp

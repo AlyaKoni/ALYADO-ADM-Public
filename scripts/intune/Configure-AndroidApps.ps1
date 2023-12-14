@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     27.10.2020 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -121,23 +122,14 @@ foreach($androidApp in $androidApps)
         
         # Checking if app exists
         Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($androidApp.displayName)
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $app = (Get-MsGraphObject -Uri $uri).value
-        if ($app.Count -gt 1)
-        {
-            $app = $app | where { $_."@odata.type" -eq $androidApp."@odata.type" }
-        }
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $allApps = Get-MsGraphCollection -Uri $uri
+        $app = $allApps | where { $_.displayName -eq $androidApp.displayName }
         if (-Not $app.id)
         {
-            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=startsWith(displayName,'$searchValue')"
-            $app = (Get-MsGraphObject -Uri $uri).value
-            if (-Not $app.id)
-            {
-                Write-Error "The app with name $($androidApp.displayName) does not exist. Please create it first." -ErrorAction Continue
-                $hadError = $true
-                continue
-            }
+            Write-Error "The app with name $($androidApp.displayName) does not exist. Please create it first." -ErrorAction Continue
+            $hadError = $true
+            continue
         }
         $appId = $app.id
         Write-Host "    appId: $appId"

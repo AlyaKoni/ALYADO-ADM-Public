@@ -90,5 +90,6 @@
       "returnCode": 1618,
       "type": "retry"
     }
-  ]
+  ],
+  "displayVersion": "21.0.1"
 }

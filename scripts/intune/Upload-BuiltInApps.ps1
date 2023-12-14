@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     21.10.2020 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -97,9 +98,9 @@ foreach($builtInApp in $builtInApps)
         {   
             $builtInApp.displayName = $builtInApp.displayName.Replace("WIN ", $AppPrefix)
         }
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $actApp = (Get-MsGraphObject -Uri $uri).value
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $allApps = Get-MsGraphCollection -Uri $uri
+        $actApp = $allApps | where { $_.displayName -eq $builtInApp.displayName }
         if (-Not $actApp.id)
         {
             # Creating the builtInApp

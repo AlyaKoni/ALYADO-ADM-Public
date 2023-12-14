@@ -60,6 +60,7 @@ if (-Not (Test-Path $outputDirectory))
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ImportExcel"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 

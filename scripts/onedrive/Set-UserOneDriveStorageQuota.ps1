@@ -30,66 +30,57 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    21.09.2023 Konrad Brunner       Initial Version
-    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
+    12.12.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$AppName = $null
+    [Parameter(Mandatory = $true)]
+    [string]$UserUpn,
+    [int]$quotaInTB = 2
 )
 
-# Loading configuration
+#Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneMobileApp-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
-
-# Constants
-$AppPrefix = "Win10 "
-if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
-    $AppPrefix = "$AlyaAppPrefix "
-}
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\onedrive\Set-UserOneDriveStorageQuota-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 
-# Logins
-LoginTo-MgGraph -Scopes @(
-    "Directory.Read.All",
-    "DeviceManagementManagedDevices.Read.All",
-    "DeviceManagementServiceConfig.Read.All",
-    "DeviceManagementConfiguration.Read.All",
-    "DeviceManagementApps.ReadWrite.All"
-)
+# Logging in
+LoginTo-SPO
 
 # =============================================================
-# Intune stuff
+# O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Delete-IntuneMobileApp | Graph" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Set-UserOneDriveStorageQuota | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking if app exists
-Write-Host "Checking if app exists" -ForegroundColor $CommandInfo
-$uri = "/beta/deviceAppManagement/mobileApps"
-$allApps = Get-MsGraphCollection -Uri $uri
-$app = $allApps | where { $_.displayName -eq $AppPrefix+$AppName }
-if (-Not $app.id)
+# Checking max allowed storage
+Write-Host "Checking max allowed storage" -ForegroundColor $CommandInfo
+$TenantConfig = Get-SPOTenant
+if ($TenantConfig.OneDriveStorageQuota -lt ($quotaInTB*1048576))
 {
-    Write-Warning "The app with name $($AppPrefix+$AppName) does not exist."
-    return
+    Write-Warning "Increasing storage limit to $($quotaInTB*1048576) MB"
+    Set-SPOTenant -OneDriveStorageQuota ($quotaInTB*1048576)
 }
-$appId = $app.id
-Write-Host "    appId: $appId"
 
-# Deleting app
-Write-Host "Deleting app" -ForegroundColor $CommandInfo
-$uri = "/beta/deviceAppManagement/mobileApps/$appId"
-$appCat = Delete-MsGraphObject -Uri $uri
+# Setting users storage quota
+Write-Host "Setting users storage quota" -ForegroundColor $CommandInfo
+$UserUpnPath = $UserUpn.Replace(".","_").Replace("@","_")
+$UserUpnUrl = Get-SPOSite -IncludePersonalSite $true -Limit all -Filter "Url -like '-my.sharepoint.com/personal/$UserUpnPath'" | Select -ExpandProperty Url
+Set-SPOSite -Identity $UserUpnUrl -StorageQuota ($quotaInTB*1048576) -StorageQuotaWarningLevel ($quotaInTB*1048576*0.9) -StorageQuotaReset
+
+$site = Get-SPOSite -Identity $UserUpnUrl
+Write-Host "StorageQuota: $($site.StorageQuota)"
+Write-Host "StorageQuotaType: $($site.StorageQuotaType)"
+Write-Host "StorageQuotaWarningLevel: $($site.StorageQuotaWarningLevel)"
 
 #Stopping Transscript
 Stop-Transcript

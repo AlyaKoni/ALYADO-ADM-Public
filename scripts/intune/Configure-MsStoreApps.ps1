@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     27.10.2020 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -105,9 +106,9 @@ foreach($msStoreApp in $msStoreApps)
         
         # Checking if app exists
         Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($msStoreApp.displayName)
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $app = (Get-MsGraphObject -Uri $uri).value
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $allApps = Get-MsGraphCollection -Uri $uri
+        $app = $allApps | where { $_.displayName -eq $msStoreApp.displayName }
         if (-Not $app.id)
         {
             Write-Error "The app with name $($msStoreApp.displayName) does not exist. Please create it first." -ErrorAction Continue

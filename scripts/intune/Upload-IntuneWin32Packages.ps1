@@ -34,6 +34,7 @@
     23.10.2021 Konrad Brunner       Added apps path
     24.04.2023 Konrad Brunner       Switched to Graph
     21.09.2023 Konrad Brunner       Version check
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -42,7 +43,8 @@ Param(
     [string]$UploadOnlyAppWithName = $null,
     [string]$ContinueAtAppWithName = $null,
     [string]$AppsPath = "Win32Apps",
-    [bool]$AskForSameVersionPackages = $true
+    [bool]$AskForSameVersionPackages = $true,
+    [bool]$ShowProgressBar = $false
 )
 
 # Loading configuration
@@ -84,23 +86,20 @@ Write-Host "Intune | Upload-IntuneWin32Packages | Graph" -ForegroundColor $Comma
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Functions
-function UploadPackage($detectVersion = $null, $appConfig)
+function UploadPackage($app, $appConfig, $bytes)
 {
+    write-host "  Memory used: $([System.GC]::GetTotalMemory($true))"
+    $detectVersion = $null
 
     # Checking existing failed upload
     Write-Host "  Checking existing failed upload"
 	$appId = $app.id
     Write-Host "    appId: $($app.id)"
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
-    $existVersions = $null
-    $maxVersion = 0
-    try {
-        $existVersions = Get-MsGraphCollection -Uri $uri
-    }
-    catch {
-    }
-    if ($existVersions)
+    $comittedVersion = $app.committedContentVersion
+    if ($comittedVersion -gt 0)
     {
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
+        $existVersions = Get-MsGraphCollection -Uri $uri
         $maxVersion = ($existVersions.Id | Measure-Object -Maximum).Maximum
         $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$maxVersion/files"
         $file = Get-MsGraphCollection -Uri $uri
@@ -114,12 +113,19 @@ function UploadPackage($detectVersion = $null, $appConfig)
 
     # Checking Version
     Write-Host "  Checking Version"
-    if ($null -eq $detectVersion -and $null -ne $app.detectionRules -and $null -ne $app.detectionRules.detectionValue)
+    if ($comittedVersion -gt 0 -and $null -eq $detectVersion -and $null -ne $app.detectionRules -and $null -ne $app.detectionRules[0] -and $null -ne $app.detectionRules[0].detectionValue)
     {
-        $detectVersion = [Version]$app.detectionRules.detectionValue
+        $detectVersion = [Version]$app.detectionRules[0].detectionValue
+    }
+    else
+    {
+        if (-Not [string]::IsNullOrEmpty($app.displayVersion))
+        {
+            $detectVersion = [Version]$app.displayVersion
+        }
     }
     $doUpload = $true
-    if ($maxVersion -gt 1 -and $detectVersion -ge [Version]$version)
+    if ($comittedVersion -gt 0 -and $detectVersion -ge [Version]$version)
     {
         Write-Host "    Looks like this version has already been uploaded!" -ForegroundColor $CommandWarning
         Write-Host "      Existing version: $($detectVersion)" -ForegroundColor $CommandWarning
@@ -190,8 +196,11 @@ function UploadPackage($detectVersion = $null, $appConfig)
 
         # Uploading intunewin content
         Write-Host "  Uploading intunewin content"
-        $OldProgressPreference = $ProgressPreference
-        $ProgressPreference = "Continue"
+        if ($ShowProgressBar)
+        {
+            $OldProgressPreference = $ProgressPreference
+            $ProgressPreference = "Continue"
+        }
         Start-Sleep -Seconds 10 # first chunk has often 403
         $chunkSizeInBytes = 1024 * 1024 * 6
         $sasRenewalTimer = [System.Diagnostics.Stopwatch]::StartNew()
@@ -200,18 +209,21 @@ function UploadPackage($detectVersion = $null, $appConfig)
         $ids = @()
         for ($chunk = 0; $chunk -lt $chunks; $chunk++)
         {
+            [system.gc]::Collect()
             $id = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($chunk.ToString("0000")))
             $ids += $id
             $start = $chunk * $chunkSizeInBytes
             $end = [Math]::Min($start + $chunkSizeInBytes - 1, $bytes.Length - 1)
-            $body = $bytes[$start..$end]
-            $encodedBody = $enc.GetString($body)
+            $encodedBody = $enc.GetString($bytes[$start..$end])
             $headers = @{
                 "x-ms-blob-type" = "BlockBlob"
             }
             $currentChunk = $chunk + 1
             Write-Host "    Uploading chunk $currentChunk of $chunks ($([int]$sasRenewalTimer.Elapsed.TotalSeconds)sec)"
-            Write-Progress -Activity "    Uploading intunewin from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
+            if ($ShowProgressBar)
+            {
+                Write-Progress -Activity "    Uploading intunewin from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
+            }
             $curi = "$($file.azureStorageUri)&comp=block&blockid=$id"
             $Global:attempts = 10
             while ($Global:attempts -ge 0)
@@ -271,11 +283,16 @@ function UploadPackage($detectVersion = $null, $appConfig)
                 }
                 $sasRenewalTimer.Restart()
             }
+            $encodedBody = $null
         }
-        Write-Progress -Completed -Activity "    Uploading intunewin"
-        $ProgressPreference = $OldProgressPreference
+        if ($ShowProgressBar)
+        {
+            Write-Progress -Completed -Activity "    Uploading intunewin"
+            $ProgressPreference = $OldProgressPreference
+        }
 
         # Finalize the upload.
+        Write-Host "  Finalizing the upload"
         $curi = "$($file.azureStorageUri)&comp=blocklist"
         $xml = '<?xml version="1.0" encoding="utf-8"?><BlockList>'
         foreach ($id in $ids)
@@ -360,6 +377,7 @@ foreach($packageDir in $packages)
     if ($UploadOnlyAppWithName -and $packageDir.Name -ne $UploadOnlyAppWithName) { continue }
     if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
 
+    [system.gc]::Collect()
     Write-Host "Uploading package $($packageDir.Name)" -ForegroundColor $CommandInfo
 
     $packagePath = Join-Path $packageDir.FullName "Package"
@@ -554,6 +572,10 @@ foreach($packageDir in $packages)
         $appConfig.largeIcon.value = "$base64icon"
     }
 
+    if (-Not (Get-Member -InputObject $appConfig -MemberType NoteProperty -Name "displayVersion" -ErrorAction SilentlyContinue)) {
+        Add-Member  -InputObject $appConfig -MemberType NoteProperty -Name "displayVersion" -Value $null
+    }
+    $appConfig.displayVersion = ([Version]$version).ToString()
     $appConfigJson = $appConfig | ConvertTo-Json
     $appConfigJson | Set-Content -Path $configPath -Encoding UTF8
 
@@ -563,39 +585,41 @@ foreach($packageDir in $packages)
     {
         throw "No displayName configured in appConfig!"
     }
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
-    $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-    $app = (Get-MsGraphObject -Uri $uri).value
-    if ($app.Count -gt 1)
-    {
-        throw "Search returned to many apps: $($app.Count)!"
-    }
+
+    $uri = "/beta/deviceAppManagement/mobileApps"
+    $allApps = Get-MsGraphCollection -Uri $uri
+    $app = $allApps | where { $_.displayName -eq $appConfig.displayName }
     if (-Not $app.id)
     {
         # Creating app
         Write-Host "  Creating app"
         $uri = "/beta/deviceAppManagement/mobileApps"
         $app = Post-MsGraph -Uri $uri -Body $appConfigJson
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         do
         {
             Start-Sleep -Seconds 5
-            $app = (Get-MsGraphObject -Uri $uri).value
+            $allApps = Get-MsGraphCollection -Uri $uri
+            $app = $allApps | where { $_.displayName -eq $appConfig.displayName }
         } while (-Not $app.id)
     }
 
     # Extracting intunewin file
     Write-Host "  Extracting intunewin file"
+    $extFile = "$($package.FullName).Extracted"
+    if (Test-Path $extFile) { Remove-Item -Path $extFile -Force }
     $zip = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
     $entry = $zip.Entries | Where-Object { $_.Name -eq "IntunePackage.intunewin" }
-    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, "$($package.FullName).Extracted", $true)
+    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $extFile, $true)
+    $entry = $null
     $zip.Dispose()
-    $bytes = [System.IO.File]::ReadAllBytes("$($package.FullName).Extracted")
-    Remove-Item -Path "$($package.FullName).Extracted" -Force
+    $bytes = [System.IO.File]::ReadAllBytes($extFile)
+    Remove-Item -Path $extFile -Force
 
     # Uploading base app package
     Write-Host "  Uploading base app package"
-    UploadPackage -detectVersion $null -appConfig $appConfig
+    Clear-Variable -Name "allApps" -Force -ErrorAction SilentlyContinue
+    [system.gc]::Collect()
+    UploadPackage -app $app -appConfig $appConfig -bytes $bytes
 
     # Checking update package if required
     Write-Host "  Checking update package if required"
@@ -605,16 +629,18 @@ foreach($packageDir in $packages)
         # Checking if update app exists
         Write-Host "  Checking if update app exists"
         $appConfig.displayName = $appConfig.displayName+" UPD"
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $app = (Get-MsGraphObject -Uri $uri).value
-        if ($app.Count -gt 1)
-        {
-            throw "Search returned to many apps: $($app.Count)!"
-        }
 
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $allApps = Get-MsGraphCollection -Uri $uri
+        $app = $allApps | where { $_.displayName -eq $appConfig.displayName }
+
+        if (-Not (Get-Member -InputObject $appConfig -MemberType NoteProperty -Name "displayVersion" -ErrorAction SilentlyContinue)) {
+            Add-Member  -InputObject $appConfig -MemberType NoteProperty -Name "displayVersion" -Value $null
+        }
+        $appConfig.displayVersion = ([Version]$version).ToString()
+    
         $detectContent = Get-Content -Path $requirementDetectionPath -Encoding $AlyaUtf8Encoding -Raw
-        $detectVersion = [Version]$appConfig.detectionRules[0].detectionValue
+        #$detectVersion = [Version]$appConfig.detectionRules[0].detectionValue
         if ($appConfig.detectionRules -and $appConfig.detectionRules[0]."@odata.type" -eq "#microsoft.graph.win32LobAppFileSystemDetection")
         {
             $detectContent = $detectContent.Replace("##FILEPATH##", $appConfig.detectionRules[0].path)
@@ -656,26 +682,6 @@ foreach($packageDir in $packages)
             "displayName" = "RequirementDetection.ps1"
             "enforceSignatureCheck" = $false
         }
-        # $appConfig.detectionRules = @(
-        #     @{
-        #         "scriptContent" = $scriptContent
-        #         "runAs32Bit" = $false
-        #         "enforceSignatureCheck" = $false
-        #         "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptDetection"
-        #     }
-        # )
-        # $appConfig.rules += @{
-        #     "comparisonValue" = $null
-        #     "operationType" = "notConfigured"
-        #     "scriptContent" = $scriptContent
-        #     "operator" = "notConfigured"
-        #     "ruleType" = "detection"
-        #     "runAs32Bit" = $false
-        #     "runAsAccount" = $null
-        #     "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptRule"
-        #     "displayName" = $null
-        #     "enforceSignatureCheck" = $false
-        # }
         $appConfigJson = $appConfig | ConvertTo-Json
 
         if (-Not $app.id)
@@ -684,18 +690,22 @@ foreach($packageDir in $packages)
             Write-Host "  Creating app"
             $uri = "/beta/deviceAppManagement/mobileApps"
             $app = Post-MsGraph -Uri $uri -Body $appConfigJson
-            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
             do
             {
                 Start-Sleep -Seconds 5
-                $app = (Get-MsGraphObject -Uri $uri).value
+                $allApps = Get-MsGraphCollection -Uri $uri
+                $app = $allApps | where { $_.displayName -eq $appConfig.displayName }
             } while (-Not $app.id)
         }
 
         # Uploading update app package
         Write-Host "  Uploading update app package"
-        UploadPackage -detectVersion $detectVersion -appConfig $appConfig
+        Clear-Variable -Name "allApps" -Force -ErrorAction SilentlyContinue
+        [system.gc]::Collect()
+        UploadPackage -app $app -appConfig $appConfig -bytes $bytes
     }
+    $bytes = $null
+    [system.gc]::Collect()
 
 }
 

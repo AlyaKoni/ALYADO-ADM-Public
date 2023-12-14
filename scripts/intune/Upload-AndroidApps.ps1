@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     25.08.2021 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -107,9 +108,9 @@ foreach($androidApp in $appsAndroid)
 
         # Checking if androidApp exists
         Write-Host "  Checking if androidApp exists"
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($androidApp.displayName)
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $actApp = (Get-MsGraphObject -Uri $uri).value
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $allApps = Get-MsGraphCollection -Uri $uri
+        $actApp = $allApps | where { $_.displayName -eq $androidApp.displayName }
         if (-Not $actApp.id)
         {
             if ($androidApp.'@odata.type' -eq "#Microsoft.Graph.androidManagedStoreApp")

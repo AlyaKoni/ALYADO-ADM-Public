@@ -1,15 +1,30 @@
 Examples:
-https://docs.microsoft.com/en-us/azure/azure-monitor/logs/manage-cost-storage
+	Misc: https://azure.github.io/fta-kusto100knocks/docs/advanced/
+	Sentinel: https://learnsentinel.blog/2022/03/16/maintaining-a-well-managed-azure-ad-tenant-with-kql/
+	Intune: https://techcommunity.microsoft.com/t5/device-management-in-microsoft/microsoft-intune-and-azure-log-analytics/ba-p/463145
+	Storage costs: https://docs.microsoft.com/en-us/azure/azure-monitor/logs/manage-cost-storage
 
 Log count per table:
 union withsource=sourceTable *
 | project sourceTable
 | summarize count() by sourceTable
 
+
 Log count per Category:
 AzureDiagnostics
 | summarize LogCount = count() by Category
 | sort by LogCount desc
+
+
+SignIn Errors with external json link:
+let ResolvedErrorCodes = externaldata(code: string, Message: string)['https://raw.githubusercontent.com/f-bader/EntraID-ErrorCodes/main/EntraIDErrorCodes.json'] with (format='multijson');
+union isfuzzy=true SigninLogs, AADNonInteractiveUserSignInLogs
+| where ResultType != 0
+| lookup ResolvedErrorCodes on $left.ResultType == $right.code
+| extend ResultDescription = iff(ResultDescription == "Other",iff(isempty(Message),"Other",Message),ResultDescription)
+| project-away Message
+| project-reorder TimeGenerated, ResultType, ResultDescription
+
 
 Usage: 
 Usage 
@@ -47,11 +62,13 @@ SystemEvents
 | extend BillingTelemetrySizeInBytes = todouble(measurements["BillingTelemetrySize"])
 | summarize sum(BillingTelemetrySizeInBytes) by BillingTelemetryType, bin(timestamp, 1d) | render barchart
 
+
 Heartbeat:
 Heartbeat 
 | where TimeGenerated > startofday(ago(31d))
 | summarize nodes = dcount(Computer) by bin(TimeGenerated, 1d)    
 | render timechart
+
 
 Security Alerts:
 SecurityAlert
@@ -84,4 +101,72 @@ SecurityAlert
           WasRdpSessionInitiated
 | sort by TimeGenerated desc
 
+
+Conditional Access Policy Report Failures:
+let policyIDs = dynamic(["244af2aa-xxx", "9a666754-xxx", "cbcb707a-xxx", "601de348-xxx"]);
+SigninLogs
+| where TimeGenerated > ago(1d)
+| project
+    ConditionalAccessPolicies,
+    TimeGenerated,
+    UserType,
+    UserPrincipalName,
+    AppDisplayName,
+    ResourceDisplayName,
+    CorrelationId,
+    Status,
+    ClientAppUsed,
+    IPAddress,
+    DeviceDetail,
+    LocationDetails,
+    NetworkLocationDetails
+| extend 
+    deviceName = DeviceDetail.displayName, 
+    deviceId = DeviceDetail.deviceId, 
+    deviceOs = DeviceDetail.operatingSystem, 
+    deviceTrust = DeviceDetail.trustType,
+    locationCountry = LocationDetails.countryOrRegion,
+    locationState = LocationDetails.state,
+    locationCity = LocationDetails.city,
+    networkKnown = NetworkLocationDetails != "[]",
+    networkDetails = tostring(NetworkLocationDetails),
+    statusCode = Status.errorCode
+| where ConditionalAccessPolicies != "[]"
+| where '*' == '*' or '*' == UserPrincipalName
+| where "All users" == "All users" or UserPrincipalName has "All users"
+| where "All apps" == "All apps" or AppDisplayName has "All apps"
+| mv-expand ConditionalAccessPolicies
+| where ConditionalAccessPolicies["id"] in (policyIDs)
+| extend
+    TimeGeneratedStr = strcat(format_datetime(TimeGenerated, 'yyyy-MM-dd'), 'T', format_datetime(TimeGenerated, 'HH:mm:ss'), 'Z'),
+    result = ConditionalAccessPolicies["result"],
+    failureReason = tostring(Status["failureReason"]),
+    policyId = ConditionalAccessPolicies["id"],
+    policyName = ConditionalAccessPolicies["displayName"]
+| project-away ConditionalAccessPolicies
+| extend filterResult = case("Failure" == "Total", "", "Failure" == "Success", "uccess", "Failure" == "Failure", "ailure", "Failure" == "User action required", "nterrupted", "ot")
+| where result contains filterResult
+| project 
+    TimeGeneratedStr, 
+    policyId,
+    policyName,
+    UserType, 
+    UserPrincipalName, 
+    AppDisplayName, 
+    result, 
+    CorrelationId, 
+    statusCode, 
+    ResourceDisplayName, 
+    ClientAppUsed, 
+    IPAddress, 
+    deviceName, 
+    deviceId, 
+    deviceOs, 
+    deviceTrust, 
+    locationCountry, 
+    locationState, 
+    locationCity,
+    networkKnown,
+    networkDetails
+| sort by TimeGeneratedStr desc
 

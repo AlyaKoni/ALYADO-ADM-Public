@@ -2041,15 +2041,15 @@ function LoginTo-PnP(
                 try {
                     if ([string]::IsNullOrEmpty($AlyaPnPAppId)) {
                         if ($AlyaPnpEnvironment -eq "Production") {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive -LaunchBrowser
                         } else {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive -LaunchBrowser
                         }
                     } else {
                         if ($AlyaPnpEnvironment -eq "Production") {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive -LaunchBrowser
                         } else {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive -LaunchBrowser
                         }
                     }
                 }
@@ -2058,9 +2058,9 @@ function LoginTo-PnP(
                     Register-PnPManagementShellAccess -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -LaunchBrowser
                     try {
                         if ($AlyaPnpEnvironment -eq "Production") {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive -LaunchBrowser
                         } else {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive -LaunchBrowser
                         }
                     }
                     catch {
@@ -2069,9 +2069,9 @@ function LoginTo-PnP(
                         Register-PnPManagementShellAccess -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ShowConsentUrl
                         pause
                         if ($AlyaPnpEnvironment -eq "Production") {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $TenantAdminUrl -ReturnConnection -Interactive -LaunchBrowser
                         } else {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $TenantAdminUrl -ReturnConnection -Interactive -LaunchBrowser
                         }
                     }
                 }
@@ -2085,15 +2085,15 @@ function LoginTo-PnP(
                 try {
                     if ([string]::IsNullOrEmpty($AlyaPnPAppId)) {
                         if ($AlyaPnpEnvironment -eq "Production") {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive -LaunchBrowser
                         } else {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive -LaunchBrowser
                         }
                     } else {
                         if ($AlyaPnpEnvironment -eq "Production") {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $Url -Connection $Connection -ReturnConnection -Interactive -LaunchBrowser
                         } else {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $Url -Connection $Connection -ReturnConnection -Interactive -LaunchBrowser
                         }
                     }
                 }
@@ -2101,9 +2101,9 @@ function LoginTo-PnP(
                     Register-PnPManagementShellAccess -LaunchBrowser
                     try {
                         if ($AlyaPnpEnvironment -eq "Production") {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive -LaunchBrowser
                         } else {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive -LaunchBrowser
                         }
                     }
                     catch {
@@ -2111,9 +2111,9 @@ function LoginTo-PnP(
                         Register-PnPManagementShellAccess -ShowConsentUrl
                         pause
                         if ($AlyaPnpEnvironment -eq "Production") {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -Url $Url -Connection $Connection -ReturnConnection -Interactive -LaunchBrowser
                         } else {
-                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive
+                            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -Connection $Connection -ReturnConnection -Interactive -LaunchBrowser
                         }
                     }
                 }

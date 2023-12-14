@@ -31,7 +31,7 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://remotedesktopmanager.com/de/home/thankyou/rdmfreemsi"
+$pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmfreemsi/"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*Setup.RemoteDesktopManager[^`"]*\.msi"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value

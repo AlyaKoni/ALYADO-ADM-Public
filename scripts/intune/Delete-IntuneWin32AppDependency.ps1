@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     21.09.2023 Konrad Brunner       Initial Version
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -81,9 +82,9 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking if app exists
 Write-Host "Checking if app exists" -ForegroundColor $CommandInfo
-$searchValue = [System.Web.HttpUtility]::UrlEncode($AppPrefix+$AppName)
-$uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-$app = (Get-MsGraphObject -Uri $uri).value
+$uri = "/beta/deviceAppManagement/mobileApps"
+$allApps = Get-MsGraphCollection -Uri $uri
+$app = $allApps | where { $_.displayName -eq $AppPrefix+$AppName }
 if (-Not $app.id)
 {
     Write-Warning "The app with name $($AppPrefix+$AppName) does not exist."
@@ -94,9 +95,9 @@ Write-Host "    appId: $appId"
 
 # Checking if dependent app exists
 Write-Host "Checking if dependent app exists" -ForegroundColor $CommandInfo
-$searchValue = [System.Web.HttpUtility]::UrlEncode($AppPrefix+$DependentAppName)
-$uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-$depApp = (Get-MsGraphObject -Uri $uri).value
+$uri = "/beta/deviceAppManagement/mobileApps"
+$allApps = Get-MsGraphCollection -Uri $uri
+$depApp = $allApps | where { $_.displayName -eq $AppPrefix+$DependentAppName }
 if (-Not $depApp.id)
 {
     Write-Warning "The app with name $($AppPrefix+$DependentAppName) does not exist."

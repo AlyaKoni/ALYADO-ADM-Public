@@ -192,8 +192,8 @@ foreach(`$sync in `$syncs)
         {
             Start-Sleep -Seconds 10
         } while (-Not (Test-Path `$syncDir))
+        Start-Sleep -Seconds 10
     }
-	Start-Sleep -Seconds 10
 }
 "@ | Add-Content -Path $scriptPath -Encoding utf8 -Force
 

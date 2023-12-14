@@ -31,7 +31,7 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://slproweb.com/products/Win32OpenSSL.html"
+$jsonUrl = "https://slproweb.com/download/win32_openssl_hashes.json"
 
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
@@ -39,9 +39,19 @@ if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*/Win64OpenSSL-[^`"]*\.msi"
-$newUrl = "https://slproweb.com" + [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+$req = Invoke-WebRequestIndep -Uri $jsonUrl -UseBasicParsing -Method Get
+[regex]$regex = "[^`"]*/Win64OpenSSL-([^`"w]*)\.msi"
+$mtchs = $regex.Matches($req.Content, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant')
+$vrs = [Version]"0.0.0"
+$newUrl = $null
+foreach($mtch in $mtchs)
+{
+    $vers = [Version]$mtch.Groups[1].Value.Replace("_",".")
+    if ($vers -gt $vrs)
+    {
+        $vrs = $vers
+        $newUrl = $mtch.Groups[0].Value
+    }
+}
 $outfile = Join-Path $contentRoot (Split-Path $newUrl -Leaf)
 $dreq = Invoke-WebRequestIndep -Uri $newUrl -Method Get -OutFile $outfile

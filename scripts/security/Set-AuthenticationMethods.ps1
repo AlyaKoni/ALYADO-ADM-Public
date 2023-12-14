@@ -62,6 +62,12 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-AuthenticationMethods | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+# Checking configuration
+if ($null -eq $AlyaKeyAuthEnabledKeys -or $AlyaKeyAuthEnabledKeys -eq "PleaseSpecify")
+{
+    $AlyaKeyAuthEnabledKeys = @("d8522d9f-575b-4866-88a9-ba99fa02f35b")
+}
+
 # Getting AuthenticationMethodPolicy
 Write-Host "Getting AuthenticationMethodPolicy" -ForegroundColor $CommandInfo
 $authenticationMethodPolicy = Get-MgBetaPolicyAuthenticationMethodPolicy

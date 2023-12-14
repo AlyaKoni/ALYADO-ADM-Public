@@ -33,6 +33,7 @@
     25.08.2021 Konrad Brunner       Initial Version
     03.11.2021 Konrad Brunner       Added v14_0
     24.04.2023 Konrad Brunner       Switched to Graph
+    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
 
 #>
 
@@ -143,9 +144,9 @@ foreach($iosApp in $appsIOS)
             
         # Checking if iosApp exists
         Write-Host "  Checking if iosApp exists"
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($iosApp.displayName)
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
-        $actApp = (Get-MsGraphObject -Uri $uri).value
+        $uri = "/beta/deviceAppManagement/mobileApps"
+        $allApps = Get-MsGraphCollection -Uri $uri
+        $actApp = $allApps | where { $_.displayName -eq $iosApp.displayName }
         if (-Not $actApp.id)
         {
             # Creating the iosApp

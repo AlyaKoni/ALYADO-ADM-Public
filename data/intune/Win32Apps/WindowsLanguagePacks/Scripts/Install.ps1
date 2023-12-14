@@ -81,7 +81,6 @@ else
 
     try
     {
-        # with help from https://github.com/okieselbach/Intune/blob/master/Win32/SetLanguage-de-DE/Install-LanguageExperiencePack.ps1#L157
         $ErrorActionPreference = "Stop"
 
         # Running version
@@ -113,16 +112,32 @@ else
         
         # Trigger package installation
         Write-Host "Trigger package installation"
-        foreach($languageToInstall in $languagesToInstall)
+        $UsingPowerShellModule = Get-Command -Name "Install-Language" -ErrorAction SilentlyContinue
+        if ($UsingPowerShellModule)
         {
-            winget install $languageToInstall.ProductId --disable-interactivity --accept-package-agreements --accept-source-agreements --force
+            Write-Host "  Using LanguagePackManagement module"
+            foreach($languageToInstall in $languagesToInstall)
+            {
+                Write-Host "    Installing $($languageToInstall.Locale)"
+                Install-Language -Language "$($languageToInstall.Locale)"
+            }
+        }
+        else
+        {
+            Write-Host "  Using winget"
+            foreach($languageToInstall in $languagesToInstall)
+            {
+                Write-Host "    Installing $($languageToInstall.ProductId)"
+                winget install --accept-package-agreements --accept-source-agreements --silent --scope machine --wait --force --verbose --disable-interactivity --id "$($languageToInstall.ProductId)"
+            }
         }
 
         # Waiting 1 hour for package installation
         Write-Host "Waiting 1 hour for package installation"
-        $counter=0
+        $counter = 0
         do {
             Start-Sleep 60
+            Write-Host "  Checking for installed packages"
             $allFound = $true
             $counter++
             if ($counter -ge 60)
@@ -131,11 +146,23 @@ else
             }
             foreach($languageToInstall in $languagesToInstall)
             {
-                $pkg = winget list $languageToInstall.ProductId | Out-String
-                if (-Not $pkg.Contains($languageToInstall.ProductId))
+                if ($UsingPowerShellModule)
                 {
-                    $allFound = $false
-                    break
+                    $pkg = Get-InstalledLanguage -Language "$($languageToInstall.Locale)"
+                    if (-Not $pkg)
+                    {
+                        $allFound = $false
+                        break
+                    }
+                }
+                else
+                {
+                    $pkg = winget list $languageToInstall.ProductId | Out-String
+                    if (-Not $pkg.Contains($languageToInstall.ProductId))
+                    {
+                        $allFound = $false
+                        break
+                    }
                 }
             }
         } while (-Not $allFound)
@@ -144,7 +171,16 @@ else
         Write-Host "Trigger package updates"
         foreach($languageToInstall in $languagesToInstall)
         {
-            winget upgrade -h --id $languageToInstall.ProductId --disable-interactivity --accept-package-agreements --accept-source-agreements --force
+            if ($UsingPowerShellModule)
+            {
+                Write-Host "  Updating $($languageToInstall.Locale)"
+                #TODO
+            }
+            else
+            {
+                Write-Host "  Updating $($languageToInstall.ProductId)"
+                winget upgrade --accept-package-agreements --accept-source-agreements --silent --scope machine --wait --force --verbose --disable-interactivity --id "$($languageToInstall.ProductId)"
+            }
         }
 
         # Trigger install for language FOD packages"
