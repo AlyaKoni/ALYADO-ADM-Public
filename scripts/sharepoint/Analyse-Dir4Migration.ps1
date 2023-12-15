@@ -2,7 +2,7 @@
 #TODO #Requires -RunAsAdministrator
 
 <#
-    Copyright (c) Alya Consulting, 2019-2023
+    Copyright (c) Alya Consulting, 2019-2024
 
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
