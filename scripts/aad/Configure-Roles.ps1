@@ -61,7 +61,7 @@ if (-Not $inputFile)
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ImportExcel"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrollment"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"

@@ -93,8 +93,13 @@ $users = Get-MgBetaUser -Property "*" -All
 $propNames = @(
     "UserPrincipalName",
     "UserType",
+    "AccountEnabled",
     "DisplayName",
-    "Authentication"
+    "Authentication",
+    "CreatedDateTime",
+    "Mail",
+    "OtherMails",
+    "ProxyAddresses"
 )
 
 $propNamesAuthenticationPrefs = @(

@@ -36,6 +36,7 @@
 
 [CmdletBinding()]
 Param(
+    [bool]$minimalConfig = $false
 )
 
 #Reading configuration
@@ -79,31 +80,33 @@ $VoiceAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Whe
 $EmailAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "Email" }
 
 # Checking mail policy
-Write-Host "Checking mail policy" -ForegroundColor $CommandInfo
-$params = @{
-    "@odata.type" = "#microsoft.graph.emailAuthenticationMethodConfiguration"
-    State = "enabled"
-    AllowExternalIdToUseEmailOtp = "enabled"
+if (-Not $minimalConfig)
+{
+    Write-Host "Checking mail policy" -ForegroundColor $CommandInfo
+    $params = @{
+        "@odata.type" = "#microsoft.graph.emailAuthenticationMethodConfiguration"
+        State = "enabled"
+        AllowExternalIdToUseEmailOtp = "enabled"
+    }
+    $dirty = $false
+    if ($EmailAMC.State -ne "enabled") {
+        Write-Warning "  mail policy wasn't enabled. Enabling it now."
+        $dirty = $true
+    } else {
+        Write-Host "  mail policy was already enabled."
+    }
+    if ($EmailAMC.AdditionalProperties.allowExternalIdToUseEmailOtp -ne "enabled") {
+        Write-Warning "  mail policy setting allowExternalIdToUseEmailOtp wasn't enabled. Enabling it now."
+        $dirty = $true
+    } else {
+        Write-Host "  mail policy setting allowExternalIdToUseEmailOtp was already enabled."
+    }
+    if ($dirty) {
+        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+            -AuthenticationMethodConfigurationId $EmailAMC.Id `
+            -BodyParameter $params
+    }
 }
-$dirty = $false
-if ($EmailAMC.State -ne "enabled") {
-    Write-Warning "  mail policy wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  mail policy was already enabled."
-}
-if ($EmailAMC.AdditionalProperties.allowExternalIdToUseEmailOtp -ne "enabled") {
-    Write-Warning "  mail policy setting allowExternalIdToUseEmailOtp wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  mail policy setting allowExternalIdToUseEmailOtp was already enabled."
-}
-if ($dirty) {
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-        -AuthenticationMethodConfigurationId $EmailAMC.Id `
-        -BodyParameter $params
-}
-
 # Checking fido2 policy
 Write-Host "Checking fido2 policy" -ForegroundColor $CommandInfo
 $params = @{
@@ -222,48 +225,54 @@ if ($dirty) {
 }
 
 # Checking sms policy
-Write-Host "Checking sms policy" -ForegroundColor $CommandInfo
-$params = @{
-    "@odata.type" = "#microsoft.graph.smsAuthenticationMethodConfiguration"
-    State = "enabled"
-}
-$dirty = $false
-if ($SmsAMC.State -ne "enabled") {
-    Write-Warning "  sms policy wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  sms policy was already enabled."
-}
-if ($dirty) {
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-        -AuthenticationMethodConfigurationId $SmsAMC.Id `
-        -BodyParameter $params
+if (-Not $minimalConfig)
+{
+    Write-Host "Checking sms policy" -ForegroundColor $CommandInfo
+    $params = @{
+        "@odata.type" = "#microsoft.graph.smsAuthenticationMethodConfiguration"
+        State = "enabled"
+    }
+    $dirty = $false
+    if ($SmsAMC.State -ne "enabled") {
+        Write-Warning "  sms policy wasn't enabled. Enabling it now."
+        $dirty = $true
+    } else {
+        Write-Host "  sms policy was already enabled."
+    }
+    if ($dirty) {
+        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+            -AuthenticationMethodConfigurationId $SmsAMC.Id `
+            -BodyParameter $params
+    }
 }
 
 # Checking voice policy
 Write-Host "Checking voice policy" -ForegroundColor $CommandInfo
-$params = @{
-    "@odata.type" = "#microsoft.graph.voiceAuthenticationMethodConfiguration"
-    State = "enabled"
-    IsOfficePhoneAllowed = $true
-}
-$dirty = $false
-if ($VoiceAMC.State -ne "enabled") {
-    Write-Warning "  voice policy wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  voice policy was already enabled."
-}
-if ($VoiceAMC.AdditionalProperties.isOfficePhoneAllowed -ne $true) {
-    Write-Warning "  voice policy setting isOfficePhoneAllowed wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  voice policy setting isOfficePhoneAllowed was already enabled."
-}
-if ($dirty) {
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-        -AuthenticationMethodConfigurationId $VoiceAMC.Id `
-        -BodyParameter $params
+if (-Not $minimalConfig)
+{
+    $params = @{
+        "@odata.type" = "#microsoft.graph.voiceAuthenticationMethodConfiguration"
+        State = "enabled"
+        IsOfficePhoneAllowed = $true
+    }
+    $dirty = $false
+    if ($VoiceAMC.State -ne "enabled") {
+        Write-Warning "  voice policy wasn't enabled. Enabling it now."
+        $dirty = $true
+    } else {
+        Write-Host "  voice policy was already enabled."
+    }
+    if ($VoiceAMC.AdditionalProperties.isOfficePhoneAllowed -ne $true) {
+        Write-Warning "  voice policy setting isOfficePhoneAllowed wasn't enabled. Enabling it now."
+        $dirty = $true
+    } else {
+        Write-Host "  voice policy setting isOfficePhoneAllowed was already enabled."
+    }
+    if ($dirty) {
+        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+            -AuthenticationMethodConfigurationId $VoiceAMC.Id `
+            -BodyParameter $params
+    }
 }
 
 # Checking temp acc pass policy
@@ -286,36 +295,40 @@ if ($dirty) {
 }
 
 # Checking SystemCredentialPreferences exludes non mfa groups
-Write-Host "Checking SystemCredentialPreferences" -ForegroundColor $CommandInfo
-if ($authenticationMethodPolicy.SystemCredentialPreferences.State -ne "disabled") {
-    $exlMfaDefaultsGroup = $null
-    if ($null -ne $AlyaNoMfaDefaultsGroupName -and $AlyaNoMfaDefaultsGroupName -ne "PleaseSpecify") {
-        $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'"
-        if (-Not $exlMfaDefaultsGroup)
-        {
-            throw "Group `$AlyaNoMfaDefaultsGroupName='$AlyaNoMfaDefaultsGroupName' not found!"
-        }
-    } else {
-        if ($null -ne $AlyaMfaDisabledGroupName -and $AlyaMfaDisabledGroupName -ne "PleaseSpecify") {
-            $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaMfaDisabledGroupName'"
+if (-Not $minimalConfig)
+{
+    Write-Host "Checking SystemCredentialPreferences" -ForegroundColor $CommandInfo
+    if ($authenticationMethodPolicy.SystemCredentialPreferences.State -ne "disabled") {
+        $exlMfaDefaultsGroup = $null
+        if ($null -ne $AlyaNoMfaDefaultsGroupName -and $AlyaNoMfaDefaultsGroupName -ne "PleaseSpecify") {
+            $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'"
             if (-Not $exlMfaDefaultsGroup)
             {
-                throw "Group `$AlyaMfaDisabledGroupName='$AlyaMfaDisabledGroupName' not found!"
+                throw "Group `$AlyaNoMfaDefaultsGroupName='$AlyaNoMfaDefaultsGroupName' not found!"
             }
         } else {
-            Write-Warning "No group to exlude!"
+            if ($null -ne $AlyaMfaDisabledGroupName -and $AlyaMfaDisabledGroupName -ne "PleaseSpecify") {
+                $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaMfaDisabledGroupName'"
+                if (-Not $exlMfaDefaultsGroup)
+                {
+                    throw "Group `$AlyaMfaDisabledGroupName='$AlyaMfaDisabledGroupName' not found!"
+                }
+            } else {
+                Write-Warning "No group to exlude!"
+            }
         }
-    }
-    $params = @{
-        SystemCredentialPreferences = @{
-            ExcludeTargets = @(@{
-                "@odata.type" = "#microsoft.graph.featureTarget"
-                Id = $exlMfaDefaultsGroup.Id
-                TargetType = "group"
-            })
+        $params = @{
+            SystemCredentialPreferences = @{
+                ExcludeTargets = @(@{
+                    "@odata.type" = "#microsoft.graph.featureTarget"
+                    Id = $exlMfaDefaultsGroup.Id
+                    TargetType = "group"
+                })
+            }
         }
+        Update-MgBetaPolicyAuthenticationMethodPolicy -BodyParameter $params
     }
-    Update-MgBetaPolicyAuthenticationMethodPolicy -BodyParameter $params
+
 }
 
 # Checking migration state

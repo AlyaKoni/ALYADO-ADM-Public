@@ -50,7 +50,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AssignedRolesFromUser-$($Al
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrollment"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo

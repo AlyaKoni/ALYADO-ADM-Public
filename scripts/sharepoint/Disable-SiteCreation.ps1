@@ -47,11 +47,9 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Disable-SiteCreation-$($
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logging in
-LoginTo-SPO
 LoginTo-MgGraph -Scopes "SharePointTenantSettings.ReadWrite.All"
 
 # =============================================================
@@ -100,17 +98,6 @@ if ($setting.isSitePagesCreationEnabled -ne $false){
 }
 else {
     Write-host "Site page creation was alreadyset to '$false'"
-}
-
-$TenantConfig = Get-SPOTenant
-if ($TenantConfig.DisplayStartASiteOption)
-{
-    Write-Warning "Site creation was enabled. Disabling it now"
-    Set-SPOTenant -DisplayStartASiteOption $false
-}
-else
-{
-    Write-Host "Site creation was already disabled" -ForegroundColor $CommandSuccess
 }
 
 #Stopping Transscript

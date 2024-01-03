@@ -46,10 +46,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-AllowAnonymousMeetin
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
 # O365 stuff
@@ -61,11 +61,11 @@ Write-Host "=====================================================`n" -Foreground
 
 # Setting sharing capability
 Write-Host "Setting AllowAnonymousMeetingParticipantsToAccessWhiteboards" -ForegroundColor $CommandInfo
-$TenantConfig = Get-SPOTenant
+$TenantConfig = Get-PnPTenant -Connection $adminCon
 if ($TenantConfig.AllowAnonymousMeetingParticipantsToAccessWhiteboards -ne "On")
 {
     Write-Warning "Was set to $($TenantConfig.AllowAnonymousMeetingParticipantsToAccessWhiteboards). Setting now to 'On'"
-    Set-SPOTenant -AllowAnonymousMeetingParticipantsToAccessWhiteboards "On"
+    Set-PnPTenant -Connection $adminCon -AllowAnonymousMeetingParticipantsToAccessWhiteboards "On"
 }
 else
 {

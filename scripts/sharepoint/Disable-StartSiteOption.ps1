@@ -30,72 +30,46 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    01.02.2021 Konrad Brunner       Initial Creation
+    21.12.2023 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [int]$keySize = 1024
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Create-DKIMDomainKeys-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Disable-StartSiteOption-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
+
+# Logging in
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
-# Exchange stuff
+# O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Create-DKIMDomainKeys | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Disable-StartSiteOption | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$domains = @()
-
-$domains += $AlyaDomainName
-foreach ($dom in $AlyaAdditionalDomainNames)
+# Disabling start site option
+Write-Host "Disabling start site option" -ForegroundColor $CommandInfo
+$TenantConfig = Get-PnPTenant -Connection $adminCon
+if ($TenantConfig.DisplayStartASiteOption)
 {
-    $domains += $dom
+    Write-Warning "DisplayStartASiteOption was enabled. Disabling now DisplayStartASiteOption"
+    Set-PnPTenant -Connection $adminCon -DisplayStartASiteOption $false
 }
-
-try
+else
 {
-    LoginTo-EXO
-    foreach ($dom in $domains)
-    {
-        Write-Host "Checking domain $dom"
-        $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
-        if (-Not $conf)
-        {
-            Write-Warning "Creating DKIM config for domain $dom"
-            if (-Not (Get-Command "New-DkimSigningConfig"))
-            {
-                Write-Error "Command New-DkimSigningConfig not found! Do you have the right access active?" -ErrorAction Continue
-            }
-            New-DkimSigningConfig -DomainName $dom -KeySize $keySize -Enabled $false
-        }
-        if (-Not $conf.Enabled)
-        {
-            Write-Warning "Enabling DKIM config for domain $dom"
-            Set-DkimSigningConfig -Identity $conf.Id -Enabled $true
-        }
-    }
-}
-catch
-{
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
-}
-finally
-{
-    DisconnectFrom-EXOandIPPS
+    Write-Host "DisplayStartASiteOption was already disabled." -ForegroundColor $CommandSuccess
 }
 
 #Stopping Transscript

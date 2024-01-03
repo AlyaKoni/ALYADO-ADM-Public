@@ -229,7 +229,18 @@ foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique
         if (-Not $pa)
         {
             Write-Warning "    Enabling '$($enabledPolicy.Policy)' policy"
-            $null = New-AzPolicyAssignment -Name $assignmentName -DisplayName $assignmentDisplayName -PolicySetDefinition $Policy -Scope "/subscriptions/$($sub.Id)"
+            $pname = $Policy.Properties.Parameters.PSObject.Properties.Name | Where-Object { $_ -like "*maximumDaysToRotate*" }
+            if ($pname)
+            {
+                $params = @{
+                    $pname = 365
+                }
+                $null = New-AzPolicyAssignment -Name $assignmentName -DisplayName $assignmentDisplayName -PolicySetDefinition $Policy -Scope "/subscriptions/$($sub.Id)" -PolicyParameterObject $params
+            }
+            else
+            {
+                $null = New-AzPolicyAssignment -Name $assignmentName -DisplayName $assignmentDisplayName -PolicySetDefinition $Policy -Scope "/subscriptions/$($sub.Id)"
+            }
         }
     }
 }

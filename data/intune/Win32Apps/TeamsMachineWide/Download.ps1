@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 2
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -27,49 +27,29 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
-    History:
-    Date       Author               Description
-    ---------- -------------------- ----------------------------
-    06.03.2020 Konrad Brunner       Initial Version
-
 #>
 
-[CmdletBinding()]
-Param(
-)
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
-
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Hide-DefaultThemes-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
-
-# Logging in
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-
-# =============================================================
-# O365 stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Hide-DefaultThemes | O365" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Hiding default themes
-Write-Host "Hiding default themes" -ForegroundColor $CommandInfo
-if (-Not (Get-PnPHideDefaultThemes -Connection $adminCon))
+$pageUrl = "https://teams.microsoft.com/downloads/desktopurl?env=production&plat=windows&arch=x64&managedInstaller=true&download=true"
+$packageRoot = "$PSScriptRoot"
+$contentRoot = Join-Path $packageRoot "Content"
+if (-Not (Test-Path $contentRoot))
 {
-    Write-Warning "Default themes were not yet hidden. Hiding them now."
-    Set-PnPHideDefaultThemes -Connection $adminCon -HideDefaultThemes $true
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-else
+$resp = Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\Teams_windows_x64.msi"
+if (-Not (Test-Path "$contentRoot\Teams_windows_x64.msi"))
 {
-    Write-Host "Default themes were already hidden."
+    throw "Not able to download Teams_windows_x64.msi"
 }
 
-#Stopping Transscript
-Stop-Transcript
+$pageUrl = "https://raw.githubusercontent.com/microsoft/TeamsMsiOverride/main/src/CheckMsiOverride.ps1"
+$resp = Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\CheckMsiOverride.ps1"
+if (-Not (Test-Path "$contentRoot\CheckMsiOverride.ps1"))
+{
+    throw "Not able to download CheckMsiOverride.ps1"
+}
+$content = Get-Content -Path "$contentRoot\CheckMsiOverride.ps1" -Encoding UTF8 -Raw
+$content = $content.Replace("`$env:TEMP\msiOverrideCheck_", "C:\ProgramData\AlyaConsulting\Logs\TeamsMachineWide-Install-")
+$content | Set-Content -Path "$contentRoot\CheckMsiOverride.ps1" -Encoding UTF8 -Force

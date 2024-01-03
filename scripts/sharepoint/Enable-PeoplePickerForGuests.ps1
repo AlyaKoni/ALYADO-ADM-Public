@@ -46,10 +46,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Enable-PeoplePickerForGu
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
 # O365 stuff
@@ -61,11 +61,11 @@ Write-Host "=====================================================`n" -Foreground
 
 # Enabling people picker for guests
 Write-Host "Enabling people picker for guests" -ForegroundColor $CommandInfo
-$TenantConfig = Get-SPOTenant
+$TenantConfig = Get-PnPTenant -Connection $adminCon
 if (-Not $TenantConfig.ShowPeoplePickerSuggestionsForGuestUsers)
 {
     Write-Warning "People picker for guests was not enabled. Enabling now the people picker for guests"
-    Set-SPOTenant -ShowPeoplePickerSuggestionsForGuestUsers $true
+    Set-PnPTenant -Connection $adminCon -ShowPeoplePickerSuggestionsForGuestUsers $true
 }
 else
 {

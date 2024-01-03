@@ -215,16 +215,15 @@ if (-Not $site)
 
     if ($siteTemplate -eq "TeamSite")
     {
-        Write-Warning "PnP has actually an issue. please createt he TeamSite by hand"
+        <#Write-Warning "PnP has actually an issue. please createt he TeamSite by hand"
         Write-Warning "  Type: TeamSite"
         Write-Warning "  Title: $title"
         Write-Warning "  Url: $siteUrl"
         Write-Warning "  TimeZone: $tmzP"
         Write-Warning "  Description: $description"
-        pause
+        pause#>
         #Set-PnPTraceLog -On -LogFile "C:\Temp\traceoutput.txt" -WriteToConsole -Level "Debug" -AutoFlush $true
-        #Keine Gruppe! $site = New-PnPTenantSite -Connection $adminCon -Url $absSiteUrl -Title $title -Lcid $lcid -TimeZone $tmzId.Id -Template "STS#3" -Owner $AlyaSharePointNewSiteOwner
-        #$site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -SiteAlias "$($siteUrl)" -Lcid $lcid -TimeZone $tmzId.Id -Description $description -Wait
+        $site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -SiteAlias "$($siteUrl)" -Lcid $lcid -TimeZone $tmzId.Id -Description $description -Wait
         #$site = New-PnPSite -Connection $adminCon -Type "TeamSite" -Title $title -Alias "$($siteUrl)" -SiteAlias "$($siteUrl)" -Lcid $lcid -TimeZone $tmzId.Id -Description $description -Owners @($AlyaSharePointNewSiteOwner) -Wait -HubSiteId 
         #Set-PnPTraceLog -Off
     }
@@ -236,6 +235,7 @@ if (-Not $site)
         Start-Sleep -Seconds 15
         $site = Get-PnPTenantSite -Connection $adminCon -Url $absSiteUrl -ErrorAction SilentlyContinue
     } while (-Not $site)
+    Write-Host "Site created. Waiting one minute."
     Start-Sleep -Seconds 60
 }
 

@@ -46,10 +46,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\onedrive\Set-RetentionForDeletedUse
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
 # O365 stuff
@@ -61,11 +61,11 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking ODFB retention
 Write-Host "Checking ODFB retention" -ForegroundColor $CommandInfo
-$TenantConfig = Get-SPOTenant
+$TenantConfig = Get-PnPTenant -Connection $adminCon
 if ($TenantConfig.OrphanedPersonalSitesRetentionPeriod -ne 365)
 {
     Write-Warning "OrphanedPersonalSitesRetentionPeriod was set to $($TenantConfig.OrphanedPersonalSitesRetentionPeriod). Setting it now to 365"
-    Set-SPOTenant -OrphanedPersonalSitesRetentionPeriod 365
+    Set-PnPTenant -Connection $adminCon -OrphanedPersonalSitesRetentionPeriod 365 -Force
 }
 else
 {

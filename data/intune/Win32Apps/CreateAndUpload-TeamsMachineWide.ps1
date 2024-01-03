@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 2
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -27,51 +27,19 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
-    History:
-    Date       Author               Description
-    ---------- -------------------- ----------------------------
-    06.03.2020 Konrad Brunner       Initial Version
-
 #>
 
 [CmdletBinding()]
 Param(
+    [bool]$reuseExistingPackages = $false,
+    [bool]$askForSameVersionPackages = $true
 )
 
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Enable-PublicCdn-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
-
-# Logging in
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-
-# =============================================================
-# O365 stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Enable-PublicCdn | O365" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Enabling public cdn
-Write-Host "Enabling public cdn" -ForegroundColor $CommandInfo
-$TenantConfig = Get-PnPTenant -Connection $adminCon
-if (-Not $TenantConfig.PublicCdnEnabled)
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\TeamsMachineWide\Package\*.intunewin" -PathType Leaf)))
 {
-    Write-Warning "Public cdn was not enabled. Enabling now the public cdn"
-    Set-PnPTenant -Connection $adminCon -PublicCdnEnabled $true
-    Set-PnPTenantCdnEnabled -Connection $adminCon -CdnType Public -Enable $true
+	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "TeamsMachineWide"
 }
-else
-{
-    Write-Host "Public cdn was already enabled." -ForegroundColor $CommandSuccess
-}
-
-#Stopping Transscript
-Stop-Transcript
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "TeamsMachineWide" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "TeamsMachineWide"

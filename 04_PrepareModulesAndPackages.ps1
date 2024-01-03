@@ -147,7 +147,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.CrossDeviceExperiences" -doNotLoad
 Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Actions" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Administration" -doNotLoadModules $true
-Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment" -doNotLoadModules $true
+Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrollment" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Functions" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.Devices.CloudPrint" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.Devices.CorporateManagement" -doNotLoadModules $true
@@ -186,7 +186,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.CrossDeviceExperiences" -doNo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Actions" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Administration" -doNotLoadModules $true
-#Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment" -doNotLoadModules $true
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrollment" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Functions" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Devices.CloudPrint" -doNotLoadModules $true
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Devices.CorporateManagement" -doNotLoadModules $true

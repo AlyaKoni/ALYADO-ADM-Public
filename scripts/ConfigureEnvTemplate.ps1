@@ -37,7 +37,7 @@
 Param(
 )
 
-Write-Host "Loading custom configuration" -ForegroundColor Cyan
+Write-Host "Loading custom configuration XXX" -ForegroundColor Cyan
 
 <# ENVIRONMENT SETTINGS #>
 #$AlyaAzureEnvironment = "AzureChinaCloud"
@@ -149,7 +149,8 @@ $AlyaResIdLetsEncryptResGrp = "PleaseSpecify" #Example:"012"
 $AlyaResIdWormResGrp = "PleaseSpecify" #Example:"015"
 $AlyaResIdItsmResGrp = "PleaseSpecify" #Example:"016"
 $AlyaResIdZefixResGrp = "PleaseSpecify" #Example:"021"
-$AlyaResIdAvdImageResGrp = "PleaseSpecify" #Example:"040"
+$AlyaResIdAvdImageResGrp = "PleaseSpecify" #Example:"050"
+$AlyaResIdAvdManagementResGrp = "PleaseSpecify" #Example:"040"
 $AlyaResIdLogAnalytics = "PleaseSpecify" #Example:"002"
 $AlyaResIdVirtualNetwork = "PleaseSpecify" #Example:"000"
 $AlyaResIdMainKeyVault = "PleaseSpecify" #Example:"001"
@@ -177,18 +178,27 @@ $AlyaResIdAvdImageClient = "PleaseSpecify" #Example:"041"
 $AlyaResIdAvdImageServer = "PleaseSpecify" #Example:"042"
 $AlyaResIdAvdImageSNet = "PleaseSpecify" #Example:"05"
 $AlyaResIdAvdHostSNet = "PleaseSpecify" #Example:"01"
+$AlyaResIdAvdSessionHostsResGrp = "PleaseSpecify" #Example:"060"
+$AlyaResIdAvdWorkspace = "PleaseSpecify" #Example:"001"
+$AlyaResIdAvdHostpool = "PleaseSpecify" #Example:"001"
+$AlyaResIdAvdAppGroup = "PleaseSpecify" #Example:"001"
+$AlyaResIdAvdImageClient = "PleaseSpecify" #Example:"051"
+$AlyaResIdAvdImageServer = "PleaseSpecify" #Example:"52"
+$AlyaAvdResIdVirtualNetwork = $AlyaResIdVirtualNetwork
+$AlyaAvdResIdVirtualNetworkTest = $AlyaResIdVirtualNetwork
+$AlyaResIdAvdHostSNetTest = "PleaseSpecify" #Example:"04"
 
 <# RESOURCE SETTINGS #>
 $AlyaResEnableInsightsAndAlerts = $false
 
 <# SHARING SETTINGS #>
-$AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" #  # None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)
+$AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" #None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)
 $AlyaAllowEmailVerifiedUsers = "PleaseSpecify" #Example:$true
 $AlyaFullTrustCrossTenantAccess = @( 
-    @{ Name = "Alya Consulting"; TenantId = "5757de31-29c4-4f39-9bd1-478cec348035";
+    <#@{ Name = "Alya Consulting"; TenantId = "5757de31-29c4-4f39-9bd1-478cec348035";
         EnableCollaboration = $true; EnableDirectConnect = $true; 
         IsMfaAccepted = $true; IsCompliantDeviceAccepted = $false; IsHybridAzureADJoinedDeviceAccepted = $false;
-        AllowUsersSync = $false; AutomaticRedemption = $false } 
+        AllowUsersSync = $false; AutomaticRedemption = $false }#>
 )
 
 <# APPLICATION SETTINGS #>
@@ -208,11 +218,12 @@ $AlyaBreakingGlassUserName = "PleaseSpecify" #Example:"john.doe@$($AlyaDomainNam
 
 <# GROUP SETTINGS #>
 $AlyaNoMfaDefaultsGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-NOMFADEFAULTS"
-$AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFADISABLED"
+$AlyaMfaDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFADISABLED(CLOUD)"
 $AlyaMfaDisabledGroupNameOnPrem = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFADISABLEDONPREM"
-$AlyaMfaDisabledForGroups = "PleaseSpecify" #Example:@("$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen")
-$AlyaMfaEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFAENABLED"
-$AlyaKeyAuthEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-KEYAUTHENABLED"
+$AlyaMfaDisabledForGroups = @() #Example:@("$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen")
+$AlyaMfaEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFAENABLED(CLOUD)"
+$AlyaMfaEnabledGroupNameOnPrem = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-MFAENABLEDONPREM"
+$AlyaKeyAuthEnabledGroupName = "$($AlyaCompanyNameShortM365)SG-ADM-KEYENABLED"
 $AlyaKeyAuthEnabledKeys = @("d8522d9f-575b-4866-88a9-ba99fa02f35b") #d8522d9f-575b-4866-88a9-ba99fa02f35b: Biometric Series 5
 $AlyaSsprEnabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-SSPRENABLED"
 $AlyaPwdResetDisabledGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-PWDCHNGDISABLED"
@@ -220,11 +231,10 @@ $AlyaAllInternals = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)MG-ADM
 $AlyaAllExternals = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)MG-ADM-AlleExternen"
 
 <# OFFICE GROUP SETTINGS #>
-$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERS" # Only members can create groups
-$AlyaGroupManagerGroupNameOnPrem = "PleaseSpecify"
-#TODO $AlyaGroupManagerMembers = @()
-$AlyaOfficeGroupsNewGroupOwner = $AlyaSharePointNewSiteOwner
-$AlyaOfficeGroupsNewGroupAdditionalOwner = $AlyaSharePointNewSiteOwner
+$AlyaGroupManagerGroupName = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERS(CLOUD)" # Only members can create groups
+$AlyaGroupManagerGroupNameOnPrem = "PleaseSpecify" #Example:"$($AlyaCompanyNameShortM365)SG-ADM-M365GROUPMANAGERSONPREM" # Only members can create groups
+$AlyaOfficeGroupsNewGroupOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
+$AlyaOfficeGroupsNewGroupAdditionalOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
 
 <# NETWORK SETTINGS #>
 $AlyaAzureNetwork = "PleaseSpecify" #Example:"172.16.0.0/16"
@@ -237,7 +247,7 @@ $AlyaDeployGateway = "PleaseSpecify" #Example:$false
 <# AVD SETTINGS #>
 <#
 $AlyaAvdRDBroker = "PleaseSpecify" #Example:"https://rdbroker.wvd.microsoft.com"
-$AlyaAvdShareServer = "PleaseSpecify" # TODO from vars
+$AlyaAvdShareServer = "PleaseSpecify"
 $AlyaAvdShareRoot = "PleaseSpecify"
 $AlyaAvdDomainAdminUPN = "PleaseSpecify" #Example:@("konrad.brunner@$($AlyaDomainName)")
 $AlyaAvdOuProd = "PleaseSpecify" #Example:"OU=PROD,OU=Avd,OU=COMPUTERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
@@ -245,6 +255,15 @@ $AlyaAvdOuTest = "PleaseSpecify" #Example:"OU=TEST,OU=Avd,OU=COMPUTERS,OU=CLOUD,
 $AlyaAvdAdmins = "PleaseSpecify" #Example:@("konrad.brunner@$($AlyaDomainName)")
 $AlyaAvdStartTime = "PleaseSpecify" #Example:"06:00"
 $AlyaAvdStopTime = "PleaseSpecify" #Example:"23:00"
+$AlyaAvdHypervisorVersion = "PleaseSpecify" #Example:"V2"
+$AlyaAvdSessionHostCount = "PleaseSpecify" #Example:4
+$AlyaAvdSessionHostCountTest = "PleaseSpecify" #Example:1
+$AlyaAvdMaxSessions = "PleaseSpecify" #Example:8
+$AlyaAvdVmSize = "PleaseSpecify" #Example:"Standard_D8s_v4"
+$AlyaAvdAcceleratedNetworking = "PleaseSpecify" #Example:$true
+$AlyaAvdSessionHostLocation = "PleaseSpecify" #Example:$AlyaLocation
+$AlyaAvdDesktopAccessGroup = "PleaseSpecify" #Example:"ALYASG-APP-DSKTP-P"
+$AlyaAvdDesktopAccessGroupTest = "PleaseSpecify" #Example:"ALYASG-APP-DSKTP-T"
 #>
 
 <# SHAREPOINT ONPREM SETTINGS #>
@@ -255,8 +274,8 @@ $AlyaSharePointOnPremVersion = "PleaseSpecify" #Example:"2019"
 <# SHAREPOINT SETTINGS #>
 $AlyaSharePointUrl = "https://$($AlyaTenantNameId).sharepoint.com"
 $AlyaSharePointAdminUrl = "https://$($AlyaTenantNameId)-admin.sharepoint.com"
-$AlyaSharePointNewSiteOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
-$AlyaSharePointNewSiteAdditionalOwner = "PleaseSpecify" #Example:"konrad.brunner@$($AlyaDomainName)"
+$AlyaSharePointNewSiteOwner = $AlyaOfficeGroupsNewGroupOwner
+$AlyaSharePointNewSiteAdditionalOwner = $AlyaOfficeGroupsNewGroupAdditionalOwner
 $AlyaSharePointNewSiteCollectionAdmins = @( $AlyaSharePointNewSiteOwner, $AlyaSharePointNewSiteAdditionalOwner )
 #https://fabricweb.z5.web.core.windows.net/pr-deploy-site/refs/heads/7.0/theming-designer/index.html
 $AlyaSpThemeDef = @{ 
@@ -298,7 +317,7 @@ $AlyaAipCustomPageUrl = "PleaseSpecify"
 $AlyaDeviceCategories = @("Standard")
 $AlyaDeviceAdminsGroupName = "PleaseSpecify" # Only these members can manage devices #Example:"$($AlyaCompanyNameShortM365)SG-DEV-ADMINS"
 $AlyaDeviceAdminsGroupNameOnPrem = "PleaseSpecify"
-$AlyaAllowDeviceRegistration = "PleaseSpecify" # All, None or a group name
+$AlyaAllowDeviceRegistration = "PleaseSpecify" # All, None or a group name or an array of groups @()
 $AlyaWinPEBackgroundJpgImage = "PleaseSpecify"
 $AlyaDesktopBackgroundUrl = "PleaseSpecify"
 $AlyaLockScreenBackgroundUrl = "PleaseSpecify"

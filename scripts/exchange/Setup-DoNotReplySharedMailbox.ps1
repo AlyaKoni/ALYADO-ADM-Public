@@ -73,7 +73,19 @@ try
         Write-Warning "Creating the shared mailbox DoNotReply"
         New-Mailbox -Shared -Name "DoNotReply" -DisplayName "DoNotReply" -Alias "DoNotReply"
     }
-    $mailbox = Get-Mailbox -Identity "DoNotReply"
+    $retries = 10
+    $mailbox = $null
+    do {
+        try {
+            Start-Sleep -Seconds 5
+            $retries--
+            if ($retries -lt 0) { throw "Error creating mailbox" }
+            $mailbox = Get-Mailbox -Identity "DoNotReply"
+        }
+        catch {
+            <#Do this if a terminating exception happens#>
+        }
+    } while (-Not $mailbox)
     $doNotReplyUserId = $mailbox.ExternalDirectoryObjectId
     $doNotReplyEmail = $mailbox.EmailAddresses[0].Replace("SMTP:","")
 

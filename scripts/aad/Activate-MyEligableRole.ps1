@@ -52,7 +52,7 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
-#Install-ModuleIfNotInstalled "Microsoft.Graph.DeviceManagement.Enrolment"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrollment"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
@@ -85,9 +85,21 @@ if (-Not $user)
 Write-Host "Getting all built in roles" -ForegroundColor $CommandInfo
 $roleDefinitions = Get-MgBetaRoleManagementDirectoryRoleDefinition -All
 $role = $roleDefinitions | Where-Object { $_.DisplayName -eq $roleName }
+$roleDefinitions = $null
+Clear-Variable -Name roleDefinitions
 if (-Not $role)
 {
     throw "Role '$roleName' not found"
+}
+
+# Checking if role is already active
+Write-Host "Checking if role is already active" -ForegroundColor $CommandInfo
+$assignedRoles = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "principalId eq '$($user.Id)'"
+$assignedRole = $assignedRoles | Where-Object { $_.RoleDefinitionId -eq $role.Id }
+if ($assignedRole)
+{
+    Write-Warning "Role is already active!"
+    exit
 }
 
 # Getting  eligable role assignment

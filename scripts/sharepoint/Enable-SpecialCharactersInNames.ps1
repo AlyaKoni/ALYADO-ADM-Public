@@ -46,10 +46,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Enable-SpecialCharacters
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
 # O365 stuff
@@ -61,11 +61,11 @@ Write-Host "=====================================================`n" -Foreground
 
 # Enabling special charcters # and % in directory and file names
 Write-Host "Enabling special charcters # and % in directory and file names" -ForegroundColor $CommandInfo
-$TenantConfig = Get-SPOTenant
+$TenantConfig = Get-PnPTenant -Connection $adminCon
 if ($TenantConfig.SpecialCharactersStateInFileFolderNames -ne "Allowed")
 {
     Write-Warning "SpecialCharactersStateInFileFolderNames was not enabled. Enabling now SpecialCharactersStateInFileFolderNames"
-    Set-SPOTenant -SpecialCharactersStateInFileFolderNames "Allowed"
+    Set-PnPTenant -Connection $adminCon -SpecialCharactersStateInFileFolderNames "Allowed"
 }
 else
 {

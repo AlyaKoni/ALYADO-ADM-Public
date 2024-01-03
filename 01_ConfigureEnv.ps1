@@ -95,7 +95,7 @@ $AlyaSolutions = "$AlyaRoot\solutions"
 $AlyaTools = "$AlyaRoot\tools"
 $AlyaEnvSwitch = ""
 $AlyaModuleVersionOverwrite = @( <#@{Name="PnP.PowerShell";Version="2.1.1"}#> )
-$AlyaPackageVersionOverwrite = @( @{Name="Selenium.WebDriver";Version="4.10.0"} )
+$AlyaPackageVersionOverwrite = @( <#@{Name="Selenium.WebDriver";Version="4.10.0"}#> )
 
 # Switching env if required
 if ((Test-Path $AlyaLocal\EnvSwitch.ps1))

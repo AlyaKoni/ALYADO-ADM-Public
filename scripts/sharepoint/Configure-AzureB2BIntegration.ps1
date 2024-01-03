@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.03.2020 Konrad Brunner       Initial Version
+    21.12.2023 Konrad Brunner       Switched to PnP
 
 #>
 
@@ -46,15 +47,10 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-AzureB2BIntegr
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-AD
-LoginTo-SPO
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
 # O365 stuff
@@ -66,25 +62,12 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring AzureB2BIntegration
 Write-Host "Configuring AzureB2BIntegration" -ForegroundColor $CommandInfo
-$TenantConfig = Get-SPOTenant
+$TenantConfig = Get-PnPTenant -Connection $adminCon
 if (-Not $TenantConfig.EnableAzureADB2BIntegration)
 {
     Write-Warning "AzureB2B integration was not enabled. Enabling now AzureB2B integration"
-    Set-SPOTenant -EnableAzureADB2BIntegration $true
-    Set-SPOTenant -SyncAadB2BManagementPolicy $true
-    Write-Warning "Enabling one-time-passcode authentication"
-    $currentpolicy =  Get-AzureADPolicy | Where-Object {$_.Type -eq 'B2BManagementPolicy' -and $_.IsOrganizationDefault -eq $true} | Select-Object -First 1
-    if (-Not $currentpolicy)
-    {
-        Write-Warning "Creating B2BManagementPolicy"
-        $policyValue=@("{`"B2BManagementPolicy`":{`"PreviewPolicy`":{`"Features`":[`"OneTimePasscode`"]}}}")
-        New-AzureADPolicy -Definition $policyValue -DisplayName B2BManagementPolicy -Type B2BManagementPolicy -IsOrganizationDefault $true
-        $currentpolicy =  Get-AzureADPolicy | Where-Object {$_.Type -eq 'B2BManagementPolicy' -and $_.IsOrganizationDefault -eq $true} | Select-Object -First 1
-    }
-    $policy = $currentpolicy.Definition | ConvertFrom-Json
-    $features = [PSCustomObject]@{'Features'=@('OneTimePasscode')}; $policy.B2BManagementPolicy | Add-Member 'PreviewPolicy' $features -Force; $policy.B2BManagementPolicy
-    $updatedPolicy = $policy | ConvertTo-Json -Depth 3
-    Set-AzureADPolicy -Definition $updatedPolicy -Id $currentpolicy.Id
+    Set-PnPTenant -Connection $adminCon -EnableAzureADB2BIntegration $true
+    #TODO Not needed any more? Set-PnPTenant -Connection $adminCon -SyncAadB2BManagementPolicy $true
 }
 else
 {
