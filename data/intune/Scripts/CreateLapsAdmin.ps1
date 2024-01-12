@@ -93,23 +93,13 @@ else
             Write-Host "creating lapsadmin user"
 		    $pwd = [System.Web.Security.Membership]::GeneratePassword(14, 7)
 		    net user lapsadmin $pwd /add /expires:never
-		    try
-		    {
-			    net localgroup Administrators lapsadmin /add
-		    }
-		    catch
-		    {
-		        try
-		        {
-			        net localgroup Administratoren lapsadmin /add
-		        }
-		        catch
-                {
-                    Write-Error "Not able to assign lapsadmin to administrators" -ErrorAction Continue
-                    $exitCode = -2
-                }
-		    }
         }
+        try {
+            net localgroup Administrators lapsadmin /add
+        } catch { }
+        try {
+            net localgroup Administratoren lapsadmin /add
+        } catch { }
     }
     catch
     {   
