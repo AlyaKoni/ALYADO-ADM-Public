@@ -129,7 +129,10 @@ foreach($siteDef in $siteStrcuture)
         -siteLogoUrl $siteDef.Logo `
         -overwritePages $overwritePages `
         -hubSitesConfigurationFile $hubSitesConfigurationFile `
-        -siteOwners $AlyaSharePointNewSiteCollectionAdmins
+        -siteOwners $AlyaSharePointNewSiteCollectionAdmins `
+        -headerLayout $siteDef.HeaderLayout `
+        -headerEmphasis $siteDef.HeaderEmphasis `
+        -quickLaunchEnabled $siteDef.QuickLaunchEnabled
 }
 
 #Stopping Transscript
