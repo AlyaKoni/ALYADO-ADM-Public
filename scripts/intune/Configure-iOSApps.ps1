@@ -113,6 +113,10 @@ $assBodyReq = @"
 "@
 $assignmentsReq = $assBodyReq | ConvertFrom-Json
 
+# Getting all apps
+$uri = "/beta/deviceAppManagement/mobileApps"
+$allApps = Get-MsGraphCollection -Uri $uri
+
 # Processing defined iosApps
 $hadError = $false
 foreach($iosApp in $iosApps)
@@ -124,9 +128,7 @@ foreach($iosApp in $iosApps)
         
         # Checking if app exists
         Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-        $uri = "/beta/deviceAppManagement/mobileApps"
-        $allApps = Get-MsGraphCollection -Uri $uri
-        $app = $allApps | where { $_.displayName -eq $iosApp.displayName }
+        $app = $allApps | where { $_.displayName -eq $iosApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.iosStoreApp"}
         if (-Not $app.id)
         {
             Write-Error "The app with name $($iosApp.displayName) does not exist. Please create it first." -ErrorAction Continue

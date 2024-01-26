@@ -652,11 +652,11 @@ function Get-PublishedModuleVersion(
             $response = Invoke-WebRequestIndep -Method "Get" -Uri $url -UseBasicParsing
             if ($exactVersion -ne "0.0.0.0")
             {
-                $versionUrl = $response.Links | where { $_.href -like "/packages/$moduleName/$exactVersion*" } | Select-Object -Property href -First 1 | Out-String
+                $versionUrl = $response.Links | where { $_.href -like "/packages/$moduleName/$exactVersion*" } | Select-Object -Property href -Last 1 | Out-String
             }
             else
             {
-                $versionUrl = $response.Links | where { $_.href -like "/packages/$moduleName/*-nightly" } | Select-Object -Property href -First 1 | Out-String
+                $versionUrl = $response.Links | where { $_.href -like "/packages/$moduleName/*-nightly" } | Select-Object -Property href -Last 1 | Out-String
             }
             if ($versionUrl)
             {
@@ -771,7 +771,7 @@ function Install-PackageIfNotInstalled (
     } else {
         $resp = Invoke-WebRequestIndep -Uri "https://www.nuget.org/packages/$packageName" -UseBasicParsing
     }
-    $nusrc = ($resp).Links | Where-Object { $_.outerText -eq "Download package" -or $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"}
+    $nusrc = ($resp).Links | Where-Object { $_.href -like "*/package/*" -and $_.outerText -eq "Download package" -or $_.outerText -eq "Manual download" -or $_."data-track" -eq "outbound-manual-download"} | Select-Object -First 1
     $nuvrs = $nusrc.href.Substring($nusrc.href.LastIndexOf("/") + 1, $nusrc.href.Length - $nusrc.href.LastIndexOf("/") - 1)
     if (-not (Test-Path "$($AlyaTools)\Packages\$packageName\$packageName.nuspec"))
     {
@@ -799,6 +799,7 @@ function Install-PackageIfNotInstalled (
         Unblock-File -Path $file.FullName
     }
 }
+#Install-PackageIfNotInstalled "Selenium.WebDriver"
 
 function Uninstall-ModuleIfInstalled (
     [string] [Parameter(Mandatory = $true)] $moduleName,
@@ -1226,6 +1227,7 @@ function Install-ModuleIfNotInstalled (
 #Install-ModuleIfNotInstalled "Az.Resources"
 #Get-Module -Name Az
 #Get-InstalledModule -Name Az
+#Install-ModuleIfNotInstalled "Az.Compute" -exactVersion "6.3.0"
 
 function Install-ScriptIfNotInstalled (
     [string] [Parameter(Mandatory = $true)] $scriptName,
@@ -2825,7 +2827,11 @@ function Get-SeleniumBrowser()
     Install-PackageIfNotInstalled "Selenium.WebDriver" -exactVersion $seleniumVersion
     Install-PackageIfNotInstalled "Selenium.WebDriver.MSEdgeDriver" -exactVersion $edgeDriverVersion
     if($AlyaIsPsCore) {
-        Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll"
+        if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll") {
+            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll"
+        } else {
+            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\WebDriver.dll"
+        }
     } else {
         Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
     }
@@ -2834,14 +2840,16 @@ function Get-SeleniumBrowser()
         $env:Path = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64;$($env:Path)"
     }
 
-    Install-ModuleIfNotInstalled "AppX"
-    $edge = Get-AppXPackage | Where-Object { $_.Name -like "Microsoft.MicrosoftEdge*" }
-    if (!$edge){
-        throw "Microsoft Edge Browser not installed."
-        return
-    }
+    # Install-ModuleIfNotInstalled "AppX"
+    # $edge = Get-AppXPackage | Where-Object { $_.Name -like "Microsoft.MicrosoftEdge*" }
+    # if (!$edge){
+    #     throw "Microsoft Edge Browser not installed."
+    #     return
+    # }
 
     $dService = [OpenQA.Selenium.Edge.EdgeDriverService]::CreateDefaultService()
+    $dService.DriverServiceExecutableName = "msedgedriver.exe"
+    $dService.DriverServicePath = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64"
     $dService.HideCommandPromptWindow = $HideCommandPrompt
     $options = New-Object -TypeName OpenQA.Selenium.Edge.EdgeOptions -Property $OptionSettings
     if($PrivateBrowsing) {$options.AddArguments('InPrivate')}

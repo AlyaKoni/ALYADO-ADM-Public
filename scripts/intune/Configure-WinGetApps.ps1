@@ -124,6 +124,10 @@ $catBody = @"
 "@
 $category = $catBody | ConvertFrom-Json
 
+# Getting all apps
+$uri = "/beta/deviceAppManagement/mobileApps"
+$allApps = Get-MsGraphCollection -Uri $uri
+
 # Processing defined winGetApps
 $hadError = $false
 foreach($winGetApp in $winGetApps)
@@ -140,9 +144,7 @@ foreach($winGetApp in $winGetApps)
         {   
             $winGetApp.displayName = $winGetApp.displayName.Replace("WIN ", $AppPrefix)
         }
-        $uri = "/beta/deviceAppManagement/mobileApps"
-        $allApps = Get-MsGraphCollection -Uri $uri
-        $app = $allApps | where { $_.displayName -eq $winGetApp.displayName }
+        $app = $allApps | where { $_.displayName -eq $winGetApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.winGetApp"}
         if (-Not $app.id)
         {
             Write-Error "The app with name $($winGetApp.displayName) does not exist. Please create it first." -ErrorAction Continue

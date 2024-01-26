@@ -37,9 +37,20 @@ Param(
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\WindowsLanguagePacks\Package\*.intunewin" -PathType Leaf)))
-{
-	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguagePacks"
-}
+& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguagePacks"
+& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguageDeDeKeybDeCh"
+& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguageEnUsKeybDeCh"
+& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguageFrFrKeybDeCh"
+& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguageItItKeybDeCh"
+
 & "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsLanguagePacks" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsLanguageDeDeKeybDeCh" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsLanguageEnUsKeybDeCh" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsLanguageFrFrKeybDeCh" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsLanguageItItKeybDeCh" -askForSameVersionPackages $askForSameVersionPackages
+
 & "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsLanguagePacks"
+& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsLanguageDeDeKeybDeCh"
+& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsLanguageEnUsKeybDeCh"
+& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsLanguageFrFrKeybDeCh"
+& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsLanguageItItKeybDeCh"

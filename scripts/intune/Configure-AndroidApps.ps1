@@ -111,6 +111,10 @@ $assBodyReq = @"
 "@
 $assignmentsReq = $assBodyReq | ConvertFrom-Json
 
+# Getting all apps
+$uri = "/beta/deviceAppManagement/mobileApps"
+$allApps = Get-MsGraphCollection -Uri $uri
+
 # Processing defined androidApps
 $hadError = $false
 foreach($androidApp in $androidApps)
@@ -122,9 +126,7 @@ foreach($androidApp in $androidApps)
         
         # Checking if app exists
         Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-        $uri = "/beta/deviceAppManagement/mobileApps"
-        $allApps = Get-MsGraphCollection -Uri $uri
-        $app = $allApps | where { $_.displayName -eq $androidApp.displayName }
+        $app = $allApps | where { $_.displayName -eq $androidApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.androidManagedStoreApp"}
         if (-Not $app.id)
         {
             Write-Error "The app with name $($androidApp.displayName) does not exist. Please create it first." -ErrorAction Continue

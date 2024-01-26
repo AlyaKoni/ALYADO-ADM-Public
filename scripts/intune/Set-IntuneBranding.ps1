@@ -194,8 +194,13 @@ $uri = "/beta/deviceManagement/intuneBrandingProfiles"
 $intuneBrand = Get-MsGraphObject -Uri $uri
 $intuneBrandId = $intuneBrand.value.id
 
-$uri = "/beta/deviceManagement/intuneBrandingProfiles/$intuneBrandId"
-$intuneBrand = Patch-MsGraph -Uri $uri -Body ($brandingConfig | ConvertTo-Json -Depth 50)
+if (-Not [string]::IsNullOrEmpty($intuneBrandId)) {
+    $uri = "/beta/deviceManagement/intuneBrandingProfiles/$intuneBrandId"
+    $intuneBrand = Patch-MsGraph -Uri $uri -Body ($brandingConfig | ConvertTo-Json -Depth 50)
+} else {
+    Write-Warning "There is actually no branding defined. Please create one and rerun this script!"
+    pause
+}
 
 #Stopping Transscript
 Stop-Transcript

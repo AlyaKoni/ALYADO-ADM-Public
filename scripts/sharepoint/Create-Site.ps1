@@ -62,7 +62,10 @@ Param(
     [string[]]$groupMembers = $null,
     [string[]]$siteOwners = $null,
     [string[]]$siteMembers = $null,
-    [string[]]$siteReaders = $null
+    [string[]]$siteReaders = $null,
+    [string]$headerLayout = $null,
+    [string]$headerEmphasis = $null,
+    [bool]$quickLaunchEnabled = $null
 )
 
 #Reading configuration
@@ -276,6 +279,31 @@ if ($hub)
     } catch {
         Write-Error $_ -ErrorAction Continue
     }
+}
+
+# Updating web properties
+Write-Host "Updating web properties" -ForegroundColor $CommandInfo
+$web = Get-PnPWeb -Connection $siteCon -Includes HeaderEmphasis,HeaderLayout,SiteLogoUrl,QuickLaunchEnabled
+$dirty = $false
+if (-Not [string]::IsNullOrEmpty($headerLayout) -and $web.HeaderLayout -ne $siteDef.HeaderLayout)
+{
+    $web.HeaderLayout = $siteDef.HeaderLayout
+    $dirty = $true
+}
+if (-Not [string]::IsNullOrEmpty($headerEmphasis) -and $web.HeaderEmphasis -ne $siteDef.HeaderEmphasis)
+{
+    $web.HeaderEmphasis = $siteDef.HeaderEmphasis
+    $dirty = $true
+}
+if ($null -ne $quickLaunchEnabled -and $web.QuickLaunchEnabled -ne $siteDef.QuickLaunchEnabled)
+{
+    $web.QuickLaunchEnabled = $siteDef.QuickLaunchEnabled
+    $dirty = $true
+}
+if ($dirty)
+{
+    $web.Update()
+    Invoke-PnPQuery -Connection $siteCon
 }
 
 # Updating site logo

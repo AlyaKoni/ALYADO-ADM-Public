@@ -210,13 +210,15 @@ function UploadPackage($app, $appConfig, $bytes)
         for ($chunk = 0; $chunk -lt $chunks; $chunk++)
         {
             [system.gc]::Collect()
-            $id = [System.Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes($chunk.ToString("0000")))
+            $id = [System.Convert]::ToBase64String($enc.GetBytes($chunk.ToString("0000")))
             $ids += $id
             $start = $chunk * $chunkSizeInBytes
             $end = [Math]::Min($start + $chunkSizeInBytes - 1, $bytes.Length - 1)
             $encodedBody = $enc.GetString($bytes[$start..$end])
             $headers = @{
                 "x-ms-blob-type" = "BlockBlob"
+                "x-ms-blob-content-encoding" = "iso-8859-1"
+                "Content-Type" = "text/plain; charset=iso-8859-1"
             }
             $currentChunk = $chunk + 1
             Write-Host "    Uploading chunk $currentChunk of $chunks ($([int]$sasRenewalTimer.Elapsed.TotalSeconds)sec)"
@@ -258,7 +260,7 @@ function UploadPackage($app, $appConfig, $bytes)
             {
                 Write-Host "    Upload renewal"
                 $renewalUri = "$uri/renewUpload"
-                $rewnewUriResult = Post-MsGraph -Uri $renewalUri	
+                $rewnewUriResult = Post-MsGraph -Uri $renewalUri -Body $null
                 $stage = "AzureStorageUriRenewal"
                 $successState = "$($stage)Success"
                 $pendingState = "$($stage)Pending"

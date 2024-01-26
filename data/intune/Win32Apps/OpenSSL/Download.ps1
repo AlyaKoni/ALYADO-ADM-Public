@@ -54,4 +54,6 @@ foreach($mtch in $mtchs)
     }
 }
 $outfile = Join-Path $contentRoot (Split-Path $newUrl -Leaf)
+Write-Warning "Download can run very long!"
+Write-Warning "Check file $outfile to see progress"
 $dreq = Invoke-WebRequestIndep -Uri $newUrl -Method Get -OutFile $outfile

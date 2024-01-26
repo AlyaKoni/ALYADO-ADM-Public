@@ -659,10 +659,11 @@ $uri = "/beta/deviceAppManagement/managedAppStatuses('appregistrationsummary')?f
 $appregistrationSummary = Get-MsGraphObject -Uri $uri
 $appregistrationSummary | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\appregistrationSummary.json")) -Force
 
+# TODO
 #windowsProtectionReport
-$uri = "/beta/deviceAppManagement/managedAppStatuses('windowsprotectionreport')"
-$windowsProtectionReport = Get-MsGraphObject -Uri $uri
-$windowsProtectionReport | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\windowsProtectionReport.json")) -Force
+# $uri = "/beta/deviceAppManagement/managedAppStatuses('windowsprotectionreport')"
+# $windowsProtectionReport = Get-MsGraphObject -Uri $uri
+# $windowsProtectionReport | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\windowsProtectionReport.json")) -Force
 
 #mdmWindowsInformationProtectionPolicies
 $uri = "/beta/deviceAppManagement/mdmWindowsInformationProtectionPolicies"

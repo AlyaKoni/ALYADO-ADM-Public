@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -27,19 +27,51 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    18.01.2024 Konrad Brunner       Initial Version
+
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$reuseExistingPackages = $true,
-    [bool]$askForSameVersionPackages = $true
+    [Parameter(Mandatory=$true)]
+    [string]$siteUrl = $null,
+    [bool]$skipRecycleBin = $false
 )
 
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+#Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\WindowsVirtualDesktopClient\Package\*.intunewin" -PathType Leaf)))
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Delete-Site-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "PnP.PowerShell" # TODO Remove when null pointer bug is fixed
+
+# Login
+#Set-PnPTraceLog -On -WriteToConsole -Level Debug -AutoFlush $true
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+
+# =============================================================
+# O365 stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Delete-Site | O365" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Checking site
+$site = Get-PnPTenantSite -Connection $adminCon -Identity $siteUrl -Detailed
+if (-Not $site)
 {
-	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsVirtualDesktopClient"
+    throw "Site not found!"
 }
-& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsVirtualDesktopClient" -askForSameVersionPackages $askForSameVersionPackages
-& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsVirtualDesktopClient"
+
+# Deleting site
+Remove-PnPTenantSite -Connection $adminCon -Url $siteUrl -SkipRecycleBin:$skipRecycleBin -Force
+
+# Stopping Transscript
+Stop-Transcript

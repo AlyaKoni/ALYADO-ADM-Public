@@ -31,15 +31,20 @@
 
 [CmdletBinding()]
 Param(
-    [bool]$reuseExistingPackages = $true,
+    [bool]$reuseExistingPackages = $false,
     [bool]$askForSameVersionPackages = $true
 )
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\WindowsVirtualDesktopClient\Package\*.intunewin" -PathType Leaf)))
+Write-Warning "This package has a dependency to WindowsLanguagePacks"
+Write-Warning "Please Update first WindowsLanguagePacks"
+Write-Warning "Otherwise you could have installation failures"
+Start-Sleep -Seconds 10
+
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\WindowsLanguageEnUsKeybDeCh\Package\*.intunewin" -PathType Leaf)))
 {
-	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsVirtualDesktopClient"
+	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguageEnUsKeybDeCh"
 }
-& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsVirtualDesktopClient" -askForSameVersionPackages $askForSameVersionPackages
-& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsVirtualDesktopClient"
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsLanguageEnUsKeybDeCh" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsLanguageEnUsKeybDeCh"
