@@ -31,8 +31,22 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmfreemsi/"
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+try {
+    $pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmmsi/"
+    $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+} catch {
+    try {
+        $pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmfreemsi/"
+        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+    } catch {
+        $pageUrl = "https://devolutions.net/remote-desktop-manager/home/downloadfree/"
+        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+        [regex]$regex = "[^`"]*msi/"
+        $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+        $pageUrl = "https://devolutions.net$newUrl"
+        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+    }
+}
 [regex]$regex = "[^`"]*Setup.RemoteDesktopManager[^`"]*\.msi"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $fileName = Split-Path -Path $newUrl -Leaf

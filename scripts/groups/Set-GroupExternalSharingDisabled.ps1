@@ -57,7 +57,8 @@ if (-Not $GroupToDisableExternalGuests)
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
-    
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+
 # Logins
 LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 

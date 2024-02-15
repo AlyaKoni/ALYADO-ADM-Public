@@ -47,7 +47,16 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-UsersAccessPerSite-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "PnP.PowerShell"
+
+# =============================================================
+# O365 stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Export-UsersAccessPerSite | O365" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting site collections
 Write-Host "Getting site collections" -ForegroundColor $CommandInfo
@@ -77,6 +86,8 @@ else
     $script:adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 }
 $sitesToProcess = Get-PnPTenantSite -Connection $script:adminCon -Detailed -IncludeOneDriveSites | Where-Object { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
+$allUsers = Get-PnPAzureADUser -Connection $script:adminCon
+$allGroups = Get-PnPAzureADGroup -Connection $script:adminCon
 
 # Function definitions
 function Process-Member
@@ -118,8 +129,7 @@ function Process-Member
                 {
                     $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
                 }
-                $oGroup = $null
-                $oGroup = Get-PnPAzureADGroup -Connection $script:adminCon -Identity $oGroupId -ErrorAction SilentlyContinue
+                $oGroup = $allGroups | Where-Object { $_.id -eq $oGroupId }
                 if ($oGroup)
                 {
                     $grpType = "AadSecurityGroup"
@@ -152,7 +162,7 @@ function Process-Member
                     }
                     foreach($ogMember in $ogMembers)
                     {
-                        $ogUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $ogMember.Id -ErrorAction SilentlyContinue
+                        $ogUser = $allUsers | Where-Object { $_.Id -eq $ogMember.Id }
                         if (-not $ogUser)
                         {
                             Write-Warning "User $($ogMember.Id) not found"
@@ -213,8 +223,7 @@ function Process-Member
                 {
                     $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
                 }
-                $ogUser = $null
-                $ogUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $dispName -ErrorAction SilentlyContinue
+                $ogUser = $allUsers | Where-Object { $_.UserPrincipalName -eq $dispName -or $_.Mail -eq $dispName -or $_.DisplayName -eq $dispName }
                 if (-not $ogUser)
                 {
                     Write-Warning "User $($dispName) not found"
@@ -271,7 +280,7 @@ function Process-Member
                 {
                     $oUserId = $oUserId.Substring(0, $oUserId.LastIndexOf("_"))
                 }
-                $oUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $oUserId -ErrorAction SilentlyContinue
+                $ogUser = $allUsers | Where-Object { $_.Id -eq $oUserId }
                 if ($oUser)
                 {
                     foreach($rolebinding in $rolebindings)
@@ -299,8 +308,7 @@ function Process-Member
                 {
                     $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
                 }
-                $oGroup = $null
-                $oGroup = Get-PnPAzureADGroup -Connection $script:adminCon -Identity $oGroupId -ErrorAction SilentlyContinue
+                $oGroup = $allGroups | Where-Object { $_.id -eq $oGroupId }
                 if ($oGroup)
                 {
                     $grpType = "Security"
@@ -333,7 +341,7 @@ function Process-Member
                     }
                     foreach($ogMember in $ogMembers)
                     {
-                        $ogUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $ogMember.Id -ErrorAction SilentlyContinue
+                        $ogUser = $allUsers | Where-Object { $_.Id -eq $ogMember.Id }
                         if (-not $ogUser)
                         {
                             Write-Warning "User $($ogMember.Id) not found"
@@ -395,8 +403,7 @@ function Process-Member
             {
                 $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
             }
-            $ogUser = $null
-            $ogUser = Get-PnPAzureADUser -Connection $script:adminCon -Identity $dispName -ErrorAction SilentlyContinue
+            $ogUser = $allUsers | Where-Object { $_.UserPrincipalName -eq $dispName -or $_.Mail -eq $dispName -or $_.DisplayName -eq $dispName }
             if (-not $ogUser)
             {
                 Write-Warning "User $($dispName) not found)"

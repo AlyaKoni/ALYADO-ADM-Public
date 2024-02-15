@@ -217,10 +217,16 @@ if ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne
 
 # Getting AuthenticationStrengthPolicy
 Write-Host "Getting AuthenticationStrengthPolicy" -ForegroundColor $CommandInfo
-$authenticationStrengthPolicy = Get-MgBetaPolicyAuthenticationStrengthPolicy | Where-Object { $_.DisplayName -eq "Phishing-resistant MFA" }
+$authenticationStrengthPolicy = Get-MgBetaPolicyAuthenticationStrengthPolicy | Where-Object { $_.DisplayName -eq "Phishing-resistant MFA or TAP" }
 if (-Not $authenticationStrengthPolicy)
 {
-    throw "AuthenticationStrengthPolicy 'Phishing-resistant MFA' not found!"
+    $authenticationStrengthPolicy = Get-MgBetaPolicyAuthenticationStrengthPolicy | Where-Object { $_.DisplayName -eq "Phishing-resistant MFA" }
+    if (-Not $authenticationStrengthPolicy) {
+        throw "AuthenticationStrengthPolicy 'Phishing-resistant MFA or TAP' nor 'Phishing-resistant MFA' found!"
+    }
+    else {
+        Write-Warning "Authentication strength 'Phishing-resistant MFA or TAP' not found. Using 'Phishing-resistant MFA' instead."
+    }
 }
 
 # Checking specific key access policy

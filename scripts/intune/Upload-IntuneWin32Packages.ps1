@@ -112,7 +112,7 @@ function UploadPackage($app, $appConfig, $bytes)
     }
 
     # Checking Version
-    Write-Host "  Checking Version"
+    Write-Host "  Checking Version '$($app.displayName)'"
     if ($comittedVersion -gt 0 -and $null -eq $detectVersion -and $null -ne $app.detectionRules -and $null -ne $app.detectionRules[0] -and $null -ne $app.detectionRules[0].detectionValue)
     {
         $detectVersion = [Version]$app.detectionRules[0].detectionValue
@@ -150,7 +150,7 @@ function UploadPackage($app, $appConfig, $bytes)
         if ($attr) { $appConfig.PSObject.Properties.Remove("committedContentVersion") }
 
         # Creating Content Version
-        Write-Host "  Creating Content Version"
+        Write-Host "  Creating Content Version '$($app.displayName)'"
         $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
         $contentVersion = Post-MsGraph -Uri $uri -Body "{}"
         Write-Host "    contentVersion: $($contentVersion.id)"
@@ -167,7 +167,7 @@ function UploadPackage($app, $appConfig, $bytes)
         $file = Post-MsGraph -Uri $uri -Body ($fileBody | ConvertTo-Json -Depth 50)
 
         # Waiting for file uri
-        Write-Host "  Waiting for file uri"
+        Write-Host "  Waiting for file uri '$($app.displayName)'"
         $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
         $stage = "AzureStorageUriRequest"
         $successState = "$($stage)Success"
@@ -195,7 +195,7 @@ function UploadPackage($app, $appConfig, $bytes)
         }
 
         # Uploading intunewin content
-        Write-Host "  Uploading intunewin content"
+        Write-Host "  Uploading intunewin content '$($app.displayName)'"
         if ($ShowProgressBar)
         {
             $OldProgressPreference = $ProgressPreference
@@ -260,29 +260,29 @@ function UploadPackage($app, $appConfig, $bytes)
             {
                 Write-Host "    Upload renewal"
                 $renewalUri = "$uri/renewUpload"
-                $rewnewUriResult = Post-MsGraph -Uri $renewalUri -Body $null
-                $stage = "AzureStorageUriRenewal"
-                $successState = "$($stage)Success"
-                $pendingState = "$($stage)Pending"
-                $Global:attempts = 10
-                while ($Global:attempts -gt 0)
-                {
-                    Start-Sleep -Seconds 3
-                    $file = Get-MsGraphObject -Uri $uri
-                    if ($file.uploadState -eq $successState)
-                    {
-                        break
-                    }
-                    elseif ($file.uploadState -ne $pendingState)
-                    {
-                        throw "Upload renewal state has not succeeded: $($file.uploadState)"
-                    }
-                    $Global:attempts--
-                }
-                if ($file -eq $null -or $file.uploadState -ne $successState)
-                {
-                    throw "File request renewel did not complete within $Global:attempts attempts"
-                }
+                $rewnewUriResult = Post-MsGraph -Uri $renewalUri
+                # $stage = "AzureStorageUriRenewal"
+                # $successState = "$($stage)Success"
+                # $pendingState = "$($stage)Pending"
+                # $Global:attempts = 10
+                # while ($Global:attempts -gt 0)
+                # {
+                #     Start-Sleep -Seconds 3
+                #     $file = Get-MsGraphObject -Uri $uri
+                #     if ($file.uploadState -eq $successState)
+                #     {
+                #         break
+                #     }
+                #     elseif ($file.uploadState -ne $pendingState)
+                #     {
+                #         throw "Upload renewal state has not succeeded: $($file.uploadState)"
+                #     }
+                #     $Global:attempts--
+                # }
+                # if ($file -eq $null -or $file.uploadState -ne $successState)
+                # {
+                #     throw "File request renewel did not complete within $Global:attempts attempts"
+                # }
                 $sasRenewalTimer.Restart()
             }
             $encodedBody = $null
@@ -294,7 +294,7 @@ function UploadPackage($app, $appConfig, $bytes)
         }
 
         # Finalize the upload.
-        Write-Host "  Finalizing the upload"
+        Write-Host "  Finalizing the upload '$($app.displayName)'"
         $curi = "$($file.azureStorageUri)&comp=blocklist"
         $xml = '<?xml version="1.0" encoding="utf-8"?><BlockList>'
         foreach ($id in $ids)
@@ -320,7 +320,7 @@ function UploadPackage($app, $appConfig, $bytes)
         } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
 
         # Committing the file
-        Write-Host "  Committing the file"
+        Write-Host "  Committing the file '$($app.displayName)'"
         $fileEncryptionInfo = @{}
         $fileEncryptionInfo.fileEncryptionInfo = @{
             encryptionKey        = $packageInfo.ApplicationInfo.EncryptionInfo.EncryptionKey
@@ -335,7 +335,7 @@ function UploadPackage($app, $appConfig, $bytes)
         $file = Post-MsGraph -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json -Depth 50)
 
         # Waiting for file commit
-        Write-Host "  Waiting for file commit"
+        Write-Host "  Waiting for file commit '$($app.displayName)'"
         $stage = "CommitFile"
         $successState = "$($stage)Success"
         $pendingState = "$($stage)Pending"
@@ -364,7 +364,7 @@ function UploadPackage($app, $appConfig, $bytes)
     }
 
     # Committing the app
-    Write-Host "  Committing the app"
+    Write-Host "  Committing the app '$($app.displayName)'"
     $uri = "/beta/deviceAppManagement/mobileApps/$appId"
     $appP = Patch-MsGraph -Uri $uri -Body ($appConfig | ConvertTo-Json -Depth 50)
 }

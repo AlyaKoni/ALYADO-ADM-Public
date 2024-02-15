@@ -63,10 +63,11 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Reports"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes @("Directory.Read.All", "Policy.Read.All", "UserAuthenticationMethod.Read.All")
+LoginTo-MgGraph -Scopes @("Directory.Read.All", "Policy.Read.All", "UserAuthenticationMethod.Read.All", "AuditLog.Read.All")
 
 # =============================================================
 # Azure stuff
@@ -76,19 +77,10 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AAD | Export-UsersMfaConfigurations | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Functions
-function Convert-ObjectIdToSid
-{
-    param([String] $ObjectId)
-    $d=[UInt32[]]::new(4);[Buffer]::BlockCopy([Guid]::Parse($ObjectId).ToByteArray(),0,$d,0,16);"S-1-12-1-$d".Replace(' ','-')
-}
-
 # Getting users
 Write-Host "Getting users" -ForegroundColor $CommandInfo
-#$users = Get-MsolUser -All
 $users = Get-MgBetaUser -Property "*" -All
-
-#Authentication {"EmailMethods":null,"Fido2Methods":null,"Id":null,"Methods":null,"MicrosoftAuthenticatorMethods":null,"Operations":null,"PasswordMethods":null,"PasswordlessMicrosoftAuthenticatorMethods":null,"PhoneMethods":null,"PlatformCredentialMethods":null,"SignInPreferences":{"IsSystemPreferredAuthenticationMethodEnabled":null,"UserPreferredMethodForSecondaryAuthentication":null},"SoftwareOathMethods":null,"TemporaryAccessPassMethods":null,"WindowsHelloForBusinessMethods":null,"AdditionalProperties":{}}
+$regDets = Get-MgBetaReportAuthenticationMethodUserRegistrationDetail
 
 $propNames = @(
     "UserPrincipalName",
@@ -106,6 +98,21 @@ $propNamesAuthenticationPrefs = @(
     "isSystemPreferredAuthenticationMethodEnabled",
     "userPreferredMethodForSecondaryAuthentication",
     "systemPreferredAuthenticationMethod"
+)
+
+$propNamesRegistrationDetails = @(
+    "DefaultMfaMethod",
+    "IsAdmin",
+    "IsMfaCapable",
+    "IsMfaRegistered",
+    "IsPasswordlessCapable",
+    "IsSsprCapable",
+    "IsSsprEnabled",
+    "IsSsprRegistered",
+    "IsSystemPreferredAuthenticationMethodEnabled2",
+    "MethodsRegistered",
+    "SystemPreferredAuthenticationMethods",
+    "UserPreferredMethodForSecondaryAuthentication2"
 )
 
 $methodNamesAuthentication = @(
@@ -154,6 +161,17 @@ foreach($user in $users)
         }
         if ($prop -eq "Authentication")
         {
+            $regDet = $regDets| Where-Object { $_.Id -eq $user.Id -or $_.UserPrincipalName -eq $user.UserPrincipalName }
+            foreach($propName in $propNamesRegistrationDetails)
+            {
+                $name = $propName
+                if ($propName -eq "IsSystemPreferredAuthenticationMethodEnabled2") { $propName = "IsSystemPreferredAuthenticationMethodEnabled" }
+                if ($propName -eq "UserPreferredMethodForSecondaryAuthentication2") { $propName = "UserPreferredMethodForSecondaryAuthentication" }
+                $value = $null
+                if ($regDet -and $regDet.$propName) { $value = $regDet.$propName }
+                if ($propName -eq "MethodsRegistered") { $value = $regDet.$propName -join " " }
+                Add-Member -InputObject $psuser -MemberType NoteProperty -Name $name -Value $value
+            }
             $signInPref = Get-MsGraphObject -Uri "https://graph.microsoft.com/beta/users/$([System.Web.HTTPUtility]::UrlEncode($user.UserPrincipalName))/authentication/signInPreferences"
             foreach($propName in $propNamesAuthenticationPrefs)
             {
@@ -167,13 +185,13 @@ foreach($user in $users)
                 if ($prmethodName.StartsWith("phoneAuthenticationMethod")) {
                     if ($prmethodName.Contains("Office")) {
                         $className = $className.Replace("Office", "")
-                        $confMeths = $methods | where { $_.AdditionalProperties."@odata.type" -eq "#microsoft.graph.$className" -and $_.AdditionalProperties.phoneType -eq "office"}
+                        $confMeths = $methods | Where-Object { $_.AdditionalProperties."@odata.type" -eq "#microsoft.graph.$className" -and $_.AdditionalProperties.phoneType -eq "office"}
                     } else {
                         $className = $className.Replace("Mobile", "")
-                        $confMeths = $methods | where { $_.AdditionalProperties."@odata.type" -eq "#microsoft.graph.$className" -and $_.AdditionalProperties.phoneType -eq "mobile"}
+                        $confMeths = $methods | Where-Object { $_.AdditionalProperties."@odata.type" -eq "#microsoft.graph.$className" -and $_.AdditionalProperties.phoneType -eq "mobile"}
                     }
                 } else {
-                    $confMeths = $methods | where { $_.AdditionalProperties."@odata.type" -eq "#microsoft.graph.$className"}
+                    $confMeths = $methods | Where-Object { $_.AdditionalProperties."@odata.type" -eq "#microsoft.graph.$className"}
                 }
                 if ($confMeths -and $confMeths.Count -gt 0) {
                     if ($prmethodName.EndsWith("Cnt")) {
@@ -265,6 +283,7 @@ do
 {
     try
     {
+        $propNames += $propNamesRegistrationDetails
         $propNames += $propNamesAuthenticationPrefs
         $propNames += $methodNamesAuthentication
         $excel = $psusers | Select-Object -Property $propNames | Export-Excel -Path $outputFile -WorksheetName "Users" -TableName "Users" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru

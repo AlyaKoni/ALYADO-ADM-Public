@@ -337,5 +337,30 @@ if ($authenticationMethodPolicy.policyMigrationState -ne "migrationComplete") {
     Write-Warning "Please migrate to authentication policies!"
 }
 
+# Checking Authentication strengths
+Write-Host "Checking Authentication strengths" -ForegroundColor $CommandInfo
+$asPolicies = Get-MgBetaPolicyAuthenticationStrengthPolicy
+$prmfaPolicy = $asPolicies | Where-Object { $_.DisplayName -eq "Phishing-resistant MFA" }
+if (-Not $prmfaPolicy)
+{
+    throw "Authentication strengths 'Phishing-resistant MFA' not found!"
+}
+$prmfatapPolicyName = "Phishing-resistant MFA or TAP"
+$prmfatapPolicy = $asPolicies | Where-Object { $_.DisplayName -eq $prmfatapPolicyName }
+if (-Not $prmfatapPolicy)
+{
+    Write-Warning "  Authentication strength '$prmfatapPolicyName' not found. Creating it now."
+    $prmfaPolicy.AllowedCombinations += "temporaryAccessPassOneTime"
+    $params = @{
+        DisplayName = $prmfatapPolicyName
+        Description = "Include authentication methods that are phishing-resistant and the Temporary Access Pass (TAP)"
+        AllowedCombinations = $prmfaPolicy.AllowedCombinations
+        CombinationConfigurations = $prmfaPolicy.CombinationConfigurations
+        PolicyType = $prmfaPolicy.PolicyType
+        RequirementsSatisfied = $prmfaPolicy.RequirementsSatisfied
+    }
+    New-MgBetaPolicyAuthenticationStrengthPolicy -BodyParameter $params
+}
+
 #Stopping Transscript
 Stop-Transcript

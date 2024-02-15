@@ -61,17 +61,23 @@ Write-Host "PSTN | List-User | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
-Write-Host "CsOnlineUser account:" -ForegroundColor $CommandInfo
+Write-Host "CsOnline User accounts:" -ForegroundColor $CommandInfo
 Get-CsOnlineUser | Select-Object -Property AccountType, UserPrincipalName, AccountEnabled, AssignedPlan | Format-Table
 
-Write-Host "CsOnlineUser lines:" -ForegroundColor $CommandInfo
-Get-CsOnlineUser | Select-Object -Property UserPrincipalName, LineURI, OnPremLineURI | Format-Table
+Write-Host "CsOnline User lines:" -ForegroundColor $CommandInfo
+Get-CsOnlineUser | Select-Object -Property UserPrincipalName, LineURI, OnPremLineURI | Where-Object { -Not [string]::IsNullOrEmpty($_.LineUri) } | Format-Table
 
-Write-Host "CsOnlineVoiceUsers:" -ForegroundColor $CommandInfo | Format-Table
-Get-CsOnlineVoiceUser | Select-Object -Property Name, EnterpriseVoiceEnabled, Number, PstnConnectivity | Format-Table
-
-Write-Host "CsOnlineApplicationInstance:" -ForegroundColor $CommandInfo | Format-Table
+Write-Host "CsOnline Application instances:" -ForegroundColor $CommandInfo | Format-Table
 Get-CsOnlineApplicationInstance | Select-Object -Property UserPrincipalName, DisplayName, PhoneNumber | Format-Table
+
+Write-Host "Cs Phone Number Assignment:" -ForegroundColor $CommandInfo | Format-Table
+Get-CsPhoneNumberAssignment | Select-Object -Property TelephoneNumber, NumberType, ActivationState, NumberSource, City, PstnAssignmentStatus | Format-Table
+
+Write-Host "CsOnline Lis Location:" -ForegroundColor $CommandInfo
+Get-CsOnlineLisLocation | Format-Table
+
+Write-Host "CsOnline Lis Civic Address:" -ForegroundColor $CommandInfo
+Get-CsOnlineLisCivicAddress | Format-Table
 
 #Stopping Transscript
 Stop-Transcript

@@ -1,50 +1,50 @@
 [
   {
-    "GeoId": 223,
     "InputLanguageID": "0409:00000807",
-    "Locale": "en-US",
-    "LicenseType": "online",
+    "SkuId": "0016",
     "PackageFamilyName": "Microsoft.LanguageExperiencePacken-US_8wekyb3d8bbwe",
     "ProductTitle": "English (United States) Local Experience Pack",
-    "LanguageTag": "en-CH",
+    "ProductId": "9PDSCC711RVF",
     "Order": 4,
-    "SkuId": "0016",
-    "ProductId": "9PDSCC711RVF"
+    "GeoId": 223,
+    "LicenseType": "online",
+    "LanguageTag": "en-CH",
+    "Locale": "en-US"
   },
   {
-    "GeoId": 223,
     "InputLanguageID": "0810:00000807",
-    "Locale": "it-IT",
-    "LicenseType": "online",
+    "SkuId": "0016",
     "PackageFamilyName": "Microsoft.LanguageExperiencePackit-IT_8wekyb3d8bbwe",
     "ProductTitle": "italiano Pacchetto di esperienze locali",
-    "LanguageTag": "it-CH",
+    "ProductId": "9P8PQWNS6VJX",
     "Order": 3,
-    "SkuId": "0016",
-    "ProductId": "9P8PQWNS6VJX"
+    "GeoId": 223,
+    "LicenseType": "online",
+    "LanguageTag": "it-CH",
+    "Locale": "it-IT"
   },
   {
-    "GeoId": 223,
     "InputLanguageID": "100c:00000807",
-    "Locale": "fr-FR",
-    "LicenseType": "online",
+    "SkuId": "0016",
     "PackageFamilyName": "Microsoft.LanguageExperiencePackfr-FR_8wekyb3d8bbwe",
     "ProductTitle": "Module d\\u0027expérience locale français (France)",
-    "LanguageTag": "fr-CH",
+    "ProductId": "9NHMG4BJKMDG",
     "Order": 2,
-    "SkuId": "0016",
-    "ProductId": "9NHMG4BJKMDG"
+    "GeoId": 223,
+    "LicenseType": "online",
+    "LanguageTag": "fr-CH",
+    "Locale": "fr-FR"
   },
   {
-    "GeoId": 223,
     "InputLanguageID": "0807:00000807",
-    "Locale": "de-DE",
-    "LicenseType": "online",
+    "SkuId": "0016",
     "PackageFamilyName": "Microsoft.LanguageExperiencePackde-DE_8wekyb3d8bbwe",
     "ProductTitle": "Deutsch Local Experience Pack",
-    "LanguageTag": "de-CH",
+    "ProductId": "9P6CT0SLW589",
     "Order": 1,
-    "SkuId": "0016",
-    "ProductId": "9P6CT0SLW589"
+    "GeoId": 223,
+    "LicenseType": "online",
+    "LanguageTag": "de-CH",
+    "Locale": "de-DE"
   }
 ]

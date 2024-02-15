@@ -2407,8 +2407,8 @@ function SendBody-MsGraph
         $Method,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $true)]
-        $Body,
+        [parameter(Mandatory = $false)]
+        $Body = $null,
         [parameter(Mandatory = $false)]
         $OutputFile = $null
     )
@@ -2424,20 +2424,42 @@ function SendBody-MsGraph
         try {
             if ($AccessToken) {
                 if ($OutputFile) {
-                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body -OutFile $OutputFile
-                    $StatusCode = $Results.StatusCode
+                    if ($Body) {
+                        $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body -OutFile $OutputFile
+                        $StatusCode = $Results.StatusCode
+                    }
+                    else{
+                        $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -OutFile $OutputFile
+                        $StatusCode = $Results.StatusCode
+                    }
                 }
                 else{
-                    $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
-                    $StatusCode = $Results.StatusCode
+                    if ($Body) {
+                        $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method -ContentType "application/json; charset=UTF-8" -Body $Body
+                        $StatusCode = $Results.StatusCode
+                    }
+                    else{
+                        $Results = Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method $Method
+                        $StatusCode = $Results.StatusCode
+                    }
                 }
             }
             else{
                 if ($OutputFile) {
-                    $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body -OutputFilePath $OutputFile
+                    if ($Body) {
+                        $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body -OutputFilePath $OutputFile
+                    }
+                    else{
+                        $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -OutputFilePath $OutputFile
+                    }
                 }
                 else{
-                    $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
+                    if ($Body) {
+                        $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri -Body $Body
+                    }
+                    else{
+                        $Results = Invoke-MgGraphRequest -Method $Method -Uri $Uri
+                    }
                 }
             }
         } catch {
@@ -2468,8 +2490,8 @@ function Post-MsGraph
         $Uri,
         [parameter(Mandatory = $false)]
         $AccessToken = $null,
-        [parameter(Mandatory = $true)]
-        $Body,
+        [parameter(Mandatory = $false)]
+        $Body = $null,
         [parameter(Mandatory = $false)]
         $OutputFile = $null
     )
