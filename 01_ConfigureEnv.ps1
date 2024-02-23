@@ -190,10 +190,6 @@ if ($AlyaScriptPath -ne $AlyaDefaultScriptPath -and $AlyaScriptPath -ne $AlyaDef
     {
         New-Item -Path $AlyaScriptPath -ItemType Directory -Force
     }
-    if (-Not $env:Path.Contains("$($AlyaScriptPath)"))
-    {
-        $env:Path = "$($AlyaScriptPath);$($env:Path)"
-    }
 }
 if ($AlyaIsPsCore)
 {
@@ -201,10 +197,10 @@ if ($AlyaIsPsCore)
     {
         $env:Path = "$($AlyaDefaultScriptPathCore);$($env:Path)"
     }
-    if (-Not $env:Path.Contains("$($AlyaScriptPath)"))
-    {
-        $env:Path = "$($AlyaScriptPath);$($env:Path)"
-    }
+}
+if (-Not $env:Path.Contains("$($AlyaScriptPath)"))
+{
+    $env:Path = "$($AlyaScriptPath);$($env:Path)"
 }
 
 <# CLIENT SETTINGS #>
@@ -1371,17 +1367,29 @@ function Get-CustomersContext(
     $context = $null
     if ($SubscriptionId)
     {
-        $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$SubscriptionId*$AlyaTenantId*" }
+        try {
+            $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$SubscriptionId*$AlyaTenantId*" }
+        } catch {
+            $context = Get-AzContext | Where-Object { $_.Name -like "*$SubscriptionId*$AlyaTenantId*" }
+        }
     }
     elseif ($SubscriptionName)
     {
-        $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$SubscriptionName*$AlyaTenantId*" }
+        try {
+            $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$SubscriptionName*$AlyaTenantId*" }
+        } catch {
+            $context = Get-AzContext | Where-Object { $_.Name -like "*$SubscriptionName*$AlyaTenantId*" }
+        }
     }
     else
     {
-        $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$AlyaTenantId*" }
-        if ($context -and $context.Count -gt 1) { $context = $context[0] }
+        try {
+            $context = Get-AzContext -ListAvailable | Where-Object { $_.Name -like "*$AlyaTenantId*" }
+        } catch {
+            $context = Get-AzContext | Where-Object { $_.Name -like "*$AlyaTenantId*" }
+        }
     }
+    if ($context -and $context.Count -gt 1) { $context = $context[0] }
     return $context
 }
 function LogoutFrom-Az(

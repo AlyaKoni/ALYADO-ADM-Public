@@ -47,11 +47,11 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\05_CreateAlyaStick-$($AlyaTimeString).log" | Out-Null
 
 #Main
-. $PSScriptRoot\04_PrepareModulesAndPackages.ps1
+#pwsh.exe -NoLogo -File "$AlyaRoot\04_PrepareModulesAndPackages.ps1"
 
 #Stick selection
 $disk = $null
-$usbDisk = Get-Disk | Where-Object BusType -eq USB
+$usbDisk = Get-Disk | Where-Object { $_.BusType -eq "USB" }
 switch (($usbDisk | Measure-Object | Select-Object Count).Count)
 {
     1 {
@@ -59,13 +59,22 @@ switch (($usbDisk | Measure-Object | Select-Object Count).Count)
     }
     {$_ -gt 1} {
         Write-Host "Select stick to be used" -ForegroundColor $CommandInfo
-        $disk = Get-Disk | Where-Object BusType -eq USB | Out-GridView -Title 'Select USB Drive to use' -OutputMode Single
+        $disk = $usbDisk | Out-GridView -Title 'Select USB Drive to be used' -OutputMode Single
     }
 }
 if ($disk)
 {
     #Volume selection
-    $vol = $disk | Get-Partition | Get-Volume | Where-Object { -Not [string]::IsNullOrEmpty($_.DriveLetter) }
+    $vols = $disk | Get-Partition | Get-Volume | Where-Object { -Not [string]::IsNullOrEmpty($_.DriveLetter) }
+    if (($vols | Measure-Object | Select-Object Count).Count -ne 1)
+    {
+        Write-Host "Select volume to be used" -ForegroundColor $CommandInfo
+        $vol = $vols | Out-GridView -Title 'Select volume to be used' -OutputMode Single
+    }
+    else
+    {
+        $vol = $vols[0]
+    }
     $alyaDir = "$($vol.DriveLetter):\Alya$AlyaCompanyNameShortM365"
     if (-Not (Test-Path $alyaDir))
     {
@@ -73,7 +82,7 @@ if ($disk)
     }
 
     #Copy alya dir
-    cmd /c robocopy "$($AlyaRoot)" "$($alyaDir)" /MIR /XD "%SourceDir%\solutions" /XD .git /XD PublishProfiles /XD .vs /XD .vscode /XD _temp /XD _logs
+    cmd /c robocopy "$($AlyaRoot)" "$($alyaDir)" /MIR /XD "$($AlyaRoot)\solutions" /XD .git /XD .github /XD PublishProfiles /XD .vs /XD .vscode /XD _temp /XD _logs /XD _local
 
     #Copy modules
     if (-Not (Test-Path "$($vol.DriveLetter):\Tools\WindowsPowerShell"))
@@ -112,6 +121,9 @@ if ($disk)
     @"
 Push-Location `"`$AlyaRoot\..\Tools\WindowsPowerShell\Modules`"
 `$AlyaModulePath = `$pwd
+Pop-Location 
+Push-Location `"`$AlyaRoot\..\Tools\WindowsPowerShell\Scripts`"
+`$AlyaScriptPath = `$pwd
 Pop-Location 
 "@ | Set-Content -Path "$($vol.DriveLetter):\Alya$AlyaCompanyNameShortM365\_local\ConfigureEnv.ps1" -Encoding UTF8
 }

@@ -281,7 +281,7 @@ else
                     if ($err) { Write-Host "Guessed ClickShare in $($progPath)" }
                     foreach ($prot in $protcols)
                     {
-                        $ruleName = "ClickShare.exe-Inbound-$($prot)-$($user.Name)"
+                        $ruleName = "AlyaClickShare-$($user.Name)-Inbound-$($prot)"
                         $rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
                         if (-not $rule)
                         {

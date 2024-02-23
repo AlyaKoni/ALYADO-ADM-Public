@@ -265,7 +265,7 @@ else
         # Run the script
         Write-Host "Checking firewall rules"
         $protcols = "UDP", "TCP"
-        $users = Get-ChildItem (Join-Path $env:SystemDrive 'Users') -Exclude 'Public'
+        $users = Get-ChildItem (Join-Path $env:SystemDrive 'Users') -Exclude 'Default','Public'
         if ($users)
         {
             foreach ($user in $users)
@@ -283,7 +283,7 @@ else
                     if ($err) { Write-Host "Guessed teams in $($progPath)" }
                     foreach ($prot in $protcols)
                     {
-                        $ruleName = "Teams.exe-Inbound-$($prot)-$($user.Name)"
+                        $ruleName = "AlyaTeams-$($user.Name)-Inbound-$($prot)"
                         $rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
                         if (-not $rule)
                         {
@@ -295,6 +295,42 @@ else
                 {
                     Write-Host "No teams installation for this user"
                 }
+            }
+        }
+		$teamss = Get-ChildItem (Join-Path (Join-Path $env:ProgramFiles 'WindowsApps') 'MSTeams*')
+        if ($teamss)
+        {
+            foreach ($teams in $teamss)
+            {
+                Write-Host "MSTeams $($teams.Name)"
+                $progPath = Join-Path $teams.FullName "ms-teams.exe"
+				foreach ($prot in $protcols)
+				{
+					$ruleName = "AlyaMSTeams-WindowsApps-Inbound-$($prot)"
+					$rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
+					if (-not $rule)
+					{
+						$null = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Any -Program $progPath -Action Allow -Protocol $prot
+					}
+				}
+            }
+        }
+		$teamss = Get-ChildItem (Join-Path (Join-Path $env:ProgramFiles 'WindowsApps') 'MicrosoftTeams*')
+        if ($teamss)
+        {
+            foreach ($teams in $teamss)
+            {
+                Write-Host "MicrosoftTeams $($teams.Name)"
+                $progPath = Join-Path $teams.FullName "msteams.exe"
+				foreach ($prot in $protcols)
+				{
+					$ruleName = "AlyaMicrosoftTeams-WindowsApps-Inbound-$($prot)"
+					$rule = Get-NetFirewallRule -DisplayName $ruleName -ErrorAction SilentlyContinue
+					if (-not $rule)
+					{
+						$null = New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Profile Any -Program $progPath -Action Allow -Protocol $prot
+					}
+				}
             }
         }
 
