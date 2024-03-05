@@ -48,6 +48,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Prepare-AllInternalAndExternalG
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logging in

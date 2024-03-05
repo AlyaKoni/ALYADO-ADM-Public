@@ -66,7 +66,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting actual DeviceEnrollmentConfigurations
 Write-Host "Getting actual DeviceEnrollmentConfiguration - limit" -ForegroundColor $CommandInfo
-$deviceEnrollmentConfigurations = Get-MgDeviceManagementDeviceEnrollmentConfiguration
+$deviceEnrollmentConfigurations = Get-MgBetaDeviceManagementDeviceEnrollmentConfiguration
 $deviceEnrollmentLimitConfiguration = $deviceEnrollmentConfigurations | Where-Object { $_.AdditionalProperties."@odata.type" -eq "#microsoft.graph.deviceEnrollmentLimitConfiguration" }
 
 # Setting actual DeviceEnrollmentConfigurations
@@ -79,7 +79,7 @@ if ($deviceEnrollmentLimitConfiguration.AdditionalProperties.limit -eq 15) {
         "@odata.type" = "#microsoft.graph.deviceEnrollmentLimitConfiguration"
         limit = 15
     }
-    $null = Update-MgDeviceManagementDeviceEnrollmentConfiguration -DeviceEnrollmentConfigurationId $deviceEnrollmentLimitConfiguration.Id -BodyParameter $params
+    $null = Update-MgBetaDeviceManagementDeviceEnrollmentConfiguration -DeviceEnrollmentConfigurationId $deviceEnrollmentLimitConfiguration.Id -BodyParameter $params
 }
 
 #Stopping Transscript

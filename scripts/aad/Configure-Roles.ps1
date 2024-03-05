@@ -70,7 +70,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All","RoleManagement.Read.All","RoleManagement.ReadWrite.Directory"
 
 # =============================================================
 # Azure stuff

@@ -57,6 +57,7 @@ $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logins

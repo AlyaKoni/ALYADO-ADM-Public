@@ -66,7 +66,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting actual DeviceEnrollmentConfigurations
 Write-Host "Getting actual DeviceEnrollmentConfiguration - platform" -ForegroundColor $CommandInfo
-$deviceEnrollmentConfigurations = Get-MgDeviceManagementDeviceEnrollmentConfiguration
+$deviceEnrollmentConfigurations = Get-MgBetaDeviceManagementDeviceEnrollmentConfiguration
 $deviceEnrollmentPlatformConfiguration = $deviceEnrollmentConfigurations | Where-Object { $_.AdditionalProperties."@odata.type" -eq "#microsoft.graph.deviceEnrollmentPlatformRestrictionsConfiguration" }
 
 # Setting actual DeviceEnrollmentConfigurations
@@ -132,7 +132,7 @@ $params = @{
 	}
 }
 
-$null = Update-MgDeviceManagementDeviceEnrollmentConfiguration -DeviceEnrollmentConfigurationId $deviceEnrollmentPlatformConfiguration.Id -BodyParameter $params
+$null = Update-MgBetaDeviceManagementDeviceEnrollmentConfiguration -DeviceEnrollmentConfigurationId $deviceEnrollmentPlatformConfiguration.Id -BodyParameter $params
 
 #Stopping Transscript
 Stop-Transcript

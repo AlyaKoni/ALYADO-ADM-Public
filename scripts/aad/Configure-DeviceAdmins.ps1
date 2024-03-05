@@ -48,13 +48,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-DeviceAdmins-$($AlyaT
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrollment"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All","RoleManagement.ReadWrite.Directory"
 
 # =============================================================
 # Azure stuff

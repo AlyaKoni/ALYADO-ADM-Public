@@ -77,7 +77,7 @@ if ($authorizationPolicy.AllowEmailVerifiedUsersToJoinOrganization -ne $AlyaAllo
     $param = @{
         allowEmailVerifiedUsersToJoinOrganization = $AlyaAllowEmailVerifiedUsers
     }
-    Update-MgPolicyAuthorizationPolicy -BodyParameter $param
+    Update-MgBetaPolicyAuthorizationPolicy -BodyParameter $param
 }
 else
 {

@@ -37,6 +37,7 @@
     23.07.2023 Konrad Brunner       Power BI Administrator sometimes not there
     13.09.2023 Konrad Brunner       Handling OnPrem groups
     08.11.2023 Konrad Brunner       Key Authentication
+    05.03.2024 Konrad Brunner       Excluding Intune Apps
 
 #>
 
@@ -57,8 +58,9 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
-
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
 
 # Logins
 LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Policy.ReadWrite.ConditionalAccess","Policy.Read.All")
@@ -70,6 +72,13 @@ LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Policy.ReadWrite.Conditiona
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Tenant | Set-ConditionalAccessPolicies | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Checking intune apps
+Write-Host "Checking intune apps" -ForegroundColor $CommandInfo
+$IntuneApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Intune'"
+$EnrollmentApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Intune Enrollment'"
+$ExcludeApps = @($IntuneApp.AppId)
+if ($EnrollmentApp) { $ExcludeApps += $EnrollmentApp.AppId }
 
 # Checking no mfa group
 Write-Host "Checking MFA exclude group" -ForegroundColor $CommandInfo
@@ -236,6 +245,7 @@ if ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne
     $conditions = @{ 
         Applications = @{
             includeApplications = "All"
+            excludeApplications = $ExcludeApps
         }
         Users = @{
             includeGroups = $IncludeKeyGroupIds
@@ -279,6 +289,7 @@ Write-Host "Checking all admins MFA access policy" -ForegroundColor $CommandInfo
 $conditions = @{ 
     Applications = @{
         includeApplications = "All"
+        excludeApplications = $ExcludeApps
     }
     Users = @{
         includeRoles = $IncludeRoleIds
@@ -315,6 +326,7 @@ if ($null -eq $GroupIdMfa)
     $conditions = @{ 
         Applications = @{
             includeApplications = "All"
+            excludeApplications = $ExcludeApps
         }
         Users = @{
             includeUsers = "All"
@@ -331,6 +343,7 @@ else
     $conditions = @{ 
         Applications = @{
             includeApplications = "All"
+            excludeApplications = $ExcludeApps
         }
         Users = @{
             includeGroups = $IncludeGroupIds

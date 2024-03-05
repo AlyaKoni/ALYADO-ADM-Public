@@ -85,6 +85,7 @@ if (-Not $ScriptDir)
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 
 # Logins
 LoginTo-MgGraph -Scopes @(

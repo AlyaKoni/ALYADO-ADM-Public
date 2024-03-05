@@ -82,7 +82,7 @@ if ($authorizationPolicy.AllowedToUseSspr -ne $AlyaPasswordResetEnabled)
     $param = @{
         AllowedToUseSspr = $AlyaPasswordResetEnabled
     }
-    Update-MgPolicyAuthorizationPolicy -BodyParameter $param
+    Update-MgBetaPolicyAuthorizationPolicy -BodyParameter $param
 }
 else
 {

@@ -54,6 +54,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Reset-GuestInvitation-$($AlyaTi
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
 # Logging in

@@ -56,6 +56,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-CloudConfigTeam-$($
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "MicrosoftTeams"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Teams"

@@ -48,6 +48,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Enable-AIPIntegrationInGroups-$
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
     
 # Logins

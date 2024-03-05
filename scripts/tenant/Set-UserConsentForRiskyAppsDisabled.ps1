@@ -70,7 +70,7 @@ if ($authorizationPolicy.AllowUserConsentForRiskyApps)
     $param = @{
         AllowUserConsentForRiskyApps = $false
     }
-    Update-MgPolicyAuthorizationPolicy -BodyParameter $param
+    Update-MgBetaPolicyAuthorizationPolicy -BodyParameter $param
 }
 else
 {

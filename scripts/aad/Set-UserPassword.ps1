@@ -55,6 +55,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserPassword-$($AlyaTimeStr
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users.Actions"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 

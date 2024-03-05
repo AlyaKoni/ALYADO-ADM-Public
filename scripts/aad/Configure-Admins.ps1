@@ -49,6 +49,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-Admins-$($AlyaTimeStr
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.DeviceManagement.Enrollment"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
