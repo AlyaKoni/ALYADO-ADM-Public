@@ -32,18 +32,41 @@
     ---------- -------------------- ----------------------------
     17.03.2020 Konrad Brunner       Initial Version
     18.10.2021 Konrad Brunner       Move to Az
+    12.03.2024 Konrad Brunner       Implemented new managed identity concept
 
 #>
 
-param(
-    [Parameter(Mandatory = $true)]
-    [string] $Subscriptions,
-    [Parameter(Mandatory = $true)]
-    [string] $TimeZone,
-    [Parameter(Mandatory = $true)]
-    [string] $AzureEnvironment
-)
-$ErrorActionPreference = "Stop"
+# Defaults
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$Global:ErrorActionPreference = "Stop"
+$Global:ProgressPreference = "SilentlyContinue"
+
+# Runbook
+$AlyaResourceGroupName = "##AlyaResourceGroupName##"
+$AlyaAutomationAccountName = "##AlyaAutomationAccountName##"
+$AlyaRunbookName = "##AlyaRunbookName##"
+
+# RunAsAccount
+$AlyaAzureEnvironment = "##AlyaAzureEnvironment##"
+$AlyaApplicationId = "##AlyaApplicationId##"
+$AlyaTenantId = "##AlyaTenantId##"
+$AlyaCertificateKeyVaultName = "##AlyaCertificateKeyVaultName##"
+$AlyaCertificateSecretName = "##AlyaCertificateSecretName##"
+$AlyaSubscriptionId = "##AlyaSubscriptionId##"
+$AlyaSubscriptionIds = "##AlyaSubscriptionIds##"
+
+# Mail settings
+$AlyaFromMail = "##AlyaFromMail##"
+$AlyaToMail = "##AlyaToMail##"
+
+# Group settings
+$grpNameAllExt = "##AlyaAllExternalsGroup##"
+$grpNameAllInt = "##AlyaAllInternalsGroup##"
+$grpNameDefTeam = "##AlyaDefaultTeamsGroup##"
+$grpNamePrjTeam = "##AlyaProjectTeamsGroup##"
+
+# Other settings
+$TimeZone = "##AlyaTimeZone##"
 
 # Check pause during certificate update
 if ( (Get-Date).Day -eq 1 )
@@ -55,36 +78,47 @@ if ( (Get-Date).Day -eq 1 )
     }
 }
 
-# Constants
-$RunAsConnectionName = "AzureRunAsConnection"
-$RunAsCertificateName = "AzureRunAsCertificate"
-$ConnectionTypeName = "AzureServicePrincipal"
+# Login
+Write-Output "Login to Az using system-assigned managed identity"
+Disable-AzContextAutosave -Scope Process | Out-Null
+try
+{
+    $AzureContext = (Connect-AzAccount -Identity -Environment $AlyaAzureEnvironment).Context
+}
+catch
+{
+    throw "There is no system-assigned user identity. Aborting."; 
+    exit 99
+}
+$AzureContext = Set-AzContext -Subscription $AlyaSubscriptionId -DefaultProfile $AzureContext
 
-# Login-AzureAutomation
 try {
-	$RunAsConnection = Get-AutomationConnection -Name $RunAsConnectionName
-	Write-Output "Logging in to Az ($AzureEnvironment)..."
-    Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
-	$null = Add-AzAccount `
-		-ServicePrincipal `
-		-TenantId $RunAsConnection.TenantId `
-        -SubscriptionId $RunAsConnection.SubscriptionId `
-		-ApplicationId $RunAsConnection.ApplicationId `
-		-CertificateThumbprint $RunAsConnection.CertificateThumbprint `
-		-Environment $AzureEnvironment
+    $RunAsCertificate = Get-AutomationCertificate -Name "AzureRunAsCertificate"
+    try { Disconnect-AzAccount }catch{}
+    Write-Output "Logging in to Az..."
+    Write-Output "  Thumbprint $($RunAsCertificate.Thumbprint)"
+    Add-AzAccount `
+        -ServicePrincipal `
+        -TenantId $AlyaTenantId `
+        -ApplicationId $AlyaApplicationId `
+        -CertificateThumbprint $RunAsCertificate.Thumbprint `
+        -Environment $AlyaAzureEnvironment
+    Select-AzSubscription -SubscriptionId $AlyaSubscriptionId  | Write-Verbose
+	$Context = Get-AzContext
 } catch {
-	if (!$RunAsConnection) {
-		Write-Output $_.Exception
-		Write-Output "Connection $RunAsConnectionName not found."
-	}
-	throw
+    if (!$RunAsCertificate) {
+        Write-Output $RunAsCertificateName
+        try { Write-Output ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+        Write-Output "Certificate $RunAsCertificateName not found."
+    }
+    throw
 }
 
 try {
 	# Members
-	$subs = $Subscriptions.Split(",")
+	$subs = $AlyaSubscriptionIds.Split(",")
 	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, $TimeZone)
-	"Run time $($runTime)"
+	Write-Output "Run time $($runTime)"
 
 	# Processing subscriptions
 	foreach($sub in $subs)
@@ -94,10 +128,10 @@ try {
 
 		Get-AzResourceGroup | Foreach-Object {
 			$ResGName = $_.ResourceGroupName
-			"  Checking ressource group $($ResGName)"
+			Write-Output "  Checking ressource group $($ResGName)"
 			foreach($vm in (Get-AzVM -ResourceGroupName $ResGName))
 			{
-				"    Checking VM $($vm.Name)"
+				Write-Output "    Checking VM $($vm.Name)"
 				$tags = $vm.Tags
 				$tKeys = $tags | Select-Object -ExpandProperty keys
 				$startTime = $null
@@ -107,18 +141,40 @@ try {
 					if ($tkey.ToUpper() -eq "STARTTIME")
 					{
 						$startTimeTag = $tags[$tkey]
-						"- startTimeTag: $($startTimeTag)"
+						Write-Output "- startTimeTag: $($startTimeTag)"
+	                    $startTimeTagWd = $null
+	                    if ($startTimeTag.Contains("("))
+	                    {
+	                        Write-Output "- Today is $($runTime.DayOfWeek) which is day $($runTime.DayOfWeek.value__) in week"
+	                        $startTimeTagWd = $startTimeTag.Split("(")[1].Replace(")","").Trim(",").Split(",")
+	                        $startTimeTag = $startTimeTag.Split("(")[0]
+	                    }
 						try { $startTime = [DateTime]::parseexact($startTimeTag,"HH:mm",$null) }
 						catch { $startTime = $null }
-						"- startTime parsed: $($startTime)"
+	                    if ($startTimeTagWd -ne $null -and $runTime.DayOfWeek.value__ -notin $startTimeTagWd)
+	                    {
+	                        $startTime = $null
+	                    }
+						Write-Output "- startTime parsed: $($startTime)"
 					}
 					if ($tkey.ToUpper() -eq "STOPTIME")
 					{
 						$stopTimeTag = $tags[$tkey]
-						"- stopTimeTag: $($stopTimeTag)"
+						Write-Output "- stopTimeTag: $($stopTimeTag)"
+	                    $stopTimeTagWd = $null
+	                    if ($stopTimeTag.Contains("("))
+	                    {
+	                        Write-Output "- Today is $($runTime.DayOfWeek) which is day $($runTime.DayOfWeek.value__) in week"
+	                        $stopTimeTagWd = $stopTimeTag.Split("(")[1].Replace(")","").Trim(",").Split(",")
+	                        $stopTimeTag = $stopTimeTag.Split("(")[0]
+	                    }
 						try { $stopTime = [DateTime]::parseexact($stopTimeTag,"HH:mm",$null) }
 						catch { $stopTime = $null }
-						"- stopTime parsed: $($stopTime)"
+	                    if ($stopTimeTagWd -ne $null -and $runTime.DayOfWeek.value__ -notin $stopTimeTagWd)
+	                    {
+	                        $stopTime = $null
+	                    }
+						Write-Output "- stopTime parsed: $($stopTime)"
 					}
 				}
 	            if ($startTime)
@@ -132,10 +188,10 @@ try {
 								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 								foreach ($VMStatus in $VMDetail.Statuses)
 								{
-									"- VM Status: $($VMStatus.Code)"
+									Write-Output "- VM Status: $($VMStatus.Code)"
 									if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
 									{
-										"- Starting VM"
+										Write-Output "- Starting VM"
 										Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
 									}
 								}
@@ -145,10 +201,10 @@ try {
 								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 								foreach ($VMStatus in $VMDetail.Statuses)
 								{
-									"- VM Status: $($VMStatus.Code)"
+									Write-Output "- VM Status: $($VMStatus.Code)"
 									if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
 									{
-										"- Stopping VM"
+										Write-Output "- Stopping VM"
 										Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
 									}
 								}
@@ -161,10 +217,10 @@ try {
 								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 								foreach ($VMStatus in $VMDetail.Statuses)
 								{
-									"- VM Status: $($VMStatus.Code)"
+									Write-Output "- VM Status: $($VMStatus.Code)"
 									if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
 									{
-										"- Stopping VM"
+										Write-Output "- Stopping VM"
 										Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
 									}
 								}
@@ -174,10 +230,10 @@ try {
 								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 								foreach ($VMStatus in $VMDetail.Statuses)
 								{
-									"- VM Status: $($VMStatus.Code)"
+									Write-Output "- VM Status: $($VMStatus.Code)"
 									if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
 									{
-										"- Starting VM"
+										Write-Output "- Starting VM"
 										Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
 									}
 								}
@@ -191,10 +247,10 @@ try {
 						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 						    foreach ($VMStatus in $VMDetail.Statuses)
 						    {
-							    "- VM Status: $($VMStatus.Code)"
+							    Write-Output "- VM Status: $($VMStatus.Code)"
 							    if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
 							    {
-								    "- Starting VM"
+								    Write-Output "- Starting VM"
 								    Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
 							    }
 		                    }
@@ -210,10 +266,10 @@ try {
 						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
 						    foreach ($VMStatus in $VMDetail.Statuses)
 						    {
-							    "- VM Status: $($VMStatus.Code)"
+							    Write-Output "- VM Status: $($VMStatus.Code)"
 							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
 							    {
-								    "- Stopping VM"
+								    Write-Output "- Stopping VM"
 								    Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
 							    }
 		                    }
@@ -223,7 +279,67 @@ try {
 			}
 		}
 	}
-} catch {
-    Write-Error $_.Exception -ErrorAction Continue
+    Write-output "Done"
+}
+catch
+{
+    Write-Error $_ -ErrorAction Continue
+    try { Write-Error ($_ | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+
+    # Login back
+    Write-Output "Login back to Az using system-assigned managed identity"
+    try { Disconnect-AzAccount }catch{}
+    $AzureContext = (Connect-AzAccount -Identity).Context
+    $AzureContext = Set-AzContext -Subscription $AlyaSubscriptionId -DefaultProfile $AzureContext
+
+    # Getting MSGraph Token
+    Write-Output "Getting MSGraph Token"
+    $token = Get-AzAccessToken -ResourceUrl "$AlyaGraphEndpoint" -TenantId $AlyaTenantId
+
+    # Sending email
+    Write-Output "Sending email"
+    Write-Output "  From: $AlyaFromMail"
+    Write-Output "  To: $AlyaToMail"
+    $subject = "Error in automation runbook '$AlyaRunbookName' in automation account '$AlyaAutomationAccountName'"
+    $contentType = "Text"
+    $content = "TenantId: $($AlyaTenantId)`n"
+    $content += "SubscriptionId: $($AlyaSubscriptionId)`n"
+    $content += "ResourceGroupName: $($AlyaResourceGroupName)`n"
+    $content += "AutomationAccountName: $($AlyaAutomationAccountName)`n"
+    $content += "RunbookName: $($AlyaRunbookName)`n"
+    $content += "Exception:`n$($_)`n`n"
+    $payload = @{
+        Message = @{
+            Subject = $subject
+            Body = @{ ContentType = $contentType; Content = $content }
+            ToRecipients = @( @{ EmailAddress = @{ Address = $AlyaToMail } } )
+        }
+        saveToSentItems = $false
+    }
+    $body = ConvertTo-Json $payload -Depth 99 -Compress
+    $HeaderParams = @{
+        'Accept' = "application/json;odata=nometadata"
+        'Content-Type' = "application/json"
+        'Authorization' = "$($token.Type) $($token.Token)"
+    }
+    $Result = ""
+    $StatusCode = ""
+    do {
+        try {
+            $Uri = "$AlyaGraphEndpoint/beta/users/$($AlyaFromMail)/sendMail"
+            Invoke-RestMethod -Headers $HeaderParams -Uri $Uri -UseBasicParsing -Method "POST" -ContentType "application/json" -Body $body
+        } catch {
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            if ($StatusCode -eq 429 -or $StatusCode -eq 503) {
+                Write-Warning "Got throttled by Microsoft. Sleeping for 45 seconds..."
+                Start-Sleep -Seconds 45
+            }
+            else {
+                Write-Error $_.Exception -ErrorAction Continue
+                throw
+            }
+        }
+    } while ($StatusCode -eq 429 -or $StatusCode -eq 503)
+
     throw
 }

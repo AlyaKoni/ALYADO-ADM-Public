@@ -331,7 +331,6 @@ function Get-PowerShellEncodingIfNoBom
 
 function Invoke-WebRequestIndep ()
 {
-    [CmdletBinding()]
     Param(
         [Switch]$UseBasicParsing,
         [System.Uri]$Uri,
@@ -369,7 +368,18 @@ function Invoke-WebRequestIndep ()
         [System.String]$OutFile,
         [Switch]$PassThru,
         [Switch]$Resume,
-        [Switch]$SkipHttpErrorCheck
+        [Switch]$SkipHttpErrorCheck,
+        [Object]$Verbose,
+        [Object]$Debug,
+        [Object]$ErrorAction,
+        [Object]$WarningAction,
+        [Object]$InformationAction,
+        [Object]$ErrorVariable,
+        [Object]$WarningVariable,
+        [Object]$InformationVariable,
+        [Object]$OutVariable,
+        [Object]$OutBuffer,
+        [Object]$PipelineVariable
     )
     $parms = @{}
     $pkeys = $PSBoundParameters.Keys
@@ -2304,7 +2314,10 @@ function Get-MsGraphCollection
                 else {
                     if (-Not $DontThrowIfStatusEquals -or $StatusCode -ne $DontThrowIfStatusEquals)
                     {
-                        $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                        if (-Not [string]::IsNullOrEmpty($_.Exception.Response.RequestMessage.Headers.Authorization))
+                        {
+                            $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                        }
                         try { Write-Host ($_ | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                         throw
                     }
@@ -2355,7 +2368,10 @@ function Get-MsGraphObject
             else {
                 if (-Not $DontThrowIfStatusEquals -or $StatusCode -ne $DontThrowIfStatusEquals)
                 {
-                    $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                    if (-Not [string]::IsNullOrEmpty($_.Exception.Response.RequestMessage.Headers.Authorization))
+                    {
+                        $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                    }
                     try { Write-Host ($_ | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                     throw
                 }
@@ -2397,7 +2413,10 @@ function Delete-MsGraphObject
                 Start-Sleep -Seconds 45
             }
             else {
-                $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                if (-Not [string]::IsNullOrEmpty($_.Exception.Response.RequestMessage.Headers.Authorization))
+                {
+                    $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                }
                 try { Write-Host ($_ | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                 throw
             }
@@ -2477,7 +2496,10 @@ function SendBody-MsGraph
                 Start-Sleep -Seconds 45
             }
             else {
-                $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                if (-Not [string]::IsNullOrEmpty($_.Exception.Response.RequestMessage.Headers.Authorization))
+                {
+                    $_.Exception.Response.RequestMessage.Headers.Authorization = "Bearer ****"
+                }
                 try { Write-Host ($_ | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                 throw
             }

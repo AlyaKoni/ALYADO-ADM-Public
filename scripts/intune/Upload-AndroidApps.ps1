@@ -108,9 +108,9 @@ foreach($androidApp in $appsAndroid)
 
         # Checking if androidApp exists
         Write-Host "  Checking if androidApp exists"
-        $uri = "/beta/deviceAppManagement/mobileApps"
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
         $allApps = Get-MsGraphCollection -Uri $uri
-        $actApp = $allApps | where { $_.displayName -eq $androidApp.displayName }
+        $actApp = $allApps | Where-Object { $_.displayName -eq $androidApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.androidManagedStoreApp" }
         if (-Not $actApp.id)
         {
             if ($androidApp.'@odata.type' -eq "#Microsoft.Graph.androidManagedStoreApp")
@@ -124,6 +124,13 @@ foreach($androidApp in $appsAndroid)
                 Write-Host "    App does not exist, creating"
                 $uri = "/beta/deviceAppManagement/mobileApps"
                 $actApp = Post-MsGraph -Uri $uri -Body ($androidApp | ConvertTo-Json -Depth 50)
+                $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+                do
+                {
+                    Start-Sleep -Seconds 5
+                    $allApps = Get-MsGraphCollection -Uri $uri
+                    $actApp = $allApps | Where-Object { $_.displayName -eq $androidApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.androidManagedStoreApp" }
+                } while (-Not $actApp.id)
             }
         }
 

@@ -30,7 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    17.02.2023 Konrad Brunner       Initial Creation
+    14.03.2024 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,36 +42,49 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Create-ScannerUser-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Prepare-PSTNDomainUserDelete-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+
+# Logins
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 
 # =============================================================
-# Exchange stuff
+# O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Create-ScannerUser | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "PSTN | Prepare-PSTNDomainUserDelete | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$userName = "scanner@$AlyaDomainName"
+#Main
+Write-Host "Checking PSTN DeleteMe user pstndeleteme@$AlyaPstnGateway" -ForegroundColor $CommandInfo
+$user = $null
+try {
+    $user = Get-AzADUser -UserPrincipalName "pstndeleteme@$AlyaPstnGateway"
+} catch { }
+if (-Not $user)
+{
+    Write-Warning "User does not exist. Nothing to do."
+    exit
+}
 
-Write-Host "Create user $userName by hand and assign license"
-pause
+Write-Host "Removing users license" -ForegroundColor $CommandInfo
+$user = Get-MgBetaUser -UserId "pstndeleteme@$AlyaPstnGateway"
+$lics = Get-MgBetaUserLicenseDetail -UserId $user.Id
+$remLics = @()
+foreach($lic in $lics)
+{
+    Set-MgBetaUserLicense -UserId $user.Id -AddLicenses @() -RemoveLicenses $lic.SkuId | Out-Null
+}
 
-& "$($AlyaScripts)\aad\Disable-MfaForUser.ps1" -userUpn $userName
-& "$($AlyaScripts)\aad\Set-UserPasswordNeverExpire.ps1" -userUpn $userName
-& "$($AlyaScripts)\exchange\Enable-SmtpAuthForUser.ps1" -userUpn $userName
-& "$($AlyaScripts)\exchange\Enable-BasicAuthPopImapSmtpForUser.ps1" -userUpn $userName
-
-Write-Host "Please login once to https://portal.office.com with user $userName"
-pause
+Write-Host "Deleting PSTN DeleteMe user pstndeleteme@$AlyaPstnGateway" -ForegroundColor $CommandInfo
+Remove-AzADUser -UPNOrObjectId "pstndeleteme@$AlyaPstnGateway"
 
 #Stopping Transscript
 Stop-Transcript

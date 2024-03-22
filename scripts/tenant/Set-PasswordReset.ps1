@@ -40,8 +40,8 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-	[object]$browser
-)
+    [object]$seleniumBrowser = $null
+    )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
@@ -69,10 +69,18 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-PasswordReset | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-if (-Not $browser) {
-    if ($Global:AlyaSeleniumBrowser) {
-        $browser = $Global:AlyaSeleniumBrowser
-    }
+# Configuring browser
+if ($seleniumBrowser) {
+    $browser = $seleniumBrowser
+} else {
+	if (-Not $browser)
+	{
+		if ($Global:AlyaSeleniumBrowser) {
+			$browser = $Global:AlyaSeleniumBrowser
+		} else {
+			$browser = Get-SeleniumBrowser
+		}
+	}
 }
 
 $authorizationPolicy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
@@ -82,7 +90,7 @@ if ($authorizationPolicy.AllowedToUseSspr -ne $AlyaPasswordResetEnabled)
     $param = @{
         AllowedToUseSspr = $AlyaPasswordResetEnabled
     }
-    Update-MgBetaPolicyAuthorizationPolicy -BodyParameter $param
+    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId $authorizationPolicy.Id -BodyParameter $param
 }
 else
 {

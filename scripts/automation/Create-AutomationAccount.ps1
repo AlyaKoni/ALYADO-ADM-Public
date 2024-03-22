@@ -105,6 +105,21 @@ if (-Not $Context)
     Exit 1
 }
 
+# Setting variable
+$AlyaSubscriptionIds = ""
+foreach($subName in $AlyaAllSubscriptions)
+{
+    $sub = Get-AzSubscription -SubscriptionName $subName
+    if (-Not $AlyaSubscriptionIds.Contains($sub.Id))
+    {
+        if (-Not [string]::IsNullOrEmpty($AlyaSubscriptionIds))
+        {
+            $AlyaSubscriptionIds += ","
+        }
+        $AlyaSubscriptionIds += $sub.Id
+    }
+}
+
 # Checking resource provider registration
 Write-Host "Checking resource provider registration Microsoft.KeyVault" -ForegroundColor $CommandInfo
 $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.KeyVault" -Location $AlyaLocation
@@ -327,35 +342,51 @@ try
     {
         Set-AzAutomationAccount -ResourceGroupName $ResourceGroupName -Name $AutomationAccountName -AssignSystemIdentity
         $AutomationAccount = Get-AzAutomationAccount -ResourceGroupName $ResourceGroupName -Name $AutomationAccountName -ErrorAction SilentlyContinue
-        while (-Not $AutomationAccount.Identity)
+        while (-Not $AutomationAccount.Identity.PrincipalId)
         {
             $AutomationAccount = Get-AzAutomationAccount -ResourceGroupName $ResourceGroupName -Name $AutomationAccountName -ErrorAction SilentlyContinue
             Write-Host "Waiting for Automation Account Identity"
-            if (-Not $FunctionApp.Identity) { Start-Sleep -Seconds 5 }
+            if (-Not $FunctionApp.Identity.PrincipalId) { Start-Sleep -Seconds 5 }
         }
     }
 
     # Setting automation account identity key vault access
     Write-Host "Setting automation account identity key vault access" -ForegroundColor $CommandInfo
-    if ($KeyVault.EnableRbacAuthorization)
+    $retries = 10
+    while ($true)
     {
-        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
-        $Retries = 0;
-        While ($null -eq $RoleAssignment -and $Retries -le 6)
-        {
-            $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
-            Start-Sleep -s 10
-            $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
-            $Retries++;
+        try {
+            if ($KeyVault.EnableRbacAuthorization)
+            {
+                $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
+                $Retries = 0;
+                While ($null -eq $RoleAssignment -and $Retries -le 6)
+                {
+                    $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+                    Start-Sleep -s 10
+                    $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ServicePrincipalName $AutomationAccount.Identity.PrincipalId -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
+                    $Retries++;
+                }
+                if ($Retries -gt 6)
+                {
+                    throw "Was not able to set role assigment 'Key Vault Administrator' for app $($AutomationAccount.Identity.PrincipalId) on scope $($KeyVault.ResourceId)"
+                }
+            }
+            else
+            {
+                Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $AutomationAccount.Identity.PrincipalId -PermissionsToCertificates "All" -PermissionsToSecrets "All" -ErrorAction Continue
+            }
+            break
         }
-        if ($Retries -gt 6)
-        {
-            throw "Was not able to set role assigment 'Key Vault Administrator' for app $($AutomationAccount.Identity.PrincipalId) on scope $($KeyVault.ResourceId)"
+        catch {
+            $retries--
+            if ($retries -lt 0)
+            {
+                throw $_
+            }
+            Write-Warning "Retrying"
+            Start-Sleep -Seconds 10
         }
-    }
-    else
-    {
-        Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $AutomationAccount.Identity.PrincipalId -PermissionsToCertificates "All" -PermissionsToSecrets "All" -ErrorAction Continue
     }
     
     # Checking automation account identity access
@@ -679,6 +710,8 @@ if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
     $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
     $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+    $rbContent = $rbContent.Replace("##AlyaSubscriptionIds##", $AlyaSubscriptionIds)
+    $rbContent = $rbContent.Replace("##AlyaTimeZone##", $AlyaTimeZone)
     $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
     $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
     $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
@@ -729,6 +762,8 @@ if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
     $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
     $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+    $rbContent = $rbContent.Replace("##AlyaSubscriptionIds##", $AlyaSubscriptionIds)
+    $rbContent = $rbContent.Replace("##AlyaTimeZone##", $AlyaTimeZone)
     $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
     $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
     $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
@@ -776,6 +811,8 @@ if (-Not (Test-Path $runbookPath) -or $UpdateRunbooks)
     $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
     $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
     $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+    $rbContent = $rbContent.Replace("##AlyaSubscriptionIds##", $AlyaSubscriptionIds)
+    $rbContent = $rbContent.Replace("##AlyaTimeZone##", $AlyaTimeZone)
     $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
     $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
     $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
@@ -829,6 +866,8 @@ if ($DeployStartStopVm)
             $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
             $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
             $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+            $rbContent = $rbContent.Replace("##AlyaSubscriptionIds##", $AlyaSubscriptionIds)
+            $rbContent = $rbContent.Replace("##AlyaTimeZone##", $AlyaTimeZone)
             $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
             $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
             $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
@@ -850,6 +889,8 @@ if ($DeployStartStopVm)
             $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
             $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
             $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+            $rbContent = $rbContent.Replace("##AlyaSubscriptionIds##", $AlyaSubscriptionIds)
+            $rbContent = $rbContent.Replace("##AlyaTimeZone##", $AlyaTimeZone)
             $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
             $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
             $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)
@@ -902,6 +943,8 @@ if ($DeployGroupUpdater)
         $rbContent = $rbContent.Replace("##AlyaCertificateKeyVaultName##", $keyVaultName)
         $rbContent = $rbContent.Replace("##AlyaCertificateSecretName##", $AzureCertificateName)
         $rbContent = $rbContent.Replace("##AlyaSubscriptionId##", $Context.Subscription.Id)
+        $rbContent = $rbContent.Replace("##AlyaSubscriptionIds##", $AlyaSubscriptionIds)
+        $rbContent = $rbContent.Replace("##AlyaTimeZone##", $AlyaTimeZone)
         $rbContent = $rbContent.Replace("##AlyaFromMail##", "DoNotReply@$($AlyaDomainName)")
         $rbContent = $rbContent.Replace("##AlyaToMail##", $AlyaSupportEmail)
         $rbContent = $rbContent.Replace("##AlyaAllExternalsGroup##", $AlyaAllExternals)

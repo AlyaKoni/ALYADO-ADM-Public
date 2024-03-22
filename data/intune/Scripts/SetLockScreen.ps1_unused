@@ -34,7 +34,7 @@
 
 #>
 
-$WallpaperUrl = "https://alyapinfstrg001.blob.core.windows.net/images/DesktopBackgroundH.jpg"
+$WallpaperUrl = "https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
 
 $path = [Environment]::GetFolderPath("ApplicationData") + "\AlyaConsulting\Background"
 if (-Not (Test-Path $path))

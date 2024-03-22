@@ -43,8 +43,8 @@ Param(
     [Parameter(Mandatory=$false)]
     [string]$hubSitesConfigurationFile = $null,
     [Parameter(Mandatory=$false)]
-	[object]$browser
-)
+    [object]$seleniumBrowser = $null
+    )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
@@ -106,10 +106,18 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "SharePoint | Configure-Microsoft365LearningPathways | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-if (-Not $browser) {
-    if ($Global:AlyaSeleniumBrowser) {
-        $browser = $Global:AlyaSeleniumBrowser
-    }
+# Configuring browser
+if ($seleniumBrowser) {
+    $browser = $seleniumBrowser
+} else {
+	if (-Not $browser)
+	{
+		if ($Global:AlyaSeleniumBrowser) {
+			$browser = $Global:AlyaSeleniumBrowser
+		} else {
+			$browser = Get-SeleniumBrowser
+		}
+	}
 }
 
 # Checking ADM hub site

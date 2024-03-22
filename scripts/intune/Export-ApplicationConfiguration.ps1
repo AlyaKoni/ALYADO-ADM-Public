@@ -142,7 +142,7 @@ $mobileAppCategories = Get-MsGraphObject -Uri $uri
 $mobileAppCategories | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\mobileAppCategories.json")) -Force
 
 #intuneApplications
-$uri = "/beta/deviceAppManagement/mobileApps?`$expand=categories"
+$uri = "/beta/deviceAppManagement/mobileApps?`$expand=categories&`$top=50"
 $intuneApplications = Get-MsGraphCollection -Uri $uri
 $intuneApplications | ConvertTo-Json -Depth 50 | Set-Content -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplications.json")) -Force
 if (-Not (Test-Path "$DataRoot\Applications\Data")) { $null = New-Item -Path "$DataRoot\Applications\Data" -ItemType Directory -Force }

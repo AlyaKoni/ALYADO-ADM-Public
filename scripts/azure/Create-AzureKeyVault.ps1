@@ -73,6 +73,20 @@ if (-Not $Context)
     Exit 1
 }
 
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.KeyVault" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.KeyVault" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Write-Warning "Resource provider Microsoft.KeyVault not registered. Registering now resource provider Microsoft.KeyVault"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.KeyVault" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.KeyVault" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
+}
+
 # Checking ressource group
 Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
 $ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue

@@ -30,11 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    30.09.2020 Konrad Brunner       Initial Version
-    23.10.2021 Konrad Brunner       Added apps path
-    24.04.2023 Konrad Brunner       Switched to Graph
-    21.09.2023 Konrad Brunner       Version check
-    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
+    19.03.2024 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,7 +38,7 @@
 Param(
     [string]$UploadOnlyAppWithName = $null,
     [string]$ContinueAtAppWithName = $null,
-    [string]$AppsPath = "Win32Apps",
+    [string]$AppsPath = "MACApps",
     [bool]$AskForSameVersionPackages = $true,
     [bool]$ShowProgressBar = $false
 )
@@ -51,13 +47,10 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-IntuneWin32Packages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Upload-IntuneMACPackages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = "Win10 "
-if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
-    $AppPrefix = "$AlyaAppPrefix "
-}
+$AppPrefix = "MAC "
 $DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
 if (-Not (Test-Path $DataRoot))
 {
@@ -82,7 +75,7 @@ LoginTo-MgGraph -Scopes @(
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Upload-IntuneWin32Packages | Graph" -ForegroundColor $CommandInfo
+Write-Host "Intune | Upload-IntuneMACPackages | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Functions
@@ -96,12 +89,17 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
 	$appId = $app.id
     Write-Host "    appId: $($app.id)"
     $comittedVersion = $app.committedContentVersion
+    $appType = "macOSDmgApp"
+    if ($app."@odata.type" -eq "#microsoft.graph.macOSPkgApp" )
+    {
+    	$appType = "macOSPkgApp"
+    }
     if ($comittedVersion -gt 0)
     {
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.$($appType)/contentVersions"
         $existVersions = Get-MsGraphCollection -Uri $uri
         $maxVersion = ($existVersions.Id | Measure-Object -Maximum).Maximum
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$maxVersion/files"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.$($appType)/contentVersions/$maxVersion/files"
         $file = Get-MsGraphCollection -Uri $uri
         if ($file -and -Not $file.isCommitted)
         {
@@ -122,6 +120,10 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         if (-Not [string]::IsNullOrEmpty($app.displayVersion))
         {
             $detectVersion = [Version]$app.displayVersion
+        }
+        else
+        {
+            $detectVersion = [Version]$app.primaryBundleVersion
         }
     }
     $doUpload = $true
@@ -151,7 +153,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
 
         # Creating Content Version
         Write-Host "  Creating Content Version '$($app.displayName)'"
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.$($appType)/contentVersions"
         $contentVersion = Post-MsGraph -Uri $uri -Body "{}"
         Write-Host "    contentVersion: $($contentVersion.id)"
 
@@ -159,18 +161,18 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         Write-Host "  Creating Content Version file"
         $fileBody = @{ "@odata.type" = "#Microsoft.Graph.mobileAppContentFile" }
         $fileBody.name = $package.Name
-        $fileBody.size = [long]$packageInfo.ApplicationInfo.UnencryptedContentSize
-        $fileBody.sizeInBytes = [long]$packageInfo.ApplicationInfo.UnencryptedContentSize
-        $fileBody.sizeEncrypted = [long]$bytes.Length
-        $fileBody.sizeEncryptedInBytes = [long]$bytes.Length
+        $fileBody.size = $packageInfo.SizeInBytes
+        $fileBody.sizeInBytes = $packageInfo.SizeInBytes
+        $fileBody.sizeEncrypted = $packageInfo.SizeEncryptedInBytes
+        $fileBody.sizeEncryptedInBytes = $packageInfo.SizeEncryptedInBytes
         $fileBody.manifest = $null
         $fileBody.isDependency = $false
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.$($appType)/contentVersions/$($contentVersion.id)/files"
         $file = Post-MsGraph -Uri $uri -Body ($fileBody | ConvertTo-Json -Depth 50)
 
         # Waiting for file uri
         Write-Host "  Waiting for file uri '$($app.displayName)'"
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)"
+        $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.$($appType)/contentVersions/$($contentVersion.id)/files/$($file.id)"
         $stage = "AzureStorageUriRequest"
         $successState = "$($stage)Success"
         $pendingState = "$($stage)Pending"
@@ -196,8 +198,8 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
             throw "File request did not complete within $Global:attempts attempts"
         }
 
-        # Uploading intunewin content
-        Write-Host "  Uploading intunewin content '$($app.displayName)'"
+        # Uploading package content
+        Write-Host "  Uploading package content '$($app.displayName)'"
         if ($ShowProgressBar)
         {
             $OldProgressPreference = $ProgressPreference
@@ -226,7 +228,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
             Write-Host "    Uploading chunk $currentChunk of $chunks ($([int]$sasRenewalTimer.Elapsed.TotalSeconds)sec)"
             if ($ShowProgressBar)
             {
-                Write-Progress -Activity "    Uploading intunewin from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
+                Write-Progress -Activity "    Uploading package from $($package.Name)" -status "      Uploading chunk $currentChunk of $chunks" -percentComplete ($currentChunk / $chunks*100)
             }
             $curi = "$($file.azureStorageUri)&comp=block&blockid=$id"
             $Global:attempts = 10
@@ -291,7 +293,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         }
         if ($ShowProgressBar)
         {
-            Write-Progress -Completed -Activity "    Uploading intunewin"
+            Write-Progress -Completed -Activity "    Uploading package"
             $ProgressPreference = $OldProgressPreference
         }
 
@@ -325,15 +327,15 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         Write-Host "  Committing the file '$($app.displayName)'"
         $fileEncryptionInfo = @{}
         $fileEncryptionInfo.fileEncryptionInfo = @{
-            encryptionKey        = $packageInfo.ApplicationInfo.EncryptionInfo.EncryptionKey
-            macKey               = $packageInfo.ApplicationInfo.EncryptionInfo.MacKey
-            initializationVector = $packageInfo.ApplicationInfo.EncryptionInfo.InitializationVector
-            mac                  = $packageInfo.ApplicationInfo.EncryptionInfo.Mac
-            profileIdentifier    = $packageInfo.ApplicationInfo.EncryptionInfo.ProfileIdentifier
-            fileDigest           = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigest
-            fileDigestAlgorithm  = $packageInfo.ApplicationInfo.EncryptionInfo.FileDigestAlgorithm
+            encryptionKey        = $packageInfo.EncryptionKey
+            macKey               = $packageInfo.MacKey
+            initializationVector = $packageInfo.InitializationVector
+            mac                  = $packageInfo.Mac
+            profileIdentifier    = $packageInfo.ProfileIdentifier
+            fileDigest           = $packageInfo.FileDigest
+            fileDigestAlgorithm  = $packageInfo.FileDigestAlgorithm
         }
-        $curi = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.win32LobApp/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
+        $curi = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.$($appType)/contentVersions/$($contentVersion.id)/files/$($file.id)/commit"
         $file = Post-MsGraph -Uri $curi -Body ($fileEncryptionInfo | ConvertTo-Json -Depth 50)
 
         # Waiting for file commit
@@ -386,34 +388,47 @@ foreach($packageDir in $packages)
 
     $packagePath = Join-Path $packageDir.FullName "Package"
     $configPath = Join-Path $packageDir.FullName "config.json"
-    $contentPath = Join-Path $packageDir.FullName "Content"
-    $requirementDetectionPath = Join-Path $packageDir.FullName "RequirementDetection.ps1"
 
-    # Checking intunewin package
-    Write-Host "  Checking intunewin package"
-    $package = Get-ChildItem -Path $packagePath -Filter "*.intunewin"
+    # Checking package file
+    Write-Host "  Checking package file"
+    $firstTry = "dmg"
+    $secondTry = "pkg"
+    $packagePreference = Get-Item -Path (Join-Path $packagePath "PackagePreference.txt") -ErrorAction SilentlyContinue
+    if ($packagePreference)
+    {
+        $packagePreference = $packagePreference | Get-Content
+        if ($packagePreference -eq "dmg")
+        {
+            $firstTry = "dmg"
+            $secondTry = "pkg"
+        }
+    }
+    $package = Get-ChildItem -Path $packagePath -Filter "*.$firstTry" | Sort-Object -Property Name
     if (-Not $package)
     {
-        Write-Error "Can't find Intune package!" -ErrorAction Continue
-        continue
+        $package = Get-ChildItem -Path $packagePath -Filter "*.$secondTry" | Sort-Object -Property Name
+        if (-Not $package)
+        {
+            $package = Get-ChildItem -Path $packagePath -Filter "Install.cmd"
+            if (-Not $package)
+            {
+                $package = Get-ChildItem -Path $packagePath -Filter "Install.ps1"
+                if (-Not $package)
+                {
+                    Write-Error "Can't find installer file for this package" -ErrorAction Continue
+                    continue
+                }
+            }
+        }
     }
     if ($package.Count -gt 1)
     {
-        Write-Error "Found more than 1 Intune packages!" -ErrorAction Continue
-        Write-Error "Please delete older once and rerun" -ErrorAction Continue
-        pause
-        continue
+        $package = $package[0]
     }
 
-    # Extracting package information
-    Write-Host "  Extracting package information"
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
-    $entry = $zip.Entries | Where-Object { $_.Name -eq "Detection.xml" }
-    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, "$($package.FullName).Detection.xml", $true)
-    $zip.Dispose()
-    $packageInfo = [xml](Get-Content -Path "$($package.FullName).Detection.xml" -Raw -Encoding $AlyaUtf8Encoding)
-    Remove-Item -Path "$($package.FullName).Detection.xml" -Force
+    # Checking package info
+    Write-Host "  Checking package info"
+    $packageInfo = Get-Content -Path "$($package.FullName).json" -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
 
     # Reading and preparing app configuration
     Write-Host "  Reading and preparing app configuration"
@@ -422,20 +437,10 @@ foreach($packageDir in $packages)
 
     $appConfig.displayName = "$AppPrefix" + $packageDir.Name
     Write-Host "    displayName: $($appConfig.displayName)"
-    if ($packageInfo.ApplicationInfo.Name -ne "Install.ps1" -and $packageInfo.ApplicationInfo.Name -ne "Install.cmd")
-    {
-        $appConfig.description = "Installs " + $packageInfo.ApplicationInfo.Name
-    }
-    if ($packageInfo.ApplicationInfo.MsiInfo.MsiPublisher)
-    {
-        $appConfig.developer = $packageInfo.ApplicationInfo.MsiInfo.MsiPublisher
-    }
-    $appConfig.setupFilePath = $packageInfo.ApplicationInfo.SetupFile
+    $appConfig.description = "Installs " + $package.Name
     $appConfig.fileName = $package.Name
 
     $version = $null
-    $regPath = $null
-    $regValue = $null
     $versionFile = Get-Item -Path (Join-Path $packageDir.FullName "version.json") -ErrorAction SilentlyContinue
     if ($versionFile)
     {
@@ -446,122 +451,25 @@ foreach($packageDir in $packages)
         }
         else
         {
-            $regPath = $versionObj.regPath
-            $regValue = $versionObj.regValue
             $version = $versionObj.version
         }
     }
     else
     {
-        if ($packageInfo.ApplicationInfo.MsiInfo)
+        [regex]$regex = "(\d+\.)?(\d+\.)?(\d+\.)?(\*|\d+)"
+        $versionStr = [regex]::Match($package.Name, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+        Write-Host "    got version from file name: $versionStr"
+        if (-Not [string]::IsNullOrEmpty($versionStr))
         {
-            $version = $packageInfo.ApplicationInfo.MsiInfo.MsiProductVersion
-            Write-Host "    got version from msi product version: $version"
-            $msiPackageType = "DualPurpose";
-            $msiExecutionContext = $packageInfo.ApplicationInfo.MsiInfo.MsiExecutionContext
-            if($msiExecutionContext -eq "System") { $msiPackageType = "PerMachine" }
-            elseif($msiExecutionContext -eq "User") { $msiPackageType = "PerUser" }
-            $appConfig.msiInformation = @{
-                "packageType" = $msiPackageType
-                "productName" = $packageInfo.ApplicationInfo.Name
-                "productCode" = $packageInfo.ApplicationInfo.MsiInfo.MsiProductCode
-                "productVersion" = $packageInfo.ApplicationInfo.MsiInfo.MsiProductVersion
-                "publisher" = $packageInfo.ApplicationInfo.MsiInfo.MsiPublisher
-                "requiresReboot" = $packageInfo.ApplicationInfo.MsiInfo.MsiRequiresReboot
-                "upgradeCode" = $packageInfo.ApplicationInfo.MsiInfo.MsiUpgradeCode
-            }
-        }
-        else
-        {
-            $firstTry = "msi"
-            $secondTry = "exe"
-            $packagePreference = Get-Item -Path (Join-Path $packageDir.FullName "PackagePreference.txt") -ErrorAction SilentlyContinue
-            if ($packagePreference)
-            {
-                $packagePreference = $packagePreference | Get-Content
-                if ($packagePreference -eq "exe")
-                {
-                    $firstTry = "exe"
-                    $secondTry = "msi"
-                }
-            }
-
-            $toInstall = Get-ChildItem -Path $contentPath -Filter "*.$firstTry" | Sort-Object -Property Name
-            if (-Not $toInstall)
-            {
-                $toInstall = Get-ChildItem -Path $contentPath -Filter "*.$secondTry" | Sort-Object -Property Name
-            }
-            if ($toInstall)
-            {
-                if ($toInstall.Count -gt 1)
-                {
-                    $toInstall = $toInstall[0]
-                }
-                if ($toInstall.VersionInfo.FileVersion -And -Not [string]::IsNullOrEmpty($toInstall.VersionInfo.FileVersion.Trim()))
-                {
-                    $version = $toInstall.VersionInfo.FileVersion
-                    Write-Host "    got version from file version: $version"
-                }
-                elseif ($toInstall.VersionInfo.ProductVersion)
-                {
-                    $version = $toInstall.VersionInfo.ProductVersion
-                    Write-Host "    got version from product version: $version"
-                }
-                else
-                {
-                    [regex]$regex = "(\d+\.)?(\d+\.)?(\d+\.)?(\*|\d+)"
-                    $versionStr = [regex]::Match($toInstall.Name, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-                    Write-Host "    got version from file name: $versionStr"
-                    if (-Not [string]::IsNullOrEmpty($versionStr))
-                    {
-                        $version = [Version]$versionStr
-                    }
-                }
-            }
-            else
-            {
-                Write-Warning "No version found. Please make sure the config.json has appropriate rules!"
-            }
+            $version = [Version]$versionStr
         }
     }
 
     if ($version)
     {
         Write-Host "    version: $($version)"
-        if ($regPath)
-        {
-            foreach($ruleWVersion in $appConfig.detectionRules)
-            {
-                if ($ruleWVersion.detectionType -eq "version") {
-                    $ruleWVersion.detectionValue = $version
-                    $ruleWVersion.keyPath = $regPath
-                    $ruleWVersion.valueName = $regValue
-                }
-            }
-            foreach($ruleWVersion in $appConfig.rules)
-            {
-                if ($ruleWVersion.operationType -eq "version") {
-                    $ruleWVersion.comparisonValue = $version
-                    $ruleWVersion.keyPath = $regPath
-                    $ruleWVersion.valueName = $regValue
-                }
-            }
-        }
-        else
-        {
-            foreach($ruleWVersion in $appConfig.detectionRules)
-            {
-                if ($ruleWVersion.detectionType -eq "version") {
-                    $ruleWVersion.detectionValue = ([Version]$version).ToString()
-                }
-            }
-            foreach($ruleWVersion in $appConfig.rules)
-            {
-                if ($ruleWVersion.operationType -eq "version") {
-                    $ruleWVersion.comparisonValue = ([Version]$version).ToString()
-                }
-            }
-        }
+        $appConfig.primaryBundleVersion = $version.ToString()
+        $appConfig.includedApps[0].bundleVersion = $version.ToString()
     }
 
     $logo = Get-ChildItem -Path $packageDir.FullName -Filter "Logo.*"
@@ -579,7 +487,6 @@ foreach($packageDir in $packages)
     if (-Not (Get-Member -InputObject $appConfig -MemberType NoteProperty -Name "displayVersion" -ErrorAction SilentlyContinue)) {
         Add-Member  -InputObject $appConfig -MemberType NoteProperty -Name "displayVersion" -Value $null
     }
-    $appConfig.displayVersion = ([Version]$version).ToString()
     $appConfigJson = $appConfig | ConvertTo-Json
     $appConfigJson | Set-Content -Path $configPath -Encoding UTF8
 
@@ -592,7 +499,7 @@ foreach($packageDir in $packages)
 
     $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
     $allApps = Get-MsGraphCollection -Uri $uri
-    $app = $allApps | Where-Object { $_.displayName -eq $appConfig.displayName -and $_."@odata.type" -eq "#microsoft.graph.win32LobApp" }
+    $app = $allApps | Where-Object { $_.displayName -eq $appConfig.displayName -and $_."@odata.type" -in @("#microsoft.graph.macOSDmgApp", "#microsoft.graph.macOSPkgApp") }
     if (-Not $app.id)
     {
         # Creating app
@@ -604,21 +511,13 @@ foreach($packageDir in $packages)
         {
             Start-Sleep -Seconds 5
             $allApps = Get-MsGraphCollection -Uri $uri
-            $app = $allApps | Where-Object { $_.displayName -eq $appConfig.displayName -and $_."@odata.type" -eq "#microsoft.graph.win32LobApp" }
+            $app = $allApps | Where-Object { $_.displayName -eq $appConfig.displayName -and $_."@odata.type" -in @("#microsoft.graph.macOSDmgApp", "#microsoft.graph.macOSPkgApp") }
         } while (-Not $app.id)
     }
 
-    # Extracting intunewin file
-    Write-Host "  Extracting intunewin file"
-    $extFile = "$($package.FullName).Extracted"
-    if (Test-Path $extFile) { Remove-Item -Path $extFile -Force }
-    $zip = [System.IO.Compression.ZipFile]::OpenRead($package.FullName)
-    $entry = $zip.Entries | Where-Object { $_.Name -eq "IntunePackage.intunewin" }
-    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $extFile, $true)
-    $entry = $null
-    $zip.Dispose()
-    $bytes = [System.IO.File]::ReadAllBytes($extFile)
-    Remove-Item -Path $extFile -Force
+    # Reading package file
+    Write-Host "  Reading package file"
+    $bytes = [System.IO.File]::ReadAllBytes($package.FullName)
 
     # Uploading base app package
     Write-Host "  Uploading base app package"
@@ -626,89 +525,6 @@ foreach($packageDir in $packages)
     [system.gc]::Collect()
     UploadPackage -packageInfo $packageInfo -app $app -appConfig $appConfig -bytes $bytes
 
-    # Checking update package if required
-    Write-Host "  Checking update package if required"
-    if (Test-Path $requirementDetectionPath)
-    {
-
-        # Checking if update app exists
-        Write-Host "  Checking if update app exists"
-        $appConfig.displayName = $appConfig.displayName+" UPD"
-
-        $uri = "/beta/deviceAppManagement/mobileApps"
-        $allApps = Get-MsGraphCollection -Uri $uri
-        $app = $allApps | where { $_.displayName -eq $appConfig.displayName }
-
-        if (-Not (Get-Member -InputObject $appConfig -MemberType NoteProperty -Name "displayVersion" -ErrorAction SilentlyContinue)) {
-            Add-Member  -InputObject $appConfig -MemberType NoteProperty -Name "displayVersion" -Value $null
-        }
-        $appConfig.displayVersion = ([Version]$version).ToString()
-    
-        $detectContent = Get-Content -Path $requirementDetectionPath -Encoding $AlyaUtf8Encoding -Raw
-        #$detectVersion = [Version]$appConfig.detectionRules[0].detectionValue
-        if ($appConfig.detectionRules -and $appConfig.detectionRules[0]."@odata.type" -eq "#microsoft.graph.win32LobAppFileSystemDetection")
-        {
-            $detectContent = $detectContent.Replace("##FILEPATH##", $appConfig.detectionRules[0].path)
-            $detectContent = $detectContent.Replace("##FILENAME##", $appConfig.detectionRules[0].fileOrFolderName)
-            $detectContent = $detectContent.Replace("##FILEVERSION##", $appConfig.detectionRules[0].detectionValue)
-            $detectContent = [Regex]::Replace($detectContent, "%programfiles%", "`$(`$env:ProgramFiles)", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-            $detectContent = [Regex]::Replace($detectContent, "%programfiles\(x86\)%", "`$(`${env:ProgramFiles(x86)})", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-        }
-        if ($appConfig.detectionRules -and $appConfig.detectionRules[0]."@odata.type" -eq "#microsoft.graph.win32LobAppRegistryDetection")
-        {
-            $detectContent = $detectContent.Replace("##KEYPATH##", $appConfig.detectionRules[0].keyPath)
-            $detectContent = $detectContent.Replace("##KEYNAME##", $appConfig.detectionRules[0].valueName)
-            $detectContent = $detectContent.Replace("##KEYVERSION##", $appConfig.detectionRules[0].detectionValue)
-        }
-        $scriptContent = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($detectContent))
-
-        $appConfig.requirementRules = @(
-            @{
-                "detectionValue" = "Required"
-                "scriptContent" = $scriptContent
-                "detectionType" = "string"
-                "runAs32Bit" = $false
-                "runAsAccount" = "system"
-                "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptRequirement"
-                "enforceSignatureCheck" = $false
-                "displayName" = "RequirementDetection.ps1"
-                "operator" = "equal"
-            }
-        )
-        $appConfig.rules += @{
-            "comparisonValue" = "Required"
-            "operationType" = "string"
-            "scriptContent" = $scriptContent
-            "operator" = "equal"
-            "ruleType" = "requirement"
-            "runAs32Bit" = $false
-            "runAsAccount" = "system"
-            "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptRule"
-            "displayName" = "RequirementDetection.ps1"
-            "enforceSignatureCheck" = $false
-        }
-        $appConfigJson = $appConfig | ConvertTo-Json
-
-        if (-Not $app.id)
-        {
-            # Creating app
-            Write-Host "  Creating app"
-            $uri = "/beta/deviceAppManagement/mobileApps"
-            $app = Post-MsGraph -Uri $uri -Body $appConfigJson
-            do
-            {
-                Start-Sleep -Seconds 5
-                $allApps = Get-MsGraphCollection -Uri $uri
-                $app = $allApps | where { $_.displayName -eq $appConfig.displayName }
-            } while (-Not $app.id)
-        }
-
-        # Uploading update app package
-        Write-Host "  Uploading update app package"
-        Clear-Variable -Name "allApps" -Force -ErrorAction SilentlyContinue
-        [system.gc]::Collect()
-        UploadPackage -packageInfo $packageInfo -app $app -appConfig $appConfig -bytes $bytes
-    }
     $bytes = $null
     [system.gc]::Collect()
 

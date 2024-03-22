@@ -224,15 +224,22 @@ foreach($packageDir in $packages)
         
         # Checking if app exists
         Write-Host "  Checking if app exists"
-        $uri = "/beta/deviceAppManagement/mobileApps"
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
         $allApps = Get-MsGraphCollection -Uri $uri
-        $app = $allApps | where { $_.displayName -eq $appConfig.displayName }
+        $app = $allApps | Where-Object { $_.displayName -eq $appConfig.displayName -and $_."@odata.type" -eq "#microsoft.graph.webApp" }
         if (-Not $app.id)
         {
             # Creating app
             Write-Host "  Creating app"
             $uri = "/beta/deviceAppManagement/mobileApps"
             $app = Post-MsGraph -Uri $uri -Body $appConfigJson
+            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+            do
+            {
+                Start-Sleep -Seconds 5
+                $allApps = Get-MsGraphCollection -Uri $uri
+                $app = $allApps | Where-Object { $_.displayName -eq $appConfig.displayName -and $_."@odata.type" -eq "#microsoft.graph.webApp" }
+            } while (-Not $app.id)
         }
 
         # Committing the app

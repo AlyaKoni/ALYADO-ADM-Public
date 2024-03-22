@@ -44,7 +44,7 @@
 
 [CmdletBinding()]
 Param(
-    [string[]]$users = @("k.brunner.test@hundegger.com"),
+    [string[]]$users = $null,
     [ValidateSet("push","oath","voiceMobile","voiceAlternateMobile","voiceOffice","sms")]
     [string]$defaultMethod = "oath"
 )

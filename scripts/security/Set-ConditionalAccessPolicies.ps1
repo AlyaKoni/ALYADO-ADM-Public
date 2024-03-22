@@ -63,7 +63,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
 
 # Logins
-LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Policy.ReadWrite.ConditionalAccess","Policy.Read.All")
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Policy.ReadWrite.ConditionalAccess","Policy.Read.All","Application.Read.All")
 
 # =============================================================
 # Azure stuff

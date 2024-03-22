@@ -43,7 +43,7 @@
 [CmdletBinding()]
 Param(
     [string]$inputFile = $null, #Defaults to "$AlyaData\aad\Lizenzen.xlsx"
-    [bool]$useDirectAssignment = $false,
+    [bool]$useDirectAssignment = $true,
     [string]$groupsInputFileForDirectAssignment = $null #Defaults to "$AlyaData\aad\Gruppen.xlsx"
 )
 
@@ -241,6 +241,11 @@ if ($useDirectAssignment)
                 if ($null -eq $assignedLicenses."$($user)")
                 {
                     $assignedLicenses."$($user)" = [System.Collections.ArrayList]@()
+                }
+                if (-Not $adUser.UsageLocation)
+                {
+                    Write-Host "      Setting usage location to '$AlyaDefaultUsageLocation'"
+                    Update-MgBetaUser -UserId $adUser.Id -UsageLocation $AlyaDefaultUsageLocation
                 }
                 $userLics = $assignedLicenses."$($user)"
                 $licDets = Get-MgBetaUserLicenseDetail -UserId $adUser.Id

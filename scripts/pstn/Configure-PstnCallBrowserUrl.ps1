@@ -30,48 +30,62 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    17.02.2023 Konrad Brunner       Initial Creation
+    12.03.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory=$true)]
+    [string]$popOutUrl
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Create-ScannerUser-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-PstnCallBrowserUrl-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
-# Exchange stuff
+# O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Create-ScannerUser | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "Teams | Configure-PstnCallBrowserUrl | CsOnline" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$userName = "scanner@$AlyaDomainName"
+#Main 
+$policy = Get-CsTeamsCallingPolicy -Identity Global
 
-Write-Host "Create user $userName by hand and assign license"
-pause
+if ($policy.PopoutForIncomingPstnCalls -eq "Disabled")
+{
+    Write-Warning "PopoutForIncomingPstnCalls was disabled. Enabling it now."
+    Set-CsTeamsCallingPolicy -Identity Global -PopoutForIncomingPstnCalls "Enabled" -PopoutAppPathForIncomingPstnCalls $popOutUrl
+    $policy = Get-CsTeamsCallingPolicy -Identity Global
+}
+else
+{
+    Write-Host "PopoutForIncomingPstnCalls was already enabled."
+}
 
-& "$($AlyaScripts)\aad\Disable-MfaForUser.ps1" -userUpn $userName
-& "$($AlyaScripts)\aad\Set-UserPasswordNeverExpire.ps1" -userUpn $userName
-& "$($AlyaScripts)\exchange\Enable-SmtpAuthForUser.ps1" -userUpn $userName
-& "$($AlyaScripts)\exchange\Enable-BasicAuthPopImapSmtpForUser.ps1" -userUpn $userName
-
-Write-Host "Please login once to https://portal.office.com with user $userName"
-pause
+if ($policy.PopoutAppPathForIncomingPstnCalls -ne $popOutUrl)
+{
+    Write-Warning "PopoutAppPathForIncomingPstnCalls was not set correctly. Setting it now to:"
+    Write-Warning $popOutUrl
+    Set-CsTeamsCallingPolicy -Identity Global -PopoutForIncomingPstnCalls "Enabled" -PopoutAppPathForIncomingPstnCalls $popOutUrl
+}
+else
+{
+    Write-Host "PopoutAppPathForIncomingPstnCalls was already set to:"
+    Write-Host $popOutUrl
+}
 
 #Stopping Transscript
 Stop-Transcript

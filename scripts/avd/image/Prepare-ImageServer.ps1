@@ -30,7 +30,9 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    16.11.2022 Konrad Brunner       Initial Version
+    13.03.2020 Konrad Brunner       Initial Version
+    07.03.2022 Konrad Brunner       AVD Version
+    16.11.2022 Konrad Brunner       Customer merges
 
 #>
 
@@ -60,6 +62,7 @@ $VMDiskName = "$($VmToImage)osdisk"
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Az.Compute"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -117,6 +120,7 @@ if (-Not $Vm)
 {
     throw "VM not found. Please create the VM $VmToImage"
 }
+$Vm | Export-CliXml -Path "$AlyaData\avd\image\$VmToImage.cliXml" -Depth 20 -Force -Encoding $AlyaUtf8Encoding
 
 # Stopping the source vm
 Write-Host "Stopping the source vm '$VmToImage'" -ForegroundColor $CommandInfo
@@ -143,6 +147,7 @@ Write-Host "Please prepare now the source host ($VmToImage):"
 Write-Host '  - Start a PowerShell as Administrator'
 Write-Host '  - Run commands:'
 Write-Host '      sfc.exe /scannow'
+Write-Host '      pause'
 Write-Host '      Set-TimeZone -Id "UTC"'
 #Write-Host '      Set-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\TimeZoneInformation -Name RealTimeIsUniversal -Value 1 -Type DWord -Force'
 #Write-Host '      Set-Service -Name w32time -StartupType Automatic'
@@ -199,7 +204,7 @@ Write-Host "Preparing the source vm '$($VmToImage)'" -ForegroundColor $CommandIn
 Stop-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage -Force
 Set-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage -Generalized  
 
-# TODO delete existing image (for update)
+# Deleting existing image (for update)
 Write-Host "Deleting existing image if present" -ForegroundColor $CommandInfo
 $image = Get-AzImage -ResourceGroupName $VmResourceGroupName -ImageName $ImageName -ErrorAction SilentlyContinue
 if ($image)
@@ -214,7 +219,6 @@ $Vm = Get-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage
 $tags = (Get-AzResource -ResourceGroupName $VmResourceGroupName -Name $VmToImage -ResourceType "Microsoft.Compute/virtualMachines" -ErrorAction SilentlyContinue).Tags
 $image = New-AzImageConfig -Location $AlyaLocation -SourceVirtualMachineId $Vm.ID -HyperVGeneration $AlyaAvdHypervisorVersion
 New-AzImage -Image $image -ImageName $ImageName -ResourceGroupName $ImageResourceGroupName -ErrorAction Stop
-#New-AzImage -Image $image -ImageName ($ImageName+$DateString) -ResourceGroupName $ImageResourceGroupName -ErrorAction Stop
 
 # Checking key vault
 Write-Host "Checking key vault" -ForegroundColor $CommandInfo
@@ -253,6 +257,7 @@ Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 Write-Host "Deleting source vm '$($VmToImage)'" -ForegroundColor $CommandInfo
 Remove-AzVM -ResourceGroupName $VmResourceGroupName -Name $VmToImage -Force
 Remove-AzDisk -ResourceGroupName $VmResourceGroupName -DiskName $Vm.StorageProfile.OsDisk.Name -Force
+#$Vm = Import-CliXml -Path "$AlyaData\avd\image\$VmToImage.cliXml"
 
 # Recreating source vm
 Write-Host "Recreating source vm '$($VmToImage)'" -ForegroundColor $CommandInfo
@@ -283,7 +288,7 @@ Write-Host "Setting tags" -ForegroundColor $CommandInfo
 if (-Not $tags) { $tags = @{} }
 if (-Not $tags.ContainsKey("displayName"))
 {
-    $tags["displayName"] = "AVD Client Image"
+    $tags["displayName"] = "AVD Server Image"
 }
 if (-Not $tags.ContainsKey("stopTime"))
 {
@@ -299,14 +304,13 @@ $tags = (Get-AzResource -ResourceGroupName $ImageResourceGroupName -Name $ImageN
 if (-Not $tags) { $tags = @{} }
 if (-Not $tags.ContainsKey("displayName"))
 {
-    $tags["displayName"] = "AVD Client Image"
+    $tags["displayName"] = "AVD Server Image"
 }
 if (-Not $tags.ContainsKey("ownerEmail"))
 {
     $tags["ownerEmail"] = $Context.Account.Id
 }
 Set-AzResource -ResourceGroupName $ImageResourceGroupName -Name $ImageName -ResourceType "Microsoft.Compute/images" -Tag $tags -Force
-#Set-AzResource -ResourceGroupName $ImageResourceGroupName -Name ($ImageName+$DateString) -ResourceType "Microsoft.Compute/images" -Tag $tags -Force
 
 # Stopping VM
 Write-Host "Stopping VM" -ForegroundColor $CommandInfo

@@ -71,7 +71,7 @@ if ($authorizationPolicy.AllowedToSignUpEmailBasedSubscriptions)
     $param = @{
         allowedToSignUpEmailBasedSubscriptions = $false
     }
-    Update-MgBetaPolicyAuthorizationPolicy -BodyParameter $param
+    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId $authorizationPolicy.Id -BodyParameter $param
 }
 else
 {

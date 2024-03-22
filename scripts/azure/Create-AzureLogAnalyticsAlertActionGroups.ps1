@@ -76,6 +76,10 @@ $AuditingResourceGroupTags = @{displayName="Audit Logs";ownerEmail=$Context.Acco
 
 function Prepare-ActionGroup ($AuditingSubscriptionName, $AuditingResourceGroupName, $AuditingActionGroupName, $AuditingActionGroupNameShort, $AuditingActionGroupEmails, $AuditingResourceGroupTags)
 {
+    # Switching subscription
+    $sub = Get-AzSubscription -SubscriptionName $AuditingSubscriptionName
+    $null = Set-AzContext -Subscription $sub.Id
+
     # Checking resource provider registration
     Write-Host "Checking resource provider registration Microsoft.Insights" -ForegroundColor $CommandInfo
     $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
@@ -90,8 +94,8 @@ function Prepare-ActionGroup ($AuditingSubscriptionName, $AuditingResourceGroupN
         } while ($resProv[0].RegistrationState -ne "Registered")
     }
 
-    # Checking ressource group
-    Write-Host "Checking ressource group $AuditingResourceGroupName" -ForegroundColor $CommandInfo
+    # Checking resource group
+    Write-Host "Checking resource group $AuditingResourceGroupName" -ForegroundColor $CommandInfo
     $ResGrpParent = Get-AzResourceGroup -Name $AuditingResourceGroupName -ErrorAction SilentlyContinue
     if (-Not $ResGrpParent)
     {

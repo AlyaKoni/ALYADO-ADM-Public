@@ -61,9 +61,24 @@ Write-Host "PSTN | Set-VoiceRouting | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main
-$VoiceRoute = Get-CsOnlineVoiceRoute -Identity $AlyaPstnVoiceRouteName -ErrorAction SilentlyContinue
+$PstnUsage = Get-CsOnlinePstnUsage -Identity "Global" -ErrorAction SilentlyContinue
+if ($PstnUsage.Usage -notcontains $AlyaPstnUsageRecordsName)
+{
+    Write-Warning "PSTN usage $AlyaPstnUsageRecordsName does not exist. Creating it now."
+    Set-CsOnlinePstnUsage -Identity "Global" -Usage @{ Add = $AlyaPstnUsageRecordsName }
+}
+else
+{
+    Write-Host "PSTN usage $AlyaPstnUsageRecordsName already exists!"
+}
+
+$VoiceRoute = $null
+try {
+    $VoiceRoute = Get-CsOnlineVoiceRoute -Identity $AlyaPstnVoiceRouteName -ErrorAction SilentlyContinue
+} catch { }
 if (-Not $VoiceRoute)
 {
+    Write-Warning "Voice route $AlyaPstnVoiceRouteName does not exist. Creating it now."
     New-CsOnlineVoiceRoute -Name $AlyaPstnVoiceRouteName -NumberPattern ".*" -Priority 0 -OnlinePstnGatewayList $AlyaPstnGateway -OnlinePstnUsages $AlyaPstnUsageRecordsName
 }
 else
@@ -71,10 +86,14 @@ else
     Write-Host "Voice Route already exists!"
 }
 
-$VoiceRoutePolicy = Get-CsOnlineVoiceRoutingPolicy -Identity $AlyaPstnVoiceRoutePolicyName -ErrorAction SilentlyContinue
+$VoiceRoutePolicy = $null
+try {
+    $VoiceRoutePolicy = Get-CsOnlineVoiceRoutingPolicy -Identity $AlyaPstnVoiceRoutePolicyName -ErrorAction SilentlyContinue
+} catch { }
 if (-Not $VoiceRoutePolicy)
 {
-    New-CsOnlineVoiceRoutingPolicy -Name $AlyaPstnVoiceRoutePolicyName -OnlinePstnUsages $AlyaPstnUsageRecordsName
+    Write-Warning "Voice routing policy $AlyaPstnVoiceRouteName does not exist. Creating it now."
+    New-CsOnlineVoiceRoutingPolicy -Identity $AlyaPstnVoiceRoutePolicyName -OnlinePstnUsages $AlyaPstnUsageRecordsName
 }
 else
 {

@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     10.11.2023 Konrad Brunner       Initial Version
+	14.03.2024 Konrad Brunner       Fixes, general rework, added new workspaces
 
 #>
 
@@ -557,12 +558,15 @@ function Update-WorkspacePerfCollection($Workspace, [PSCustomObject]$PerfCollect
 		}
 	}
 }
-function Create-Alert($AlertText,$AlertResourceGroupName,$LogAnaWrkspc,$ScheduledLogs,$ActionGroupId,$Severity,$QueryType,$ThresholdOperator,$Threshold,$FrequencyInMinutes,$TimeWindowInMinutes,$Query)
+
+function Create-Alert($Subscription, $AlertText,$AlertResourceGroupName,$LogAnaWrkspc,$ScheduledLogs,$ActionGroupId,$Severity,$QueryType,$ThresholdOperator,$Threshold,$FrequencyInMinutes,$TimeWindowInMinutes,$Query)
 {
     # Checking alert
-    $AlertName = "$WrkspcName - $AlertText"
+    $AlertName = "$($LogAnaWrkspc.Name) - $AlertText"
     Write-Host "Checking alert '$AlertName'" -ForegroundColor $CommandInfo
     $alertRule = Get-AzScheduledQueryRule -ResourceGroupName $AlertResourceGroupName -Name $AlertName -ErrorAction SilentlyContinue
+    $isAzureDiagnostics = $false
+    $SubscriptionId = $Subscription.id
 
     if ($ScheduledLogs)
     {
@@ -571,130 +575,11 @@ function Create-Alert($AlertText,$AlertResourceGroupName,$LogAnaWrkspc,$Schedule
       {
         Write-Host "    Creating new rule" -ForegroundColor $CommandWarning
 
-        <#
-        #kind: "LogAlert",
-        #"apiVersion": "2023-03-15-preview",
-        $json = @"
-{
-  "type": "Microsoft.Insights/scheduledQueryRules",
-  "name": "$AlertName",
-  "location": "$AlyaLocation",
-  "identity": {
-    "type": "SystemAssigned"
-  },
-  "properties": {
-    "displayName": "$AlertName",
-    "description": "Triggers an alert for the condition: $AlertText",
-    "severity": $Severity,
-    "enabled": true,
-    "evaluationFrequency": "PT$($FrequencyInMinutes)M",
-    "scopes": [
-        "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName"
-    ],
-    "windowSize": "PT$($TimeWindowInMinutes)M",
-    "criteria": {
-        "allOf": [
-            {
-                "query": $($Query | ConvertTo-Json),
-                "timeAggregation": "$QueryType",
-                "operator": "$ThresholdOperator",
-                "threshold": $Threshold,
-                "failingPeriods": {
-                    "numberOfEvaluationPeriods": 1,
-                    "minFailingPeriodsToAlert": 1
-                }
-            }
-        ]
-    },
-    "actions": {
-        "actionGroups": [
-            "$ActionGroupId"
-        ]
-    }
-  }
-}
-"@
-Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/Microsoft.Insights/scheduledQueryRules?api-version=2023-03-15-preview" -Method "Post" -Payload $json
-
-Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName?api-version=2023-03-15-preview" -Method "Post" -Payload $json
-Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName?api-version=2023-03-15-preview" -Method "Put" -Payload $json
-Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/Microsoft.Insights/scheduledQueryRules?api-version=2023-03-15-preview" -Method "Post" -Payload $json
-Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/Microsoft.Insights/scheduledQueryRules?api-version=2023-03-15-preview" -Method "Put" -Payload $json
-Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName/scheduledQueryRules?api-version=2022-10-01" -Method "Post" -Payload $json
-Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName/scheduledQueryRules?api-version=2022-10-01" -Method "Put" -Payload $json
-
-$alertRule = New-AzScheduledQueryRule `
--Name $AlertName `
--DisplayName $AlertName `
--Description "Triggers an alert for the condition: $AlertText" `
--ResourceGroupName $AlertResourceGroupName `
--ActionGroupResourceId $ActionGroupId `
--Location $AlyaLocation `
--Enabled:$true `
--Scope $LogAnaWrkspc.ResourceId `
--Severity $Severity `
--WindowSize ([System.TimeSpan]::FromMinutes($TimeWindowInMinutes)) `
--EvaluationFrequency ([System.TimeSpan]::FromMinutes($FrequencyInMinutes)) `
--CriterionAllOf $alertCondition
-Invoke-AzRestMethod -Path "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/resourceGroups/RG_AzureSentinel/providers/Microsoft.Insights/scheduledqueryrules/hanshundegger-azure-sentinel - Windows Low Disk Space?api-version=2023-03-15-preview" -Method "Patch" -Payload $json
-
-
-          Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName/alertsversion?api-version=2017-04-26-preview" -Method "Get"
-          Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName/alertsversion?api-version=2022-10-01" -Method "Get"
-$json = @"
-{
-  "name": "hanshundegger-azure-sentinel - Windows Low Disk Space",
-  "properties": {
-    "displayName": "hanshundegger-azure-sentinel - Windows Low Disk Space",
-    "description": "Triggers an alert for the condition: Windows Low Disk Space",
-    "severity": 2,
-    "enabled": true,
-    "evaluationFrequency": "PT30M",
-    "scopes": [
-        "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/resourcegroups/rg_azuresentinel/providers/microsoft.operationalinsights/workspaces/hanshundegger-azure-sentinel"
-    ],
-    "windowSize": "PT30M",
-    "criteria": {
-        "allOf": [
-            {
-                "query": "let _minValue = 10; Perf | where TimeGenerated >= ago(1h) | where CounterValue <= _minValue | where CounterName == \"% Free Space\" and InstanceName in (\"C:\", \"D:\", \"E:\", \"F:\", \"G:\")  | summarize mtgPerf=max(TimeGenerated), CounterValue=max(CounterValue) by Computer, InstanceName, CounterName, ObjectName, DriveLetter=replace(@\"(\\\\w).\",@\"\\\\1\", InstanceName) | join kind=inner ( Heartbeat | where OSType == \"Windows\" and ComputerEnvironment == \"Azure\" | summarize max(TimeGenerated) by Computer) on Computer | project Computer, ObjectName, CounterName, InstanceName, TimeGenerated=mtgPerf, round(CounterValue), DriveLetter, AlertType_s = \"Windows Low Disk Space\", Severity = 3, SeverityName_s = \"WARNING\", AffectedCI_s = strcat(Computer, \"/\", DriveLetter), AlertTitle_s = strcat(Computer, \": Low Disk Space on Drive \", DriveLetter), AlertDetails_s = strcat(\"Computer: \", Computer, \"\\\\r\\\\nDrive Letter: \", DriveLetter, \"\\\\r\\\\nPercent Free Space: \", round(CounterValue), \"%\\\\r\\\\nAlert Threshold: <= \", _minValue, \"%\")",
-                "timeAggregation": "Count",
-                "operator": "GreaterThan",
-                "threshold": 0,
-                "failingPeriods": {
-                    "numberOfEvaluationPeriods": 1,
-                    "minFailingPeriodsToAlert": 1
-                }
-            }
-        ]
-    },
-    "actions": {
-        "actionGroups": [
-            "/subscriptions/6B392099-8A5D-4F63-A57E-986F278BC20D/resourceGroups/RG_AzureSentinel/providers/microsoft.insights/actionGroups/Alertmail IT"
-        ]
-    },
-    "identity": {
-      "type": "SystemAssigned",
-      "tenantId": "d8af8c04-8701-44f5-b6d8-845367ef5a72",
-      "principalId": "9640708e-fb58-41c6-a36e-7b6b75af5212"
-    }
-  }
-}
-"@
-Invoke-AzRestMethod -Path "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/resourceGroups/RG_AzureSentinel/providers/Microsoft.Insights/scheduledqueryrules/hanshundegger-azure-sentinel - Windows Low Disk Space?api-version=2023-03-15-preview" -Method "Patch" -Payload $json
-
-$resp = Invoke-AzRestMethod -Path "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/resourceGroups/RG_AzureSentinel/providers/Microsoft.Insights/scheduledqueryrules/hanshundegger-azure-sentinel - Unexpected Shutdown?api-version=2023-03-15-preview" -Method "Get"
-$rule = $resp.Content | ConvertFrom-Json
-($rule | ConvertTo-Json -Depth 99)
-
-$rule.id = $null
-$rule.systemData = $null
-Invoke-AzRestMethod -Path "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/resourceGroups/RG_AzureSentinel/providers/Microsoft.Insights/scheduledqueryrules/hanshundegger-azure-sentinel - Windows Low Disk Space?api-version=2023-03-15-preview" -Method "Patch" -Payload ($rule | ConvertTo-Json -Depth 99)
-#>
         $queryStr = $Query
         if ($Query.StartsWith("arg("))
         {
           $queryStr = "AzureDiagnostics"
+          $isAzureDiagnostics = $true
         }
         $alertCondition = New-AzScheduledQueryRuleConditionObject `
           -Query $queryStr `
@@ -719,11 +604,10 @@ Invoke-AzRestMethod -Path "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/r
           -CriterionAllOf $alertCondition
 
       }
-      #else
-      #{
-        Write-Host "    Updating rule" -ForegroundColor $CommandWarning
 
-        $json = @"
+      Write-Host "    Updating rule" -ForegroundColor $CommandWarning
+
+      $json = @"
 {
   "type": "Microsoft.Insights/scheduledQueryRules",
   "name": "$AlertName",
@@ -738,7 +622,7 @@ Invoke-AzRestMethod -Path "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/r
     "enabled": true,
     "evaluationFrequency": "PT$($FrequencyInMinutes)M",
     "scopes": [
-        "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName"
+        "/subscriptions/$($SubscriptionId)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName"
     ],
     "windowSize": "PT$($TimeWindowInMinutes)M",
     "criteria": {
@@ -763,56 +647,34 @@ Invoke-AzRestMethod -Path "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/r
   }
 }
 "@
-        Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$WrkspcResourceGroupName/providers/Microsoft.Insights/scheduledQueryRules/$($AlertName)?api-version=2023-03-15-preview" -Method "Patch" -Payload $json
+      Invoke-AzRestMethod -Path "/subscriptions/$($SubscriptionId)/resourcegroups/$WrkspcResourceGroupName/providers/Microsoft.Insights/scheduledQueryRules/$($AlertName)?api-version=2023-03-15-preview" -Method "Patch" -Payload $json
         
-        <# TODO PowerShell update actually removes system assigned identity, created an issue
-
-        $alertCondition = New-AzScheduledQueryRuleConditionObject `
-          -Query $Query `
-          -TimeAggregation $QueryType `
-          -Operator $ThresholdOperator `
-          -Threshold $Threshold `
-          -FailingPeriodNumberOfEvaluationPeriod 1 `
-          -FailingPeriodMinFailingPeriodsToAlert 1
-
-        $null = Update-AzScheduledQueryRule -InputObject $alertRule.Id `
-          -DisplayName $AlertName `
-          -Description "Triggers an alert for the condition: $AlertText" `
-          -ActionGroupResourceId $ActionGroupId `
-          -Enabled:$true `
-          -Scope $LogAnaWrkspc.ResourceId `
-          -Severity $Severity `
-          -WindowSize ([System.TimeSpan]::FromMinutes($TimeWindowInMinutes)) `
-          -EvaluationFrequency ([System.TimeSpan]::FromMinutes($FrequencyInMinutes)) `
-          -CriterionAllOf $alertCondition#>
-
-      #}
-
-      $retries = 10
+      $retries = 12
       do {
-        Start-Sleep -Seconds 5
         $rulePrincipal = Get-AzADServicePrincipal -Filter "DisplayName eq '$AlertName'" -ErrorAction SilentlyContinue
         if ($rulePrincipal) {
           break
+        } else {
+          Start-Sleep -Seconds 10
         }
         $retries--
       } while ($retries -ge 0)
-            
+
       if (-Not $rulePrincipal)
       {
-        Write-Warning "We don't have actually any possibility to set the identity by PowerShell. Please:"
-        Write-Host " - Go to: 'https://portal.azure.com/#/resource$($alertRule.Id)/overview'"
-        Write-Host " - Enable system assigned identity"
-        Write-Host " - Give the identity '$AlertName' read rights to the workspace"
-        Write-Host " - Rerun this script"
+        Write-Warning "We don't have actually a possibility to set the identity by PowerShell. Please:"
+        Write-Warning " - Go to: 'https://portal.azure.com/#/resource/$($alertRule.Id)/overview'"
+        Write-Warning " - Edit the rule and enable system assigned identity"
+        Write-Warning " - Rerun this script"
+        exit
       }
       else
       {
           $ruleRole = Get-AzRoleAssignment -Scope $LogAnaWrkspc.ResourceId -RoleDefinitionName "Reader" | Where-Object { $_.ObjectType -eq "ServicePrincipal" -and  $_.DisplayName -eq $AlertName }
           if (-Not $ruleRole)
           {
+            $RoleAssignment = $null;
             $Retries = 0;
-            $RoleAssignment = $null
             While ($null -eq $RoleAssignment -and $Retries -le 6)
             {
                 $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Reader" -ServicePrincipalName $rulePrincipal.AppId -Scope $LogAnaWrkspc.ResourceId -ErrorAction SilentlyContinue
@@ -822,9 +684,31 @@ Invoke-AzRestMethod -Path "/subscriptions/6b392099-8a5d-4f63-a57e-986f278bc20d/r
             }
             if ($Retries -gt 6)
             {
-                Write-Warning "We are not able to set the role assigment. insufficient access rights?"
+                Write-Warning "We are not able to set the role assigment on workspace. insufficient access rights?"
                 Write-Host " - Give the identity '$AlertName' read rights to the workspace"
                 pause
+            }
+          }
+          if ($isAzureDiagnostics)
+          {
+            $ruleRole = Get-AzRoleAssignment -Scope "/subscriptions/$($Subscription.id)" -RoleDefinitionName "Reader" | Where-Object { $_.ObjectType -eq "ServicePrincipal" -and  $_.DisplayName -eq $AlertName }
+            if (-Not $ruleRole)
+            {
+              $RoleAssignment = $null;
+              $Retries = 0;
+              While ($null -eq $RoleAssignment -and $Retries -le 6)
+              {
+                  $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Reader" -ServicePrincipalName $rulePrincipal.AppId -Scope "/subscriptions/$($Subscription.id)" -ErrorAction SilentlyContinue
+                  Start-Sleep -s 10
+                  $RoleAssignment = Get-AzRoleAssignment -Scope "/subscriptions/$($Subscription.id)" -RoleDefinitionName "Reader" | Where-Object { $_.ObjectType -eq "ServicePrincipal" -and  $_.DisplayName -eq $AlertName }
+                  $Retries++;
+              }
+              if ($Retries -gt 6)
+              {
+                  Write-Warning "We are not able to set the role assigment on workspace. insufficient access rights?"
+                  Write-Host " - Give the identity '$AlertName' read rights to the workspace"
+                  pause
+              }
             }
           }
       }
@@ -898,6 +782,15 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
     $LogAnaWrkspcLogVersResp = Invoke-AzRestMethod -Path "/subscriptions/$($sub.Id)/resourcegroups/$WrkspcResourceGroupName/providers/microsoft.operationalinsights/workspaces/$WrkspcName/alertsversion?api-version=2017-04-26-preview" -Method "Get"
     $LogAnaWrkspcLogVers = $LogAnaWrkspcLogVersResp.Content | ConvertFrom-Json
 
+    # Checking action group
+    Write-Host "Checking action group $ActionGroupName" -ForegroundColor $CommandInfo
+    $actionGroup = Get-AzActionGroup -ResourceGroupName $ActionGroupResourceGroupName -Name $ActionGroupName -ErrorAction SilentlyContinue
+    if (-Not $actionGroup)
+    {
+        throw "Does not exist. Please create it first with Create-AzureLogAnalyticsAlertActionGroups.ps1"
+    }
+    $actionGroupId = $actionGroup.Id
+
     # Checking log analytics workspace event log collections
     Write-Host "Checking log analytics workspace event log collections" -ForegroundColor $CommandInfo
     Update-WorkspaceEventCollection `
@@ -910,19 +803,11 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
 	    -Workspace $LogAnaWrkspc `
 	    -PerfCollectionConfig $workSpaceConfig.PerformanceCounters
 
-    # Checking action group
-    Write-Host "Checking action group $ActionGroupName" -ForegroundColor $CommandInfo
-    $actionGroup = Get-AzActionGroup -ResourceGroupName $ActionGroupResourceGroupName -Name $ActionGroupName -ErrorAction SilentlyContinue
-    if (-Not $actionGroup)
-    {
-        throw "Does not exist. Please create it first with Create-AzureLogAnalyticsAlertActionGroups.ps1"
-    }
-    $actionGroupId = $actionGroup.Id
-
     # Alert rule examples from: https://github.com/microsoft/manageability-toolkits/blob/master/Alert%20Toolkit/DefaultAlertConfig.json
 
     # Checking Low Disk Space alert
     Create-Alert `
+        -Subscription $sub `
         -AlertText "Windows Low Disk Space" `
         -AlertResourceGroupName $AlertResourceGroupName `
         -LogAnaWrkspc $LogAnaWrkspc `
@@ -938,6 +823,7 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
 
     # Checking High CPU Usage alert
     Create-Alert `
+        -Subscription $sub `
         -AlertText "High CPU Usage" `
         -AlertResourceGroupName $AlertResourceGroupName `
         -LogAnaWrkspc $LogAnaWrkspc `
@@ -953,6 +839,7 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
 
     # Checking Low Memory alert
     Create-Alert `
+        -Subscription $sub `
         -AlertText "Low Memory" `
         -AlertResourceGroupName $AlertResourceGroupName `
         -LogAnaWrkspc $LogAnaWrkspc `
@@ -968,6 +855,7 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
 
     # Checking File System Corrupt alert
     Create-Alert `
+        -Subscription $sub `
         -AlertText "File System Corrupt" `
         -AlertResourceGroupName $AlertResourceGroupName `
         -LogAnaWrkspc $LogAnaWrkspc `
@@ -983,6 +871,7 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
 
     # Checking Unexpected Shutdown alert
     Create-Alert `
+        -Subscription $sub `
         -AlertText "Unexpected Shutdown" `
         -AlertResourceGroupName $AlertResourceGroupName `
         -LogAnaWrkspc $LogAnaWrkspc `
@@ -998,6 +887,7 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
 
     # Checking Runbook alert
     Create-Alert `
+        -Subscription $sub `
         -AlertText "Runbook Job Failed" `
         -AlertResourceGroupName $AlertResourceGroupName `
         -LogAnaWrkspc $LogAnaWrkspc `
@@ -1013,6 +903,7 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
 
     # Checking VM Update Installation Error
     Create-Alert `
+        -Subscription $sub `
         -AlertText "VM Update Installation Error" `
         -AlertResourceGroupName $AlertResourceGroupName `
         -LogAnaWrkspc $LogAnaWrkspc `
@@ -1026,9 +917,10 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
         -TimeWindowInMinutes 60 `
         -Query "arg(`"`").patchinstallationresources | where type !has `"softwarepatches`" | extend machineName = tostring(split(id, `"/`", 8)), resourceType = tostring(split(type, `"/`", 0)), tostring(rgName = split(id, `"/`", 4)), tostring(RunID = split(id, `"/`", 10)) | extend prop = parse_json(properties) | where prop.installedPatchCount > 0 or prop.failedPatchCount > 0 | extend lastTime = todatetime(prop.lastModifiedDateTime), OS = tostring(prop.osType), maintenanceWindowExceeded = tostring(prop.maintenanceWindowExceeded), status = tostring(prop.status), installedPatchCount = tostring(prop.installedPatchCount), failedPatchCount = tostring(prop.failedPatchCount), pendingPatchCount = tostring(prop.pendingPatchCount), excludedPatchCount = tostring(prop.excludedPatchCount), notSelectedPatchCount = tostring(prop.notSelectedPatchCount) | project lastTime, RunID, machineName, rgName, resourceType, OS, status, maintenanceWindowExceeded, installedPatchCount, failedPatchCount, pendingPatchCount, excludedPatchCount, notSelectedPatchCount, prop | where lastTime > ago(1h) and status == `"Failed`""
 
-    # Checking VM Update Installation Secceeded
+    # Checking VM Update Installation Succeeded
     Create-Alert `
-        -AlertText "VM Update Installation Secceeded" `
+        -Subscription $sub `
+        -AlertText "VM Update Installation Succeeded" `
         -AlertResourceGroupName $AlertResourceGroupName `
         -LogAnaWrkspc $LogAnaWrkspc `
         -ScheduledLogs ($LogAnaWrkspcLogVers.version -eq 2 -and $LogAnaWrkspcLogVers.scheduledQueryRulesEnabled -eq $true) `

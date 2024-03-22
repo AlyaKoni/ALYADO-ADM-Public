@@ -143,19 +143,6 @@ if (-Not $LogAnaWrkspc)
     }
 }
 
-# Checking resource provider registration
-Write-Host "Checking resource provider registration" -ForegroundColor $CommandInfo
-$resProv = Get-AzResourceProvider -ProviderNamespace "microsoft.insights" -Location $AlyaLocation
-if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
-{
-    Register-AzResourceProvider -ProviderNamespace "microsoft.insights"
-    do
-    {
-        Start-Sleep -Seconds 5
-        $resProv = Get-AzResourceProvider -ProviderNamespace "microsoft.insights" -Location $AlyaLocation
-    } while ($resProv[0].RegistrationState -ne "Registered")
-}
-
 # Setting auditing on azure active directory
 Write-Host "Setting auditing on azure active directory" -ForegroundColor $CommandInfo
 $token = Get-AzAccessToken -audience "https://management.azure.com/"
@@ -168,8 +155,8 @@ $headers = @{
 #TODO Sign in values for different license types
 $body = @"
 {
-  "name": "$($DiagnosticRuleName)",
-  "properties": {
+    "name": "$($DiagnosticRuleName)",
+    "properties": {
         "logs": [{
                 "category": "AuditLogs",
                 "enabled": true,
@@ -277,9 +264,9 @@ $body = @"
                 }
             }
         ],
-    "metrics": [],
-    "storageAccountId": "$($StrgAccount.Id)",
-    "workspaceId": "$($LogAnaWrkspc.ResourceId)"
+        "metrics": [],
+        "storageAccountId": "$($StrgAccount.Id)",
+        "workspaceId": "$($LogAnaWrkspc.ResourceId)"
   }
 }
 "@

@@ -144,6 +144,7 @@ if (-Not $LogAnaWrkspc)
 
 function Set-SubscriptionRule($subName)
 {
+    $DiagnosticRuleName = $subName + "-diag"
     $subscriptionId = (Get-AzSubscription -SubscriptionName $($subName)).Id
     $token = Get-AzAccessToken("https://management.azure.com/")
     $uri = "https://management.azure.com/subscriptions/{0}/providers/microsoft.insights/diagnosticSettings/{1}?api-version=2017-05-01-preview" -f $subscriptionId, $DiagnosticRuleName

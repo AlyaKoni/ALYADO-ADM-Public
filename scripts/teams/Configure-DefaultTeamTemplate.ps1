@@ -36,7 +36,6 @@
 
 [CmdletBinding()]
 Param(
-    [bool]$assignedGroups = $false
 )
 
 #Reading configuration
@@ -64,18 +63,30 @@ Write-Host "=====================================================`n" -Foreground
 
 $TemplateListEn = Get-CsTeamTemplateList -PublicTemplateLocale "en-US"
 $TemplateListDe = Get-CsTeamTemplateList -PublicTemplateLocale "de-DE"
-$ProjectTemplateEn = $TemplateListEn | Where-Object { $_.Name -eq "Manage a Project" }
-$ProjectTemplateDe = $TemplateListDe | Where-Object { $_.Name -eq "Ein Projekt verwalten" }
-$ProjectTemplateJsonEn = Get-CsTeamTemplate -OdataId $ProjectTemplateEn.OdataId
-$ProjectTemplateJsonDe = Get-CsTeamTemplate -OdataId $ProjectTemplateDe.OdataId
 
-$ProjectTemplateJsonEn.DisplayName = "$($AlyaCompanyNameShortM365.ToUpper())TM Project"
-$ProjectTemplateJsonEn.Category = $null
-New-CsTeamTemplate -Locale "en-US" -Body $ProjectTemplateJsonEn
+$TemplateEn = $TemplateListEn | Where-Object { $_.Name -eq "$($AlyaCompanyNameShortM365.ToUpper())TM Project" }
+if (-Not $TemplateEn) {
+    Write-Warning "Template '$($AlyaCompanyNameShortM365.ToUpper())TM Project' does not exist. Creating it now."
+    $ProjectTemplateEn = $TemplateListEn | Where-Object { $_.Name -eq "Manage a Project" }
+    $ProjectTemplateJsonEn = Get-CsTeamTemplate -OdataId $ProjectTemplateEn.OdataId
+    $ProjectTemplateJsonEn.DisplayName = "$($AlyaCompanyNameShortM365.ToUpper())TM Project"
+    $ProjectTemplateJsonEn.Category = $null
+    $TemplateEn = New-CsTeamTemplate -Locale "en-US" -Body $ProjectTemplateJsonEn
+} else {
+    Write-Host "Template '$($AlyaCompanyNameShortM365.ToUpper())TM Project' already exists."
+}
 
-$ProjectTemplateJsonDe.DisplayName = "$($AlyaCompanyNameShortM365.ToUpper())TM Projekt"
-$ProjectTemplateJsonDe.Category = $null
-New-CsTeamTemplate -Locale "de-DE" -Body $ProjectTemplateJsonDe
+$TemplateDe = $TemplateListDe | Where-Object { $_.Name -eq "$($AlyaCompanyNameShortM365.ToUpper())TM Projekt" }
+if (-Not $TemplateDe) {
+    Write-Warning "Template '$($AlyaCompanyNameShortM365.ToUpper())TM Projekt' does not exist. Creating it now."
+    $ProjectTemplateDe = $TemplateListDe | Where-Object { $_.Name -eq "Ein Projekt verwalten" }
+    $ProjectTemplateJsonDe = Get-CsTeamTemplate -OdataId $ProjectTemplateDe.OdataId
+    $ProjectTemplateJsonDe.DisplayName = "$($AlyaCompanyNameShortM365.ToUpper())TM Projekt"
+    $ProjectTemplateJsonDe.Category = $null
+    $TemplateDe = New-CsTeamTemplate -Locale "de-DE" -Body $ProjectTemplateJsonDe
+} else {
+    Write-Host "Template '$($AlyaCompanyNameShortM365.ToUpper())TM Projekt' already exists."
+}
 
 <#
 $TemplateListEn | Where-Object { $_.Name -like "$($AlyaCompanyNameShortM365.ToUpper())*" }

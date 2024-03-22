@@ -61,6 +61,7 @@ Write-Host "PSTN | Add-PSTNGateway | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
+Write-Host "Checking PSTN domain $AlyaPstnGateway" -ForegroundColor $CommandInfo
 if ((Get-CsTenant).VerifiedDomains.Name -notcontains $AlyaPstnGateway)
 {
     Write-Host "$AlyaPstnGateway is not yet in the VerifiedDomains list" -ForegroundColor Red
@@ -74,10 +75,20 @@ if (((Get-CsTenant).VerifiedDomains | Where-Object { $_.Name -eq $AlyaPstnGatewa
     exit 2
 }
 
-$PSTNGateway = Get-CsOnlinePSTNGateway -Identity $AlyaPstnGateway -ErrorAction SilentlyContinue
+Write-Host "Checking PSTN gateway $AlyaPstnGateway" -ForegroundColor $CommandInfo
+$PSTNGateway = $null
+try {
+    $PSTNGateway = Get-CsOnlinePSTNGateway -Identity $AlyaPstnGateway -ErrorAction SilentlyContinue
+} catch { }
 if (-Not $PSTNGateway)
 {
-    New-CsOnlinePSTNGateway -Fqdn $AlyaPstnGateway -SipSignalingPort $AlyaPstnPort -MaxConcurrentSessions 100 -Enabled $true -ForwardPai $true -ForwardCallHistory $true
+    try {
+        New-CsOnlinePSTNGateway -Fqdn $AlyaPstnGateway -SipSignalingPort $AlyaPstnPort -MaxConcurrentSessions 100 -Enabled $true -ForwardPai $true -ForwardCallHistory $true
+    } catch {
+        Write-Error $_.Exception
+        Write-Warning "Possibly your domain is not ready. To fix this, please add a user in this domain and assign an exchange license to him."
+        Write-Warning "Scripts: Prepare-PSTNDomainUserCreate.ps1 and Prepare-PSTNDomainUserDelete.ps1"
+    }
 }
 else
 {

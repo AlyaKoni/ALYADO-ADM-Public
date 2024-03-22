@@ -97,15 +97,22 @@ foreach($winGetApp in $winGetApps)
         {   
             $winGetApp.displayName = $winGetApp.displayName.Replace("WIN ", $AppPrefix)
         }
-        $uri = "/beta/deviceAppManagement/mobileApps"
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
         $allApps = Get-MsGraphCollection -Uri $uri
-        $actApp = $allApps | where { $_.displayName -eq $winGetApp.displayName }
+        $actApp = $allApps | Where-Object { $_.displayName -eq $winGetApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.winGetApp" }
         if (-Not $actApp.id)
         {
             # Creating the WinGetApp
             Write-Host "    App does not exist, creating"
             $uri = "/beta/deviceAppManagement/mobileApps"
             $actApp = Post-MsGraph -Uri $uri -Body ($winGetApp | ConvertTo-Json -Depth 50)
+            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+            do
+            {
+                Start-Sleep -Seconds 5
+                $allApps = Get-MsGraphCollection -Uri $uri
+                $actApp = $allApps | Where-Object { $_.displayName -eq $winGetApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.winGetApp" }
+            } while (-Not $actApp.id)
         }
 
         # Waiting until published

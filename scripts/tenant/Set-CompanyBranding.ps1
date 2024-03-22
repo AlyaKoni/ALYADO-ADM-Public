@@ -39,7 +39,7 @@
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-	[object]$browser
+	[object]$seleniumBrowser = $null
 )
 
 #Reading configuration
@@ -54,21 +54,29 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
 # Logins
-LoginTo-MgGraph -Scopes @("Organization.ReadWrite.All")
+LoginTo-MgGraph -Scopes @("Organization.ReadWrite.All","OrganizationalBranding.ReadWrite.All")
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
-if (-Not $browser) {
-    if ($Global:AlyaSeleniumBrowser) {
-        $browser = $Global:AlyaSeleniumBrowser
-    }
-}
-
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Tenant | Set-CompanyBranding | Azure" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Configuring browser
+if ($seleniumBrowser) {
+    $browser = $seleniumBrowser
+} else {
+	if (-Not $browser)
+	{
+		if ($Global:AlyaSeleniumBrowser) {
+			$browser = $Global:AlyaSeleniumBrowser
+		} else {
+			$browser = Get-SeleniumBrowser
+		}
+	}
+}
 
 # Getting organisation
 Write-Host "Getting organisation" -ForegroundColor $CommandInfo
@@ -194,10 +202,12 @@ else
     }
     try
     {
-        $params = @{  
-            BackgroundImageInputFile = $uplFile
-        }  
-        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        # not working! Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BackgroundImageInputFile $uplFile
+        # not working! Set-MgBetaOrganizationBrandingBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile
+        Set-MgBetaOrganizationBrandingLocalizationBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "en-US"
+        Set-MgBetaOrganizationBrandingLocalizationBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
+        Set-MgBetaOrganizationBrandingLocalizationBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
+        Set-MgBetaOrganizationBrandingLocalizationBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
     }
     catch
     {
@@ -231,10 +241,12 @@ else
     }
     try
     {
-        $params = @{  
-            SquareLogoInputFile = $uplFile
-        }  
-        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        # not working! Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -SquareLogoInputFile $uplFile
+        # not working! Set-MgBetaOrganizationBrandingSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "en-US"
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
     }
     catch
     {
@@ -268,10 +280,12 @@ else
     }
     try
     {
-        $params = @{  
-            SquareLogoInputFile = $uplFile
-        }  
-        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        # not working! Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -SquareLogoDarkInputFile $uplFile
+        # not working! Set-MgBetaOrganizationBrandingSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "en-US"
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
     }
     catch
     {
@@ -303,16 +317,14 @@ else
         if (Test-Path $uplFile) { Remove-Item -Path $uplFile -Force -ErrorAction SilentlyContinue }
         Invoke-WebRequestIndep -Uri $AlyaAzureBrandingBannerLogo -OutFile $uplFile
     }
-    #$stream = [System.IO.File]::Open($uplFile,[System.IO.FileMode]::Open)
-    #Set-MgBetaOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile
-    #$stream.Close()
-    #Get-MgBetaOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -OutFile $uplFile
     try
     {
-        $params = @{  
-            BannerLogoInputFile = $uplFile
-        }  
-        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        # not working! Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BannerLogoInputFile $uplFile
+        # not working! Set-MgBetaOrganizationBrandingBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile
+        Set-MgBetaOrganizationBrandingLocalizationBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "en-US"
+        Set-MgBetaOrganizationBrandingLocalizationBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
+        Set-MgBetaOrganizationBrandingLocalizationBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
+        Set-MgBetaOrganizationBrandingLocalizationBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
     }
     catch
     {
@@ -346,10 +358,12 @@ else
     }
     try
     {
-        $params = @{  
-            FaviconInputFile = $uplFile
-        }  
-        Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -BodyParameter $params
+        # not working! Update-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId -FaviconInputFile $uplFile
+        # not working! Set-MgBetaOrganizationBrandingFavicon -OrganizationId $AlyaTenantId -InFile $uplFile
+        Set-MgBetaOrganizationBrandingLocalizationFavicon -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "en-US"
+        Set-MgBetaOrganizationBrandingLocalizationFavicon -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
+        Set-MgBetaOrganizationBrandingLocalizationFavicon -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
+        Set-MgBetaOrganizationBrandingLocalizationFavicon -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
     }
     catch
     {

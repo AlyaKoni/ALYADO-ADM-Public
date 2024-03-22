@@ -188,12 +188,13 @@ foreach ($group in $AllGroups)
         $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
         if (-Not [string]::IsNullOrEmpty($group.ParentGroup))
         {
-            $groupsToAssign = $group.ParentGroup.Split(",")
-            foreach($groupToAssign in $groupsToAssign)
+            $groupsToAssignTo = $group.ParentGroup.Split(",")
+            foreach($groupToAssignTo in $groupsToAssignTo)
             {
-                $aGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($groupToAssign)'"
+                $aGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($groupToAssignTo)'"
                 if ($aGrp)
                 {
+                    Write-Host "   - Assigning to '$($groupToAssignTo)'"
                     $members = Get-MgBetaGroupMember -GroupId $aGrp.Id -All
                     $fnd = $false
                     foreach ($member in $members)
@@ -206,14 +207,14 @@ foreach ($group in $AllGroups)
                     }
                     if (-Not $fnd)
                     {
-                        Write-Warning "Adding group '$($group.DisplayName)' as member to group '$groupToAssign'"
+                        Write-Warning "Adding group '$($group.DisplayName)' as member to group '$groupToAssignTo'"
                         New-MgBetaGroupMember -GroupId $aGrp.Id -DirectoryObjectId $exGrp.Id
                     }
                 }
                 else
                 {
-                    Write-Warning "Not able to assign group '$($groupToAssign)' to '$($group.DisplayName)'"
-                    Write-Warning "Reason: '$($group.DisplayName)' does not exist"
+                    Write-Warning "Not able to assign group '$($group.DisplayName)' to '$($groupToAssignTo)'"
+                    Write-Warning "Reason: '$($groupToAssignTo)' does not exist"
                     pause
                 }
             }

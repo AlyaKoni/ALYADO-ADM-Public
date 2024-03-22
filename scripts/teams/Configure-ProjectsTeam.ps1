@@ -42,8 +42,8 @@ Param(
     [Parameter(Mandatory=$false)]
     [bool]$assignedGroups = $false,
     [Parameter(Mandatory=$false)]
-	[object]$browser
-)
+    [object]$seleniumBrowser = $null
+    )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
@@ -92,10 +92,18 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Teams | Configure-ProjectsTeam | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-if (-Not $browser) {
-    if ($Global:AlyaSeleniumBrowser) {
-        $browser = $Global:AlyaSeleniumBrowser
-    }
+# Configuring browser
+if ($seleniumBrowser) {
+    $browser = $seleniumBrowser
+} else {
+	if (-Not $browser)
+	{
+		if ($Global:AlyaSeleniumBrowser) {
+			$browser = $Global:AlyaSeleniumBrowser
+		} else {
+			$browser = Get-SeleniumBrowser
+		}
+	}
 }
 
 # Checking team
@@ -343,7 +351,7 @@ if (-Not $msgs -or $msgs.Count -eq 0)
 
     Write-Host "Please pin now the created messages and" -ForegroundColor $CommandWarning
     Write-Host "set channel to allow only owners posting messages" -ForegroundColor $CommandWarning
-    $teamLink = "https://teams.microsoft.com/_?tenantId=$($AlyaTenantId)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)2&ctx=channel"
+    $teamLink = "https://teams.microsoft.com/v2/_?tenantId=$($AlyaTenantId)#/conversations/Allgemein?groupId=$($Team.GroupId)&threadId=$($Channel.Id)&ctx=channel"
     Write-Host "  $teamLink"
     if (-Not $browser) {
         Start-Process "$teamLink"

@@ -35,7 +35,7 @@
 
 #>
 
-$WallpaperUrl = "https://alyapinfstrg001.blob.core.windows.net/images/DesktopBackgroundH.jpg"
+$WallpaperUrl = "https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
 $WallpaperStyle = "Fill"
 
 $Style = Switch ($WallpaperStyle) {

@@ -124,7 +124,7 @@ Write-Host "Checking assignment" -ForegroundColor $CommandInfo
 $Assignments = Get-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $App.Id -All
 if ($null -eq ($Assignments | Where-Object { $_.AppRoleId -eq $AppRole.Id -and $_.ResourceId -eq $ToApp.Id}))
 {
-    New-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $AcIdentity.Id -PrincipalId $AcIdentity.Id -ResourceId $GraphApp.Id -AppRoleId $AppRole.Id
+    New-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $App.Id -PrincipalId $App.Id -ResourceId $ToApp.Id -AppRoleId $AppRole.Id
 }
 else
 {
