@@ -142,13 +142,13 @@ foreach($definedProfile in $definedProfiles)
             #$definedDefinitionValue = $definedProfile.definitionValues[0]
             Write-Host "      $($definedDefinitionValue.definition.displayName)"
             $extDefinitionValue = $extDefinitionValues | Where-Object { $_.definition.classType -eq $definedDefinitionValue.definition.classType -and $_.definition.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.definition.displayName -eq $definedDefinitionValue.definition.displayName }
+            $groupPolicyDefinition = $groupPolicyDefinitions | Where-Object { $_.classType -eq $definedDefinitionValue.definition.classType -and $_.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.displayName -eq $definedDefinitionValue.definition.displayName } 
+            if (-Not $groupPolicyDefinition)
+            {
+                throw "Was not able to find the right definition"
+            }
             if (-Not $extDefinitionValue)
             {
-                $groupPolicyDefinition = $groupPolicyDefinitions | Where-Object { $_.classType -eq $definedDefinitionValue.definition.classType -and $_.groupPolicyCategoryId -eq $definedDefinitionValue.definition.groupPolicyCategoryId -and $_.displayName -eq $definedDefinitionValue.definition.displayName } 
-                if (-Not $groupPolicyDefinition)
-                {
-                    throw "Was not able to find the right definition"
-                }
                 $mvalue = $definedDefinitionValue | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
                 $mvalue.PSObject.properties.remove("definition")
                 $mvalue.PSObject.properties.remove("definition@odata.bind")
@@ -228,38 +228,50 @@ foreach($profile in $definedProfiles)
         
         # Checking if profile exists
         Write-Host "  Checking if profile exists"
-        $searchValue = [System.Web.HttpUtility]::UrlEncode($definedProfile.displayName)
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
         $uri = "/beta/deviceManagement/groupPolicyConfigurations?`$filter=displayName eq '$searchValue'"
         $actProfile = (Get-MsGraphObject -Uri $uri).value
         if ($actProfile.id)
         {
 
-            $tGroup = $null
+            $tGroups = @()
             if ($profile.displayName.StartsWith("WIN"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
                 if (-Not $sGroup) {
                     Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
                 } else {
-                    $tGroup = $sGroup
+                    $tGroups += $sGroup
+                }
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM not found. Can't create assignment."
+                } else {
+                    $tGroups += $sGroup
                 }
             }
             if ($profile.displayName.StartsWith("WIN10"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10'"
                 if (-Not $sGroup) {
-                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM10 not found. Can't create assignment."
                 } else {
-                    $tGroup = $sGroup
+                    $tGroups += $sGroup
                 }
             }
             if ($profile.displayName.StartsWith("WIN11"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11'"
                 if (-Not $sGroup) {
-                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM11 not found. Can't create assignment."
                 } else {
-                    $tGroup = $sGroup
+                    $tGroups += $sGroup
+                }
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM11'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM11 not found. Can't create assignment."
+                } else {
+                    $tGroups += $sGroup
                 }
             }
             if ($profile.displayName.StartsWith("AND") -and $profile.displayName -like "*Personal*")
@@ -268,7 +280,7 @@ foreach($profile in $definedProfiles)
                 if (-Not $sGroup) {
                     Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL not found. Can't create assignment."
                 } else {
-                    $tGroup = $sGroup
+                    $tGroups += $sGroup
                 }
             }
             if ($profile.displayName.StartsWith("AND") -and $profile.displayName -like "*Owned*")
@@ -277,7 +289,7 @@ foreach($profile in $definedProfiles)
                 if (-Not $sGroup) {
                     Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED not found. Can't create assignment."
                 } else {
-                    $tGroup = $sGroup
+                    $tGroups += $sGroup
                 }
             }
             if ($profile.displayName.StartsWith("IOS"))
@@ -286,7 +298,7 @@ foreach($profile in $definedProfiles)
                 if (-Not $sGroup) {
                     Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-IOSMDM not found. Can't create assignment."
                 } else {
-                    $tGroup = $sGroup
+                    $tGroups += $sGroup
                 }
             }
             if ($profile.displayName.StartsWith("MAC"))
@@ -295,15 +307,15 @@ foreach($profile in $definedProfiles)
                 if (-Not $sGroup) {
                     Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-MACMDM not found. Can't create assignment."
                 } else {
-                    $tGroup = $sGroup
+                    $tGroups += $sGroup
                 }
             }
 
-            if ($tGroup) {
+            if ($tGroups.Count -gt 0) { 
                 $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($actProfile.id)/assignments"
                 $asses = (Get-MsGraphObject -Uri $uri).value
-                $ass = $asses | Where-Object { $_.target.groupId -eq $tGroup.Id }
-                if (-Not $ass) {
+                $Targets = @()
+                foreach($tGroup in $tGroups) {
                     $GroupAssignment = New-Object -TypeName PSObject -Property @{
                         "@odata.type" = "#microsoft.graph.groupAssignmentTarget"
                         "groupId" = $tGroup.Id
@@ -311,13 +323,23 @@ foreach($profile in $definedProfiles)
                     $Target = New-Object -TypeName PSObject -Property @{
                         "target" = $GroupAssignment
                     }
-                    $Assignment = New-Object -TypeName PSObject -Property @{
-                        "assignments" = @($Target)
-                    }
-                    $body = ConvertTo-Json -InputObject $Assignment -Depth 10
-                    $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($actProfile.id)/assign"
-                    Post-MsGraph -Uri $uri -Body $body
+                    $Targets += $Target
                 }
+                foreach($ass in $asses) {
+                    if ($ass.target.groupId -notin $tGroups.Id)
+                    {
+                        $Target = New-Object -TypeName PSObject -Property @{
+                            "target" = $ass.target
+                        }
+                        $Targets += $Target
+                    }
+                }
+                $Assignment = New-Object -TypeName PSObject -Property @{
+                    "assignments" = $Targets
+                }
+                $body = ConvertTo-Json -InputObject $Assignment -Depth 10
+                $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($actProfile.id)/assign"
+                Post-MsGraph -Uri $uri -Body $body
             }
         } else {
             Write-Host "Not found!" -ForegroundColor $CommandError

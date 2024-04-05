@@ -97,7 +97,8 @@ foreach($winGetApp in $winGetApps)
         {   
             $winGetApp.displayName = $winGetApp.displayName.Replace("WIN ", $AppPrefix)
         }
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($winGetApp.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         $allApps = Get-MsGraphCollection -Uri $uri
         $actApp = $allApps | Where-Object { $_.displayName -eq $winGetApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.winGetApp" }
         if (-Not $actApp.id)
@@ -106,7 +107,8 @@ foreach($winGetApp in $winGetApps)
             Write-Host "    App does not exist, creating"
             $uri = "/beta/deviceAppManagement/mobileApps"
             $actApp = Post-MsGraph -Uri $uri -Body ($winGetApp | ConvertTo-Json -Depth 50)
-            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+            $searchValue = [System.Web.HttpUtility]::UrlEncode($winGetApp.displayName)
+            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
             do
             {
                 Start-Sleep -Seconds 5

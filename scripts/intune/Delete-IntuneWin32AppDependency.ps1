@@ -49,7 +49,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneWin32AppDependency-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = "Win10 "
+$AppPrefix = "WIN "
 if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
     $AppPrefix = "$AlyaAppPrefix "
 }

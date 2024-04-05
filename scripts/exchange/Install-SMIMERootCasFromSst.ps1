@@ -63,7 +63,7 @@ try
     foreach ($sst in $ssts)
     {
         Write-Host "Importing $($sst.FullName)"
-        $sstc = Get-Content $sst.FullName -Encoding Byte
+        $sstc = [System.IO.File]::ReadAllBytes($sst.FullName)
         Set-SmimeConfig -SMIMECertificateIssuingCA $sstc
     }
 }

@@ -497,7 +497,8 @@ foreach($packageDir in $packages)
         throw "No displayName configured in appConfig!"
     }
 
-    $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+    $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
+    $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
     $allApps = Get-MsGraphCollection -Uri $uri
     $app = $allApps | Where-Object { $_.displayName -eq $appConfig.displayName -and $_."@odata.type" -in @("#microsoft.graph.macOSDmgApp", "#microsoft.graph.macOSPkgApp") }
     if (-Not $app.id)
@@ -506,7 +507,8 @@ foreach($packageDir in $packages)
         Write-Host "  Creating app"
         $uri = "/beta/deviceAppManagement/mobileApps"
         $app = Post-MsGraph -Uri $uri -Body $appConfigJson
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($appConfig.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         do
         {
             Start-Sleep -Seconds 5

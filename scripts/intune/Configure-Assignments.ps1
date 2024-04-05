@@ -121,11 +121,12 @@ foreach($policy in $compliancePolicies)
     Write-Host "$($policy.displayName)"
     switch($policy.displayName)
     {
-        'WIN Compliance Policy' { $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM" }
-        'AND Enterprise Personal Compliance Policy' { $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL" }
-        'AND Enterprise Owned Compliance Policy' { $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED" }
-        'IOS Compliance Policy' { $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM" }
-        'MAC Compliance Policy' { $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-MACMDM" }
+        'WIN Compliance Policy' { $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM" }
+        'WIN365 Compliance Policy' { $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM" }
+        'AND Enterprise Personal Compliance Policy' { $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL" }
+        'AND Enterprise Owned Compliance Policy' { $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED" }
+        'IOS Compliance Policy' { $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM" }
+        'MAC Compliance Policy' { $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-MACMDM" }
     }
     $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
     if (-Not $exGrp){
@@ -159,57 +160,64 @@ foreach($profile in $configurationProfiles)
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
     Write-Host "$($profile.displayName)"
+    $assGrps = @()
     if ($profile.displayName.StartsWith("WIN "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM"
     }
     if ($profile.displayName.StartsWith("WIN10 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
     }
     if ($profile.displayName.StartsWith("WIN11 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM11"
     }
     if ($profile.displayName.StartsWith("MAC "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-MACMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-MACMDM"
     }
     if ($profile.displayName.StartsWith("AND ") -and $profile.displayName -like "*Personal*")
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL"
     }
     if ($profile.displayName.StartsWith("AND ") -and $profile.displayName -like "*Owned*")
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED"
     }
     if ($profile.displayName.StartsWith("IOS "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM"
-    }
-    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
-    if (-Not $exGrp){
-        Write-Error "Can't find group $assGrp"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM"
     }
 
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
-    $uri = "/beta/deviceManagement/deviceConfigurations?`$filter=displayName eq '$searchValue'"
-    $actProfile = (Get-MsGraphObject -Uri $uri).value
-    if (-Not $actProfile){
-        Write-Error "Can't find profile $($profile.displayName)"
+    foreach($assGrp in $assGrps)
+    {
+        $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
+        if (-Not $exGrp){
+            Write-Error "Can't find group $assGrp"
+        }
+    
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
+        $uri = "/beta/deviceManagement/deviceConfigurations?`$filter=displayName eq '$searchValue'"
+        $actProfile = (Get-MsGraphObject -Uri $uri).value
+        if (-Not $actProfile){
+            Write-Error "Can't find profile $($profile.displayName)"
+        }
+    
+        $assignment = @{
+            deviceConfigurationGroupAssignments = @(
+                @{
+                    "@odata.type" = "#Microsoft.Graph.deviceConfigurationGroupAssignment"
+                    targetGroupId = $exGrp.Id
+                    excludeGroup = $false
+                }
+            )
+        }
+        $uri = "/beta/deviceManagement/deviceConfigurations/$($actProfile.id)/assign"
+        $assignment = Post-MsGraph -Uri $uri -Body $assignment
     }
-
-    $assignment = @{
-        deviceConfigurationGroupAssignments = @(
-            @{
-                "@odata.type" = "#Microsoft.Graph.deviceConfigurationGroupAssignment"
-                targetGroupId = $exGrp.Id
-                excludeGroup = $false
-            }
-        )
-    }
-    $uri = "/beta/deviceManagement/deviceConfigurations/$($actProfile.id)/assign"
-    $assignment = Post-MsGraph -Uri $uri -Body $assignment
 }
 
 Write-Host "Configuring assignments for feature profiles" -ForegroundColor $CommandInfo
@@ -218,43 +226,50 @@ foreach($profile in $featureProfiles)
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
     Write-Host "$($profile.displayName)"
+    $assGrps = @()
     if ($profile.displayName.StartsWith("WIN "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM"
     }
     if ($profile.displayName.StartsWith("WIN10 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
     }
     if ($profile.displayName.StartsWith("WIN11 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
-    }
-    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
-    if (-Not $exGrp){
-        Write-Error "Can't find group $assGrp"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM11"
     }
 
-    $uri = "/beta/deviceManagement/windowsFeatureUpdateProfiles"
-    $actProfiles = (Get-MsGraphObject -Uri $uri).value
-    $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
-    if (-Not $actProfile){
-        Write-Error "Can't find profile $($profile.displayName)"
-    }
+    foreach($assGrp in $assGrps)
+    {
+        $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
+        if (-Not $exGrp){
+            Write-Error "Can't find group $assGrp"
+        }
 
-    $assignment = @{
-        assignments = @(
-            @{
-                target = @{
-                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
-                    groupId = $exGrp.Id
-                    deviceAndAppManagementAssignmentFilterId = $null
+        $uri = "/beta/deviceManagement/windowsFeatureUpdateProfiles"
+        $actProfiles = (Get-MsGraphObject -Uri $uri).value
+        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
+        if (-Not $actProfile){
+            Write-Error "Can't find profile $($profile.displayName)"
+        }
+
+        $assignment = @{
+            assignments = @(
+                @{
+                    target = @{
+                        "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
+                        groupId = $exGrp.Id
+                        deviceAndAppManagementAssignmentFilterId = $null
+                    }
                 }
-            }
-        )
+            )
+        }
+        $uri = "/beta/deviceManagement/windowsFeatureUpdateProfiles/$($actProfile.id)/assign"
+        $assignment = Post-MsGraph -Uri $uri -Body $assignment
     }
-    $uri = "/beta/deviceManagement/windowsFeatureUpdateProfiles/$($actProfile.id)/assign"
-    $assignment = Post-MsGraph -Uri $uri -Body $assignment
 }
 
 Write-Host "Configuring assignments for quality profiles" -ForegroundColor $CommandInfo
@@ -263,39 +278,46 @@ foreach($profile in $qualityProfiles)
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
     Write-Host "$($profile.displayName)"
+    $assGrps = @()
     if ($profile.displayName.StartsWith("WIN "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM"
     }
     if ($profile.displayName.StartsWith("WIN10 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
     }
     if ($profile.displayName.StartsWith("WIN11 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
-    }
-    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
-    if (-Not $exGrp){
-        Write-Error "Can't find group $assGrp"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM11"
     }
 
-    $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
-    $actProfiles = (Get-MsGraphObject -Uri $uri).value
-    $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
-    $assignment = @{
-        assignments = @(
-            @{
-                target = @{
-                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
-                    groupId = $exGrp.Id
-                    deviceAndAppManagementAssignmentFilterId = $null
+    foreach($assGrp in $assGrps)
+    {
+        $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
+        if (-Not $exGrp){
+            Write-Error "Can't find group $assGrp"
+        }
+
+        $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
+        $actProfiles = (Get-MsGraphObject -Uri $uri).value
+        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
+        $assignment = @{
+            assignments = @(
+                @{
+                    target = @{
+                        "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
+                        groupId = $exGrp.Id
+                        deviceAndAppManagementAssignmentFilterId = $null
+                    }
                 }
-            }
-        )
+            )
+        }
+        $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles/$($actProfile.id)/assign"
+        $assignment = Post-MsGraph -Uri $uri -Body $assignment
     }
-    $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles/$($actProfile.id)/assign"
-    $assignment = Post-MsGraph -Uri $uri -Body $assignment
 }
 
 Write-Host "Configuring assignments for update profiles" -ForegroundColor $CommandInfo
@@ -304,47 +326,54 @@ foreach($profile in $updateProfiles)
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
     Write-Host "$($profile.displayName)"
+    $assGrps = @()
     if ($profile.displayName.StartsWith("WIN "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM"
     }
     if ($profile.displayName.StartsWith("WIN10 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
     }
     if ($profile.displayName.StartsWith("WIN11 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM11"
     }
     if ($profile.displayName.StartsWith("IOS "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM"
     }
-    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
-    if (-Not $exGrp){
-        Write-Error "Can't find group $assGrp"
-    }
+    
+    foreach($assGrp in $assGrps)
+    {
+        $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
+        if (-Not $exGrp){
+            Write-Error "Can't find group $assGrp"
+        }
 
-    $uri = "/beta/deviceManagement/deviceConfigurations"
-    $actProfiles = (Get-MsGraphObject -Uri $uri).value
-    $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
-    if (-Not $actProfile){
-        Write-Error "Can't find profile $($profile.displayName)"
-    }
+        $uri = "/beta/deviceManagement/deviceConfigurations"
+        $actProfiles = (Get-MsGraphObject -Uri $uri).value
+        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
+        if (-Not $actProfile){
+            Write-Error "Can't find profile $($profile.displayName)"
+        }
 
-    $assignment = @{
-        assignments = @(
-            @{
-                target = @{
-                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
-                    groupId = $exGrp.Id
-                    deviceAndAppManagementAssignmentFilterId = $null
+        $assignment = @{
+            assignments = @(
+                @{
+                    target = @{
+                        "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
+                        groupId = $exGrp.Id
+                        deviceAndAppManagementAssignmentFilterId = $null
+                    }
                 }
-            }
-        )
+            )
+        }
+        $uri = "/beta/deviceManagement/deviceConfigurations/$($actProfile.id)/assign"
+        $assignment = Post-MsGraph -Uri $uri -Body $assignment
     }
-    $uri = "/beta/deviceManagement/deviceConfigurations/$($actProfile.id)/assign"
-    $assignment = Post-MsGraph -Uri $uri -Body $assignment
 }
 
 Write-Host "Configuring assignments for group policy profiles" -ForegroundColor $CommandInfo
@@ -353,42 +382,49 @@ foreach($profile in $grouPolicyProfiles)
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
     Write-Host "$($profile.displayName)"
+    $assGrps = @()
     if ($profile.displayName.StartsWith("WIN "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM"
     }
     if ($profile.displayName.StartsWith("WIN10 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10"
     }
     if ($profile.displayName.StartsWith("WIN11 "))
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
-    }
-    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
-    if (-Not $exGrp){
-        Write-Error "Can't find group $assGrp"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM11"
     }
 
-    $searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
-    $uri = "/beta/deviceManagement/groupPolicyConfigurations?`$filter=displayName eq '$searchValue'"
-    $actProfile = (Get-MsGraphObject -Uri $uri).value
-    if (-Not $actProfile){
-        Write-Error "Can't find profile $($profile.displayName)"
-    }
+    foreach($assGrp in $assGrps)
+    {
+        $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
+        if (-Not $exGrp){
+            Write-Error "Can't find group $assGrp"
+        }
 
-    $assignment = @{
-        assignments = @(
-            @{
-                target = @{
-                    "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
-                    groupId  = $exGrp.Id          
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($profile.displayName)
+        $uri = "/beta/deviceManagement/groupPolicyConfigurations?`$filter=displayName eq '$searchValue'"
+        $actProfile = (Get-MsGraphObject -Uri $uri).value
+        if (-Not $actProfile){
+            Write-Error "Can't find profile $($profile.displayName)"
+        }
+
+        $assignment = @{
+            assignments = @(
+                @{
+                    target = @{
+                        "@odata.type" = "#Microsoft.Graph.groupAssignmentTarget"
+                        groupId  = $exGrp.Id          
+                    }
                 }
-            }
-        )
+            )
+        }
+        $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($actProfile.id)/assign"
+        $assignment = Post-MsGraph -Uri $uri -Body $assignment
     }
-    $uri = "/beta/deviceManagement/groupPolicyConfigurations/$($actProfile.id)/assign"
-    $assignment = Post-MsGraph -Uri $uri -Body $assignment
 }
 
 Write-Host "Configuring assignments for scripts" -ForegroundColor $CommandInfo
@@ -398,35 +434,39 @@ foreach($script in $scripts)
     Write-Host "$($script.Name)"
     if ($script.Name  -eq "ConfigureFirewallForTeamsInProfiles.ps1")
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
     if ($script.Name  -eq "ConfigureFirewallForClickShareInProfiles.ps1")
     {
-        $assGrp = "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
+        $assGrps += "$($AlyaCompanyNameShortM365)SG-DEV-WINMDM"
     }
-    $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
-    if (-Not $exGrp){
-        Write-Error "Can't find group $assGrp"
-    }
+    
+    foreach($assGrp in $assGrps)
+    {
+        $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($assGrp)'"
+        if (-Not $exGrp){
+            Write-Error "Can't find group $assGrp"
+        }
 
-    $uri = "/beta/deviceManagement/deviceManagementScripts"
-    $actScripts = (Get-MsGraphObject -Uri $uri).value
-    $actScript = $actScripts | Where-Object { $_.fileName -eq $script.Name }
-    if (-Not $actScript){
-        Write-Error "Can't find script $($script.Name)"
-    }
+        $uri = "/beta/deviceManagement/deviceManagementScripts"
+        $actScripts = (Get-MsGraphObject -Uri $uri).value
+        $actScript = $actScripts | Where-Object { $_.fileName -eq $script.Name }
+        if (-Not $actScript){
+            Write-Error "Can't find script $($script.Name)"
+        }
 
-    $assignment = @{
-        deviceManagementScriptGroupAssignments = @(
-            @{
-                "@odata.type" = "#Microsoft.Graph.deviceManagementScriptGroupAssignment"
-                targetGroupId = $exGrp.Id
-                id = $actScript.id
-            }
-        )
+        $assignment = @{
+            deviceManagementScriptGroupAssignments = @(
+                @{
+                    "@odata.type" = "#Microsoft.Graph.deviceManagementScriptGroupAssignment"
+                    targetGroupId = $exGrp.Id
+                    id = $actScript.id
+                }
+            )
+        }
+        $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)/assign"
+        $assignment = Post-MsGraph -Uri $uri -Body $assignment
     }
-    $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)/assign"
-    $assignment = Post-MsGraph -Uri $uri -Body $assignment
 }
 
 #Stopping Transscript

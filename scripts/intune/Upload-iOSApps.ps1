@@ -144,7 +144,8 @@ foreach($iosApp in $appsIOS)
             
         # Checking if iosApp exists
         Write-Host "  Checking if iosApp exists"
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($iosApp.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         $allApps = Get-MsGraphCollection -Uri $uri
         $actApp = $allApps | Where-Object { $_.displayName -eq $iosApp.displayName -and $_."@odata.type" -eq "#microsoft.graph.iosStoreApp" }
         if (-Not $actApp.id)
@@ -153,7 +154,8 @@ foreach($iosApp in $appsIOS)
             Write-Host "    App does not exist, creating"
             $uri = "/beta/deviceAppManagement/mobileApps"
             $actApp = Post-MsGraph -Uri $uri -Body ($iosApp | ConvertTo-Json -Depth 50)
-            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+            $searchValue = [System.Web.HttpUtility]::UrlEncode($iosApp.displayName)
+            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
             do
             {
                 Start-Sleep -Seconds 5

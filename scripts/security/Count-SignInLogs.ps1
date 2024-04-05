@@ -62,47 +62,45 @@ if (-Not (Test-Path $outputDirectory))
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ImportExcel"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Reports"
     
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes "Directory.Read.All","AuditLog.Read.All"
 
 # =============================================================
-# Azure stuff
+# Graph stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Count-SignInLogs | AZURE" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Count-SignInLogs | GRAPH" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
 
 # Getting users
 Write-Host "Getting users" -ForegroundColor $CommandInfo
-$users = Get-AzureADUser -All $true
+$users = Get-MgBetaUser -Property "*" -All
+
+# Getting users
+Write-Host "Getting audit logs" -ForegroundColor $CommandInfo
+Write-Host "... Please wait. Will need a long time!" -ForegroundColor $CommandInfo
+$allAudits = Get-MgBetaAuditLogSignIn -All
 
 # Getting sign-in logs from all users
 Write-Host "Getting sign-in logs from all users" -ForegroundColor $CommandInfo
 $allLogs = [System.Collections.ArrayList]@()
 foreach($user in $users)
 {
+    #$user = $users | where { $_.UserPrincipalName -eq "admin-ext-kbr@baslerhofmann.onmicrosoft.com" }
     Write-Host " - $($user.UserPrincipalName)"
     $lastDay = (Get-Date).AddDays(-1)
     $lastWeek = (Get-Date).AddDays(-7)
-   do
+    do
     {
         try
         {
-            $logs = Get-AzureADAuditSignInLogs -Filter "startsWith(userPrincipalName,'$($user.UserPrincipalName)')" -All $true
+            $logs = $allAudits | Where-Object { $_.UserPrincipalName -eq $user.UserPrincipalName }
+            #if ($logs.Count -eq 0) { continue }
             $min,$max = [DateTime[]]@($logs | Select-Object CreatedDateTime | Sort CreatedDateTime)[0,-1].CreatedDateTime
             $allLogs += [PSCustomObject]@{
                 "UPN" = $user.UserPrincipalName
@@ -125,7 +123,7 @@ foreach($user in $users)
                 "FailureLastWeekCount" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek }).Count
                 "FailureLastWeekCount$countByCountry" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -eq $countByCountry }).Count
                 "FailureLastWeekCountNot$countByCountry" = ($logs | Where-Object { $_.Status.ErrorCode -gt 0 -and $_.IsInteractive -eq $true -and ([DateTime]$_.CreatedDateTime) -gt $lastWeek -and $_.Location.CountryOrRegion -ne $countByCountry }).Count
-                #NonInteractiveCount = ($logs | Where-Object { $_.IsInteractive -eq $false }).Count
+                "NonInteractiveCount" = ($logs | Where-Object { $_.IsInteractive -eq $false }).Count
                 "RiskCount" = ($logs | Where-Object { $_.RiskState -ne "none" }).Count
                 "MinDate" = $min
                 "MaxDate" = $max

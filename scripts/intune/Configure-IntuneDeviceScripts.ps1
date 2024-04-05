@@ -33,6 +33,7 @@
     20.10.2020 Konrad Brunner       Initial Version
     24.04.2023 Konrad Brunner       Switched to Graph
     05.09.2023 Konrad Brunner       Added assignment
+    27.03.2024 Konrad Brunner       Added MAC scripts
 
 #>
 
@@ -48,7 +49,8 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneDeviceScripts-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = "Win10 "
+$AppPrefix = "WIN "
+$AppPrefixMac = "MAC "
 if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
     $AppPrefix = "$AlyaAppPrefix "
 }
@@ -79,7 +81,8 @@ Write-Host "Intune | Configure-IntuneDeviceScripts | Graph" -ForegroundColor $Co
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Main
-$scripts = Get-ChildItem -Path $ScriptDir -Filter "*.ps1"
+$scripts = Get-ChildItem -File -Path $ScriptDir -Filter "*.ps1"
+$scripts += Get-ChildItem -File -Path $ScriptDir -Filter "*.sh" | Where-Object { $_.name -notlike "*.customattribute.*" }
 
 # Processing scripts
 $hadError = $false
@@ -95,9 +98,13 @@ foreach($script in $scripts)
         $scriptResponse = [System.IO.File]::ReadAllBytes($script)
         $base64script = [System.Convert]::ToBase64String($scriptResponse)
         #TODO Description out of the script?
-        $scriptName = "$AppPrefix$($script.BaseName)"
-        #"@odata.type": "#Microsoft.Graph.deviceManagementScript",
-        $body = @"
+
+        if ($script.Name.EndsWith("ps1"))
+        {
+
+            $scriptName = "$AppPrefix$($script.BaseName)"
+            #"@odata.type": "#Microsoft.Graph.deviceManagementScript",
+            $body = @"
 {
     "displayName": "$scriptName",
     "description": "",
@@ -112,22 +119,60 @@ foreach($script in $scripts)
 }
 "@
 
-        # Checking if script exists
-        Write-Host "  Checking if script exists"
-        $uri = "/beta/deviceManagement/deviceManagementScripts"
-        $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
-        if (-Not $actScript.id)
-        {
-            # Creating the script
-            Write-Host "    Script does not exist, creating"
+            # Checking if script exists
+            Write-Host "  Checking if script exists"
             $uri = "/beta/deviceManagement/deviceManagementScripts"
-            $actScript = Post-MsGraph -Uri $uri -Body $body
-        }
+            $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
+            if (-Not $actScript.id)
+            {
+                # Creating the script
+                Write-Host "    Script does not exist, creating"
+                $uri = "/beta/deviceManagement/deviceManagementScripts"
+                $actScript = Post-MsGraph -Uri $uri -Body $body
+            }
 
-        # Updating the script
-        Write-Host "    Updating the script"
-        $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)"
-        $actScript = Patch-MsGraph -Uri $uri -Body $body
+            # Updating the script
+            Write-Host "    Updating the script"
+            $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)"
+            $actScript = Patch-MsGraph -Uri $uri -Body $body
+
+        }
+        else
+        {
+
+            $scriptName = "$AppPrefixMac$($script.BaseName)"
+            #"@odata.type": "#Microsoft.Graph.deviceShellScript",
+            $body = @"
+{
+    "displayName": "$scriptName",
+    "description": "",
+    "executionFrequency": "P7D",
+    "scriptContent": "$base64script",
+    "runAsAccount": "system",
+    "retryCount": 3,
+    "blockExecutionNotifications": true,
+    "fileName": "$($script.Name)"
+}
+"@
+
+            # Checking if script exists
+            Write-Host "  Checking if script exists"
+            $uri = "/beta/deviceManagement/deviceShellScripts"
+            $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
+            if (-Not $actScript.id)
+            {
+                # Creating the script
+                Write-Host "    Script does not exist, creating"
+                $uri = "/beta/deviceManagement/deviceShellScripts"
+                $actScript = Post-MsGraph -Uri $uri -Body $body
+            }
+
+            # Updating the script
+            Write-Host "    Updating the script"
+            $uri = "/beta/deviceManagement/deviceShellScripts/$($actScript.id)"
+            $actScript = Patch-MsGraph -Uri $uri -Body $body
+
+        }
     }
     catch {
         $hadError = $true
@@ -140,6 +185,9 @@ if ($hadError)
 }
 
 # Assigning defined profiles
+$sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
+$sGroup365 = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM'"
+$sGroupMac = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-MACMDM'"
 foreach($script in $scripts)
 {
     if ($script.Name.IndexOf("_unused") -gt -1) { continue }
@@ -147,42 +195,91 @@ foreach($script in $scripts)
 
     try {
         
-        # Checking if script exists
-        Write-Host "  Checking if script exists"
-        $scriptName = "$AppPrefix$($script.BaseName)"
-        $uri = "/beta/deviceManagement/deviceManagementScripts"
-        $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
-        if ($actScript.id)
+        if ($script.Name.EndsWith("ps1"))
         {
 
-            $tGroup = $null
-            $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
-            if (-Not $sGroup) {
-                Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
-            } else {
-                $tGroup = $sGroup
-            }
-
-            if ($tGroup) {
-                $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)/assignments"
-                $asses = (Get-MsGraphObject -Uri $uri).value
-                $ass = $asses | Where-Object { $_.target.groupId -eq $tGroup.Id }
-                if (-Not $ass) {
-                    $GroupAssignment = New-Object -TypeName PSObject -Property @{
-                        "@odata.type" = "#Microsoft.Graph.deviceManagementScriptGroupAssignment"
-                        "targetGroupId" = $tGroup.Id
-                        "id" = $actScript.id
+            # Checking if script exists
+            Write-Host "  Checking if script exists"
+            $scriptName = "$AppPrefix$($script.BaseName)"
+            $uri = "/beta/deviceManagement/deviceManagementScripts"
+            $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
+            if ($actScript.id)
+            {
+                $tGroups = @()
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroups += $sGroup
+                }
+                if (-Not $sGroup365) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroups += $sGroup365
+                }
+                if ($tGroups.Count -gt 0) { 
+                    $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)/groupAssignments"
+                    $asses = (Get-MsGraphObject -Uri $uri).value
+                    $Targets = @()
+                    foreach($tGroup in $tGroups) {
+                        $GroupAssignment = New-Object -TypeName PSObject -Property @{
+                            "@odata.type" = "#Microsoft.Graph.deviceManagementScriptGroupAssignment"
+                            "targetGroupId" = $tGroup.Id
+                            "id" = $actScript.id
+                        }
+                        $Targets += $GroupAssignment
+                    }
+                    foreach($ass in $asses) {
+                        if ($ass.targetGroupId -notin $tGroups.Id)
+                        {
+                            $Targets += $ass.target
+                        }
                     }
                     $Assignment = New-Object -TypeName PSObject -Property @{
-                        "deviceManagementScriptGroupAssignments" = @($GroupAssignment)
+                        "deviceManagementScriptGroupAssignments" = $Targets
                     }
                     $body = ConvertTo-Json -InputObject $Assignment -Depth 10
                     $uri = "/beta/deviceManagement/deviceManagementScripts/$($actScript.id)/assign"
                     Post-MsGraph -Uri $uri -Body $body
                 }
+            } else {
+                Write-Host "Not found!" -ForegroundColor $CommandError
             }
-        } else {
-            Write-Host "Not found!" -ForegroundColor $CommandError
+
+        }
+        else
+        {
+
+            # Checking if script exists
+            Write-Host "  Checking if script exists"
+            $scriptName = "$AppPrefixMac$($script.BaseName)"
+            $uri = "/beta/deviceManagement/deviceShellScripts"
+            $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
+            if ($actScript.id)
+            {
+                if (-Not $sGroupMac) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-MACMDM not found. Can't create assignment."
+                } else {
+                    $uri = "/beta/deviceManagement/deviceShellScripts/$($actScript.id)/groupAssignments"
+                    $asses = (Get-MsGraphObject -Uri $uri).value
+                    $ass = $asses | Where-Object { $_.target.groupId -eq $sGroupMac.Id }
+                    if (-Not $ass) {
+                        $GroupAssignment = New-Object -TypeName PSObject -Property @{
+                            "@odata.type" = "#Microsoft.Graph.deviceManagementScriptGroupAssignment"
+                            "targetGroupId" = $sGroupMac.Id
+                            "id" = $actScript.id
+                        }
+                        $Assignment = New-Object -TypeName PSObject -Property @{
+                            "deviceManagementScriptGroupAssignments" = @($GroupAssignment)
+                        }
+                        $body = ConvertTo-Json -InputObject $Assignment -Depth 10
+                        $uri = "/beta/deviceManagement/deviceShellScripts/$($actScript.id)/assign"
+                        Post-MsGraph -Uri $uri -Body $body
+                    }
+                }
+            } else {
+                Write-Host "Not found!" -ForegroundColor $CommandError
+            }
+
         }
     }
     catch {

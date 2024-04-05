@@ -45,7 +45,7 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneMsStoreApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
-$AppPrefix = "Win10 "
+$AppPrefix = "WIN "
 if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
     $AppPrefix = "$AlyaAppPrefix "
 }

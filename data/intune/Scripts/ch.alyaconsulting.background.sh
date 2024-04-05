@@ -27,6 +27,8 @@ cd $backgroundsDir
 curl -O $dekstopBackgroundUrl
 cd $runDir
 
+if [[ ! -f $scriptsDir/ch.alyaconsulting.background.sh ]];then
+
 echo "$(date) : creating apply script"
 cat > $scriptsDir/ch.alyaconsulting.background.sh <<- EOF
 #!/bin/bash
@@ -38,6 +40,10 @@ echo "\$(date) : done ch.alyaconsulting.background"
 EOF
 chmod 755 $scriptsDir/ch.alyaconsulting.background.sh
 xattr -d com.apple.provenance $scriptsDir/ch.alyaconsulting.background.sh
+
+fi
+
+if [[ ! -f $agentsDir/ch.alyaconsulting.background.plist ]];then
 
 echo "$(date) : creating login agent"
 cat > $agentsDir/ch.alyaconsulting.background.plist <<- EOF
@@ -74,6 +80,8 @@ launchctl load $agentsDir/ch.alyaconsulting.background.plist
 
 echo "$(date) : ltarting plist file"
 launchctl start $agentsDir/ch.alyaconsulting.background.plist
+
+fi
 
 echo "$(date) : done ch.alyaconsulting.background"
 

@@ -55,8 +55,6 @@ if (-Not (Test-Path $DataRoot))
     $null = New-Item -Path $DataRoot -ItemType Directory -Force
 }
 
-& "$PSScriptRoot\Download-Win32AppPrepTool.ps1"
-
 # =============================================================
 # Intune stuff
 # =============================================================

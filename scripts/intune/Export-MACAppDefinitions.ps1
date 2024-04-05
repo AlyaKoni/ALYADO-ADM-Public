@@ -30,27 +30,19 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    21.09.2023 Konrad Brunner       Initial Version
-    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
+    28.03.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$AppName = $null
 )
 
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneMobileApp-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
-
-# Constants
-$AppPrefix = "WIN "
-if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
-    $AppPrefix = "$AlyaAppPrefix "
-}
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-MACAppDefinitions-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -59,10 +51,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 # Logins
 LoginTo-MgGraph -Scopes @(
     "Directory.Read.All",
-    "DeviceManagementManagedDevices.Read.All",
-    "DeviceManagementServiceConfig.Read.All",
-    "DeviceManagementConfiguration.Read.All",
-    "DeviceManagementApps.ReadWrite.All"
+    "DeviceManagementApps.Read.All"
 )
 
 # =============================================================
@@ -70,26 +59,23 @@ LoginTo-MgGraph -Scopes @(
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Delete-IntuneMobileApp | Graph" -ForegroundColor $CommandInfo
+Write-Host "Intune | Export-MACAppDefinitions | mac" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking if app exists
-Write-Host "Checking if app exists" -ForegroundColor $CommandInfo
+$DataRoot = Join-Path (Join-Path $AlyaData "intune") "Configuration"
+$filePath ="$DataRoot\Applications\intuneApplicationsMAC.json"
 $uri = "/beta/deviceAppManagement/mobileApps"
-$allApps = Get-MsGraphCollection -Uri $uri
-$app = $allApps | where { $_.displayName -eq $AppPrefix+$AppName }
-if (-Not $app.id)
+$intuneApplications = Get-MsGraphCollection -Uri $uri
+$macApps = $intuneApplications | Where-Object { ($_.'@odata.type').Contains("macOSPkgApp") -or ($_.'@odata.type').Contains("macOSDmgApp") }
+foreach($macApp in $macApps)
 {
-    Write-Warning "The app with name $($AppPrefix+$AppName) does not exist."
-    return
+    $uri = "/beta/deviceAppManagement/mobileApps/$($macApp.id)?`$select=largeIcon"
+    $appIcon = Get-MsGraphObject -Uri $uri
+    $macApp.largeIcon = $appIcon.largeIcon
 }
-$appId = $app.id
-Write-Host "    appId: $appId"
+$macApps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path $filePath -Force
 
-# Deleting app
-Write-Host "Deleting app" -ForegroundColor $CommandInfo
-$uri = "/beta/deviceAppManagement/mobileApps/$appId"
-$appCat = Delete-MsGraphObject -Uri $uri
+Write-Host "mac apps exported to: $filePath" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript

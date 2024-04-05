@@ -78,6 +78,8 @@ $SmsAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where
 $TemporaryAccessPassAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "TemporaryAccessPass" }
 $VoiceAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "Voice" }
 $EmailAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "Email" }
+$HardwareOathAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "HardwareOath" }
+$SoftwareOathAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "SoftwareOath" }
 
 # Checking mail policy
 if (-Not $minimalConfig)
@@ -221,6 +223,44 @@ if ($MicrosoftAuthenticatorAMC.AdditionalProperties.featureSettings.displayLocat
 if ($dirty) {
     Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
         -AuthenticationMethodConfigurationId $MicrosoftAuthenticatorAMC.Id `
+        -BodyParameter $params
+}
+
+# Checking SoftwareOath policy
+Write-Host "Checking SoftwareOath policy" -ForegroundColor $CommandInfo
+$params = @{
+    "@odata.type" = "#microsoft.graph.softwareOathAuthenticationMethodConfiguration"
+    State = "enabled"
+}
+$dirty = $false
+if ($SoftwareOathAMC.State -ne "enabled") {
+    Write-Warning "  SoftwareOath policy wasn't enabled. Enabling it now."
+    $dirty = $true
+} else {
+    Write-Host "  SoftwareOath policy was already enabled."
+}
+if ($dirty) {
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+        -AuthenticationMethodConfigurationId $SoftwareOathAMC.Id `
+        -BodyParameter $params
+}
+
+# Checking HardwareOath policy
+Write-Host "Checking HardwareOath policy" -ForegroundColor $CommandInfo
+$params = @{
+    "@odata.type" = "#microsoft.graph.hardwareOathAuthenticationMethodConfiguration"
+    State = "enabled"
+}
+$dirty = $false
+if ($SoftwareOathAMC.State -ne "enabled") {
+    Write-Warning "  HardwareOath policy wasn't enabled. Enabling it now."
+    $dirty = $true
+} else {
+    Write-Host "  HardwareOath policy was already enabled."
+}
+if ($dirty) {
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+        -AuthenticationMethodConfigurationId $HardwareOathAMC.Id `
         -BodyParameter $params
 }
 

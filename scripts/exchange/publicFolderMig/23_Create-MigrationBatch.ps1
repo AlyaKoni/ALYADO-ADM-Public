@@ -47,6 +47,7 @@ if (-Not $endpoint)
 {
     throw "Migration endpoint $migEndpoint not found"
 }
-New-MigrationBatch -Name $migBatchName -CSVData (Get-Content "$migDir\import.csv" -Encoding Byte) -PublicFolderToUnifiedGroup -SourceEndpoint $endpoint.Identity -NotificationEmails $migNotify
+$data = [System.IO.File]::ReadAllBytes("$migDir\import.csv")
+New-MigrationBatch -Name $migBatchName -CSVData $data -PublicFolderToUnifiedGroup -SourceEndpoint $endpoint.Identity -NotificationEmails $migNotify
 
 Disconnect-ExchangeOnline -Confirm:$false

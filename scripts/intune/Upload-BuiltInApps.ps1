@@ -52,7 +52,7 @@ if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
     $AppPrefix = "$AlyaAppPrefix "
 }
 else {
-    $AppPrefix = "Win10 "
+    $AppPrefix = "WIN "
 }
 if (-Not $BuiltInAppsFile)
 {
@@ -98,7 +98,8 @@ foreach($builtInApp in $builtInApps)
         {   
             $builtInApp.displayName = $builtInApp.displayName.Replace("WIN ", $AppPrefix)
         }
-        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+        $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
+        $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
         $allApps = Get-MsGraphCollection -Uri $uri
         $actApp = $allApps | Where-Object { $_.displayName -eq $builtInApp.displayName -and $_."@odata.type" -in @("#microsoft.graph.officeSuiteApp", "#microsoft.graph.macOSOfficeSuiteApp", "#microsoft.graph.macOSMdatpApp", "#microsoft.graph.macOSMicrosoftEdgeApp") }
         if (-Not $actApp.id)
@@ -107,7 +108,8 @@ foreach($builtInApp in $builtInApps)
             Write-Host "    App does not exist, creating"
             $uri = "/beta/deviceAppManagement/mobileApps"
             $actApp = Post-MsGraph -Uri $uri -Body ($builtInApp | ConvertTo-Json -Depth 50)
-            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$($appConfig.displayName)'"
+            $searchValue = [System.Web.HttpUtility]::UrlEncode($builtInApp.displayName)
+            $uri = "/beta/deviceAppManagement/mobileApps?`$filter=displayName eq '$searchValue'"
             do
             {
                 Start-Sleep -Seconds 5

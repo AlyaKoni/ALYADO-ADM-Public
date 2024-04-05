@@ -691,22 +691,19 @@ function Check-Module (
 {
     if ($exactVersion -ne "0.0.0.0")
     {
-        $module = Get-Module -Name $moduleName -ListAvailable |`
-            Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        $module = Get-Module -Name $moduleName -ListAvailable | Where-Object { $_.Version -eq $exactVersion }
         if (-Not $module)
         {
             try
             {
                 try
                 {
-                    $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                        Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                    $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
                 }
                 catch
                 {
                     Import-Module -Name PowerShellGet
-                    $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                        Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                    $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
                 }
             }
             catch { }
@@ -714,19 +711,19 @@ function Check-Module (
     }
     else
     {
-        $module = Get-Module -Name $moduleName -ListAvailable |`
+        $module = Get-Module -Name $moduleName -ListAvailable | `
             Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
             try
             {
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
             catch
             {
                 Import-Module -Name PowerShellGet
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
         }
@@ -814,20 +811,17 @@ function Uninstall-ModuleIfInstalled (
 {
     if ($exactVersion -ne "0.0.0.0")
     {
-        $module = Get-Module -Name $moduleName -ListAvailable |`
-            Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        $module = Get-Module -Name $moduleName -ListAvailable | Where-Object { $_.Version -eq $exactVersion }
         if (-Not $module)
         {
             try
             {
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
             }
             catch
             {
                 Import-Module -Name PowerShellGet
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
             }
         }
     }
@@ -959,14 +953,12 @@ function Install-ModuleIfNotInstalled (
     $module = $null
     if ($exactVersion -ne "0.0.0.0")
     {
-        $module = Get-Module -Name $moduleName -ListAvailable |`
-            Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        $module = Get-Module -Name $moduleName -ListAvailable | Where-Object { $_.Version -eq $exactVersion }
         if (-Not $module)
         {
             try
             {
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
             }
             catch
             {
@@ -974,13 +966,11 @@ function Install-ModuleIfNotInstalled (
                 {
                     Import-Module -Name PowerShellGet
                 }
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
-                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
             }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue |`
-                    Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
             }
         }
         if ($null -ne $module)
@@ -1006,13 +996,13 @@ function Install-ModuleIfNotInstalled (
     }
     if ($minimalVersion -ne "0.0.0.0")
     {
-        $module = Get-Module -Name $moduleName -ListAvailable |`
+        $module = Get-Module -Name $moduleName -ListAvailable | `
             Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
             try
             {
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
             catch
@@ -1021,12 +1011,12 @@ function Install-ModuleIfNotInstalled (
                 {
                     Import-Module -Name PowerShellGet
                 }
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue |`
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
         }
@@ -1054,13 +1044,13 @@ function Install-ModuleIfNotInstalled (
     }
     if ($null -eq $module -and $exactVersion -eq "0.0.0.0" -and $minimalVersion -eq "0.0.0.0")
     {
-        $module = Get-Module -Name $moduleName -ListAvailable |`
+        $module = Get-Module -Name $moduleName -ListAvailable | `
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
             try
             {
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
             catch
@@ -1069,12 +1059,12 @@ function Install-ModuleIfNotInstalled (
                 {
                     Import-Module -Name PowerShellGet
                 }
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue |`
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
         }
@@ -1180,24 +1170,24 @@ function Install-ModuleIfNotInstalled (
                 }
             }
         }
-        $module = Get-Module -Name $moduleName -ListAvailable |`
+        $module = Get-Module -Name $moduleName -ListAvailable | `
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $module)
         {
             try
             {
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
             catch
             {
                 Import-Module -Name PowerShellGet
-                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue |`
+                $module = Get-InstalledModule -Name $moduleName -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
             }
             if (-Not $module)
             {
-                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue |`
+                $module = Get-Module -FullyQualifiedName "$AlyaModulePath\$moduleName" -ListAvailable -ErrorAction SilentlyContinue | `
                     Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
                 if (-Not $module)
 	            {
@@ -1252,8 +1242,7 @@ function Install-ScriptIfNotInstalled (
     [string]$requestedVersionFullname = $null
     if ($exactVersion -ne "0.0.0.0")
     {
-        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
-            Where-Object { $_.Version -eq $exactVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
         if ($null -ne $script)
         {
             $autoUpdate = $false
@@ -1274,7 +1263,7 @@ function Install-ScriptIfNotInstalled (
     }
     if ($minimalVersion -ne "0.0.0.0")
     {
-        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
+        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue | `
             Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if ($null -ne $script)
         {
@@ -1296,7 +1285,7 @@ function Install-ScriptIfNotInstalled (
     }
     if ($null -eq $script -and $exactVersion -eq "0.0.0.0" -and $minimalVersion -eq "0.0.0.0")
     {
-        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
+        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue | `
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
     }
     if ($script)
@@ -1347,7 +1336,7 @@ function Install-ScriptIfNotInstalled (
         {
             Install-Script -Name $scriptName @optionalArgs -Scope CurrentUser -Force -Verbose
         }
-        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue |`
+        $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue | `
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
         if (-Not $script)
         {

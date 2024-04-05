@@ -30,66 +30,84 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    21.09.2023 Konrad Brunner       Initial Version
-    12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
+    01.04.2024 Konrad Brunner       Initial Creation
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$AppName = $null
+    [string]$certSubject = $null,
+    [string]$certThumbPrint = $null
 )
 
-# Loading configuration
+#Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneMobileApp-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
-
-# Constants
-$AppPrefix = "WIN "
-if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
-    $AppPrefix = "$AlyaAppPrefix "
-}
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Export-SMIMERootCasToSst-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-
-# Logins
-LoginTo-MgGraph -Scopes @(
-    "Directory.Read.All",
-    "DeviceManagementManagedDevices.Read.All",
-    "DeviceManagementServiceConfig.Read.All",
-    "DeviceManagementConfiguration.Read.All",
-    "DeviceManagementApps.ReadWrite.All"
-)
+Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 
 # =============================================================
-# Intune stuff
+# Exchange stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Delete-IntuneMobileApp | Graph" -ForegroundColor $CommandInfo
+Write-Host "EXCHANGE | Export-SMIMERootCasToSst | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking if app exists
-Write-Host "Checking if app exists" -ForegroundColor $CommandInfo
-$uri = "/beta/deviceAppManagement/mobileApps"
-$allApps = Get-MsGraphCollection -Uri $uri
-$app = $allApps | where { $_.displayName -eq $AppPrefix+$AppName }
-if (-Not $app.id)
+if ([string]::IsNullOrEmpty($certSubject) -and [string]::IsNullOrEmpty($certSerial) -and [string]::IsNullOrEmpty($certThumbPrint))
 {
-    Write-Warning "The app with name $($AppPrefix+$AppName) does not exist."
-    return
+    throw "You need to specify certSubject or certThumbPrint"
 }
-$appId = $app.id
-Write-Host "    appId: $appId"
 
-# Deleting app
-Write-Host "Deleting app" -ForegroundColor $CommandInfo
-$uri = "/beta/deviceAppManagement/mobileApps/$appId"
-$appCat = Delete-MsGraphObject -Uri $uri
+$cert = $null
+$certs = Get-ChildItem -Path Cert:\CurrentUser -Recurse
+if ($null -eq $cert -and -Not [string]::IsNullOrEmpty($certThumbPrint))
+{
+    $cert = $certs | Where-Object { $_.Thumbprint -eq $certThumbPrint }
+}
+if ($null -eq $cert -and -Not [string]::IsNullOrEmpty($certSubject))
+{
+    $cert = $certs | Where-Object { $_.Subject -eq $certSubject }
+}
+if ($null -eq $cert)
+{
+    throw "Certificate not found"
+}
+
+$rCert = $cert
+$certExp = @()
+$certExp += $cert
+do
+{
+    $issuer = $certs | Where-Object { $_.Subject -eq $cert.Issuer }
+    if (($Issuer | Get-Unique).Thumbprint -in $certExp.Thumbprint)
+    {
+        break
+    }
+    if ($null -ne $issuer)
+    {
+        $certExp += $issuer | Get-Unique
+        $cert = $issuer | Get-Unique
+    }
+} while ($null -ne $issuer)
+
+
+if (-Not (Test-Path "$AlyaData\exchange"))
+{
+    New-Item -Path "$AlyaData\exchange" -ItemType "Directory" -Force
+}
+if (-Not (Test-Path "$AlyaData\exchange\smime"))
+{
+    New-Item -Path "$AlyaData\exchange\smime" -ItemType "Directory" -Force
+}
+$fileName = "$AlyaData\exchange\smime\$($rCert.Thumbprint).sst"
+$certExp | Export-Certificate -FilePath $fileName -Type "SST" -Force
+
+Write-Host "SST exported to $AlyaData\exchange\smime\$($rCert.Thumbprint).sst"
 
 #Stopping Transscript
 Stop-Transcript
