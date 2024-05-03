@@ -59,7 +59,6 @@ $siteCon = LoginTo-PnP -Url $SiteUrl
 $SiteScriptContent = Get-Content -Path $SiteScriptFile -Encoding utf8BOM -Raw
 
 # Import site script
-$results = Invoke-PnPSiteScript -Connection $adminCon -WebUrl $SiteUrl -Script $SiteScriptContent
 $results = Invoke-PnPSiteScript -Connection $siteCon -Script $SiteScriptContent
 $results
 Write-Host "SiteScript $SiteScriptFile imported to $SiteUrl" -ForegroundColor $CommandSuccess

@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     10.11.2023 Konrad Brunner       Initial Version
 	14.03.2024 Konrad Brunner       Fixes, general rework, added new workspaces
+	09.04.2024 Konrad Brunner       Added Linux definitions
 
 #>
 
@@ -79,7 +80,7 @@ if (-Not $Context)
 }
 
 # Definitions
-$workSpaceConfigJson = @"
+$windowsWorkSpaceConfigJson = @"
 {
   "Events": [
     {
@@ -465,9 +466,281 @@ $workSpaceConfigJson = @"
   ]
 }
 "@
-$workSpaceConfig = $workSpaceConfigJson | ConvertFrom-Json
+$windowsWorkSpaceConfig = $windowsWorkSpaceConfigJson | ConvertFrom-Json
 
-function Update-WorkspaceEventCollection($Workspace, [PSCustomObject]$EventLogConfig)
+$linuxWorkSpaceConfigJson = @"
+{
+  "Syslogs": [
+    {
+      "Facility": "kern",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "user",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "daemon",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "auth",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "syslog",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "uucp",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "authpriv",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "ftp",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "cron",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "local0",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "local1",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "local2",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "local3",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "local4",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "local5",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "local6",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "local7",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "lpr",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "mail",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    },
+    {
+      "Facility": "news",
+      "Emergency": true,
+      "Alert": true,
+      "Critical": true,
+      "Error": true,
+      "Warning": true,
+      "Notice": false,
+      "Info": false,
+      "Debug": false
+    }
+  ],
+  "PerformanceCounters": [
+    {
+        "CounterNames": ["% Free Inodes","% Free Space","% Used Inodes","% Used Space","Disk Read Bytes/sec","Disk Reads/sec","Disk Transfers/sec","Disk Write Bytes/sec","Disk Writes/sec","Free Megabytes","Logical Disk Bytes/sec"],
+        "InstanceName": "*",
+        "intervalSeconds": 300,
+        "ObjectName": "Logical Disk"
+    },
+    {
+        "CounterNames": ["% Available Memory","% Available Swap Space","% Used Memory","% Used Swap Space","Available MBytes Memory","Available MBytes Swap","Page Reads/sec","Page Writes/sec","Pages/sec","Used MBytes Swap Space","Used Memory MBytes"],
+        "InstanceName": "*",
+        "intervalSeconds": 300,
+        "ObjectName": "Memory"
+    },
+    {
+        "CounterNames": ["Total Bytes Transmitted","Total Bytes Received","Total Bytes","Total Packets Transmitted","Total Packets Received","Total Rx Errors","Total Tx Errors","Total Collisions"],
+        "InstanceName": "*",
+        "intervalSeconds": 300,
+        "ObjectName": "Network"
+    },
+    {
+        "CounterNames": ["Avg. Disk sec/Read","Avg. Disk sec/Transfer","Avg. Disk sec/Write","Physical Disk Bytes/sec"],
+        "InstanceName": "*",
+        "intervalSeconds": 300,
+        "ObjectName": "Physical Disk"
+    },
+    {
+        "CounterNames": ["Pct Privileged Time","Pct User Time","Used Memory kBytes","Virtual Shared Memory"],
+        "InstanceName": "*",
+        "intervalSeconds": 300,
+        "ObjectName": "Process"
+    },
+    {
+        "CounterNames": ["% DPC Time","% Idle Time","% Interrupt Time","% IO Wait Time","% Nice Time","% Privileged Time","% Processor Time","% User Time"],
+        "InstanceName": "*",
+        "intervalSeconds": 300,
+        "ObjectName": "Processor"
+    },
+    {
+        "CounterNames": ["Free Physical Memory","Free Space in Paging Files","Free Virtual Memory","Processes","Size Stored In Paging Files","Uptime","Users"],
+        "InstanceName": "*",
+        "intervalSeconds": 300,
+        "ObjectName": "System"
+    }
+  ]
+}
+"@
+$linuxWorkSpaceConfig = $linuxWorkSpaceConfigJson | ConvertFrom-Json
+
+function Update-WindowsWorkspaceEventCollection($Workspace, [PSCustomObject]$EventLogConfig)
 {
 	Write-Host "Getting current windows event collection configuration from workspace"
 	$CurrentWindowsEventConfig = Get-AzOperationalInsightsDataSource -WorkspaceName $Workspace.Name -ResourceGroupName $Workspace.ResourceGroupName -Kind WindowsEvent | Select-Object `
@@ -482,30 +755,30 @@ function Update-WorkspaceEventCollection($Workspace, [PSCustomObject]$EventLogCo
 	{
 		Write-Host "Processing event '$($EventLogItem.EventLogName)'"
 
-		$EventArguments = @{}
-
-		$EventArguments.Add('EventLogName', $EventLogItem.EventLogName)
-
-		if ( $EventLogItem.Error )
-		{
-			$EventArguments.Add('CollectErrors', $null)
-		}
-		if ( $EventLogItem.Warning )
-		{
-			$EventArguments.Add('CollectWarnings', $null)
-		}
-		if ( $EventLogItem.Information )
-		{
-			$EventArguments.Add('CollectInformation', $null)
-		}
-
 		$ThisEvent = $CurrentWindowsEventConfig | Where-Object { $_.EventLogName -eq $EventLogItem.EventLogName }
 
 		if ( -not $ThisEvent )
 		{
 			Write-Host "Event log not configured";
 
-			$NewDataSourceName = "DataSource_WindowsEvent_$(  (New-Guid).ToString() )"
+      $EventArguments = @{}
+
+      $EventArguments.Add('EventLogName', $EventLogItem.EventLogName)
+  
+      if ( $EventLogItem.Error )
+      {
+        $EventArguments.Add('CollectErrors', $null)
+      }
+      if ( $EventLogItem.Warning )
+      {
+        $EventArguments.Add('CollectWarnings', $null)
+      }
+      if ( $EventLogItem.Information )
+      {
+        $EventArguments.Add('CollectInformation', $null)
+      }
+  
+      $NewDataSourceName = "DataSource_WindowsEvent_$(  (New-Guid).ToString() )"
 
 			Write-Host $NewDataSourceName
 
@@ -518,9 +791,85 @@ function Update-WorkspaceEventCollection($Workspace, [PSCustomObject]$EventLogCo
 	}
 }
 
-function Update-WorkspacePerfCollection($Workspace, [PSCustomObject]$PerfCollectionConfig)
+function Update-LinuxWorkspaceSyslogCollection($Workspace, [PSCustomObject]$EventLogConfig)
 {
-	Write-Host "Getting current windows event collection configuration from workspace"
+	Write-Host "Getting current linux syslog collection configuration from workspace"
+	$CurrentWindowsEventConfig = Get-AzOperationalInsightsDataSource -WorkspaceName $Workspace.Name -ResourceGroupName $Workspace.ResourceGroupName -Kind LinuxSyslog | Select-Object `
+		Name, `
+		@{n='Facility'; e={ $_.Properties.syslogName }}, `
+		@{n='CollectEmergency'; e={$_.Properties.SyslogSeverities.Severity -contains 'emerg' }}, `
+		@{n='CollectAlert'; e={$_.Properties.SyslogSeverities.Severity -contains 'alert' }}, `
+		@{n='CollectCritical'; e={$_.Properties.SyslogSeverities.Severity -contains 'crit' }}, `
+		@{n='CollectError'; e={$_.Properties.SyslogSeverities.Severity -contains 'err' }}, `
+		@{n='CollectWarning'; e={$_.Properties.SyslogSeverities.Severity -contains 'warning' }}, `
+		@{n='CollectInformational'; e={$_.Properties.SyslogSeverities.Severity -contains 'info' }}, `
+		@{n='CollectDebug'; e={$_.Properties.SyslogSeverities.Severity -contains 'debug' }}, `
+		@{n='CollectNotice'; e={$_.Properties.SyslogSeverities.Severity -contains 'notice' }}
+
+	Write-Host "Looping through events from even log configuration"
+	foreach ($EventLogItem in $EventLogConfig)
+	{
+		Write-Host "Processing event '$($EventLogItem.Facility)'"
+
+		$ThisEvent = $CurrentWindowsEventConfig | Where-Object { $_.Facility -eq $EventLogItem.Facility }
+
+		if ( -not $ThisEvent )
+		{
+			Write-Host "Event log not configured";
+
+      $EventArguments = @{}
+
+      $EventArguments.Add('Facility', $EventLogItem.Facility)
+  
+      if ( $EventLogItem.Emergency )
+      {
+        $EventArguments.Add('CollectEmergency', $null)
+      }
+      if ( $EventLogItem.Alert )
+      {
+        $EventArguments.Add('CollectAlert', $null)
+      }
+      if ( $EventLogItem.Critical )
+      {
+        $EventArguments.Add('CollectCritical', $null)
+      }
+      if ( $EventLogItem.Error )
+      {
+        $EventArguments.Add('CollectError', $null)
+      }
+      if ( $EventLogItem.Warning )
+      {
+        $EventArguments.Add('CollectWarning', $null)
+      }
+      if ( $EventLogItem.Info )
+      {
+        $EventArguments.Add('CollectInformational', $null)
+      }
+      if ( $EventLogItem.Notice )
+      {
+        $EventArguments.Add('CollectNotice', $null)
+      }
+      if ( $EventLogItem.Debug )
+      {
+        $EventArguments.Add('CollectDebug', $null)
+      }
+
+      $NewDataSourceName = "DataSource_LinuxSyslog_$(  (New-Guid).ToString() )"
+
+			Write-Host $NewDataSourceName
+
+			New-AzOperationalInsightsLinuxSyslogDataSource -WorkspaceName $Workspace.Name -ResourceGroupName $Workspace.ResourceGroupName -Name $NewDataSourceName @EventArguments | Out-Null
+		}
+		else
+		{
+			Write-Host "Event log collection already configured"
+		}
+	}
+}
+
+function Update-WindowsWorkspacePerfCollection($Workspace, [PSCustomObject]$PerfCollectionConfig)
+{
+	Write-Host "Getting current windows performance collection configuration from workspace"
 	$CurrentWindowsPerfConfig = Get-AzOperationalInsightsDataSource -Workspace $Workspace -Kind WindowsPerformanceCounter | Select-Object `
 		Name, `
 		@{n='ObjectName'; e={ $_.Properties.ObjectName }}, `
@@ -534,23 +883,63 @@ function Update-WorkspacePerfCollection($Workspace, [PSCustomObject]$PerfCollect
 	{
 		Write-Host "Processing performance collector '$($PerfCollectionItem.ObjectName)($($PerfCollectionItem.InstanceName))\$($PerfCollectionItem.CounterName)'"
 
-		$EventArguments = @{}
-		$EventArguments.Add('ObjectName', $PerfCollectionItem.ObjectName)
-		$EventArguments.Add('InstanceName', $PerfCollectionItem.InstanceName)
-		$EventArguments.Add('IntervalSeconds', $PerfCollectionItem.IntervalSeconds)
-		$EventArguments.Add('CounterName', $PerfCollectionItem.CounterName)
-
-		$ThisPerfCollector = $CurrentWindowsPerfConfig | Where-Object {  ($_.ObjectName -eq $PerfCollectionItem.ObjectName ) -and  ($_.CounterName -eq $PerfCollectionItem.CounterName ) -and ($_.CounterName -eq $PerfCollectionItem.CounterName ) }
+		$ThisPerfCollector = $CurrentWindowsPerfConfig | Where-Object {  ($_.ObjectName -eq $PerfCollectionItem.ObjectName ) -and ($_.CounterName -eq $PerfCollectionItem.CounterName ) }
 
 		if ( -not $ThisPerfCollector )
 		{
 			Write-Host "Perf collector not configured";
 
-			$NewDataSourceName = "DataSource_PerfCounter_$(  (New-Guid).ToString() )"
+      $EventArguments = @{}
+      $EventArguments.Add('ObjectName', $PerfCollectionItem.ObjectName)
+      $EventArguments.Add('InstanceName', $PerfCollectionItem.InstanceName)
+      $EventArguments.Add('IntervalSeconds', $PerfCollectionItem.IntervalSeconds)
+      $EventArguments.Add('CounterName', $PerfCollectionItem.CounterName)
+  
+      $NewDataSourceName = "DataSource_WindowsPerformanceCounter_$(  (New-Guid).ToString() )"
+
+      Write-Host $NewDataSourceName
+
+			New-AzOperationalInsightsWindowsPerformanceCounterDataSource -Workspace $Workspace -Name $NewDataSourceName @EventArguments | Out-Null
+		}
+		else
+		{
+			Write-Host "Perf counter collection already configured"
+		}
+	}
+}
+
+function Update-LinuxWorkspacePerfCollection($Workspace, [PSCustomObject]$PerfCollectionConfig)
+{
+	Write-Host "Getting current linux performance collection configuration from workspace"
+	$CurrentWindowsPerfConfig = Get-AzOperationalInsightsDataSource -Workspace $Workspace -Kind LinuxPerformanceObject | Select-Object `
+		Name, `
+		@{n='ObjectName'; e={ $_.Properties.ObjectName }}, `
+		@{n='InstanceName'; e={$_.Properties.InstanceName }}, `
+		@{n='IntervalSeconds'; e={$_.Properties.IntervalSeconds }}, `
+		@{n='CounterNames'; e={$_.Properties.CounterNames }}
+
+	Write-Host "Looping through events from even log configuration"
+	foreach ( $PerfCollectionItem in $PerfCollectionConfig )
+	{
+		Write-Host "Processing performance collector '$($PerfCollectionItem.ObjectName)($($PerfCollectionItem.InstanceName))\$($PerfCollectionItem.CounterNames)'"
+
+		$ThisPerfCollector = $CurrentWindowsPerfConfig | Where-Object {  ($_.ObjectName -eq $PerfCollectionItem.ObjectName ) }
+
+		if ( -not $ThisPerfCollector )
+		{
+			Write-Host "Perf collector not configured";
+
+      $EventArguments = @{}
+      $EventArguments.Add('ObjectName', $PerfCollectionItem.ObjectName)
+      $EventArguments.Add('InstanceName', $PerfCollectionItem.InstanceName)
+      $EventArguments.Add('IntervalSeconds', $PerfCollectionItem.IntervalSeconds)
+      $EventArguments.Add('CounterNames', $PerfCollectionItem.CounterNames)
+  
+      $NewDataSourceName = "DataSource_LinuxPerformanceObject_$(  (New-Guid).ToString() )"
 
 			Write-Host $NewDataSourceName
 
-			New-AzOperationalInsightsWindowsPerformanceCounterDataSource -Workspace $Workspace -Name $NewDataSourceName @EventArguments | Out-Null
+			New-AzOperationalInsightsLinuxPerformanceObjectDataSource -Workspace $Workspace -Name $NewDataSourceName @EventArguments | Out-Null
 		}
 		else
 		{
@@ -758,10 +1147,10 @@ function Create-Alert($Subscription, $AlertText,$AlertResourceGroupName,$LogAnaW
     }
 }
 
-function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName, $WrkspcResourceGroupName, $ActionGroupResourceGroupName, $ActionGroupName, $WrkspcName)
+function Prepare-StandardAlerts ($AlyaSubscriptionName, $AlertResourceGroupName, $WrkspcResourceGroupName, $ActionGroupResourceGroupName, $ActionGroupName, $WrkspcName)
 {
     # Switching subscription
-    $sub = Get-AzSubscription -SubscriptionName $AlertSubscriptionName
+    $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName
     $null = Set-AzContext -Subscription $sub.Id
 
     # Checking ressource group
@@ -791,17 +1180,29 @@ function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName
     }
     $actionGroupId = $actionGroup.Id
 
-    # Checking log analytics workspace event log collections
-    Write-Host "Checking log analytics workspace event log collections" -ForegroundColor $CommandInfo
-    Update-WorkspaceEventCollection `
+    # Checking windows log analytics workspace event log collections
+    Write-Host "Checking windows log analytics workspace event log collections" -ForegroundColor $CommandInfo
+    Update-WindowsWorkspaceEventCollection `
 	    -Workspace $LogAnaWrkspc `
-	    -EventLogConfig $workSpaceConfig.Events
+	    -EventLogConfig $windowsWorkSpaceConfig.Events
 
-    # Checking log analytics workspace performance counter collections
-    Write-Host "Checking log analytics workspace performance counter collections" -ForegroundColor $CommandInfo
-    Update-WorkspacePerfCollection `
+    # Checking linux log analytics workspace syslog log collections
+    Write-Host "Checking linux log analytics workspace syslog log collections" -ForegroundColor $CommandInfo
+    Update-LinuxWorkspaceSyslogCollection `
 	    -Workspace $LogAnaWrkspc `
-	    -PerfCollectionConfig $workSpaceConfig.PerformanceCounters
+	    -EventLogConfig $linuxWorkSpaceConfig.Syslogs
+
+    # Checking windows log analytics workspace performance counter collections
+    Write-Host "Checking windows log analytics workspace performance counter collections" -ForegroundColor $CommandInfo
+    Update-WindowsWorkspacePerfCollection `
+	    -Workspace $LogAnaWrkspc `
+	    -PerfCollectionConfig $windowsWorkSpaceConfig.PerformanceCounters
+
+    # Checking windows log analytics workspace performance counter collections
+    Write-Host "Checking linux log analytics workspace performance counter collections" -ForegroundColor $CommandInfo
+    Update-LinuxWorkspacePerfCollection `
+	    -Workspace $LogAnaWrkspc `
+	    -PerfCollectionConfig $linuxWorkSpaceConfig.PerformanceCounters
 
     # Alert rule examples from: https://github.com/microsoft/manageability-toolkits/blob/master/Alert%20Toolkit/DefaultAlertConfig.json
 

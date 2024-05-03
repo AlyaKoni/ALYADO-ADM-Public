@@ -1,105 +1,118 @@
-[{
+[
+    {
         "Comment1": "=================================================",
         "Comment2": "WIN Update Profiles",
         "Comment3": "================================================="
-    }, {
+    },
+    {
         "@odata.type": "#microsoft.graph.windowsUpdateForBusinessConfiguration",
-        "displayName": "WIN10 Update Configuration",
+        "automaticUpdateMode": "autoInstallAtMaintenanceTime",
+        "autoRestartNotificationDismissal": "notConfigured",
+        "businessReadyUpdatesOnly": "businessReadyOnly",
+        "deadlineForFeatureUpdatesInDays": null,
+        "deadlineForQualityUpdatesInDays": null,
+        "deadlineGracePeriodInDays": null,
+        "deliveryOptimizationMode": "userDefined",
         "description": "Configures updates on windows10 devices",
-        "roleScopeTagIds": ["0"],
-        "deliveryOptimizationMode": "userDefined",
-        "prereleaseFeatures": "userDefined",
-        "automaticUpdateMode": "autoInstallAtMaintenanceTime",
-        "microsoftUpdateServiceAllowed": true,
+        "displayName": "WIN10 Update Configuration",
         "driversExcluded": false,
-        "qualityUpdatesDeferralPeriodInDays": 0,
-        "featureUpdatesDeferralPeriodInDays": 0,
-        "qualityUpdatesPaused": false,
-        "featureUpdatesPaused": false,
-        "qualityUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
-        "featureUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
-        "businessReadyUpdatesOnly": "businessReadyOnly",
-        "skipChecksBeforeRestart": false,
-        "updateWeeks": null,
-        "featureUpdatesRollbackWindowInDays": 60,
-        "qualityUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
-        "featureUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
         "engagedRestartDeadlineInDays": null,
         "engagedRestartSnoozeScheduleInDays": null,
         "engagedRestartTransitionScheduleInDays": null,
-        "deadlineForFeatureUpdatesInDays": null,
-        "deadlineForQualityUpdatesInDays": null,
-        "deadlineGracePeriodInDays": null,
-        "postponeRebootUntilAfterDeadline": null,
-        "autoRestartNotificationDismissal": "notConfigured",
-        "scheduleRestartWarningInHours": null,
-        "scheduleImminentRestartWarningInMinutes": null,
-        "userPauseAccess": "enabled",
-        "userWindowsUpdateScanAccess": "enabled",
-        "updateNotificationLevel": "defaultNotifications",
+        "featureUpdatesDeferralPeriodInDays": 0,
+        "featureUpdatesPaused": false,
+        "featureUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
+        "featureUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
+        "featureUpdatesRollbackWindowInDays": 60,
         "installationSchedule": {
             "@odata.type": "#microsoft.graph.windowsUpdateActiveHoursInstall",
-            "activeHoursStart": "07:00:00.0000000",
-            "activeHoursEnd": "22:00:00.0000000"
-        }
-    }, {
+            "activeHoursEnd": "22:00:00.0000000",
+            "activeHoursStart": "07:00:00.0000000"
+        },
+        "microsoftUpdateServiceAllowed": true,
+        "postponeRebootUntilAfterDeadline": null,
+        "prereleaseFeatures": "userDefined",
+        "qualityUpdatesDeferralPeriodInDays": 0,
+        "qualityUpdatesPaused": false,
+        "qualityUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
+        "qualityUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "scheduleImminentRestartWarningInMinutes": null,
+        "scheduleRestartWarningInHours": null,
+        "skipChecksBeforeRestart": false,
+        "updateNotificationLevel": "defaultNotifications",
+        "updateWeeks": null,
+        "userPauseAccess": "enabled",
+        "userWindowsUpdateScanAccess": "enabled"
+    },
+    {
         "@odata.type": "#microsoft.graph.windowsUpdateForBusinessConfiguration",
-        "displayName": "WIN11 Update Configuration",
-        "description": "Configures updates on windows11 devices",
-        "roleScopeTagIds": ["0"],
         "allowWindows11Upgrade": true,
-        "deliveryOptimizationMode": "userDefined",
-        "prereleaseFeatures": "userDefined",
         "automaticUpdateMode": "autoInstallAtMaintenanceTime",
-        "microsoftUpdateServiceAllowed": true,
-        "driversExcluded": false,
-        "qualityUpdatesDeferralPeriodInDays": 0,
-        "featureUpdatesDeferralPeriodInDays": 0,
-        "qualityUpdatesPaused": false,
-        "featureUpdatesPaused": false,
-        "qualityUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
-        "featureUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
+        "autoRestartNotificationDismissal": "notConfigured",
         "businessReadyUpdatesOnly": "businessReadyOnly",
-        "skipChecksBeforeRestart": false,
-        "updateWeeks": null,
-        "featureUpdatesRollbackWindowInDays": 60,
-        "qualityUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
-        "featureUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
-        "engagedRestartDeadlineInDays": null,
-        "engagedRestartSnoozeScheduleInDays": null,
-        "engagedRestartTransitionScheduleInDays": null,
         "deadlineForFeatureUpdatesInDays": null,
         "deadlineForQualityUpdatesInDays": null,
         "deadlineGracePeriodInDays": null,
-        "postponeRebootUntilAfterDeadline": null,
-        "autoRestartNotificationDismissal": "notConfigured",
-        "scheduleRestartWarningInHours": null,
-        "scheduleImminentRestartWarningInMinutes": null,
-        "userPauseAccess": "enabled",
-        "userWindowsUpdateScanAccess": "enabled",
-        "updateNotificationLevel": "defaultNotifications",
+        "deliveryOptimizationMode": "userDefined",
+        "description": "Configures updates on windows11 devices",
+        "displayName": "WIN11 Update Configuration",
+        "driversExcluded": false,
+        "engagedRestartDeadlineInDays": null,
+        "engagedRestartSnoozeScheduleInDays": null,
+        "engagedRestartTransitionScheduleInDays": null,
+        "featureUpdatesDeferralPeriodInDays": 0,
+        "featureUpdatesPaused": false,
+        "featureUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
+        "featureUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
+        "featureUpdatesRollbackWindowInDays": 60,
         "installationSchedule": {
             "@odata.type": "#microsoft.graph.windowsUpdateActiveHoursInstall",
-            "activeHoursStart": "07:00:00.0000000",
-            "activeHoursEnd": "22:00:00.0000000"
-        }
-    }, {
+            "activeHoursEnd": "22:00:00.0000000",
+            "activeHoursStart": "07:00:00.0000000"
+        },
+        "microsoftUpdateServiceAllowed": true,
+        "postponeRebootUntilAfterDeadline": null,
+        "prereleaseFeatures": "userDefined",
+        "qualityUpdatesDeferralPeriodInDays": 0,
+        "qualityUpdatesPaused": false,
+        "qualityUpdatesPauseExpiryDateTime": "0001-01-01T00:00:00Z",
+        "qualityUpdatesRollbackStartDateTime": "0001-01-01T00:00:00Z",
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "scheduleImminentRestartWarningInMinutes": null,
+        "scheduleRestartWarningInHours": null,
+        "skipChecksBeforeRestart": false,
+        "updateNotificationLevel": "defaultNotifications",
+        "updateWeeks": null,
+        "userPauseAccess": "enabled",
+        "userWindowsUpdateScanAccess": "enabled"
+    },
+    {
         "Comment1": "=================================================",
         "Comment2": "MAC Profiles",
         "Comment3": "================================================="
-    },{
+    },
+    {
         "Comment1": "=================================================",
         "Comment2": "ANDROID Profiles",
         "Comment3": "================================================="
-    }, {
+    },
+    {
         "Comment1": "=================================================",
         "Comment2": "IOS Profiles",
         "Comment3": "================================================="
-    },{
-		"@odata.type":  "#microsoft.graph.iosUpdateConfiguration",
-		"displayName":  "IOS Update Policy",
-		"description":  "Updates iOS devices to the latest update",
-        "roleScopeTagIds": ["0"],
-		"updateScheduleType":  "alwaysUpdate"
-	}
+    },
+    {
+        "@odata.type": "#microsoft.graph.iosUpdateConfiguration",
+        "description": "Updates iOS devices to the latest update",
+        "displayName": "IOS Update Policy",
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "updateScheduleType": "alwaysUpdate"
+    }
 ]

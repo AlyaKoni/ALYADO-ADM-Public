@@ -58,7 +58,7 @@ LoginTo-MgGraph -Scopes @("Directory.Read.All","AppRoleAssignment.ReadWrite.All"
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "ENTAPPS | Get-AdminConsentsFromManagedIdentities | AZURE" -ForegroundColor $CommandInfo
+Write-Host "ENTAPPS | Get-AdminConsentsFromManagedIdentities | GRAPH" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Getting ServicePrincipals" -ForegroundColor $CommandInfo
@@ -68,6 +68,7 @@ Write-Host "Checking assignments" -ForegroundColor $CommandInfo
 $assignedRoles = @()
 foreach($App in $Apps)
 {
+    Write-Host "$($App.DisplayName)"
     $Assignments = Get-MgBetaServicePrincipalAppRoleAssignment -ServicePrincipalId $App.Id -All
     foreach($Assignment in $Assignments)
     {

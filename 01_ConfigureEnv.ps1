@@ -54,6 +54,7 @@
 	12.06.2023 Konrad Brunner		Scripts path
 	22.07.2023 Konrad Brunner		Added non Public Cloud Environment Support
     16.10.2023 Konrad Brunner       Install-ModuleIfNotInstalled new param: doNotLoadModules
+    01.05.2024 Konrad Brunner       Supporting MAC
 
 #>
 
@@ -116,8 +117,12 @@ if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
 $Global:ErrorActionPreference = "Stop"
 $Global:ProgressPreference = "SilentlyContinue"
 $AlyaIsPsCore = ($PSVersionTable).PSEdition -eq "Core"
+$AlyaIsPsUnix = ($PSVersionTable).Platform -eq "Unix"
 $AlyaUtf8Encoding = "UTF8"
 if ($AlyaIsPsCore) { $AlyaUtf8Encoding = "utf8BOM" }
+$AlyaPowerShellExe = "powershell.exe"
+if ($AlyaIsPsCore) { $AlyaPowerShellExe = "pwsh.exe" }
+if ($AlyaIsPsUnix) { $AlyaPowerShellExe = "pwsh" }
 
 <# TLS Connections #>
 [Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls12, [Net.SecurityProtocolType]::Tls13)
@@ -149,12 +154,12 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Modules") -and `
     }
 }
 if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
-     -Not $env:Path.Contains("$($AlyaTools)\WindowsPowerShell\Scripts"))
+     -Not $env:PATH.Contains("$($AlyaTools)\WindowsPowerShell\Scripts"))
 {
     Write-Host "Adding tools\WindowsPowerShell\Scripts to Path"
-    if (-Not $env:Path.StartsWith("$($AlyaTools)\WindowsPowerShell\Scripts"))
+    if (-Not $env:PATH.StartsWith("$($AlyaTools)\WindowsPowerShell\Scripts"))
     {
-        $env:Path = "$($AlyaTools)\WindowsPowerShell\Scripts;"+$env:Path
+        $env:PATH = "$($AlyaTools)\WindowsPowerShell\Scripts;"+$env:PATH
     }
 }
 
@@ -193,14 +198,14 @@ if ($AlyaScriptPath -ne $AlyaDefaultScriptPath -and $AlyaScriptPath -ne $AlyaDef
 }
 if ($AlyaIsPsCore)
 {
-    if (-Not $env:Path.Contains("$($AlyaDefaultScriptPathCore)"))
+    if (-Not $env:PATH.Contains("$($AlyaDefaultScriptPathCore)"))
     {
-        $env:Path = "$($AlyaDefaultScriptPathCore);$($env:Path)"
+        $env:PATH = "$($AlyaDefaultScriptPathCore);$($env:PATH)"
     }
 }
-if (-Not $env:Path.Contains("$($AlyaScriptPath)"))
+if (-Not $env:PATH.Contains("$($AlyaScriptPath)"))
 {
-    $env:Path = "$($AlyaScriptPath);$($env:Path)"
+    $env:PATH = "$($AlyaScriptPath);$($env:PATH)"
 }
 
 <# CLIENT SETTINGS #>
@@ -502,13 +507,28 @@ function Remove-OneDriveItemRecursive
 function Is-InternetConnected()
 {
     $var = Get-Variable -Name "AlyaIsInternetConnected" -Scope "Global" -ErrorAction SilentlyContinue
+    $hasTestNetCon = Get-Command -Name "Test-NetConnection" -ErrorAction SilentlyContinue
     if (-Not $var)
     {
-        $ret = Test-NetConnection -ComputerName 8.8.8.8 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
+        if ($hasTestNetCon)
+        {
+            $ret = Test-NetConnection -ComputerName 8.8.8.8 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
+        }
+        else
+        {
+            $ret = Test-Connection -TargetName 8.8.8.8 -TcpPort 443 -Quiet -ErrorAction SilentlyContinue
+        }
         if (-Not $ret)
         {
-            $ret = Test-NetConnection -ComputerName 1.1.1.1 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
-        }
+            if ($hasTestNetCon)
+            {
+                $ret = Test-NetConnection -ComputerName 1.1.1.1 -Port 443 -ErrorAction SilentlyContinue -InformationLevel Quiet
+            }
+            else
+            {
+                $ret = Test-Connection -TargetName 1.1.1.1 -TcpPort 443 -Quiet -ErrorAction SilentlyContinue
+            }
+           }
         if ($ret)
         {
             $Global:AlyaIsInternetConnected = $ret
@@ -745,8 +765,22 @@ function DownloadAndInstall-Package($packageName, $nuvrs, $nusrc)
 		Write-Error "    Was not able to download $packageName which is a prerequisite for this script" -ErrorAction Continue
 		break
 	}
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::ExtractToDirectory($fileName, "$($AlyaTools)\Packages\$packageName")
+    #Add-Type -AssemblyName System.IO.Compression.FileSystem
+    #[System.IO.Compression.ZipFile]::ExtractToDirectory($fileName, "$($AlyaTools)\Packages\$packageName")
+    #New version for mac:
+	if (-not (Test-Path "$($AlyaTools)\Packages\$packageName"))
+	{
+		New-Item -Path "$($AlyaTools)\Packages\$packageName" -ItemType Directory -Force
+	}
+    $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+    if ($cmdTst)
+    {
+        Expand-Archive -Path $fileName -DestinationPath "$($AlyaTools)\Packages\$packageName" -Force
+    }
+    else
+    {
+        Expand-Archive -Path $fileName -OutputPath "$($AlyaTools)\Packages\$packageName" -Force
+    }
     Remove-Item $fileName
 }
 
@@ -803,6 +837,7 @@ function Install-PackageIfNotInstalled (
     }
 }
 #Install-PackageIfNotInstalled "Selenium.WebDriver"
+#Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
 
 function Uninstall-ModuleIfInstalled (
     [string] [Parameter(Mandatory = $true)] $moduleName,
@@ -2841,6 +2876,97 @@ if ($AlyaAzureNetwork -and $AlyaTestNetwork -and $AlyaAzureNetwork -ne "PleaseSp
     }
 }
 
+function ConvertFrom-XML
+{
+    #https://www.red-gate.com/simple-talk/blogs/convert-from-xml/
+	[CmdletBinding()]
+	param
+	(
+		[Parameter(Mandatory = $true, ValueFromPipeline)]
+		[System.Xml.XmlNode]$node, #we are working through the nodes
+		[string]$Prefix='',#do we indicate an attribute with a prefix?
+		$ShowDocElement=$false #Do we show the document element? 
+	)
+	process
+	{   #if option set, we skip the Document element
+		if ($node.DocumentElement -and !($ShowDocElement)) 
+            { $node = $node.DocumentElement }
+		$oHash = [ordered] @{ } # start with an ordered hashtable.
+        #The order of elements is always significant regardless of what they are
+		write-verbose "calling with $($node.LocalName)"
+		if ($node.Attributes -ne $null) #if there are elements
+		# record all the attributes first in the ordered hash
+		{
+			$node.Attributes | foreach {
+				$oHash.$($Prefix+$_.FirstChild.parentNode.LocalName) = $_.FirstChild.value
+			}
+		}
+		# check to see if there is a pseudo-array. (more than one
+		# child-node with the same name that must be handled as an array)
+		$node.ChildNodes | #we just group the names and create an empty
+        #array for each
+		Group-Object -Property LocalName | where { $_.count -gt 1 } | select Name |
+		foreach{
+			write-verbose "pseudo-Array $($_.Name)"
+			$oHash.($_.Name) = @() <# create an empty array for each one#>
+		};
+		foreach ($child in $node.ChildNodes)
+		{#now we look at each node in turn.
+			write-verbose "processing the '$($child.LocalName)'"
+			$childName = $child.LocalName
+			if ($child -is [system.xml.xmltext])
+			# if it is simple XML text 
+			{
+				write-verbose "simple xml $childname";
+				$oHash.$childname += $child.InnerText
+			}
+			# if it has a #text child we may need to cope with attributes
+			elseif ($child.FirstChild.Name -eq '#text' -and $child.ChildNodes.Count -eq 1)
+			{
+				write-verbose "text";
+				if ($child.Attributes -ne $null) #hah, an attribute
+				{
+					<#we need to record the text with the #text label and preserve all
+					the attributes #>
+					$aHash = [ordered]@{ };
+					$child.Attributes | foreach {
+						$aHash.$($_.FirstChild.parentNode.LocalName) = $_.FirstChild.value
+					}
+                    #now we add the text with an explicit name
+					$aHash.'#text' += $child.'#text'
+					$oHash.$childname += $aHash
+				}
+				else
+				{ #phew, just a simple text attribute. 
+					$oHash.$childname += $child.FirstChild.InnerText
+				}
+			}
+			elseif ($child.'#cdata-section' -ne $null)
+			# if it is a data section, a block of text that isnt parsed by the parser,
+			# but is otherwise recognized as markup
+			{
+				write-verbose "cdata section";
+				$oHash.$childname = $child.'#cdata-section'
+			}
+			elseif ($child.ChildNodes.Count -gt 1 -and 
+                        ($child | gm -MemberType Property).Count -eq 1)
+			{
+				$oHash.$childname = @()
+				foreach ($grandchild in $child.ChildNodes)
+				{
+					$oHash.$childname += (ConvertFrom-XML $grandchild)
+				}
+			}
+			else
+			{
+				# create an array as a value  to the hashtable element
+				$oHash.$childname += (ConvertFrom-XML $child)
+			}
+		}
+		$oHash
+	}
+} 
+
 function Select-Item()
 {
     Param(
@@ -2876,9 +3002,9 @@ function Get-SeleniumBrowser()
     } else {
         Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
     }
-    if ($env:Path.IndexOf("$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64") -eq -1)
+    if ($env:PATH.IndexOf("$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64") -eq -1)
     {
-        $env:Path = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64;$($env:Path)"
+        $env:PATH = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64;$($env:PATH)"
     }
 
     # Install-ModuleIfNotInstalled "AppX"

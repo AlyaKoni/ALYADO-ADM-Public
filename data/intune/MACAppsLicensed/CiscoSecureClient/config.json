@@ -1,0 +1,92 @@
+{
+  "@odata.type": "#microsoft.graph.macOSDmgApp",
+  "description": "Installs cisco-secure-client-macos-5.1.2.42-predeploy-k9.dmg",
+  "developer": "Cisco",
+  "displayName": "MAC CiscoSecureClient",
+  "fileName": "cisco-secure-client-macos-5.1.2.42-predeploy-k9.dmg",
+  "ignoreVersionDetection": false,
+  "includedApps": [
+    {
+      "bundleVersion": "5.1.2.42",
+      "bundleId": "com.cisco.secureclient.gui"
+    },
+    {
+      "bundleVersion": "5.1.2.42",
+      "bundleId": "com.cisco.secureclient.vpn.notification"
+    },
+    {
+      "bundleVersion": "5.1.2.42",
+      "bundleId": "com.cisco.secureclient.vpndownloader"
+    },
+    {
+      "bundleVersion": "5.1.2.42",
+      "bundleId": "com.cisco.secureclient.uninstaller"
+    },
+    {
+      "bundleVersion": "5.1.2.42",
+      "bundleId": "com.cisco.secureclient.dartuninstaller"
+    },
+    {
+      "bundleVersion": "5.1.2.42",
+      "bundleId": "com.cisco.secureclient.dart"
+    },
+    {
+      "bundleVersion": "5.1.03",
+      "bundleId": "com.cisco.kext.acsock"
+    },
+    {
+      "bundleVersion": "5.1.2.5191",
+      "bundleId": "com.cisco.secureclient.zta.service"
+    },
+    {
+      "bundleVersion": "6.2.0.0",
+      "bundleId": "com.duosecurity.duo-device-health"
+    },
+    {
+      "bundleVersion": "1.182.3",
+      "bundleId": "com.cisco.secureclient.thousandeyes"
+    },
+    {
+      "bundleVersion": "1.7.0",
+      "bundleId": "com.opendns.OpenDNS-Diagnostic"
+    },
+    {
+      "bundleVersion": "5.1.2.22",
+      "bundleId": "com.cisco.anyconnect.macos.acsock"
+    },
+    {
+      "bundleVersion": "1.0",
+      "bundleId": "com.cisco.secureclient.acwebhelper"
+    }
+  ],
+  "informationUrl": "https://www.cisco.com",
+  "isFeatured": false,
+  "largeIcon": {
+    "value": "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",
+    "type": "image/png",
+    "@odata.type": "#Microsoft.Graph.mimeContent"
+  },
+  "minimumSupportedOperatingSystem": {
+    "v10_10": false,
+    "v10_11": false,
+    "v10_12": false,
+    "v10_13": false,
+    "v10_14": false,
+    "v10_15": false,
+    "v10_7": false,
+    "v10_8": false,
+    "v10_9": false,
+    "v11_0": true,
+    "v12_0": false,
+    "v13_0": false,
+    "v14_0": false
+  },
+  "notes": "",
+  "owner": "",
+  "primaryBundleId": "com.cisco.secureclient.gui",
+  "primaryBundleVersion": "5.1.2.42",
+  "privacyInformationUrl": "https://www.cisco.com/c/en/us/about/legal/privacy-full.html",
+  "publisher": "Cisco",
+  "roleScopeTagIds": [],
+  "displayVersion": "5.1.2.42"
+}

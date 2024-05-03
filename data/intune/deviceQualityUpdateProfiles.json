@@ -1,27 +1,34 @@
-﻿[{
+﻿[
+    {
         "Comment1": "=================================================",
         "Comment2": "WIN Profiles",
         "Comment3": "================================================="
-    }, {
+    },
+    {
         "@odata.type": "#microsoft.graph.windowsQualityUpdateProfile",
-		"displayName": "WIN QualityUpdate Configuration",
-        "description": "Configures quality updates on windows devices",
-        "roleScopeTagIds": ["0"],
-        "releaseDateDisplayName": null,
         "deployableContentDisplayName": null,
+        "description": "Configures quality updates on windows devices",
+        "displayName": "WIN QualityUpdate Configuration",
         "expeditedUpdateSettings": {
-            "qualityUpdateRelease": "2022-06-20T00:00:00Z",
-            "daysUntilForcedReboot": 1
-        }
-    }, {
+            "daysUntilForcedReboot": 1,
+            "qualityUpdateRelease": "2022-06-20T00:00:00Z"
+        },
+        "releaseDateDisplayName": null,
+        "roleScopeTagIds": [
+            "0"
+        ]
+    },
+    {
         "Comment1": "=================================================",
         "Comment2": "MAC Profiles",
         "Comment3": "================================================="
-    }, {
+    },
+    {
         "Comment1": "=================================================",
         "Comment2": "ANDROID Profiles",
         "Comment3": "================================================="
-    }, {
+    },
+    {
         "Comment1": "=================================================",
         "Comment2": "IOS Profiles",
         "Comment3": "================================================="

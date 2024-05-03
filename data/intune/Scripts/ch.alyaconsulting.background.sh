@@ -34,12 +34,19 @@ cat > $scriptsDir/ch.alyaconsulting.background.sh <<- EOF
 #!/bin/bash
 echo "\$(date) : running ch.alyaconsulting.background"
 dekstopBackground="$backgroundsDir/$dekstopBackgroundName"
-osascript -e 'tell application "System Events" to tell every desktop to set picture to "'"\$dekstopBackground"'"'
+#osascript -e 'tell application "System Events" to tell every desktop to set picture to "'"\$dekstopBackground"'"'
+if ! osascript -s o <<EOOSA
+    tell application "System Events" to tell every desktop to set picture to '\$dekstopBackground'
+EOOSA
+then
+    echo "osascript failed"
+fi
 #killall Dock
 echo "\$(date) : done ch.alyaconsulting.background"
 EOF
 chmod 755 $scriptsDir/ch.alyaconsulting.background.sh
 xattr -d com.apple.provenance $scriptsDir/ch.alyaconsulting.background.sh
+xattr -d com.apple.quarantine $scriptsDir/ch.alyaconsulting.background.sh
 
 fi
 
@@ -74,6 +81,7 @@ cat > $agentsDir/ch.alyaconsulting.background.plist <<- EOF
 EOF
 chmod 644 $agentsDir/ch.alyaconsulting.background.plist
 xattr -d com.apple.provenance $agentsDir/ch.alyaconsulting.background.plist
+xattr -d com.apple.quarantine $agentsDir/ch.alyaconsulting.background.plist
 
 echo "$(date) : loading plist file"
 launchctl load $agentsDir/ch.alyaconsulting.background.plist

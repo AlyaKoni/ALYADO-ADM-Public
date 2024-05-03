@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN VSCode",
-  "description": "Installs VSCodeSetup-x64-1.86.1.exe",
+  "description": "Installs VSCodeSetup-x64-1.88.1.exe",
   "publisher": "Microsoft",
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
@@ -15,7 +15,7 @@
   "developer": null,
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "VSCodeSetup-x64-1.86.1.intunewin",
+  "fileName": "VSCodeSetup-x64-1.88.1.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,7 +24,7 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": null,
-  "setupFilePath": "VSCodeSetup-x64-1.86.1.exe",
+  "setupFilePath": "VSCodeSetup-x64-1.88.1.exe",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -45,7 +45,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "1.86.1"
+      "detectionValue": "1.88.1"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "1.86.1"
+      "comparisonValue": "1.88.1"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "1.86.1"
+  "displayVersion": "1.88.1"
 }

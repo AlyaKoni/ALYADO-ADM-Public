@@ -250,9 +250,13 @@ foreach($packageDir in $packageDirs)
         }
 
 		$packageFile = Join-Path $packagePath $toInstall.Name
-		$packageJsonFile = Join-Path $packagePath "$($toInstall.Name).json"
-		$encInfo = powershell -File "$AlyaScripts\intune\Encrypt-Package.ps1" -sourceFile "$($toInstall.FullName)" -targetFile "$packageFile"
+
+        & dotnet "$($AlyaScripts)/intune/encryptPackages/publish/encryptPackages.dll".Replace("\", "/") "$($toInstall.FullName)".Replace("\", "/") "$packageFile".Replace("\", "/")
+		$packageXmlFile = "$packageFile.xml"
+		$packageJsonFile = "$packageFile.json"
+        $encInfo = ([xml](Get-Content $packageXmlFile)).EncryptionInfo | ConvertFrom-Xml | ConvertTo-Json -Depth 99
 		$encInfo | Set-Content -Path $packageJsonFile -Force
+        Remove-Item -Path $packageXmlFile -Force
 
         Write-Host "  Running post package task if required"
         $incrementScript = Get-Item -Path (Join-Path $packageDir.FullName "PostPackageTask.ps1") -ErrorAction SilentlyContinue

@@ -608,8 +608,8 @@
         "localSecurityOptionsInformationShownOnLockScreen": "doNotDisplayUser",
         "localSecurityOptionsLogOnMessageText": "Use your corporate login to access this device. Any non permitted use is prohibited.",
         "localSecurityOptionsLogOnMessageTitle": "Welcome to ##AlyaCompanyName##",
-        "localSecurityOptionsMachineInactivityLimit": 10,
-        "localSecurityOptionsMachineInactivityLimitInMinutes": 10,
+        "localSecurityOptionsMachineInactivityLimit": 30,
+        "localSecurityOptionsMachineInactivityLimitInMinutes": 30,
         "localSecurityOptionsMinimumSessionSecurityForNtlmSspBasedClients": "none",
         "localSecurityOptionsMinimumSessionSecurityForNtlmSspBasedServers": "none",
         "localSecurityOptionsOnlyElevateSignedExecutables": false,
@@ -911,7 +911,7 @@
                 "description": "Period of inactivity before Windows transitions the system to sleep",
                 "displayName": "StandbyTimeoutPluggedIn",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/StandbyTimeoutPluggedIn",
-                "value": "<enabled/><data id=\"EnterACStandbyTimeOut\" value=\"28800\"/>"
+                "value": "<enabled/><data id=\"EnterACStandbyTimeOut\" value=\"14400\"/>"
             },
             {
                 "@odata.type": "#microsoft.graph.omaSettingString",
@@ -925,7 +925,7 @@
                 "description": "Period of inactivity before Windows transitions the system to hibernate",
                 "displayName": "HibernateTimeoutOnBattery",
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/Power/HibernateTimeoutOnBattery",
-                "value": "<enabled/><data id=\"EnterDCHibernateTimeOut\" value=\"7200\"/>"
+                "value": "<enabled/><data id=\"EnterDCHibernateTimeOut\" value=\"14400\"/>"
             },
             {
                 "@odata.type": "#microsoft.graph.omaSettingInteger",
@@ -956,7 +956,7 @@
                 "displayName": "MaxInactivityTimeDeviceLock",
                 "isReadOnly": false,
                 "omaUri": "./Device/Vendor/MSFT/Policy/Config/DeviceLock/MaxInactivityTimeDeviceLock",
-                "value": 30
+                "value": 15
             }
         ],
         "roleScopeTagIds": [

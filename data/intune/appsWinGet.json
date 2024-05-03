@@ -1,4 +1,5 @@
-[{
+[
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Microsoft Intune helps organizations manage access to corporate apps, data, and resources. Company Portal is the app that lets you, as an employee of your company, securely access those resources.\r\n\r\nBefore you can use this app, make sure your IT admin has set up your work account. Your company must also have a subscription to Microsoft Intune.\r\n\r\nCompany Portal helps simplify the tasks you need to do for work:\r\n\r\n- Enroll your device to access corporate resources, including Office, email, and OneDrive for Business\r\n- Sign in to corporate resources with company-issued certificates\r\n- Reduce the number of times you need to sign in to corporate resources with single sign-on\r\n- Browse and install approved business apps from your IT department or the Microsoft Store for Business\r\n- View and manage your enrolled devices – and wipe them if they get lost or stolen\r\n- Get help directly from your IT department through available contact information\r\n \r\nA note about Intune: every organization has different access requirements, and will use Intune in ways that they determine will best manage their information. Some functionality might be unavailable in certain countries. If you have questions about how this app is being used within your organization, your company’s IT administrator should have those answers for you. Microsoft, your network provider, and your device’s manufacturer do not know how Intune will be used by your organization.",
         "developer": "",
@@ -17,28 +18,32 @@
         "packageIdentifier": "9WZDNCRFJ3PZ",
         "privacyInformationUrl": "http://go.microsoft.com/fwlink/?LinkID=316999",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Graphisoft’s BIMx Desktop Viewer is an interactive app for exploring BIM projects and linked documentation sets created in Archicad and DDScad and enables viewers to explore architectural design projects on your desktop computer.\r\n\r\nBIMx offers professional building visualization with game-like navigation to explore and visualize architectural projects. BIMx features the ‘BIMx hyper-model’ – allowing non-design professionals to explore and fully understand architectural design intent, view project deliverables, and access element level BIM data. BIMx links the 3D model with the relevant 2D documentation layouts, providing a seamless way to view the 3D cutaway model in the context of a 2D layout — and vice versa.\r\n\r\nSend your comments and suggestions to bimx@graphisoft.com!",
         "developer": "",
         "displayName": "WIN BIMx Desktop",
         "informationUrl": "https://graphisoft.com/solutions/bimx",
-        "isFeatured": false,
-        "packageIdentifier": "9PCQMBW7H8J9",
         "installExperience": {
             "runAsAccount": "user"
         },
+        "isFeatured": false,
         "largeIcon": {
             "type": "image/jpeg",
             "value": "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"
         },
-        "owner": "",
         "notes": "",
-        "publisher": "Graphisoft SE",
+        "owner": "",
+        "packageIdentifier": "9PCQMBW7H8J9",
         "privacyInformationUrl": "https://redirect.graphisoft.com/?gstype=legal&gssubtype=privacy",
-        "roleScopeTagIds": []
-    }, {
+        "publisher": "Graphisoft SE",
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Print, scan, and share files by using HP Smart with your HP Printer. HP Smart makes it easy to get started and keeps you going with features like Print Anywhere or Mobile Fax!\r\n NOTE: \r\nDisconnect from a Virtual Private Network (VPN) connection before downloading.\r\n\r\n\r\n· Start with a hassle-free set up, then print, scan, copy, and share files directly from your computer to your friends, co-workers, or a linked cloud account \r\n· Manage or print to your printer using any network connection\r\n· Order supplies, get support, and manage your HP account straight from the app\r\n· Create high-quality scans by importing existing files or scanning from your printer, and improve them by cropping the file, adding filters and text, or adjusting saturation, contrast, and brightness\r\n· It’s easy to send secure faxes from the app with Mobile Fax\r\n· Be more productive with customizable one-touch Shortcuts (formally Smart Tasks)\r\n· Access hundreds of printable crafts, cards, and learning activities for free with Printables! Get involved and get your family creating together!\r\n \r\nSome HP Smart features require a network connection and an HP account for full functionality. Certain features/software are available in English language only.",
         "developer": "",
@@ -57,8 +62,10 @@
         "packageIdentifier": "9WZDNCRFHWLH",
         "privacyInformationUrl": "http://www.hp.com/go/privacy",
         "publisher": "HP Inc.",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "iTunes is the easiest way to enjoy everything you need to be entertained - music, movies, and TV shows - and keep it all easily organized. Rent or buy movies, download your favorite TV shows, and more.\n\niTunes is also home to Apple Music, where you can listen to millions of songs and your entire music library - ad-free with zero commercials. Plus, download your favorite music to listen without Wi-Fi. Try it free with no commitment, and cancel anytime.",
         "developer": "",
@@ -78,8 +85,10 @@
         "packageIdentifier": "9PB2MZ1ZMB1S",
         "privacyInformationUrl": "https://www.apple.com/legal/privacy/",
         "publisher": "Apple Inc.",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "iCloud for Windows keeps your photos, videos, mail, calendar and other important information up to date and available on your Windows PC.\n\niCloud Photos\n• Keep your photos up to date across all your devices and your PC.\n• Create Shared Albums and invite others to add their own photos, videos, and comments.\n• Access, add, and remove photos and videos from your iCloud Shared Photo Library.\n• View your photos directly in the Microsoft Photos app in Windows 11.\n\niCloud Drive\n• Safely store and access your files and folders in iCloud Drive.\n• Share files with friends, family, and colleagues right from File Explorer.\n\niCloud Passwords\n• View and manage your passwords on your Windows PC in the iCloud Passwords app.\n• Save and sync your passwords across your devices and PC in Chrome or Edge using the iCloud Passwords extension.\n• Generate Time-based One-Time Passwords (TOTP) in the iCloud Passwords app.\n\niCloud Mail, Contacts, Calendars, and Bookmarks\n• Keep mail, contacts, and calendars up to date across all your devices and your PC.\n• Share calendars with other iCloud users.\n• Edge, Firefox, and Google Chrome Bookmarks automatically stay up to date with Safari.\n\niCloud for Windows requires:\n• Windows 10 or later (64-bit)\n• Mail, Contacts, Calendars: requires Outlook 2019 or later\n• Passwords: requires Chrome 100 or later, or Edge 100 or later\n• Bookmarks: requires Chrome 100 or later, Firefox 92 or later, or Edge 100 or later",
         "developer": "",
@@ -98,8 +107,10 @@
         "packageIdentifier": "9PKTQ5699M62",
         "privacyInformationUrl": "https://www.apple.com/privacy/",
         "publisher": "Apple Inc.",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Use the Microsoft Remote Desktop app to connect to a remote PC or virtual apps and desktops made available by your admin. The app helps you be productive no matter where you are.\n\n    Getting Started\n    Configure your PC for remote access first. Download the Remote Desktop assistant to your PC and let it do the work for you: https://aka.ms/RDSetup\n\n    Learn more about the different remote desktop apps at: https://aka.ms/rdapps\n\n    If you are having an issue or have a feature suggestion, please submit detailed feedback via the Feedback Hub at https://aka.ms/rdstorefeedback.",
         "developer": "",
@@ -118,8 +129,10 @@
         "packageIdentifier": "9WZDNCRFJ3PS",
         "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkId=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Need to remember something for later? Use Microsoft Sticky Notes. They're the simple way to quickly save something for later, so you can stay in the flow. With Sticky Notes, you can create notes, type, ink or add a picture, add text formatting, stick them to the desktop, move them around there freely, close them to the Notes list, and sync them across devices and apps like OneNote Mobile, Microsoft Launcher for Android, and Outlook for Windows.",
         "developer": "",
@@ -138,8 +151,10 @@
         "packageIdentifier": "9NBLGGH4QGHW",
         "privacyInformationUrl": "http://go.microsoft.com/fwlink/?LinkID=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Uncover surprising and useful things you can do with Windows in the official Microsoft Tips app. If you're new to Windows, you'll learn how to use apps and settings like a pro. And if you've been using Windows forever, you'll discover new features and maybe some tricks you never knew. We update the app frequently, so check back often to see what's new.",
         "developer": "",
@@ -158,8 +173,10 @@
         "packageIdentifier": "9WZDNCRDTBJJ",
         "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkId=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Got something on your mind? Get Microsoft To Do. Whether you want to increase your productivity, decrease your stress levels, or just free up some mental space, Microsoft To Do makes it easy to plan your day and manage your life.\r\n\r\nWith Microsoft To Do, you can:\r\n• Stay focused with My Day, a personalized daily planner with suggested tasks\r\n• Get your lists anywhere, on any device\r\n• Share lists and assign tasks with your friends, family, colleagues, and classmates\r\n• Personalize your lists with bold and colorful backgrounds\r\n• Set one-time or recurring due dates and reminders\r\n• Break your tasks into manageable steps\r\n• Add notes to any task\r\n• Attach files up to 25 MB to any task\r\n• Sync your tasks between Outlook and To Do\r\n• Group your lists together by topic or project\r\nWhether it's for work, school, or home, To Do helps you organize and simplify your plans. To Do is free and available on all your devices.\r\n\r\nLearn more: https://to-do.microsoft.com\r\nFollow us on Twitter: @MicrosoftToDo\r\nNeed support? https://microsoft-todo.helpshift.com\r\nBy installing Microsoft To Do, you agree to the Microsoft Terms of Use: https://go.microsoft.com/fwlink/?linkid=842575",
         "developer": "",
@@ -178,8 +195,10 @@
         "packageIdentifier": "9NBLGGH5R558",
         "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkId=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "The collaborative digital canvas in Microsoft 365 for effective meetings and engaged learning.\n\n  Microsoft Whiteboard provides a freeform, intelligent canvas where you and your team can ideate, create, and collaborate visually via the cloud. Designed for touch, type, and pen, it lets you write or draw as smoothly as you would with ink. You can type in text, add an image, sticky notes, or note grid to express your ideas and use reactions to visually communicate your thoughts. It enhances teamwork by allowing all team members to edit the canvas in real time, no matter where they are. Get started quickly by inserting a pre-built template or drawing your own flowchart using our expansive shapes library. Trust that all your work stays safe in the cloud, ready to be picked back up from another location or device.",
         "developer": "",
@@ -198,8 +217,10 @@
         "packageIdentifier": "9MSPC6MP8FM4",
         "privacyInformationUrl": "https://privacy.microsoft.com/en-us/privacystatement",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "You love your phone. So does your PC. Get instant access to everything you love on your phone, right from your PC.\n\nLink your Android phone and PC to view and reply to text messages, make and receive calls*, view your notifications, and more.\n\nMake emailing yourself photos a thing of the past as you share your favorite images between your phone and PC. Copy, edit, and even drag and drop photos without ever touching your phone.\n\nFor select** Microsoft Duo, Samsung, and HONOR phones access your favorite mobile apps on your PC. Continue working by wirelessly dragging and dropping your files from your phone to your PC (and vice versa).\n\nLet us know what features you’d like to see next by selecting “Send feedback” in the Phone Link app settings.\n\nFor cross-device experiences to work, you must link your Android phone (running Android 7 or later) with your PC, through the Phone Link app.\n\n*Calls requires a Windows 10 PC with Bluetooth capability.\n\n**Drag and drop, Phone screen and Apps all require a compatible Android device (aka.ms/phonelinkdevices). The multiple apps experience requires a Windows 10 PC running the May 2020 Update or later and has at least 8GB of RAM, and your Android device must be running Android 11.0.​",
         "developer": "",
@@ -218,8 +239,10 @@
         "packageIdentifier": "9NMPJ99VJBWV",
         "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkId=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "The Power Apps app is the front door to the apps at your work or school. Which apps can you use? It depends on what’s been created for you. Here are some examples you might see, or ones you can make yourself using the Power Apps website:\n\n- Campus app: Map your campus with icons for landmarks and facility details.\n- Event registration app: Record attendees as they arrive using barcodes or QR codes.\n- Expenses app: Let employees submit their expenses and upload photos of receipts.\n- Health clinic app: Let patients check in to appointments with just a few taps.\n- Performance app: Visualize data and get insights with interactive dashboards.\n- Sales app: See opportunities and leads, review comments, and approve for your P&L.\n- Timesheet app: Collect, consolidate, and analyze shift data from employees.\n\nThis is just a handful of examples; the possibilities are endless. Build and share low-code apps for your work or school at the Power Apps website.",
         "developer": "",
@@ -238,8 +261,10 @@
         "packageIdentifier": "9MVC8P1Q3B29",
         "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkID=310138",
         "publisher": "Microsoft Corp.",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Power Automate allows you to automate web and desktop applications on your Windows desktop by mimicking the user interface actions like clicks, and keyboard input. You can also combine these actions with predefined support for applications like Excel to help automate repetitive tasks.",
         "developer": "",
@@ -258,8 +283,10 @@
         "packageIdentifier": "9NFTCH6J7FHV",
         "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkId=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Power BI Desktop puts visual analytics at your fingertips. With this powerful authoring tool, you can create interactive data visualizations and reports.\r\n \r\nConnect, mash up and model, and visualize your data. Place visuals exactly where you want them, analyze and explore your data, and share content with your team by publishing to the Power BI web service.\r\n \r\nPower BI Desktop is part of the Power BI product suite. Use Power BI Desktop to create and distribute BI content. To monitor key data and share dashboards and reports, use the Power BI web service. To view and interact with your data on any Windows 10 device, get the Power BI Mobile app. \r\n  \r\nWith Power BI Desktop, you can:\r\n \r\n•\tConnect securely to hundreds of data sources —in the cloud and on-premises \r\n•\tTransform and mash up data from multiple sources—in just a few clicks\r\n•\tExtend your data models with DAX formulas\r\n•\tChoose from more than 100 cutting-edge data visuals—or create your own\r\n•\tDig deep into data to find patterns and discover insights\r\n•\tBuild out your design with intuitive formatting tools and themes\r\n•\tCreate mobile reports for on-the-go users\r\n•\tShare visual analytics with everyone in your organization \r\n•\tPublish securely to the web or an on-premises report server, or embed visuals in your website or app\r\n \r\nGet the full Power BI suite and never miss a beat with Power BI Desktop, the Power BI web service, and the Power BI app.",
         "developer": "",
@@ -278,8 +305,10 @@
         "packageIdentifier": "9NTXR16HNW1T",
         "privacyInformationUrl": "http://go.microsoft.com/fwlink/p/?LinkId=282053",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Samsung Flow is a software product that enables a seamless, secure, connected experience across your devices. You can authenticate your Tablet/PC with your smartphone, share content between devices, and sync notifications or view contents from your smartphone on your Tablet/PC. You can turn on the smartphone's Mobile Hotspot to keep your Tablet/PC connected.\r\nYou can also log in to your Tablet/PC with your biometric data (Iris, Fingerprints) if you register with Samsung Pass.\r\n\r\nThe following devices support Samsung Flow:\r\n1. Windows Tablet/PC : Windows 10 OS Creators update (V1703) and June patch build (15063.413)\r\n(Galaxy TabPro S, Galaxy Book,  Galaxy Book2.  Galaxy Book S, PC)\r\n2. Android Tablet: Android Marshmallow OS or newer (Galaxy Tab S6, Galaxy Tab S5e, Galaxy Tab S4, Tab S3, Tab S2, Tab A (2018, 10.5), Tab A2, Tab Active 2, Tab A 10.1, Tab A (2017))\r\n3. Android Phone : Android Marshmallow OS or Newer\r\nIt may not be supported by some models, depending on the smartphone specifications.\r\n\r\n* Samsung Flow will operate only on official software released by Samsung Electronics.\r\n* Windows: Bluetooth (Bluetooth LE optional) or Wi-Fi/LAN, Wi-Fi direct\r\n\r\nWindows 10 users can find the Samsung Flow app on the Windows App Store.\r\nGo to the Samsung Flow webpage where you can find the setup guide: \r\nwww.samsung.com/samsungflow\r\nIf you have not updated the Samsung Flow app to the latest version, please go to Windows Store > Menu > Downloads and Updates to update the app.\r\n\r\n* The PC unlock function is no longer provided because the Windows policy has changed.",
         "developer": "",
@@ -298,8 +327,10 @@
         "packageIdentifier": "9NBLGGH5GB0M",
         "privacyInformationUrl": "https://static.bada.com/contents/legal/us/default/samsungflow.html",
         "publisher": "Samsung Electronics Co, Ltd.",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Get the most out of your Surface. The Surface app provides you with customisation options and the opportunity to learn more about your Surface device. Give feedback on your experience so we can keep making it better. Safety, warranty, and regulatory info is there whenever you need it.",
         "developer": "",
@@ -318,8 +349,10 @@
         "packageIdentifier": "9WZDNCRFJB8P",
         "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkId=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Touch and Type Covers for Surface have a trackpad built-in that functions like a mouse. Trackpad Settings lets you control functions such as tap and touch gestures on your Surface.\r\nIf this app doesn’t detect the keyboard, do the following: \r\n\r\n1. Make sure you have the latest updates: From the Start screen, type Update, tap Settings, then tap Check for updates. \r\n2. From the Start screen, type Devices, tap Settings, then tap Devices and Printers. Then tap Refresh three times (circular arrow next to Search box). Try using the app again.",
         "developer": "",
@@ -338,8 +371,10 @@
         "packageIdentifier": "9WZDNCRFHZT8",
         "privacyInformationUrl": "http://go.microsoft.com/fwlink/?LinkID=268437",
         "publisher": "MSFT Corp",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Microsoft Translator enables you to translate text and speech, have translated conversations, and even download AI-powered language packs to use offline. \r\n\r\n- Speak, type, or write by hand with Windows Ink, to translate into over 60 languages \r\n- Have real-time translated conversations with up to 100 people, each on their own device (Windows, iOS, Android, Kindle)       \r\n- Start or join a conversation directly through Cortana\r\n- Translate images such as menus and signs\r\n-  Download languages to translate offline using state-of-the-art neural machine translation \r\n- Hear your translated phrase to help you with pronunciation\r\n- Share your translation with other apps \r\n- Pin your most frequent translations to save for later\r\n- Learn a new word or phrase everyday by pinning Translator to Start\r\n\r\nTranslator supports the following languages:  Afrikaans, Arabic, Bangla, Bosnian (Latin), Bulgarian, Cantonese (Traditional), Catalan, Chinese (Simplified), Chinese (Traditional), Croatian, Czech, Danish, Dutch, English, Estonian, Fijian, Filipino, Finnish, French, German, Greek, Haitian Creole, Hebrew, Hindi, Hmong Daw, Hungarian, Indonesian, Italian, Japanese, Kiswahili, Klingon, Korean, Latvian, Lithuanian, Malagasy, Malay, Maltese, Norwegian, Persian, Polish, Portuguese, Querétaro Otomi, Romanian, Russian, Samoan, Serbian (Cyrillic), Serbian (Latin), Slovak, Slovenian, Spanish, Swedish, Tahitian, Tamil, Thai, Tongan, Turkish, Ukrainian, Urdu, Vietnamese, Welsh, and Yucatec Maya. \r\n\r\nMicrosoft Translator is powered by cutting-edge technology that is used by Office, Bing, Skype, Edge as well as by countless partners. \r\n\r\nPlease note that some features are not available in all languages.",
         "developer": "",
@@ -358,8 +393,10 @@
         "packageIdentifier": "9WZDNCRFJ3PG",
         "privacyInformationUrl": "https://go.microsoft.com/fwlink/?LinkId=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "VLC media player (previously the VideoLAN Client and commonly known as simply VLC) is a free and open-source, portable, cross-platform media player software and streaming media server developed by the VideoLAN project. VLC is available for desktop operating systems and mobile platforms.",
         "developer": "",
@@ -378,8 +415,10 @@
         "packageIdentifier": "XPDM1ZW6815MQM",
         "privacyInformationUrl": "https://www.videolan.org/privacy.html",
         "publisher": "VideoLAN",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "WhatsApp from Meta is a 100% free messaging app. It’s used by over 2B people in more than 180 countries. It’s simple, reliable, and private, so you can easily keep in touch with your friends and family. WhatsApp works across mobile and desktop even on slow connections, with no subscription fees*.\r\n\r\nPrivate messaging across the world\r\n\r\nYour personal messages and calls to friends and family are end-to-end encrypted. No one outside of your chats, not even WhatsApp, can read or listen to them.\r\n\r\n*Data charges may apply. Contact your provider for details.\r\n\r\n---------------------------------------------------------\r\n\r\nIf you have any feedback or questions, please go to WhatsApp > Settings > Help > Contact Us",
         "developer": "",
@@ -398,8 +437,10 @@
         "packageIdentifier": "9NKSQGP7F2NH",
         "privacyInformationUrl": "https://www.whatsapp.com/legal/#privacy-policy",
         "publisher": "WhatsApp Inc.",
-        "roleScopeTagIds": []
-    }, {
+        "roleScopeTagIds": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.winGetApp",
         "description": "Maps is your guide to everywhere. Find your way with voice navigation and driving, transit, and walking directions. Search for places to get directions, business info, and reviews. Download maps to use when you’re offline. Tour the world virtually with breathtaking aerial imagery and 360 degree street-level views.",
         "developer": "",
@@ -418,6 +459,7 @@
         "packageIdentifier": "9WZDNCRDTBVB",
         "privacyInformationUrl": "http://go.microsoft.com/fwlink/?LinkID=521839",
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": []
+        "roleScopeTagIds": [
+        ]
     }
 ]

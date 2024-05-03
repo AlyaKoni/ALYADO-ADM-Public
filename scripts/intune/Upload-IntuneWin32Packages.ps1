@@ -306,7 +306,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         $xml += '</BlockList>'
         do {
             try {
-                $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Body $xml
+                $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Body $xml -ContentType "application/xml"
                 $StatusCode = $response.StatusCode
             } catch {
                 $StatusCode = $_.Exception.Response.StatusCode.value__

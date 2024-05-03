@@ -1,7 +1,6 @@
-[{
+[
+    {
         "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
-        "displayName": "WIN Compliance Policy",
-        "description": "Checks the compliance of windows devices",
         "activeFirewallRequired": true,
         "antiSpywareRequired": true,
         "antivirusRequired": true,
@@ -10,11 +9,14 @@
         "configurationManagerComplianceRequired": false,
         "defenderEnabled": true,
         "defenderVersion": null,
+        "description": "Checks the compliance of windows devices",
         "deviceCompliancePolicyScript": null,
         "deviceThreatProtectionEnabled": false,
         "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+        "displayName": "WIN Compliance Policy",
         "earlyLaunchAntiMalwareDriverEnabled": false,
-        "localActions": [],
+        "localActions": [
+        ],
         "mobileOsMaximumVersion": null,
         "mobileOsMinimumVersion": null,
         "osMaximumVersion": null,
@@ -29,16 +31,21 @@
         "passwordRequiredToUnlockFromIdle": false,
         "passwordRequiredType": "deviceDefault",
         "requireHealthyDeviceReport": false,
-        "roleScopeTagIds": ["0"],
+        "roleScopeTagIds": [
+            "0"
+        ],
         "rtpEnabled": true,
-        "scheduledActionsForRule": [{
+        "scheduledActionsForRule": [
+            {
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
-                "scheduledActionConfigurations": [{
+                "scheduledActionConfigurations": [
+                    {
                         "@odata.type": "#microsoft.graph.deviceComplianceActionItem",
                         "actionType": "block",
                         "gracePeriodHours": 8760,
-                        "notificationMessageCCList": [],
+                        "notificationMessageCCList": [
+                        ],
                         "notificationTemplateId": ""
                     }
                 ]
@@ -48,11 +55,11 @@
         "signatureOutOfDate": true,
         "storageRequireEncryption": true,
         "tpmRequired": true,
-        "validOperatingSystemBuildRanges": []
-    }, {
+        "validOperatingSystemBuildRanges": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.windows10CompliancePolicy",
-        "displayName": "WIN365 Compliance Policy",
-        "description": "Checks the compliance of windows365 devices",
         "activeFirewallRequired": true,
         "antiSpywareRequired": true,
         "antivirusRequired": true,
@@ -61,11 +68,14 @@
         "configurationManagerComplianceRequired": false,
         "defenderEnabled": true,
         "defenderVersion": null,
+        "description": "Checks the compliance of windows365 devices",
         "deviceCompliancePolicyScript": null,
         "deviceThreatProtectionEnabled": false,
         "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+        "displayName": "WIN365 Compliance Policy",
         "earlyLaunchAntiMalwareDriverEnabled": false,
-        "localActions": [],
+        "localActions": [
+        ],
         "mobileOsMaximumVersion": null,
         "mobileOsMinimumVersion": null,
         "osMaximumVersion": null,
@@ -80,16 +90,21 @@
         "passwordRequiredToUnlockFromIdle": false,
         "passwordRequiredType": "deviceDefault",
         "requireHealthyDeviceReport": false,
-        "roleScopeTagIds": ["0"],
+        "roleScopeTagIds": [
+            "0"
+        ],
         "rtpEnabled": true,
-        "scheduledActionsForRule": [{
+        "scheduledActionsForRule": [
+            {
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
-                "scheduledActionConfigurations": [{
+                "scheduledActionConfigurations": [
+                    {
                         "@odata.type": "#microsoft.graph.deviceComplianceActionItem",
                         "actionType": "block",
                         "gracePeriodHours": 8760,
-                        "notificationMessageCCList": [],
+                        "notificationMessageCCList": [
+                        ],
                         "notificationTemplateId": ""
                     }
                 ]
@@ -99,15 +114,18 @@
         "signatureOutOfDate": true,
         "storageRequireEncryption": true,
         "tpmRequired": true,
-        "validOperatingSystemBuildRanges": []
-    }, {
+        "validOperatingSystemBuildRanges": [
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.androidWorkProfileCompliancePolicy",
-        "displayName": "AND Enterprise Personal Compliance Policy",
-        "description": "Checks the compliance of personal owned android devices",
         "advancedThreatProtectionRequiredSecurityLevel": "unavailable",
+        "description": "Checks the compliance of personal owned android devices",
         "deviceThreatProtectionEnabled": false,
         "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
-        "localActions": [],
+        "displayName": "AND Enterprise Personal Compliance Policy",
+        "localActions": [
+        ],
         "minAndroidSecurityPatchLevel": null,
         "osMaximumVersion": null,
         "osMinimumVersion": null,
@@ -118,15 +136,20 @@
         "passwordRequired": true,
         "passwordRequiredType": "numeric",
         "passwordSignInFailureCountBeforeFactoryReset": null,
-        "roleScopeTagIds": ["0"],
-        "scheduledActionsForRule": [{
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "scheduledActionsForRule": [
+            {
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
-                "scheduledActionConfigurations": [{
+                "scheduledActionConfigurations": [
+                    {
                         "@odata.type": "#microsoft.graph.deviceComplianceActionItem",
                         "actionType": "block",
                         "gracePeriodHours": 8760,
-                        "notificationMessageCCList": [],
+                        "notificationMessageCCList": [
+                        ],
                         "notificationTemplateId": ""
                     }
                 ]
@@ -142,14 +165,16 @@
         "securityRequireUpToDateSecurityProviders": false,
         "securityRequireVerifyApps": false,
         "storageRequireEncryption": true
-    }, {
+    },
+    {
         "@odata.type": "#microsoft.graph.androidDeviceOwnerCompliancePolicy",
-        "displayName": "AND Enterprise Owned Compliance Policy",
-        "description": "Checks the compliance of company owned android devices",
         "advancedThreatProtectionRequiredSecurityLevel": "unavailable",
+        "description": "Checks the compliance of company owned android devices",
         "deviceThreatProtectionEnabled": false,
         "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
-        "localActions": [],
+        "displayName": "AND Enterprise Owned Compliance Policy",
+        "localActions": [
+        ],
         "minAndroidSecurityPatchLevel": null,
         "osMaximumVersion": null,
         "osMinimumVersion": null,
@@ -165,15 +190,20 @@
         "passwordPreviousPasswordCountToBlock": 1,
         "passwordRequired": true,
         "passwordRequiredType": "numeric",
-        "roleScopeTagIds": ["0"],
-        "scheduledActionsForRule": [{
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "scheduledActionsForRule": [
+            {
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
-                "scheduledActionConfigurations": [{
+                "scheduledActionConfigurations": [
+                    {
                         "@odata.type": "#microsoft.graph.deviceComplianceActionItem",
                         "actionType": "block",
                         "gracePeriodHours": 8760,
-                        "notificationMessageCCList": [],
+                        "notificationMessageCCList": [
+                        ],
                         "notificationTemplateId": ""
                     }
                 ]
@@ -182,14 +212,16 @@
         "securityRequireSafetyNetAttestationBasicIntegrity": false,
         "securityRequireSafetyNetAttestationCertifiedDevice": false,
         "storageRequireEncryption": null
-    }, {
+    },
+    {
         "@odata.type": "#microsoft.graph.iosCompliancePolicy",
-        "displayName": "IOS Compliance Policy",
-        "description": "Checks the compliance of iOS devices",
         "advancedThreatProtectionRequiredSecurityLevel": "unavailable",
+        "description": "Checks the compliance of iOS devices",
         "deviceThreatProtectionEnabled": false,
         "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
-        "localActions": [],
+        "displayName": "IOS Compliance Policy",
+        "localActions": [
+        ],
         "managedEmailProfileRequired": true,
         "osMaximumBuildVersion": null,
         "osMaximumVersion": null,
@@ -204,33 +236,41 @@
         "passcodePreviousPasscodeBlockCount": 1,
         "passcodeRequired": true,
         "passcodeRequiredType": "deviceDefault",
-        "restrictedApps": [],
-        "roleScopeTagIds": ["0"],
-        "scheduledActionsForRule": [{
+        "restrictedApps": [
+        ],
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "scheduledActionsForRule": [
+            {
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
-                "scheduledActionConfigurations": [{
+                "scheduledActionConfigurations": [
+                    {
                         "@odata.type": "#microsoft.graph.deviceComplianceActionItem",
                         "actionType": "block",
                         "gracePeriodHours": 8760,
-                        "notificationMessageCCList": [],
+                        "notificationMessageCCList": [
+                        ],
                         "notificationTemplateId": ""
                     }
                 ]
             }
         ],
         "securityBlockJailbrokenDevices": true
-    }, {
+    },
+    {
         "@odata.type": "#microsoft.graph.macOSCompliancePolicy",
-        "displayName": "MAC Compliance Policy",
         "description": "Checks the compliance from MAC devices",
         "deviceThreatProtectionEnabled": false,
         "deviceThreatProtectionRequiredSecurityLevel": "unavailable",
+        "displayName": "MAC Compliance Policy",
         "firewallBlockAllIncoming": true,
-        "firewallEnableStealthMode": false,
         "firewallEnabled": true,
+        "firewallEnableStealthMode": false,
         "gatekeeperAllowedAppSource": "notConfigured",
-        "localActions": [],
+        "localActions": [
+        ],
         "osMaximumBuildVersion": null,
         "osMaximumVersion": null,
         "osMinimumBuildVersion": null,
@@ -243,15 +283,20 @@
         "passwordPreviousPasswordBlockCount": 1,
         "passwordRequired": true,
         "passwordRequiredType": "deviceDefault",
-        "roleScopeTagIds": ["0"],
-        "scheduledActionsForRule": [{
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "scheduledActionsForRule": [
+            {
                 "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
                 "ruleName": "DefaultPolicy",
-                "scheduledActionConfigurations": [{
+                "scheduledActionConfigurations": [
+                    {
                         "@odata.type": "#microsoft.graph.deviceComplianceActionItem",
                         "actionType": "block",
                         "gracePeriodHours": 8760,
-                        "notificationMessageCCList": [],
+                        "notificationMessageCCList": [
+                        ],
                         "notificationTemplateId": ""
                     }
                 ]
