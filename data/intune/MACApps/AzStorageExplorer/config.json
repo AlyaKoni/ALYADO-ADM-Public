@@ -1,103 +1,44 @@
 {
-  "@odata.type": "#microsoft.graph.win32LobApp",
-  "displayName": "WIN AzStorageExplorer",
-  "description": "Installs StorageExplorer-windows-x64.exe",
-  "publisher": "Microsoft",
+  "@odata.type": "#microsoft.graph.macOSPkgApp",
+  "description": "Installs StorageExplorer-darwin-arm64.pkg",
+  "developer": "Microsoft",
+  "displayName": "MAC AzStorageExplorer",
+  "fileName": "StorageExplorer-darwin-arm64.pkg",
+  "ignoreVersionDetection": false,
+  "includedApps": [
+    {
+      "bundleId": "com.microsoft.StorageExplorer",
+      "bundleVersion": "1.33.1"
+    }
+  ],
+  "informationUrl": "https://azure.microsoft.com/de-de/products/storage/storage-explorer",
+  "isFeatured": false,
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
     "type": "image/png",
     "value": "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"
   },
-  "isFeatured": false,
-  "privacyInformationUrl": "https://privacy.microsoft.com/en-gb/privacystatement",
-  "informationUrl": "https://azure.microsoft.com/de-de/products/storage/storage-explorer",
-  "owner": "",
-  "developer": "Microsoft Corporation",
-  "notes": "",
-  "roleScopeTagIds": [],
-  "fileName": "StorageExplorer-windows-x64.intunewin",
-  "installCommandLine": "Install.cmd",
-  "uninstallCommandLine": "Uninstall.cmd",
-  "applicableArchitectures": "x64",
-  "minimumFreeDiskSpaceInMB": 800,
-  "minimumMemoryInMB": 100,
-  "minimumNumberOfProcessors": 1,
-  "minimumCpuSpeedInMHz": 1,
-  "msiInformation": {
-    "requiresReboot": "false",
-    "productVersion": "2.8.85.0",
-    "publisher": "Microsoft Corporation",
-    "productCode": "{BABF7665-BCC5-430C-91AF-CFDC9D5B13C8}",
-    "upgradeCode": "{5D9EC71D-960E-4E58-ADA1-C43B094DAE72}",
-    "productName": "Microsoft Azure Information Protection",
-    "packageType": "PerMachine"
-  },
-  "setupFilePath": "StorageExplorer-windows-x64.exe",
-  "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
-    "v8_0": false,
-    "v8_1": false,
-    "v10_0": false,
-    "v10_1607": true,
-    "v10_1703": false,
-    "v10_1709": false,
-    "v10_1803": false,
-    "v10_1809": false,
-    "v10_1903": false
+    "v10_10": false,
+    "v10_11": false,
+    "v10_12": false,
+    "v10_13": false,
+    "v10_14": false,
+    "v10_15": true,
+    "v10_7": false,
+    "v10_8": false,
+    "v10_9": false,
+    "v11_0": false,
+    "v12_0": false,
+    "v13_0": false,
+    "v14_0": false
   },
-  "detectionRules": [
-    {
-      "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
-      "path": "%ProgramFiles%\\Microsoft Azure Storage Explorer",
-      "fileOrFolderName": "StorageExplorer.exe",
-      "check32BitOn64System": false,
-      "detectionType": "version",
-      "operator": "greaterThanOrEqual",
-      "detectionValue": "1.32.1"
-    }
-  ],
-  "requirementRules": [],
-  "rules": [
-    {
-      "@odata.type": "#microsoft.graph.win32LobAppFileSystemRule",
-      "ruleType": "detection",
-      "path": "%ProgramFiles%\\Microsoft Azure Storage Explorer",
-      "fileOrFolderName": "StorageExplorer.exe",
-      "check32BitOn64System": false,
-      "operationType": "version",
-      "operator": "greaterThanOrEqual",
-      "comparisonValue": "1.32.1"
-    }
-  ],
-  "installExperience": {
-    "runAsAccount": "system",
-    "deviceRestartBehavior": "suppress"
-  },
-  "returnCodes": [
-    {
-      "returnCode": -1,
-      "type": "failed"
-    },
-    {
-      "returnCode": 0,
-      "type": "success"
-    },
-    {
-      "returnCode": 1707,
-      "type": "success"
-    },
-    {
-      "returnCode": 3010,
-      "type": "softReboot"
-    },
-    {
-      "returnCode": 1641,
-      "type": "hardReboot"
-    },
-    {
-      "returnCode": 1618,
-      "type": "retry"
-    }
-  ],
-  "displayVersion": "1.32.1"
+  "notes": "",
+  "owner": "",
+  "primaryBundleId": "com.microsoft.StorageExplorer",
+  "primaryBundleVersion": "1.33.1",
+  "privacyInformationUrl": "https://privacy.microsoft.com/en-gb/privacystatement",
+  "publisher": "Microsoft",
+  "roleScopeTagIds": [],
+  "displayVersion": null
 }

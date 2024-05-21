@@ -30,6 +30,8 @@
 #>
 
 cls
+$informUsers = $true
+$onlyStartStopOnce = $true
 $runAtMinute = 10 # Scheduler Time
 $startTime = "05:00" # Start tag definition
 $stopTime = "21:55" # Stop tag definition
@@ -42,39 +44,80 @@ if ($stopTime) { $stopTime = [DateTime]::parseexact($stopTime,"HH:mm",$null) }
 for ($runtime = $midTime; $runtime -lt $midTime.AddDays(1); $runtime = $runtime.AddHours(1))
 {
     $runtime
+	$infTime = $runTime.AddHours(1)
 	if ($startTime)
 	{
 	    if ($stopTime)
 	    {
-		    if ($runTime -lt $stopTime -and $runTime -gt $startTime)
-		    {
-			    Write-Host "- Starting VM if not running" -ForegroundColor Green
-		    }
-            else
-		    {
-			    Write-Host "- Stopping VM if running" -ForegroundColor Red
-		    }
-	    }
+			if ($startTime -lt $stopTime)
+			{
+				if ($informUsers -and (-Not ($infTime -lt $stopTime -and $infTime -gt $startTime) -and [Math]::Abs($stopTime.Subtract($infTime).TotalMinutes) -lt 60))
+				{
+					Write-Host "- Informing users about shutdown in 1 hour" -ForegroundColor Green
+				}
+				if ($runTime -lt $stopTime -and $runTime -gt $startTime)
+				{
+					if ($onlyStartStopOnce -eq $false -or [Math]::Abs($startTime.Subtract($runTime).TotalMinutes) -lt 60)
+					{
+						Write-Host "- Starting VM if not running" -ForegroundColor Green
+					}
+				}
+				else
+				{
+					if ($onlyStartStopOnce -eq $false -or [Math]::Abs($stopTime.Subtract($runTime).TotalMinutes) -lt 60)
+					{
+						Write-Host "- Stopping VM if running" -ForegroundColor Red
+					}
+				}
+			}
+			else
+			{
+				if ($informUsers -and ($infTime -lt $startTime -and $infTime -gt $stopTime -and [Math]::Abs($stopTime.Subtract($infTime).TotalMinutes) -lt 60))
+				{
+					Write-Host "- Informing users about shutdown in 1 hour" -ForegroundColor Green
+				}
+				if ($runTime -lt $startTime -and $runTime -gt $stopTime)
+				{
+					if ($onlyStartStopOnce -eq $false -or [Math]::Abs($stopTime.Subtract($runTime).TotalMinutes) -lt 60)
+					{
+						Write-Host "- Stopping VM if running" -ForegroundColor Red
+					}
+				}
+				else
+				{
+					if ($onlyStartStopOnce -eq $false -or [Math]::Abs($startTime.Subtract($runTime).TotalMinutes) -lt 60)
+					{
+						Write-Host "- Starting VM if not running" -ForegroundColor Green
+					}
+				}
+			}
+		}
 		else
 		{
-		    if ($runTime -gt $startTime)
-		    {
-			    Write-Host "- Starting VM if not running" -ForegroundColor Green
-		    }
+			if ($runTime -gt $startTime)
+			{
+				if ($onlyStartStopOnce -eq $false -or [Math]::Abs($startTime.Subtract($runTime).TotalMinutes) -lt 60)
+				{
+					Write-Host "- Starting VM if not running" -ForegroundColor Green
+				}
+			}
 		}
 	}
 	else
 	{
 	    if ($stopTime)
 	    {
-		    if ($runTime -gt $stopTime)
+			if ($informUsers -and ($infTime -gt $stopTime -and [Math]::Abs($stopTime.Subtract($infTime).TotalMinutes) -lt 60))
+			{
+				Write-Host "- Informing users about shutdown in 1 hour" -ForegroundColor Green
+			}
+			if ($runTime -gt $stopTime -or ($runTime.Hour -eq 0 -and $stopTime.Hour -eq 23))
 		    {
-			    Write-Host "- Stopping VM if running" -ForegroundColor Red
-		    }
-		    if ($runTime.Hour -eq 0 -and $stopTime.Hour -eq 23)
-		    {
-			    Write-Host "- Stopping VM if running" -ForegroundColor Red
-		    }
+				if ($onlyStartStopOnce -eq $false -or [Math]::Abs($stopTime.Subtract($runTime).TotalMinutes) -lt 60)
+				{
+					Write-Host "- Stopping VM if running" -ForegroundColor Red
+				}
+			}
 	    }
 	}
 }

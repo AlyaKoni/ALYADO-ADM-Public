@@ -84,6 +84,7 @@ $modules = @(
 	"Az.DataShare", 
 	"Az.DeploymentManager", 
 	"Az.DesktopVirtualization", 
+	"Az.DesktopVirtualization.Utility",
 	"Az.DevCenter", 
 	"Az.DevTestLabs", 
 	"Az.Dns", 
@@ -242,7 +243,6 @@ $modules = @(
 	"MSOnline", 
 	"MSStore", 
 	"PnP.PowerShell", 
-	"Pscx", 
 	"PSWindowsUpdate", 
 	"WindowsAutoPilotIntune"
 )
@@ -250,7 +250,9 @@ foreach($module in $modules)
 {
     Install-ModuleIfNotInstalled $module -doNotLoadModules $true
 }
-
+if (-Not $AlyaIsPsUnix) {
+    Install-ModuleIfNotInstalled "Pscx" -doNotLoadModules $true
+}
 Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM"
 Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\log4net"
 Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"

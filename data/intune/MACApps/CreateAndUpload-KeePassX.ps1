@@ -37,9 +37,9 @@ Param(
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\MACApps\Firefox\Package\*.json" -PathType Leaf)))
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\MACApps\KeePassX\Package\*.json" -PathType Leaf)))
 {
-    & "$($AlyaScripts)\intune\Create-IntuneMACPackages.ps1" -CreateOnlyAppWithName "Firefox"
+    & "$($AlyaScripts)\intune\Create-IntuneMACPackages.ps1" -CreateOnlyAppWithName "KeePassX"
 }
-& "$($AlyaScripts)\intune\Upload-IntuneMACPackages.ps1" -UploadOnlyAppWithName "Firefox" -askForSameVersionPackages $askForSameVersionPackages
-& "$($AlyaScripts)\intune\Configure-IntuneMACPackages.ps1" -ConfigureOnlyAppWithName "Firefox"
+& "$($AlyaScripts)\intune\Upload-IntuneMACPackages.ps1" -UploadOnlyAppWithName "KeePassX" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Configure-IntuneMACPackages.ps1" -ConfigureOnlyAppWithName "KeePassX"

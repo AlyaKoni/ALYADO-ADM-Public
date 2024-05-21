@@ -1,0 +1,4 @@
+security import "InstallerCertificate_AlyaConsulting.pem"
+security import "AlyaConsulting" -T /usr/bin/productbuild -T /usr/bin/pkgbuild
+security add-trusted-cert -d InstallerCertificate_AlyaConsulting.pem
+

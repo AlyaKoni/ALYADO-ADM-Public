@@ -36,23 +36,18 @@ if (-not $AlyaIsPsUnix)
     throw "Please run this script on a mac"
 }
 
-$pageUrl = "https://www.sourcetreeapp.com/"
-$appName = "Sourcetree"
-
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*ga/Sourcetree[^`"]*\.zip"
-$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-$fileName = Split-Path -Path $newUrl -Leaf
+$pageUrl = "https://aka.ms/storageexplorer/downloadmacosarm64"
+$fileName = "StorageExplorer-darwin-arm64.zip"
+$appName = "Microsoft Azure Storage Explorer"
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\$fileName"
 
 $dirName = Split-Path -Path $fileName -LeafBase
-#$dmgName = $fileName.Replace(".zip", ".dmg")
 $pkgName = $fileName.Replace(".zip", ".pkg")
 unzip "$contentRoot/$fileName" -d "$contentRoot/$dirName"
 productbuild --sign "AlyaConsulting" --component "$contentRoot/$dirName/$appName.app" "/Applications" "$contentRoot/$pkgName"
@@ -62,9 +57,11 @@ productbuild --sign "AlyaConsulting" --component "$contentRoot/$dirName/$appName
 #installer -pkg "$contentRoot/$pkgName" -target /
 
 $versionFile = Join-Path $packageRoot "version.json"
-$bundleVersion = $fileName -replace ".*\d+\.\d+\.\d+_(\d+).*", "`$1"
+$plistCont = Get-Content -Path "$contentRoot/$dirName/$appName.app/Contents/Info.plist" -Encoding utf8 -Raw
+[regex]$regex = "<key>CFBundleVersion</key>.*?<string>(.*?)</string>"
+$bundleVersion = [Version]([regex]::Matches($plistCont, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant, Singleline')[0].Groups[1].Value)
 $versionObj = @{}
-$versionObj.version = "$bundleVersion.0.0.0"
+$versionObj.version = $bundleVersion.ToString()
 $versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
 
 Remove-Item -Path "$contentRoot\$fileName" -Recurse -Force

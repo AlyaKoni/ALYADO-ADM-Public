@@ -64,7 +64,7 @@ Write-Host "Importing site template" -ForegroundColor $CommandInfo
 Set-PnPTraceLog -On -LogFile "$TemplateFile.log" -Level debug
 Invoke-PnPSiteTemplate -Connection $siteCon -Path $TemplateFile
 
-Write-Host "Template exported to $outfile" -ForegroundColor $CommandSuccess
+Write-Host "Template imported to $outfile" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript

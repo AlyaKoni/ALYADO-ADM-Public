@@ -39,6 +39,7 @@
 [CmdletBinding()]
 Param(
     [bool]$doUserDataExport = $false,
+    [bool]$doReportExport = $false,
     [bool]$doAppReportExport = $false
 )
 
@@ -272,7 +273,6 @@ foreach($configurationPolicy in $configurationPolicies)
     $configurationPolicy["settings"] = $configurationPolicySettings
 }
 $configurationPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ConfigurationPolicy\configurationPolicies.json")) -Force
-
 
 ##### Starting exports AppConfigurationPolicy
 #####
@@ -556,7 +556,6 @@ foreach($script in $deviceManagementScripts)
     $userRunStates | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\DeviceConfiguration\userRunStates_$($script.id).json")) -Force
 }
 
-
 ##### Starting exports EnrollmentRestrictions
 #####
 Write-Host "Exporting EnrollmentRestrictions" -ForegroundColor $CommandInfo
@@ -704,99 +703,102 @@ foreach($managedAppPolicy in $managedAppPolicies)
 
 ##### Starting exports Reports
 #####
-Write-Host "Exporting Reports" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\Reports")) { $null = New-Item -Path "$DataRoot\Reports" -ItemType Directory -Force }
+if ($doReportExport)
+{
+    Write-Host "Exporting Reports" -ForegroundColor $CommandInfo
+    if (-Not (Test-Path "$DataRoot\Reports")) { $null = New-Item -Path "$DataRoot\Reports" -ItemType Directory -Force }
 
-$DeviceComplianceUri = GetReportUri -reportname "DeviceCompliance"
-$DeviceNonComplianceUri = GetReportUri -reportname "DeviceNonCompliance"
-$DevicesUri = GetReportUri -reportname "Devices"
-$FeatureUpdatePolicyFailuresAggregateUri = GetReportUri -reportname "FeatureUpdatePolicyFailuresAggregate"
-$UnhealthyDefenderAgentsUri = GetReportUri -reportname "UnhealthyDefenderAgents"
-$DefenderAgentsUri = GetReportUri -reportname "DefenderAgents"
-$ActiveMalwareUri = GetReportUri -reportname "ActiveMalware"
-$MalwareUri = GetReportUri -reportname "Malware"
-$AllAppsListUri = GetReportUri -reportname "AllAppsList"
-$AppInstallStatusAggregateUri = GetReportUri -reportname "AppInstallStatusAggregate"
-$ComanagedDeviceWorkloadsUri = GetReportUri -reportname "ComanagedDeviceWorkloads"
-$ComanagementEligibilityTenantAttachedDevicesUri = GetReportUri -reportname "ComanagementEligibilityTenantAttachedDevices"
-$DevicesWithInventoryUri = GetReportUri -reportname "DevicesWithInventory"
-$FirewallStatusUri = GetReportUri -reportname "FirewallStatus"
-$GPAnalyticsSettingMigrationReadinessUri = GetReportUri -reportname "GPAnalyticsSettingMigrationReadiness"
-$MAMAppProtectionStatusUri = GetReportUri -reportname "MAMAppProtectionStatus"
-$MAMAppConfigurationStatusUri = GetReportUri -reportname "MAMAppConfigurationStatus"
-$AppInvAggregateUri = GetReportUri -reportname "AppInvAggregate"
-$AppInvRawDataUri = GetReportUri -reportname "AppInvRawData"
+    $DeviceComplianceUri = GetReportUri -reportname "DeviceCompliance"
+    $DeviceNonComplianceUri = GetReportUri -reportname "DeviceNonCompliance"
+    $DevicesUri = GetReportUri -reportname "Devices"
+    $FeatureUpdatePolicyFailuresAggregateUri = GetReportUri -reportname "FeatureUpdatePolicyFailuresAggregate"
+    $UnhealthyDefenderAgentsUri = GetReportUri -reportname "UnhealthyDefenderAgents"
+    $DefenderAgentsUri = GetReportUri -reportname "DefenderAgents"
+    $ActiveMalwareUri = GetReportUri -reportname "ActiveMalware"
+    $MalwareUri = GetReportUri -reportname "Malware"
+    $AllAppsListUri = GetReportUri -reportname "AllAppsList"
+    $AppInstallStatusAggregateUri = GetReportUri -reportname "AppInstallStatusAggregate"
+    $ComanagedDeviceWorkloadsUri = GetReportUri -reportname "ComanagedDeviceWorkloads"
+    $ComanagementEligibilityTenantAttachedDevicesUri = GetReportUri -reportname "ComanagementEligibilityTenantAttachedDevices"
+    $DevicesWithInventoryUri = GetReportUri -reportname "DevicesWithInventory"
+    $FirewallStatusUri = GetReportUri -reportname "FirewallStatus"
+    $GPAnalyticsSettingMigrationReadinessUri = GetReportUri -reportname "GPAnalyticsSettingMigrationReadiness"
+    $MAMAppProtectionStatusUri = GetReportUri -reportname "MAMAppProtectionStatus"
+    $MAMAppConfigurationStatusUri = GetReportUri -reportname "MAMAppConfigurationStatus"
+    $AppInvAggregateUri = GetReportUri -reportname "AppInvAggregate"
+    $AppInvRawDataUri = GetReportUri -reportname "AppInvRawData"
 
-$uri = "/beta/deviceManagement/reports/getReportFilters"
-$temp = New-TemporaryFile
-Invoke-MgGraphRequest -Method "POST" -Uri $uri -Body "{`"name`": `"FeatureUpdatePolicy`"}" -OutputFilePath $temp
-$fpolicies = (Get-Content -Path $temp -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json).Values
-Remove-Item -Path $temp -Force
-$DeviceFailuresByFeatureUpdatePolicyUris = @()
-foreach($policy in $fpolicies)
-{
-    $uri = GetReportUri -reportname "DeviceFailuresByFeatureUpdatePolicy" -filter "PolicyId eq '$($policy[0])'"
-    $DeviceFailuresByFeatureUpdatePolicyUris += @{name=$policy[1];uri=$uri}
-}
-$FeatureUpdateDeviceStateUris = @()
-foreach($policy in $fpolicies)
-{
-    $uri = GetReportUri -reportname "FeatureUpdateDeviceState" -filter "PolicyId eq '$($policy[0])'"
-    $FeatureUpdateDeviceStateUris += @{name=$policy[1];uri=$uri}
-}
+    $uri = "/beta/deviceManagement/reports/getReportFilters"
+    $temp = New-TemporaryFile
+    Invoke-MgGraphRequest -Method "POST" -Uri $uri -Body "{`"name`": `"FeatureUpdatePolicy`"}" -OutputFilePath $temp
+    $fpolicies = (Get-Content -Path $temp -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json).Values
+    Remove-Item -Path $temp -Force
+    $DeviceFailuresByFeatureUpdatePolicyUris = @()
+    foreach($policy in $fpolicies)
+    {
+        $uri = GetReportUri -reportname "DeviceFailuresByFeatureUpdatePolicy" -filter "PolicyId eq '$($policy[0])'"
+        $DeviceFailuresByFeatureUpdatePolicyUris += @{name=$policy[1];uri=$uri}
+    }
+    $FeatureUpdateDeviceStateUris = @()
+    foreach($policy in $fpolicies)
+    {
+        $uri = GetReportUri -reportname "FeatureUpdateDeviceState" -filter "PolicyId eq '$($policy[0])'"
+        $FeatureUpdateDeviceStateUris += @{name=$policy[1];uri=$uri}
+    }
 
-$uri = "/beta/deviceManagement/reports/getReportFilters"
-$temp = New-TemporaryFile
-Invoke-MgGraphRequest -Method "POST" -Uri $uri -Body "{`"name`": `"QualityUpdatePolicy`"}" -OutputFilePath $temp
-$qpolicies = (Get-Content -Path $temp -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json).Values
-Remove-Item -Path $temp -Force
-$QualityUpdateDeviceErrorsByPolicyUris = @()
-foreach($policy in $qpolicies)
-{
-    $uri = GetReportUri -reportname "QualityUpdateDeviceErrorsByPolicy" -filter "PolicyId eq '$($policy[0])'"
-    $QualityUpdateDeviceErrorsByPolicyUris += @{name=$policy[1];uri=$uri}
-}
-$QualityUpdateDeviceStatusByPolicyUris = @()
-foreach($policy in $qpolicies)
-{
-    $uri = GetReportUri -reportname "QualityUpdateDeviceStatusByPolicy" -filter "PolicyId eq '$($policy[0])'"
-    $QualityUpdateDeviceStatusByPolicyUris += @{name=$policy[1];uri=$uri}
-}
+    $uri = "/beta/deviceManagement/reports/getReportFilters"
+    $temp = New-TemporaryFile
+    Invoke-MgGraphRequest -Method "POST" -Uri $uri -Body "{`"name`": `"QualityUpdatePolicy`"}" -OutputFilePath $temp
+    $qpolicies = (Get-Content -Path $temp -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json).Values
+    Remove-Item -Path $temp -Force
+    $QualityUpdateDeviceErrorsByPolicyUris = @()
+    foreach($policy in $qpolicies)
+    {
+        $uri = GetReportUri -reportname "QualityUpdateDeviceErrorsByPolicy" -filter "PolicyId eq '$($policy[0])'"
+        $QualityUpdateDeviceErrorsByPolicyUris += @{name=$policy[1];uri=$uri}
+    }
+    $QualityUpdateDeviceStatusByPolicyUris = @()
+    foreach($policy in $qpolicies)
+    {
+        $uri = GetReportUri -reportname "QualityUpdateDeviceStatusByPolicy" -filter "PolicyId eq '$($policy[0])'"
+        $QualityUpdateDeviceStatusByPolicyUris += @{name=$policy[1];uri=$uri}
+    }
 
-DownloadReport -repUri $DeviceComplianceUri -repName "DeviceCompliance" -repDir "\Reports"
-DownloadReport -repUri $DeviceNonComplianceUri -repName "DeviceNonCompliance" -repDir "\Reports"
-DownloadReport -repUri $DevicesUri -repName "Devices" -repDir "\Reports"
-DownloadReport -repUri $FeatureUpdatePolicyFailuresAggregateUri -repName "FeatureUpdatePolicyFailuresAggregate" -repDir "\Reports"
-DownloadReport -repUri $UnhealthyDefenderAgentsUri -repName "UnhealthyDefenderAgents" -repDir "\Reports"
-DownloadReport -repUri $DefenderAgentsUri -repName "DefenderAgents" -repDir "\Reports"
-DownloadReport -repUri $ActiveMalwareUri -repName "ActiveMalware" -repDir "\Reports"
-DownloadReport -repUri $MalwareUri -repName "Malware" -repDir "\Reports"
-DownloadReport -repUri $AllAppsListUri -repName "AllAppsList" -repDir "\Reports"
-DownloadReport -repUri $AppInstallStatusAggregateUri -repName "AppInstallStatusAggregate" -repDir "\Reports"
-DownloadReport -repUri $ComanagedDeviceWorkloadsUri -repName "ComanagedDeviceWorkloads" -repDir "\Reports"
-DownloadReport -repUri $ComanagementEligibilityTenantAttachedDevicesUri -repName "ComanagementEligibilityTenantAttachedDevices" -repDir "\Reports"
-DownloadReport -repUri $DevicesWithInventoryUri -repName "DevicesWithInventory" -repDir "\Reports"
-DownloadReport -repUri $FirewallStatusUri -repName "FirewallStatus" -repDir "\Reports"
-DownloadReport -repUri $GPAnalyticsSettingMigrationReadinessUri -repName "GPAnalyticsSettingMigrationReadiness" -repDir "\Reports"
-DownloadReport -repUri $MAMAppProtectionStatusUri -repName "MAMAppProtectionStatus" -repDir "\Reports"
-DownloadReport -repUri $MAMAppConfigurationStatusUri -repName "MAMAppConfigurationStatus" -repDir "\Reports"
-DownloadReport -repUri $AppInvAggregateUri -repName "AppInvAggregate" -repDir "\Reports"
-DownloadReport -repUri $AppInvRawDataUri -repName "AppInvRawData" -repDir "\Reports"
-foreach($puriPolicy in $DeviceFailuresByFeatureUpdatePolicyUris)
-{
-    DownloadReport -repUri $puriPolicy.uri -repName "DeviceFailuresByFeatureUpdatePolicy-$($puriPolicy.name)" -repDir "\Reports"
-}
-foreach($puriPolicy in $FeatureUpdateDeviceStateUris)
-{
-    DownloadReport -repUri $puriPolicy.uri -repName "FeatureUpdateDeviceState-$($puriPolicy.name)" -repDir "\Reports"
-}
-foreach($puriPolicy in $QualityUpdateDeviceErrorsByPolicyUris)
-{
-    DownloadReport -repUri $puriPolicy.uri -repName "QualityUpdateDeviceErrorsByPolicy-$($puriPolicy.name)" -repDir "\Reports"
-}
-foreach($puriPolicy in $QualityUpdateDeviceStatusByPolicyUris)
-{
-    DownloadReport -repUri $puriPolicy.uri -repName "QualityUpdateDeviceStatusByPolicy-$($puriPolicy.name)" -repDir "\Reports"
+    DownloadReport -repUri $DeviceComplianceUri -repName "DeviceCompliance" -repDir "\Reports"
+    DownloadReport -repUri $DeviceNonComplianceUri -repName "DeviceNonCompliance" -repDir "\Reports"
+    DownloadReport -repUri $DevicesUri -repName "Devices" -repDir "\Reports"
+    DownloadReport -repUri $FeatureUpdatePolicyFailuresAggregateUri -repName "FeatureUpdatePolicyFailuresAggregate" -repDir "\Reports"
+    DownloadReport -repUri $UnhealthyDefenderAgentsUri -repName "UnhealthyDefenderAgents" -repDir "\Reports"
+    DownloadReport -repUri $DefenderAgentsUri -repName "DefenderAgents" -repDir "\Reports"
+    DownloadReport -repUri $ActiveMalwareUri -repName "ActiveMalware" -repDir "\Reports"
+    DownloadReport -repUri $MalwareUri -repName "Malware" -repDir "\Reports"
+    DownloadReport -repUri $AllAppsListUri -repName "AllAppsList" -repDir "\Reports"
+    DownloadReport -repUri $AppInstallStatusAggregateUri -repName "AppInstallStatusAggregate" -repDir "\Reports"
+    DownloadReport -repUri $ComanagedDeviceWorkloadsUri -repName "ComanagedDeviceWorkloads" -repDir "\Reports"
+    DownloadReport -repUri $ComanagementEligibilityTenantAttachedDevicesUri -repName "ComanagementEligibilityTenantAttachedDevices" -repDir "\Reports"
+    DownloadReport -repUri $DevicesWithInventoryUri -repName "DevicesWithInventory" -repDir "\Reports"
+    DownloadReport -repUri $FirewallStatusUri -repName "FirewallStatus" -repDir "\Reports"
+    DownloadReport -repUri $GPAnalyticsSettingMigrationReadinessUri -repName "GPAnalyticsSettingMigrationReadiness" -repDir "\Reports"
+    DownloadReport -repUri $MAMAppProtectionStatusUri -repName "MAMAppProtectionStatus" -repDir "\Reports"
+    DownloadReport -repUri $MAMAppConfigurationStatusUri -repName "MAMAppConfigurationStatus" -repDir "\Reports"
+    DownloadReport -repUri $AppInvAggregateUri -repName "AppInvAggregate" -repDir "\Reports"
+    DownloadReport -repUri $AppInvRawDataUri -repName "AppInvRawData" -repDir "\Reports"
+    foreach($puriPolicy in $DeviceFailuresByFeatureUpdatePolicyUris)
+    {
+        DownloadReport -repUri $puriPolicy.uri -repName "DeviceFailuresByFeatureUpdatePolicy-$($puriPolicy.name)" -repDir "\Reports"
+    }
+    foreach($puriPolicy in $FeatureUpdateDeviceStateUris)
+    {
+        DownloadReport -repUri $puriPolicy.uri -repName "FeatureUpdateDeviceState-$($puriPolicy.name)" -repDir "\Reports"
+    }
+    foreach($puriPolicy in $QualityUpdateDeviceErrorsByPolicyUris)
+    {
+        DownloadReport -repUri $puriPolicy.uri -repName "QualityUpdateDeviceErrorsByPolicy-$($puriPolicy.name)" -repDir "\Reports"
+    }
+    foreach($puriPolicy in $QualityUpdateDeviceStatusByPolicyUris)
+    {
+        DownloadReport -repUri $puriPolicy.uri -repName "QualityUpdateDeviceStatusByPolicy-$($puriPolicy.name)" -repDir "\Reports"
+    }
 }
 
 #TODO

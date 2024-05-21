@@ -32,6 +32,9 @@
     ---------- -------------------- ----------------------------
     17.02.2022 Konrad Brunner       Initial Version
 
+    https://learn.microsoft.com/de-de/exchange/troubleshoot/user-and-shared-mailboxes/sent-mail-is-not-saved
+    https://learn.microsoft.com/de-de/outlook/troubleshoot/email-management/email-remains-in-the-outbox-when-you-use-the-deleg
+    
 #>
 
 [CmdletBinding()]

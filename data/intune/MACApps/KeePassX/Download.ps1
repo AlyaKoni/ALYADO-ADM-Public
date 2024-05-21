@@ -31,21 +31,17 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
+$pageUrl = "https://www.keepassx.org/downloads/index.html"
+
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+
+[regex]$regex = "[^`"]*KeePassX[^`"]*\.dmg"
+$newUrl = "https://www.keepassx.org"+[regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Replace("..","")
+$fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
-$contentZipRoot = Join-Path $packageRoot "ContentZip"
 if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-if (-Not (Test-Path $contentZipRoot))
-{
-    $null = New-Item -Path $contentZipRoot -ItemType Directory -Force
-}
-$files = Get-ChildItem -Path $contentZipRoot
-if ($files.Count -eq 0)
-{
-    Write-Error "Please copy the file to package into the directory $contentZipRoot"
-    exit
-}
-Copy-Item -Path "$contentZipRoot\*.*" -Destination $contentRoot
+Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"

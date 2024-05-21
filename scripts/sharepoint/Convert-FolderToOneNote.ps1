@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -27,19 +27,59 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    08.05.2024 Konrad Brunner       Initial Version
+
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$reuseExistingPackages = $false,
-    [bool]$askForSameVersionPackages = $true
+    [Parameter(Mandatory=$true)]
+    [string]$folderUrl
 )
 
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+#Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\MACApps\Firefox\Package\*.json" -PathType Leaf)))
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Convert-FolderToOneNote-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Install-ModuleIfNotInstalled "PnP.PowerShell"
+
+# Members
+$parts = $folderUrl.Split("/", [StringSplitOptions]::RemoveEmptyEntries)
+$SiteUrl = "";
+for ($i = 0; $i -lt $parts.Length; $i++)
 {
-    & "$($AlyaScripts)\intune\Create-IntuneMACPackages.ps1" -CreateOnlyAppWithName "Firefox"
+    if ($parts[$i].ToLower() -eq "sites")
+    {
+        for ($j = 0; $j -le ($i + 1); $j++)
+        {
+            if ($j -eq 0) {
+                $SiteUrl += $parts[$j] + "/"
+            } else {
+                $SiteUrl += "/" + $parts[$j]
+            }
+        }
+        break
+    }
 }
-& "$($AlyaScripts)\intune\Upload-IntuneMACPackages.ps1" -UploadOnlyAppWithName "Firefox" -askForSameVersionPackages $askForSameVersionPackages
-& "$($AlyaScripts)\intune\Configure-IntuneMACPackages.ps1" -ConfigureOnlyAppWithName "Firefox"
+
+# Logins
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$siteCon = LoginTo-PnP -Url $SiteUrl
+
+#Main
+$folder = Get-PnPFolder -Connection $siteCon -Url $folderUrl
+$item = $folder.ListItemAllFields
+$folder.Context.Load($item)
+$folder.Context.ExecuteQuery()
+$item["HTML_x0020_File_x0020_Type"] = "Document.OneNote"
+$item.SystemUpdate()
+$folder.Context.ExecuteQuery()
+
+#Stopping Transscript
+Stop-Transcript

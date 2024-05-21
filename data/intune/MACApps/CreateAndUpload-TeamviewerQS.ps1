@@ -31,11 +31,15 @@
 
 [CmdletBinding()]
 Param(
+    [bool]$reuseExistingPackages = $false,
     [bool]$askForSameVersionPackages = $true
 )
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-& "$($AlyaScripts)\intune\Create-IntuneMACPackages.ps1" -CreateOnlyAppWithName "TeamviewerQS"
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\MACApps\TeamviewerQS\Package\*.json" -PathType Leaf)))
+{
+    & "$($AlyaScripts)\intune\Create-IntuneMACPackages.ps1" -CreateOnlyAppWithName "TeamviewerQS"
+}
 & "$($AlyaScripts)\intune\Upload-IntuneMACPackages.ps1" -UploadOnlyAppWithName "TeamviewerQS" -askForSameVersionPackages $askForSameVersionPackages
 & "$($AlyaScripts)\intune\Configure-IntuneMACPackages.ps1" -ConfigureOnlyAppWithName "TeamviewerQS"

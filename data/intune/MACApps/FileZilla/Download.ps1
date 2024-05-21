@@ -36,13 +36,22 @@ if (-not $AlyaIsPsUnix)
     throw "Please run this script on a mac"
 }
 
-$pageUrl = "https://www.sourcetreeapp.com/"
-$appName = "Sourcetree"
+$pageUrl = "https://filezilla-project.org/download.php?show_all=1"
+$appName = "FileZilla"
 
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*ga/Sourcetree[^`"]*\.zip"
+$headers = @{
+    "accept" = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+    "accept-encoding" = "gzip, deflate, br"
+    "accept-language" = "de,de-DE;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"
+    "cache-control" = "max-age=0"
+    "upgrade-insecure-requests" = "1"
+    "user-agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/"
+}
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -Headers $headers -SkipHeaderValidation
+[regex]$regex = "[^`"]*FileZilla[^`"]*macos-arm64[^`"]*tar.bz2[^`"]*[^`"]*"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-$fileName = Split-Path -Path $newUrl -Leaf
+
+$fileName = (Split-Path -Path $newUrl -Leaf).Split("?")[0]
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
@@ -51,21 +60,14 @@ if (-Not (Test-Path $contentRoot))
 }
 Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
 
-$dirName = Split-Path -Path $fileName -LeafBase
-#$dmgName = $fileName.Replace(".zip", ".dmg")
-$pkgName = $fileName.Replace(".zip", ".pkg")
-unzip "$contentRoot/$fileName" -d "$contentRoot/$dirName"
-productbuild --sign "AlyaConsulting" --component "$contentRoot/$dirName/$appName.app" "/Applications" "$contentRoot/$pkgName"
-#productbuild --sign "AlyaConsulting" --component "/Applications/$appName.app" "$contentRoot/$pkgName"
-#pkgbuild --install-location "/Applications" --component "$contentRoot/$dirName/$appName.app" "$contentRoot/$pkgName"
-#hdiutil create -srcfolder "$contentRoot/$dirName"  -volname "$dirName" "$contentRoot/$dmgName"
-#installer -pkg "$contentRoot/$pkgName" -target /
+$dirName = $fileName.Replace(".app.tar.bz2", "")
+if (-Not (Test-Path "$contentRoot/$dirName"))
+{
+    $null = New-Item -Path "$contentRoot/$dirName" -ItemType Directory -Force
+}
+pushd "$contentRoot/$dirName"
+tar -xf "$contentRoot\$fileName"
+popd
 
-$versionFile = Join-Path $packageRoot "version.json"
-$bundleVersion = $fileName -replace ".*\d+\.\d+\.\d+_(\d+).*", "`$1"
-$versionObj = @{}
-$versionObj.version = "$bundleVersion.0.0.0"
-$versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
+TODO  package
 
-Remove-Item -Path "$contentRoot\$fileName" -Recurse -Force
-Remove-Item -Path "$contentRoot\$dirName" -Recurse -Force

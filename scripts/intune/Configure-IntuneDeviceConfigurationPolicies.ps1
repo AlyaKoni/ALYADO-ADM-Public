@@ -117,24 +117,27 @@ foreach($definedPolicy in $definedPolicies)
         $mpolicy = $definedPolicy | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
         $mpolicySettings = $mpolicy.settings
 
-        $uri = "/beta/deviceManagement/configurationPolicyTemplates?`$filter=id eq '$($mpolicy.templateReference.templateId)'"
-        $policyTemplate = Get-MsGraphCollection -Uri $uri
-        if (-Not $policyTemplate.id)
+        if ($mpolicy.templateReference.templateId)
         {
-            $searchValue = [System.Web.HttpUtility]::UrlEncode($mpolicy.templateReference.templateDisplayName)
-            $uri = "/beta/deviceManagement/configurationPolicyTemplates?`$filter=displayName eq '$searchValue'"
+            $uri = "/beta/deviceManagement/configurationPolicyTemplates?`$filter=id eq '$($mpolicy.templateReference.templateId)'"
             $policyTemplate = Get-MsGraphCollection -Uri $uri
             if (-Not $policyTemplate.id)
             {
-                $searchValue = [System.Web.HttpUtility]::UrlEncode($mpolicy.templateReference.templateFamily)
-                $uri = "/beta/deviceManagement/configurationPolicyTemplates?`$filter=templateFamily eq '$searchValue'"
+                $searchValue = [System.Web.HttpUtility]::UrlEncode($mpolicy.templateReference.templateDisplayName)
+                $uri = "/beta/deviceManagement/configurationPolicyTemplates?`$filter=displayName eq '$searchValue'"
                 $policyTemplate = Get-MsGraphCollection -Uri $uri
+                if (-Not $policyTemplate.id)
+                {
+                    $searchValue = [System.Web.HttpUtility]::UrlEncode($mpolicy.templateReference.templateFamily)
+                    $uri = "/beta/deviceManagement/configurationPolicyTemplates?`$filter=templateFamily eq '$searchValue'"
+                    $policyTemplate = Get-MsGraphCollection -Uri $uri
+                }
             }
+            $mpolicy.templateReference.templateId = $policyTemplate.id
+            $mpolicy.templateReference.templateDisplayName = $policyTemplate.displayName
+            $mpolicy.templateReference.templateFamily = $policyTemplate.templateFamily
+            $mpolicy.templateReference.templateDisplayVersion = $policyTemplate.displayVersion
         }
-        $mpolicy.templateReference.templateId = $policyTemplate.id
-        $mpolicy.templateReference.templateDisplayName = $policyTemplate.displayName
-        $mpolicy.templateReference.templateFamily = $policyTemplate.templateFamily
-        $mpolicy.templateReference.templateDisplayVersion = $policyTemplate.displayVersion
 
         if (-Not $extPolicy.id)
         {
@@ -156,26 +159,45 @@ foreach($definedPolicy in $definedPolicies)
         $null = Patch-MsGraph -Uri $uri -Body ($mpolicy | ConvertTo-Json -Depth 50)
 
         # Updating policy values
-        Write-Host "    Updating policy values"
-        $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings"
-        $extPolicySettings = Get-MsGraphCollection -Uri $uri
-        foreach($mpolicySetting in $mpolicySettings)
-        {
-            $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings/$($mpolicySetting.Id)"
-            <# TODO: NOT YET FOUND A SOLUTION!
-            #$uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings/$($mpolicySetting.settingInstance.settingDefinitionId)"
-            Write-Host "  Updating '$($uri)'"
-            Get-MsGraphObject -Uri $uri
-            $mpolicySetting.PSObject.properties.remove("id")
-            $null = Patch-MsGraph -Uri $uri -Body ($mpolicySetting | ConvertTo-Json -Depth 50)
-            $null = Post-MsGraph -Uri $uri -Body ($mpolicySetting | ConvertTo-Json -Depth 50)
-            break
-            #>
-        }
-        <#
-        $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings"
-        $null = Patch-MsGraph -Uri $uri -Body ($mpolicySettings | ConvertTo-Json -Depth 50)
-        #>
+        #TODO not working!!!
+        # Write-Host "    Updating policy values"
+        # $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings"
+        # $extPolicySettings = Get-MsGraphCollection -Uri $uri
+        # $nextId = ($extPolicySettings.id | Measure-Object -Maximum).Maximum
+        # foreach($extPolicySetting in $extPolicySettings)
+        # {
+        #     $mpolicySetting = $mpolicySettings | Where-Object {`
+        #         $_.settingInstance.'@odata.type' -eq $extPolicySetting.settingInstance.'@odata.type' -and `
+        #         $_.settingInstance.settingDefinitionId -eq $extPolicySetting.settingInstance.settingDefinitionId }
+        #     if ($mpolicySetting)
+        #     {
+        #         Write-Host "Found, updating"
+        #         $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings/$($extPolicySetting.id)"
+        #         #if ($mpolicySetting.id) { $mpolicySetting.PSObject.properties.remove("id") }
+        #         $null = Patch-MsGraph -Uri $uri -Body ($mpolicySetting | ConvertTo-Json -Depth 50)
+        #     }
+        #     else
+        #     {
+        #         Write-Host "Not found, creating"
+        #         $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings"
+        #         $mpolicySetting.id = $nextId++
+        #         $null = Post-MsGraph -Uri $uri -Body ($mpolicySetting | ConvertTo-Json -Depth 50)
+        #     }
+        # }
+        # $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings"
+        # $extPolicySettings = Get-MsGraphCollection -Uri $uri
+        # foreach($mpolicySetting in $mpolicySettings)
+        # {
+        #     $extPolicySetting = $extPolicySettings | Where-Object {`
+        #         $_.settingInstance.'@odata.type' -eq $mpolicySetting.settingInstance.'@odata.type' -and `
+        #         $_.settingInstance.settingDefinitionId -eq $mpolicySetting.settingInstance.settingDefinitionId }
+        #     if (-Not $extPolicySetting)
+        #     {
+        #         Write-Host "Not found, deleting"
+        #         $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings/$($extPolicySetting.id)"
+        #         $null = Delete-MsGraph -Uri $uri
+        #     }
+        # }
     }
     catch {
         $hadError = $true

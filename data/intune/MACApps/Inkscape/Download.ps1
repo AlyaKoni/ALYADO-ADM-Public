@@ -36,12 +36,21 @@ if (-not $AlyaIsPsUnix)
     throw "Please run this script on a mac"
 }
 
-$pageUrl = "https://www.sourcetreeapp.com/"
-$appName = "Sourcetree"
+$pageUrl = "https://inkscape.org/release"
+$appName = "Inkscape"
 
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*ga/Sourcetree[^`"]*\.zip"
-$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+[regex]$regex = "[^`"]*mac-os-x[^`"]*"
+$newUrl = "https://inkscape.org"+[regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Replace("..","")
+
+$req = Invoke-WebRequestIndep -Uri $newUrl -UseBasicParsing -Method Get
+[regex]$regex = "[^`"]*dmg-arm64[^`"]*"
+$newUrl = "https://inkscape.org"+[regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Replace("..","")
+
+$req = Invoke-WebRequestIndep -Uri $newUrl -UseBasicParsing -Method Get
+[regex]$regex = "[^`"=]*Inkscape[^`"]*arm64\.dmg"
+$newUrl = "https://inkscape.org"+[regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value.Replace("..","")
+
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
@@ -51,21 +60,15 @@ if (-Not (Test-Path $contentRoot))
 }
 Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
 
-$dirName = Split-Path -Path $fileName -LeafBase
-#$dmgName = $fileName.Replace(".zip", ".dmg")
-$pkgName = $fileName.Replace(".zip", ".pkg")
-unzip "$contentRoot/$fileName" -d "$contentRoot/$dirName"
-productbuild --sign "AlyaConsulting" --component "$contentRoot/$dirName/$appName.app" "/Applications" "$contentRoot/$pkgName"
-#productbuild --sign "AlyaConsulting" --component "/Applications/$appName.app" "$contentRoot/$pkgName"
-#pkgbuild --install-location "/Applications" --component "$contentRoot/$dirName/$appName.app" "$contentRoot/$pkgName"
-#hdiutil create -srcfolder "$contentRoot/$dirName"  -volname "$dirName" "$contentRoot/$dmgName"
-#installer -pkg "$contentRoot/$pkgName" -target /
+hdiutil attach -nobrowse -readonly "$contentRoot/$dmgName"
+$volume = 
 
 $versionFile = Join-Path $packageRoot "version.json"
-$bundleVersion = $fileName -replace ".*\d+\.\d+\.\d+_(\d+).*", "`$1"
+$plistCont = Get-Content -Path "$contentRoot/$dirName/$appName.app/Contents/Info.plist" -Encoding utf8 -Raw
+[regex]$regex = "<key>CFBundleVersion</key>.*?<string>(.*?)</string>"
+$bundleVersion = [Version]([regex]::Matches($plistCont, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant, Singleline')[0].Groups[1].Value)
 $versionObj = @{}
-$versionObj.version = "$bundleVersion.0.0.0"
+$versionObj.version = $bundleVersion.ToString()
 $versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
 
-Remove-Item -Path "$contentRoot\$fileName" -Recurse -Force
-Remove-Item -Path "$contentRoot\$dirName" -Recurse -Force
+hdiutil detach $volume

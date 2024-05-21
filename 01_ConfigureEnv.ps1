@@ -1446,6 +1446,7 @@ function LoginTo-Az(
 {
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
 
+    try { Update-AzConfig -Scope Process -EnableLoginByWam $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -DisplaySurveyMessage $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -EnableDataCollection $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
 

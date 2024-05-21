@@ -1,0 +1,5 @@
+﻿{
+    "@odata.type": "#microsoft.graph.mobileAppCategory",
+    "id": "5dcd7a90-0306-4f09-a75d-6b97a243f04e",
+    "displayName":  "Photos \u0026 Media"
+}

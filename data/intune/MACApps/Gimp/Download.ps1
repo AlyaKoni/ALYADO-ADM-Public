@@ -29,17 +29,18 @@
 
 #>
 
-[CmdletBinding()]
-Param(
-    [bool]$reuseExistingPackages = $false,
-    [bool]$askForSameVersionPackages = $true
-)
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+$pageUrl = "https://www.gimp.org/downloads/"
 
-if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\MACApps\Firefox\Package\*.json" -PathType Leaf)))
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+[regex]$regex = "[^`"]*macos/gimp[^`"]*arm64.dmg"
+$newUrl = "https:"+[regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+$fileName = Split-Path -Path $newUrl -Leaf
+$packageRoot = "$PSScriptRoot"
+$contentRoot = Join-Path $packageRoot "Content"
+if (-Not (Test-Path $contentRoot))
 {
-    & "$($AlyaScripts)\intune\Create-IntuneMACPackages.ps1" -CreateOnlyAppWithName "Firefox"
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-& "$($AlyaScripts)\intune\Upload-IntuneMACPackages.ps1" -UploadOnlyAppWithName "Firefox" -askForSameVersionPackages $askForSameVersionPackages
-& "$($AlyaScripts)\intune\Configure-IntuneMACPackages.ps1" -ConfigureOnlyAppWithName "Firefox"
+Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"

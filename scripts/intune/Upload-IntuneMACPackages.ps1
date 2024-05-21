@@ -161,10 +161,10 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         Write-Host "  Creating Content Version file"
         $fileBody = @{ "@odata.type" = "#Microsoft.Graph.mobileAppContentFile" }
         $fileBody.name = $package.Name
-        $fileBody.size = $packageInfo.SizeInBytes
-        $fileBody.sizeInBytes = $packageInfo.SizeInBytes
-        $fileBody.sizeEncrypted = $packageInfo.SizeEncryptedInBytes
-        $fileBody.sizeEncryptedInBytes = $packageInfo.SizeEncryptedInBytes
+        $fileBody.size = [Int64]$packageInfo.SizeInBytes
+        $fileBody.sizeInBytes = [Int64]$packageInfo.SizeInBytes
+        $fileBody.sizeEncrypted = [Int64]$packageInfo.SizeEncryptedInBytes
+        $fileBody.sizeEncryptedInBytes = [Int64]$packageInfo.SizeEncryptedInBytes
         $fileBody.manifest = $null
         $fileBody.isDependency = $false
         $uri = "/beta/deviceAppManagement/mobileApps/$appId/Microsoft.Graph.$($appType)/contentVersions/$($contentVersion.id)/files"
@@ -308,7 +308,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         $xml += '</BlockList>'
         do {
             try {
-                $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Body $xml
+                $response = Invoke-WebRequestIndep -Uri $curi -Method Put -Body $xml -ContentType "application/xml"
                 $StatusCode = $response.StatusCode
             } catch {
                 $StatusCode = $_.Exception.Response.StatusCode.value__
