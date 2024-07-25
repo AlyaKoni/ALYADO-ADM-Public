@@ -33,7 +33,7 @@
 
 $pageUrl = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=53018"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regexAzp = "[^`"]*AzInfoProtection[^`"]*UL[^`"]*\.exe"
+[regex]$regexAzp = "[^`"]*PurviewInfoProtection\.exe"
 $newUrl = [regex]::Match($req.Content, $regexAzp, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"

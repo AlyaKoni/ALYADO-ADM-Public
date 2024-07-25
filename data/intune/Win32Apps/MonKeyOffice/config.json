@@ -1,0 +1,95 @@
+{
+  "@odata.type": "#microsoft.graph.win32LobApp",
+  "displayName": "WIN MonKeyOffice",
+  "description": "Installs MonKeyOffice_2024_setup.exe",
+  "publisher": "ProSaldo GmbH",
+  "largeIcon": {
+    "type": "image/png",
+    "value": "",
+    "@odata.type": "#Microsoft.Graph.mimeContent"
+  },
+  "isFeatured": true,
+  "privacyInformationUrl": "https://www.monkey-office.de/privacy/index.html",
+  "informationUrl": "https://www.monkey-office.de/",
+  "owner": "",
+  "developer": null,
+  "notes": "",
+  "roleScopeTagIds": [],
+  "fileName": "MonKeyOffice-2.57-Setup.intunewin",
+  "installCommandLine": "Install.cmd",
+  "uninstallCommandLine": "Uninstall.cmd",
+  "applicableArchitectures": "x64",
+  "minimumFreeDiskSpaceInMB": 20,
+  "minimumMemoryInMB": 100,
+  "minimumNumberOfProcessors": 1,
+  "minimumCpuSpeedInMHz": 1,
+  "msiInformation": null,
+  "setupFilePath": "MonKeyOffice_2024_setup.exe",
+  "minimumSupportedWindowsRelease": "1607",
+  "minimumSupportedOperatingSystem": {
+    "v8_0": false,
+    "v8_1": false,
+    "v10_0": false,
+    "v10_1607": true,
+    "v10_1703": false,
+    "v10_1709": false,
+    "v10_1803": false,
+    "v10_1809": false,
+    "v10_1903": false
+  },
+  "detectionRules": [
+    {
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
+      "path": "%ProgramFiles%\\ProSaldo\\MonKey Office 2024",
+      "fileOrFolderName": "MonKey Office 2024.exe",
+      "check32BitOn64System": false,
+      "detectionType": "version",
+      "operator": "greaterThanOrEqual",
+      "detectionValue": "21.3.1.0"
+    }
+  ],
+  "requirementRules": [],
+  "rules": [
+    {
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemRule",
+      "ruleType": "detection",
+      "path": "%ProgramFiles%\\ProSaldo\\MonKey Office 2024",
+      "fileOrFolderName": "MonKey Office 2024.exe",
+      "check32BitOn64System": false,
+      "operationType": "version",
+      "operator": "greaterThanOrEqual",
+      "comparisonValue": "21.3.1.0"
+    }
+  ],
+  "installExperience": {
+    "runAsAccount": "system",
+    "deviceRestartBehavior": "suppress"
+  },
+  "returnCodes": [
+    {
+      "returnCode": -1,
+      "type": "failed"
+    },
+    {
+      "returnCode": 0,
+      "type": "success"
+    },
+    {
+      "returnCode": 1707,
+      "type": "success"
+    },
+    {
+      "returnCode": 3010,
+      "type": "softReboot"
+    },
+    {
+      "returnCode": 1641,
+      "type": "hardReboot"
+    },
+    {
+      "returnCode": 1618,
+      "type": "retry"
+    }
+  ],
+  "displayVersion": "21.3.1.0"
+}

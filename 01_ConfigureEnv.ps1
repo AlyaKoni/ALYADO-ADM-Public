@@ -122,7 +122,11 @@ $AlyaUtf8Encoding = "UTF8"
 if ($AlyaIsPsCore) { $AlyaUtf8Encoding = "utf8BOM" }
 $AlyaPowerShellExe = "powershell.exe"
 if ($AlyaIsPsCore) { $AlyaPowerShellExe = "pwsh.exe" }
-if ($AlyaIsPsUnix) { $AlyaPowerShellExe = "pwsh" }
+$AlyaPathSep = ";"
+if ($AlyaIsPsUnix) {
+    $AlyaPowerShellExe = "pwsh"
+    $AlyaPathSep = ":"
+}
 
 <# TLS Connections #>
 [Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls12, [Net.SecurityProtocolType]::Tls13)
@@ -150,7 +154,7 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Modules") -and `
     Write-Host "Adding tools\WindowsPowerShell\Modules to PSModulePath"
     if (-Not $env:PSModulePath.StartsWith("$($AlyaTools)\WindowsPowerShell\Modules"))
     {
-        $env:PSModulePath = "$($AlyaTools)\WindowsPowerShell\Modules;"+$env:PSModulePath
+        $env:PSModulePath = "$($AlyaTools)\WindowsPowerShell\Modules$AlyaPathSep"+$env:PSModulePath
     }
 }
 if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
@@ -159,7 +163,7 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
     Write-Host "Adding tools\WindowsPowerShell\Scripts to Path"
     if (-Not $env:PATH.StartsWith("$($AlyaTools)\WindowsPowerShell\Scripts"))
     {
-        $env:PATH = "$($AlyaTools)\WindowsPowerShell\Scripts;"+$env:PATH
+        $env:PATH = "$($AlyaTools)\WindowsPowerShell\Scripts$AlyaPathSep"+$env:PATH
     }
 }
 
@@ -186,7 +190,7 @@ if ($AlyaModulePath -ne $AlyaDefaultModulePath -and $AlyaModulePath -ne $AlyaDef
     }
     if (-Not $env:PSModulePath.Contains("$($AlyaModulePath)"))
     {
-        $env:PSModulePath = "$($AlyaModulePath);"+$env:PSModulePath
+        $env:PSModulePath = "$($AlyaModulePath)$AlyaPathSep"+$env:PSModulePath
     }
 }
 if ($AlyaScriptPath -ne $AlyaDefaultScriptPath -and $AlyaScriptPath -ne $AlyaDefaultScriptPathCore)
@@ -200,12 +204,12 @@ if ($AlyaIsPsCore)
 {
     if (-Not $env:PATH.Contains("$($AlyaDefaultScriptPathCore)"))
     {
-        $env:PATH = "$($AlyaDefaultScriptPathCore);$($env:PATH)"
+        $env:PATH = "$($AlyaDefaultScriptPathCore)$AlyaPathSep$($env:PATH)"
     }
 }
 if (-Not $env:PATH.Contains("$($AlyaScriptPath)"))
 {
-    $env:PATH = "$($AlyaScriptPath);$($env:PATH)"
+    $env:PATH = "$($AlyaScriptPath)$AlyaPathSep$($env:PATH)"
 }
 
 <# CLIENT SETTINGS #>
@@ -371,6 +375,7 @@ function Invoke-WebRequestIndep ()
         [System.String]$TransferEncoding,
         [System.String]$InFile,
         [System.String]$OutFile,
+        [Switch]$AllowInsecureRedirect,
         [Switch]$PassThru,
         [Switch]$Resume,
         [Switch]$SkipHttpErrorCheck,
@@ -404,6 +409,7 @@ function Invoke-WebRequestIndep ()
         if ($pkeys -contains "Resume") { $parms["Resume"] = $null }
         if ($pkeys -contains "SkipHeaderValidation") { $parms["SkipHeaderValidation"] = $null }
         if ($pkeys -contains "PreserveAuthorizationOnRedirect") { $parms["PreserveAuthorizationOnRedirect"] = $null }
+        if ($pkeys -contains "AllowInsecureRedirect") { $parms["AllowInsecureRedirect"] = $null }
     }
     if ($pkeys -contains "UseBasicParsing") { $parms["UseBasicParsing"] = $null }
     if ($pkeys -contains "Uri") { $parms["Uri"] = $Uri }
@@ -448,17 +454,17 @@ function Get-MimeType()
     Param(
         [string]$Extension = $null
     )
-    $mimeType = $null;
+    $mimeType = $null
     if ( $null -ne $extension )
     {
-        $drive = Get-PSDrive "HKCR" -ErrorAction SilentlyContinue;
+        $drive = Get-PSDrive "HKCR" -ErrorAction SilentlyContinue
         if ( $null -eq $drive )
         {
             $drive = New-PSDrive -Name "HKCR" -PSProvider Registry -Root HKEY_CLASSES_ROOT
         }
-        $mimeType = (Get-ItemProperty "HKCR:$extension")."Content Type";
+        $mimeType = (Get-ItemProperty "HKCR:$extension")."Content Type"
     }
-    return $mimeType;
+    return $mimeType
 }
 
 function Remove-OneDriveItemRecursive
@@ -617,7 +623,7 @@ function Get-Password(
     {
         $row = ($n % 4)
         $chars = $allPwdChars[$row].ToCharArray()
-        $pwd += $chars[$rnd.Next(0, $chars.Length - 1)];
+        $pwd += $chars[$rnd.Next(0, $chars.Length - 1)]
     }
     return $pwd
 }
@@ -938,7 +944,13 @@ function Install-ModuleIfNotInstalled (
     {
         $ModuleContentUrl = "https://www.powershellgallery.com/api/v2/package/PackageManagement"
         do {
-            $ModuleContentUrl = (Invoke-WebRequest -Uri $ModuleContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore).Headers.Location 
+			try {
+			    $req = Invoke-WebRequest -Uri $ModuleContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore
+			}
+			catch {
+			    $req = $_.Exception.Response
+			}
+			$ModuleContentUrl = $req.Headers.Location
         } while (!$ModuleContentUrl.Contains(".nupkg"))
         $WebClient = New-Object System.Net.WebClient
         $PathFolderName = New-Guid
@@ -2910,7 +2922,7 @@ function ConvertFrom-XML
 		foreach{
 			write-verbose "pseudo-Array $($_.Name)"
 			$oHash.($_.Name) = @() <# create an empty array for each one#>
-		};
+		}
 		foreach ($child in $node.ChildNodes)
 		{#now we look at each node in turn.
 			write-verbose "processing the '$($child.LocalName)'"
@@ -2918,18 +2930,18 @@ function ConvertFrom-XML
 			if ($child -is [system.xml.xmltext])
 			# if it is simple XML text 
 			{
-				write-verbose "simple xml $childname";
+				write-verbose "simple xml $childname"
 				$oHash.$childname += $child.InnerText
 			}
 			# if it has a #text child we may need to cope with attributes
 			elseif ($child.FirstChild.Name -eq '#text' -and $child.ChildNodes.Count -eq 1)
 			{
-				write-verbose "text";
+				write-verbose "text"
 				if ($child.Attributes -ne $null) #hah, an attribute
 				{
 					<#we need to record the text with the #text label and preserve all
 					the attributes #>
-					$aHash = [ordered]@{ };
+					$aHash = [ordered]@{ }
 					$child.Attributes | foreach {
 						$aHash.$($_.FirstChild.parentNode.LocalName) = $_.FirstChild.value
 					}
@@ -2946,7 +2958,7 @@ function ConvertFrom-XML
 			# if it is a data section, a block of text that isnt parsed by the parser,
 			# but is otherwise recognized as markup
 			{
-				write-verbose "cdata section";
+				write-verbose "cdata section"
 				$oHash.$childname = $child.'#cdata-section'
 			}
 			elseif ($child.ChildNodes.Count -gt 1 -and 
@@ -2989,6 +3001,25 @@ function Get-SeleniumBrowser()
         [bool]$PrivateBrowsing = $true,
         $OptionSettings =  @{ },
         $seleniumVersion = $null,
+        $driverVersion = $null
+    )
+    return Get-SeleniumEdgeBrowser -HideCommandPrompt = $HideCommandPrompt `
+        -Headless = $Headless `
+        -PrivateBrowsing = $PrivateBrowsing `
+        -OptionSettings $OptionSettings `
+        -seleniumVersion $seleniumVersion `
+        -driverVersion $driverVersion
+}
+
+<# SELENIUM BROWSER #>
+function Get-SeleniumEdgeBrowser()
+{
+    Param(
+        [bool]$HideCommandPrompt = $true,
+        [bool]$Headless = $false,
+        [bool]$PrivateBrowsing = $true,
+        $OptionSettings =  @{ },
+        $seleniumVersion = $null,
         $edgeDriverVersion = $null
     )
     $Global:AlyaSeleniumBrowser = $null
@@ -3005,7 +3036,7 @@ function Get-SeleniumBrowser()
     }
     if ($env:PATH.IndexOf("$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64") -eq -1)
     {
-        $env:PATH = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64;$($env:PATH)"
+        $env:PATH = "$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64$AlyaPathSep$($env:PATH)"
     }
 
     # Install-ModuleIfNotInstalled "AppX"
@@ -3023,6 +3054,101 @@ function Get-SeleniumBrowser()
     if($PrivateBrowsing) {$options.AddArguments('InPrivate')}
     if($Headless) {$options.AddArguments('headless')}
     $Global:AlyaSeleniumBrowser = New-Object OpenQA.Selenium.Edge.EdgeDriver $dService, $options
+    $Global:AlyaSeleniumBrowser.Manage().window.position = '0,0'
+    return $Global:AlyaSeleniumBrowser
+}
+
+function Get-7ZipInstallLocation()
+{
+    $7zip = $null
+    if ((Test-path HKLM:\SOFTWARE\7-Zip\) -eq $true)
+    {
+        $7zpath = Get-ItemProperty -path  HKLM:\SOFTWARE\7-Zip\ -Name Path
+        $7zpath = $7zpath.Path
+        $7zpathexe = $7zpath + "7z.exe"
+        if ((Test-Path $7zpathexe) -eq $true)
+        {
+            $7zip = $7zpathexe
+        }    
+    }
+    elseif (-Not $7zip -and (Test-Path -PathType Container "C:\Programme\7-Zip"))
+    {
+        $7zip = "C:\Program Files\7-Zip\7z.exe"
+    }
+    elseif (-Not $7zip -and (Test-Path -PathType Container "C:\Programme (x86)\7-Zip"))
+    {
+        $7zip = "C:\Program Files\7-Zip\7z.exe"
+    }
+    elseif (-Not $7zip -and (Test-Path -PathType Container "C:\Program Files\7-Zip"))
+    {
+        $7zip = "C:\Program Files\7-Zip\7z.exe"
+    }
+    elseif (-Not $7zip -and (Test-Path -PathType Container "C:\Program Files (x86)\7-Zip"))
+    {
+        $7zip = "C:\Program Files\7-Zip\7z.exe"
+    }
+    return $7zip
+}
+function Get-SeleniumChromeBrowser()
+{
+    Param(
+        [bool]$HideCommandPrompt = $true,
+        [bool]$Headless = $false,
+        [bool]$PrivateBrowsing = $true,
+        $OptionSettings =  @{ },
+        $seleniumVersion = $null,
+        $chromeDriverVersion = $null
+    )
+    $Global:AlyaSeleniumBrowser = $null
+    Install-PackageIfNotInstalled "Selenium.WebDriver" -exactVersion $seleniumVersion
+    Install-PackageIfNotInstalled "Selenium.WebDriver.ChromeDriver" -exactVersion $chromeDriverVersion
+    if (-Not (Test-Path "$($AlyaTools)\GoogleChromePortable"))
+    {
+        if (-Not (Test-Path "$AlyaTools"))
+        {
+            $null = New-Item -Path $AlyaTools -ItemType Directory -Force
+        }
+        $pageUrl = "https://portableapps.com/de/apps/internet/google_chrome_portable"
+        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+        [regex]$regex = "[^`"]*https://downloads.sourceforge.net/portableapps[^`"]*"
+        $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+        $fileName = Split-Path -Path $newUrl -Leaf
+        Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$AlyaTools\$fileName"
+        & "$AlyaTools\$fileName" /S /D="$AlyaTools\GoogleChromePortable"
+        Wait-UntilProcessEnds -processName $fileName
+        $null = Remove-Item -Path "$AlyaTools\$fileName" -Force
+    }
+
+    if($AlyaIsPsCore) {
+        if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll") {
+            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll"
+        } else {
+            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\WebDriver.dll"
+        }
+    } else {
+        Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
+    }
+    if ($env:PATH.IndexOf("$($AlyaTools)\Packages\Selenium.WebDriver.ChromeDriver\driver\win32") -eq -1)
+    {
+        $env:PATH = "$($AlyaTools)\Packages\Selenium.WebDriver.ChromeDriver\driver\win32$AlyaPathSep$($env:PATH)"
+    }
+
+    # Install-ModuleIfNotInstalled "AppX"
+    # $edge = Get-AppXPackage | Where-Object { $_.Name -like "Microsoft.MicrosoftEdge*" }
+    # if (!$edge){
+    #     throw "Microsoft Edge Browser not installed."
+    #     return
+    # }
+
+    $dService = [OpenQA.Selenium.Chrome.ChromeDriverService]::CreateDefaultService()
+    $dService.DriverServiceExecutableName = "chromedriver.exe"
+    $dService.DriverServicePath = "$($AlyaTools)\Packages\Selenium.WebDriver.ChromeDriver\driver\win32"
+    $dService.HideCommandPromptWindow = $HideCommandPrompt
+    $options = New-Object -TypeName OpenQA.Selenium.Chrome.ChromeOptions -Property $OptionSettings
+    if($PrivateBrowsing) {$options.AddArguments('InPrivate')}
+    if($Headless) {$options.AddArguments('headless')}
+    $options.BinaryLocation = "$($AlyaTools)\GoogleChromePortable\App\Chrome-bin\chrome.exe"
+    $Global:AlyaSeleniumBrowser = New-Object OpenQA.Selenium.Chrome.ChromeDriver $dService, $options
     $Global:AlyaSeleniumBrowser.Manage().window.position = '0,0'
     return $Global:AlyaSeleniumBrowser
 }

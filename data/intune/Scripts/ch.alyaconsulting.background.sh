@@ -5,13 +5,14 @@ exec 1>>/Library/Logs/ch.alyaconsulting.background.log 2>&1
 
 echo "$(date) : installing ch.alyaconsulting.background"
 
+dekstopBackgroundUrl="https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
+
 runDir=$pwd
 alyaDir="/Library/Alya"
 agentsDir="/Library/LaunchAgents"
 scriptsDir="/Library/Scripts"
 logsDir="/Library/Logs/Alya"
 backgroundsDir="$alyaDir/Backgrounds"
-dekstopBackgroundUrl=https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg
 dekstopBackgroundName=$(basename $dekstopBackgroundUrl)
 
 echo "$(date) : preparing directories"
@@ -27,33 +28,50 @@ cd $backgroundsDir
 curl -O $dekstopBackgroundUrl
 cd $runDir
 
-if [[ ! -f $scriptsDir/ch.alyaconsulting.background.sh ]];then
+if [[ -f $scriptsDir/ch.alyaconsulting.background.sh ]];then
+    rm -f $scriptsDir/ch.alyaconsulting.background.sh
+fi
 
 echo "$(date) : creating apply script"
-cat > $scriptsDir/ch.alyaconsulting.background.sh <<- EOF
-#!/bin/bash
-echo "\$(date) : running ch.alyaconsulting.background"
-dekstopBackground="$backgroundsDir/$dekstopBackgroundName"
-#osascript -e 'tell application "System Events" to tell every desktop to set picture to "'"\$dekstopBackground"'"'
-if ! osascript -s o <<EOOSA
-    tell application "System Events" to tell every desktop to set picture to '\$dekstopBackground'
-EOOSA
-then
-    echo "osascript failed"
-fi
-#killall Dock
-echo "\$(date) : done ch.alyaconsulting.background"
+cat > /tmp/ch.alyaconsulting.background.tmp <<- EOF
+#!/usr/bin/swift
+import Foundation
+import AppKit
+let date = Date()
+print( "\(Date()) : running ch.alyaconsulting.background")
+let ws = NSWorkspace.shared
+let uri = URL(string: "file://$backgroundsDir/$dekstopBackgroundName")
+for _ in 1...10 {
+    for screen in NSScreen.screens {
+        let actUrl = ws.desktopImageURL(for: screen)
+        if (actUrl?.path != uri?.path) {
+            print( "Screen \(screen) setting background to \(uri!.path)")
+            guard var options = ws.desktopImageOptions(for: screen) else {
+                try! ws.setDesktopImageURL(uri!, for: screen)
+                continue
+            }
+            //options[.imageScaling] = NSNumber(value: NSImageScaling.scaleAxesIndependently.rawValue) // fill
+            options[.imageScaling] = NSNumber(value: NSImageScaling.scaleProportionallyUpOrDown.rawValue) // fit
+            //options[.imageScaling] = NSNumber(value: NSImageScaling.scaleNone.rawValue) // center
+            options[.allowClipping] = true
+            try! ws.setDesktopImageURL(uri!, for: screen, options: options)
+        }
+    }
+    sleep(30)
+}
+print( "\(Date()) : done ch.alyaconsulting.background")
 EOF
-chmod 755 $scriptsDir/ch.alyaconsulting.background.sh
-xattr -d com.apple.provenance $scriptsDir/ch.alyaconsulting.background.sh
-xattr -d com.apple.quarantine $scriptsDir/ch.alyaconsulting.background.sh
 
+if ! cmp -s "/tmp/ch.alyaconsulting.background.tmp" "$scriptsDir/ch.alyaconsulting.background.swift"; then
+    cp "/tmp/ch.alyaconsulting.background.tmp" "$scriptsDir/ch.alyaconsulting.background.swift"
 fi
-
-if [[ ! -f $agentsDir/ch.alyaconsulting.background.plist ]];then
+chmod 755 $scriptsDir/ch.alyaconsulting.background.swift
+xattr -d com.apple.provenance $scriptsDir/ch.alyaconsulting.background.swift
+xattr -d com.apple.quarantine $scriptsDir/ch.alyaconsulting.background.swift
+rm -f /tmp/ch.alyaconsulting.background.tmp
 
 echo "$(date) : creating login agent"
-cat > $agentsDir/ch.alyaconsulting.background.plist <<- EOF
+cat > /tmp/ch.alyaconsulting.background.plist <<- EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" http://www.apple.com/DTDs/PropertyList-1.0.dtd>
 <plist version="1.0">
@@ -61,7 +79,7 @@ cat > $agentsDir/ch.alyaconsulting.background.plist <<- EOF
     <key>Label</key>
     <string>ch.alyaconsulting.background</string>
     <key>Program</key>
-    <string>$scriptsDir/ch.alyaconsulting.background.sh</string>
+    <string>$scriptsDir/ch.alyaconsulting.background.swift</string>
     <key>ProgramArguments</key>
     <array/>
     <key>WorkingDirectory</key>
@@ -79,17 +97,20 @@ cat > $agentsDir/ch.alyaconsulting.background.plist <<- EOF
 </dict>
 </plist>
 EOF
+
+if ! cmp -s "/tmp/ch.alyaconsulting.background.plist" "$agentsDir/ch.alyaconsulting.background.plist"; then
+    cp "/tmp/ch.alyaconsulting.background.plist" "$agentsDir/ch.alyaconsulting.background.plist"
+fi
 chmod 644 $agentsDir/ch.alyaconsulting.background.plist
 xattr -d com.apple.provenance $agentsDir/ch.alyaconsulting.background.plist
 xattr -d com.apple.quarantine $agentsDir/ch.alyaconsulting.background.plist
+rm -f /tmp/ch.alyaconsulting.background.plist
 
 echo "$(date) : loading plist file"
 launchctl load $agentsDir/ch.alyaconsulting.background.plist
 
-echo "$(date) : ltarting plist file"
+echo "$(date) : starting plist file"
 launchctl start $agentsDir/ch.alyaconsulting.background.plist
-
-fi
 
 echo "$(date) : done ch.alyaconsulting.background"
 

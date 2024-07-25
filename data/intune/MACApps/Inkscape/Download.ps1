@@ -60,15 +60,17 @@ if (-Not (Test-Path $contentRoot))
 }
 Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
 
-hdiutil attach -nobrowse -readonly "$contentRoot/$dmgName"
-$volume = 
+<#
+hdiutil attach -nobrowse -readonly "$contentRoot/$fileName"
+$volume = "/Volumes/$appName"
 
 $versionFile = Join-Path $packageRoot "version.json"
-$plistCont = Get-Content -Path "$contentRoot/$dirName/$appName.app/Contents/Info.plist" -Encoding utf8 -Raw
+$plistCont = Get-Content -Path "$volume/$appName.app/Contents/Info.plist" -Encoding utf8 -Raw
 [regex]$regex = "<key>CFBundleVersion</key>.*?<string>(.*?)</string>"
-$bundleVersion = [Version]([regex]::Matches($plistCont, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant, Singleline')[0].Groups[1].Value)
+$bundleVersion = [Version]([regex]::Matches($plistCont, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant, Singleline')[0].Groups[1].Value + ".0.0")
 $versionObj = @{}
 $versionObj.version = $bundleVersion.ToString()
 $versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
 
 hdiutil detach $volume
+#>

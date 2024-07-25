@@ -31,12 +31,14 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     01.02.2021 Konrad Brunner       Initial Creation
+    03.06.2024 Konrad Brunner       Added try catch
 
 #>
 
 [CmdletBinding()]
 Param(
-    [int]$keySize = 1024
+    [int]$keySize = 1024,
+    [bool]$enableDkim = $false
 )
 
 #Reading configuration
@@ -70,21 +72,26 @@ try
     LoginTo-EXO
     foreach ($dom in $domains)
     {
-        Write-Host "Checking domain $dom"
-        $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
-        if (-Not $conf)
-        {
-            Write-Warning "Creating DKIM config for domain $dom"
-            if (-Not (Get-Command "New-DkimSigningConfig"))
-            {
-                Write-Error "Command New-DkimSigningConfig not found! Do you have the right access active?" -ErrorAction Continue
-            }
-            New-DkimSigningConfig -DomainName $dom -KeySize $keySize -Enabled $false
+        try {
+			Write-Host "Checking domain $dom"
+			$conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
+			if (-Not $conf)
+			{
+				Write-Warning "Creating DKIM config for domain $dom"
+				if (-Not (Get-Command "New-DkimSigningConfig"))
+				{
+					Write-Error "Command New-DkimSigningConfig not found! Do you have the right access active?" -ErrorAction Continue
+				}
+				New-DkimSigningConfig -DomainName $dom -KeySize $keySize -Enabled $false
+			}
+			if ($enableDkim -and -Not $conf.Enabled)
+			{
+				Write-Warning "Enabling DKIM config for domain $dom"
+				Set-DkimSigningConfig -Identity $conf.Id -Enabled $true
+			}
         }
-        if (-Not $conf.Enabled)
-        {
-            Write-Warning "Enabling DKIM config for domain $dom"
-            Set-DkimSigningConfig -Identity $conf.Id -Enabled $true
+        catch {
+            Write-Error $_.Exception -ErrorAction Continue
         }
     }
 }

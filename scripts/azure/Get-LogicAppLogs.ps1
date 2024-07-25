@@ -51,6 +51,9 @@ Param(
 # Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Get-LogicAppLogs-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
+# Constants
+$expDir = "$($AlyaLogs)\scripts\azure\LogicAppLogs-$($logicAppName)-$($AlyaTimeString)"
+
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
@@ -68,6 +71,9 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Automation | Get-LogicAppLogs | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+Write-Host "All logs will be exported to: $expDir" -ForegroundColor $CommandSuccess
+$null = New-Item -Path $expDir -ItemType Directory -Force
+
 # Getting context
 $Context = Get-AzContext
 if (-Not $Context)
@@ -81,12 +87,14 @@ Write-Host "Exporting all logic app runs" -ForegroundColor $CommandInfo
 $LogicApp = Get-AzLogicApp -Name $logicAppName
 $ResGrp = $LogicApp.Id.Split("/")[4]
 $Runs = Get-AzLogicAppRunHistory -Name $logicAppName -ResourceGroupName $ResGrp -FollowNextPageLink
+$Runs | ConvertTo-Json -Depth 10 | Set-Content -Path "$expDir\runs.json" -Encoding $AlyaUtf8Encoding -Force
 
 # Exporting all logic app triggers
 Write-Host "Exporting all logic app triggers" -ForegroundColor $CommandInfo
 $Trigg = Get-AzLogicAppTrigger -Name $logicAppName -ResourceGroupName $ResGrp
 $TriggHistsAll = Get-AzLogicAppTriggerHistory -Name $logicAppName -ResourceGroupName $ResGrp -TriggerName $Trigg.Name -FollowNextPageLink #-MaximumFollowNextPageLink 2000
 $TriggHists = $TriggHistsAll | Where-Object {$_.Status -ne "Skipped" -and $_.Fired -eq $true}
+$TriggHistsAll | ConvertTo-Json -Depth 10 | Set-Content -Path "$expDir\triggerHistory.json" -Encoding $AlyaUtf8Encoding -Force
 
 # Fired logic app trigger outputs
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
@@ -100,18 +108,18 @@ foreach($TriggHist in $TriggHists)
     Add-Member -InputObject $obj -MemberType NoteProperty -Name "StartTime" -Value $TriggHist.StartTime
     $TriggHistOutps += $obj
 }
-$TriggHistOutps | Select-Object Run, Name, StartTime, LastModified | Format-Table | Out-String | % {Write-Host $_}
+$TriggHistOutps | Select-Object Run, Name, StartTime, LastModified | Format-Table | Out-String | ForEach-Object {Write-Host $_}
 
 # Logic app runs
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs" -ForegroundColor $CommandInfo
-$Runs | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+$Runs | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | ForEach-Object {Write-Host $_}
 
 # Logic app runs with status Succeeded
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs with status Succeeded" -ForegroundColor $CommandInfo
 $SRuns = $Runs | Where-Object {$_.Status -eq "Succeeded"}
-$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | ForEach-Object {Write-Host $_}
 
 # Actions from succeeded logic app runs
 Write-Host "`nActions from succeeded logic app runs" -ForegroundColor $CommandInfo
@@ -124,7 +132,8 @@ foreach($Run in $SRuns)
     Write-Host "`nSucceeded run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
     Write-Host "`nActions:"
     $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
-    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    $Acts | ConvertTo-Json -Depth 10 | Set-Content -Path "$expDir\$($Run.Name)_runActions.json" -Encoding $AlyaUtf8Encoding -Force
+    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | ForEach-Object {Write-Host $_}
     if ($exportInputsAndOutputs)
     {
         Write-Host "`nInputs and Outputs:"
@@ -136,12 +145,14 @@ foreach($Run in $SRuns)
             if ($Act.InputsLink)
             {
                 $ActInp = Invoke-RestMethod -Method Get -Uri $Act.InputsLink.Uri -UseBasicParsing
+                $ActInp | ConvertTo-Json -Depth 10 | Set-Content -Path "$expDir\$($Run.Name)_runAction_$($Act.Name)_Input.json" -Encoding $AlyaUtf8Encoding -Force
                 $Inp = $ActInp | ConvertTo-Json -Depth 2 -Compress
                 Write-Host "  Inputs: $([Regex]::Replace($Inp, '"\$content":"[^"]*"', '"$content":"TRUNCATED"', $regexOpts))"
             }
             if ($Act.OutputsLink)
             {
                 $ActOut = Invoke-RestMethod -Method Get -Uri $Act.OutputsLink.Uri -UseBasicParsing
+                $ActOut | ConvertTo-Json -Depth 10 | Set-Content -Path "$expDir\$($Run.Name)_runAction_$($Act.Name)_Output.json" -Encoding $AlyaUtf8Encoding -Force
                 $Out = $ActOut | ConvertTo-Json -Depth 2 -Compress
                 Write-Host "  Outputs: $([Regex]::Replace($Out, '"\$content":"[^"]*"', '"$content":"TRUNCATED"', $regexOpts))"
             }
@@ -153,7 +164,7 @@ foreach($Run in $SRuns)
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs with status Cancelled" -ForegroundColor $CommandInfo
 $SRuns = $Runs | Where-Object {$_.Status -eq "Cancelled"}
-$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | ForEach-Object {Write-Host $_}
 
 # Actions from cancelled logic app runs
 Write-Host "`nActions from cancelled logic app runs" -ForegroundColor $CommandInfo
@@ -163,7 +174,7 @@ foreach($Run in $SRuns)
     Write-Host "`nCancelled run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
     Write-Host "Actions:"
     $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
-    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | ForEach-Object {Write-Host $_}
     if ($exportInputsAndOutputs)
     {
         Write-Host "`nInputs and Outputs:"
@@ -192,7 +203,7 @@ foreach($Run in $SRuns)
 Write-Host "`n==============================================" -ForegroundColor $CommandInfo
 Write-Host "Logic apps runs with status Failed" -ForegroundColor $CommandInfo
 $SRuns = $Runs | Where-Object {$_.Status -eq "Failed"}
-$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | % {Write-Host $_}
+$SRuns | Select-Object Name, StartTime, EndTime, Status, Code | Format-Table | Out-String | ForEach-Object {Write-Host $_}
 
 # Actions from failed logic app runs
 Write-Host "`nActions from failed logic app runs" -ForegroundColor $CommandInfo
@@ -202,7 +213,7 @@ foreach($Run in $SRuns)
     Write-Host "`nFailed run: $($Run.Name) $($Run.StartTime) $($Run.EndTime)"
     Write-Host "Actions:"
     $Acts = Get-AzLogicAppRunAction -Name $logicAppName -ResourceGroupName $ResGrp -RunName $Run.Name | Sort-Object -Property EndTime -Descending
-    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | % {Write-Host $_}
+    $Acts | Select-Object Status, Name, EndTime, Code, StartTime | Format-Table | Out-String | ForEach-Object {Write-Host $_}
     if ($exportInputsAndOutputs)
     {
         Write-Host "`nInputs and Outputs:"

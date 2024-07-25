@@ -55,17 +55,21 @@ $dirName = Split-Path -Path $fileName -LeafBase
 #$dmgName = $fileName.Replace(".zip", ".dmg")
 $pkgName = $fileName.Replace(".zip", ".pkg")
 unzip "$contentRoot/$fileName" -d "$contentRoot/$dirName"
+
+[regex]$regex = "(\d+\.){2}\d+"
+$versionStr = [regex]::Match($fileName, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+[regex]$regex = "(\d+\.){2}\d+_(\d+)"
+$bundleVersion = [regex]::Match($fileName, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Groups[2].Value
+
+$plistCont = Get-Content -Path "$contentRoot/$dirName/$appName.app/Contents/Info.plist" -Encoding utf8 -Raw
+$plistContNew = $plistCont.Replace("<string>$bundleVersion</string>", "<string>$versionStr</string>")
+$plistContNew | Set-Content -Path "$contentRoot/$dirName/$appName.app/Contents/Info.plist" -Encoding utf8
+
 productbuild --sign "AlyaConsulting" --component "$contentRoot/$dirName/$appName.app" "/Applications" "$contentRoot/$pkgName"
 #productbuild --sign "AlyaConsulting" --component "/Applications/$appName.app" "$contentRoot/$pkgName"
 #pkgbuild --install-location "/Applications" --component "$contentRoot/$dirName/$appName.app" "$contentRoot/$pkgName"
 #hdiutil create -srcfolder "$contentRoot/$dirName"  -volname "$dirName" "$contentRoot/$dmgName"
 #installer -pkg "$contentRoot/$pkgName" -target /
-
-$versionFile = Join-Path $packageRoot "version.json"
-$bundleVersion = $fileName -replace ".*\d+\.\d+\.\d+_(\d+).*", "`$1"
-$versionObj = @{}
-$versionObj.version = "$bundleVersion.0.0.0"
-$versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
 
 Remove-Item -Path "$contentRoot\$fileName" -Recurse -Force
 Remove-Item -Path "$contentRoot\$dirName" -Recurse -Force

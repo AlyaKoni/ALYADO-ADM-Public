@@ -88,7 +88,7 @@ foreach($user in $AllUsers)
         $intMemb = $AllInternalsGroupMembers | Where-Object { $_.AdditionalProperties.userPrincipalName -eq $user.UserPrincipalName }
         if (-Not $intMemb)
         {
-            Write-Warning "    Adding to $AlyaAllExternals"
+            Write-Warning "    Adding to $AlyaAllInternals"
             New-MgBetaGroupMember -GroupId $AllInternalsGroup.Id -DirectoryObjectId $user.Id
         }
     }

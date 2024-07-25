@@ -88,6 +88,7 @@ $modules = @(
 	"Az.DevCenter", 
 	"Az.DevTestLabs", 
 	"Az.Dns", 
+	"Az.DnsResolver", 
 	"Az.ElasticSan", 
 	"Az.EventGrid", 
 	"Az.EventHub", 
@@ -125,6 +126,7 @@ $modules = @(
 	"Az.RedisEnterpriseCache", 
 	"Az.Relay", 
 	"Az.ResourceMover", 
+	"Az.ResourceGraph", 
 	"Az.Resources", 
 	"Az.Security", 
 	"Az.SecurityInsights", 
@@ -151,7 +153,6 @@ $modules = @(
 	"Microsoft.Graph", 
 	"Microsoft.Graph.Authentication", 
 	"Microsoft.Graph.Applications", 
-	"Microsoft.Graph.Authentication", 
 	"Microsoft.Graph.Bookings", 
 	"Microsoft.Graph.Calendar", 
 	"Microsoft.Graph.ChangeNotifications", 
@@ -250,9 +251,9 @@ foreach($module in $modules)
 {
     Install-ModuleIfNotInstalled $module -doNotLoadModules $true
 }
-if (-Not $AlyaIsPsUnix) {
-    Install-ModuleIfNotInstalled "Pscx" -doNotLoadModules $true
-}
+# if (-Not $AlyaIsPsUnix) {
+#     Install-ModuleIfNotInstalled "Pscx" -doNotLoadModules $true
+# }
 Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM"
 Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\log4net"
 Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"

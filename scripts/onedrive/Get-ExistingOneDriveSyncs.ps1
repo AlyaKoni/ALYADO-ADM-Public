@@ -2,10 +2,16 @@
 $tenant = $null
 $tenants = @()
 foreach($par in (Get-ChildItem HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts)) {
-	$tenantId = Get-ItemPropertyValue -Path $par.PSPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
-	$tenantName = Get-ItemPropertyValue -Path $par.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
-	$serviceEndpointUri = Get-ItemPropertyValue -Path $par.PSPath -Name "ServiceEndpointUri" -ErrorAction SilentlyContinue
-	$userFolder = Get-ItemPropertyValue -Path $par.PSPath -Name "UserFolder" -ErrorAction SilentlyContinue
+    $tenantId = $null
+    $tenantName = $null
+    $serviceEndpointUri = $null
+    if (-Not $par.Name.EndsWith("Personal"))
+    {
+        $tenantId = Get-ItemPropertyValue -Path $par.PSPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
+        $tenantName = Get-ItemPropertyValue -Path $par.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
+        $serviceEndpointUri = Get-ItemPropertyValue -Path $par.PSPath -Name "ServiceEndpointUri" -ErrorAction SilentlyContinue
+    }
+    $userFolder = Get-ItemPropertyValue -Path $par.PSPath -Name "UserFolder" -ErrorAction SilentlyContinue
 	$userEmail = Get-ItemPropertyValue -Path $par.PSPath -Name "UserEmail" -ErrorAction SilentlyContinue
 	$cid = Get-ItemPropertyValue -Path $par.PSPath -Name "cid" -ErrorAction SilentlyContinue
     $bname = $par.PSChildName

@@ -63,8 +63,12 @@ Param(
     $allLinesBusyTextToSpeechPrompt = "Leider sind aktuell alle unsere Leitung besetzt. Bitte hinterlassen Sie uns eine Nachricht oder versuchen Sie es später noch einmal.", #Only used if $redirectToExternalNumber $null
     $pleaseWaitTextToSpeechPrompt = "Willkommen bei Alya Consulting! Der nächste freie Mitarbeiter kümmert sich gleich um Ihr Anliegen. Bitte haben Sie einen Moment Geduld.",
     $outOfOfficeTimeTextToSpeechPrompt = "Willkommen bei Alya Consulting! Leider erreichen Sie uns ausserhalb unserer Öffnungszeiten. Bitte hinterlassen Sie uns eine Nachricht oder rufen Sie uns von Montag bis Freitag von 8 bis 12 Uhr oder von 13 bis 17 Uhr an.",
-    $allowSharedVoicemail = $true,
     $afterHoursMenuTextToSpeechPrompt = "Drücken Sie 1 um uns eine Nachricht zu hinterlassen.",
+    $allLinesBusyTextToSpeechPromptAudioFile = $null,
+    $pleaseWaitTextToSpeechPromptAudioFile = $null,
+    $outOfOfficeTimeTextToSpeechPromptAudioFile = $null,
+    $afterHoursMenuTextToSpeechPromptAudioFile = $null,
+    $allowSharedVoicemail = $true,
     $languageId = "de-DE",
     $timeZoneId = "W. Europe Standard Time",
     [ValidateSet("Female","Male")]
@@ -233,23 +237,46 @@ else
 {
     if ($allowSharedVoicemail)
     {
-        if (-Not $noCallHandlingAtAll) {
-            $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
-                -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-                -OverflowThreshold 5 -OverflowAction SharedVoicemail -OverflowActionTarget $dGrp.ExternalDirectoryObjectId -EnableOverflowSharedVoicemailTranscription $true `
-                -OverflowSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `
-                -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction SharedVoicemail -TimeoutActionTarget $dGrp.ExternalDirectoryObjectId -EnableTimeoutSharedVoicemailTranscription $true `
-                -TimeoutSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `
-                -DistributionLists $dGrp.ExternalDirectoryObjectId
-        } else {
-            $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
-                -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-                -OverflowThreshold 0 -OverflowAction SharedVoicemail -OverflowActionTarget $null -EnableOverflowSharedVoicemailTranscription $true `
-                -OverflowSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `
-                -TimeoutThreshold 0 -TimeoutAction SharedVoicemail -TimeoutActionTarget $null -EnableTimeoutSharedVoicemailTranscription $true `
-                -TimeoutSharedVoicemailTextToSpeechPrompt $allLinesBusyTextToSpeechPrompt `
-                -DistributionLists $null
+        $cmdParamBuilder = @{            
+            Identity = $callQueue.Identity
+            Name = $callQueueName
+            LanguageId = $languageId
+            RoutingMethod = "Attendant"
+            PresenceBasedRouting = $presenceBasedRouting
+            Users = $null
+            AllowOptOut = $allowOptOut
+            AgentAlertTime = $redirectToNextAgentAfterSeconds
+            UseDefaultMusicOnHold = $true
+            ConferenceMode = $true
+            OverflowAction = "SharedVoicemail"
+            EnableOverflowSharedVoicemailTranscription = $true
+            TimeoutAction = "SharedVoicemail"
+            EnableTimeoutSharedVoicemailTranscription = $true
         }
+        if ($null -eq $allLinesBusyTextToSpeechPromptAudioFile) {
+            $cmdParamBuilder.add('OverflowSharedVoicemailTextToSpeechPrompt', $allLinesBusyTextToSpeechPrompt)
+            $cmdParamBuilder.add('TimeoutSharedVoicemailTextToSpeechPrompt', $allLinesBusyTextToSpeechPrompt)
+        } else {
+            $content = [System.IO.File]::ReadAllBytes($allLinesBusyTextToSpeechPromptAudioFile)
+            $name = Split-Path -Path $allLinesBusyTextToSpeechPromptAudioFile -Leaf
+            $audioFile = Import-CsOnlineAudioFile -ApplicationId "OrgAutoAttendant" -FileName $name -Content $content
+            $cmdParamBuilder.add('OverflowSharedVoicemailAudioFilePrompt', $audioFile)
+            $cmdParamBuilder.add('TimeoutSharedVoicemailAudioFilePrompt', $audioFile)
+        }
+        if (-Not $noCallHandlingAtAll) {
+            $cmdParamBuilder.add('OverflowThreshold', 5)
+            $cmdParamBuilder.add('OverflowActionTarget', $dGrp.ExternalDirectoryObjectId)
+            $cmdParamBuilder.add('TimeoutThreshold', $keepCallInQueueForSeconds)
+            $cmdParamBuilder.add('TimeoutActionTarget', $dGrp.ExternalDirectoryObjectId)
+            $cmdParamBuilder.add('DistributionLists', $dGrp.ExternalDirectoryObjectId)
+        } else {
+            $cmdParamBuilder.add('OverflowThreshold', 0)
+            $cmdParamBuilder.add('OverflowActionTarget', $null)
+            $cmdParamBuilder.add('TimeoutThreshold', 0)
+            $cmdParamBuilder.add('TimeoutActionTarget', $null)
+            $cmdParamBuilder.add('DistributionLists', $null)
+        }
+        Set-CsCallQueue @cmdParamBuilder
     }
     else
     {
@@ -317,15 +344,36 @@ else
     $defaultOption = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Automatic -CallTarget $queueInstanceEntity
     $defaultMenu = New-CsAutoAttendantMenu -Name "Default Menu" -MenuOptions @($defaultOption) -DirectorySearchMethod None
     $greetingPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $pleaseWaitTextToSpeechPrompt
+    if ($null -ne $pleaseWaitTextToSpeechPromptAudioFile)
+    {
+        $content = [System.IO.File]::ReadAllBytes($pleaseWaitTextToSpeechPromptAudioFile)
+        $name = Split-Path -Path $pleaseWaitTextToSpeechPromptAudioFile -Leaf
+        $audioFile = Import-CsOnlineAudioFile -ApplicationId "OrgAutoAttendant" -FileName $name -Content $content
+        $greetingPrompt = New-CsAutoAttendantPrompt -AudioFilePrompt $audioFile
+    }
     $defaultCallFlow = New-CsAutoAttendantCallFlow -Name "Default call flow" -Greetings @($greetingPrompt) -Menu $defaultMenu
     $afterHoursGreetingPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $outOfOfficeTimeTextToSpeechPrompt
+    if ($null -ne $outOfOfficeTimeTextToSpeechPromptAudioFile)
+    {
+        $content = [System.IO.File]::ReadAllBytes($outOfOfficeTimeTextToSpeechPromptAudioFile)
+        $name = Split-Path -Path $outOfOfficeTimeTextToSpeechPromptAudioFile -Leaf
+        $audioFile = Import-CsOnlineAudioFile -ApplicationId "OrgAutoAttendant" -FileName $name -Content $content
+        $afterHoursGreetingPrompt = New-CsAutoAttendantPrompt -AudioFilePrompt $audioFile
+    }
+    $afterHoursMenuPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $afterHoursMenuTextToSpeechPrompt
+    if ($null -ne $afterHoursMenuTextToSpeechPromptAudioFile)
+    {
+        $content = [System.IO.File]::ReadAllBytes($afterHoursMenuTextToSpeechPromptAudioFile)
+        $name = Split-Path -Path $afterHoursMenuTextToSpeechPromptAudioFile -Leaf
+        $audioFile = Import-CsOnlineAudioFile -ApplicationId "OrgAutoAttendant" -FileName $name -Content $content
+        $afterHoursMenuPrompt = New-CsAutoAttendantPrompt -AudioFilePrompt $audioFile
+    }
+    $sharedVoicemailEntity = New-CsAutoAttendantCallableEntity -Identity $dGrp.ExternalDirectoryObjectId -Type SharedVoiceMail -EnableTranscription -EnableSharedVoicemailSystemPromptSuppression
     if ($allowSharedVoicemail)
     {
         if ($redirectToExternalNumberByMenu -ne $null)
         {
-            $sharedVoicemailEntity = New-CsAutoAttendantCallableEntity -Identity $dGrp.ExternalDirectoryObjectId -Type SharedVoiceMail -EnableTranscription -EnableSharedVoicemailSystemPromptSuppression
             $externalNumberEntity = New-CsAutoAttendantCallableEntity -Identity $redirectToExternalNumberByMenu -Type ExternalPstn
-            $afterHoursMenuPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $afterHoursMenuTextToSpeechPrompt
             $afterHoursMenuOptionOne = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Tone1 -CallTarget $sharedVoicemailEntity
             $afterHoursMenuOptionTwo = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Tone2 -CallTarget $externalNumberEntity
             $afterHoursMenu = New-CsAutoAttendantMenu -Name "After Hours menu" -MenuOptions @($afterHoursMenuOptionOne,$afterHoursMenuOptionTwo) -Prompts @($afterHoursMenuPrompt)
@@ -333,8 +381,6 @@ else
         }
         else
         {
-            $sharedVoicemailEntity = New-CsAutoAttendantCallableEntity -Identity $dGrp.ExternalDirectoryObjectId -Type SharedVoiceMail -EnableTranscription -EnableSharedVoicemailSystemPromptSuppression
-            $afterHoursMenuPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $afterHoursMenuTextToSpeechPrompt
             $afterHoursMenuOptionOne = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Tone1 -CallTarget $sharedVoicemailEntity
             $afterHoursMenu = New-CsAutoAttendantMenu -Name "After Hours menu" -MenuOptions @($afterHoursMenuOptionOne) -Prompts @($afterHoursMenuPrompt)
             $afterHoursCallFlow = New-CsAutoAttendantCallFlow -Name "After Hours call flow" -Greetings @($afterHoursGreetingPrompt) -Menu $afterHoursMenu

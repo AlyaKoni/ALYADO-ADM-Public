@@ -70,7 +70,7 @@ Write-Host "Checking Global Administrator role" -ForegroundColor $CommandInfo
 $gaRole = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Global Administrator'"
 $gaRoleMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($gaRole.Id)'" -All -ExpandProperty Principal
 Write-Host "Global Administrators:"
-$gaRoleMembs
+$gaRoleMembs | ft | Out-String
 if ($gaRoleMembs.Count -gt 1)
 {
     Write-Warning "We suggest to have only one single Global Administrator"
@@ -79,9 +79,9 @@ foreach($memb in $gaRoleMembs)
 {
     $globalAdmin = Get-MgBetaUser -UserId $memb.PrincipalId
     Write-Host "$($globalAdmin.UserPrincipalName)"
-    if ($globalAdmin.UserPrincipalName -like "admin@*" -or $globalAdmin.UserPrincipalName -like "administrator@*" -or `
-        $globalAdmin.UserPrincipalName -like "globaladmin@*" -or $globalAdmin.UserPrincipalName -like "breakingglass@*" -or `
-        $globalAdmin.UserPrincipalName -like "breaking.glass@*" -or $globalAdmin.UserPrincipalName -like "breakglass@*")
+    if ($globalAdmin.UserPrincipalName -like "admin*" -or $globalAdmin.UserPrincipalName -like "administrator*" -or `
+        $globalAdmin.UserPrincipalName -like "globaladmin*" -or $globalAdmin.UserPrincipalName -like "breakingglass*" -or `
+        $globalAdmin.UserPrincipalName -like "breaking.glass*" -or $globalAdmin.UserPrincipalName -like "breakglass*")
     {
         $name = -Join ([System.Security.Cryptography.HashAlgorithm]::Create("MD5").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($AlyaDomainName)) | % { $_.ToString("x2") } )
         $AlyaGlobalAdmin = "$name@$($AlyaDomainName)"
@@ -105,7 +105,7 @@ else
     } catch {}
     if (-Not $bgAdmin)
     {
-        Write-Host "  Breaking glass account not found. Creating it now."
+        Write-Warning "Breaking glass account not found. Creating it now."
         $PasswordProfile = @{
             Password = Get-Password -length 36
             ForceChangePasswordNextSignIn = $false
@@ -124,11 +124,21 @@ Write-Host "Checking Privileged Role Administrator role" -ForegroundColor $Comma
 $paRole = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "displayname eq 'Privileged Role Administrator'"
 $paRoleMembs = Get-MgBetaRoleManagementDirectoryRoleAssignment -Filter "roleDefinitionId eq '$($paRole.Id)'" -All -ExpandProperty Principal
 Write-Host "Privileged Role Administrators:"
-$paRoleMembs
+$paRoleMembs | ft | Out-String
 if ($paRoleMembs.Count -eq 0)
 {
     Write-Warning "We suggest to specify at least one Privileged Role Administrator. Ideally the breaking glass account."
     Write-Warning "He will be able to solve Global Administrator rights if something goes wrong"
+}
+
+# Checking breaking glass admin Privileged Role Administrator role
+Write-Host "Checking breaking glass admin Privileged Role Administrator role" -ForegroundColor $CommandInfo
+$bgAdminRole = $paRoleMembs | Where-Object { $_.PrincipalId -eq $bgAdmin.Id }
+if (-Not $bgAdminRole)
+{
+    Write-Warning "Breaking glass Privileged Role Administrator role not found. Assigning it now."
+    $null = New-MgBetaRoleManagementDirectoryRoleAssignment -PrincipalId $bgAdmin.Id -RoleDefinitionId $paRole.Id -DirectoryScopeId "/"
+
 }
 
 #Stopping Transscript

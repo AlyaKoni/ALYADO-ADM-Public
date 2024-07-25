@@ -42,4 +42,4 @@ if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+Invoke-WebRequestIndep -UseBasicParsing -AllowInsecureRedirect -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"

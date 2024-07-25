@@ -33,7 +33,7 @@
 
 $pageUrl = "https://creator.pdf24.org/listVersions.php"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*pdf24[^`"]*creator[^`"]*\.msi"
+[regex]$regex = "[^`"]*pdf24[^`"]*creator[^`"]*x64\.msi"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"

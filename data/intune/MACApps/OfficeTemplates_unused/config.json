@@ -1,0 +1,45 @@
+﻿{
+    "@odata.type": "#microsoft.graph.macOSPkgApp",
+    "description": "Installs ch.alyaconsulting.office.templates.pkg",
+    "developer": "Konrad Brunner",
+    "displayName": "MAC OfficeTemplates",
+    "fileName": "ch.alyaconsulting.office.templates.pkg",
+    "ignoreVersionDetection": false,
+    "includedApps": [
+      {
+        "bundleId": "ch.alyaconsulting.office.templates",
+        "bundleVersion": "1.0.0"
+      }
+    ],
+    "informationUrl": "https://alyaconsulting.ch",
+    "isFeatured": false,
+    "largeIcon": {
+      "value": "",
+      "@odata.type": "#Microsoft.Graph.mimeContent",
+      "type": "image/png"
+    },
+    "minimumSupportedOperatingSystem": {
+      "v10_10": false,
+      "v10_11": false,
+      "v10_12": false,
+      "v10_13": false,
+      "v10_14": false,
+      "v10_15": true,
+      "v10_7": false,
+      "v10_8": false,
+      "v10_9": false,
+      "v11_0": false,
+      "v12_0": false,
+      "v13_0": false,
+      "v14_0": false
+    },
+    "notes": "",
+    "owner": "",
+    "primaryBundleId": "ch.alyaconsulting.office.templates",
+    "primaryBundleVersion": "1.0.0",
+    "privacyInformationUrl": "https://alyaconsulting.ch/Home/Privacy",
+    "publisher": "Alya Consulting",
+    "roleScopeTagIds": [],
+    "displayVersion": null
+  }
+  

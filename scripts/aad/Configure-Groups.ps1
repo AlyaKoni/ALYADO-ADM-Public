@@ -223,22 +223,46 @@ foreach ($group in $AllGroups)
         # License
         if (-Not [string]::IsNullOrEmpty($group.Licenses))
         {
-            Write-Host "   - Configuring license." -ForegroundColor $CommandSuccess
-            $exGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'"
+            Write-Host "   - Configuring license."
+            $licGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($group.DisplayName)'" -Property "Id","AssignedLicenses"
             foreach($license in $group.Licenses.Split(","))
             {
-                $licPresent = $exGrp.AssignedLicenses | Where-Object { $_.SkuPartNumber -like "*$($license)" }
+                $plans = $null
+                if ($license.Contains("("))
+                {
+                    $plans = $license.SubString($license.IndexOf("(")).Replace("(","").Replace(")","").Split(";")
+                    $license = $license.SubString(0,$license.IndexOf("("))
+                }
+                # License
                 $licSku = $Skus | Where-Object { $_.SkuPartNumber -eq $license }
                 if (-Not $licSku)
                 {
                     Write-Warning "Can't find license '$($license)' in your list of available licenses!"
                     continue
                 }
+                $licPresent = $licGrp.AssignedLicenses | Where-Object { $_.SkuId -eq $licSku.SkuId }
+                $disabledPlans = @()
+                if ($null -ne $plans)
+                {
+                    foreach($plan in $licSku.ServicePlans)
+                    {
+                        if ($plan.ServicePlanName -notin $plans)
+                        {
+                            $disabledPlans += $plan.ServicePlanId
+                        }
+                    }
+                }
                 if (-Not $licPresent)
                 {
-                    Write-Host "       Adding license '$($license)'"
-                    $licenseOption = @{SkuId = $licSku.SkuId <# TODO ; DisabledPlans = @()#>}
-                    Set-MgBetaGroupLicense -GroupId $exGrp.Id -AddLicenses $licenseOption -RemoveLicenses @()
+                    Write-Warning "Adding license '$($license)'"
+                    $licenseOption = @{SkuId = $licSku.SkuId; DisabledPlans = $disabledPlans}
+                    Set-MgBetaGroupLicense -GroupId $licGrp.Id -AddLicenses $licenseOption -RemoveLicenses @()
+                }
+                else
+                {
+                    Write-Warning "Updating license '$($license)'"
+                    $licenseOption = @{SkuId = $licSku.SkuId; DisabledPlans = $disabledPlans}
+                    Set-MgBetaGroupLicense -GroupId $licGrp.Id -AddLicenses $licenseOption -RemoveLicenses @()
                 }
             }
         }

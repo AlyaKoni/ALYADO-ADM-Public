@@ -99,7 +99,7 @@ try
     do {
         try {
             $retries--
-            $membs = Get-DistributionGroupMember -Identity "$($AlyaCompanyName)$($newNamingPart) Privacy"
+            $membs = Get-DistributionGroupMember -Identity $dGrp.PrimarySmtpAddress
             break
         } catch {
             Start-Sleep -Seconds 4
@@ -117,7 +117,7 @@ try
         do {
             try {
                 $retries--
-                $memb = Add-DistributionGroupMember -Identity "$($AlyaCompanyName)$($newNamingPart) Privacy" -Member $ownerEmail
+                $memb = Add-DistributionGroupMember -Identity $dGrp.PrimarySmtpAddress -Member $ownerEmail
                 break
             } catch {
                 Start-Sleep -Seconds 4
@@ -147,7 +147,7 @@ try
     do {
         try {
             $retries--
-            $membs = Get-DistributionGroupMember -Identity "$($AlyaCompanyName)$($newNamingPart) Security"
+            $membs = Get-DistributionGroupMember -Identity $dGrp.PrimarySmtpAddress
             break
         } catch {
             Start-Sleep -Seconds 4
@@ -165,7 +165,7 @@ try
         do {
             try {
                 $retries--
-                $memb = Add-DistributionGroupMember -Identity "$($AlyaCompanyName)$($newNamingPart) Security" -Member $ownerEmail
+                $memb = Add-DistributionGroupMember -Identity $dGrp.PrimarySmtpAddress -Member $ownerEmail
                 break
             } catch {
                 Start-Sleep -Seconds 4
@@ -200,7 +200,7 @@ try
     do {
         try {
             $retries--
-            $membs = Get-DistributionGroupMember -Identity "$($AlyaCompanyName) Cloud$($newNamingSuffix)"
+            $membs = Get-DistributionGroupMember -Identity $dGrp.PrimarySmtpAddress
             Get-DistributionGroupMember -Identity $dGrp.Id
             break
         } catch {
@@ -219,7 +219,7 @@ try
         do {
             try {
                 $retries--
-                $memb = Add-DistributionGroupMember -Identity "$($AlyaCompanyName)$($newNamingPart) Cloud" -Member $ownerEmail
+                $memb = Add-DistributionGroupMember -Identity $dGrp.PrimarySmtpAddress -Member $ownerEmail
                 break
             } catch {
                 Start-Sleep -Seconds 4
@@ -249,7 +249,7 @@ try
     do {
         try {
             $retries--
-            $membs = Get-DistributionGroupMember -Identity "$($AlyaCompanyName)$($newNamingPart) Support"
+            $membs = Get-DistributionGroupMember -Identity $dGrp.PrimarySmtpAddress
             break
         } catch {
             Start-Sleep -Seconds 4
@@ -267,7 +267,7 @@ try
         do {
             try {
                 $retries--
-                $memb = Add-DistributionGroupMember -Identity "$($AlyaCompanyName)$($newNamingPart) Support" -Member $ownerEmail
+                $memb = Add-DistributionGroupMember -Identity $dGrp.PrimarySmtpAddress -Member $ownerEmail
                 break
             } catch {
                 Start-Sleep -Seconds 4

@@ -58,7 +58,7 @@ if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot/$fileName"
 
 $dirName = $fileName.Replace(".app.tar.bz2", "")
 if (-Not (Test-Path "$contentRoot/$dirName"))
@@ -66,8 +66,15 @@ if (-Not (Test-Path "$contentRoot/$dirName"))
     $null = New-Item -Path "$contentRoot/$dirName" -ItemType Directory -Force
 }
 pushd "$contentRoot/$dirName"
-tar -xf "$contentRoot\$fileName"
+tar -xf "$contentRoot/$fileName"
 popd
 
-TODO  package
+$pkgName = $dirName + ".pkg"
+productbuild --sign "AlyaConsulting" --component "$contentRoot/$dirName/$appName.app" "/Applications" "$contentRoot/$pkgName"
+#productbuild --sign "AlyaConsulting" --component "/Applications/$appName.app" "$contentRoot/$pkgName"
+#pkgbuild --install-location "/Applications" --component "$contentRoot/$dirName/$appName.app" "$contentRoot/$pkgName"
+#hdiutil create -srcfolder "$contentRoot/$dirName"  -volname "$dirName" "$contentRoot/$dmgName"
+#installer -pkg "$contentRoot/$pkgName" -target /
 
+Remove-Item -Path "$contentRoot\$fileName" -Recurse -Force
+Remove-Item -Path "$contentRoot\$dirName" -Recurse -Force

@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     24.04.2023 Konrad Brunner       Initial Creation
+    03.06.2024 Konrad Brunner       Added try catch
 
 #>
 
@@ -70,21 +71,26 @@ try
     LoginTo-EXO
     foreach ($dom in $domains)
     {
-        Write-Host "Checking domain $dom"
-        $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
-        if (-Not $conf) {
-            Write-Warning "No DKIM config found to rotate in domain $dom"
+        try {
+            Write-Host "Checking domain $dom"
+            $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
+            if (-Not $conf) {
+                Write-Warning "No DKIM config found to rotate in domain $dom"
+            }
+            else {
+                if ($conf.RotateOnDate -ge (Get-Date)) {
+                    Write-Warning "A rotation is already planned!"
+                    continue
+                }
+                if (-Not (Get-Command "Rotate-DkimSigningConfig")) {
+                    throw "Command Rotate-DkimSigningConfig not found! Do you have the right access active?"
+                }
+                Write-Warning "Rotating domain key."
+                Rotate-DkimSigningConfig -KeySize $keySize -Identity $dom
+            }
         }
-        else {
-            if ($conf.RotateOnDate -ge (Get-Date)) {
-                Write-Warning "A rotation is already planned!"
-                return
-            }
-            if (-Not (Get-Command "Rotate-DkimSigningConfig")) {
-                throw "Command Rotate-DkimSigningConfig not found! Do you have the right access active?"
-            }
-            Write-Warning "Rotating domain key."
-            Rotate-DkimSigningConfig -KeySize $keySize -Identity $dom
+        catch {
+            Write-Error $_.Exception -ErrorAction Continue
         }
     }
 }

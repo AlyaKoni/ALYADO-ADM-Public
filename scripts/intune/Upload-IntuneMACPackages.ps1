@@ -456,8 +456,18 @@ foreach($packageDir in $packages)
     }
     else
     {
-        [regex]$regex = "(\d+\.)?(\d+\.)?(\d+\.)?(\*|\d+)"
+        [regex]$regex = "(\d+\.){3}(\*|\d+)"
         $versionStr = [regex]::Match($package.Name, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+        if ([string]::IsNullOrEmpty($versionStr))
+        {
+            [regex]$regex = "(\d+\.){2}(\*|\d+)"
+            $versionStr = [regex]::Match($package.Name, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+            if ([string]::IsNullOrEmpty($versionStr))
+            {
+                [regex]$regex = "(\d+\.)?(\d+\.)?(\d+\.)?(\*|\d+)"
+                $versionStr = [regex]::Match($package.Name, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+            }
+        }
         Write-Host "    got version from file name: $versionStr"
         if (-Not [string]::IsNullOrEmpty($versionStr))
         {

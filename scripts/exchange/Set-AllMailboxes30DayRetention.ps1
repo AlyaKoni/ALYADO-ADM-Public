@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     07.07.2020 Konrad Brunner       Initial Creation
     25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
+    16.07.2024 Konrad Brunner       Added Set-MailboxPlan
 
 #>
 
@@ -64,6 +65,7 @@ try
     LoginTo-EXO
 
     Get-Mailbox -ResultSize unlimited -Filter "RecipientTypeDetails -eq 'UserMailbox'" | Set-Mailbox -RetainDeletedItemsFor 30
+    Set-MailboxPlan -Identity "ExchangeOnlineEnterprise" -RetainDeletedItemsFor 30
 }
 catch
 {

@@ -34,12 +34,14 @@
     24.04.2023 Konrad Brunner       Switched to Graph
     05.09.2023 Konrad Brunner       Added assignment
     27.03.2024 Konrad Brunner       Added MAC scripts
+    19.06.2024 Konrad Brunner       Fixed MAC line endings
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$ScriptDir = $null #defaults to $($AlyaData)\intune\Scripts
+    [string]$ScriptDir = $null, #defaults to $($AlyaData)\intune\Scripts,
+    [string]$OnlyProcessShellScripts = $true
 )
 
 # Loading configuration
@@ -93,14 +95,15 @@ foreach($script in $scripts)
 
     try {
         
-        # Loading script
-        Write-Host "  Loading script"
-        $scriptResponse = [System.IO.File]::ReadAllBytes($script)
-        $base64script = [System.Convert]::ToBase64String($scriptResponse)
-        #TODO Description out of the script?
-
         if ($script.Name.EndsWith("ps1"))
         {
+            if ($OnlyProcessShellScripts) { continue }
+
+            # Loading script
+            Write-Host "  Loading script"
+            $scriptResponse = [System.IO.File]::ReadAllBytes($script)
+            $base64script = [System.Convert]::ToBase64String($scriptResponse)
+            #TODO Description out of the script?
 
             $scriptName = "$AppPrefix$($script.BaseName)"
             #"@odata.type": "#Microsoft.Graph.deviceManagementScript",
@@ -139,6 +142,14 @@ foreach($script in $scripts)
         }
         else
         {
+
+            # Loading script
+            Write-Host "  Loading script"
+            $scriptContent = Get-Content -Path $script -Raw
+            $scriptContent = $scriptContent.Replace("`r`n","`n")
+            $scriptBytes = [System.Text.Encoding]::UTF8.GetBytes($scriptContent)
+            $base64script = [System.Convert]::ToBase64String($scriptBytes)
+            #TODO Description out of the script?
 
             $scriptName = "$AppPrefixMac$($script.BaseName)"
             #"@odata.type": "#Microsoft.Graph.deviceShellScript",
@@ -197,9 +208,10 @@ foreach($script in $scripts)
         
         if ($script.Name.EndsWith("ps1"))
         {
+            if ($OnlyProcessShellScripts) { continue }
 
             # Checking if script exists
-            Write-Host "  Checking if script exists"
+            Write-Host "  Checking script"
             $scriptName = "$AppPrefix$($script.BaseName)"
             $uri = "/beta/deviceManagement/deviceManagementScripts"
             $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}
@@ -250,7 +262,7 @@ foreach($script in $scripts)
         {
 
             # Checking if script exists
-            Write-Host "  Checking if script exists"
+            Write-Host "  Checking script"
             $scriptName = "$AppPrefixMac$($script.BaseName)"
             $uri = "/beta/deviceManagement/deviceShellScripts"
             $actScript = (Get-MsGraphObject -Uri $uri).value | Where-Object { $_.displayName -eq $scriptName}

@@ -1,14 +1,14 @@
 {
   "@odata.type": "#microsoft.graph.macOSDmgApp",
-  "description": "Installs Firefox Setup 124.0.dmg",
+  "description": "Installs Firefox Setup 127.0.dmg",
   "developer": "Mozilla",
   "displayName": "MAC Firefox",
-  "fileName": "Firefox Setup 124.0.dmg",
+  "fileName": "Firefox Setup 127.0.dmg",
   "ignoreVersionDetection": false,
   "includedApps": [
     {
       "bundleId": "org.mozilla.firefox",
-      "bundleVersion": "124.0"
+      "bundleVersion": "127.0"
     }
   ],
   "informationUrl": "https://www.mozilla.org/",
@@ -36,7 +36,7 @@
   "notes": "",
   "owner": "",
   "primaryBundleId": "org.mozilla.firefox",
-  "primaryBundleVersion": "124.0",
+  "primaryBundleVersion": "127.0",
   "privacyInformationUrl": "https://www.mozilla.org/en-US/firefox/privacy/",
   "publisher": "Mozilla",
   "roleScopeTagIds": [],

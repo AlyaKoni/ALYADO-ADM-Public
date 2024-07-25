@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     01.02.2021 Konrad Brunner       Initial Creation
+    03.06.2024 Konrad Brunner       Added try catch
 
 #>
 
@@ -69,24 +70,29 @@ try
     LoginTo-EXO
     foreach ($dom in $domains)
     {
-        Write-Host "Checking domain $dom"
-        $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
-        if ($conf)
-        {
-            if (-Not $conf.Enabled)
+        try {
+            Write-Host "Checking domain $dom"
+            $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
+            if ($conf)
             {
-                Write-Warning "Enabling DKIM config for domain $dom"
-                Set-DkimSigningConfig -Identity $dom -Enabled $true
+                if (-Not $conf.Enabled)
+                {
+                    Write-Warning "Enabling DKIM config for domain $dom"
+                    Set-DkimSigningConfig -Identity $dom -Enabled $true
+                }
+                else
+                {
+                    Write-Host "  Domain key was already enabled"
+                }
             }
             else
             {
-                Write-Host "  Domain key was already enabled"
+                Write-Error "Domain key config not found. Please run first the script Create_DKIM_DomainKeys.ps1" -ErrorAction Continue
             }
         }
-        else
-        {
-            Write-Error "Domain key config not found. Please run first the script Create_DKIM_DomainKeys.ps1" -ErrorAction Continue
-        }
+        catch {
+            Write-Error $_.Exception -ErrorAction Continue
+        } 
     }
 }
 catch

@@ -34,7 +34,7 @@
 $pageUrl = "https://www.gimp.org/downloads/"
 
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*macos/gimp[^`"]*arm64.dmg"
+[regex]$regex = "[^`"]*macos/gimp[^`"]*arm64[^`"]*.dmg"
 $newUrl = "https:"+[regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
