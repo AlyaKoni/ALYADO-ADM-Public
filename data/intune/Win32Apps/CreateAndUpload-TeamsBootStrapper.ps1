@@ -1,6 +1,8 @@
-@echo off
+﻿#Requires -Version 2
 
-goto :COMMENTS
+<#
+    Copyright (c) Alya Consulting, 2019-2024
+
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
@@ -23,13 +25,21 @@ goto :COMMENTS
     Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
     Siehe die GNU General Public License fuer weitere Details:
     https://www.gnu.org/licenses/gpl-3.0.txt
-:COMMENTS
 
-if not exist C:\ProgramData\AlyaConsulting mkdir C:\ProgramData\AlyaConsulting
-if not exist C:\ProgramData\AlyaConsulting\Logs mkdir C:\ProgramData\AlyaConsulting\Logs
-for /f %%a in ('powershell.exe -Command "Get-Date -format yyyyMMddHHmmssfff"') do set Timestamp=%%a
-set Timestamp=%Timestamp: =0%
-powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -File "%~dp0Install.ps1" 2>&1 1>>C:\ProgramData\AlyaConsulting\Logs\Install.cmd-%Timestamp%.log
-set RETURNCODE=%ERRORLEVEL%
-echo RETURNCODE: %RETURNCODE% 1>>C:\ProgramData\AlyaConsulting\Logs\Install.cmd-%Timestamp%.log
-EXIT /B %RETURNCODE%
+
+#>
+
+[CmdletBinding()]
+Param(
+    [bool]$reuseExistingPackages = $false,
+    [bool]$askForSameVersionPackages = $true
+)
+
+. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\TeamsBootStrapper\Package\*.intunewin" -PathType Leaf)))
+{
+	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "TeamsBootStrapper"
+}
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "TeamsBootStrapper" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "TeamsBootStrapper"

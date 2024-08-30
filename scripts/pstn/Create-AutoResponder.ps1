@@ -74,7 +74,8 @@ Param(
     [ValidateSet("Female","Male")]
     $voiceId = "Female",
     $allowOptOut = $true,
-    $redirectAlways = $false `
+    $redirectAlways = $false,
+    $phoneNumberType = "DirectRouting"
 )
 if ($attendantNumber.StartsWith("tel:"))
 {
@@ -173,10 +174,18 @@ if (-Not $appInstance)
 {
     Write-Warning "Application Instance $attendantUpn not found! Creating it now."
     $appinstanceAppId = "ce933385-9390-45d1-9512-c8d228074e07"
-    $appInstance = New-CsOnlineApplicationInstance -UserPrincipalName $attendantUpn -ApplicationId $appinstanceAppId -DisplayName $attendantName -Force
-    Start-Sleep -Seconds 10
+    $appInstance = New-CsOnlineApplicationInstance -UserPrincipalName $attendantUpn -ApplicationId $appinstanceAppId -DisplayName $attendantName
 }
-$appInstance = Get-CsOnlineApplicationInstance -Identity $attendantUpn
+do
+{
+    try {
+        $appInstance = Get-CsOnlineApplicationInstance -Identity $attendantUpn
+    }
+    catch {
+        Write-Host "ApplicationInstance not yet found. Waiting..."
+        Start-Sleep -Seconds 10
+    }
+} while (-Not $appInstance)
 
 Write-Host "Checking Application Instance $callQueueUpn" -ForegroundColor $CommandInfo
 $queueInstance = Find-CsOnlineApplicationInstance -SearchQuery $callQueueUpn
@@ -184,10 +193,18 @@ if (-Not $queueInstance)
 {
     Write-Warning "Application Instance $callQueueUpn not found! Creating it now."
     $queueInstanceAppId = "11cd3e2e-fccb-42ad-ad00-878b93575e07"
-    $queueInstance = New-CsOnlineApplicationInstance -UserPrincipalName $callQueueUpn -ApplicationId $queueInstanceAppId -DisplayName $callQueueName -Force
-    Start-Sleep -Seconds 10
+    $queueInstance = New-CsOnlineApplicationInstance -UserPrincipalName $callQueueUpn -ApplicationId $queueInstanceAppId -DisplayName $callQueueName
 }
-$queueInstance = Get-CsOnlineApplicationInstance -Identity $callQueueUpn
+do
+{
+    try {
+        $queueInstance = Get-CsOnlineApplicationInstance -Identity $callQueueUpn
+    }
+    catch {
+        Write-Host "ApplicationInstance not yet found. Waiting..."
+        Start-Sleep -Seconds 10
+    }
+} while (-Not $queueInstance)
 
 Write-Host "Checking licenses for $attendantUpn" -ForegroundColor $CommandInfo
 Write-Host " - Please assign license to $attendantUpn in license sheet \data\aad\Lizenzen.xlsx"
@@ -196,13 +213,21 @@ Write-Host "Hit return when done"
 pause
 
 Write-Host "Checking phone number $attendantNumber for $attendantUpn" -ForegroundColor $CommandInfo
-if ($appInstance.PhoneNumber -ne "tel:$attendantNumber")
+if (-Not $appInstance.PhoneNumber)
 {
-    Write-Warning "Changing phone number from '$($appInstance.PhoneNumber)' to '$attendantNumber'."
-    $numberType = (Get-CsPhoneNumberAssignment -TelephoneNumber $appInstance.PhoneNumber.Replace("tel:","")).NumberType
-    Remove-CsPhoneNumberAssignment -Identity $attendantUpn -PhoneNumber $appInstance.PhoneNumber.Replace("tel:","") -PhoneNumberType $numberType
-    Set-CsPhoneNumberAssignment -Identity $attendantUpn -PhoneNumber $attendantNumber -PhoneNumberType $numberType
+    Set-CsPhoneNumberAssignment -Identity $attendantUpn -PhoneNumber $attendantNumber -PhoneNumberType $phoneNumberType
     Start-Sleep -Seconds 10
+}
+else
+{
+    if ($appInstance.PhoneNumber -ne "tel:$attendantNumber")
+    {
+        Write-Warning "Changing phone number from '$($appInstance.PhoneNumber)' to '$attendantNumber'."
+        $numberType = (Get-CsPhoneNumberAssignment -TelephoneNumber $appInstance.PhoneNumber.Replace("tel:","")).NumberType
+        Remove-CsPhoneNumberAssignment -Identity $attendantUpn -PhoneNumber $appInstance.PhoneNumber.Replace("tel:","") -PhoneNumberType $numberType
+        Set-CsPhoneNumberAssignment -Identity $attendantUpn -PhoneNumber $attendantNumber -PhoneNumberType $numberType
+        Start-Sleep -Seconds 10
+    }
 }
 $appInstance = Get-CsOnlineApplicationInstance -Identity $attendantUpn
 

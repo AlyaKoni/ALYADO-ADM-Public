@@ -114,6 +114,24 @@ catch {
     }
 }
 
+$owners = @($ctx.Web.CurrentUser.Email)
+if (-Not [string]::IsNullOrEmpty($gauserLoginName))
+{
+    $owners += $gauserLoginName
+}
+else
+{
+    Write-Warning "Global Administrator Group not found"
+}
+if (-Not [string]::IsNullOrEmpty($sauserLoginName))
+{
+    $owners += $sauserLoginName
+}
+else
+{
+    Write-Warning "SharePoint Administrator Group not found"
+}
+
 # Setting site admins
 Write-Host "Setting site admins" -ForegroundColor $CommandInfo
 foreach ($site in $sitesToProcess)
@@ -125,7 +143,7 @@ foreach ($site in $sitesToProcess)
     $ctx = Get-PnPContext -Connection $adminCon
     $ctx.Load($ctx.Web.CurrentUser)
     Invoke-PnPQuery -Connection $adminCon
-    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners @($gauserLoginName,$sauserLoginName,$ctx.Web.CurrentUser.Email)
+    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $owners
 
     # Checking if AAD group is assigned
     $tsite = Get-PnPTenantSite -Connection $adminCon -Identity $site.Url -Detailed

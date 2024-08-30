@@ -30,7 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    24.08.2023 Konrad Brunner       Initial Version
+    25.07.2024 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,6 +42,27 @@ $exitCode = 0
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 $AlyaScriptName = Split-Path $PSCommandPath -Leaf
 $AlyaScriptDir = Split-Path $PSCommandPath -Parent
+
+function Wait-UntilProcessEnds(
+    [string] [Parameter(Mandatory = $true)] $processName)
+{
+    $maxStartTries = 10
+    $startTried = 0
+    do
+    {
+        $prc = Get-Process -Name $processName -ErrorAction SilentlyContinue
+        $startTried = $startTried + 1
+        if ($startTried -gt $maxStartTries)
+        {
+            $prc = "Continue"
+        }
+    } while (-Not $prc)
+    do
+    {
+        Start-Sleep -Seconds 5
+        $prc = Get-Process -Name $processName -ErrorAction SilentlyContinue
+    } while ($prc)
+}
 
 if (![System.Environment]::Is64BitProcess)
 {
@@ -76,33 +97,47 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\TeamsMachineWide-$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-TeamsBootStrapper-$($AlyaTimeString).log" -Force
 
     try
     {
         $ErrorActionPreference = "Stop"
 
-        # Install msi
-        $toInstall = Get-ChildItem -Path $AlyaScriptDir -Filter "*.msi"
-        foreach($toInst in $toInstall)
-        {
-            Write-Host "Installing $($toInst.FullName)"
-            Write-Host "MSI Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-			$version = (Get-AppLockerFileInformation "$($toInst.FullName)").Publisher.BinaryVersion.ToString()
-			$fileName = Split-Path -Path $toInst -Leaf
-			& ".\CheckMsiOverride.ps1" -Type Package -OverrideVersion $version -MsiFileName $fileName -FixRunKey -UninstallAll -AllowInstallOverTopExisting -OverwritePolicyKey
-            do
-            {
-                Start-Sleep -Seconds 5
-                $process = Get-Process -Name "msiexec" -IncludeUserName -ErrorAction SilentlyContinue | Where-Object { $_.UserName -notlike "*\SYSTEM" }
-                if (-Not $process)
-                {
-                    $process = Get-Process -Name "msiexec.exe" -IncludeUserName -ErrorAction SilentlyContinue | Where-Object { $_.UserName -notlike "*\SYSTEM" }
-                }
-            } while ($process)
-            Write-Host "MSI End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-        }
+        # Running version
+        Write-Host "Running version:"
+        $versionFile = Join-Path $AlyaScriptDir "version.json"
+        Get-Content -Path $versionFile -Raw -Encoding UTF8
 
+        # Uninstalling teams machine wide
+		Write-Host "Uninstalling teams machine wide"
+		$resultStr = & "$AlyaScriptDir\teamsbootstrapper.exe" -u
+		$resultStr
+		
+        # Installing bootstrapper online for all users
+		Write-Host "Installing bootstrapper online for all users"
+		$resultStr = & "$AlyaScriptDir\teamsbootstrapper.exe" -p
+		$resultStr
+
+        # Setting version in registry
+		Write-Host "Setting version in registry"
+        $versionFile = Join-Path $AlyaScriptDir "version.json"
+        $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        $version = [Version]$versionObj.version
+        $regPath = "HKLM:\SOFTWARE\AlyaConsulting\Intune\Win32AppVersions"
+        $valueName = "TeamsBootStrapper"
+        if (!(Test-Path $regPath))
+        {
+            New-Item -Path $regPath -Force
+        }
+        $prop = Get-ItemProperty -Path $regPath -Name $valueName -ErrorAction SilentlyContinue
+        if (-Not $prop)
+        {
+            New-ItemProperty -Path $regPath -Name $valueName -Value $version -PropertyType String -Force
+        }
+        else
+        {
+            Set-ItemProperty -Path $regPath -Name $valueName -Value $version -Force
+        }
     }
     catch
     {   

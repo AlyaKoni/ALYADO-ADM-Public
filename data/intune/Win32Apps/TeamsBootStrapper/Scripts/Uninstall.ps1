@@ -30,7 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    24.08.2023 Konrad Brunner       Initial Version
+    25.07.2024 Konrad Brunner       Initial Version
 
 #>
 
@@ -76,28 +76,35 @@ if (![System.Environment]::Is64BitProcess)
 }
 else
 {
-    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\TeamsMachineWide-$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-TeamsBootStrapper-$($AlyaTimeString).log" -Force
 
     try
     {
         $ErrorActionPreference = "Stop"
 
-		$MsiPkg64Guid = "{731F6BAA-A986-45A4-8936-7C3AAAAA760B}"
-		$msiExecUninstallArgs = "/X $MsiPkg64Guid /quiet /l*v C:\ProgramData\AlyaConsulting\Logs\TeamsMachineWide-Install-msiexecUninstall64.log"
+        # Uninstalling bootstrapper online for all users
+		& "$AlyaScriptDir\teamsbootstrapper.exe" -x
 
-		Write-Host "About to uninstall 64-bit MSI using this msiexec command:"
-		Write-Host " msiexec.exe $msiExecUninstallArgs"
-
-		$res = Start-Process "msiexec.exe" -ArgumentList $msiExecUninstallArgs -Wait -PassThru -WindowStyle Hidden
-		if ($res.ExitCode -eq 0)
-		{
-			Write-Host "MsiExec completed successfully."
-		}
-		else
-		{
-			throw "ERROR: MsiExec failed with exit code $($res.ExitCode)"
-		}
-		
+        # Setting version in registry
+		$version = "0.0.0.0"
+        $versionFile = Join-Path $AlyaScriptDir "version.json"
+        $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        $version = [Version]$versionObj.version
+        $regPath = "HKLM:\SOFTWARE\AlyaConsulting\Intune\Win32AppVersions"
+        $valueName = "TeamsBootStrapper"
+        if (!(Test-Path $regPath))
+        {
+            New-Item -Path $regPath -Force
+        }
+        $prop = Get-ItemProperty -Path $regPath -Name $valueName -ErrorAction SilentlyContinue
+        if (-Not $prop)
+        {
+            New-ItemProperty -Path $regPath -Name $valueName -Value $version -PropertyType String -Force
+        }
+        else
+        {
+            Set-ItemProperty -Path $regPath -Name $valueName -Value $version -Force
+        }
     }
     catch
     {   

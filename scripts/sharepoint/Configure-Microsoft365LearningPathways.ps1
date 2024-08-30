@@ -115,7 +115,7 @@ if ($seleniumBrowser) {
 		if ($Global:AlyaSeleniumBrowser) {
 			$browser = $Global:AlyaSeleniumBrowser
 		} else {
-			$browser = Get-SeleniumBrowser
+			$browser = Get-SeleniumChromeBrowser
 		}
 	}
 }

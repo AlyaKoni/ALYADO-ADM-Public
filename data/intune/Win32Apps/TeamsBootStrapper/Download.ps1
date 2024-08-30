@@ -1,6 +1,8 @@
-@echo off
+﻿#Requires -Version 2
 
-goto :COMMENTS
+<#
+    Copyright (c) Alya Consulting, 2019-2024
+
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
@@ -23,13 +25,41 @@ goto :COMMENTS
     Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
     Siehe die GNU General Public License fuer weitere Details:
     https://www.gnu.org/licenses/gpl-3.0.txt
-:COMMENTS
 
-if not exist C:\ProgramData\AlyaConsulting mkdir C:\ProgramData\AlyaConsulting
-if not exist C:\ProgramData\AlyaConsulting\Logs mkdir C:\ProgramData\AlyaConsulting\Logs
-for /f %%a in ('powershell.exe -Command "Get-Date -format yyyyMMddHHmmssfff"') do set Timestamp=%%a
-set Timestamp=%Timestamp: =0%
-powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -File "%~dp0Uninstall.ps1" 2>&1 1>>C:\ProgramData\AlyaConsulting\Logs\Uninstall.cmd-%Timestamp%.log
-set RETURNCODE=%ERRORLEVEL%
-echo RETURNCODE: %RETURNCODE% 1>>C:\ProgramData\AlyaConsulting\Logs\Uninstall.cmd-%Timestamp%.log
-EXIT /B %RETURNCODE%
+
+#>
+
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+
+$pageUrl = "https://go.microsoft.com/fwlink/?linkid=2243204&clcid=0x409"
+$packageRoot = "$PSScriptRoot"
+$contentRoot = Join-Path $packageRoot "Content"
+if (-Not (Test-Path $contentRoot))
+{
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
+}
+$resp = Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\teamsbootstrapper.exe"
+if (-Not (Test-Path "$contentRoot\teamsbootstrapper.exe"))
+{
+    throw "Not able to download teamsbootstrapper.exe"
+}
+
+$toInstall = Get-Item -Path "$contentRoot\teamsbootstrapper.exe"
+$versionFile = Join-Path $packageRoot "version.json"
+if ((Test-Path $versionFile))
+{
+    $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    $version = [Version]$versionObj.version
+}
+else
+{
+    $versionObj = @{}
+    $versionObj.version = "1.0"
+    $version = [Version]$versionObj.version
+}
+Write-Host "      actual version: $version"
+
+$version = [Version]$toInstall.VersionInfo.FileVersion
+Write-Host "      new version: $version"
+$versionObj.version = $version.ToString()
+$versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force

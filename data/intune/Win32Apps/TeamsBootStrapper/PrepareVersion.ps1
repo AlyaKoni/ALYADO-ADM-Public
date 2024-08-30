@@ -29,27 +29,4 @@
 
 #>
 
-. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
-
-$pageUrl = "https://teams.microsoft.com/downloads/desktopurl?env=production&plat=windows&arch=x64&managedInstaller=true&download=true"
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
-{
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
-}
-$resp = Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\Teams_windows_x64.msi"
-if (-Not (Test-Path "$contentRoot\Teams_windows_x64.msi"))
-{
-    throw "Not able to download Teams_windows_x64.msi"
-}
-
-$pageUrl = "https://raw.githubusercontent.com/microsoft/TeamsMsiOverride/main/src/CheckMsiOverride.ps1"
-$resp = Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\CheckMsiOverride.ps1"
-if (-Not (Test-Path "$contentRoot\CheckMsiOverride.ps1"))
-{
-    throw "Not able to download CheckMsiOverride.ps1"
-}
-$content = Get-Content -Path "$contentRoot\CheckMsiOverride.ps1" -Encoding UTF8 -Raw
-$content = $content.Replace("`$env:TEMP\msiOverrideCheck_", "C:\ProgramData\AlyaConsulting\Logs\TeamsMachineWide-Install-")
-$content | Set-Content -Path "$contentRoot\CheckMsiOverride.ps1" -Encoding UTF8 -Force
+# already done in Download.ps1

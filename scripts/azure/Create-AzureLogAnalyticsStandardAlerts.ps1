@@ -31,8 +31,8 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     10.11.2023 Konrad Brunner       Initial Version
-	14.03.2024 Konrad Brunner       Fixes, general rework, added new workspaces
-	09.04.2024 Konrad Brunner       Added Linux definitions
+    14.03.2024 Konrad Brunner       Fixes, general rework, added new workspaces
+    09.04.2024 Konrad Brunner       Added Linux definitions
 
 #>
 
@@ -1147,10 +1147,10 @@ function Create-Alert($Subscription, $AlertText,$AlertResourceGroupName,$LogAnaW
     }
 }
 
-function Prepare-StandardAlerts ($AlyaSubscriptionName, $AlertResourceGroupName, $WrkspcResourceGroupName, $ActionGroupResourceGroupName, $ActionGroupName, $WrkspcName)
+function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName, $WrkspcResourceGroupName, $ActionGroupResourceGroupName, $ActionGroupName, $WrkspcName)
 {
     # Switching subscription
-    $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName
+    $sub = Get-AzSubscription -SubscriptionName $AlertSubscriptionName
     $null = Set-AzContext -Subscription $sub.Id
 
     # Checking ressource group

@@ -39,6 +39,7 @@
 Param(
     [string[]]$directoriesToAnalyse = @("C:\Users"),
     [string[]]$urlsToDocLibs = @("sites/example/DocLib1"),
+    [string]$maxOneDriveSyncPath = "C:\Users\maxprename.maxlastname\EntraIdTenantNameInProperties\maxSiteName - maxLibTitle",
     [string]$delemitter = ","
 )
 
@@ -312,7 +313,7 @@ namespace SharePointFileShareMigrationAnalysis
             return results;
         }
 
-        internal static DirInfo GetInfo(string root, string di, string path, string delemitter, StreamWriter ffi, StreamWriter cfi, StreamWriter efi, Dictionary<string, DirInfo> typeInfo)
+        internal static DirInfo GetInfo(string root, string di, string path, string oneDrivePath, string delemitter, StreamWriter ffi, StreamWriter cfi, StreamWriter efi, Dictionary<string, DirInfo> typeInfo)
         {
             string name = GetName(di);
             if (!IsFolderReadable(di))
@@ -428,26 +429,22 @@ namespace SharePointFileShareMigrationAnalysis
             }
         }
 
-        public static void Analyse(string[] dirs, string[] urls, string csvLocation, string delemitter)
+        public static void Analyse(string[] dirs, string[] urls, string oneDrivePath, string csvLocation, string delemitter)
         {
             try
             {
-                //using (StreamWriter ffi = new FileInfo(csvLocation+"\\SPShareAnalysis_Files.csv").CreateText())
                 using (StreamWriter ffi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Files.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                 {
                     ffi.AutoFlush = true;
                     lock (ffi) { ffi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { "Path", "Size [Bytes]", "PathLength" }); }
-                    //using (StreamWriter cfi = new FileInfo(csvLocation+"\\SPShareAnalysis_Dirs.csv").CreateText())
                     using (StreamWriter cfi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Dirs.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                     {
                         cfi.AutoFlush = true;
                         lock (cfi) { cfi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"" + delemitter + "\"{3}\"" + delemitter + "\"{4}\"" + delemitter + "\"{5}\"" + delemitter + "\"{6}\"", new object[] { "Path", "#Files", "#Dirs", "Size [Bytes]", "TotalSize [Bytes]", "#FilesTotal", "MaxPathLength" }); }
-                        //using (StreamWriter efi = new FileInfo(csvLocation+"\\SPShareAnalysis_Errors.csv").CreateText())
                         using (StreamWriter efi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Errors.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                         {
                             efi.AutoFlush = true;
                             lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { "Path", "Type", "Error" }); }
-                            //using (StreamWriter tfi = new FileInfo(csvLocation+"\\SPShareAnalysis_Types.csv").CreateText())
                             using (StreamWriter tfi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Types.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                             {
                                 tfi.AutoFlush = true;
@@ -461,7 +458,7 @@ namespace SharePointFileShareMigrationAnalysis
                                 {
                                     string currentUrl = urls[Array.IndexOf(dirs, currentDir)];
                                     currentUrl = currentUrl.TrimEnd("/\\".ToCharArray()) + "/";
-                                    GetInfo(currentDir, currentDir, currentUrl, delemitter, ffi, cfi, efi, typeInfo);
+                                    GetInfo(currentDir, currentDir, currentUrl, oneDrivePath, delemitter, ffi, cfi, efi, typeInfo);
                                 });
                                 foreach (KeyValuePair<string, DirInfo> type in typeInfo)
                                     lock (tfi) { tfi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { type.Key, type.Value.Files, type.Value.Size }); }
@@ -520,7 +517,7 @@ if (-Not (Test-Path $AlyaTemp))
 }
 
 Write-Host "Analysing directories" -ForegroundColor $CommandInfo
-[SharePointFileShareMigrationAnalysis.Helper]::Analyse($directoriesToAnalyse, $urlsToDocLibs, $AlyaTemp, $delemitter)
+[SharePointFileShareMigrationAnalysis.Helper]::Analyse($directoriesToAnalyse, $urlsToDocLibs, $maxOneDriveSyncPath, $AlyaTemp, $delemitter)
 
 Write-Host "Exporting excel file:" -ForegroundColor $CommandInfo
 $outputFile = "$($AlyaData)\sharepoint\FileSystemAnalysis4Migration.xlsx"

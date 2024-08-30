@@ -32,11 +32,13 @@
     ---------- -------------------- ----------------------------
     01.02.2021 Konrad Brunner       Initial Creation
     03.06.2024 Konrad Brunner       Added try catch
+    16.08.2024 Konrad Brunner       ignoreDomains
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string[]]$ignoreDomains = $null
 )
 
 #Reading configuration
@@ -62,6 +64,7 @@ $domains = @()
 $domains += $AlyaDomainName
 foreach ($dom in $AlyaAdditionalDomainNames)
 {
+    if ($ignoreDomains -and $dom -in $ignoreDomains) { continue }
     $domains += $dom
 }
 

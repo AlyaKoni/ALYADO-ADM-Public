@@ -53,6 +53,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-PasswordReset-$($AlyaTim
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
@@ -60,6 +61,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-MgGraph -Scopes @("Directory.Read.All","Policy.ReadWrite.Authorization")
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 # =============================================================
 # O365 stuff
@@ -78,7 +80,7 @@ if ($seleniumBrowser) {
 		if ($Global:AlyaSeleniumBrowser) {
 			$browser = $Global:AlyaSeleniumBrowser
 		} else {
-			$browser = Get-SeleniumBrowser
+			$browser = Get-SeleniumChromeBrowser
 		}
 	}
 }

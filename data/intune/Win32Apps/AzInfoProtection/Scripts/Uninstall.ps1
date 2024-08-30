@@ -93,7 +93,7 @@ else
             try {
                 $publisher = Get-ItemPropertyValue -Path ($reg.PSPath+"\InstallProperties") -Name "Publisher" -ErrorAction SilentlyContinue
             } catch {}
-            if ($displayName -eq "Microsoft Azure Information Protection" -and $publisher -eq "Microsoft Corporation")
+            if ($displayName -eq "Microsoft Purview Information Protection" -and $publisher -eq "Microsoft Corporation")
             {
                 Write-Host "Uninstalling $displayName"
                 Write-Host "with infos from $($reg.Name)"

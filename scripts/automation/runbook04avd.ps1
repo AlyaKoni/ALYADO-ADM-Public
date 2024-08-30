@@ -34,6 +34,15 @@
     01.05.2020 Konrad Brunner       Added RDS stuff
     18.10.2021 Konrad Brunner       Move to Az
     12.03.2024 Konrad Brunner       Implemented new managed identity concept
+    31.07.2024 Konrad Brunner       Implemented WeekDay and Week in month
+
+	timeTag examples:
+	05:00
+	07:30
+	07:30(1,2,3,4,5) (WeekDay): Sunday=0
+	07:30(1)[1,l] [Week in month]: 1,2,3,4,5,L=last week,l=last 7 days in month
+	07:30[1]
+	07:30(1,2,3,4,5);06:30[1] (separate multiple times with ;)
 
 #>
 
@@ -68,6 +77,10 @@ $grpNamePrjTeam = "##AlyaProjectTeamsGroup##"
 
 # Other settings
 $TimeZone = "##AlyaTimeZone##"
+$startTimeTagName = "STARTTIME"
+$stopTimeTagName = "STOPTIME"
+$onlyStartStopOnce = $false
+$informUsers = $true
 
 # Check pause during certificate update
 if ( (Get-Date).Day -eq 1 )
@@ -84,7 +97,7 @@ Write-Output "Login to Az using system-assigned managed identity"
 Disable-AzContextAutosave -Scope Process | Out-Null
 try
 {
-    $AzureContext = (Connect-AzAccount -Identity -Environment $AlyaAzureEnvironment).Context
+    $AzureContext = (Connect-AzAccount -Identity -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId).Context
 }
 catch
 {
@@ -124,18 +137,14 @@ function InformUsers($vmName)
     {
         $rGrp = $hPool.Id.Split("/")[4]
         $sessHosts = Get-AzWvdSessionHost -ResourceGroupName $rGrp -HostPoolName $hPool.Name
-    Write-Output "Hosts"
         foreach($sessHost in $sessHosts)
         {
             $hName = $sessHost.Name.Split("/")[1].Split(".")[0]
             $sName = $sessHost.Name.Split("/")[1]
-    Write-Output "Host $hName"
             if ($vmName -ne $hName) { continue }
             $sessions = Get-AzWvdUserSession -ResourceGroupName $rGrp -HostPoolName $hPool.Name -SessionHostName $sName
-     Write-Output "Sessions"
            foreach($session in $sessions)
             {
-     Write-Output "Send"
                Send-AzWvdUserSessionMessage -ResourceGroupName $rGrp `
                     -HostPoolName $hPool.Name `
                     -SessionHostName $sName `
@@ -189,6 +198,26 @@ try {
 	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, $TimeZone)
 	Write-Output "Run time $($runTime)"
     $infTime = $runTime.AddHours(1)
+	Write-Output "Inform Time $($infTime)"
+
+	$firstDay = Get-Date $runTime -Day 1
+	$lastDay = $firstDay.AddMonths(1).AddDays(-1)
+	$weekNumber = 0
+	$maxWeek = 0
+	for ($w = 0; $w -lt 7; $w++)
+	{
+		$weekDay = $firstDay.AddDays($w * 7)
+		if ($runTime.DayOfYear -ge $weekDay.DayOfYear)
+		{
+			$weekNumber = $w + 1
+		}
+		if ($runTime.Month -eq $weekDay.Month)
+		{
+			$maxWeek++
+		}
+	}
+	$isLastWeek = $weekNumber -eq $maxWeek
+	$isLastWeek7 = ($lastDay.DayOfYear - $runTime.DayOfYear) -lt 7
 
 	# Processing subscriptions
 	foreach($sub in $subs)
@@ -196,127 +225,248 @@ try {
 		"Processing subscription: $($sub)"
         $null = Set-AzContext -Subscription $sub
 
+		# Processing resource groups
 		Get-AzResourceGroup | Foreach-Object {
 			$ResGName = $_.ResourceGroupName
 			Write-Output "  Checking ressource group $($ResGName)"
 			foreach($vm in (Get-AzVM -ResourceGroupName $ResGName))
 			{
 				Write-Output "    Checking VM $($vm.Name)"
+				$startTimeDefs = @()
+				$stopTimeDefs = @()
+				$informsDone = @()
+				$stopsDone = @()
 				$tags = $vm.Tags
 				$tKeys = $tags | Select-Object -ExpandProperty keys
-				$startTime = $null
-				$stopTime = $null
 				foreach ($tkey in $tkeys)
 				{
-					if ($tkey.ToUpper() -eq "STARTTIME")
+					if ($tkey.ToUpper() -eq $startTimeTagName)
 					{
 						$startTimeTag = $tags[$tkey]
-						Write-Output "- startTimeTag: $($startTimeTag)"
-	                    $startTimeTagWd = $null
-	                    if ($startTimeTag.Contains("("))
-	                    {
-	                        Write-Output "- Today is $($runTime.DayOfWeek) which is day $($runTime.DayOfWeek.value__) in week"
-	                        $startTimeTagWd = $startTimeTag.Split("(")[1].Replace(")","").Trim(",").Split(",")
-	                        $startTimeTag = $startTimeTag.Split("(")[0]
-	                    }
-						try { $startTime = [DateTime]::parseexact($startTimeTag,"HH:mm",$null) }
-						catch { $startTime = $null }
-	                    if ($startTimeTagWd -ne $null -and $runTime.DayOfWeek.value__ -notin $startTimeTagWd)
-	                    {
-	                        $startTime = $null
-	                    }
-						Write-Output "- startTime parsed: $($startTime)"
-					}
-					if ($tkey.ToUpper() -eq "STOPTIME")
-					{
-						$stopTimeTag = $tags[$tkey]
-						Write-Output "- stopTimeTag: $($stopTimeTag)"
-	                    $stopTimeTagWd = $null
-	                    if ($stopTimeTag.Contains("("))
-	                    {
-	                        Write-Output "- Today is $($runTime.DayOfWeek) which is day $($runTime.DayOfWeek.value__) in week"
-	                        $stopTimeTagWd = $stopTimeTag.Split("(")[1].Replace(")","").Trim(",").Split(",")
-	                        $stopTimeTag = $stopTimeTag.Split("(")[0]
-	                    }
-						try { $stopTime = [DateTime]::parseexact($stopTimeTag,"HH:mm",$null) }
-						catch { $stopTime = $null }
-	                    if ($stopTimeTagWd -ne $null -and $runTime.DayOfWeek.value__ -notin $stopTimeTagWd)
-	                    {
-	                        $stopTime = $null
-	                    }
-						Write-Output "- stopTime parsed: $($stopTime)"
-					}
-				}
-	            if ($startTime)
-	            {
-	                if ($stopTime)
-	                {
-						if ($startTime -lt $stopTime)
+						Write-Output "- startTimeTag on vm: $($startTimeTag)"
+						$startTimeTagValues = $startTimeTag.Split(";")
+						foreach($startTimeTagValue in $startTimeTagValues)
 						{
-			                if (-Not ($infTime -lt $stopTime -and $infTime -gt $startTime))
-			                {
-	                            Write-Output "Informing users about shutdown in 1 hour"
-				                InformUsers -vmName $vm.Name
-			                }
-							if ($runTime -lt $stopTime -and $runTime -gt $startTime)
+							$startTime = $null
+							$startTimeWds = $null
+							$startTimeWks = $null
+							if (-Not [string]::IsNullOrEmpty($startTimeTagValue))
 							{
-								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-								foreach ($VMStatus in $VMDetail.Statuses)
+								Write-Output "- startTimeTag: $($startTimeTagValue)"
+								if ($startTimeTagValue.Contains("(") -or $startTimeTagValue.Contains("["))
 								{
-									Write-Output "- VM Status: $($VMStatus.Code)"
-									if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
-									{
-										Write-Output "- Starting VM"
-										Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
-									}
+									if ($startTimeTagValue.Contains("(")) { $startTimeWds = $startTimeTagValue.Split("(")[1].Split(")")[0].Split(",") }
+									if ($startTimeTagValue.Contains("[")) { $startTimeWks = $startTimeTagValue.Split("[")[1].Split("]")[0].Split(",") }
+									$startTimeTag = $startTimeTagValue.Split("(")[0].Split("[")[0]
 								}
-							}
-							else
-							{
-								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-								foreach ($VMStatus in $VMDetail.Statuses)
+								else
 								{
-									Write-Output "- VM Status: $($VMStatus.Code)"
-									if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
-									{
-										Write-Output "- Stopping VM"
-									    LogOffSessions -vmName $vm.Name
-										Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
-									}
+									$startTimeTag = $startTimeTagValue
+								}
+								try { $startTime = [DateTime]::parseexact($startTimeTag,"HH:mm",$null).AddDays($dayOffset) }
+								catch { $startTime = $null }
+								Write-Output "- startTime parsed: $($startTime)"
+								Write-Output "- startTimeWds parsed: $($startTimeWds)"
+								Write-Output "- startTimeWks parsed: $($startTimeWks)`n"
+								$startTimeDefs += @{
+									startTimeTag = $startTimeTagValue
+									startTime = $startTime
+									startTimeWds = $startTimeWds
+									startTimeWks = $startTimeWks
 								}
 							}
 						}
-						else
+					}
+					if ($tkey.ToUpper() -eq $stopTimeTagName)
+					{
+						$stopTimeTag = $tags[$tkey]
+						Write-Output "- stopTimeTag on vm: $($stopTimeTag)"
+						$stopTimeTagValues = $stopTimeTag.Split(";")
+						foreach($stopTimeTagValue in $stopTimeTagValues)
 						{
-			                if ($infTime -lt $startTime -and $infTime -gt $stopTime)
-			                {
-	                            Write-Output "Informing users about shutdown in 1 hour"
-				                InformUsers -vmName $vm.Name
-			                }
-							if ($runTime -lt $startTime -and $runTime -gt $stopTime)
+							$stopTime = $null
+							$stopTimeWds = $null
+							$stopTimeWks = $null
+							if (-Not [string]::IsNullOrEmpty($stopTimeTagValue))
 							{
-								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-								foreach ($VMStatus in $VMDetail.Statuses)
+								Write-Output "- stopTimeTag: $($stopTimeTagValue)"
+								if ($stopTimeTagValue.Contains("(") -or $stopTimeTagValue.Contains("["))
 								{
-									Write-Output "- VM Status: $($VMStatus.Code)"
-									if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
-									{
-										Write-Output "- Stopping VM"
-									    LogOffSessions -vmName $vm.Name
-										Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
-									}
+									if ($stopTimeTagValue.Contains("(")) { $stopTimeWds = $stopTimeTagValue.Split("(")[1].Split(")")[0].Split(",") }
+									if ($stopTimeTagValue.Contains("[")) { $stopTimeWks = $stopTimeTagValue.Split("[")[1].Split("]")[0].Split(",") }
+									$stopTimeTag = $stopTimeTagValue.Split("(")[0].Split("[")[0]
+								}
+								else
+								{
+									$stopTimeTag = $stopTimeTagValue
+								}
+								try { $stopTime = [DateTime]::parseexact($stopTimeTag,"HH:mm",$null).AddDays($dayOffset) }
+								catch { $stopTime = $null }
+								Write-Output "- stopTime parsed: $($stopTime)"
+								Write-Output "- stopTimeWds parsed: $($stopTimeWds)"
+								Write-Output "- stopTimeWks parsed: $($stopTimeWks)`n"
+								$stopTimeDefs += @{
+									stopTimeTag = $stopTimeTagValue
+									stopTime = $stopTime
+									stopTimeWds = $stopTimeWds
+									stopTimeWks = $stopTimeWks
 								}
 							}
-							else
+						}
+					}
+				}
+	            if ($startTimeDefs.Count -gt 0)
+	            {
+	                if ($stopTimeDefs.Count -gt 0)
+	                {
+						foreach($startTimeDef in $startTimeDefs)
+						{
+							foreach($stopTimeDef in $stopTimeDefs)
 							{
-								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-								foreach ($VMStatus in $VMDetail.Statuses)
+								$startTime = $startTimeDef.startTime
+								$startTimeTag = $startTimeDef.startTimeTag
+								$ignoreStart = $false
+								if ($null -ne $startTimeDef.startTimeWds -and $runTime.DayOfWeek.value__ -notin $startTimeDef.startTimeWds)
 								{
-									Write-Output "- VM Status: $($VMStatus.Code)"
-									if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
+									Write-Output "- Start ignored. Not right weekday."
+									$ignoreStart = $true
+								}
+								if ($null -ne $startTimeDef.startTimeWks -and $weekNumber -notin $startTimeDef.startTimeWks -and -not ($startTimeDef.startTimeWks -contains "l"  -and $isLastWeek7) -and -not ($startTimeDef.startTimeWks -contains "L" -and $isLastWeek))
+								{
+									Write-Output "- Start ignored. Not right week."
+									$ignoreStart = $true
+								}
+								$stopTime = $stopTimeDef.stopTime
+								$stopTimeTag = $stopTimeDef.stopTimeTag
+								$ignoreStop = $false
+								if ($null -ne $stopTimeDef.stopTimeWds -and $runTime.DayOfWeek.value__ -notin $stopTimeDef.stopTimeWds)
+								{
+									Write-Output "- Stop ignored. Not right weekday."
+									$ignoreStop = $true
+								}
+								if ($null -ne $stopTimeDef.stopTimeWks -and $weekNumber -notin $stopTimeDef.stopTimeWks -and -not ($stopTimeDef.stopTimeWks -contains "l"  -and $isLastWeek7) -and -not ($stopTimeDef.stopTimeWks -contains "L" -and $isLastWeek))
+								{
+									Write-Output "- Stop ignored. Not right week."
+									$ignoreStop = $true
+								}
+								if ($startTime -lt $stopTime)
+								{
+									if ($informUsers -and (-Not ($infTime -lt $stopTime -and $infTime -gt $startTime) -and [Math]::Abs($stopTime.Subtract($infTime).TotalMinutes) -lt 60))
 									{
-										Write-Output "- Starting VM"
-										Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
+										if ($informsDone -notcontains $stopTimeTag -and -not $ignoreStop)
+										{
+											Write-Output "- Informing users about shutdown in 1 hour (tag=$stopTimeTag)"
+											InformUsers -vmName $vm.Name
+											$informsDone += $stopTimeTag
+										}
+									}
+									if ($runTime -lt $stopTime -and $runTime -gt $startTime)
+									{
+										$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+										foreach ($VMStatus in $VMDetail.Statuses)
+										{
+											Write-Output "- VM Status: $($VMStatus.Code)"
+											if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
+											{
+												if ($onlyStartStopOnce -eq $false -or [Math]::Abs($startTime.Subtract($runTime).TotalMinutes) -lt 60)
+												{
+													if (-not $ignoreStart)
+													{
+														Write-Output "- Starting VM (tag=$startTimeTag)"
+														Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
+													}
+												}
+												else
+												{
+													Write-Output "- Start ignored by onlyStartStopOnce."
+												}
+											}
+										}
+									}
+									else
+									{
+										$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+										foreach ($VMStatus in $VMDetail.Statuses)
+										{
+											Write-Output "- VM Status: $($VMStatus.Code)"
+											if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+											{
+												if ($onlyStartStopOnce -eq $false -or [Math]::Abs($stopTime.Subtract($runTime).TotalMinutes) -lt 60)
+												{
+													if ($stopsDone -notcontains $stopTimeTag -and -not $ignoreStop)
+													{
+														Write-Output "- Stopping VM (tag=$stopTimeTag)"
+														LogOffSessions -vmName $vm.Name
+														Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+														$stopsDone += $stopTimeTag
+													}
+												}
+												else
+												{
+													Write-Output "- Stop ignored by onlyStartStopOnce."
+												}
+											}
+										}
+									}
+								}
+								else
+								{
+									if ($informUsers -and ($infTime -lt $startTime -and $infTime -gt $stopTime -and [Math]::Abs($stopTime.Subtract($infTime).TotalMinutes) -lt 60))
+									{
+										if (-not $ignoreStop)
+										{
+											Write-Output "Informing users about shutdown in 1 hour (tag=$stopTimeTag)"
+											InformUsers -vmName $vm.Name
+											$informsDone += $stopTimeTag
+										}
+									}
+									if ($runTime -lt $startTime -and $runTime -gt $stopTime)
+									{
+										$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+										foreach ($VMStatus in $VMDetail.Statuses)
+										{
+											Write-Output "- VM Status: $($VMStatus.Code)"
+											if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+											{
+												if ($onlyStartStopOnce -eq $false -or [Math]::Abs($stopTime.Subtract($runTime).TotalMinutes) -lt 60)
+												{
+													if (-not $ignoreStop)
+													{
+														Write-Output "- Stopping VM (tag=$stopTimeTag)"
+														LogOffSessions -vmName $vm.Name
+														Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+														$stopsDone += $stopTimeTag
+													}
+												}
+												else
+												{
+													Write-Output "- Stop ignored by onlyStartStopOnce."
+												}
+											}
+										}
+									}
+									else
+									{
+										$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+										foreach ($VMStatus in $VMDetail.Statuses)
+										{
+											Write-Output "- VM Status: $($VMStatus.Code)"
+											if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
+											{
+												if ($onlyStartStopOnce -eq $false -or [Math]::Abs($startTime.Subtract($runTime).TotalMinutes) -lt 60)
+												{
+													if (-not $ignoreStart)
+													{
+														Write-Output "- Starting VM (tag=$startTimeTag)"
+														Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
+													}
+												}
+												else
+												{
+													Write-Output "- Start ignored by onlyStartStopOnce."
+												}
+											}
+										}
 									}
 								}
 							}
@@ -324,44 +474,100 @@ try {
 	                }
 		            else
 		            {
-		                if ($runTime -gt $startTime)
-		                {
-						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-						    foreach ($VMStatus in $VMDetail.Statuses)
-						    {
-							    Write-Output "- VM Status: $($VMStatus.Code)"
-							    if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
-							    {
-								    Write-Output "- Starting VM"
-								    Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
-							    }
-		                    }
-		                }
+						foreach($startTimeDef in $startTimeDefs)
+						{
+							$startTime = $startTimeDef.startTime
+							$startTimeTag = $startTimeDef.startTimeTag
+							$ignoreStart = $false
+							if ($null -ne $startTimeDef.startTimeWds -and $runTime.DayOfWeek.value__ -notin $startTimeDef.startTimeWds)
+							{
+								Write-Output "- Start ignored. Not right weekday."
+								$ignoreStart = $true
+							}
+							if ($null -ne $startTimeDef.startTimeWks -and $weekNumber -notin $startTimeDef.startTimeWks -and -not ($startTimeDef.startTimeWks -contains "l"  -and $isLastWeek7) -and -not ($startTimeDef.startTimeWks -contains "L" -and $isLastWeek))
+							{
+								Write-Output "- Start ignored. Not right week."
+								$ignoreStart = $true
+							}
+							if ($runTime -gt $startTime)
+							{
+								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+								foreach ($VMStatus in $VMDetail.Statuses)
+								{
+									Write-Output "- VM Status: $($VMStatus.Code)"
+									if($VMStatus.Code.CompareTo("PowerState/deallocated") -eq 0 -or $VMStatus.Code.CompareTo("PowerState/stopped") -eq 0)
+									{
+										if ($onlyStartStopOnce -eq $false -or [Math]::Abs($startTime.Subtract($runTime).TotalMinutes) -lt 60)
+										{
+											if (-not $ignoreStart)
+											{
+												Write-Output "- Starting VM (tag=$startTimeTag)"
+												Start-AzVM -ResourceGroupName $ResGName -Name $vm.Name
+											}
+										}
+										else
+										{
+											Write-Output "- Start ignored by onlyStartStopOnce."
+										}
+									}
+								}
+							}
+						}
 		            }
 	            }
 	            else
 	            {
-	                if ($stopTime)
+	                if ($stopTimeDefs.Count -gt 0)
 	                {
-			            if ($infTime -gt $stopTime)
-			            {
-	                        Write-Output "Informing users about shutdown in 1 hour"
-				            InformUsers -vmName $vm.Name
-			            }
-		                if ($runTime -gt $stopTime -or ($runTime.Hour -eq 0 -and $stopTime.Hour -eq 23))
-		                {
-						    $VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
-						    foreach ($VMStatus in $VMDetail.Statuses)
-						    {
-							    Write-Output "- VM Status: $($VMStatus.Code)"
-							    if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
-							    {
-								    Write-Output "- Stopping VM"
-								    LogOffSessions -vmName $vm.Name
-								    Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
-							    }
-		                    }
-		                }
+						foreach($stopTimeDef in $stopTimeDefs)
+						{
+							$stopTime = $stopTimeDef.stopTime
+							$stopTimeTag = $stopTimeDef.stopTimeTag
+							$ignoreStop = $false
+							if ($null -ne $stopTimeDef.stopTimeWds -and $runTime.DayOfWeek.value__ -notin $stopTimeDef.stopTimeWds)
+							{
+								Write-Output "- Stop ignored. Not right weekday."
+								$ignoreStop = $true
+							}
+							if ($null -ne $stopTimeDef.stopTimeWks -and $weekNumber -notin $stopTimeDef.stopTimeWks -and -not ($stopTimeDef.stopTimeWks -contains "l"  -and $isLastWeek7) -and -not ($stopTimeDef.stopTimeWks -contains "L" -and $isLastWeek))
+							{
+								Write-Output "- Stop ignored. Not right week."
+								$ignoreStop = $true
+							}
+							if ($informUsers -and ($infTime -gt $stopTime -and [Math]::Abs($stopTime.Subtract($infTime).TotalMinutes) -lt 60))
+							{
+								if (-not $ignoreStop)
+								{
+									Write-Output "Informing users about shutdown in 1 hour (tag=$stopTimeTag)"
+									InformUsers -vmName $vm.Name
+									$informsDone += $stopTimeTag
+								}
+							}
+							if ($runTime -gt $stopTime -or ($runTime.Hour -eq 0 -and $stopTime.Hour -eq 23))
+							{
+								$VMDetail = Get-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Status
+								foreach ($VMStatus in $VMDetail.Statuses)
+								{
+									Write-Output "- VM Status: $($VMStatus.Code)"
+									if($VMStatus.Code.CompareTo("PowerState/running") -eq 0)
+									{
+										if ($onlyStartStopOnce -eq $false -or [Math]::Abs($stopTime.Subtract($runTime).TotalMinutes) -lt 60)
+										{
+											if (-not $ignoreStop)
+											{
+												Write-Output "- Stopping VM (tag=$stopTimeTag)"
+												LogOffSessions -vmName $vm.Name
+												Stop-AzVM -ResourceGroupName $ResGName -Name $vm.Name -Force
+											}
+										}
+										else
+										{
+											Write-Output "- Stop ignored by onlyStartStopOnce."
+										}
+									}
+								}
+							}
+						}
 	                }
 	            }
 			}

@@ -44,6 +44,7 @@
 Param(
     [string]$inputFile = $null, #Defaults to "$AlyaData\aad\Lizenzen.xlsx"
     [bool]$useDirectAssignment = $true,
+    [bool]$useOnPremAndCloudGroups = $false,
     [string]$groupsInputFileForDirectAssignment = $null #Defaults to "$AlyaData\aad\Gruppen.xlsx"
 )
 
@@ -94,7 +95,8 @@ $licDefs = Import-Excel $inputFile -ErrorAction Stop
 
 # Configured licenses
 Write-Host "Configured licenses:" -ForegroundColor $CommandInfo
-$grpSuffixes = @("", "ONPREM", "CLOUD")
+$grpSuffixes = @("")
+if ($true -eq $useOnPremAndCloudGroups) { $grpSuffixes = @("", "ONPREM", "CLOUD") }
 $licNames = $null
 $fndMissingGroup = $false
 $byGroup = @{}

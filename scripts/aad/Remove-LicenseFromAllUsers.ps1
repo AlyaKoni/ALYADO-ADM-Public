@@ -30,65 +30,65 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    16.09.2020 Konrad Brunner       Initial Version
-    28.12.2021 Konrad Brunner       Switch to teams module
+    20.08.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [ValidateSet("User", "AutoAttendant", "CallQueue", IgnoreCase = $true)]
-    $type = "User",
-    [ValidateNotNullOrEmpty()]
-    $upn = "konrad.brunner@alyaconsulting.ch",
-    [ValidateNotNullOrEmpty()]
-    $number = "+41625620460"
+    [Parameter(Mandatory=$true)]
+    [string]$licenseToRemove
 )
-
-#Checking parms
-if ($number.StartsWith("tel:"))
-{
-    Write-Error "The number must not start with 'tel:'" -ErrorAction Continue
-    exit
-}
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Activate-User-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Remove-LicenseFromAllUsers-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "MicrosoftTeams"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users.Actions"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
 
-# Logins
-LoginTo-Teams
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Organization.Read.All")
 
 # =============================================================
-# O365 stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "PSTN | Activate-User | Teams" -ForegroundColor $CommandInfo
+Write-Host "AAD | Remove-LicenseFromAllUsers | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Main 
-if ($type -eq "User")
+# Getting license
+Write-Host "Getting license" -ForegroundColor $CommandInfo
+
+$Skus = Get-MgBetaSubscribedSku
+$Sku = $Skus | Where-Object { $_.SkuPartNumber -eq $licenseToRemove }
+if (-Not $Sku)
 {
-    Write-Host "Setting user $upn lineuri to $number" -ForegroundColor $CommandInfo
-    Set-CsPhoneNumberAssignment -Identity $upn -PhoneNumber $number -PhoneNumberType DirectRouting
-    Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName $AlyaPstnVoiceRoutePolicyName
-    #Set-CsTenantDialPlan -Identity $upn -PolicyName "Global"
-    Set-CsUserCallingSettings -Identity $upn -IsUnansweredenabled $False
-    Get-CsUserCallingSettings -Identity $upn
+    throw "Can't find license '$licenseToRemove'"
 }
-if ($type -eq "AutoAttendant" -or $type -eq "CallQueue")
+
+# Getting users
+Write-Host "Getting users" -ForegroundColor $CommandInfo
+$mgUsers = Get-MgBetaUser -Property "*" -All
+
+# Removing auth method
+Write-Host "Removing license '$licenseToRemove' on user:" -ForegroundColor $CommandInfo
+foreach($user in $mgUsers)
 {
-    Write-Host "Setting auto attendant or call queue $upn lineuri to $number" -ForegroundColor $CommandInfo
-    Set-CsPhoneNumberAssignment -Identity $upn -PhoneNumber $number -PhoneNumberType DirectRouting
-    #Set-CsOnlineApplicationInstance -Identity $upn -OnpremPhoneNumber $number
-    Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName $AlyaPstnVoiceRoutePolicyName
+    $assignedLicense = $user.AssignedLicenses | Where-Object { $_.SkuId -like $Sku.SkuId }
+    if ($assignedLicense)
+    {
+        Write-Host "$($user.UserPrincipalName)"
+        Set-MgUserLicense -UserId $user.Id -RemoveLicenses @($Sku.SkuId) -AddLicenses @{}
+    }
 }
 
 #Stopping Transscript
