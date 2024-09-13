@@ -55,6 +55,7 @@
 	22.07.2023 Konrad Brunner		Added non Public Cloud Environment Support
     16.10.2023 Konrad Brunner       Install-ModuleIfNotInstalled new param: doNotLoadModules
     01.05.2024 Konrad Brunner       Supporting MAC
+    13.09.2024 Konrad Brunner       AlyaPnPAppId
 
 #>
 
@@ -2057,15 +2058,15 @@ function LoginTo-PnP(
 {
     Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
 
-    if ($AlyaPnpEnvironment -eq "China" -and [string]::IsNullOrEmpty($AlyaPnPAppId))
+    if ([string]::IsNullOrEmpty($AlyaPnPAppId) -or $AlyaPnPAppId -eq "PleaseSpecify")
     {
-        Write-Warning "We need to register the PnP app for China tenants"
-
-        $regApp = Register-PnPAzureADApp -ApplicationName "PnP Management Shell" -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment `
-            -Interactive -SharePointDelegatePermissions AllSites.FullControl -SharePointApplicationPermissions Sites.FullControl.All `
-            -GraphApplicationPermissions Group.ReadWrite.All -GraphDelegatePermissions Group.ReadWrite.All
-
-        Write-Warning "Please store the AppId from generated app in configureEnv.ps1 in variable AlyaPnPAppId"
+        Write-Warning "We need to register the PnP app"
+        $regApp = Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "$($AlyaCompanyNameShortM365)PnPManagementShell" -Tenant $AlyaTenantName -Interactive
+        $pnpAppId = $regApp."AzureAppId/ClientId"
+        $cont = Get-Content -Path "$AlyaData\ConfigureEnv.ps1" -Raw -Encoding $AlyaUtf8Encoding
+        $cont = $cont.Replace("`$AlyaPnPAppId = `"PleaseSpecify`"", "`$AlyaPnPAppId = `"$pnpAppId`"")
+        $cont | Set-Content -Path "$AlyaData\ConfigureEnv.ps1" -Encoding $AlyaUtf8Encoding
+        Write-Warning "PnP AppId $pnpAppId has been set in variable AlyaPnPAppId in data\ConfigureEnv.ps1"
     }
 
     if ([string]::IsNullOrEmpty($TenantAdminUrl))

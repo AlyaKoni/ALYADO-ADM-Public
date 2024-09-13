@@ -434,10 +434,55 @@ foreach ($usrEmail in $siteReaders)
     Add-PnPGroupMember -Connection $siteCon -Group $mgroup -EmailAddress $usrEmail -SendEmail:$false
 }
 
-<# TODO
-    [string[]]$groupOwners = $null,
-    [string[]]$groupMembers = $null,
-#>
+# Setting group Owners
+if ($null -ne $groupOwners -and $groupOwners.Length -gt 0)
+{
+    Write-Host "Setting group Owners " -ForegroundColor $CommandInfo
+    $grpOwners = Get-PnPMicrosoft365GroupOwners -Connection $adminCon -Identity $m365GroupId
+    $grpOwnersNew = @($grpOwners.UserPrincipalName)
+    foreach($own in $groupOwners)
+    {
+        $fnd = $false
+        foreach($gown in $grpOwners)
+        {
+            if ($gown.UserPrincipalName -eq $own -or $gown.Email -eq $own)
+            {
+                $fnd = $true
+                break
+            }
+            if (-Not $fnd)
+            {
+                $grpOwnersNew += $own
+            }
+        }
+    }
+    Set-PnPMicrosoft365Group -Connection $adminCon -Identity $m365GroupId -Owners $grpOwnersNew
+}
+
+# Setting group Members
+if ($null -ne $groupMembers -and $groupMembers.Length -gt 0)
+{
+    Write-Host "Setting group Members " -ForegroundColor $CommandInfo
+    $grpMembers = Get-PnPMicrosoft365GroupMembers -Connection $adminCon -Identity $m365GroupId
+    $grpMembersNew = @($grpMembers.UserPrincipalName)
+    foreach($memb in $groupMembers)
+    {
+        $fnd = $false
+        foreach($gmemb in $grpMembers)
+        {
+            if ($gmemb.UserPrincipalName -eq $memb -or $gmemb.Email -eq $memb)
+            {
+                $fnd = $true
+                break
+            }
+            if (-Not $fnd)
+            {
+                $grpMembersNew += $memb
+            }
+        }
+    }
+    Set-PnPMicrosoft365Group -Connection $adminCon -Identity $m365GroupId -Members $grpMembersNew
+}
 
 # M365 Group Sharing Capability
 if ($siteTemplate -eq "TeamSite")

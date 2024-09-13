@@ -32,6 +32,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     18.07.2024 Konrad Brunner       Initial Version
+    02.09.2024 Konrad Brunner       Checking OneDrive sync path
 
 #>
 
@@ -39,6 +40,7 @@
 Param(
     [string[]]$directoriesToAnalyse = @("C:\Alya"),
     [string[]]$urlsToDocLibs = @("sites/XXXXSP-ADM-Daten/Freigegebene Dokumente"),
+    [string]$maxOneDriveSyncPath = "C:\Users\maxprename.maxlastname\EntraIdTenantNameInProperties\maxSiteName - maxLibTitle",
     [string]$delemitter = ","
 )
 
@@ -185,6 +187,7 @@ namespace SharePointFileShareMigrationAnalysis
         internal static long byteToGb = 1024 * 1024 * 1024;
         internal static long fileSizeLimit = 250;
         internal static int fullPathLimit = 400;
+        internal static int oneDrivePathLimit = 256;
         internal static int fileFolderNameLimit = 255;
         internal static int numFilesLimit = 300000;
         internal static string notAllowedChars = "\\/:*?\"<>|";
@@ -314,7 +317,7 @@ namespace SharePointFileShareMigrationAnalysis
             return results;
         }
 
-        internal static DirInfo GetInfo(string root, string di, string path, string delemitter, StreamWriter ffi, StreamWriter cfi, StreamWriter efi, Dictionary<string, DirInfo> typeInfo)
+        internal static DirInfo GetInfo(string root, string di, string path, int oneDrivePathTotLength, string delemitter, StreamWriter ffi, StreamWriter cfi, StreamWriter efi, Dictionary<string, DirInfo> typeInfo)
         {
             string name = GetName(di);
             if (!IsFolderReadable(di))
@@ -328,6 +331,7 @@ namespace SharePointFileShareMigrationAnalysis
             else
             {
                 int dirTotLength = di.Length - root.Length + path.Length;
+                int oneDriveDirTotLength = di.Length - root.Length + oneDrivePathTotLength;
                 if (name.IndexOfAny(notAllowedChars.ToCharArray()) > -1)
                     lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Not allowed character found: " + notAllowedChars }); }
                 if (name.Trim() != name)
@@ -341,6 +345,8 @@ namespace SharePointFileShareMigrationAnalysis
                     lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "A name forms is in root not allowed" }); }
                 if (dirTotLength > fullPathLimit)
                     efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Full folder path can have up to " + fullPathLimit + " characters" });
+                if (oneDriveDirTotLength > oneDrivePathLimit)
+                    efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "OneDrive client full folder path can have up to " + oneDrivePathLimit + " characters" });
                 if (name.Length > fileFolderNameLimit)
                     efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "Folder name can have up to " + fileFolderNameLimit + " characters" });
                 List<string> files = GetFiles(di);
@@ -373,6 +379,7 @@ namespace SharePointFileShareMigrationAnalysis
                         allFilesSize += fileSize;
                         string fname = GetName(fi);
                         int fileTotLength = dirTotLength + 1 + fname.Length;
+                        int oneDriveFileTotLength = oneDriveDirTotLength + 1 + fname.Length;
                         string fext = "";
                         if (fname.IndexOf(".") > -1) fext = fname.Substring(fname.LastIndexOf("."));
                         lock (typeInfo)
@@ -398,7 +405,9 @@ namespace SharePointFileShareMigrationAnalysis
                         if ((fileSize / byteToGb) > fileSizeLimit)
                             lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Too big. only " + fileSizeLimit + "GB allowed" }); }
                         if (fileTotLength > fullPathLimit)
-                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Folder name and file name combinations can have up to 400 characters" }); }
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Folder name and file name combinations can have up to " + fullPathLimit + " characters" }); }
+                        if (oneDriveFileTotLength > oneDrivePathLimit)
+                            lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "OneDrive client folder name and file name combinations can have up to " + oneDrivePathLimit + " characters" }); }
                         if (fname.Length > fileFolderNameLimit)
                             efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "File name can have up to 255 characters" });
                         if (fileTotLength > maxPathLength)
@@ -411,7 +420,7 @@ namespace SharePointFileShareMigrationAnalysis
                 },
                     (sdi) =>
                     {
-                        DirInfo subinfo = GetInfo(root, sdi, path, delemitter, ffi, cfi, efi, typeInfo);
+                        DirInfo subinfo = GetInfo(root, sdi, path, oneDrivePathTotLength, delemitter, ffi, cfi, efi, typeInfo);
                         lock (subDirs)
                         {
                             subDirsSize += subinfo.Size;
@@ -430,26 +439,22 @@ namespace SharePointFileShareMigrationAnalysis
             }
         }
 
-        public static void Analyse(string[] dirs, string[] urls, string csvLocation, string delemitter)
+        public static void Analyse(string[] dirs, string[] urls, int oneDrivePathTotLength, string csvLocation, string delemitter)
         {
             try
             {
-                //using (StreamWriter ffi = new FileInfo(csvLocation+"\\SPShareAnalysis_Files.csv").CreateText())
                 using (StreamWriter ffi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Files.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                 {
                     ffi.AutoFlush = true;
                     lock (ffi) { ffi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { "Path", "Size [Bytes]", "PathLength" }); }
-                    //using (StreamWriter cfi = new FileInfo(csvLocation+"\\SPShareAnalysis_Dirs.csv").CreateText())
                     using (StreamWriter cfi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Dirs.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                     {
                         cfi.AutoFlush = true;
                         lock (cfi) { cfi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"" + delemitter + "\"{3}\"" + delemitter + "\"{4}\"" + delemitter + "\"{5}\"" + delemitter + "\"{6}\"", new object[] { "Path", "#Files", "#Dirs", "Size [Bytes]", "TotalSize [Bytes]", "#FilesTotal", "MaxPathLength" }); }
-                        //using (StreamWriter efi = new FileInfo(csvLocation+"\\SPShareAnalysis_Errors.csv").CreateText())
                         using (StreamWriter efi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Errors.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                         {
                             efi.AutoFlush = true;
                             lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { "Path", "Type", "Error" }); }
-                            //using (StreamWriter tfi = new FileInfo(csvLocation+"\\SPShareAnalysis_Types.csv").CreateText())
                             using (StreamWriter tfi = new StreamWriter(File.Open(csvLocation + "\\SPShareAnalysis_Types.csv", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None), Encoding.UTF8))
                             {
                                 tfi.AutoFlush = true;
@@ -463,7 +468,7 @@ namespace SharePointFileShareMigrationAnalysis
                                 {
                                     string currentUrl = urls[Array.IndexOf(dirs, currentDir)];
                                     currentUrl = currentUrl.TrimEnd("/\\".ToCharArray()) + "/";
-                                    GetInfo(currentDir, currentDir, currentUrl, delemitter, ffi, cfi, efi, typeInfo);
+                                    GetInfo(currentDir, currentDir, currentUrl, oneDrivePathTotLength, delemitter, ffi, cfi, efi, typeInfo);
                                 });
                                 foreach (KeyValuePair<string, DirInfo> type in typeInfo)
                                     lock (tfi) { tfi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { type.Key, type.Value.Files, type.Value.Size }); }

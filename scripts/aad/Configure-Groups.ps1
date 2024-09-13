@@ -132,7 +132,7 @@ foreach ($group in $AllGroups)
                 else
                 {
                     if ($dynamicMembershipDisabled) { throw "Dynamic membership is disabled. Please update sheet!" }
-                    $groupTypes += @("DynamicMembership")
+                    $groupTypes += "DynamicMembership"
                     if ([string]::IsNullOrEmpty($group.Alias))
                     {
                         $exGrp = Update-MgBetaGroup -GroupId $exGrp.Id -Description $group.Description -DisplayName $group.DisplayName -GroupTypes $groupTypes -MembershipRule $group.DanymicRule -MembershipRuleProcessingState $ruleProcessingState -MailNickname $group.DisplayName -MailEnabled:$false -Visibility $group.Visibility

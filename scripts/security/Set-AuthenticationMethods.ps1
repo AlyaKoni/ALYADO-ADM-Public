@@ -36,7 +36,8 @@
 
 [CmdletBinding()]
 Param(
-    [bool]$minimalConfig = $false
+    [bool]$minimalConfig = $true,
+    [bool]$conditionalAccessEnabled = $true
 )
 
 #Reading configuration
@@ -335,7 +336,7 @@ if ($dirty) {
 }
 
 # Checking SystemCredentialPreferences exludes non mfa groups
-if (-Not $minimalConfig)
+if ($conditionalAccessEnabled)
 {
     Write-Host "Checking SystemCredentialPreferences" -ForegroundColor $CommandInfo
     if ($authenticationMethodPolicy.SystemCredentialPreferences.State -ne "disabled") {
@@ -344,14 +345,24 @@ if (-Not $minimalConfig)
             $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'"
             if (-Not $exlMfaDefaultsGroup)
             {
-                throw "Group `$AlyaNoMfaDefaultsGroupName='$AlyaNoMfaDefaultsGroupName' not found!"
+                $exGrp = New-MgBetaGroup -Description "Users of this group do not get security defaults" -DisplayName $AlyaNoMfaDefaultsGroupName -GroupTypes @() -MailNickname $AlyaNoMfaDefaultsGroupName -MailEnabled:$false -SecurityEnabled:$true
+                $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'"
+                if (-Not $exlMfaDefaultsGroup)
+                {
+                    throw "Group `$AlyaNoMfaDefaultsGroupName='$AlyaNoMfaDefaultsGroupName' not found!"
+                }
             }
         } else {
             if ($null -ne $AlyaMfaDisabledGroupName -and $AlyaMfaDisabledGroupName -ne "PleaseSpecify") {
                 $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaMfaDisabledGroupName'"
                 if (-Not $exlMfaDefaultsGroup)
                 {
-                    throw "Group `$AlyaMfaDisabledGroupName='$AlyaMfaDisabledGroupName' not found!"
+                    $exGrp = New-MgBetaGroup -Description "Users of this group do not get MFA prompts" -DisplayName $AlyaMfaDisabledGroupName -GroupTypes @() -MailNickname $AlyaMfaDisabledGroupName -MailEnabled:$false -SecurityEnabled:$true
+                    $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'"
+                    if (-Not $exlMfaDefaultsGroup)
+                    {
+                        throw "Group `$AlyaNoMfaDefaultsGroupName='$AlyaNoMfaDefaultsGroupName' not found!"
+                    }
                 }
             } else {
                 Write-Warning "No group to exlude!"

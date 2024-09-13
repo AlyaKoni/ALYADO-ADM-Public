@@ -262,6 +262,13 @@ $body = @"
                     "enabled": false,
                     "days": 0
                 }
+            }, {
+                "category": "RemoteNetworkHealthLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
             }
         ],
         "metrics": [],

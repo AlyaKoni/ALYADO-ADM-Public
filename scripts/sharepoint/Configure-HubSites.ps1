@@ -37,6 +37,7 @@
     07.07.2022 Konrad Brunner       New PnP Login and some fixes
     20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
     05.08.2023 Konrad Brunner       Added role admins
+    04.09.2024 Konrad Brunner       Added overwritePagesOnlyOnHubs param
 
 #>
 
@@ -44,6 +45,7 @@
 Param(
     [string]$siteLocale = "de-CH",
     [bool]$overwritePages = $false,
+    [string[]]$overwritePagesOnlyOnHubs = @(),
     [string]$hubSitesConfigurationFile = $null,
     [bool]$createHubSitesOnly = $false
 )
@@ -586,7 +588,7 @@ if (-Not $createHubSitesOnly)
 {
 
     Write-Host "Processing Hub Site Start Pages" -ForegroundColor $TitleColor
-    if ($overwritePages)
+    if ($overwritePages -or ($null -ne $overwritePagesOnlyOnHubs -and $overwritePagesOnlyOnHubs.Count -gt 0))
     {
 
         #Set-PnPTraceLog -On -WriteToConsole -Level Debug
@@ -594,6 +596,11 @@ if (-Not $createHubSitesOnly)
         foreach($hubSite in $hubSites)
         {
             #$hubSite = $hubSites[0]
+            if ($null -ne $overwritePagesOnlyOnHubs -and $overwritePagesOnlyOnHubs.Count -gt 0 -and `
+                $hubSite.short -notin $overwritePagesOnlyOnHubs)
+            {
+                continue
+            }
 		    $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$($hubSite.url)"
             $tempFile = [System.IO.Path]::GetTempFileName()
             $hubSite.homePageTemplate | Set-Content -Path $tempFile -Encoding UTF8
@@ -602,15 +609,18 @@ if (-Not $createHubSitesOnly)
         }
         #Set-PnPTraceLog -Off
 
-        ###Processing Root Site Start Page
-	    $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
-        if ($homePageTemplateRootTeamSite) # defined in hub def script
+        if ($overwritePages)
         {
-            Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
-            $tempFile = [System.IO.Path]::GetTempFileName()
-            $homePageTemplateRootTeamSite | Set-Content -Path $tempFile -Encoding UTF8
-            $null = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
-            Remove-Item -Path $tempFile
+            ###Processing Root Site Start Page
+            $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
+            if ($homePageTemplateRootTeamSite) # defined in hub def script
+            {
+                Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
+                $tempFile = [System.IO.Path]::GetTempFileName()
+                $homePageTemplateRootTeamSite | Set-Content -Path $tempFile -Encoding UTF8
+                $null = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
+                Remove-Item -Path $tempFile
+            }
         }
     }
 

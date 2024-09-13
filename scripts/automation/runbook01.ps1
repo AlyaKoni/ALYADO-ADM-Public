@@ -34,6 +34,7 @@
     18.10.2021 Konrad Brunner       Move to Az
     23.01.2022 Konrad Brunner       Fixed issue with new found dependency module
     04.08.2023 Konrad Brunner       Changed from params to constants and new managed identity login
+	02.09.2024 Konrad Brunner       Fixed LatestModuleVersionOnGallery
 
 #>
 
@@ -268,8 +269,8 @@ function Import-AutomationModule([string] $ModuleName, [bool] $UseAzModule = $fa
         $NewAutomationModule = $script:NewAzureRmAutomationModule
     }
 
-
-    $LatestModuleVersionOnGallery = (Get-ModuleDependencyAndLatestVersion $ModuleName)[0]
+	$LatestModuleVersionOnGallery = Get-ModuleDependencyAndLatestVersion $ModuleName
+    if ($LatestModuleVersionOnGallery -is [Array]) ( $LatestModuleVersionOnGallery = (Get-ModuleDependencyAndLatestVersion $ModuleName)[0] )
 
     $ModuleContentUrl = Get-ModuleContentUrl $ModuleName
     # Find the actual blob storage location of the module

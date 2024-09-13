@@ -1,0 +1,44 @@
+{
+  "@odata.type": "#microsoft.graph.macOSPkgApp",
+  "description": "Installs CompanyPortal-Installer.pkg",
+  "developer": null,
+  "displayName": "MAC CompanyPortal",
+  "fileName": "CompanyPortal-Installer.pkg",
+  "ignoreVersionDetection": false,
+  "includedApps": [
+    {
+      "bundleId": "com.microsoft.CompanyPortalMac",
+      "bundleVersion": "5.2409.0"
+    }
+  ],
+  "informationUrl": "http://go.microsoft.com/fwlink/?LinkId=273865",
+  "isFeatured": false,
+  "largeIcon": {
+    "value": "",
+    "@odata.type": "#Microsoft.Graph.mimeContent",
+    "type": "image/png"
+  },
+  "minimumSupportedOperatingSystem": {
+    "v10_10": false,
+    "v10_11": false,
+    "v10_12": false,
+    "v10_13": false,
+    "v10_14": false,
+    "v10_15": true,
+    "v10_7": false,
+    "v10_8": false,
+    "v10_9": false,
+    "v11_0": false,
+    "v12_0": false,
+    "v13_0": false,
+    "v14_0": false
+  },
+  "notes": "",
+  "owner": "",
+  "primaryBundleId": "com.microsoft.CompanyPortalMac",
+  "primaryBundleVersion": "5.2409.0",
+  "privacyInformationUrl": "http://go.microsoft.com/fwlink/?LinkID=316999",
+  "publisher": "Microsoft Corporation",
+  "roleScopeTagIds": [],
+  "displayVersion": null
+}

@@ -45,7 +45,8 @@ $iniFile = "$($env:LOCALAPPDATA)\Microsoft\OneDrive\settings\$($tenant.businessN
 $iniContent = Get-Content -Path $iniFile -Encoding unicode
 Write-Host "`$odopens = @(" -ForegroundColor DarkCyan
 $first = $true
-foreach($line in $iniContent) {
+
+foreach($line in ($iniContent | Sort-Object { $_.Split()[8] })) {
     $values = @()
     if ($line.Contains("libraryScope =")) {
         $prts = $line.Split(" ")

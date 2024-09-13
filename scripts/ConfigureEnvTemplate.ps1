@@ -46,8 +46,7 @@ Write-Host "Loading custom configuration XXX" -ForegroundColor Cyan
 #$AlyaExchangeEnvironment = "O365China"
 #$AlyaSharePointEnvironment = "China"
 #$AlyaTeamsEnvironment = "TeamsChina"
-#$AlyaGraphAppId = "91564448-b99e-469a-b588-8b50fd0bd82d"
-#$AlyaPnPAppId = "3431e8bc-3d7e-45f9-9b3b-4864ddabd23a"
+#$AlyaGraphAppId = "PleaseSpecify"
 #$AlyaGraphEndpoint = "https://microsoftgraph.chinacloudapi.cn"
 #$AlyaADGraphEndpoint = "https://graph.chinacloudapi.cn"
 #$AlyaOpenIDEndpoint = "https://login.chinacloudapi.cn"
@@ -89,9 +88,9 @@ $AlyaGeoId = "PleaseSpecify" #Example:223
 $AlyaDefaultUsageLocation = "PleaseSpecify" #Example:"CH"
 $AlyaB2BCompStart = "PleaseSpecify" #Example:"["
 $AlyaB2BCompEnd = "PleaseSpecify" #Example:"]"
-$AlyaLicenseType = "PleaseSpecify" #Example:"BusinessPremium" #"BusinessBasic","BusinessStandard","BusinessPremium","EnterpriseOE1","EnterpriseOE3","EnterpriseOE5","EnterpriseME3orOE3EMS","EnterpriseME5orOE5EMS"
+$AlyaLicenseType = "PleaseSpecify" #Example:"BusinessPremium" #"BusinessBasic","BusinessStandard","BusinessPremium","EnterpriseOE1","EnterpriseOE3","EnterpriseOE5","EnterpriseME3orOE3EMSorA3","EnterpriseME5orOE5EMS"
 $AlyaAddLicenses = @() #"M365DefenderP1","SMIME","MsLegacyStore"
-$AlyaPasswordResetEnabled = $AlyaLicenseType -in @("BusinessPremium","EnterpriseME3orOE3EMS","EnterpriseME5orOE5EMS")
+$AlyaPasswordResetEnabled = $AlyaLicenseType -in @("BusinessPremium","EnterpriseME3orOE3EMSorA3","EnterpriseME5orOE5EMS")
 $AlyaVMLicenseTypeClient = "PleaseSpecify" #Example:"None" #Windows_Client=HybridBenefit, None=PAYG
 $AlyaVMLicenseTypeServer = "PleaseSpecify" #Example:"None" #Windows_Server=HybridBenefit, None=PAYG
 $AlyaServerOuProd = $null #Example:"OU=PROD,OU=Avd,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
@@ -272,6 +271,7 @@ $AlyaSharePointOnPremClaimPrefix = "PleaseSpecify" #Example:"w:"
 $AlyaSharePointOnPremVersion = "PleaseSpecify" #Example:"2019"
 
 <# SHAREPOINT SETTINGS #>
+$AlyaPnPAppId = "PleaseSpecify"
 $AlyaSharePointUrl = "https://$($AlyaTenantNameId).sharepoint.com"
 $AlyaSharePointAdminUrl = "https://$($AlyaTenantNameId)-admin.sharepoint.com"
 $AlyaSharePointNewSiteOwner = $AlyaOfficeGroupsNewGroupOwner

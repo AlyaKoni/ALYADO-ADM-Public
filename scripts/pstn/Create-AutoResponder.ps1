@@ -68,6 +68,7 @@ Param(
     $pleaseWaitTextToSpeechPromptAudioFile = $null,
     $outOfOfficeTimeTextToSpeechPromptAudioFile = $null,
     $afterHoursMenuTextToSpeechPromptAudioFile = $null,
+    $musicOnHoldAudioFile = $null,
     $allowSharedVoicemail = $true,
     $languageId = "de-DE",
     $timeZoneId = "W. Europe Standard Time",
@@ -242,42 +243,57 @@ if (-Not $callQueue)
 
 #OverflowThreshold Maximum calls in the queue
 #TimeoutThreshold Maximum wait time until TimeoutAction
+
+$cmdParamBuilder = @{            
+    Identity = $callQueue.Identity
+    Name = $callQueueName
+    LanguageId = $languageId
+    RoutingMethod = "Attendant"
+    PresenceBasedRouting = $presenceBasedRouting
+    Users = $null
+    AllowOptOut = $allowOptOut
+    AgentAlertTime = $redirectToNextAgentAfterSeconds
+    ConferenceMode = $true
+}
+if ($null -eq $musicOnHoldAudioFile)
+{
+    $cmdParamBuilder.add('UseDefaultMusicOnHold', $true)
+}
+else
+{
+    $content = [System.IO.File]::ReadAllBytes($musicOnHoldAudioFile)
+    $name = Split-Path -Path $musicOnHoldAudioFile -Leaf
+    $audioFile = Import-CsOnlineAudioFile -ApplicationId "OrgAutoAttendant" -FileName $name -Content $content # ApplicationID HuntGroup ?
+    $cmdParamBuilder.add('MusicOnHoldAudioFileId', $audioFile.ID)
+}
 if ($redirectToExternalNumber -ne $null -or $redirectToExternalNumberByMenu -ne $null)
 {
     if ($redirectToExternalNumberByMenu){
-        $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
-	    -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-	    -OverflowThreshold 5 -OverflowAction Forward -OverflowActionTarget "tel:$redirectToExternalNumberByMenu" `
-	    -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction Forward -TimeoutActionTarget "tel:$redirectToExternalNumberByMenu" `
-	    -DistributionLists $dGrp.ExternalDirectoryObjectId
+        $cmdParamBuilder.add('OverflowThreshold', 5)
+        $cmdParamBuilder.add('OverflowAction', "Forward")
+        $cmdParamBuilder.add('OverflowActionTarget', "tel:$redirectToExternalNumberByMenu")
+        $cmdParamBuilder.add('TimeoutThreshold', $keepCallInQueueForSeconds)
+        $cmdParamBuilder.add('TimeoutAction', "Forward")
+        $cmdParamBuilder.add('TimeoutActionTarget', "tel:$redirectToExternalNumberByMenu")
+        $cmdParamBuilder.add('DistributionLists', $dGrp.ExternalDirectoryObjectId)
     } else {
-        $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
-	    -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-	    -OverflowThreshold 5 -OverflowAction Forward -OverflowActionTarget "tel:$redirectToExternalNumber" `
-	    -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction Forward -TimeoutActionTarget "tel:$redirectToExternalNumber" `
-	    -DistributionLists $dGrp.ExternalDirectoryObjectId
+        $cmdParamBuilder.add('OverflowThreshold', 5)
+        $cmdParamBuilder.add('OverflowAction', "Forward")
+        $cmdParamBuilder.add('OverflowActionTarget', "tel:$redirectToExternalNumber")
+        $cmdParamBuilder.add('TimeoutThreshold', $keepCallInQueueForSeconds)
+        $cmdParamBuilder.add('TimeoutAction', "Forward")
+        $cmdParamBuilder.add('TimeoutActionTarget', "tel:$redirectToExternalNumber")
+        $cmdParamBuilder.add('DistributionLists', $dGrp.ExternalDirectoryObjectId)
     }
 }
 else
 {
     if ($allowSharedVoicemail)
     {
-        $cmdParamBuilder = @{            
-            Identity = $callQueue.Identity
-            Name = $callQueueName
-            LanguageId = $languageId
-            RoutingMethod = "Attendant"
-            PresenceBasedRouting = $presenceBasedRouting
-            Users = $null
-            AllowOptOut = $allowOptOut
-            AgentAlertTime = $redirectToNextAgentAfterSeconds
-            UseDefaultMusicOnHold = $true
-            ConferenceMode = $true
-            OverflowAction = "SharedVoicemail"
-            EnableOverflowSharedVoicemailTranscription = $true
-            TimeoutAction = "SharedVoicemail"
-            EnableTimeoutSharedVoicemailTranscription = $true
-        }
+        $cmdParamBuilder.add('OverflowAction', "SharedVoicemail")
+        $cmdParamBuilder.add('EnableOverflowSharedVoicemailTranscription', $true)
+        $cmdParamBuilder.add('TimeoutAction', "SharedVoicemail")
+        $cmdParamBuilder.add('EnableTimeoutSharedVoicemailTranscription', $true)
         if ($null -eq $allLinesBusyTextToSpeechPromptAudioFile) {
             $cmdParamBuilder.add('OverflowSharedVoicemailTextToSpeechPrompt', $allLinesBusyTextToSpeechPrompt)
             $cmdParamBuilder.add('TimeoutSharedVoicemailTextToSpeechPrompt', $allLinesBusyTextToSpeechPrompt)
@@ -301,23 +317,25 @@ else
             $cmdParamBuilder.add('TimeoutActionTarget', $null)
             $cmdParamBuilder.add('DistributionLists', $null)
         }
-        Set-CsCallQueue @cmdParamBuilder
     }
     else
     {
         if (-Not $noCallHandlingAtAll) {
-            $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
-                -Users $null -AllowOptOut $allowOptOut -AgentAlertTime $redirectToNextAgentAfterSeconds -UseDefaultMusicOnHold $true -ConferenceMode $true `
-                -OverflowThreshold 5 -OverflowAction Disconnect -TimeoutThreshold $keepCallInQueueForSeconds -TimeoutAction Disconnect `
-                -DistributionLists $dGrp.ExternalDirectoryObjectId
+            $cmdParamBuilder.add('OverflowThreshold', 5)
+            $cmdParamBuilder.add('OverflowAction', "Disconnect")
+            $cmdParamBuilder.add('TimeoutThreshold', $keepCallInQueueForSeconds)
+            $cmdParamBuilder.add('TimeoutAction', "Disconnect")
+            $cmdParamBuilder.add('DistributionLists', $dGrp.ExternalDirectoryObjectId)
         } else {
-            $null = Set-CsCallQueue -Identity $callQueue.Identity -Name $callQueueName -LanguageId $languageId -RoutingMethod "Attendant" -PresenceBasedRouting $presenceBasedRouting `
-                -Users $null -AllowOptOut $allowOptOut -AgentAlertTime 15 -UseDefaultMusicOnHold $true -ConferenceMode $true `
-                -OverflowThreshold 0 -OverflowAction Disconnect -TimeoutThreshold 0 -TimeoutAction Disconnect `
-                -DistributionLists $null
+            $cmdParamBuilder.add('OverflowThreshold', 0)
+            $cmdParamBuilder.add('OverflowAction', "Disconnect")
+            $cmdParamBuilder.add('TimeoutThreshold', 0)
+            $cmdParamBuilder.add('TimeoutAction', "Disconnect")
+            $cmdParamBuilder.add('DistributionLists', $null)
         }
     }
 }
+Set-CsCallQueue @cmdParamBuilder
 
 $queueInstanceAssoc = $null
 try
@@ -368,15 +386,26 @@ else
     $queueInstanceEntity = New-CsAutoAttendantCallableEntity -Identity $queueInstance.ObjectId -Type ApplicationEndpoint
     $defaultOption = New-CsAutoAttendantMenuOption -Action TransferCallToTarget -DtmfResponse Automatic -CallTarget $queueInstanceEntity
     $defaultMenu = New-CsAutoAttendantMenu -Name "Default Menu" -MenuOptions @($defaultOption) -DirectorySearchMethod None
-    $greetingPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $pleaseWaitTextToSpeechPrompt
+    $greetings = $null
+    if (-Not [string]::IsNullOrEmpty($pleaseWaitTextToSpeechPrompt))
+    {
+        $greetings = @(New-CsAutoAttendantPrompt -TextToSpeechPrompt $pleaseWaitTextToSpeechPrompt)
+    }
     if ($null -ne $pleaseWaitTextToSpeechPromptAudioFile)
     {
         $content = [System.IO.File]::ReadAllBytes($pleaseWaitTextToSpeechPromptAudioFile)
         $name = Split-Path -Path $pleaseWaitTextToSpeechPromptAudioFile -Leaf
         $audioFile = Import-CsOnlineAudioFile -ApplicationId "OrgAutoAttendant" -FileName $name -Content $content
-        $greetingPrompt = New-CsAutoAttendantPrompt -AudioFilePrompt $audioFile
+        $greetings = @(New-CsAutoAttendantPrompt -AudioFilePrompt $audioFile)
     }
-    $defaultCallFlow = New-CsAutoAttendantCallFlow -Name "Default call flow" -Greetings @($greetingPrompt) -Menu $defaultMenu
+    if ($null -eq $greetings)
+    {
+        $defaultCallFlow = New-CsAutoAttendantCallFlow -Name "Default call flow" -Menu $defaultMenu
+    }
+    else
+    {
+        $defaultCallFlow = New-CsAutoAttendantCallFlow -Name "Default call flow" -Greetings $greetings -Menu $defaultMenu
+    }
     $afterHoursGreetingPrompt = New-CsAutoAttendantPrompt -TextToSpeechPrompt $outOfOfficeTimeTextToSpeechPrompt
     if ($null -ne $outOfOfficeTimeTextToSpeechPromptAudioFile)
     {
