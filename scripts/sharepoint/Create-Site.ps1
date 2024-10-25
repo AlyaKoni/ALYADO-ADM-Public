@@ -438,6 +438,7 @@ foreach ($usrEmail in $siteReaders)
 if ($null -ne $groupOwners -and $groupOwners.Length -gt 0)
 {
     Write-Host "Setting group Owners " -ForegroundColor $CommandInfo
+    $m365GroupId = $site.GroupId.Guid
     $grpOwners = Get-PnPMicrosoft365GroupOwners -Connection $adminCon -Identity $m365GroupId
     $grpOwnersNew = @($grpOwners.UserPrincipalName)
     foreach($own in $groupOwners)
@@ -463,6 +464,7 @@ if ($null -ne $groupOwners -and $groupOwners.Length -gt 0)
 if ($null -ne $groupMembers -and $groupMembers.Length -gt 0)
 {
     Write-Host "Setting group Members " -ForegroundColor $CommandInfo
+    $m365GroupId = $site.GroupId.Guid
     $grpMembers = Get-PnPMicrosoft365GroupMembers -Connection $adminCon -Identity $m365GroupId
     $grpMembersNew = @($grpMembers.UserPrincipalName)
     foreach($memb in $groupMembers)

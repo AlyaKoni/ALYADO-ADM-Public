@@ -55,7 +55,7 @@ Install-ModuleIfNotInstalled "MicrosoftTeams"
 LoginTo-Teams
 
 # =============================================================
-# O365 stuff
+# Teams stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo

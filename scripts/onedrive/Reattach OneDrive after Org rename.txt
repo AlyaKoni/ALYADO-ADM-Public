@@ -1,0 +1,48 @@
+Reattach OneDrive after Org rename
+==================================
+
+Outlook
+- Open Outlook
+- Sign out account on top right (not from mailbox ;-) )
+
+Word
+- Open Word
+- Sign out account top right
+
+OneDrive
+- Make sure sync is in health state
+- Stop all open Office products
+- Stop OneDrive Backup
+- Detach all folders
+- Detach entire OneDrive
+- Exit OneDrive
+- Check Task Manager for running OneDrive processes, kill them if any present
+
+File System
+- Rename %userprofile%\##OldTenantName## to %userprofile%\##OldTenantName##.yyyyMMdd
+- Rename %userprofile%\OneDrive - ##OldTenantName## to %userprofile%\OneDrive - ##OldTenantName##.yyyyMMdd
+- Rename %localappdata%/Microsoft/OneAuth to %localappdata%/Microsoft/OneAuth.yyyyMMdd
+- Rename %localappdata%/Microsoft/IdentityCache to %localappdata%/Microsoft/IdentityCache.yyyyMMdd
+- Rename %localappdata%/OneDrive to %localappdata%/OneDrive.yyyyMMdd
+- Rename %localappdata%/Microsoft\OneDrive\settings\Business1 to %localappdata%/Microsoft\OneDrive\settings\Business1.yyyyMMdd
+
+Regedit
+- Rename HKCU\Software\Microsoft\OneDrive\Accounts\Business1.yyyyMMdd
+- Rename HKCU\Software\SyncEngines\Providers\OneDrive\Business1.yyyyMMdd
+- Go to HKCU\Software\Microsoft\OneDrive
+  - Set ClientEverSignedIn to 0
+  - Set SilentBusinessConfigCompleted to 0
+- Go to HKCU\Software\Microsoft\Office\16.0\Common\ServicesManagerCache\Identities\12345678-1234-1234-1234-12345678_ADAL
+  - Set ForceCacheRefresh to 1
+  - Set NextUpdate to current date and time
+
+Outlook
+- Open Outlook and sign in
+
+Word
+- Open Word and sign in
+
+OneDrive
+- Open OneDrive
+- Authenticate
+- Enable OneDrive Backup

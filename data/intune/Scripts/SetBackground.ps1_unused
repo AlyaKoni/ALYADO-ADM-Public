@@ -32,56 +32,128 @@
     ---------- -------------------- ----------------------------
     01.04.2020 Konrad Brunner       Initial Version
     04.11.2021 Konrad Brunner       Enhanced the script
+    15.10.2024 Konrad Brunner       Fixed path, 64bit powershell, error handling, logging
 
 #>
 
-$WallpaperUrl = "https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
-$WallpaperStyle = "Fill"
+[CmdletBinding()]
+param (
+)
 
-$Style = Switch ($WallpaperStyle) {
-  
-    "Fill" {"10"}
-    "Fit" {"6"}
-    "Stretch" {"2"}
-    "Tile" {"0"}
-    "Center" {"0"}
-    "Span" {"22"}
-}
-$Tile = 0
-if ($WallpaperStyle -eq "Tile") { $Tile = 1 }
-$path = [Environment]::GetFolderPath("ApplicationData") + "\AlyaConsulting\Background"
-if (-Not (Test-Path $path))
+$exitCode = 0
+$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+$AlyaScriptName = Split-Path $PSCommandPath -Leaf
+
+if (![System.Environment]::Is64BitProcess)
 {
-    New-Item -ItemType Directory -Force -Path $path | Out-Null
-}
-$localFile = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)
-$localFileTmp = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)+".tmp"
-Start-BitsTransfer -Source $WallpaperUrl -Destination $localFileTmp
-$localFileHash = Get-FileHash -Path $localFile
-$localFileTmpHash = Get-FileHash -Path $localFileTmp
-if ($localFileHash.Hash -eq $localFileTmpHash.Hash)
-{
-    Remove-Item -Path $localFileTmp -Force
+    Write-Host "Launching 64bit PowerShell"
+    $arguments = ""
+    foreach($key in $MyInvocation.BoundParameters.keys)
+    {
+        switch($MyInvocation.BoundParameters[$key].GetType().Name)
+        {
+            "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $arguments += "-$key " } }
+            "String"          { $arguments += "-$key `"$($MyInvocation.BoundParameters[$key])`" " }
+            "Int32"           { $arguments += "-$key $($MyInvocation.BoundParameters[$key]) " }
+            "Boolean"         { $arguments += "-$key `$$($MyInvocation.BoundParameters[$key]) " }
+        }
+    }
+    $sysNativePowerShell = "$($PSHOME.ToLower().Replace("syswow64", "sysnative"))\powershell.exe"
+    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+    $pinfo.FileName = $sysNativePowerShell
+    $pinfo.Arguments = "-ex bypass -file `"$PSCommandPath`" $arguments"
+    $pinfo.RedirectStandardError = $true
+    $pinfo.RedirectStandardOutput = $true
+    $pinfo.CreateNoWindow = $true
+    $pinfo.UseShellExecute = $false
+    $p = New-Object System.Diagnostics.Process
+    $p.StartInfo = $pinfo
+    $p.Start() | Out-Null
+    $stdout = $p.StandardOutput.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout }
+    $stderr = $p.StandardError.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stderr)) { Write-Error $stderr }
+    $exitCode = $p.ExitCode
 }
 else
 {
-    Move-Item -Path $localFileTmp -Destination $localFile -Force
 
-    Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\' -Name "WallpaperStyle" -value $Style
-    Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\' -Name "TileWallpaper" -value $Tile
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-SetBackground-$($AlyaTimeString).log" -Force
 
-    Add-Type -TypeDefinition @"
-    using System;
-    using System.Runtime.InteropServices;
-    public class User32Call
+    try
     {
-        [DllImport("User32.dll",CharSet=CharSet.Unicode)]
-        public static extern int SystemParametersInfo (Int32 uAction,
-                                                       Int32 uParam,
-                                                       String lpvParam,
-                                                       Int32 fuWinIni);
-    }
-"@
-  
-    $ret =[User32Call]::SystemParametersInfo(0x0014, 0, $localFile, (0x01 -bor 0x02))
+        $ErrorActionPreference = "Stop"
+
+        $WallpaperUrl = "https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
+        $WallpaperStyle = "Fill"
+
+        Write-Host "configuring registry"
+        $Style = Switch ($WallpaperStyle) {
+            "Fill" {"10"}
+            "Fit" {"6"}
+            "Stretch" {"2"}
+            "Tile" {"0"}
+            "Center" {"0"}
+            "Span" {"22"}
+        }
+        $Tile = 0
+        if ($WallpaperStyle -eq "Tile") { $Tile = 1 }
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\' -Name "WallpaperStyle" -value $Style
+        Set-ItemProperty -Path 'HKCU:\Control Panel\Desktop\' -Name "TileWallpaper" -value $Tile
+
+        $path = "C:\ProgramData\AlyaConsulting\Background"
+        if (-Not (Test-Path $path))
+        {
+            New-Item -ItemType Directory -Force -Path $path | Out-Null
+        }
+
+        Write-Host "downloading image"
+        $localFile = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)
+        $localFileTmp = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)+".tmp"
+        Start-BitsTransfer -Source $WallpaperUrl -Destination $localFileTmp
+
+        Write-Host "replacing stored image"
+        if (Test-Path $localFile)
+        {
+            $localFileHash = Get-FileHash -Path $localFile
+            $localFileTmpHash = Get-FileHash -Path $localFileTmp
+            if ($localFileHash.Hash -eq $localFileTmpHash.Hash)
+            {
+                Remove-Item -Path $localFileTmp -Force
+            }
+        }
+        if (Test-Path $localFileTmp)
+        {
+            Move-Item -Path $localFileTmp -Destination $localFile -Force
+        }
+
+        Write-Host "setting background"
+        Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class User32Call
+{
+    [DllImport("User32.dll",CharSet=CharSet.Unicode)]
+    public static extern int SystemParametersInfo (Int32 uAction,
+        Int32 uParam,
+        String lpvParam,
+        Int32 fuWinIni);
 }
+"@
+
+        # 0x0014 = SPI_SETDESKWALLPAPER
+        $exitCode = [User32Call]::SystemParametersInfo(0x0014, 0, $localFile, (0x01 -bor 0x02))
+
+        Write-Host "done $exitCode"
+    }
+    catch
+    {   
+        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+        Write-Error ($_.Exception) -ErrorAction Continue
+        $exitCode = -3
+    }
+
+    Stop-Transcript
+}
+
+exit $exitCode

@@ -269,6 +269,13 @@ $body = @"
                     "enabled": false,
                     "days": 0
                 }
+            }, {
+                "category": "NetworkAccessAlerts",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
             }
         ],
         "metrics": [],

@@ -93,6 +93,10 @@ try
         Write-Output "TTL:   1 hour"
 
         $cfg = Get-DkimSigningConfig -Identity $dom
+        if (-Not $cfg -or -Not $cfg.Selector1CNAME)
+        {
+            Write-Error "No domain config found for $dom" -ErrorAction Continue
+        }
         $Selector1CNAME = $cfg.Selector1CNAME
         $Selector2CNAME = $cfg.Selector2CNAME
 

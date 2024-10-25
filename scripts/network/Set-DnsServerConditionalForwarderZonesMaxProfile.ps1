@@ -30,37 +30,68 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    09.08.2021 Konrad Brunner       Initial Version
+    25.09.2024 Konrad Brunner       Initial version
 
+
+    https://learn.microsoft.com/en-us/azure/private-link/private-endpoint-dns
+    
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory=$true)]
+    [ValidateScript({$_ -match [IPAddress]$_ })]
+    [string]$forwarderIp = $null,
+    [int]$dnsTimeout = 10,
+    [bool]$onlyShowValues = $true
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Allow-CloudRecordingForCalls-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\network\Set-DnsServerConditionalForwarderZonesMaxProfile-$($AlyaTimeString).log" | Out-Null
 
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "MicrosoftTeams"
-
-# Logins
-LoginTo-Teams
+# Constants
+$allDomains = @(
+    "azconfig.io",
+    "azmk8s.io",
+    "azure.com",
+    "azure.net",
+    "azure-api.net",
+    "azure-automation.net",
+    "azurecr.io",
+    "azuredatabricks.net",
+    "azure-devices.net",
+    "azure-devices-provisioning.net",
+    "azurehdinsight.net",
+    "azurehealthcareapis.com",
+    "azureiotcentral.com",
+    "azureml.ms",
+    "azurestaticapps.net",
+    "azuresynapse.net",
+    "azurewebsites.net",
+    "botframework.com",
+    "microsoft.com",
+    "signalr.net",
+    "windows.net",
+    "windows.net1",
+    "windowsazure.com"
+)
 
 # =============================================================
-# Teams stuff
+# DNS stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Teams | Allow-CloudRecordingForCalls | CsOnline" -ForegroundColor $CommandInfo
+Write-Host "DNS | Set-DnsServerConditionalForwarderZonesMaxProfile | ON-PREMISES" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Main 
-Set-CsTeamsCallingPolicy -Identity Global -AllowCloudRecordingForCalls $true 
+foreach($domain in $allDomains)
+{
+    Write-Host "  Forwarding $domain to $forwarderIp"
+    if (-Not $onlyShowValues) { Add-DnsServerConditionalForwarderZone -Name $domain -ReplicationScope "Forest" -MasterServers $forwarderIp -ForwarderTimeout $dnsTimeout }
+}
 
 #Stopping Transscript
 Stop-Transcript

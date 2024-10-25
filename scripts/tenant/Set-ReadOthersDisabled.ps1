@@ -64,7 +64,7 @@ Write-Host "=====================================================`n" -Foreground
 # Checking permission to read others for guests
 Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
 $policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
-if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers)
+if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers -eq $true)
 {
     Write-Warning "Read others for guests was enabled. Disabling it now"
     $RolePermissions = @{}

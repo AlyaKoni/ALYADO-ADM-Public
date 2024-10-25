@@ -30,48 +30,95 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    04.03.2020 Konrad Brunner       Initial Version
-    26.04.2023 Konrad Brunner       Switched to Graph
+    20.09.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$ServicePrincipalName = "PnP Management Shell",
+    [string]$ServicePrincipalId = $null
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-ReadOthersEnabled-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-ApplicationAdminGrants-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
-# Logins
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes @("Directory.Read.All")
 
 # =============================================================
-# O365 stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-ReadOthersEnabled | O365" -ForegroundColor $CommandInfo
+Write-Host "ENTAPPS | Get-ApplicationAdminGrants | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking permission to read others for guests
-Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
-$policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
-if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers -eq $false)
+Write-Host "Getting ServicePrincipal" -ForegroundColor $CommandInfo
+$App = $null
+if ($ServicePrincipalName)
 {
-    Write-Warning "Read others for guests was disabled. Enabling it now"
-    $RolePermissions = @{}
-    $RolePermissions["allowedToReadOtherUsers"] = $true
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
+    $App = Get-MgBetaServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalName)'"
+    if (-Not $App)
+    {
+        throw "ServicePrincipal with name '$($ServicePrincipalName)' not found"
+    }
 }
-Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+if ($ServicePrincipalId)
+{
+    $App = Get-MgBetaServicePrincipal -Filter "AppId eq '$($ServicePrincipalId)'"
+    if (-Not $App)
+    {
+        throw "ServicePrincipal with id '$($ServicePrincipalId)' not found"
+    }
+}
+if (-not $App)
+{
+    throw "Please provide ServicePrincipalName or ServicePrincipalId"
+}
+
+Write-Host "Getting Grants" -ForegroundColor $CommandInfo
+$grants = Get-MgBetaServicePrincipalOauth2PermissionGrant -ServicePrincipalId $App.Id -All | Where-Object { $_.ConsentType -eq "AllPrincipals" }
+
+foreach($grant in $grants)
+{
+    #$grant = $grants[0]
+    $gApp = Get-MgBetaServicePrincipal -ServicePrincipalId $grant.ResourceId
+    if ($gApp)
+    {
+        Write-Host "App: $($gApp.DisplayName) AppID: $($gApp.AppId)"
+        $scopes = $grant.Scope.Split()
+        foreach($scope in $scopes)
+        {
+            $scps = @($scope)
+            if ($scope -eq "AllSites.FullControl") { $scps += "Sites.FullControl.All" }
+            $appRole = $gApp.AppRoles | Where-Object {$_.Value -in $scps -and $_.AllowedMemberTypes -contains "Application"}
+            if ($appRole)
+            {
+                Write-Host "  Scope: $scope ID: $($appRole.Id)"
+            }
+            else
+            {
+                Write-Warning "AppRole '$scope' not found on application"
+            }
+        }
+    }
+    else
+    {
+        Write-Warning "ServicePrincipal with id '$($grant.ResourceId)' not found"
+    }
+    ""
+}
 
 #Stopping Transscript
 Stop-Transcript

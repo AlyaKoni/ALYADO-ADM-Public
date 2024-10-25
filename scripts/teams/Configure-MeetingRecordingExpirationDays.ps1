@@ -53,7 +53,7 @@ Install-ModuleIfNotInstalled "MicrosoftTeams"
 LoginTo-Teams
 
 # =============================================================
-# O365 stuff
+# Teams stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
@@ -61,6 +61,7 @@ Write-Host "Teams | Configure-MeetingRecordingExpirationDays | CsOnline" -Foregr
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
+Write-Host "Setting 'MeetingRecordingExpirationDays' to $MeetingRecordingExpirationDays."
 Set-CsTeamsMeetingPolicy -Identity Global -NewMeetingRecordingExpirationDays $MeetingRecordingExpirationDays
 
 #Stopping Transscript

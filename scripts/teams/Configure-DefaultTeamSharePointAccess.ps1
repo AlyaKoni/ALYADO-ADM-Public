@@ -57,7 +57,7 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
-# O365 stuff
+# Teams stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo

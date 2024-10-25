@@ -79,21 +79,21 @@ if (-Not (Test-Path -Path $TemplateRoot -PathType Container))
 }
 Push-Location -Path $TemplateRoot
 
-foreach($subscriptionName in ($AlyaAllSubscriptions | Sort-Object -Unique))
+foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique))
 {
-    $sub = Get-AzSubscription -SubscriptionName $subscriptionName -TenantId $AlyaTenantId -ErrorAction SilentlyContinue
+    $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName -TenantId $AlyaTenantId -ErrorAction SilentlyContinue
     if ($sub)
     {
         Select-AzSubscription -SubscriptionObject $sub -Force
         $grps = Get-AzResourceGroup
         foreach($grp in $grps)
         {
-            Write-Host "Exporting ressource group $($grp.ResourceId) from subscription $($subscriptionName)"
+            Write-Host "Exporting ressource group $($grp.ResourceId) from subscription $($AlyaSubscriptionName)"
             $fileName = ($grp.ResourceId -replace "/", "_") + ".json"
             try
             {
                 Export-AzResourceGroup -ResourceGroupName $grp.ResourceGroupName -Path . -IncludeParameterDefaultValue -IncludeComments -Pre -Force
-                Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($subscriptionName + "_" + $grp.ResourceGroupName + ".json") -Force
+                Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($AlyaSubscriptionName + "_" + $grp.ResourceGroupName + ".json") -Force
             }
             catch
             {
@@ -102,7 +102,7 @@ foreach($subscriptionName in ($AlyaAllSubscriptions | Sort-Object -Unique))
         }
     } else
     {
-        Write-Warning "Can't find subscription with name $($subscriptionName)"
+        Write-Warning "Can't find subscription with name $($AlyaSubscriptionName)"
     }
 }
 

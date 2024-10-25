@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     17.01.2023 Konrad Brunner       Initial Version
+    15.10.2024 Konrad Brunner       Using WinSystemLocale for local group name
 
 #>
 
@@ -41,7 +42,6 @@ param (
 $exitCode = 0
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 $AlyaScriptName = Split-Path $PSCommandPath -Leaf
-$AlyaScriptDir = Split-Path $PSCommandPath -Parent
 
 if (![System.Environment]::Is64BitProcess)
 {
@@ -82,24 +82,40 @@ else
     {
         $ErrorActionPreference = "Stop"
 
+        $userName = "lapsadmin"
+
 		Add-Type -AssemblyName 'System.Web'
-        $user = $null
-        try {
-            $user = net user lapsadmin
-            Write-Host "lapsadmin already exists"
-        } catch {}
-        if ([string]::IsNullOrEmpty($user))
+        $user = Get-LocalUser -Name $userName -ErrorAction SilentlyContinue
+        if (-Not $user)
         {
-            Write-Host "creating lapsadmin user"
+            Write-Host "creating $userName user"
 		    $pwd = [System.Web.Security.Membership]::GeneratePassword(14, 7)
-		    net user lapsadmin $pwd /add /expires:never
+            $pwdSec = ConvertTo-SecureString -String $pwd -AsPlainText -Force
+            Clear-Variable -Name pwd
+            New-LocalUser -AccountNeverExpires -Name $userName -Password $pwdSec -PasswordNeverExpires -Confirm:$false
         }
-        try {
-            net localgroup Administrators lapsadmin /add
-        } catch { }
-        try {
-            net localgroup Administratoren lapsadmin /add
-        } catch { }
+        else
+        {
+            Write-Host "$userName already exists"
+        }
+
+        $admins = "Administrators"
+        if ((Get-WinSystemLocale).Name.Contains("de-"))
+        {
+            $admins = "Administratoren"
+        }
+        $member = Get-LocalGroupMember -Group $admins -Member $userName -ErrorAction SilentlyContinue
+        if (-Not $member)
+        {
+            Write-Host "adding $userName user to $admins group"
+            Add-LocalGroupMember -Group $admins -Member $userName
+        }
+        else
+        {
+            Write-Host "$userName is already member of the $admins group"
+        }
+
+        Write-Host "done $exitCode"
     }
     catch
     {   

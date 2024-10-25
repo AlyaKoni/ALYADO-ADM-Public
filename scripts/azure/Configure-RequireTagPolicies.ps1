@@ -58,7 +58,7 @@ Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName $AlyaSubscriptionNameName
 
 # =============================================================
 # Azure stuff
@@ -84,9 +84,10 @@ if (-Not $policyIdentity)
 }
 
 # Processing subscriptions
-foreach($AlyaSubscription in $AlyaAllSubscriptions) {
-    Write-Host "Processing subscription $AlyaSubscription" -ForegroundColor $MenuColor
-    $Context = Set-AzContext -SubscriptionName $AlyaSubscription
+foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique))
+{
+    Write-Host "Processing subscription $AlyaSubscriptionName" -ForegroundColor $MenuColor
+    $Context = Set-AzContext -SubscriptionName $AlyaSubscriptionName
     if (-Not $Context) {
         Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
         Exit 1
@@ -122,11 +123,11 @@ foreach($AlyaSubscription in $AlyaAllSubscriptions) {
 
     # Checking policy 'Require an $requiredTagName tag on resource groups'
     Write-Host "Checking policy 'Require an $requiredTagName tag on resource groups'" -ForegroundColor $CommandInfo
-    $reqTagOnRg = Get-AzPolicyAssignment -PolicyDefinitionId $reqTagOnRg.Id | Where-Object { $_.DisplayName -eq "$($AlyaSubscription.ToUpper()): Require an $requiredTagName tag on resource groups" }
+    $reqTagOnRg = Get-AzPolicyAssignment -PolicyDefinitionId $reqTagOnRg.Id | Where-Object { $_.DisplayName -eq "$($AlyaSubscriptionName.ToUpper()): Require an $requiredTagName tag on resource groups" }
     if (-Not $reqTagOnRg)
     {
         $tagName = @{"tagName"="$requiredTagName"}
-        $reqTagOnRg = New-AzPolicyAssignment -Location $AlyaLocation -Scope "/subscriptions/$($Context.Subscription.Id)" -Name "$($AlyaSubscription)polowneronrg" -DisplayName "$($AlyaSubscription.ToUpper()): Require an $requiredTagName tag on resource groups" -PolicyDefinition $reqTagOnRg -PolicyParameterObject $tagName
+        $reqTagOnRg = New-AzPolicyAssignment -Location $AlyaLocation -Scope "/subscriptions/$($Context.Subscription.Id)" -Name "$($AlyaSubscriptionName)polowneronrg" -DisplayName "$($AlyaSubscriptionName.ToUpper()): Require an $requiredTagName tag on resource groups" -PolicyDefinition $reqTagOnRg -PolicyParameterObject $tagName
     }
 
     # Checking policies 'Inherit the $requiredTagName tag from resource group'
@@ -134,7 +135,7 @@ foreach($AlyaSubscription in $AlyaAllSubscriptions) {
     $rgs = Get-AzResourceGroup
     foreach($inhTagRg in $rgs)
     {
-        # $inhTag = Get-AzPolicyAssignment -PolicyDefinitionId $reqTagInh.Id | Where-Object { $_.DisplayName -eq "$($AlyaSubscription.ToUpper()): RG $($inhTagRg.ResourceGroupName): Inherit the $requiredTagName tag from resource group" }
+        # $inhTag = Get-AzPolicyAssignment -PolicyDefinitionId $reqTagInh.Id | Where-Object { $_.DisplayName -eq "$($AlyaSubscriptionName.ToUpper()): RG $($inhTagRg.ResourceGroupName): Inherit the $requiredTagName tag from resource group" }
         # if ($inhTag)
         # {
         #     Remove-AzPolicyAssignment -Id $inhTag.Id
@@ -144,12 +145,12 @@ foreach($AlyaSubscription in $AlyaAllSubscriptions) {
             if ([string]::IsNullOrEmpty($excludeResourceGroupsWithPartialName) -or $inhTagRg.ResourceGroupName -notlike $excludeResourceGroupsWithPartialName)
             {
                 Write-Host "RG: $($inhTagRg.ResourceGroupName)"
-                $inhTag = Get-AzPolicyAssignment -PolicyDefinitionId $reqTagInh.Id | Where-Object { $_.DisplayName -eq "$($AlyaSubscription.ToUpper()): RG $($inhTagRg.ResourceGroupName): Inherit the $requiredTagName tag from resource group" }
+                $inhTag = Get-AzPolicyAssignment -PolicyDefinitionId $reqTagInh.Id | Where-Object { $_.DisplayName -eq "$($AlyaSubscriptionName.ToUpper()): RG $($inhTagRg.ResourceGroupName): Inherit the $requiredTagName tag from resource group" }
                 if (-Not $inhTag)
                 {
                     $tagName = @{"tagName"="$requiredTagName"}
                     $nameHash = ([System.BitConverter]::ToString($md5.ComputeHash($utf8.GetBytes($inhTagRg.ResourceGroupName)))).replace("-","").ToLower()
-                    $inhTag = New-AzPolicyAssignment -Location $AlyaLocation -Scope $inhTagRg.ResourceId -Name "$($AlyaSubscription)polownerinh$($nameHash)" -DisplayName "$($AlyaSubscription.ToUpper()): RG $($inhTagRg.ResourceGroupName): Inherit the $requiredTagName tag from resource group" -PolicyDefinition $reqTagInh -PolicyParameterObject $tagName -IdentityType "UserAssigned" -IdentityId $policyIdentity.Id
+                    $inhTag = New-AzPolicyAssignment -Location $AlyaLocation -Scope $inhTagRg.ResourceId -Name "$($AlyaSubscriptionName)polownerinh$($nameHash)" -DisplayName "$($AlyaSubscriptionName.ToUpper()): RG $($inhTagRg.ResourceGroupName): Inherit the $requiredTagName tag from resource group" -PolicyDefinition $reqTagInh -PolicyParameterObject $tagName -IdentityType "UserAssigned" -IdentityId $policyIdentity.Id
                 }
 
                 $json = @"
@@ -203,9 +204,10 @@ Write-Host "Waiting 5 minutes for policy refresh"
 Start-Sleep -Seconds 300
 
 # Processing states for subscriptions
-foreach($AlyaSubscription in $AlyaAllSubscriptions) {
-    Write-Host "Processing states for subscription $AlyaSubscription" -ForegroundColor $MenuColor
-    $Context = Set-AzContext -SubscriptionName $AlyaSubscription
+foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique))
+{
+    Write-Host "Processing states for subscription $AlyaSubscriptionName" -ForegroundColor $MenuColor
+    $Context = Set-AzContext -SubscriptionName $AlyaSubscriptionName
     if (-Not $Context) {
         Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
         Exit 1
@@ -231,7 +233,7 @@ foreach($AlyaSubscription in $AlyaAllSubscriptions) {
             if ([string]::IsNullOrEmpty($excludeResourceGroupsWithPartialName) -or $inhTagRg.ResourceGroupName -notlike $excludeResourceGroupsWithPartialName)
             {
                 Write-Host "RG: $($inhTagRg.ResourceGroupName)"
-                $inhTag = Get-AzPolicyAssignment -PolicyDefinitionId $reqTagInh.Id | Where-Object { $_.DisplayName -eq "$($AlyaSubscription.ToUpper()): RG $($inhTagRg.ResourceGroupName): Inherit the $requiredTagName tag from resource group" }
+                $inhTag = Get-AzPolicyAssignment -PolicyDefinitionId $reqTagInh.Id | Where-Object { $_.DisplayName -eq "$($AlyaSubscriptionName.ToUpper()): RG $($inhTagRg.ResourceGroupName): Inherit the $requiredTagName tag from resource group" }
                 if (-Not $inhTag)
                 {
                     throw "Policy not found"

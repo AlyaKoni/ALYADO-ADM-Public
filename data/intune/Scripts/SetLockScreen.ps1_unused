@@ -31,55 +31,127 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     04.11.2021 Konrad Brunner       Initial Version
+    15.10.2024 Konrad Brunner       Fixed path, 64bit powershell, error handling, logging
 
 #>
 
-$WallpaperUrl = "https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
 
-$path = [Environment]::GetFolderPath("ApplicationData") + "\AlyaConsulting\Background"
-if (-Not (Test-Path $path))
+[CmdletBinding()]
+param (
+)
+
+$exitCode = 0
+$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+$AlyaScriptName = Split-Path $PSCommandPath -Leaf
+
+if (![System.Environment]::Is64BitProcess)
 {
-    New-Item -ItemType Directory -Force -Path $path | Out-Null
-}
-$localFile = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)
-$localFileTmp = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)+".tmp"
-Start-BitsTransfer -Source $WallpaperUrl -Destination $localFileTmp
-$localFileHash = Get-FileHash -Path $localFile
-$localFileTmpHash = Get-FileHash -Path $localFileTmp
-if ($localFileHash.Hash -eq $localFileTmpHash.Hash)
-{
-    Remove-Item -Path $localFileTmp -Force
+    Write-Host "Launching 64bit PowerShell"
+    $arguments = ""
+    foreach($key in $MyInvocation.BoundParameters.keys)
+    {
+        switch($MyInvocation.BoundParameters[$key].GetType().Name)
+        {
+            "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $arguments += "-$key " } }
+            "String"          { $arguments += "-$key `"$($MyInvocation.BoundParameters[$key])`" " }
+            "Int32"           { $arguments += "-$key $($MyInvocation.BoundParameters[$key]) " }
+            "Boolean"         { $arguments += "-$key `$$($MyInvocation.BoundParameters[$key]) " }
+        }
+    }
+    $sysNativePowerShell = "$($PSHOME.ToLower().Replace("syswow64", "sysnative"))\powershell.exe"
+    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+    $pinfo.FileName = $sysNativePowerShell
+    $pinfo.Arguments = "-ex bypass -file `"$PSCommandPath`" $arguments"
+    $pinfo.RedirectStandardError = $true
+    $pinfo.RedirectStandardOutput = $true
+    $pinfo.CreateNoWindow = $true
+    $pinfo.UseShellExecute = $false
+    $p = New-Object System.Diagnostics.Process
+    $p.StartInfo = $pinfo
+    $p.Start() | Out-Null
+    $stdout = $p.StandardOutput.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout }
+    $stderr = $p.StandardError.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stderr)) { Write-Error $stderr }
+    $exitCode = $p.ExitCode
 }
 else
 {
-    Move-Item -Path $localFileTmp -Destination $localFile -Force
 
-    $tkdwnYes = "Y"
-    $admins = "Administrators"
-    if ((Get-WinSystemLocale).Name.IndexOf("de-") -gt -1)
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-SetLockScreen-$($AlyaTimeString).log" -Force
+
+    try
     {
-        $tkdwnYes = "J"
-        $admins = "Administratoren"
-    }
+        $ErrorActionPreference = "Stop"
 
-    # Clearing LockScreen cache
-    Start-Process -filePath "$env:SystemRoot\system32\takeown.exe" -ArgumentList "/F `"$env:ProgramData\Microsoft\Windows\SystemData`" /R /A /D $tkdwnYes" -NoNewWindow -Wait
-    Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:ProgramData\Microsoft\Windows\SystemData`" /grant $($admins):'(OI)(CI)F' /T" -NoNewWindow -Wait
-    Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:ProgramData\Microsoft\Windows\SystemData\S-1-5-18\ReadOnly`" /reset /T" -NoNewWindow -Wait
-    Remove-Item -Path "$env:ProgramData\Microsoft\Windows\SystemData\S-1-5-18\ReadOnly\LockScreen_Z\*" -Force
+        $WallpaperUrl = "https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
 
-    # Copy image to LockScreen
-    Start-Process -filePath "$env:SystemRoot\system32\takeown.exe" -ArgumentList "/F `"$env:SystemRoot\Web\Screen`" /R /A /D $tkdwnYes" -NoNewWindow -Wait
-    Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:SystemRoot\Web\Screen`" /grant $($admins):'(OI)(CI)F' /T" -NoNewWindow -Wait
-    Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:SystemRoot\Web\Screen`" /reset /T" -NoNewWindow -Wait
-    $images = Get-ChildItem -Path "$env:SystemRoot\Web\Screen" -Filter *.jpg
-    foreach ($image in $images)
-    {
-        if (-Not (Test-Path ($image.FullName+".orig")))
+        $path = "C:\ProgramData\AlyaConsulting\Background"
+        if (-Not (Test-Path $path))
         {
-            Move-Item -Path $image.FullName -Destination ($image.FullName+".orig") -Force
+            New-Item -ItemType Directory -Force -Path $path | Out-Null
         }
-    }
-    Copy-Item -Path $localFile -Destination "$env:SystemRoot\Web\Screen\img100.jpg" -Force
 
+        Write-Host "downloading image"
+        $localFile = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)
+        $localFileTmp = "$path\"+(Split-Path -Path $WallpaperUrl -Leaf)+".tmp"
+        Start-BitsTransfer -Source $WallpaperUrl -Destination $localFileTmp
+
+        Write-Host "replacing stored image"
+        if (Test-Path $localFile)
+        {
+            $localFileHash = Get-FileHash -Path $localFile
+            $localFileTmpHash = Get-FileHash -Path $localFileTmp
+            if ($localFileHash.Hash -eq $localFileTmpHash.Hash)
+            {
+                Remove-Item -Path $localFileTmp -Force
+            }
+        }
+        if (Test-Path $localFileTmp)
+        {
+            Move-Item -Path $localFileTmp -Destination $localFile -Force
+        }
+
+        $tkdwnYes = "Y"
+        $admins = "Administrators"
+        if ((Get-WinSystemLocale).Name.IndexOf("de-") -gt -1)
+        {
+            $tkdwnYes = "J"
+            $admins = "Administratoren"
+        }
+
+        # Clearing LockScreen cache
+        Write-Host "clearing LockScreen cache"
+        Start-Process -filePath "$env:SystemRoot\system32\takeown.exe" -ArgumentList "/F `"$env:ProgramData\Microsoft\Windows\SystemData`" /R /A /D $tkdwnYes" -NoNewWindow -Wait
+        Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:ProgramData\Microsoft\Windows\SystemData`" /grant $($admins):'(OI)(CI)F' /T" -NoNewWindow -Wait
+        Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:ProgramData\Microsoft\Windows\SystemData\S-1-5-18\ReadOnly`" /reset /T" -NoNewWindow -Wait
+        Remove-Item -Path "$env:ProgramData\Microsoft\Windows\SystemData\S-1-5-18\ReadOnly\LockScreen_Z\*" -Force
+
+        # Copy image to LockScreen
+        Write-Host "copy image to LockScreen"
+        Start-Process -filePath "$env:SystemRoot\system32\takeown.exe" -ArgumentList "/F `"$env:SystemRoot\Web\Screen`" /R /A /D $tkdwnYes" -NoNewWindow -Wait
+        Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:SystemRoot\Web\Screen`" /grant $($admins):'(OI)(CI)F' /T" -NoNewWindow -Wait
+        Start-Process -filePath "$env:SystemRoot\system32\icacls.exe" -ArgumentList "`"$env:SystemRoot\Web\Screen`" /reset /T" -NoNewWindow -Wait
+        $images = Get-ChildItem -Path "$env:SystemRoot\Web\Screen" -Filter *.jpg
+        foreach ($image in $images)
+        {
+            if (-Not (Test-Path ($image.FullName+".orig")))
+            {
+                Move-Item -Path $image.FullName -Destination ($image.FullName+".orig") -Force
+            }
+        }
+        Copy-Item -Path $localFile -Destination "$env:SystemRoot\Web\Screen\img100.jpg" -Force
+
+        Write-Host "done $exitCode"
+    }
+    catch
+    {   
+        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+        Write-Error ($_.Exception) -ErrorAction Continue
+        $exitCode = -3
+    }
+
+    Stop-Transcript
 }
+
+exit $exitCode

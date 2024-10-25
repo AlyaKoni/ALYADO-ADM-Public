@@ -64,7 +64,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-EmailVerifiedUsers | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-if ($AlyaAllowEmailVerifiedUsers -eq "PleaseSpecify")
+if ($AlyaAllowEmailVerifiedUsers -is [string] -and $AlyaAllowEmailVerifiedUsers -eq "PleaseSpecify")
 {
     Write-Warning "Please configure variable `$AlyaAllowEmailVerifiedUsers in ConfigureEnv.ps1"
     exit
@@ -77,7 +77,7 @@ if ($authorizationPolicy.AllowEmailVerifiedUsersToJoinOrganization -ne $AlyaAllo
     $param = @{
         allowEmailVerifiedUsersToJoinOrganization = $AlyaAllowEmailVerifiedUsers
     }
-    Update-MgBetaPolicyAuthorizationPolicy -BodyParameter $param
+    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId $authorizationPolicy.Id -BodyParameter $param
 }
 else
 {

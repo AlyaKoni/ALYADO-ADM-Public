@@ -104,17 +104,27 @@ try
         "Id": "deviceRegistrationPolicy",
         "DisplayName": "Device Registration Policy",
         "Description": "Tenant-wide policy that manages intial provisioning controls using quota restrictions, additional authentication and authorization checks",      
-        "MultiFactorAuthConfiguration": "0",
+        "MultiFactorAuthConfiguration": "notRequired",
         "UserDeviceQuota": 50,
         "AzureAdJoin": {
-            "AllowedGroups": [$($allowedIds)],
-            "AllowedUsers": [],
+            "AllowedToJoin": {
+                "@odata.type": "#microsoft.graph.enumeratedDeviceRegistrationMembership",
+                "users": [],
+                "groups": [$($allowedIds)]
+            },
             "AppliesTo": "2",
-            "IsAdminConfigurable": true
+            "IsAdminConfigurable": true,
+            "LocalAdmins": {
+                "enableGlobalAdmins": true,
+                "registeringUsers": {
+                    "@odata.type": "#microsoft.graph.noDeviceRegistrationMembership"
+                }
+            }
         },
         "AzureAdRegistration": {
-            "AllowedGroups": [],
-            "AllowedUsers": [],
+            "AllowedToRegister": {
+                "@odata.type": "#microsoft.graph.allDeviceRegistrationMembership"
+            },
             "AppliesTo": "1",
             "IsAdminConfigurable": false
         },
@@ -132,17 +142,27 @@ try
         "Id": "deviceRegistrationPolicy",
         "DisplayName": "Device Registration Policy",
         "Description": "Tenant-wide policy that manages intial provisioning controls using quota restrictions, additional authentication and authorization checks",      
-        "MultiFactorAuthConfiguration": "0",
+        "MultiFactorAuthConfiguration": "notRequired",
         "UserDeviceQuota": 50,
         "AzureAdJoin": {
-            "AllowedGroups": [],
-            "AllowedUsers": [],
-            "AppliesTo": "1",
-            "IsAdminConfigurable": true
+            "AllowedToJoin": {
+                "@odata.type": "#microsoft.graph.enumeratedDeviceRegistrationMembership",
+                "users": [],
+                "groups": []
+            },
+            "AppliesTo": "2",
+            "IsAdminConfigurable": true,
+            "LocalAdmins": {
+                "enableGlobalAdmins": true,
+                "registeringUsers": {
+                    "@odata.type": "#microsoft.graph.noDeviceRegistrationMembership"
+                }
+            }
         },
         "AzureAdRegistration": {
-            "AllowedGroups": [],
-            "AllowedUsers": [],
+            "AllowedToRegister": {
+                "@odata.type": "#microsoft.graph.allDeviceRegistrationMembership"
+            },
             "AppliesTo": "1",
             "IsAdminConfigurable": false
         },

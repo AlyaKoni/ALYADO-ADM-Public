@@ -41,7 +41,7 @@
 [CmdletBinding()]
 Param(
     [string]$ScriptDir = $null, #defaults to $($AlyaData)\intune\Scripts,
-    [string]$OnlyProcessShellScripts = $true
+    [bool]$OnlyProcessShellScripts = $false
 )
 
 # Loading configuration

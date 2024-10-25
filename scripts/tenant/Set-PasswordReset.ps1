@@ -34,13 +34,15 @@
     10.07.2022 Konrad Brunner       Added AlyaSsprEnabledGroup
     04.08.2023 Konrad Brunner       Browser parameter
     28.08.2023 Konrad Brunner       Switch to MgGraph
+    15.10.2024 Konrad Brunner       Disable methods if already migrated
 
 #>
 
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-    [object]$seleniumBrowser = $null
+    [object]$seleniumBrowser = $null,
+    [bool]$alreadyMigratedToAuthMethods = $true
     )
 
 #Reading configuration
@@ -99,6 +101,8 @@ else
     Write-Host "AllowedToUseSspr was already set to $($AlyaPasswordResetEnabled)." -ForegroundColor $CommandSuccess
 }
 
+$amEnabled = "true"
+if ($alreadyMigratedToAuthMethods) { $amEnabled = "false" }
 if ($AlyaPasswordResetEnabled)
 {
     $apiToken = Get-AzAccessToken
@@ -118,12 +122,12 @@ if ($AlyaPasswordResetEnabled)
     "objectId": "default",
     "enablementType": 2,
     "numberOfAuthenticationMethodsRequired": 2,
-    "emailOptionEnabled": true,
-    "mobilePhoneOptionEnabled": true,
-    "officePhoneOptionEnabled": true,
+    "emailOptionEnabled": $amEnabled,
+    "mobilePhoneOptionEnabled": $amEnabled,
+    "officePhoneOptionEnabled": $amEnabled,
     "securityQuestionsOptionEnabled": false,
-    "mobileAppNotificationEnabled": true,
-    "mobileAppCodeEnabled": true,
+    "mobileAppNotificationEnabled": $amEnabled,
+    "mobileAppCodeEnabled": $amEnabled,
     "numberOfQuestionsToRegister": 5,
     "numberOfQuestionsToReset": 3,
     "registrationRequiredOnSignIn": true,
@@ -139,11 +143,11 @@ if ($AlyaPasswordResetEnabled)
     "securityQuestions": [],
     "registrationConditionalAccessPolicies": [],
     "emailOptionAllowed": true,
-    "mobilePhoneOptionAllowed": true,
-    "officePhoneOptionAllowed": true,
-    "securityQuestionsOptionAllowed": true,
-    "mobileAppNotificationOptionAllowed": true,
-    "mobileAppCodeOptionAllowed": true
+    "mobilePhoneOptionAllowed": $amEnabled,
+    "officePhoneOptionAllowed": $amEnabled,
+    "securityQuestionsOptionAllowed": $amEnabled,
+    "mobileAppNotificationOptionAllowed": $amEnabled,
+    "mobileAppCodeOptionAllowed": $amEnabled
 }
 "@
         }
@@ -161,12 +165,12 @@ if ($AlyaPasswordResetEnabled)
     "objectId": "default",
     "enablementType": 1,
     "numberOfAuthenticationMethodsRequired": 2,
-    "emailOptionEnabled": true,
-    "mobilePhoneOptionEnabled": true,
-    "officePhoneOptionEnabled": true,
+    "emailOptionEnabled": $amEnabled,
+    "mobilePhoneOptionEnabled": $amEnabled,
+    "officePhoneOptionEnabled": $amEnabled,
     "securityQuestionsOptionEnabled": false,
-    "mobileAppNotificationEnabled": true,
-    "mobileAppCodeEnabled": true,
+    "mobileAppNotificationEnabled": $amEnabled,
+    "mobileAppCodeEnabled": $amEnabled,
     "numberOfQuestionsToRegister": 5,
     "numberOfQuestionsToReset": 3,
     "registrationRequiredOnSignIn": true,
@@ -181,12 +185,12 @@ if ($AlyaPasswordResetEnabled)
     "passwordResetEnabledGroupName": "$($AlyaSsprEnabledGroupName)",
     "securityQuestions": [],
     "registrationConditionalAccessPolicies": [],
-    "emailOptionAllowed": true,
-    "mobilePhoneOptionAllowed": true,
-    "officePhoneOptionAllowed": true,
-    "securityQuestionsOptionAllowed": true,
-    "mobileAppNotificationOptionAllowed": true,
-    "mobileAppCodeOptionAllowed": true
+    "emailOptionAllowed": $amEnabled,
+    "mobilePhoneOptionAllowed": $amEnabled,
+    "officePhoneOptionAllowed": $amEnabled,
+    "securityQuestionsOptionAllowed": $amEnabled,
+    "mobileAppNotificationOptionAllowed": $amEnabled,
+    "mobileAppCodeOptionAllowed": $amEnabled
 }
 "@
         }

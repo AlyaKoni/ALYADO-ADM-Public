@@ -52,7 +52,7 @@ Install-ModuleIfNotInstalled "MicrosoftTeams"
 LoginTo-Teams
 
 # =============================================================
-# O365 stuff
+# Teams stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
@@ -60,6 +60,7 @@ Write-Host "Teams | StoreMeetingRecordings-InStream | CsOnline" -ForegroundColor
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 #Main 
+Write-Host "Setting 'RecordingStorageMode' to 'Stream'."
 Set-CsTeamsMeetingPolicy -Identity Global -RecordingStorageMode "Stream"
 
 #Stopping Transscript

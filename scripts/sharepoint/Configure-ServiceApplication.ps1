@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     05.11.2020 Konrad Brunner       Initial Version
+    16.09.2024 Konrad Brunner       Rework with Graph
 
 #>
 
@@ -53,11 +54,12 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Az.KeyVault"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Directory.Read.All","AppRoleAssignment.ReadWrite.All","Application.ReadWrite.All")
 
 # =============================================================
 # Azure stuff
@@ -101,39 +103,63 @@ if (-Not $KeyVault)
 # Setting own key vault access
 Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
 $user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
-Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All"
+if ($KeyVault.EnableRbacAuthorization)
+{
+    $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ObjectId $user.Id -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
+    $Retries = 0;
+    While ($null -eq $RoleAssignment -and $Retries -le 6)
+    {
+        $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ObjectId $user.Id -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
+        Start-Sleep -s 10
+        $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ObjectId $user.Id -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
+        $Retries++;
+    }
+    if ($Retries -gt 6)
+    {
+        throw "Was not able to set role assigment 'Key Vault Administrator' for user $($user.Id) on scope $($KeyVault.ResourceId)"
+    }
+}
+else
+{
+    Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All" -ErrorAction Continue
+}
 
 # Checking azure key vault certificate
 Write-Host "Checking azure key vault certificate" -ForegroundColor $CommandInfo
-$AzureCertifcateAssetName = "AlyaSharePointRunAsCertificate"
-$AzureCertificateName = $AzureCertifcateAssetName
-$AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -ErrorAction SilentlyContinue
+$AzureCertifcateAssetName = "$($CompName)SharePointRunAsCertificate"
+$SharePointCertificateName = $AzureCertifcateAssetName
+$AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $SharePointCertificateName -ErrorAction SilentlyContinue
+if ($AzureKeyVaultCertificate)
+{
+    if ($AzureKeyVaultCertificate.Expires -lt (Get-Date).AddMonths(3))
+    {
+        Write-Host "  Certificate in key vault needs update"
+        $AzureKeyVaultCertificate = $null
+    }
+}
 if (-Not $AzureKeyVaultCertificate)
 {
-    Write-Warning "Key Vault certificate not found. Creating the certificate $AzureCertificateName"
-    $NoOfMonthsUntilExpired = 120
-    $AzureCertSubjectName = "CN=" + $AzureCertificateName
-    $AzurePolicy = New-AzKeyVaultCertificatePolicy -SecretContentType "application/x-pkcs12" -SubjectName $AzureCertSubjectName  -IssuerName "Self" -ValidityInMonths $NoOfMonthsUntilExpired -ReuseKeyOnRenewal
-    $AzureKeyVaultCertificateProgress = Add-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -CertificatePolicy $AzurePolicy
-    While ($AzureKeyVaultCertificateProgress.Status -eq "inProgress")
-    {
-        Start-Sleep -s 10
-        $AzureKeyVaultCertificateProgress = Get-AzKeyVaultCertificateOperation -VaultName $KeyVaultName -Name $AzureCertificateName
-    }
-    if ($AzureKeyVaultCertificateProgress.Status -ne "completed")
-    {
-        Write-Error "Key vault cert creation is not sucessfull and its status is: $(KeyVaultCertificateProgress.Status)" -ErrorAction Continue 
-        Exit 2
-    }
-    $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -ErrorAction SilentlyContinue
+    Write-Warning "Key Vault certificate not found or needs update. Creating the certificate $SharePointCertificateName"
+	$SelfSignedCertNoOfMonthsUntilExpired = 120
+	$SelfSignedCertPlainPassword = "`$" + [Guid]::NewGuid().ToString() + "!"
+	$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($SharePointCertificateName + ".pfx")
+	$CerPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
+	Clear-Variable -Name "SelfSignedCertPlainPassword" -Force -ErrorAction SilentlyContinue
+	$Cert = New-SelfSignedCertificate -Subject "CN=$SharePointCertificateName" -CertStoreLocation Cert:\CurrentUser\My `
+						-KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
+						-NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired) -HashAlgorithm SHA256
+	Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
+	$AzureKeyVaultCertificate = Import-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $SharePointCertificateName -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword
+	$AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $SharePointCertificateName
+    Remove-Item -Path $PfxCertPathForRunAsAccount -Force -ErrorAction SilentlyContinue | Out-Null
 }
 
 # Checking application
 Write-Host "Checking application" -ForegroundColor $CommandInfo
 $CompName = Make-PascalCase($AlyaCompanyNameShort)
 $applicationName = "$($CompName)SharePointRunAsApp"
-$AzureAdApplication = Get-AzADApplication -DisplayName $applicationName -ErrorAction SilentlyContinue
-if (-Not $AzureAdApplication)
+$AzAdApplication = Get-AzADApplication -DisplayName $applicationName -ErrorAction SilentlyContinue
+if (-Not $AzAdApplication)
 {
     Write-Warning "Azure AD Application not found. Creating the Azure AD Application $applicationName"
 
@@ -142,11 +168,11 @@ if (-Not $AzureAdApplication)
 
         #Exporting certificate
         Write-Host "Exporting certificate" -ForegroundColor $CommandInfo
-        $PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".pfx")
+        $PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($SharePointCertificateName + ".pfx")
         $PfxCertPlainPasswordForRunAsAccount = "`$" + [Guid]::NewGuid().ToString() + "!"
-        $CerCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".cer")
+        $CerCertPathForRunAsAccount = Join-Path $env:TEMP ($SharePointCertificateName + ".cer")
         #Getting the certificate 
-        $CertificateRetrieved = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AzureCertificateName
+        $CertificateRetrieved = Get-AzKeyVaultSecret -VaultName $KeyVaultName -Name $SharePointCertificateName
         $CertificateBytes = [System.Convert]::FromBase64String(($CertificateRetrieved.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password }))
         $CertCollection = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
         $CertCollection.Import($CertificateBytes, $null, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
@@ -154,23 +180,24 @@ if (-Not $AzureAdApplication)
         $ProtectedCertificateBytes = $CertCollection.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, $PfxCertPlainPasswordForRunAsAccount)
         [System.IO.File]::WriteAllBytes($PfxCertPathForRunAsAccount, $ProtectedCertificateBytes)
         #Export the .cer file 
-        $CertificateRetrieved = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName
+        $CertificateRetrieved = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $SharePointCertificateName
         $CertificateBytes = $CertificateRetrieved.Certificate.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
         [System.IO.File]::WriteAllBytes($CerCertPathForRunAsAccount, $CertificateBytes)
         #Read the .pfx file 
         $PfxCert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($PfxCertPathForRunAsAccount, $PfxCertPlainPasswordForRunAsAccount)
-        $KeyValue = [System.Convert]::ToBase64String($PfxCert.GetRawCertData())
-        $startDate = $PfxCert.NotBefore
-        $endDate = $PfxCert.NotAfter
+        $CerKeyValue = [System.Convert]::ToBase64String($PfxCert.GetRawCertData())
+        $CerThumbprint = [System.Convert]::ToBase64String($PfxCert.GetCertHash())
+        $CerStartDate = $PfxCert.NotBefore
+        $CerEndDate = $PfxCert.NotAfter
 
         #Creating application and service principal
         $KeyId = [Guid]::NewGuid()
         $HomePageUrl = $AlyaSharePointAdminUrl
-        $AzureAdApplication = New-AzADApplication -DisplayName $applicationName -HomePage $HomePageUrl -IdentifierUris ("http://" + $KeyId)
-        $AzureAdServicePrincipal = New-AzADServicePrincipal -ApplicationId $AzureAdApplication.ApplicationId
+        $AzAdApplication = New-AzADApplication -DisplayName $applicationName -HomePage $HomePageUrl -IdentifierUris ("http://$AlyaTenantName/$KeyId")
+        $AzureAdServicePrincipal = New-AzADServicePrincipal -ApplicationId $AzAdApplication.AppId
 
         #Create credential
-        $AzureAdApplicationCredential = New-AzADAppCredential -ApplicationId $AzureAdApplication.ApplicationId -CertValue $KeyValue -StartDate $startDate -EndDate $endDate
+        $AzAdApplicationCredential = New-AzADAppCredential -ApplicationId $AzAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $CerKeyValue -StartDate $CerStartDate -EndDate $CerEndDate 
 
     }
     finally
@@ -180,64 +207,82 @@ if (-Not $AzureAdApplication)
         Remove-Item -Path $CerCertPathForRunAsAccount -Force | Out-Null
     }
 
-    #TODO
-    #remove 'Contributor' over scope '/subscriptions/02016285-d8fb-4cd2-a126-3cbd9e1df1d2'
-
-    #Setting its own as owner (required for automated cert updates)
-    $AdAzureAdApplication = Get-AzureADApplication -Filter "AppId eq '$($AzureAdApplication.ApplicationId)'"
-    #$AdAzureAdServicePrincipal = Get-AzureADServicePrincipal -Filter "AppId eq '$($AzureAdApplication.ApplicationId)'"
-    #Add-AzureADApplicationOwner -ObjectId $AdAzureAdApplication.ObjectId -RefObjectId $AdAzureAdServicePrincipal.ObjectId
-
-    #Adding type Microsoft.Open.AzureAD.Model.ResourceAccess
-    #$module = Get-InstalledModule -Name AzureAd
-    #$instLoc = $module.InstalledLocation
-    #Add-Type -Path "$instLoc\Microsoft.Open.AzureAD16.Graph.Client.dll"
-
     #Granting permissions
-    $AppPermissionMsGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "18a4783c-866b-4cc7-a460-3d5e5662c884","Role"
-    $RequiredResourceAccessMsGraph = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
-    $RequiredResourceAccessMsGraph.ResourceAppId = "00000003-0000-0000-c000-000000000000"
-    $RequiredResourceAccessMsGraph.ResourceAccess = $AppPermissionMsGraph
+    Write-Host "Granting permissions"
+    $SpApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Office 365 SharePoint Online'" -Property "*"
+    $SpAppRoleSite = $SpApp.AppRoles | Where-Object {$_.Value -eq "Sites.FullControl.All" -and $_.AllowedMemberTypes -contains "Application"}
+    $SpAppRoleTerm = $SpApp.AppRoles | Where-Object {$_.Value -eq "TermStore.ReadWrite.All" -and $_.AllowedMemberTypes -contains "Application"}
+    $SpAppRoleUser = $SpApp.AppRoles | Where-Object {$_.Value -eq "User.ReadWrite.All" -and $_.AllowedMemberTypes -contains "Application"}
+    $GraphApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Graph'" -Property "*"
+    $GraphAppRoleSite = $GraphApp.AppRoles | Where-Object {$_.Value -eq "Sites.FullControl.All" -and $_.AllowedMemberTypes -contains "Application"}
+    $GraphAppRoleTerm = $GraphApp.AppRoles | Where-Object {$_.Value -eq "TermStore.ReadWrite.All" -and $_.AllowedMemberTypes -contains "Application"}
+    $GraphAppRoleUser = $GraphApp.AppRoles | Where-Object {$_.Value -eq "Directory.Read.All" -and $_.AllowedMemberTypes -contains "Application"}
+    $GraphAppRoleMember = $GraphApp.AppRoles | Where-Object {$_.Value -eq "GroupMember.ReadWrite.All" -and $_.AllowedMemberTypes -contains "Application"}
 
-    $AppPermissionSharePoint1 = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "fbcd29d2-fcca-4405-aded-518d457caae4","Role"
-    $AppPermissionSharePoint2 = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "678536fe-1083-478a-9c59-b99265e6b0d3","Role"
-    $AppPermissionSharePoint3 = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "9bff6588-13f2-4c48-bbf2-ddab62256b36","Role"
-    $AppPermissionSharePoint4 = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "c8e3537c-ec53-43b9-bed3-b2bd3617ae97","Role"
-    $AppPermissionSharePoint5 = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "741f803b-c850-494e-b5df-cde7c675a1ca","Role"
-    $AppPermissionSharePoint6 = New-Object -TypeName "Microsoft.Open.AzureAD.Model.ResourceAccess" -ArgumentList "df021288-bdef-4463-88db-98f22de89214","Role"
-    $RequiredResourceAccessSharePoint = New-Object -TypeName "Microsoft.Open.AzureAD.Model.RequiredResourceAccess"
-    $RequiredResourceAccessSharePoint.ResourceAppId = "00000003-0000-0ff1-ce00-000000000000"
-    $RequiredResourceAccessSharePoint.ResourceAccess = $AppPermissionSharePoint1, $AppPermissionSharePoint2, $AppPermissionSharePoint3, $AppPermissionSharePoint4, $AppPermissionSharePoint5, $AppPermissionSharePoint6
+    $params = @{
+        RequiredResourceAccess = @(
+            @{
+                ResourceAppId = "$($SpApp.AppId)"
+                ResourceAccess = @(
+                    @{
+                        Id = "$($SpAppRoleSite.Id)"
+                        Type = "Role"
+                    },
+                    @{
+                        Id = "$($SpAppRoleUser.Id)"
+                        Type = "Role"
+                    },
+                    @{
+                        Id = "$($SpAppRoleTerm.Id)"
+                        Type = "Role"
+                    }
+                )
+            },
+            @{
+                ResourceAppId = "$($GraphApp.AppId)"
+                ResourceAccess = @(
+                    @{
+                        Id = "$($GraphAppRoleSite.Id)"
+                        Type = "Role"
+                    },
+                    @{
+                        Id = "$($GraphAppRoleTerm.Id)"
+                        Type = "Role"
+                    },
+                    @{
+                        Id = "$($GraphAppRoleUser.Id)"
+                        Type = "Role"
+                    },
+                    @{
+                        Id = "$($GraphAppRoleMember.Id)"
+                        Type = "Role"
+                    }
+                )
+            }
+        )
+    }
+    Update-MgBetaApplication -ApplicationId $AzAdApplication.Id -BodyParameter $params
 
-    Set-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId -RequiredResourceAccess $RequiredResourceAccessMsGraph, $RequiredResourceAccessSharePoint
-    $tmp = Get-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId
-    while ($tmp.RequiredResourceAccess.Count -lt 3)
+    # Waiting for admin consent
+    $tmp = Get-MgBetaApplication -ApplicationId $AzAdApplication.Id -Property "RequiredResourceAccess"
+    while ($tmp.RequiredResourceAccess.Count -lt 2)
     {
         Start-Sleep -Seconds 10
-        $tmp = Get-AzureADApplication -ObjectId $AdAzureAdApplication.ObjectId
+        $tmp = Get-MgBetaApplication -ApplicationId $AzAdApplication.Id -Property "RequiredResourceAccess"
     }
     Start-Sleep -Seconds 60 # Looks like there is some time issue for admin consent #TODO 60 seconds enough
-
-    <#To check existing permissions
-    $tmp.RequiredResourceAccess
-    ($tmp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -eq '00000003-0000-0ff1-ce00-000000000000'}).ResourceAccess
-    ($tmp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -eq '00000003-0000-0000-c000-000000000000'}).ResourceAccess
-    ($tmp.RequiredResourceAccess | Where-Object { $_.ResourceAppId -eq '00000002-0000-0000-c000-000000000000'}).ResourceAccess
-    $tmp.RequiredResourceAccess.ResourceAppId
-    $tmp.RequiredResourceAccess.ResourceAccess
-    #>
 
     #Admin consent
     $apiToken = Get-AzAccessToken
     if (-Not $apiToken)
     {
-        Write-Warning "Can't aquire an access token. Please give admin consent to application '$($applicationName)' in the portal!"
+        Write-Warning "Can't aquire an access token. Please give admin consent to application '$($RunasAppName)' in the portal!"
         pause
     }
     else
     {
         $header = @{'Authorization'='Bearer '+$apiToken;'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-        $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$($AzureAdApplication.ApplicationId)/Consent?onBehalfOfAll=true"
+        $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$($AzAdApplication.AppId)/Consent?onBehalfOfAll=true"
         Invoke-RestMethod -Uri $url -Headers $header -Method POST -ErrorAction Stop
         #TODO consent was working?
         Write-Warning "Please check in portal if admin consent was working"

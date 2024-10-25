@@ -76,6 +76,7 @@ Write-Host "=====================================================`n" -Foreground
 # Checking intune apps
 Write-Host "Checking intune apps" -ForegroundColor $CommandInfo
 $IntuneApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Intune'"
+if (-Not $IntuneApp) { $IntuneApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft.Intune'" }
 $EnrollmentApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Intune Enrollment'"
 $ExcludeApps = @($IntuneApp.AppId)
 if ($EnrollmentApp) { $ExcludeApps += $EnrollmentApp.AppId }

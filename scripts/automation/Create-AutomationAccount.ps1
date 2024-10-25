@@ -107,9 +107,9 @@ if (-Not $Context)
 
 # Setting variable
 $AlyaSubscriptionIds = ""
-foreach($subName in $AlyaAllSubscriptions)
+foreach ($AlyaSubscriptionName in ($AlyaAllSubscriptions | Select-Object -Unique))
 {
-    $sub = Get-AzSubscription -SubscriptionName $subName
+    $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName
     if (-Not $AlyaSubscriptionIds.Contains($sub.Id))
     {
         if (-Not [string]::IsNullOrEmpty($AlyaSubscriptionIds))

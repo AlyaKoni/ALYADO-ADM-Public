@@ -50,6 +50,10 @@ if (-Not $ProfileFile)
 {
     $ProfileFile = "$($AlyaData)\intune\deviceDriverUpdateProfiles.json"
 }
+$AppPrefix = "WIN "
+if (-Not [string]::IsNullOrEmpty($AlyaAppPrefix)) {
+    $AppPrefix = "$AlyaAppPrefix "
+}
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -211,9 +215,9 @@ foreach($profile in $profiles)
 {
     if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
     if ($profile.displayName.EndsWith("_unused")) { continue }
-    if (-Not $profile.displayName.StartsWith("$AlyaAppPrefix "))
+    if (-Not $profile.displayName.StartsWith("$AppPrefix "))
     {
-        $profile.displayName = $profile.displayName.Replace("WIN ", "$AlyaAppPrefix ")
+        $profile.displayName = $profile.displayName.Replace("WIN ", "$AppPrefix ")
     }
     Write-Host "Configuring profile '$($profile.displayName)'" -ForegroundColor $CommandInfo
 

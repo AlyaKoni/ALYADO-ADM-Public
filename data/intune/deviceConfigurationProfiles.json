@@ -844,17 +844,6 @@
         "@odata.type": "#microsoft.graph.windowsHealthMonitoringConfiguration",
         "allowDeviceHealthMonitoring": "enabled",
         "configDeviceHealthMonitoringCustomScope": null,
-        "configDeviceHealthMonitoringScope": "bootPerformance",
-        "description": "Configures intune device monitoring capabilities",
-        "displayName": "WIN Intune Device Monitoring",
-        "roleScopeTagIds": [
-            "0"
-        ]
-    },
-    {
-        "@odata.type": "#microsoft.graph.windowsHealthMonitoringConfiguration",
-        "allowDeviceHealthMonitoring": "enabled",
-        "configDeviceHealthMonitoringCustomScope": null,
         "configDeviceHealthMonitoringScope": "bootPerformance,windowsUpdates",
         "description": "Configures intune data collection on windows devices",
         "displayName": "WIN Intune Data Collection",

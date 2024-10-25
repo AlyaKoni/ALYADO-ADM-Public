@@ -30,7 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    09.08.2021 Konrad Brunner       Initial Version
+    18.10.2024 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,7 +42,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Allow-CloudRecordingForCalls-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Disable-TeamsAIFeatures-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -56,11 +56,34 @@ LoginTo-Teams
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Teams | Allow-CloudRecordingForCalls | CsOnline" -ForegroundColor $CommandInfo
+Write-Host "Teams | Disable-TeamsAIFeatures | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-#Main 
-Set-CsTeamsCallingPolicy -Identity Global -AllowCloudRecordingForCalls $true 
+# Checking LobbyForExternals
+Write-Host "Checking EnrollFace" -ForegroundColor $CommandInfo
+$Policy = Get-CsTeamsAIPolicy -Identity Global
+if ($Policy.EnrollFace -ne "Disabled")
+{
+    Write-Warning "EnrollFace was set to '$($Policy.EnrollFace)'. Setting now to 'Disabled'."
+    Set-CsTeamsAIPolicy -Identity Global -EnrollFace  "Disabled"
+}
+else
+{
+    Write-Host "EnrollFace was already set to 'Disabled'."
+}
+
+# Checking EnrollVoice
+Write-Host "Checking EnrollVoice" -ForegroundColor $CommandInfo
+$Policy = Get-CsTeamsAIPolicy -Identity Global
+if ($Policy.EnrollVoice -ne "Disabled")
+{
+    Write-Warning "EnrollVoice was set to '$($Policy.EnrollVoice)'. Setting now to 'Disabled'."
+    Set-CsTeamsAIPolicy -Identity Global -EnrollVoice  "Disabled"
+}
+else
+{
+    Write-Host "EnrollVoice was already set to 'Disabled'."
+}
 
 #Stopping Transscript
 Stop-Transcript

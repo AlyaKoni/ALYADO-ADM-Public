@@ -14,12 +14,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -43,12 +47,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -72,12 +80,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -101,12 +113,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -130,12 +146,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -159,12 +179,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -188,12 +212,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -205,6 +233,7 @@
     {
         "@odata.type": "#microsoft.graph.iosStoreApp",
         "applicableDeviceType": {
+            "@odata.type": "microsoft.graph.iosDeviceType",
             "iPad": true,
             "iPhoneAndIPod": true
         },
@@ -217,12 +246,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -246,12 +279,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -275,12 +312,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -304,16 +345,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
             "v14_0": false,
-            "v15_0": false,
+            "v15_0": true,
             "v16_0": false,
-            "v17_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -337,12 +378,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -366,12 +411,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -395,12 +444,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -424,12 +477,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -453,12 +510,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -482,12 +543,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -511,12 +576,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -540,12 +609,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -569,12 +642,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -598,12 +675,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -627,12 +708,16 @@
         "isFeatured": true,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -656,12 +741,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -685,12 +774,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -714,12 +807,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -738,17 +835,21 @@
         "bundleId": "com.microsoft.rdc.ios",
         "description": "Use Microsoft Remote Desktop for iOS to connect to a remote PC or virtual apps and desktops made available by your admin. With Microsoft Remote Desktop, you can be productive no matter where you are.\n\nGET STARTED\n\nConfigure your PC for remote access using the information at https://aka.ms/rdsetup.\n\nLearn about our other Remote Desktop clients at https://aka.ms/rdclients.\n\nKEY ​FEATURES\n\n• Access remote PCs running Windows Professional or Enterprise and Windows Server.\n• Access managed resources published by your admin\n• Connect through a Remote Desktop Gateway.\n• Rich multi-touch experience supporting Windows gestures.\n• Secure connection to your data and applications.\n• Simple management of your connections and user account from the Connection Center.\n• Audio and video streaming.\n• Redirect your clipboard, and local devices such as microphones and cameras.\n\nSubmit feedback at https://aka.ms/rdiosfbk.",
         "developer": "",
-        "displayName": "IOS Microsoft-Remotedesktop",
+        "displayName": "IOS Windows App Mobile",
         "informationUrl": null,
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -772,12 +873,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -801,12 +906,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",
@@ -830,12 +939,16 @@
         "isFeatured": false,
         "largeIcon": null,
         "minimumSupportedOperatingSystem": {
+            "v8_0": false,
+            "v9_0": false,
             "v10_0": false,
             "v11_0": false,
             "v12_0": false,
             "v13_0": false,
-            "v8_0": true,
-            "v9_0": false
+            "v14_0": false,
+            "v15_0": true,
+            "v16_0": false,
+            "v17_0": false
         },
         "notes": "",
         "owner": "",

@@ -96,8 +96,13 @@ $AlyaScripts = "$AlyaRoot\scripts"
 $AlyaSolutions = "$AlyaRoot\solutions"
 $AlyaTools = "$AlyaRoot\tools"
 $AlyaEnvSwitch = ""
-$AlyaModuleVersionOverwrite = @( <#@{Name="PnP.PowerShell";Version="2.4.0"}#> )
+$AlyaModuleVersionOverwrite = @( @{Name="PnP.PowerShell";Version="2.4.0"} )
 $AlyaPackageVersionOverwrite = @( <#@{Name="Selenium.WebDriver";Version="4.10.0"}#> )
+
+if (-Not (Test-Path $AlyaTemp))
+{
+    $null = New-Item -Path $AlyaTemp -ItemType "Directory" -Force
+}
 
 # Switching env if required
 if ((Test-Path $AlyaLocal\EnvSwitch.ps1))
@@ -217,7 +222,7 @@ if (-Not $env:PATH.Contains("$($AlyaScriptPath)"))
 $AlyaOfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE") #WINPROJ.EXE, VISIO.EXE, ONENOTE.EXE, MSPUB.EXE, MSACCESS.EXE
 
 <# URLS #>
-$AlyaGitDownload = "https://git-scm.com/download/win"
+$AlyaGitDownload = "https://git-scm.com/downloads/win"
 $AlyaDeployToolDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49117"
 $AlyaAipClientDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=53018"
 $AlyaIntuneWinAppUtilDownload = "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool.git"
@@ -1621,6 +1626,8 @@ function LoginTo-MgGraph(
 {
     Write-Host "Login to Graph" -ForegroundColor $CommandInfo
 
+    try { Set-MgGraphOption -EnableLoginByWAM $false -ErrorAction SilentlyContinue | Out-Null } catch {}
+
     $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
     if ($mgContext)
     {
@@ -2061,12 +2068,8 @@ function LoginTo-PnP(
     if ([string]::IsNullOrEmpty($AlyaPnPAppId) -or $AlyaPnPAppId -eq "PleaseSpecify")
     {
         Write-Warning "We need to register the PnP app"
-        $regApp = Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "$($AlyaCompanyNameShortM365)PnPManagementShell" -Tenant $AlyaTenantName -Interactive
-        $pnpAppId = $regApp."AzureAppId/ClientId"
-        $cont = Get-Content -Path "$AlyaData\ConfigureEnv.ps1" -Raw -Encoding $AlyaUtf8Encoding
-        $cont = $cont.Replace("`$AlyaPnPAppId = `"PleaseSpecify`"", "`$AlyaPnPAppId = `"$pnpAppId`"")
-        $cont | Set-Content -Path "$AlyaData\ConfigureEnv.ps1" -Encoding $AlyaUtf8Encoding
-        Write-Warning "PnP AppId $pnpAppId has been set in variable AlyaPnPAppId in data\ConfigureEnv.ps1"
+        & "$AlyaScripts\sharepoint\Register-PnPApp.ps1"
+        throw "Please restart this script"
     }
 
     if ([string]::IsNullOrEmpty($TenantAdminUrl))
