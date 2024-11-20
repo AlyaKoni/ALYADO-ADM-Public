@@ -1,0 +1,12 @@
+[{
+        "@odata.type": "#microsoft.graph.mobileAppAssignment",
+		"intent": "available",
+        "source": "direct",
+        "sourceId": null,
+        "target": {
+            "@odata.type": "#microsoft.graph.allLicensedUsersAssignmentTarget",
+            "deviceAndAppManagementAssignmentFilterId": null,
+            "deviceAndAppManagementAssignmentFilterType": "none"
+        }
+    }
+]

@@ -174,6 +174,8 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
 }
 
 # Loading local custom configuration
+$AlyaPnpConnectionsDefined = Get-Variable -Name "AlyaPnpConnections" -Scope Global -ErrorAction SilentlyContinue
+if (-Not $AlyaPnpConnectionsDefined) { $Global:AlyaPnpConnections = @() }
 if ((Test-Path $AlyaLocal\ConfigureEnv.ps1))
 {
     Write-Host "Loading local configuration" -ForegroundColor $CommandInfo
@@ -2052,8 +2054,6 @@ function LogoutFrom-PnP(
     try { $null = Disconnect-PnPOnline -Connection $Connection -ErrorAction SilentlyContinue } catch {}
 }
 
-$AlyaPnpConnectionsDefined = Get-Variable -Name "AlyaPnpConnections" -Scope Global -ErrorAction SilentlyContinue
-if (-Not $AlyaPnpConnectionsDefined) { $Global:AlyaPnpConnections = @() }
 function LoginTo-PnP(
     [string] [Parameter(Mandatory = $true)] $Url,
     [string] [Parameter(Mandatory = $false)] $TenantAdminUrl = $null,

@@ -65,7 +65,7 @@ $plistContNew = $plistCont.Substring(0,$idx) + "<key>CFBundleVersion</key>`n`t<s
 $plistContNew | Set-Content -Path "$contentRoot/$dirName/$appName/$appName.app/Contents/Info.plist" -Encoding utf8
 
 $pkgName = $fileName.Replace(".dmg", ".pkg")
-productbuild --sign "AlyaConsulting" --component "$contentRoot/$dirName/$appName/$appName.app" "/Applications" "$contentRoot/$pkgName"
+productbuild --sign $AlyaMacPackageInstallCertName --component "$contentRoot/$dirName/$appName/$appName.app" "/Applications" "$contentRoot/$pkgName"
 
 Remove-Item -Path "$contentRoot/$fileName" -Force
 Remove-Item -Path "$contentRoot/$dirName" -Recurse -Force

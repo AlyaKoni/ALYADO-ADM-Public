@@ -70,8 +70,8 @@ tar -xf "$contentRoot/$fileName"
 popd
 
 $pkgName = $dirName + ".pkg"
-productbuild --sign "AlyaConsulting" --component "$contentRoot/$dirName/$appName.app" "/Applications" "$contentRoot/$pkgName"
-#productbuild --sign "AlyaConsulting" --component "/Applications/$appName.app" "$contentRoot/$pkgName"
+productbuild --sign $AlyaMacPackageInstallCertName --component "$contentRoot/$dirName/$appName.app" "/Applications" "$contentRoot/$pkgName"
+#productbuild --sign $AlyaMacPackageInstallCertName --component "/Applications/$appName.app" "$contentRoot/$pkgName"
 #pkgbuild --install-location "/Applications" --component "$contentRoot/$dirName/$appName.app" "$contentRoot/$pkgName"
 #hdiutil create -srcfolder "$contentRoot/$dirName"  -volname "$dirName" "$contentRoot/$dmgName"
 #installer -pkg "$contentRoot/$pkgName" -target /

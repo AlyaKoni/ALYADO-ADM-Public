@@ -31,6 +31,8 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     10.08.2021 Konrad Brunner       Initial version
+    07.11.2024 Konrad Brunner       Initial version
+
 #>
 
 [CmdletBinding()]
@@ -57,6 +59,11 @@ Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $C
 Write-Host "Extracting Automation Runbooks" -ForegroundColor $CommandInfo
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
 & "$($AlyaScripts)\automation\Extract-AllRunbooks.ps1"
+
+Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
+Write-Host "Extracting DNS Zones" -ForegroundColor $CommandInfo
+Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
+& "$($AlyaScripts)\network\Extract-DnsZoneFiles.ps1"
 
 # Stopping Transscript
 Stop-Transcript

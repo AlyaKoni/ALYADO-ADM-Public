@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -27,30 +27,34 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    04.11.2024 Konrad Brunner       Initial Version
+
 #>
 
-. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string]$OneDriveSiteUrl
+)
 
-if (-not $AlyaIsPsUnix)
-{
-    throw "Please run this script on a mac"
-}
+#Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-$appName = "ch.alyaconsulting.office.templates"
-$appLocation = "/Library/Application Support/Microsoft/Office365/User Content.localized/Templates.localized"
-$packageRoot = "$PSScriptRoot"
-$versionFile = Join-Path $packageRoot "version.json"
-$appVersion = (Get-Content -Path $versionFile -Raw | ConvertFrom-Json).Version
-$contentZip = Join-Path $packageRoot "ContentZip"
-$contentScripts = Join-Path $packageRoot "Scripts"
-$contentRoot = Join-Path $packageRoot "Content"
-$packagePath = Join-Path $contentRoot "$appName.pkg"
-if (-Not (Test-Path $contentRoot))
-{
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
-}
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\onedirve\Set-OneDriveReadOnly-$($AlyaTimeString).log" | Out-Null
 
-pkgbuild --sign $AlyaMacPackageInstallCertName --root $contentZip --identifier $appName --version $appVersion --install-location $appLocation --scripts $contentScripts $packagePath
+# Checking modules
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-#$tmp = Join-Path $packageRoot "Temp"
-#pkgutil --expand-full $packagePath $tmp
+# Logins
+$siteCon = LoginTo-PnP -Url $OneDriveSiteUrl
+
+# Lock the site
+Write-Host "Locking OneDrive" -ForegroundColor $CommandSuccess
+Set-PnPSite -Connection $siteCon -Identity $OneDriveSiteUrl -LockState ReadOnly -Wait
+
+#Stopping Transscript
+Stop-Transcript

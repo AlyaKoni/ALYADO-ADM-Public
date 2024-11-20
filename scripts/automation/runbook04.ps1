@@ -34,6 +34,7 @@
     18.10.2021 Konrad Brunner       Move to Az
     12.03.2024 Konrad Brunner       Implemented new managed identity concept
     31.07.2024 Konrad Brunner       Implemented WeekDay and Week in month
+    31.10.2024 Konrad Brunner       Better cert update handling
 
 	timeTag examples:
 	05:00
@@ -78,24 +79,41 @@ $grpNamePrjTeam = "##AlyaProjectTeamsGroup##"
 $TimeZone = "##AlyaTimeZone##"
 $startTimeTagName = "STARTTIME"
 $stopTimeTagName = "STOPTIME"
-$onlyStartStopOnce = $false
+$onlyStartStopOnce = $true
+$certUpdateDay = 1
+$certUpdateWeekDay = -1
+$certUpdateWeekDayWeek = -1
+$certUpdateStartCheckHour = 4
+$certUpdateStopCheckHour = 7
+$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, $TimeZone)
+Write-Output "Run time $($runTime)"
+$infTime = $runTime.AddHours(1)
 
-# Check pause during certificate update
-if ( (Get-Date).Day -eq 1 )
+$firstDay = Get-Date $runTime -Day 1
+$lastDay = $firstDay.AddMonths(1).AddDays(-1)
+$weekNumber = 0
+$maxWeek = 0
+for ($w = 0; $w -lt 7; $w++)
 {
-    if ( (Get-Date).Hour -ge 1 -and (Get-Date).Hour -le 7 )
+	$weekDay = $firstDay.AddDays($w * 7)
+	if ($runTime.DayOfYear -ge $weekDay.DayOfYear)
     {
-        Write-Output "Stopping execution to prevent errors during certificate update."
-        Exit
+		$weekNumber = $w + 1
     }
+	if ($runTime.Month -eq $weekDay.Month)
+	{
+		$maxWeek++
 }
+}
+$isLastWeek = $weekNumber -eq $maxWeek
+$isLastWeek7 = ($lastDay.DayOfYear - $runTime.DayOfYear) -lt 7
 
 # Login
 Write-Output "Login to Az using system-assigned managed identity"
 Disable-AzContextAutosave -Scope Process | Out-Null
 try
 {
-    $AzureContext = (Connect-AzAccount -Identity -Environment $AlyaAzureEnvironment).Context
+    $AzureContext = (Connect-AzAccount -Identity -Environment $AlyaAzureEnvironment -Tenant $AlyaTenantId).Context
 }
 catch
 {
@@ -104,52 +122,74 @@ catch
 }
 $AzureContext = Set-AzContext -Subscription $AlyaSubscriptionId -DefaultProfile $AzureContext
 
-try {
-    $RunAsCertificate = Get-AutomationCertificate -Name "AzureRunAsCertificate"
-    try { Disconnect-AzAccount }catch{}
-    Write-Output "Logging in to Az..."
-    Write-Output "  Thumbprint $($RunAsCertificate.Thumbprint)"
-    Add-AzAccount `
-        -ServicePrincipal `
-        -TenantId $AlyaTenantId `
-        -ApplicationId $AlyaApplicationId `
-        -CertificateThumbprint $RunAsCertificate.Thumbprint `
-        -Environment $AlyaAzureEnvironment
-    Select-AzSubscription -SubscriptionId $AlyaSubscriptionId  | Write-Verbose
-	$Context = Get-AzContext
-} catch {
-    if (!$RunAsCertificate) {
-        Write-Output $RunAsCertificateName
-        try { Write-Output ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-        Write-Output "Certificate $RunAsCertificateName not found."
-    }
-    throw
-}
+# Login-AzureAutomation
+$retries = 10
+do
+{
+    Start-Sleep -Seconds ((10-$retries)*4)
+	try {
+	    $RunAsCertificate = Get-AutomationCertificate -Name "AzureRunAsCertificate"
+	    try { Disconnect-AzAccount }catch{}
+	    Write-Output "Logging in to Az..."
+	    if (!$AlyaApplicationId -or $AlyaApplicationId.Contains("##")) {
+	        $ErrorMessage = "Missing application id."
+	        throw $ErrorMessage            
+	    }
+	
+	    Write-Output "Logging in to Az ($AlyaAzureEnvironment)..."
+	    Write-Output "  Thumbprint $($RunAsCertificate.Thumbprint)"
+	    Disable-AzContextAutosave -Scope Process -ErrorAction SilentlyContinue | Out-Null
+	    Add-AzAccount `
+	        -ServicePrincipal `
+	        -TenantId $AlyaTenantId `
+	        -ApplicationId $AlyaApplicationId `
+	        -CertificateThumbprint $RunAsCertificate.Thumbprint `
+	        -Environment $AlyaAzureEnvironment
+	    Select-AzSubscription -SubscriptionId $AlyaSubscriptionId  | Write-Verbose
+		$Context = Get-AzContext
+		break
+	} catch {
+		try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+		$retries--
+		if ($retries -lt 0)
+		{
+			Write-Error "Max retries reached!" -ErrorAction Continue
+			# Check during certificate update
+			$isCertUpdating = $false
+			if ($certUpdateDay -gt 0)
+			{
+				if ( (Get-Date).Day -eq $certUpdateDay )
+				{
+					$isCertUpdating = $true
+				}
+			}
+			else
+			{
+				$weekDay = (Get-Date).DayOfWeek.value__
+				if ($weekDay -eq $certUpdateWeekDay -and $weekNumber -eq $certUpdateWeekDayWeek)
+				{
+					$isCertUpdating = $true
+	    		}
+    		}
+			if ($isCertUpdating)
+			{
+				if ( (Get-Date).Hour -ge $certUpdateStartCheckHour -and (Get-Date).Hour -le $certUpdateStopCheckHour )
+				{
+					Write-Error "Guessing cert update! Exiting..." -ErrorAction Continue
+					exit
+				}
+			}
+			else
+			{
+			    throw
+			}
+		}
+	}
+} while ($true)
 
 try {
 	# Members
 	$subs = $AlyaSubscriptionIds.Split(",")
-	$runTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, $TimeZone)
-	Write-Output "Run time $($runTime)"
-
-	$firstDay = Get-Date $runTime -Day 1
-	$lastDay = $firstDay.AddMonths(1).AddDays(-1)
-	$weekNumber = 0
-	$maxWeek = 0
-	for ($w = 0; $w -lt 7; $w++)
-	{
-		$weekDay = $firstDay.AddDays($w * 7)
-		if ($runTime.DayOfYear -ge $weekDay.DayOfYear)
-		{
-			$weekNumber = $w + 1
-		}
-		if ($runTime.Month -eq $weekDay.Month)
-		{
-			$maxWeek++
-		}
-	}
-	$isLastWeek = $weekNumber -eq $maxWeek
-	$isLastWeek7 = ($lastDay.DayOfYear - $runTime.DayOfYear) -lt 7
 
 	# Processing subscriptions
 	foreach($sub in $subs)
@@ -157,6 +197,7 @@ try {
 		"Processing subscription: $($sub)"
         $null = Set-AzContext -Subscription $sub
 
+		# Processing
 		Get-AzResourceGroup | Foreach-Object {
 			$ResGName = $_.ResourceGroupName
 			Write-Output "  Checking ressource group $($ResGName)"

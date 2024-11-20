@@ -33,6 +33,7 @@
     24.04.2023 Konrad Brunner       Initial Creation
     03.06.2024 Konrad Brunner       Added try catch
     16.08.2024 Konrad Brunner       ignoreDomains
+    20.11.2024 Konrad Brunner       Better error handling
 
 #>
 
@@ -93,6 +94,10 @@ try
             }
         }
         catch {
+            if ($conf)
+            {
+                $conf | Format-List | Out-String
+            }
             Write-Error $_.Exception -ErrorAction Continue
         }
     }

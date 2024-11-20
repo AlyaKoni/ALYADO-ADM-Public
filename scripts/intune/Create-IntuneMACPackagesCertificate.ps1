@@ -64,10 +64,10 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Create-IntuneMACPackagesCertificate | Local" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-$keyName = "$($outputPath )/InstallerCertificate_$($AlyaCompanyName)_Key.pem".Replace("\", "/")
-$crtName = "$($outputPath )/InstallerCertificate_$($AlyaCompanyName)_Cert.pem".Replace("\", "/")
-$cerName = "$($outputPath )/InstallerCertificate_$($AlyaCompanyName)_Cert.cer".Replace("\", "/")
-openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -sha256 -addext basicConstraints=critical,CA:false -addext keyUsage=critical,digitalSignature -set_serial "0x$(openssl rand -hex 4)" -subj "/CN=Installer Certificate ($AlyaCompanyName)" -out "$crtName" -keyout "$keyName"
+$keyName = "$($outputPath )/InstallerCertificate_$($AlyaMacPackageInstallCertName)_Key.pem".Replace("\", "/")
+$crtName = "$($outputPath )/InstallerCertificate_$($AlyaMacPackageInstallCertName)_Cert.pem".Replace("\", "/")
+$cerName = "$($outputPath )/InstallerCertificate_$($AlyaMacPackageInstallCertName)_Cert.cer".Replace("\", "/")
+openssl req -x509 -nodes -days 3650 -newkey rsa:4096 -sha256 -addext basicConstraints=critical,CA:false -addext keyUsage=critical,digitalSignature -set_serial "0x$(openssl rand -hex 4)" -subj "/CN=Installer Certificate ($AlyaMacPackageInstallCertName)" -out "$crtName" -keyout "$keyName"
 cp "$crtName" "$cerName"
 security import "$crtName"
 security import "$keyName" -T /usr/bin/productbuild -T /usr/bin/pkgbuild

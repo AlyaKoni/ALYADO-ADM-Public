@@ -34,6 +34,7 @@
     18.10.2021 Konrad Brunner       Move to Az
     24.01.2022 Konrad Brunner       Fixed unwanted module updates
     04.08.2023 Konrad Brunner       Changed from params to constants and new managed identity login
+    31.10.2024 Konrad Brunner       Robuster Url handling
 
 #>
 
@@ -58,7 +59,6 @@ $AlyaFromMail = "##AlyaFromMail##"
 $AlyaToMail = "##AlyaToMail##"
 
 # Constants
-$RunAsConnectionName = "AzureRunAsConnection"
 $ModulesToInstall = @( ##AlyaModules## ) #Version $null means latest
 
 # Functions
@@ -73,6 +73,11 @@ Function GetModuleContentUrl
 
     )
 
+    $moduleUrl = $null
+    $retries = 10
+    do
+    {
+        Start-Sleep -Seconds ((10-$retries)*4)
     $Url = "https://www.powershellgallery.com/api/v2/Search()?`$filter=IsLatestVersion&searchTerm=%27$ModuleName%27&targetFramework=%27%27&includePrerelease=false&`$skip=0&`$top=40"
     $SearchResult = Invoke-RestMethod -Method Get -Uri $Url -UseBasicParsing
 
@@ -80,9 +85,20 @@ Function GetModuleContentUrl
         $SearchResult = $SearchResult | Where-Object -FilterScript {
             return $_.properties.title -eq $ModuleName
         }
+            if($SearchResult.Length -and $SearchResult.Length -gt 1) {
+                $SearchResult = $SearchResult[0]
+            }
+        }
+        $moduleUrl = $SearchResult.id
+        $retries--
+    } while ($moduleUrl -eq $null -and $retries -ge 0)
+    if ($moduleUrl -eq $null)
+    {
+        Write-Error "Could not find module $ModuleName on PowerShell Gallery. This may be a module you imported from a different location." -ErrorAction Continue
+        return $null
     }
 
-    $PackageDetails = Invoke-RestMethod -Method Get -UseBasicParsing -Uri $SearchResult.id
+    $PackageDetails = Invoke-RestMethod -Method Get -UseBasicParsing -Uri $moduleUrl
     if(!$ModuleVersion) {
         $ModuleVersion = $PackageDetails.entry.properties.version
     }
@@ -105,10 +121,12 @@ function Update-ProfileAndAutomationVersionToLatest
     $WebClient = New-Object System.Net.WebClient
     # Download Az.Profile to temp location
     $ProfileURL = GetModuleContentUrl $ProfileModuleName
+    if ($ProfileURL -eq $null) { exit }
     $ProfilePath = Join-Path $env:TEMP ($ProfileModuleName + ".zip")
     $WebClient.DownloadFile($ProfileURL, $ProfilePath)
     # Download Az.Automation to temp location
     $AutomationURL = GetModuleContentUrl $AutomationModuleName
+    if ($AutomationURL -eq $null) { exit }
     $AutomationPath = Join-Path $env:TEMP ($AutomationModuleName + ".zip")
     $WebClient.DownloadFile($AutomationURL, $AutomationPath)
     # Create folder for unzipping the Module files
@@ -174,6 +192,7 @@ try {
 		$ModuleVersion = $ModuleToInstall.Version
 		Write-Output "Checking module $ModuleName $ModuleVersion ..."
 		$AzureADGalleryURL = GetModuleContentUrl -ModuleName $ModuleName -ModuleVersion $ModuleVersion
+        if ($AzureADGalleryURL -eq $null) { continue }
 		if (-Not $AzureADGalleryURL)
 		{
 			Write-Error "Can't find module $ModuleName" -ErrorAction Continue
@@ -192,6 +211,7 @@ try {
         else
         {
 			$AzureADGalleryURLActual = GetModuleContentUrl -ModuleName $ModuleName -ModuleVersion $ADModule.Version.ToString()
+            if ($AzureADGalleryURLActual -eq $null) { continue }
 			if ($AzureADGalleryURL -ne $AzureADGalleryURLActual)
 			{
 				Write-Output "  Updating..."

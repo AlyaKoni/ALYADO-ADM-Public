@@ -43,13 +43,13 @@
 #>
 
 cls
+$dayOffset = -10 # 0
 $informUsers = $true
 $onlyStartStopOnce = $true
 $runAtMinute = 10 # Scheduler Time
 $runForDays = 14
-$dayOffset = 0
-$startTimeTagValue = "07:30[1];06:30(1)" # Start tag definition
-$stopTimeTagValue = "21:55[1];06:30(1)" # Stop tag definition
+$startTimeTagValue = "06:00" #"07:30[1];06:30(1)" # Start tag definition
+$stopTimeTagValue = "" # "21:55[1];06:30(1)" # Stop tag definition
 $midTime = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($(Get-Date), [System.TimeZoneInfo]::Local.Id, 'W. Europe Standard Time')
 $midTime = $midTime.AddHours(-$midTime.Hour).AddMinutes(-$midTime.Minute).AddSeconds(-$midTime.Second).AddMilliseconds(-$midTime.Millisecond)
 $midTime = $midTime.AddMinutes($runAtMinute).AddDays($dayOffset)
@@ -59,6 +59,7 @@ $startTimeTagValues = $startTimeTagValue.Split(";")
 $startTimeDefs = @()
 foreach($startTimeTagValue in $startTimeTagValues)
 {
+    if ([string]::IsNullOrEmpty($startTimeTagValue)) { continue }
 	$startTime = $null
 	$startTimeWds = $null
 	$startTimeWks = $null
@@ -92,6 +93,7 @@ $stopTimeTagValues = $stopTimeTagValue.Split(";")
 $stopTimeDefs = @()
 foreach($stopTimeTagValue in $stopTimeTagValues)
 {
+    if ([string]::IsNullOrEmpty($stopTimeTagValue)) { continue }
 	$stopTime = $null
 	$stopTimeWds = $null
 	$stopTimeWks = $null

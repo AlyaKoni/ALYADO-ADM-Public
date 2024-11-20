@@ -35,6 +35,7 @@
     23.01.2022 Konrad Brunner       Fixed issue with new found dependency module
     04.08.2023 Konrad Brunner       Changed from params to constants and new managed identity login
 	02.09.2024 Konrad Brunner       Fixed LatestModuleVersionOnGallery
+    31.10.2024 Konrad Brunner       Robuster Url handling
 
 #>
 
@@ -198,7 +199,7 @@ function Get-ModuleDependencyAndLatestVersion([string] $ModuleName) {
                 throw $_
             }
             Write-Warning "Retrying"
-            Start-Sleep -Seconds 10
+            Start-Sleep -Seconds ((10-$retries)*4)
         }
     }
     
@@ -227,7 +228,7 @@ function Get-ModuleDependencyAndLatestVersion([string] $ModuleName) {
                         throw $_
                     }
                     Write-Warning "Retrying"
-                    Start-Sleep -Seconds 10
+                    Start-Sleep -Seconds ((10-$retries)*4)
                 }
             }
 
