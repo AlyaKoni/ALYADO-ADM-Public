@@ -30,66 +30,84 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.12.2019 Konrad Brunner       Initial Version
-    25.02.2020 Konrad Brunner       Changes for a project
-    25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
+    22.12.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string[]] [Parameter(Mandatory=$false)]
+    $adminUsers = $null
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-O365AuditLogging-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Add-AdminsToAllTeams-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
-# Exchange stuff
+# Teams stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-O365AuditLogging | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "Teams | Add-AdminsToAllTeams | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Setting auditing in exchange"
-try
+# Getting all teams
+$Teams = Get-Team
+
+# Defining functions
+function CheckNotIn($searchFor, $searchIn)
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
-
-    $cfg = Get-OrganizationConfig
-    if ($cfg.IsDehydrated)
+    $notfnd = $true
+    foreach($search in $searchIn)
     {
-        Enable-OrganizationCustomization -ErrorAction Stop
+        if ($search -like "*$searchFor*") { $notfnd = $false ; break }
+        if ($searchFor -like "*$search*") { $notfnd = $false ; break }
     }
-    while ((Get-OrganizationConfig).IsDehydrated)
-    {
-        Write-Host "Waiting 1 minute..."
-        Start-Sleep -Seconds 60
-    }
+    return $notfnd
+}
 
-    $error.Clear()
-    if (-Not (Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
+# Defining admins
+$owners = @()
+if (-Not [string]::IsNullOrEmpty($AlyaTeamsNewTeamOwner) -and $AlyaTeamsNewTeamOwner -ne "PleaseSepcify") { if (CheckNotIn -searchFor $AlyaTeamsNewTeamOwner -searchIn $owners) { $owners += $AlyaTeamsNewTeamOwner } }
+if (-Not [string]::IsNullOrEmpty($AlyaTeamsNewTeamAdditionalOwner) -and $AlyaTeamsNewTeamAdditionalOwner -ne "PleaseSepcify") { if (CheckNotIn -searchFor $AlyaTeamsNewTeamAdditionalOwner -searchIn $owners) { $owners += $AlyaTeamsNewTeamAdditionalOwner } }
+if ($AlyaTeamsNewAdmins -and $AlyaTeamsNewAdmins.Count -gt 0)
+{
+    foreach($AlyaTeamsNewTeamAdmin in $AlyaTeamsNewAdmins)
     {
-        Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
-        if ($error.Count -gt 0)
+        if (-Not [string]::IsNullOrEmpty($AlyaTeamsNewTeamAdmin) -and $AlyaTeamsNewTeamAdmin -ne "PleaseSepcify") { if (CheckNotIn -searchFor $AlyaTeamsNewTeamAdmin -searchIn $owners) { $owners += $AlyaTeamsNewTeamAdmin } }
+    }
+}
+foreach($owner in $adminUsers)
+{
+    if (CheckNotIn -searchFor $owner -searchIn $owners) { $owners += $owner ; if (-Not $primaryAdmin) { $primaryAdmin = $owner } }
+}
+
+# Processing teams
+foreach($Team in $Teams)
+{
+    #$Team = $Teams[22]
+    Write-Host "Team $($Team.DisplayName)"
+    $members = Get-TeamUser -GroupId $Team.GroupId -Role Owner
+    foreach($memb in $owners)
+    {
+        if (CheckNotIn -searchFor $memb -searchIn $members.User)
         {
-            Write-Error "We were not able to set audit logging. Possibly it needs some time until customization gets enabled. Please rerun in an hour or so." -ErrorAction Continue
+            Write-Warning "Adding owner $memb to team."
+            Add-TeamUser -GroupId $Team.GroupId -Role Owner -User $memb
         }
     }
-}
-catch
-{
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
+    
 }
 
-#Stopping Transscript
+# Stopping Transscript
 Stop-Transcript

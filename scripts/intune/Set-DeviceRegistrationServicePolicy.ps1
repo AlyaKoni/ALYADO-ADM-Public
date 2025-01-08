@@ -80,7 +80,7 @@ if ($AlyaAllowDeviceRegistration -and -Not [string]::IsNullOrEmpty($AlyaAllowDev
         if ($allowedGroup) {
             $allowedGroups += $allowedGroup
         } else {
-            Write-Wrning "Group $grpName not found!"
+            Write-Warning "Group $grpName not found!"
         }
     }
 }
@@ -90,7 +90,7 @@ if ($AlyaAllowDeviceRegistration -and -Not [string]::IsNullOrEmpty($AlyaAllowDev
     if ($allowedGroup) {
         $allowedGroups += $allowedGroup
     } else {
-        Write-Wrning "Group $AlyaAllowDeviceRegistration not found!"
+        Write-Warning "Group $AlyaAllowDeviceRegistration not found!"
     }
 }
 

@@ -121,10 +121,6 @@ try
         }
     }
 }
-finally
-{
-    DisconnectFrom-EXOandIPPS
-}
 
 #Stopping Transscript
 Stop-Transcript

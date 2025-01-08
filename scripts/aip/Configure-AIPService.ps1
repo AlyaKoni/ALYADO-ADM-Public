@@ -176,7 +176,6 @@ if (-Not $actConfiguration.AutomaticServiceUpdateEnabled)
 #Test-IRMConfiguration -Sender first.last@domain.ch
 
 Get-IRMConfiguration | Format-List
-DisconnectFrom-EXOandIPPS
 
 #Stopping Transscript
 Stop-Transcript

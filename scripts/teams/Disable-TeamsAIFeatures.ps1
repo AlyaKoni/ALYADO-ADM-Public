@@ -59,7 +59,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Teams | Disable-TeamsAIFeatures | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking LobbyForExternals
+# Checking EnrollFace
 Write-Host "Checking EnrollFace" -ForegroundColor $CommandInfo
 $Policy = Get-CsTeamsAIPolicy -Identity Global
 if ($Policy.EnrollFace -ne "Disabled")

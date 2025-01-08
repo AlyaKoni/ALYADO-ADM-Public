@@ -64,7 +64,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Getting site collections
 Write-Host "Getting site collections" -ForegroundColor $CommandInfo
-$sitesToProcess = Get-PnPTenantSite -Connection $script:adminCon -Detailed -IncludeOneDriveSites | Where-Object { $_.Url -like "*/sites/*" }
+$sitesToProcess = Get-PnPTenantSite -Connection $script:adminCon -Detailed | Where-Object { $_.Url -like "*/sites/*" }
 $allUsers = Get-PnPAzureADUser -Connection $script:adminCon
 
 $searchUser = $allUsers | Where-Object { $_.UserPrincipalName -eq $searchUpn }
@@ -83,6 +83,13 @@ foreach($siteToProcess in $sitesToProcess)
     Write-Host "$($siteToProcess.Url)" -ForegroundColor $CommandInfo
     $siteCon = LoginTo-PnP -Url $siteToProcess.Url
 
+    $site = Get-PnPTenantSite -Connection $adminCon -Identity $siteToProcess.Url
+    if ($site.Template -like "REDIRECTSITE*") 
+    { 
+        Write-Host "Ignored: REDIRECTSITE"
+        continue 
+    }
+
     $web = Get-PnPWeb -Connection $siteCon
     $roleAssignments = Get-PnPProperty -Connection $siteCon -ClientObject $web -Property "RoleAssignments"
     foreach($roleAssignment in $roleAssignments)
@@ -90,18 +97,35 @@ foreach($siteToProcess in $sitesToProcess)
         $loginName = Get-PnPProperty -Connection $siteCon -ClientObject $roleAssignment.Member -Property "LoginName"
         $principalType = Get-PnPProperty -Connection $siteCon -ClientObject $roleAssignment.Member -Property "PrincipalType"
         Write-Host "Assignment $principalType '$loginName'"
+        $searchFnd = $false
+        $configureFnd = $false
         if ($principalType -eq "User")
         {
             if ($loginName -like "*$searchUpn")
             {
-                Write-Host "Found"
+                Write-Host "Found search"
+                $searchFnd = $true
+            }
+            if ($loginName -like "*$configureUpn")
+            {
+                Write-Host "Found configure"
+                $configureFnd = $true
+            }
+            if ($searchFnd -and -Not $configureFnd)
+            {
+                Write-Host "Adding configure"
+                $bindings = Get-PnPProperty -Connection $siteCon -ClientObject $roleAssignment -Property "RoleDefinitionBindings"
+                foreach($binding in $bindings)
+                {
+                    if ($binding.Name -eq "Limited Access" -or $binding.Name -eq "Beschränkter Zugriff") { continue }
+                    Set-PnPWebPermission -Connection $siteCon -User $configureUpn -AddRole $binding.Name
+                }
             }
         }
         if ($principalType -eq "SharePointGroup")
         {
+            if ($loginName -like "*limited*") { continue }
             $members = Get-PnPGroupMember -Connection $siteCon -Identity $loginName #TODO does this work for sub webs?
-            $searchFnd = $false
-            $configureFnd = $false
             foreach($member in $members)
             {
                 if ($member.LoginName -like "*$searchUpn")
@@ -115,13 +139,10 @@ foreach($siteToProcess in $sitesToProcess)
                     $configureFnd = $true
                 }
             }
-            if ($searchFnd)
+            if ($searchFnd -and -Not $configureFnd)
             {
-                if (-Not $configureFnd)
-                {
-                    Write-Host "Adding configure"
-                    Add-PnPGroupMember -Connection $siteCon -Group $loginName -LoginName $configureUpn
-                }
+                Write-Host "Adding configure"
+                Add-PnPGroupMember -Connection $siteCon -Group $loginName -LoginName $configureUpn
             }
         }
     }

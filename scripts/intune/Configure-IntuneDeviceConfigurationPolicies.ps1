@@ -36,7 +36,8 @@
 
 [CmdletBinding()]
 Param(
-    [string]$definedPolicyFile = $null #defaults to $($AlyaData)\intune\deviceConfigurationPolicies.json
+    [string]$definedPolicyFile = $null, #defaults to $($AlyaData)\intune\deviceConfigurationPolicies.json
+    [string]$onlyPolicy = $null
 )
 
 # Loading configuration
@@ -105,6 +106,7 @@ foreach($definedPolicy in $definedPolicies)
 {
     if ($definedPolicy.Comment1 -and $definedPolicy.Comment2 -and $definedPolicy.Comment3) { continue }
     if ($definedPolicy.name.EndsWith("_unused")) { continue }
+    if (-Not [string]::IsNullOrEmpty($onlyPolicy) -and $definedPolicy.name -ne $onlyPolicy) { continue }
     Write-Host "ConfigurationPolicy '$($definedPolicy.name)'" -ForegroundColor $CommandInfo
 
     try {
@@ -156,9 +158,11 @@ foreach($definedPolicy in $definedPolicies)
         $mpolicy.PSObject.properties.remove("platforms")
         $mpolicy.PSObject.properties.remove("templateReference")
         $mpolicy.PSObject.properties.remove("settings")
+        $mpolicy.PSObject.properties.remove("settingCount")
         $null = Patch-MsGraph -Uri $uri -Body ($mpolicy | ConvertTo-Json -Depth 50)
 
         # Updating policy values
+        Write-Warning "    Updating policy values not yet working"
         #TODO not working!!!
         # Write-Host "    Updating policy values"
         # $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings"
@@ -166,12 +170,16 @@ foreach($definedPolicy in $definedPolicies)
         # $nextId = ($extPolicySettings.id | Measure-Object -Maximum).Maximum
         # foreach($extPolicySetting in $extPolicySettings)
         # {
+        #     #$extPolicySetting = $extPolicySettings[0]
         #     $mpolicySetting = $mpolicySettings | Where-Object {`
         #         $_.settingInstance.'@odata.type' -eq $extPolicySetting.settingInstance.'@odata.type' -and `
         #         $_.settingInstance.settingDefinitionId -eq $extPolicySetting.settingInstance.settingDefinitionId }
         #     if ($mpolicySetting)
         #     {
         #         Write-Host "Found, updating"
+        #         #$uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)"
+        #         #$null = Patch-MsGraph -Uri $uri -Body (@{Settings=@($mpolicySetting)} | ConvertTo-Json -Depth 50)
+
         #         $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings/$($extPolicySetting.id)"
         #         #if ($mpolicySetting.id) { $mpolicySetting.PSObject.properties.remove("id") }
         #         $null = Patch-MsGraph -Uri $uri -Body ($mpolicySetting | ConvertTo-Json -Depth 50)
@@ -214,6 +222,7 @@ foreach($policy in $definedPolicies)
 {
     if ($policy.Comment1 -and $policy.Comment2 -and $policy.Comment3) { continue }
     if ($policy.name.EndsWith("_unused")) { continue }
+    if (-Not [string]::IsNullOrEmpty($onlyPolicy) -and $definedPolicy.name -ne $onlyPolicy) { continue }
     Write-Host "Assigning ConfigurationPolicy policy '$($policy.name)'" -ForegroundColor $CommandInfo
 
     try {

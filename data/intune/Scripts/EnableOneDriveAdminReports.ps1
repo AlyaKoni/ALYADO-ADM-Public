@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2024
+    Copyright (c) Alya Consulting, 2019-2023
 
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,54 +30,13 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    10.07.2022 Konrad Brunner       Initial Version
+    16.12.2024 Konrad Brunner       Initial Version
 
 #>
 
-[CmdletBinding()]
-Param(
-)
-
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
-
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Set-OrganizationCustomizationEnabled-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
-
-# =============================================================
-# Exchange stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-OrganizationCustomizationEnabled | EXCHANGE" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-try
+$odRegPath = "HKLM:\SOFTWARE\Policies\Microsoft\OneDrive"
+if (!(Test-Path $odRegPath))
 {
-    Write-Host "Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
-
-    $config = Get-OrganizationConfig
-    if ($config.IsDehydrated)
-    {
-        Write-Host "Enabling OrganizationCustomization" -ForegroundColor $CommandInfo
-        Enable-OrganizationCustomization
-    }
-    else
-    {
-        Write-Host "OrganizationCustomization was already enabled" -ForegroundColor $CommandInfo
-    }
-
+    New-Item -Path $odRegPath -Force
 }
-catch
-{
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
-}
-
-#Stopping Transscript
-Stop-Transcript
+New-ItemProperty -Path $odRegPath -Name "EnableSyncAdminReports" -Value "1" -PropertyType DWORD -Force

@@ -105,10 +105,6 @@ try
         Write-Host "  User does not exist in O365"
     }
 }
-finally
-{
-    DisconnectFrom-EXOandIPPS
-}
 
 #Setting SharePoint photo
 Write-Host "Setting SharePoint photo" -ForegroundColor $CommandInfo

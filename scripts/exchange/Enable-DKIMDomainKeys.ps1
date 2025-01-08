@@ -103,10 +103,6 @@ catch
     try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
-finally
-{
-    DisconnectFrom-EXOandIPPS
-}
 
 #Stopping Transscript
 Stop-Transcript

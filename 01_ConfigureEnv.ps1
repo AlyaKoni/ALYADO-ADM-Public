@@ -56,6 +56,7 @@
     16.10.2023 Konrad Brunner       Install-ModuleIfNotInstalled new param: doNotLoadModules
     01.05.2024 Konrad Brunner       Supporting MAC
     13.09.2024 Konrad Brunner       AlyaPnPAppId
+    04.12.2024 Konrad Brunner       New EXO login behaviour
 
 #>
 
@@ -1891,31 +1892,30 @@ function LoginTo-EXO([String[]]$commandsToLoad = $null)
 {
     Write-Host "Login to EXO" -ForegroundColor $CommandInfo
 
-    if ($commandsToLoad)
+    $actConnection = Get-ConnectionInformation | Where-Object { $_.IsEopSession -eq $false -and $_.State -eq "Connected" -and $_.TenantID -eq $AlyaTenantId -and $_.TokenExpiryTimeUTC -gt [DateTime]::UtcNow }
+    if (-Not $actConnection)
     {
-        Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowProgress $true -CommandName $commandsToLoad
-    }
-    else
-    {
-        Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowProgress $true
+        if ($commandsToLoad)
+        {
+            Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -CommandName $commandsToLoad
+        }
+        else
+        {
+            Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true
+        }
     }
 }
 
 function LoginTo-IPPS()
 {
     Write-Host "Login to IPPS" -ForegroundColor $CommandInfo
-    $extRunspaces = Get-Runspace | Where-Object { $_.ConnectionInfo.ComputerName -like "*compliance.protection.outlook.com" }
-    $actConnection = $extRunspaces | Where-Object { $_.RunspaceStateInfo.State -eq "Opened" }
+    $actConnection = Get-ConnectionInformation | Where-Object { $_.IsEopSession -eq $true -and $_.State -eq "Connected" -and $_.TenantID -eq $AlyaTenantId -and $_.TokenExpiryTimeUTC -gt [DateTime]::UtcNow }
     if (-Not $actConnection)
     {
-        foreach($extRunspace in $extRunspaces)
-        {
-            $extRunspace.Dispose()
-        }
         if ($AlyaLoginEndpoint -eq "https://login.microsoftonline.com") {
-            Connect-IPPSSession
+            Connect-IPPSSession -ShowBanner:$false
         } else {
-            Connect-IPPSSession -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+            Connect-IPPSSession -ShowBanner:$false -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
         }
     }
 }
@@ -1923,20 +1923,6 @@ function LoginTo-IPPS()
 function LogoutFrom-EXOandIPPS()
 {
     DisconnectFrom-EXOandIPPS
-}
-
-function DisconnectFrom-EXOandIPPS()
-{
-    Write-Host "Disconnecting from EXO and IPPS" -ForegroundColor $CommandInfo
-    Disconnect-ExchangeOnline -Confirm:$false
-    <#
-    $extRunspaces = Get-Runspace | Where-Object { $_.ConnectionInfo.ComputerName -like "*compliance.protection.outlook.com" }
-    foreach($extRunspace in $extRunspaces)
-    {
-        $extRunspace.Dispose()
-    }
-    Connect-IPPSSession
-    #>
 }
 
 function LogoutFrom-Msol()

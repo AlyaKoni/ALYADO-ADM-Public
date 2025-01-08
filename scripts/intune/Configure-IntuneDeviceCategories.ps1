@@ -53,7 +53,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 LoginTo-MgGraph -Scopes @(
     "DeviceManagementManagedDevices.ReadWrite.All"
 )
-#Disconnect-MgBetaGraph
+#Disconnect-MgGraph
 
 # =============================================================
 # Intune stuff

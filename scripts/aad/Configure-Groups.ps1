@@ -377,10 +377,6 @@ catch
     Write-Error ($_.Exception) -ErrorAction Continue
     Write-Error "Please delete created groups by hand. Clean them from recycle bin. Start over again after fixing the issue." -ErrorAction Continue
 }
-finally
-{
-    DisconnectFrom-EXOandIPPS
-}
 
 Write-Host "Setting ProcessingState" -ForegroundColor $CommandInfo
 foreach ($group in $AllGroups)

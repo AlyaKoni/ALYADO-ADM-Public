@@ -30,66 +30,68 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.12.2019 Konrad Brunner       Initial Version
-    25.02.2020 Konrad Brunner       Changes for a project
-    25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
+    22.12.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string[]] [Parameter(Mandatory=$true)]
+    $membersToAdd
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-O365AuditLogging-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Add-MembersToAllTeams-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
-# Exchange stuff
+# Teams stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-O365AuditLogging | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "Teams | Add-MembersToAllTeams | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Setting auditing in exchange"
-try
+# Getting all teams
+$Teams = Get-Team
+
+# Defining functions
+function CheckNotIn($searchFor, $searchIn)
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
-
-    $cfg = Get-OrganizationConfig
-    if ($cfg.IsDehydrated)
+    $notfnd = $true
+    foreach($search in $searchIn)
     {
-        Enable-OrganizationCustomization -ErrorAction Stop
+        if ($search -like "*$searchFor*") { $notfnd = $false ; break }
+        if ($searchFor -like "*$search*") { $notfnd = $false ; break }
     }
-    while ((Get-OrganizationConfig).IsDehydrated)
-    {
-        Write-Host "Waiting 1 minute..."
-        Start-Sleep -Seconds 60
-    }
+    return $notfnd
+}
 
-    $error.Clear()
-    if (-Not (Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
+# Processing teams
+foreach($Team in $Teams)
+{
+    #$Team = $Teams[22]
+    Write-Host "Team $($Team.DisplayName)"
+    $members = Get-TeamUser -GroupId $Team.GroupId -Role Member
+    foreach($memb in $membersToAdd)
     {
-        Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
-        if ($error.Count -gt 0)
+        if (CheckNotIn -searchFor $memb -searchIn $members.User)
         {
-            Write-Error "We were not able to set audit logging. Possibly it needs some time until customization gets enabled. Please rerun in an hour or so." -ErrorAction Continue
+            Write-Warning "Adding member $memb to team."
+            Add-TeamUser -GroupId $Team.GroupId -Role Member -User $memb
         }
     }
-}
-catch
-{
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
+    
 }
 
-#Stopping Transscript
+# Stopping Transscript
 Stop-Transcript

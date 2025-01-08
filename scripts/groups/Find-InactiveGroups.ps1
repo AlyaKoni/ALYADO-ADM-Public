@@ -221,7 +221,5 @@ foreach ($Group in $Groups)
 
 }
 
-DisconnectFrom-EXOandIPPS
-
 #Stopping Transscript
 Stop-Transcript

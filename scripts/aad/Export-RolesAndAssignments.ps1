@@ -115,10 +115,10 @@ foreach($roleDef in $adRoleDefs)
             $objUser | Add-Member CreationDate $extProp.AdditionalProperties.createdDateTime
             $objUser | Add-Member SecurityIdentifier  $extProp.AdditionalProperties.securityIdentifier
             $roleMappings += $objUser
-            if ($role.DisplayName -eq "Directory Readers")
-            {
-                return
-            }
+            # if ($role.DisplayName -eq "Directory Readers")
+            # {
+            #     return
+            # }
         }
     }
 }

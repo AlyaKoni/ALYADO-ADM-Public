@@ -36,11 +36,10 @@
 
 [CmdletBinding()]
 Param(
-    $adminGroups = @("TRAILASP-Admins")
-    <#[string[]] [Parameter(Mandatory=$true, ParameterSetName="Groups")]
-    $adminGroups,
-    [string[]] [Parameter(Mandatory=$true, ParameterSetName="Users")]
-    $adminUsers#>
+    [string[]] [Parameter(Mandatory=$false)]
+    $adminGroups = $null,
+    [string[]] [Parameter(Mandatory=$false)]
+    $adminUsers = $null
 )
 
 # Reading configuration
@@ -49,7 +48,7 @@ Param(
 # Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-AdminsToAllSites-$($AlyaTimeString).log" | Out-Null
 
-# Checking modules
+# CheckIng modules
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Login
@@ -75,15 +74,83 @@ do
     }
 } while ($true)
 
+# Getting role groups
+$siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
+$web = Get-PnPWeb -Connection $siteCon
+
+$spAdminRoleName = "Company Administrator"
+try {
+    $gauser = $web.EnsureUser($spAdminRoleName)
+    $gauser.Context.Load($gauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $gauserLoginName = $gauser.LoginName
+}
+catch {
+    $spAdminRoleName = "Global Administrator"
+    try {
+        $gauser = $web.EnsureUser($spAdminRoleName)
+        $gauser.Context.Load($gauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $gauserLoginName = $gauser.LoginName
+    }
+    catch {
+        $gauserLoginName = $null
+    }
+}
+
+$spAdminRoleName = "SharePoint Service Administrator"
+try {
+    $sauser = $web.EnsureUser($spAdminRoleName)
+    $sauser.Context.Load($sauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $sauserLoginName = $sauser.LoginName
+}
+catch {
+    $spAdminRoleName = "SharePoint Administrator"
+    try {
+        $sauser = $web.EnsureUser($spAdminRoleName)
+        $sauser.Context.Load($sauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $sauserLoginName = $sauser.LoginName
+    }
+    catch {
+        $sauserLoginName = $null
+    }
+}
+
+# Defining functions
+function CheckNotIn($searchFor, $searchIn)
+{
+    $notfnd = $true
+    foreach($search in $searchIn)
+    {
+        if ($search -like "*$searchFor*") { $notfnd = $false ; break }
+        if ($searchFor -like "*$search*") { $notfnd = $false ; break }
+    }
+    return $notfnd
+}
+
 # Defining admins
 $owners = @()
+$primaryAdmin = $null
+if (-Not [string]::IsNullOrEmpty($gauserLoginName)) { if (CheckNotIn -searchFor $gauserLoginName -searchIn $owners) { $owners += $gauserLoginName ; if (-Not $primaryAdmin) { $primaryAdmin = $gauserLoginName } } }
+if (-Not [string]::IsNullOrEmpty($sauserLoginName)) { if (CheckNotIn -searchFor $sauserLoginName -searchIn $owners) { $owners += $sauserLoginName ; if (-Not $primaryAdmin) { $primaryAdmin = $sauserLoginName } } }
+if (-Not [string]::IsNullOrEmpty($AlyaSharePointNewSiteOwner) -and $AlyaSharePointNewSiteOwner -ne "PleaseSepcify") { if (CheckNotIn -searchFor $AlyaSharePointNewSiteOwner -searchIn $owners) { $owners += $AlyaSharePointNewSiteOwner ; if (-Not $primaryAdmin) { $primaryAdmin = $AlyaSharePointNewSiteOwner } } }
+if (-Not [string]::IsNullOrEmpty($AlyaSharePointNewSiteAdditionalOwner) -and $AlyaSharePointNewSiteAdditionalOwner -ne "PleaseSepcify") { if (CheckNotIn -searchFor $AlyaSharePointNewSiteAdditionalOwner -searchIn $owners) { $owners += $AlyaSharePointNewSiteAdditionalOwner ; if (-Not $primaryAdmin) { $primaryAdmin = $AlyaSharePointNewSiteAdditionalOwner } } }
+if ($AlyaSharePointNewSiteCollectionAdmins -and $AlyaSharePointNewSiteCollectionAdmins.Count -gt 0)
+{
+    foreach($AlyaSharePointNewSiteCollectionAdmin in $AlyaSharePointNewSiteCollectionAdmins)
+    {
+        if (-Not [string]::IsNullOrEmpty($AlyaSharePointNewSiteCollectionAdmin) -and $AlyaSharePointNewSiteCollectionAdmin -ne "PleaseSepcify") { if (CheckNotIn -searchFor $AlyaSharePointNewSiteCollectionAdmin -searchIn $owners) { $owners += $AlyaSharePointNewSiteCollectionAdmin ; if (-Not $primaryAdmin) { $primaryAdmin = $AlyaSharePointNewSiteCollectionAdmin } } }
+    }
+}
 foreach($owner in $adminGroups)
 {
-    $owners += $owner
+    if (CheckNotIn -searchFor $owner -searchIn $owners) { $owners += $owner ; if (-Not $primaryAdmin) { $primaryAdmin = $owner } }
 }
 foreach($owner in $adminUsers)
 {
-    $owners += $owner
+    if (CheckNotIn -searchFor $owner -searchIn $owners) { $owners += $owner ; if (-Not $primaryAdmin) { $primaryAdmin = $owner } }
 }
 
 # Setting site admins
@@ -94,8 +161,37 @@ foreach ($site in $sitesToProcess)
     if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
     Write-Host "$($site.Url)"
 
-    # Checking site owner
-    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $owners
+    # CheckIng existing owners
+    $sowners = $owners
+    $sprimaryAdmin = $primaryAdmin
+    $siteCon = LoginTo-PnP -Url $site.Url
+
+    $tsite = Get-PnPTenantSite -Connection $adminCon -Identity $site.Url
+    if ($tsite.OwnerLoginName -ne $sprimaryAdmin)
+    {
+        try {
+            Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $sprimaryAdmin
+        }
+        catch {
+            try {
+                Add-PnPSiteCollectionAdmin -Connection $siteCon -PrimarySiteCollectionAdmin $sprimaryAdmin
+            }
+            catch {
+                Write-Warning "Not able to add primary admin $sprimaryAdmin"
+                Write-Warning "Please add yourself or $sprimaryAdmin as site collection admin and rerun this script"
+                continue
+            }
+        }
+    }
+
+    $admins = Get-PnPSiteCollectionAdmin -Connection $siteCon
+    foreach($owner in $admins.LoginName)
+    {
+        if (CheckNotIn -searchFor $owner -searchIn $sowners) { $sowners += $owner ; if (-Not $sprimaryAdmin) { $sprimaryAdmin = $owner } }
+    }
+
+    # Setting site owners
+    Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $sprimaryAdmin -Owners $sowners
 }
 
 # Stopping Transscript

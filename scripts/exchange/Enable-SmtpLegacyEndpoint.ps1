@@ -80,10 +80,6 @@ catch
     try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
-finally
-{
-    DisconnectFrom-EXOandIPPS
-}
 
 Write-Host "Please use the following endpoint as client SMTP server:" -ForegroundColor $CommandSuccess
 Write-Host "smtp-legacy.office365.com" -ForegroundColor $CommandSuccess

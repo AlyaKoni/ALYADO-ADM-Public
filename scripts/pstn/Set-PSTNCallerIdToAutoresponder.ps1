@@ -30,66 +30,51 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.12.2019 Konrad Brunner       Initial Version
-    25.02.2020 Konrad Brunner       Changes for a project
-    25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
+    17.12.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [ValidateNotNullOrEmpty()]
+    [string]$attendantUpn = "zentrale@schreinereidubs.ch",
+    [bool]$enableUserOverride = $false
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-O365AuditLogging-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Set-PSTNCallerIdToAutoresponder-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
-# Exchange stuff
+# O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-O365AuditLogging | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "PSTN | Set-PSTNCallerIdToAutoresponder | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Setting auditing in exchange"
-try
+#Main 
+$attendant = Get-CsOnlineApplicationInstance -Identity $attendantUpn -ErrorAction SilentlyContinue
+if (-Not $attendant)
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
-
-    $cfg = Get-OrganizationConfig
-    if ($cfg.IsDehydrated)
-    {
-        Enable-OrganizationCustomization -ErrorAction Stop
-    }
-    while ((Get-OrganizationConfig).IsDehydrated)
-    {
-        Write-Host "Waiting 1 minute..."
-        Start-Sleep -Seconds 60
-    }
-
-    $error.Clear()
-    if (-Not (Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
-    {
-        Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
-        if ($error.Count -gt 0)
-        {
-            Write-Error "We were not able to set audit logging. Possibly it needs some time until customization gets enabled. Please rerun in an hour or so." -ErrorAction Continue
-        }
-    }
+    throw "Attendant $attendantUpn not found"
 }
-catch
+
+$CallLineId = Get-CsCallingLineIdentity -Identity "Global" -ErrorAction SilentlyContinue
+if (-Not $CallLineId)
 {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
+    throw "CallingLineIdentity Global not found"
 }
+Set-CsCallingLineIdentity -Identity $CallLineId.Identity -CallingIDSubstitute "Resource" -EnableUserOverride $enableUserOverride -ResourceAccount $attendant.ObjectId
 
 #Stopping Transscript
 Stop-Transcript

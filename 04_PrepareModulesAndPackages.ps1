@@ -69,6 +69,7 @@ $modules = @(
 	"Az.Cdn", 
 	"Az.CloudService", 
 	"Az.CognitiveServices", 
+	"Az.Communication",
 	"Az.Compute", 
 	"Az.ConnectedMachine",
 	"Az.ConfidentialLedger", 

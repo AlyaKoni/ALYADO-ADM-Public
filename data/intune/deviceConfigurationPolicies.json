@@ -1,32 +1,112 @@
-[
-    {
+[{
         "Comment1": "=================================================",
         "Comment2": "General Policies",
         "Comment3": "================================================="
-    },
-    {
+    }, {
         "Comment1": "=================================================",
         "Comment2": "WIN Policies",
         "Comment3": "================================================="
-    },
-    {
+    }, {
+        "name": "WIN Outlook Disable New Outlook Migration",
+        "description": "Disables the migration to new outlook",
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "priorityMetaData": null,
+        "creationSource": null,
+        "settings": [{
+                "id": "0",
+                "settingInstance": {
+                    "settingDefinitionId": "user_vendor_msft_policy_config_outlk16v14~policy~l_microsoftofficeoutlook~l_outlookoptions~l_other_l_donewoutlookautomigration",
+                    "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                    "choiceSettingValue": {
+                        "settingValueTemplateReference": null,
+                        "value": "user_vendor_msft_policy_config_outlk16v14~policy~l_microsoftofficeoutlook~l_outlookoptions~l_other_l_donewoutlookautomigration_0",
+                        "children": []
+                    },
+                    "settingInstanceTemplateReference": null
+                }
+            }, {
+                "id": "1",
+                "settingInstance": {
+                    "settingDefinitionId": "user_vendor_msft_policy_config_outlk16v14~policy~l_microsoftofficeoutlook~l_outlookoptions~l_other_l_newoutlookautomigrationretryintervals",
+                    "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
+                    "choiceSettingValue": {
+                        "settingValueTemplateReference": null,
+                        "value": "user_vendor_msft_policy_config_outlk16v14~policy~l_microsoftofficeoutlook~l_outlookoptions~l_other_l_newoutlookautomigrationretryintervals_1",
+                        "children": [{
+                                "settingDefinitionId": "user_vendor_msft_policy_config_outlk16v14~policy~l_microsoftofficeoutlook~l_outlookoptions~l_other_l_newoutlookautomigrationretryintervals_l_newoutlookautomigrationretryintervalsid",
+                                "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
+                                "simpleSettingValue": {
+                                    "settingValueTemplateReference": null,
+                                    "@odata.type": "#microsoft.graph.deviceManagementConfigurationIntegerSettingValue",
+                                    "value": 0
+                                },
+                                "settingInstanceTemplateReference": null
+                            }
+                        ]
+                    },
+                    "settingInstanceTemplateReference": null
+                }
+            }
+        ],
+        "settingCount": 2,
+        "technologies": "mdm",
+        "platforms": "windows10",
+        "templateReference": {
+            "templateDisplayName": null,
+            "templateId": "",
+            "templateDisplayVersion": null,
+            "templateFamily": "none"
+        }
+    }, {
+        "name": "WIN Copilot Hardware Key",
+        "description": "Sets the SetCopilotHardwareKey to the W365 app",
+        "roleScopeTagIds": [
+            "0"
+        ],
+        "priorityMetaData": null,
+        "platforms": "windows10",
+        "settings": [{
+                "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
+                "id": "0",
+                "settingInstance": {
+                    "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
+                    "simpleSettingValue": {
+                        "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
+                        "settingValueTemplateReference": null,
+                        "value": "Microsoft.MicrosoftOfficeHub_8wekyb3d8bbwe!Microsoft.MicrosoftOfficeHub"
+                    },
+                    "settingInstanceTemplateReference": null,
+                    "settingDefinitionId": "user_vendor_msft_policy_config_windowsai_setcopilothardwarekey"
+                }
+            }
+        ],
+        "technologies": "mdm",
+        "templateReference": {
+            "templateFamily": "none",
+            "templateDisplayVersion": null,
+            "templateDisplayName": null,
+            "templateId": ""
+        },
+        "creationSource": null,
+        "settingCount": 1
+    }, {
+        "name": "WIN LAPS Configuration",
         "creationSource": null,
         "description": "Configures LAPS on local devices",
-        "name": "WIN LAPS Configuration",
         "platforms": "windows10",
         "priorityMetaData": null,
         "roleScopeTagIds": [
             "0"
         ],
-        "settings": [
-            {
+        "settings": [{
                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
                 "id": "0",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
                     "choiceSettingValue": {
-                        "children": [
-                            {
+                        "children": [{
                                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
                                 "settingDefinitionId": "device_vendor_msft_laps_policies_passwordagedays_aad",
                                 "settingInstanceTemplateReference": null,
@@ -48,8 +128,7 @@
                         "settingInstanceTemplateId": "a3270f64-e493-499d-8900-90290f61ed8a"
                     }
                 }
-            },
-            {
+            }, {
                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
                 "id": "1",
                 "settingInstance": {
@@ -67,8 +146,7 @@
                         "value": "lapsadmin"
                     }
                 }
-            },
-            {
+            }, {
                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
                 "id": "2",
                 "settingInstance": {
@@ -87,8 +165,7 @@
                         "settingInstanceTemplateId": "8a7459e8-1d1c-458a-8906-7b27d216de52"
                     }
                 }
-            },
-            {
+            }, {
                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
                 "id": "3",
                 "settingInstance": {
@@ -106,8 +183,7 @@
                         "value": 24
                     }
                 }
-            },
-            {
+            }, {
                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
                 "id": "4",
                 "settingInstance": {
@@ -126,8 +202,7 @@
                         "settingInstanceTemplateId": "d9282eb1-d187-42ae-b366-7081f32dcfff"
                     }
                 }
-            },
-            {
+            }, {
                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSetting",
                 "id": "5",
                 "settingInstance": {
@@ -154,13 +229,11 @@
             "templateFamily": "endpointSecurityAccountProtection",
             "templateId": "adc46e5a-f4aa-4ff6-aeff-4f27bc525796_1"
         }
-    },
-    {
+    }, {
         "Comment1": "=================================================",
         "Comment2": "MAC Policies",
         "Comment3": "================================================="
-    },
-    {
+    }, {
         "description": "Configure the Antivirus engine settings to manage the preferences of the antivirus component of Microsoft Defender for Endpoint.",
         "name": "MAC Defender Configuration",
         "platforms": "macOS",
@@ -168,8 +241,7 @@
             "0"
         ],
         "settingCount": 25,
-        "settings": [
-            {
+        "settings": [{
                 "id": "0",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
@@ -181,8 +253,7 @@
                         "value": 2
                     }
                 }
-            },
-            {
+            }, {
                 "id": "1",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -195,8 +266,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_enablefilehashcomputation",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "2",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -209,8 +279,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_passivemode",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "3",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -223,8 +292,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_enablerealtimeprotection",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "4",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -237,8 +305,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_enforcementlevel_antivirusengine",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "5",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -251,8 +318,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_exclusionsmergepolicy",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "6",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -265,19 +331,15 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_scanafterdefinitionupdate",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "7",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance",
-                    "groupSettingCollectionValue": [
-                        {
-                            "children": [
-                                {
+                    "groupSettingCollectionValue": [{
+                            "children": [{
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
                                     "choiceSettingValue": {
-                                        "children": [
-                                            {
+                                        "children": [{
                                                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
                                                 "settingDefinitionId": "com.apple.managedclient.preferences_exclusions_item_name",
                                                 "settingInstanceTemplateReference": null,
@@ -296,14 +358,11 @@
                                 }
                             ],
                             "settingValueTemplateReference": null
-                        },
-                        {
-                            "children": [
-                                {
+                        }, {
+                            "children": [{
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
                                     "choiceSettingValue": {
-                                        "children": [
-                                            {
+                                        "children": [{
                                                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
                                                 "choiceSettingValue": {
                                                     "children": [
@@ -313,8 +372,7 @@
                                                 },
                                                 "settingDefinitionId": "com.apple.managedclient.preferences_exclusions_item_isdirectory",
                                                 "settingInstanceTemplateReference": null
-                                            },
-                                            {
+                                            }, {
                                                 "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
                                                 "settingDefinitionId": "com.apple.managedclient.preferences_exclusions_item_path",
                                                 "settingInstanceTemplateReference": null,
@@ -338,8 +396,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_exclusions",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "8",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
@@ -351,8 +408,7 @@
                         "value": 10000
                     }
                 }
-            },
-            {
+            }, {
                 "id": "9",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
@@ -364,8 +420,7 @@
                         "value": 90
                     }
                 }
-            },
-            {
+            }, {
                 "id": "10",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -378,15 +433,12 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_scanarchives",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "11",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance",
-                    "groupSettingCollectionValue": [
-                        {
-                            "children": [
-                                {
+                    "groupSettingCollectionValue": [{
+                            "children": [{
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
                                     "choiceSettingValue": {
                                         "children": [
@@ -396,8 +448,7 @@
                                     },
                                     "settingDefinitionId": "com.apple.managedclient.preferences_threattypesettings_item_value",
                                     "settingInstanceTemplateReference": null
-                                },
-                                {
+                                }, {
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
                                     "choiceSettingValue": {
                                         "children": [
@@ -415,8 +466,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_threattypesettings",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "12",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -429,8 +479,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_threattypesettingsmergepolicy",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "13",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -443,8 +492,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_automaticdefinitionupdateenabled",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "14",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -457,8 +505,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_cloudblocklevel",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "15",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -471,8 +518,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_diagnosticlevel",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "16",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -485,8 +531,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_automaticsamplesubmission",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "17",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -499,15 +544,12 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_enabled",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "18",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationGroupSettingCollectionInstance",
-                    "groupSettingCollectionValue": [
-                        {
-                            "children": [
-                                {
+                    "groupSettingCollectionValue": [{
+                            "children": [{
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
                                     "choiceSettingValue": {
                                         "children": [
@@ -517,8 +559,7 @@
                                     },
                                     "settingDefinitionId": "com.apple.managedclient.preferences_tags_item_key",
                                     "settingInstanceTemplateReference": null
-                                },
-                                {
+                                }, {
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationSimpleSettingInstance",
                                     "settingDefinitionId": "com.apple.managedclient.preferences_tags_item_value",
                                     "settingInstanceTemplateReference": null,
@@ -535,8 +576,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_tags",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "19",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -549,8 +589,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_earlypreview",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "20",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -563,8 +602,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_enforcementlevel",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "21",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -577,8 +615,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_enforcementlevel_tamperprotection",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "22",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -591,8 +628,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_consumerexperience",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "23",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",
@@ -605,8 +641,7 @@
                     "settingDefinitionId": "com.apple.managedclient.preferences_hidestatusmenuicon",
                     "settingInstanceTemplateReference": null
                 }
-            },
-            {
+            }, {
                 "id": "24",
                 "settingInstance": {
                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationChoiceSettingInstance",

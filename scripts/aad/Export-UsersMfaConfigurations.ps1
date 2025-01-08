@@ -169,7 +169,8 @@ foreach($user in $users)
                 if ($propName -eq "UserPreferredMethodForSecondaryAuthentication2") { $propName = "UserPreferredMethodForSecondaryAuthentication" }
                 $value = $null
                 if ($regDet -and $regDet.$propName) { $value = $regDet.$propName }
-                if ($propName -eq "MethodsRegistered") { $value = $regDet.$propName -join " " }
+                if ($propName -eq "MethodsRegistered") { $value = $regDet.$propName -join "," }
+                if ($propName -eq "SystemPreferredAuthenticationMethods") { $value = $regDet.$propName -join "," }
                 Add-Member -InputObject $psuser -MemberType NoteProperty -Name $name -Value $value
             }
             $signInPref = Get-MsGraphObject -Uri "https://graph.microsoft.com/beta/users/$([System.Web.HTTPUtility]::UrlEncode($user.UserPrincipalName))/authentication/signInPreferences"

@@ -30,9 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.12.2019 Konrad Brunner       Initial Version
-    25.02.2020 Konrad Brunner       Changes for a project
-    25.10.2020 Konrad Brunner       Changed from service user to new ExchangeOnline module
+    25.11.2024 Konrad Brunner       Initial Version
 
 #>
 
@@ -44,51 +42,34 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-O365AuditLogging-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Disable-TeamsCallTranscription-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "MicrosoftTeams"
+
+# Logins
+LoginTo-Teams
 
 # =============================================================
-# Exchange stuff
+# Teams stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-O365AuditLogging | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "Teams | Disable-TeamsCallTranscription | Teams" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-Write-Host "Setting auditing in exchange"
-try
+# Checking Transcription setting
+Write-Host "Checking Transcription setting" -ForegroundColor $CommandInfo
+$Policy = Get-CsTeamsCallingPolicy -Identity Global
+if ($Policy.AllowTranscriptionForCalling -ne $false)
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
-
-    $cfg = Get-OrganizationConfig
-    if ($cfg.IsDehydrated)
-    {
-        Enable-OrganizationCustomization -ErrorAction Stop
-    }
-    while ((Get-OrganizationConfig).IsDehydrated)
-    {
-        Write-Host "Waiting 1 minute..."
-        Start-Sleep -Seconds 60
-    }
-
-    $error.Clear()
-    if (-Not (Get-AdminAuditLogConfig).UnifiedAuditLogIngestionEnabled)
-    {
-        Set-AdminAuditLogConfig -UnifiedAuditLogIngestionEnabled $true
-        if ($error.Count -gt 0)
-        {
-            Write-Error "We were not able to set audit logging. Possibly it needs some time until customization gets enabled. Please rerun in an hour or so." -ErrorAction Continue
-        }
-    }
+    Write-Warning "Transcription was set to '$($Policy.AllowTranscriptionForCalling)'. Setting now to 'False'."
+    Set-CsTeamsCallingPolicy -Identity Global -AllowTranscriptionForCalling $false
 }
-catch
+else
 {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
+    Write-Host "Transcription was already set to 'False'."
 }
 
 #Stopping Transscript

@@ -64,7 +64,7 @@ LoginTo-MgGraph -Scopes @(
     "DeviceManagementConfiguration.ReadWrite.All",
     "DeviceManagementManagedDevices.Read.All"
 )
-#Disconnect-MgBetaGraph
+#Disconnect-MgGraph
 
 # =============================================================
 # Intune stuff
