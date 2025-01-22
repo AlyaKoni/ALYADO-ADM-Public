@@ -31,10 +31,21 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://git-scm.com/download/win"
+$pageUrl = "https://git-scm.com/downloads/win"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*windows[^`"]*Git[^`"]*64-bit\.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+if ([string]::IsNullOrEmpty($newUrl))
+{
+    $pageUrl = "https://git-scm.com/download/win"
+    $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+    [regex]$regex = "[^`"]*windows[^`"]*Git[^`"]*64-bit\.exe"
+    $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+}
+if ([string]::IsNullOrEmpty($newUrl))
+{
+    throw "Not able to get GIT download url"
+}
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"

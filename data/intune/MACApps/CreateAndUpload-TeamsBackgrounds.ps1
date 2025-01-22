@@ -29,20 +29,17 @@
 
 #>
 
-. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+[CmdletBinding()]
+Param(
+    [bool]$reuseExistingPackages = $false,
+    [bool]$askForSameVersionPackages = $true
+)
 
-$pageUrl = "https://www.scribus.net/downloads/"
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*https://sourceforge.net/projects/scribus[^`"]*"
-$prjUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-$req = Invoke-WebRequestIndep -Uri $prjUrl -UseBasicParsing -Method Get
-[regex]$regex = "http[^`"]*scribus[^`"]*windows-x64\.exe"
-$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-$fileName = Split-Path -Path $newUrl -Leaf
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
+. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\MACApps\TeamsBackgrounds\Package\*.json" -PathType Leaf)))
 {
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
+    & "$($AlyaScripts)\intune\Create-IntuneMACPackages.ps1" -CreateOnlyAppWithName "TeamsBackgrounds"
 }
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+& "$($AlyaScripts)\intune\Upload-IntuneMACPackages.ps1" -UploadOnlyAppWithName "TeamsBackgrounds" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Configure-IntuneMACPackages.ps1" -ConfigureOnlyAppWithName "TeamsBackgrounds"

@@ -31,15 +31,82 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=53018"
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regexAzp = "[^`"]*PurviewInfoProtection\.exe"
-$newUrl = [regex]::Match($req.Content, $regexAzp, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-$fileName = Split-Path -Path $newUrl -Leaf
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
+try
 {
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
+    $pageUrl = "https://www.microsoft.com/en-us/download/details.aspx?id=53018"
+    $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "Wget"
+    [regex]$regex = "[^`"]*download/[^`"]*PurviewInfoProtection\.exe"
+    $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+    if ([string]::IsNullOrEmpty($newUrl))
+    {
+        [regex]$regexAzp = "`"url`"\s*:\s*`"([^`"]*PurviewInfoProtection\.exe)"
+        $newUrl = [regex]::Match($req.Content, $regexAzp, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Groups[1].Value
+    }
+    $fileName = Split-Path -Path $newUrl -Leaf
+    $packageRoot = "$PSScriptRoot"
+    $contentRoot = Join-Path $packageRoot "Content"
+    if (-Not (Test-Path $contentRoot))
+    {
+        $null = New-Item -Path $contentRoot -ItemType Directory -Force
+    }
+    Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
 }
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+catch
+{
+    Write-Warning "Problems automatically downloading PurviewInfoProtection.exe. Please download manually"
+    Write-Host "We launch now a browser with the PurviewInfoProtection.exe download page."
+    Write-Host " - Select 'Download'"
+    Write-Host " - Select 'PurviewInfoProtection.exe'"
+    Write-Host " - Select 'Download"
+    Write-Host "`n"
+    pause
+    
+    $profile = [Environment]::GetFolderPath("UserProfile")
+    $downloads = $profile+"\downloads"
+    $lastfilename = $null
+    $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
+    if ($file)
+    {
+        $lastfilename = $file.Name
+    }
+    $filename = $null
+    $attempts = 10
+    while ($attempts -ge 0)
+    {
+        Write-Host "Downloading PurviewInfoProtection.exe file from $pageUrl"
+        Write-Warning "Please don't start any other download!"
+        try {
+            Start-Process "$pageUrl"
+            do
+            {
+                Start-Sleep -Seconds 10
+                $file = Get-ChildItem -path $downloads | sort LastWriteTime | Select-Object -last 1
+                if ($file)
+                {
+                    $filename = $file.Name
+                    if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
+                    if ($filename.Contains(".partial")) { $filename = $lastfilename }
+                    if ($filename.Contains(".tmp")) { $filename = $lastfilename }
+                }
+            } while ($lastfilename -eq $filename)
+            $attempts = -1
+        } catch {
+            Write-Host "Catched exception $($_.Exception.Message)"
+            Write-Host "Retrying $attempts times"
+            $attempts--
+            if ($attempts -lt 0) { throw }
+            Start-Sleep -Seconds 10
+        }
+    }
+    Start-Sleep -Seconds 3
+    if ($filename)
+    {
+        $sourcePath = $downloads+"\"+$filename
+        Copy-Item -Path $sourcePath -Destination $contentRoot -Force
+        Remove-Item -Path $sourcePath -Force
+    }
+    else
+    {
+        throw "We were not able to download PurviewInfoProtection.exe"
+    }
+}

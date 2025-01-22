@@ -115,6 +115,16 @@ function MakeFsCompatiblePath()
        Replace("|", "_"). `
        Replace("?", "_"). `
        Replace("*", "_")
+
+    if ($AlyaIsPsUnix)
+    {
+        $npath = $npath.Replace("\", "_")
+    }
+    else
+    {
+        $npath = $npath.Replace("/", "_")
+    }
+
     if ($hadDisk) { $npath = $npath.Remove(1,1).Insert(1,":") }
 
     $parent = Split-Path -Path $npath -Parent
@@ -194,22 +204,22 @@ if (-Not (Test-Path "$DataRoot")) { $null = New-Item -Path "$DataRoot" -ItemType
 #groups
 $uri = "/beta/groups"
 $groups = Get-MsGraphCollection -Uri $uri
-$groups | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\groups.json")) -Force
+$groups | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\"+(MakeFsCompatiblePath("groups.json"))) -Force
 
 #users
 $uri = "/beta/users"
 $users = Get-MsGraphCollection -Uri $uri
-$users | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\users.json")) -Force
+$users | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\"+(MakeFsCompatiblePath("users.json"))) -Force
 
 #roles
 $uri = "/beta/directoryRoles"
 $roles = Get-MsGraphCollection -Uri $uri
-$roles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\directoryRoles.json")) -Force
+$roles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\"+(MakeFsCompatiblePath("directoryRoles.json"))) -Force
 
 #managedDeviceOverview
 $uri = "/beta/deviceManagement/managedDeviceOverview"
 $managedDeviceOverview = Get-MsGraphCollection -Uri $uri
-$managedDeviceOverview | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\managedDeviceOverview.json")) -Force
+$managedDeviceOverview | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\"+(MakeFsCompatiblePath("managedDeviceOverview.json"))) -Force
 
 
 ##### Starting exports AndroidEnterprise
@@ -220,26 +230,26 @@ if (-Not (Test-Path "$DataRoot\AndroidEnterprise")) { $null = New-Item -Path "$D
 #deviceEnrollmentConfigurations
 $uri = "/beta/deviceManagement/deviceEnrollmentConfigurations"
 $deviceEnrollmentConfigurations = Get-MsGraphCollection -Uri $uri
-$deviceEnrollmentConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AndroidEnterprise\deviceEnrollmentConfigurations.json")) -Force
+$deviceEnrollmentConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AndroidEnterprise\"+(MakeFsCompatiblePath("deviceEnrollmentConfigurations.json"))) -Force
 $androidEnterpriseConfig = $deviceEnrollmentConfigurations | Where-Object { $_.androidForWorkRestriction.platformBlocked -eq $false }
 foreach($androidConfig in $androidEnterpriseConfig)
 {
     $uri = "/beta/deviceManagement/deviceEnrollmentConfigurations/$($androidConfig.id)/assignments"
     $assignments = Get-MsGraphObject -Uri $uri
-    $assignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AndroidEnterprise\assignments_$($androidConfig.id).json")) -Force
+    $assignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AndroidEnterprise\"+(MakeFsCompatiblePath("assignments_$($androidConfig.id).json"))) -Force
 }
 
 #androidDeviceOwnerEnrollmentProfiles
 $now = (Get-Date -Format s)
 $uri = "/beta/deviceManagement/androidDeviceOwnerEnrollmentProfiles?`$filter=tokenExpirationDateTime gt $($now)z"
 $androidDeviceOwnerEnrollmentProfiles = Get-MsGraphCollection -Uri $uri
-$androidDeviceOwnerEnrollmentProfiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AndroidEnterprise\androidDeviceOwnerEnrollmentProfiles.json")) -Force
+$androidDeviceOwnerEnrollmentProfiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AndroidEnterprise\"+(MakeFsCompatiblePath("androidDeviceOwnerEnrollmentProfiles.json"))) -Force
 $profiles = $androidDeviceOwnerEnrollmentProfiles
 foreach($profile in $profiles)
 {
     $uri = "/beta/deviceManagement/androidDeviceOwnerEnrollmentProfiles/$($profile.id)?`$select=qrCodeImage"
     $qrCode = Get-MsGraphObject -Uri $uri
-    $qrCode | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AndroidEnterprise\qrCode_$($profile.id).json")) -Force
+    $qrCode | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AndroidEnterprise\"+(MakeFsCompatiblePath("qrCode_$($profile.id).json"))) -Force
     if ($qrCode.value -and $qrCode.value.qrCodeImage)
     {
         $type = $qrCode.value.qrCodeImage.type
@@ -254,7 +264,7 @@ foreach($profile in $profiles)
 #androidManagedStoreAccountEnterpriseSettings
 $uri = "/beta/deviceManagement/androidManagedStoreAccountEnterpriseSettings"
 $androidManagedStoreAccountEnterpriseSettings = Get-MsGraphObject -Uri $uri
-$androidManagedStoreAccountEnterpriseSettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AndroidEnterprise\androidManagedStoreAccountEnterpriseSettings.json")) -Force
+$androidManagedStoreAccountEnterpriseSettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AndroidEnterprise\"+(MakeFsCompatiblePath("androidManagedStoreAccountEnterpriseSettings.json"))) -Force
 
 
 ##### Starting exports ConfigurationPolicy
@@ -269,10 +279,10 @@ foreach($configurationPolicy in $configurationPolicies)
 {
     $uri = "/beta/deviceManagement/configurationPolicies/$($configurationPolicy.Id)/settings"
     $configurationPolicySettings = Get-MsGraphCollection -Uri $uri
-    $configurationPolicySettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ConfigurationPolicy\$($configurationPolicy.Id).json")) -Force
+    $configurationPolicySettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\ConfigurationPolicy\"+(MakeFsCompatiblePath("$($configurationPolicy.Id).json"))) -Force
     $configurationPolicy["settings"] = $configurationPolicySettings
 }
-$configurationPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ConfigurationPolicy\configurationPolicies.json")) -Force
+$configurationPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\ConfigurationPolicy\"+(MakeFsCompatiblePath("configurationPolicies.json"))) -Force
 
 ##### Starting exports AppConfigurationPolicy
 #####
@@ -282,20 +292,20 @@ if (-Not (Test-Path "$DataRoot\AppConfigurationPolicy")) { $null = New-Item -Pat
 #targetedManagedAppConfigurations
 $uri = "/beta/deviceAppManagement/targetedManagedAppConfigurations?`$expand=apps"
 $targetedManagedAppConfigurations = Get-MsGraphObject -Uri $uri
-$targetedManagedAppConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppConfigurationPolicy\targetedManagedAppConfigurations.json")) -Force
+$targetedManagedAppConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppConfigurationPolicy\"+(MakeFsCompatiblePath("targetedManagedAppConfigurations.json"))) -Force
 
 #mobileAppConfigurations
 $uri = "/beta/deviceAppManagement/mobileAppConfigurations"
 $mobileAppConfigurations = Get-MsGraphCollection -Uri $uri
-$mobileAppConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppConfigurationPolicy\mobileAppConfigurations.json")) -Force
+$mobileAppConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppConfigurationPolicy\"+(MakeFsCompatiblePath("mobileAppConfigurations.json"))) -Force
 foreach($config in $mobileAppConfigurations)
 {
     $uri = "/beta/deviceAppManagement/mobileAppConfigurations/$($config.id)/deviceStatuses"
     $deviceStatuses = Get-MsGraphObject -Uri $uri
-    $deviceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppConfigurationPolicy\mobileAppConfiguration_deviceStatuses_$($config.id).json")) -Force
+    $deviceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppConfigurationPolicy\"+(MakeFsCompatiblePath("mobileAppConfiguration_deviceStatuses_$($config.id).json"))) -Force
     $uri = "/beta/deviceAppManagement/mobileAppConfigurations/$($config.id)/userStatuses"
     $userStatuses = Get-MsGraphObject -Uri $uri
-    $userStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppConfigurationPolicy\mobileAppConfiguration_userStatuses_$($config.id).json")) -Force
+    $userStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppConfigurationPolicy\"+(MakeFsCompatiblePath("mobileAppConfiguration_userStatuses_$($config.id).json"))) -Force
 }
 
 
@@ -307,28 +317,28 @@ if (-Not (Test-Path "$DataRoot\AppleEnrollment")) { $null = New-Item -Path "$Dat
 #applePushNotificationCertificateapplePushNotificationCertificate
 #TODO $uri = "/beta/devicemanagement/applePushNotificationCertificate"
 #TODO $applePushNotificationCertificate = Get-MsGraphObject -Uri $uri
-#TODO $applePushNotificationCertificate | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppleEnrollment\applePushNotificationCertificate.json")) -Force
+#TODO $applePushNotificationCertificate | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppleEnrollment\"+(MakeFsCompatiblePath("applePushNotificationCertificate.json")) -Force
 
 #depOnboardingSettings
 $uri = "/beta/deviceManagement/depOnboardingSettings"
 $depOnboardingSettings = Get-MsGraphCollection -Uri $uri
-$depOnboardingSettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppleEnrollment\depOnboardingSettings.json")) -Force
+$depOnboardingSettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppleEnrollment\"+(MakeFsCompatiblePath("depOnboardingSettings.json"))) -Force
 foreach($profile in $depOnboardingSettings)
 {
     $uri = "/beta/deviceManagement/depOnboardingSettings/$($profile.id)/enrollmentProfiles"
     $enrollmentProfile = Get-MsGraphObject -Uri $uri
-    $enrollmentProfile | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppleEnrollment\enrollmentProfile_$($profile.id).json")) -Force
+    $enrollmentProfile | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppleEnrollment\"+(MakeFsCompatiblePath("enrollmentProfile_$($profile.id).json"))) -Force
 }
 
 #managedEbooks
 $uri = "/beta/deviceAppManagement/managedEbooks"
 $managedEbooks = Get-MsGraphObject -Uri $uri
-$managedEbooks | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppleEnrollment\managedEbooks.json")) -Force
+$managedEbooks | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppleEnrollment\"+(MakeFsCompatiblePath("managedEbooks.json"))) -Force
 
 #iosLobAppProvisioningConfigurations
 $uri = "/beta/deviceAppManagement/iosLobAppProvisioningConfigurations?`$expand=assignments"
 $iosLobAppProvisioningConfigurations = Get-MsGraphObject -Uri $uri
-$iosLobAppProvisioningConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\AppleEnrollment\iosLobAppProvisioningConfigurations.json")) -Force
+$iosLobAppProvisioningConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\AppleEnrollment\"+(MakeFsCompatiblePath("iosLobAppProvisioningConfigurations.json"))) -Force
 
 
 ##### Starting exports Auditing
@@ -339,24 +349,24 @@ if (-Not (Test-Path "$DataRoot\Auditing")) { $null = New-Item -Path "$DataRoot\A
 #auditCategories
 $uri = "/beta/deviceManagement/auditEvents/getAuditCategories"
 $auditCategories = Get-MsGraphObject -Uri $uri
-$auditCategories | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Auditing\auditCategories.json")) -Force
+$auditCategories | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Auditing\"+(MakeFsCompatiblePath("auditCategories.json"))) -Force
 
 #auditEvents
 #TODO
 #$daysago = "{0:s}" -f (get-date).AddDays(-30) + "Z"
 #$uri = "/beta/deviceManagement/auditEvents?`$filter=activityDateTime gt $daysago"
 #$auditEvents = Get-MsGraphObject -Uri $uri
-#$auditEvents | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Auditing\auditEvents.json")) -Force
+#$auditEvents | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Auditing\"+(MakeFsCompatiblePath("auditEvents.json")) -Force
 
 #remoteActionAudits
 $uri = "/beta/deviceManagement/remoteActionAudits"
 $remoteActionAudits = Get-MsGraphObject -Uri $uri
-$remoteActionAudits | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Auditing\remoteActionAudits.json")) -Force
+$remoteActionAudits | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Auditing\"+(MakeFsCompatiblePath("remoteActionAudits.json"))) -Force
 
 #iosUpdateStatuses
 $uri = "/beta/deviceManagement/iosUpdateStatuses"
 $iosUpdateStatuses = Get-MsGraphObject -Uri $uri
-$iosUpdateStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Auditing\iosUpdateStatuses.json")) -Force
+$iosUpdateStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Auditing\"+(MakeFsCompatiblePath("iosUpdateStatuses.json"))) -Force
 
 
 ##### Starting exports CertificationAuthority
@@ -367,7 +377,7 @@ if (-Not (Test-Path "$DataRoot\CertificationAuthority")) { $null = New-Item -Pat
 #ndesconnectors
 $uri = "/beta/deviceManagement/ndesconnectors"
 $ndesconnectors = Get-MsGraphObject -Uri $uri
-$ndesconnectors | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\CertificationAuthority\ndesconnectors.json")) -Force
+$ndesconnectors | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CertificationAuthority\"+(MakeFsCompatiblePath("ndesconnectors.json"))) -Force
 
 
 ##### Starting exports CompanyPortalBranding
@@ -378,12 +388,12 @@ if (-Not (Test-Path "$DataRoot\CompanyPortalBranding")) { $null = New-Item -Path
 #intuneBrand
 $uri = "/beta/deviceManagement/intuneBrand"
 $intuneBrand = Get-MsGraphObject -Uri $uri
-$intuneBrand | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\CompanyPortalBranding\intuneBrand.json")) -Force
+$intuneBrand | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CompanyPortalBranding\"+(MakeFsCompatiblePath("intuneBrand.json"))) -Force
 
 #intuneBrandingProfiles
 $uri = "/beta/deviceManagement/intuneBrandingProfiles"
 $intuneBrandingProfiles = Get-MsGraphObject -Uri $uri
-$intuneBrandingProfiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\CompanyPortalBranding\intuneBrandingProfiles.json")) -Force
+$intuneBrandingProfiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CompanyPortalBranding\"+(MakeFsCompatiblePath("intuneBrandingProfiles.json"))) -Force
 
 
 ##### Starting exports CompliancePolicy
@@ -394,12 +404,12 @@ if (-Not (Test-Path "$DataRoot\CompliancePolicy")) { $null = New-Item -Path "$Da
 #deviceCompliancePolicies
 $uri = "/beta/deviceManagement/deviceCompliancePolicies"
 $deviceCompliancePolicies = Get-MsGraphCollection -Uri $uri
-$deviceCompliancePolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\CompliancePolicy\deviceCompliancePolicies.json")) -Force
+$deviceCompliancePolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CompliancePolicy\"+(MakeFsCompatiblePath("deviceCompliancePolicies.json"))) -Force
 foreach($policy in $deviceCompliancePolicies)
 {
     $uri = "/beta/deviceManagement/deviceCompliancePolicies/$($policy.id)/assignments"
     $assignments = Get-MsGraphObject -Uri $uri
-    $assignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\CompliancePolicy\deviceCompliancePolicy_assignment_$($policy.id).json")) -Force
+    $assignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CompliancePolicy\"+(MakeFsCompatiblePath("deviceCompliancePolicy_assignment_$($policy.id).json"))) -Force
 }
 
 
@@ -411,7 +421,7 @@ if (-Not (Test-Path "$DataRoot\CorporateDeviceEnrollment")) { $null = New-Item -
 #importedDeviceIdentities
 $uri = "/beta/deviceManagement/importedDeviceIdentities"
 $importedDeviceIdentities = Get-MsGraphObject -Uri $uri
-$importedDeviceIdentities | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\CorporateDeviceEnrollment\importedDeviceIdentities.json")) -Force
+$importedDeviceIdentities | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CorporateDeviceEnrollment\"+(MakeFsCompatiblePath("importedDeviceIdentities.json"))) -Force
 
 
 ##### Starting exports GroupPolicyConfiguration
@@ -422,17 +432,17 @@ if (-Not (Test-Path "$DataRoot\GroupPolicyConfiguration")) { $null = New-Item -P
 #groupPolicyDefinitions
 $uri = "/beta/deviceManagement/groupPolicyDefinitions"
 $groupPolicyDefinitions = Get-MsGraphObject -Uri $uri
-$groupPolicyDefinitions | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\GroupPolicyConfiguration\groupPolicyDefinitions.json")) -Force
+$groupPolicyDefinitions | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\GroupPolicyConfiguration\"+(MakeFsCompatiblePath("groupPolicyDefinitions.json"))) -Force
 
 #groupPolicyCategories
 $uri = "/beta/deviceManagement/groupPolicyCategories"
 $groupPolicyCategories = Get-MsGraphObject -Uri $uri
-$groupPolicyCategories | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\GroupPolicyConfiguration\groupPolicyCategories.json")) -Force
+$groupPolicyCategories | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\GroupPolicyConfiguration\"+(MakeFsCompatiblePath("groupPolicyCategories.json"))) -Force
 
 #groupPolicyUploadedDefinitionFiles
 $uri = "/beta/deviceManagement/groupPolicyUploadedDefinitionFiles"
 $groupPolicyUploadedDefinitionFiles = Get-MsGraphObject -Uri $uri
-$groupPolicyUploadedDefinitionFiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\GroupPolicyConfiguration\groupPolicyUploadedDefinitionFiles.json")) -Force
+$groupPolicyUploadedDefinitionFiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\GroupPolicyConfiguration\"+(MakeFsCompatiblePath("groupPolicyUploadedDefinitionFiles.json"))) -Force
 
 #groupPolicyConfigurations
 $uri = "/beta/deviceManagement/groupPolicyConfigurations"
@@ -521,7 +531,7 @@ foreach($policy in $groupPolicyConfigurations)
     }
     $policy | Add-Member -MemberType NoteProperty -Name definitionValues -Value $definitionValues -Force
 }
-$groupPolicyConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\GroupPolicyConfiguration\groupPolicyConfigurations.json")) -Force
+$groupPolicyConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\GroupPolicyConfiguration\"+(MakeFsCompatiblePath("groupPolicyConfigurations.json"))) -Force
 
 
 ##### Starting exports DeviceConfiguration
@@ -532,28 +542,28 @@ if (-Not (Test-Path "$DataRoot\DeviceConfiguration")) { $null = New-Item -Path "
 #deviceConfigurations
 $uri = "/beta/deviceManagement/deviceConfigurations"
 $deviceConfigurations = Get-MsGraphCollection -Uri $uri
-$deviceConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\DeviceConfiguration\deviceConfigurations.json")) -Force
+$deviceConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\DeviceConfiguration\"+(MakeFsCompatiblePath("deviceConfigurations.json"))) -Force
 foreach($policy in $deviceConfigurations)
 {
     $uri = "/beta/deviceManagement/deviceConfigurations/$($policy.id)/groupAssignments"
     $assignments = Get-MsGraphObject -Uri $uri
-    $assignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\DeviceConfiguration\deviceConfiguration_assignment_$($policy.id).json")) -Force
+    $assignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\DeviceConfiguration\"+(MakeFsCompatiblePath("deviceConfiguration_assignment_$($policy.id).json"))) -Force
 }
 
 #deviceManagementScripts
 $uri = "/beta/deviceManagement/deviceManagementScripts?`$expand=groupAssignments"
 $deviceManagementScripts = Get-MsGraphCollection -Uri $uri
-$deviceManagementScripts | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\DeviceConfiguration\deviceManagementScripts.json")) -Force
+$deviceManagementScripts | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\DeviceConfiguration\"+(MakeFsCompatiblePath("deviceManagementScripts.json"))) -Force
 foreach($script in $deviceManagementScripts)
 {
     $uri = "/beta/deviceManagement/deviceManagementScripts/$($script.id)"
     $scriptContent = Get-MsGraphObject -Uri $uri
     $fileName = $scriptContent.fileName
     $scriptContent = [System.Text.Encoding]::ASCII.GetString([System.Convert]::FromBase64String($scriptContent.scriptContent))
-    $scriptContent | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\DeviceConfiguration\$($fileName)")) -Force
+    $scriptContent | Set-Content -Encoding UTF8 -Path ("$DataRoot\DeviceConfiguration\"+(MakeFsCompatiblePath("$($fileName)"))) -Force
     $uri = "/beta/deviceManagement/deviceManagementScripts/$($script.id)/userRunStates"
     $userRunStates = Get-MsGraphObject -Uri $uri
-    $userRunStates | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\DeviceConfiguration\userRunStates_$($script.id).json")) -Force
+    $userRunStates | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\DeviceConfiguration\"+(MakeFsCompatiblePath("userRunStates_$($script.id).json"))) -Force
 }
 
 ##### Starting exports EnrollmentRestrictions
@@ -564,7 +574,7 @@ if (-Not (Test-Path "$DataRoot\EnrollmentRestrictions")) { $null = New-Item -Pat
 #deviceEnrollmentConfigurations
 $uri = "/beta/deviceManagement/deviceEnrollmentConfigurations"
 $deviceEnrollmentConfigurations = Get-MsGraphObject -Uri $uri
-$deviceEnrollmentConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\EnrollmentRestrictions\deviceEnrollmentConfigurations.json")) -Force
+$deviceEnrollmentConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\EnrollmentRestrictions\"+(MakeFsCompatiblePath("deviceEnrollmentConfigurations.json"))) -Force
 
 
 ##### Starting exports Applications
@@ -575,12 +585,12 @@ if (-Not (Test-Path "$DataRoot\Applications")) { $null = New-Item -Path "$DataRo
 #mobileAppCategories
 $uri = "/beta/deviceAppManagement/mobileAppCategories"
 $mobileAppCategories = Get-MsGraphObject -Uri $uri
-$mobileAppCategories | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\mobileAppCategories.json")) -Force
+$mobileAppCategories | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("mobileAppCategories.json"))) -Force
 
 #intuneApplications
 $uri = "/beta/deviceAppManagement/mobileApps"
 $intuneApplications = Get-MsGraphCollection -Uri $uri
-$intuneApplications | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplications.json")) -Force
+$intuneApplications | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("intuneApplications.json"))) -Force
 if (-Not (Test-Path "$DataRoot\Applications\Data")) { $null = New-Item -Path "$DataRoot\Applications\Data" -ItemType Directory -Force }
 $DeviceInstallStatusByAppUris = @()
 $UserInstallStatusAggregateByAppUris = @()
@@ -588,7 +598,7 @@ foreach($application in $intuneApplications)
 {
     $uri = "/beta/deviceAppManagement/mobileApps/$($application.id)"
     $application = Get-MsGraphObject -Uri $uri
-    $application | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_application.json")) -Force
+    $application | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\Data\"+(MakeFsCompatiblePath("app_$($application.id)_application.json"))) -Force
 
     if ($doAppReportExport)
     {
@@ -596,7 +606,7 @@ foreach($application in $intuneApplications)
         $applicationAssignments = Get-MsGraphObject -Uri $uri
         if ($applicationAssignments -and $applicationAssignments.value.Count -gt 0)
         {
-            $applicationAssignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_applicationAssignments.json")) -Force
+            $applicationAssignments | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\Data\"+(MakeFsCompatiblePath("app_$($application.id)_applicationAssignments.json"))) -Force
             $uri = GetReportUri -reportname "DeviceInstallStatusByApp" -filter "ApplicationId eq '$($application.id)'"
             $DeviceInstallStatusByAppUris += @{app=$application.id;uri=$uri}
             $uri = GetReportUri -reportname "UserInstallStatusAggregateByApp" -filter "ApplicationId eq '$($application.id)'"
@@ -606,10 +616,10 @@ foreach($application in $intuneApplications)
     
     <#
     $uri = "/beta/deviceManagement/reports/getAppStatusOverviewReport"
-    $getAppStatusOverviewReport = Post-MsGraph -Uri $uri -Body "{`"filter`":`"(ApplicationId eq '$($application.id)')`"}" -OutputFile (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_appStatusOverviewReport.json"))
+    $getAppStatusOverviewReport = Post-MsGraph -Uri $uri -Body "{`"filter`":`"(ApplicationId eq '$($application.id)')`"}" -OutputFile ("$DataRoot\Applications\Data\"+(MakeFsCompatiblePath("app_$($application.id)_appStatusOverviewReport.json"))
     
     $uri = "/beta/deviceManagement/reports/getAppsInstallSummaryReport"
-    $getAppStatusOverviewReport = Post-MsGraph -Uri $uri -Body "{`"filter`":`"(ApplicationId eq '$($application.id)')`"}" -OutputFile (MakeFsCompatiblePath("$DataRoot\Applications\Data\app_$($application.id)_appsInstallSummaryReport.json"))
+    $getAppStatusOverviewReport = Post-MsGraph -Uri $uri -Body "{`"filter`":`"(ApplicationId eq '$($application.id)')`"}" -OutputFile ("$DataRoot\Applications\Data\"+(MakeFsCompatiblePath("app_$($application.id)_appsInstallSummaryReport.json"))
     #>
 }
 foreach($appUri in $DeviceInstallStatusByAppUris)
@@ -629,75 +639,75 @@ foreach($mdmApp in $mdmApps)
     $mdmApp.largeIcon = $appIcon.largeIcon
 }
 
-$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managed") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMAM.json")) -Force
-$mdmApps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDMfull.json")) -Force
-$intuneApplications | Where-Object { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#microsoft.graph.winGetApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.iosVppApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.windowsAppX")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.androidForWorkApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.windowsMobileMSI")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.androidLobApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.iosLobApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.microsoftStoreForBusinessApp")) } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsMDM.json")) -Force
-$intuneApplications | Where-Object { ($_.'@odata.type').Contains("win32") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsWIN32.json")) -Force
-$intuneApplications | Where-Object { ($_.'@odata.type').Contains("winGetApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsWinGet.json")) -Force
-$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managedAndroidStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsAndroid.json")) -Force
-$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managedIOSStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\intuneApplicationsIos.json")) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managed") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("intuneApplicationsMAM.json"))) -Force
+$mdmApps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("intuneApplicationsMDMfull.json"))) -Force
+$intuneApplications | Where-Object { (!($_.'@odata.type').Contains("managed")) -and (!($_.'@odata.type').Contains("#microsoft.graph.winGetApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.iosVppApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.windowsAppX")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.androidForWorkApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.windowsMobileMSI")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.androidLobApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.iosLobApp")) -and (!($_.'@odata.type').Contains("#Microsoft.Graph.microsoftStoreForBusinessApp")) } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("intuneApplicationsMDM.json"))) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("win32") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("intuneApplicationsWIN32.json"))) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("winGetApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("intuneApplicationsWinGet.json"))) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managedAndroidStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("intuneApplicationsAndroid.json"))) -Force
+$intuneApplications | Where-Object { ($_.'@odata.type').Contains("managedIOSStoreApp") } | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("intuneApplicationsIos.json"))) -Force
 
 #mobileAppConfigurations
 $uri = "/beta/deviceAppManagement/mobileAppConfigurations?`$expand=assignments"
 $mobileAppConfigurations = Get-MsGraphObject -Uri $uri
-$mobileAppConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\mobileAppConfigurations.json")) -Force
+$mobileAppConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("mobileAppConfigurations.json"))) -Force
 
 #targetedManagedAppConfigurations
 $uri = "/beta/deviceAppManagement/targetedManagedAppConfigurations"
 $targetedManagedAppConfigurations = Get-MsGraphCollection -Uri $uri
-$targetedManagedAppConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\targetedManagedAppConfigurations.json")) -Force
+$targetedManagedAppConfigurations | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("targetedManagedAppConfigurations.json"))) -Force
 foreach($configuration in $targetedManagedAppConfigurations)
 {
     $uri = "/beta/deviceAppManagement/targetedManagedAppConfigurations('$($configuration.id)')?`$expand=apps,assignments"
     $configuration = Get-MsGraphObject -Uri $uri
-    $configuration | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\targetedManagedAppConfiguration_$($configuration.id).json")) -Force
+    $configuration | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("targetedManagedAppConfiguration_$($configuration.id).json"))) -Force
 }
 
 #appregistrationSummary
 $uri = "/beta/deviceAppManagement/managedAppStatuses('appregistrationsummary')?fetch=6000&policyMode=0&columns=DisplayName,UserEmail,ApplicationName,ApplicationInstanceId,ApplicationVersion,DeviceName,DeviceType,DeviceManufacturer,DeviceModel,AndroidPatchVersion,AzureADDeviceId,MDMDeviceID,Platform,PlatformVersion,ManagementLevel,PolicyName,LastCheckInDate"
 $appregistrationSummary = Get-MsGraphObject -Uri $uri
-$appregistrationSummary | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\appregistrationSummary.json")) -Force
+$appregistrationSummary | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("appregistrationSummary.json"))) -Force
 
 # TODO
 #windowsProtectionReport
 # $uri = "/beta/deviceAppManagement/managedAppStatuses('windowsprotectionreport')"
 # $windowsProtectionReport = Get-MsGraphObject -Uri $uri
-# $windowsProtectionReport | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\windowsProtectionReport.json")) -Force
+# $windowsProtectionReport | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("windowsProtectionReport.json")) -Force
 
 #mdmWindowsInformationProtectionPolicies
 $uri = "/beta/deviceAppManagement/mdmWindowsInformationProtectionPolicies"
 $mdmWindowsInformationProtectionPolicies = Get-MsGraphObject -Uri $uri
-$mdmWindowsInformationProtectionPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\mdmWindowsInformationProtectionPolicies.json")) -Force
+$mdmWindowsInformationProtectionPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("mdmWindowsInformationProtectionPolicies.json"))) -Force
 
 #managedAppPolicies
 $uri = "/beta/deviceAppManagement/managedAppPolicies"
 $managedAppPolicies = Get-MsGraphCollection -Uri $uri
-$managedAppPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicies.json")) -Force
+$managedAppPolicies | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("managedAppPolicies.json"))) -Force
 foreach($managedAppPolicy in $managedAppPolicies)
 {
     try {
         #TODO
         $uri = "/beta/deviceAppManagement/androidManagedAppProtections('$($managedAppPolicy.id)')?`$expand=apps"
         $policy = Get-MsGraphObject -Uri $uri
-        $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_android.json")) -Force
+        $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("managedAppPolicy_$($policy.id)_android.json"))) -Force
     } catch {}
     try {
         #TODO
         $uri = "/beta/deviceAppManagement/iosManagedAppProtections('$($managedAppPolicy.id)')?`$expand=apps"
         $policy = Get-MsGraphObject -Uri $uri
-        $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_ios.json")) -Force
+        $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("managedAppPolicy_$($policy.id)_ios.json"))) -Force
     } catch {}
     try {
         #TODO
         $uri = "/beta/deviceAppManagement/windowsInformationProtectionPolicies('$($managedAppPolicy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
         $policy = Get-MsGraphObject -Uri $uri
-        $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_windows.json")) -Force
+        $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("managedAppPolicy_$($policy.id)_windows.json"))) -Force
     } catch {}
     try {
         #TODO
         $uri = "/beta/deviceAppManagement/mdmWindowsInformationProtectionPolicies('$($managedAppPolicy.id)')?`$expand=protectedAppLockerFiles,exemptAppLockerFiles,assignments"
         $policy = Get-MsGraphObject -Uri $uri
-        $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\Applications\managedAppPolicy_$($policy.id)_mdm.json")) -Force
+        $policy | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\Applications\"+(MakeFsCompatiblePath("managedAppPolicy_$($policy.id)_mdm.json"))) -Force
     } catch {}
 }
 
@@ -832,7 +842,7 @@ foreach($device in $managedDevices)
     $detectedApps = Get-MsGraphObject -Uri $uri
     $device.detectedApps = $detectedApps
 }
-$managedDevices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ManagedDevices\managedDevices.json")) -Force
+$managedDevices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\ManagedDevices\"+(MakeFsCompatiblePath("managedDevices.json"))) -Force
 
 #registeredDevices
 $uri = "/beta/devices"
@@ -848,17 +858,17 @@ foreach($device in $registeredDevices)
     $registeredUsers = Get-MsGraphObject -Uri $uri
     $device.registeredUsers = $registeredUsers
 }
-$registeredDevices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ManagedDevices\registeredDevices.json")) -Force
+$registeredDevices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\ManagedDevices\"+(MakeFsCompatiblePath("registeredDevices.json"))) -Force
 
 #managedDeviceOverview
 $uri = "/beta/deviceManagement/managedDeviceOverview"
 $managedDeviceOverview = Get-MsGraphObject -Uri $uri
-$managedDeviceOverview | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ManagedDevices\managedDeviceOverview.json")) -Force
+$managedDeviceOverview | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\ManagedDevices\"+(MakeFsCompatiblePath("managedDeviceOverview.json"))) -Force
 
 #healthStates
 $uri = "/beta/deviceAppManagement/windowsManagementApp/healthStates"
 $healthStates = Get-MsGraphObject -Uri $uri
-$healthStates | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\ManagedDevices\healthStates.json")) -Force
+$healthStates | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\ManagedDevices\"+(MakeFsCompatiblePath("healthStates.json"))) -Force
 
 
 ##### Starting exports SoftwareUpdates
@@ -869,12 +879,12 @@ if (-Not (Test-Path "$DataRoot\SoftwareUpdates")) { $null = New-Item -Path "$Dat
 #softwareUpdatePoliciesWin
 $uri = "/beta/deviceManagement/deviceConfigurations?`$filter=isof('Microsoft.Graph.windowsUpdateForBusinessConfiguration')&`$expand=groupAssignments"
 $softwareUpdatePoliciesWin = Get-MsGraphObject -Uri $uri
-$softwareUpdatePoliciesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\softwareUpdatePoliciesWin.json")) -Force
+$softwareUpdatePoliciesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\SoftwareUpdates\"+(MakeFsCompatiblePath("softwareUpdatePoliciesWin.json"))) -Force
 
 #softwareUpdatePoliciesIos
 $uri = "/beta/deviceManagement/deviceConfigurations?`$filter=isof('Microsoft.Graph.iosUpdateConfiguration')&`$expand=groupAssignments"
 $softwareUpdatePoliciesIos = Get-MsGraphObject -Uri $uri
-$softwareUpdatePoliciesIos | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\softwareUpdatePoliciesIos.json")) -Force
+$softwareUpdatePoliciesIos | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\SoftwareUpdates\"+(MakeFsCompatiblePath("softwareUpdatePoliciesIos.json"))) -Force
 
 
 ##### Starting exports FeatureUpdateProfiles
@@ -884,7 +894,7 @@ Write-Host "Exporting FeatureUpdateProfiles" -ForegroundColor $CommandInfo
 #windowsFeatureUpdateProfiles
 $uri = "/beta/deviceManagement/windowsFeatureUpdateProfiles"
 $windowsFeatureUpdateProfilesWin = Get-MsGraphObject -Uri $uri
-$windowsFeatureUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\windowsFeatureUpdateProfiles.json")) -Force
+$windowsFeatureUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\SoftwareUpdates\"+(MakeFsCompatiblePath("windowsFeatureUpdateProfiles.json"))) -Force
 
 
 ##### Starting exports QualityUpdateProfiles
@@ -894,7 +904,7 @@ Write-Host "Exporting QualityUpdateProfiles" -ForegroundColor $CommandInfo
 #QualityUpdateProfiles
 $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
 $windowsQualityUpdateProfilesWin = Get-MsGraphObject -Uri $uri
-$windowsQualityUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\windowsQualityUpdateProfiles.json")) -Force
+$windowsQualityUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\SoftwareUpdates\"+(MakeFsCompatiblePath("windowsQualityUpdateProfiles.json"))) -Force
 
 ##### Starting exports DriverUpdateProfiles
 #####
@@ -903,7 +913,7 @@ Write-Host "Exporting DriverUpdateProfiles" -ForegroundColor $CommandInfo
 #DriverUpdateProfiles
 $uri = "/beta/deviceManagement/windowsDriverUpdateProfiles"
 $windowsDriverUpdateProfilesWin = Get-MsGraphObject -Uri $uri
-$windowsDriverUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\SoftwareUpdates\windowsDriverUpdateProfiles.json")) -Force
+$windowsDriverUpdateProfilesWin | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\SoftwareUpdates\"+(MakeFsCompatiblePath("windowsDriverUpdateProfiles.json"))) -Force
 
 ##### Starting exports TermsAndConditions
 #####
@@ -913,7 +923,7 @@ if (-Not (Test-Path "$DataRoot\TermsAndConditions")) { $null = New-Item -Path "$
 #termsAndConditions
 $uri = "/beta/deviceManagement/termsAndConditions"
 $termsAndConditions = Get-MsGraphObject -Uri $uri
-$termsAndConditions | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\TermsAndConditions\termsAndConditions.json")) -Force
+$termsAndConditions | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\TermsAndConditions\"+(MakeFsCompatiblePath("termsAndConditions.json"))) -Force
 
 
 #termsAndConditionsAcceptanceStatuses
@@ -921,7 +931,7 @@ foreach ($termsAndCondition in $termsAndConditions.value)
 {
     $uri = "/beta/deviceManagement/termsAndConditions/$($termsAndCondition.id)/acceptanceStatuses"
     $acceptanceStatuses = Get-MsGraphObject -Uri $uri
-    $acceptanceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\TermsAndConditions\termsAndConditionsAcceptanceStatuses_$($termsAndCondition.id).json")) -Force
+    $acceptanceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\TermsAndConditions\"+(MakeFsCompatiblePath("termsAndConditionsAcceptanceStatuses_$($termsAndCondition.id).json"))) -Force
 }
 
 
@@ -993,42 +1003,42 @@ if ($doUserDataExport)
             #memberOf
             $uri = "/beta/users/$($user.id)/memberOf/Microsoft.Graph.group"
             $members = Get-MsGraphObject -Uri $uri
-            $members | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\groups.json")) -Force
+            $members | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("groups.json"))) -Force
         } catch {}
         try
         {
             #registeredDevices
             $uri = "/beta/users/$($user.id)/registeredDevices"
             $devices = Get-MsGraphObject -Uri $uri
-            $devices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\registered_devices.json")) -Force
+            $devices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("registered_devices.json"))) -Force
         } catch {}
         try
         {
             #managedAppRegistrations
             $uri = "/beta/users/$($user.id)/managedAppRegistrations?`$expand=appliedPolicies,intendedPolicies,operations"
             $regs = Get-MsGraphObject -Uri $uri
-            $regs | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\managedAppRegistrations.json")) -Force
+            $regs | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("managedAppRegistrations.json"))) -Force
         } catch { }
         try
         {
             #managedAppStatuses
             $uri = "/beta/deviceAppManagement/managedAppStatuses('userstatus')?userId=$($user.id)"
             $managedAppStatuses = Get-MsGraphObject -Uri $uri
-            $managedAppStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\managedAppStatuses_userstatus.json")) -Force
+            $managedAppStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("managedAppStatuses_userstatus.json"))) -Force
         } catch { }
         try
         {
             #managedAppStatuses
             $uri = "/beta/deviceAppManagement/managedAppStatuses('userconfigstatus')?userId=$($user.id)"
             $managedAppStatuses = Get-MsGraphObject -Uri $uri
-            $managedAppStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\managedAppStatuses_userconfigstatus.json")) -Force
+            $managedAppStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("managedAppStatuses_userconfigstatus.json"))) -Force
         } catch { }
         try
         {
             #deviceManagementTroubleshootingEvents
             $uri = "/beta/users/$($user.id)/deviceManagementTroubleshootingEvents"
             $deviceManagementTroubleshootingEvents = Get-MsGraphObject -Uri $uri
-            $deviceManagementTroubleshootingEvents | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\deviceManagementTroubleshootingEvents.json")) -Force
+            $deviceManagementTroubleshootingEvents | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("deviceManagementTroubleshootingEvents.json"))) -Force
         } catch { }
         try
         {
@@ -1040,14 +1050,14 @@ if ($doUserDataExport)
                 $acceptanceStatuses = Get-MsGraphObject -Uri $uri
                 $termsAndConditionsAcceptanceStatuses += ($acceptanceStatuses | Where-Object { $_.id.Contains($user.id) })
             }
-            $termsAndConditionsAcceptanceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\termsAndConditionsAcceptanceStatuses.json")) -Force
+            $termsAndConditionsAcceptanceStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("termsAndConditionsAcceptanceStatuses.json"))) -Force
         } catch { }
         try
         {
             #otherData
             $uri = "/beta/users/$($user.id)/exportDeviceAndAppManagementData()/content"
             $otherData = Get-MsGraphObject -Uri $uri -DontThrowIfStatusEquals 404
-            $otherData | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\otherData.json")) -Force
+            $otherData | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("otherData.json"))) -Force
         } catch { }
         try
         {
@@ -1055,28 +1065,28 @@ if ($doUserDataExport)
             #TODO
             #$uri = "/beta/deviceManagement/auditEvents?`$filter=actor/id eq '$($user.id)'"
             #$events = Get-MsGraphObject -Uri $uri
-            #$events | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\events.json")) -Force
+            #$events | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("events.json")) -Force
         } catch { }
         try
         {
             #iosUpdateStatuses
             $uri = "/beta/deviceManagement/iosUpdateStatuses"
             $iosUpdateStatuses = Get-MsGraphObject -Uri $uri | Where-Object { $_.userPrincipalName -ieq $upn }
-            $iosUpdateStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\iosUpdateStatuses.json")) -Force
+            $iosUpdateStatuses | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("iosUpdateStatuses.json"))) -Force
         } catch { }
         try
         {
             #depOnboardingSettings
             $uri = "/beta/deviceManagement/depOnboardingSettings?`$filter=appleIdentifier eq '$([System.Web.HttpUtility]::UrlEncode($upn))'"
             $depOnboardingSettings = Get-MsGraphObject -Uri $uri
-            $depOnboardingSettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\depOnboardingSettings.json")) -Force
+            $depOnboardingSettings | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("depOnboardingSettings.json"))) -Force
         } catch { }
         try
         {
             #remoteActionAudits
             $uri = "/beta/deviceManagement/remoteActionAudits?`$filter=initiatedByUserPrincipalName eq '$([System.Web.HttpUtility]::UrlEncode($upn))'"
             $remoteActionAudits = Get-MsGraphObject -Uri $uri
-            $remoteActionAudits | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\remoteActionAudits.json")) -Force
+            $remoteActionAudits | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("remoteActionAudits.json"))) -Force
         } catch { }
         try
         {
@@ -1086,7 +1096,7 @@ if ($doUserDataExport)
             {
                 $uri = "/beta/users/$($user.id)/managedDevices"
                 $devices = Get-MsGraphCollection -Uri $uri -DontThrowIfStatusEquals 404
-                $devices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\managed_devices.json")) -Force
+                $devices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("managed_devices.json"))) -Force
             } catch { }
             if ($devices -ne $null)
             {
@@ -1161,7 +1171,7 @@ if ($doUserDataExport)
                         $deviceWithHardwareInfo = Get-MsGraphObject -Uri $uri
                         $deviceData.hardwareInformation = $deviceWithHardwareInfo
 
-                        $deviceData | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\managedDevice_$($device.deviceName).json")) -Force
+                        $deviceData | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("managedDevice_$($device.deviceName).json"))) -Force
                     } catch { 
 					    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
 					    try { Write-Host $_.Exception -ForegroundColor $CommandError } catch {}
@@ -1172,14 +1182,14 @@ if ($doUserDataExport)
                     $config.deviceStatuses = $config.deviceStatusesForDevice
                     $config.PSObject.Properties.Remove('deviceStatusesForDevice')
                 }
-                $mobileAppConfigurationsForUser | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\mobileAppConfigurations.json")) -Force
+                $mobileAppConfigurationsForUser | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("mobileAppConfigurations.json"))) -Force
                 foreach($application in $applications)
                 {
                     $application.deviceStatuses = $application.deviceStatusesForDevice
                     $application.PSObject.Properties.Remove('deviceStatusesForDevice')
                 }
-                $intuneApplicationsForUser | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\intuneApplications.json")) -Force
-                $deviceManagementScriptsForUser | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path (MakeFsCompatiblePath("$DataRoot\IntuneDataExport\$($upn)\deviceManagementScripts.json")) -Force
+                $intuneApplicationsForUser | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("intuneApplications.json"))) -Force
+                $deviceManagementScriptsForUser | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("deviceManagementScripts.json"))) -Force
             }
 	    } catch { 
 		    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}

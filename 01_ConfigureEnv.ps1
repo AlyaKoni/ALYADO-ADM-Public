@@ -226,8 +226,8 @@ $AlyaOfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERP
 
 <# URLS #>
 $AlyaGitDownload = "https://git-scm.com/downloads/win"
-$AlyaDeployToolDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=49117"
-$AlyaAipClientDownload = "https://www.microsoft.com/en-us/download/confirmation.aspx?id=53018"
+$AlyaDeployToolDownload = "https://www.microsoft.com/en-us/download/details.aspx?id=49117"
+$AlyaAipClientDownload = "https://www.microsoft.com/en-us/download/details.aspx?id=53018"
 $AlyaIntuneWinAppUtilDownload = "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool.git"
 $AlyaAzCopyDownload = "https://aka.ms/downloadazcopy-v10-windows"
 $AlyaAdkDownload = "https://go.microsoft.com/fwlink/?linkid=2120254"

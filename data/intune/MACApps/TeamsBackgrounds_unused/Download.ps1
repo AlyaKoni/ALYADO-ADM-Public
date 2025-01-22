@@ -31,18 +31,26 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://www.scribus.net/downloads/"
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*https://sourceforge.net/projects/scribus[^`"]*"
-$prjUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-$req = Invoke-WebRequestIndep -Uri $prjUrl -UseBasicParsing -Method Get
-[regex]$regex = "http[^`"]*scribus[^`"]*windows-x64\.exe"
-$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-$fileName = Split-Path -Path $newUrl -Leaf
+if (-not $AlyaIsPsUnix)
+{
+    throw "Please run this script on a mac"
+}
+
+$appName = "ch.alyaconsulting.teams.backgrounds"
+$appLocation = "/Library/Alya/TeamsBackgrounds"
 $packageRoot = "$PSScriptRoot"
+$versionFile = Join-Path $packageRoot "version.json"
+$appVersion = (Get-Content -Path $versionFile -Raw | ConvertFrom-Json).Version
+$contentZip = Join-Path $packageRoot "ContentZip"
+$contentScripts = Join-Path $packageRoot "Scripts"
 $contentRoot = Join-Path $packageRoot "Content"
+$packagePath = Join-Path $contentRoot "$appName.pkg"
 if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+
+pkgbuild --sign $AlyaMacPackageInstallCertName --root $contentZip --identifier $appName --version $appVersion --install-location $appLocation --scripts $contentScripts $packagePath
+
+#$tmp = Join-Path $packageRoot "Temp"
+#pkgutil --expand-full $packagePath $tmp

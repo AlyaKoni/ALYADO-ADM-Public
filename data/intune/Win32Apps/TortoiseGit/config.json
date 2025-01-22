@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN TortoiseGit",
-  "description": "Installs TortoiseGit 2.16.0.0 (64 bit)",
+  "description": "Installs TortoiseGit 2.17.0.2 (64 bit)",
   "publisher": "tortoisegit.org",
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
@@ -15,7 +15,7 @@
   "developer": "TortoiseGit",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "TortoiseGit-2.16.0.0-64bit.intunewin",
+  "fileName": "TortoiseGit-2.17.0.2-64bit.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,15 +24,15 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "productName": "TortoiseGit 2.16.0.0 (64 bit)",
-    "productVersion": "2.16.0.0",
-    "publisher": "TortoiseGit",
-    "requiresReboot": "false",
     "packageType": "PerMachine",
-    "upgradeCode": "{F46D0E11-F71A-48A0-8A7B-FD8669B5080C}",
-    "productCode": "{B4DE2D35-3384-45BA-947C-60905D4B4699}"
+    "publisher": "TortoiseGit",
+    "productName": "TortoiseGit 2.17.0.2 (64 bit)",
+    "requiresReboot": "false",
+    "productCode": "{01FAC96A-A140-440B-BACE-0318CB99722A}",
+    "productVersion": "2.17.0.2",
+    "upgradeCode": "{F46D0E11-F71A-48A0-8A7B-FD8669B5080C}"
   },
-  "setupFilePath": "TortoiseGit-2.16.0.0-64bit.msi",
+  "setupFilePath": "TortoiseGit-2.17.0.2-64bit.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "2.16.0.0"
+      "detectionValue": "2.17.0.2"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "2.16.0.0"
+      "comparisonValue": "2.17.0.2"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "2.16.0.0"
+  "displayVersion": "2.17.0.2"
 }

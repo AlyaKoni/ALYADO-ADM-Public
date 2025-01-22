@@ -1231,6 +1231,21 @@
         ]
     },
     {
+        "@odata.type": "#microsoft.graph.macOSCustomConfiguration",
+        "deploymentChannel": "deviceChannel",
+        "description": "Configures security and privacy settings for the terminal app",
+        "deviceManagementApplicabilityRuleOsEdition": null,
+        "deviceManagementApplicabilityRuleOsVersion": null,
+        "deviceManagementApplicabilityRuleDeviceMode": null,
+        "displayName": "MAC Terminal Security",
+        "payload": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPCFET0NUWVBFIHBsaXN0IFBVQkxJQyAiLS8vQXBwbGUvL0RURCBQTElTVCAxLjAvL0VOIiAiaHR0cDovL3d3dy5hcHBsZS5jb20vRFREcy9Qcm9wZXJ0eUxpc3QtMS4wLmR0ZCI+CjxwbGlzdCB2ZXJzaW9uPSIxLjAiPgo8ZGljdD4KCTxrZXk+UGF5bG9hZENvbnRlbnQ8L2tleT4KCTxhcnJheT4KCQk8ZGljdD4KCQkJPGtleT5QYXlsb2FkRGVzY3JpcHRpb248L2tleT4KCQkJPHN0cmluZz5HaXZlcyB0aGUgVGVybWluYWwgYXBwIGZ1bGwgZGlzayBhY2Nlc3M8L3N0cmluZz4KCQkJPGtleT5QYXlsb2FkRGlzcGxheU5hbWU8L2tleT4KCQkJPHN0cmluZz5NQUMgVGVybWluYWwgU2VjdXJpdHk8L3N0cmluZz4KCQkJPGtleT5QYXlsb2FkSWRlbnRpZmllcjwva2V5PgoJCQk8c3RyaW5nPjRENzZCMDIwLUVGRkQtNDJFNy1BMDg3LUIxNEY1NUUyNUM3NDwvc3RyaW5nPgoJCQk8a2V5PlBheWxvYWRPcmdhbml6YXRpb248L2tleT4KCQkJPHN0cmluZz5BbHlhIENvbnN1bHRpbmc8L3N0cmluZz4KCQkJPGtleT5QYXlsb2FkVHlwZTwva2V5PgoJCQk8c3RyaW5nPmNvbS5hcHBsZS5UQ0MuY29uZmlndXJhdGlvbi1wcm9maWxlLXBvbGljeTwvc3RyaW5nPgoJCQk8a2V5PlBheWxvYWRVVUlEPC9rZXk+CgkJCTxzdHJpbmc+OURGM0JGRTEtNzQ0Ni00MDE5LTg4NDUtODU5RTlENjNFODk3PC9zdHJpbmc+CgkJCTxrZXk+UGF5bG9hZFZlcnNpb248L2tleT4KCQkJPGludGVnZXI+MTwvaW50ZWdlcj4KCQkJPGtleT5TZXJ2aWNlczwva2V5PgoJCQk8ZGljdD4KCQkJCTxrZXk+U3lzdGVtUG9saWN5QXBwRGF0YTwva2V5PgoJCQkJPGFycmF5PgoJCQkJCTxkaWN0PgoJCQkJCQk8a2V5PkF1dGhvcml6YXRpb248L2tleT4KCQkJCQkJPHN0cmluZz5BbGxvdzwvc3RyaW5nPgoJCQkJCQk8a2V5PkNvZGVSZXF1aXJlbWVudDwva2V5PgoJCQkJCQk8c3RyaW5nPmlkZW50aWZpZXIgImNvbS5hcHBsZS5UZXJtaW5hbCIgYW5kIGFuY2hvciBhcHBsZTwvc3RyaW5nPgoJCQkJCQk8a2V5PklkZW50aWZpZXI8L2tleT4KCQkJCQkJPHN0cmluZz5jb20uYXBwbGUuVGVybWluYWw8L3N0cmluZz4KCQkJCQkJPGtleT5JZGVudGlmaWVyVHlwZTwva2V5PgoJCQkJCQk8c3RyaW5nPmJ1bmRsZUlEPC9zdHJpbmc+CgkJCQkJPC9kaWN0PgoJCQkJPC9hcnJheT4KCQkJPC9kaWN0PgoJCTwvZGljdD4KCTwvYXJyYXk+Cgk8a2V5PlBheWxvYWREZXNjcmlwdGlvbjwva2V5PgoJPHN0cmluZz5HaXZlcyB0aGUgVGVybWluYWwgYXBwIGZ1bGwgZGlzayBhY2Nlc3M8L3N0cmluZz4KCTxrZXk+UGF5bG9hZERpc3BsYXlOYW1lPC9rZXk+Cgk8c3RyaW5nPk1BQyBUZXJtaW5hbCBTZWN1cml0eTwvc3RyaW5nPgoJPGtleT5QYXlsb2FkSWRlbnRpZmllcjwva2V5PgoJPHN0cmluZz40RDc2QjAyMC1FRkZELTQyRTctQTA4Ny1CMTRGNTVFMjVDNzQ8L3N0cmluZz4KCTxrZXk+UGF5bG9hZE9yZ2FuaXphdGlvbjwva2V5PgoJPHN0cmluZz5BbHlhIENvbnN1bHRpbmc8L3N0cmluZz4KCTxrZXk+UGF5bG9hZFNjb3BlPC9rZXk+Cgk8c3RyaW5nPlN5c3RlbTwvc3RyaW5nPgoJPGtleT5QYXlsb2FkVHlwZTwva2V5PgoJPHN0cmluZz5Db25maWd1cmF0aW9uPC9zdHJpbmc+Cgk8a2V5PlBheWxvYWRVVUlEPC9rZXk+Cgk8c3RyaW5nPjlCQzBGNjk5LTdDNTctNEM4Mi05RDRDLUQ0QjE3MkZDOTFGQjwvc3RyaW5nPgoJPGtleT5QYXlsb2FkVmVyc2lvbjwva2V5PgoJPGludGVnZXI+MTwvaW50ZWdlcj4KPC9kaWN0Pgo8L3BsaXN0Pg==",
+        "payloadFileName": "terminalAppAccess.mobileconfig",
+        "payloadName": "MAC Terminal Security",
+        "roleScopeTagIds": [
+            "0"
+        ]
+    },
+    {
         "@odata.type": "#microsoft.graph.macOSDeviceFeaturesConfiguration",
         "adminShowHostInfo": false,
         "airPrintDestinations": [

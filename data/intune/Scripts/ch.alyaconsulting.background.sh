@@ -5,13 +5,13 @@ exec 1>>/Library/Logs/ch.alyaconsulting.background.log 2>&1
 
 echo "$(date) : installing ch.alyaconsulting.background"
 
-dekstopBackgroundUrl="https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
+dekstopBackgroundUrl="https://hhaginfpstrg000.blob.core.windows.net/backgrounds/DesktopDefaultHHAG.jpg"
 
 runDir=$pwd
 alyaDir="/Library/Alya"
 agentsDir="/Library/LaunchAgents"
 scriptsDir="/Library/Scripts"
-logsDir="/Library/Logs/Alya"
+logsDir="/Library/Alya/Logs"
 backgroundsDir="$alyaDir/Backgrounds"
 dekstopBackgroundName=$(basename $dekstopBackgroundUrl)
 
@@ -32,20 +32,43 @@ if [[ -f $scriptsDir/ch.alyaconsulting.background.sh ]];then
     rm -f $scriptsDir/ch.alyaconsulting.background.sh
 fi
 
+if ! [[ -d /Library/Developer/CommandLineTools ]]; then
+	#xcode-select --install
+    #touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+    PROD=$(softwareupdate -l | grep "\*.*Command Line" | tail -n 1 | sed 's/^[^C]* //')
+    softwareupdate -i "$PROD" --verbose
+fi
+toolsPath=$(xcode-select -p)
+echo "$(date) : command line tools: $toolsPath"
+
+if [[ -f /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap ]]; then
+	osv=`sw_vers --productVersion`
+	if [[ $osv == *"5.1.1"* ]]; then
+		echo "$(date) : implementing swift fix for 5.1.1"
+		mv /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap.orig
+	fi
+fi
+
 echo "$(date) : creating apply script"
 cat > /tmp/ch.alyaconsulting.background.tmp <<- EOF
 #!/usr/bin/swift
 import Foundation
 import AppKit
 let date = Date()
-print( "\(Date()) : running ch.alyaconsulting.background")
+var msg = ""
+let logFile = URL(string: "file:///Library/Alya/Logs/ch.alyaconsulting.background.log")
+msg = "\(Date()) : running ch.alyaconsulting.background"
+print( msg )
+do { try msg.write(to: logFile!, atomically: true, encoding: String.Encoding.utf8) } catch {}
 let ws = NSWorkspace.shared
-let uri = URL(string: "file://$backgroundsDir/$dekstopBackgroundName")
+let uri = URL(string: "file:///Library/Alya/Backgrounds/DesktopDefaultHHAG.jpg")
 for _ in 1...10 {
     for screen in NSScreen.screens {
         let actUrl = ws.desktopImageURL(for: screen)
         if (actUrl?.path != uri?.path) {
-            print( "Screen \(screen) setting background to \(uri!.path)")
+            msg = "Screen \(screen) setting background to \(uri!.path)"
+            print( msg )
+            do { try msg.write(to: logFile!, atomically: true, encoding: String.Encoding.utf8) } catch {}
             guard var options = ws.desktopImageOptions(for: screen) else {
                 try! ws.setDesktopImageURL(uri!, for: screen)
                 continue
@@ -59,7 +82,9 @@ for _ in 1...10 {
     }
     sleep(30)
 }
-print( "\(Date()) : done ch.alyaconsulting.background")
+msg = "\(Date()) : done ch.alyaconsulting.background"
+print( msg )
+do { try msg.write(to: logFile!, atomically: true, encoding: String.Encoding.utf8) } catch {}
 EOF
 
 if ! cmp -s "/tmp/ch.alyaconsulting.background.tmp" "$scriptsDir/ch.alyaconsulting.background.swift"; then

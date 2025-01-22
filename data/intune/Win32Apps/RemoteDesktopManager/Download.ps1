@@ -32,23 +32,39 @@
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
 try {
-    $pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmmsi/"
+    $pageUrl = "https://devolutions.net/remote-desktop-manager/home/downloadfree/"
     $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+    [regex]$regex = "[^`"]*msi[^`"]*free[^`"]*windows[^`"]*"
+    $pageUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+    if ([string]::IsNullOrEmpty($pageUrl))
+    {
+        throw "Download link not found"
+    }
+    $pageUrl = "https://devolutions.net" + $pageUrl
+    $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+    [regex]$regex = "[^`"]*download[^`"]*RemoteDesktopManager[^`"]*msi[^`"]*"
+    $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 } catch {
     try {
-        $pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmfreemsi/"
+        $pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmmsi/"
         $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
     } catch {
-        $pageUrl = "https://devolutions.net/remote-desktop-manager/home/downloadfree/"
-        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-        [regex]$regex = "[^`"]*msi/"
-        $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-        $pageUrl = "https://devolutions.net$newUrl"
-        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+        try {
+            $pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmfreemsi/"
+            $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+        } catch {
+            $pageUrl = "https://devolutions.net/remote-desktop-manager/home/downloadfree/"
+            $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+            [regex]$regex = "[^`"]*msi/"
+            $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+            $pageUrl = "https://devolutions.net$newUrl"
+            $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+        }
     }
+    [regex]$regex = "[^`"]*Setup.RemoteDesktopManager[^`"]*\.msi"
+    $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 }
-[regex]$regex = "[^`"]*Setup.RemoteDesktopManager[^`"]*\.msi"
-$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+            
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"

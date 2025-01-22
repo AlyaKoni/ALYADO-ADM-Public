@@ -714,3 +714,64 @@ notif.mobileconfig
 		</array>
 	</dict>
 </plist>
+
+MAC Terminal Security
+Alya Consulting
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PayloadContent</key>
+	<array>
+		<dict>
+			<key>PayloadDescription</key>
+			<string>Gives the Terminal app full disk access to app data</string>
+			<key>PayloadDisplayName</key>
+			<string>MAC Terminal Security</string>
+			<key>PayloadIdentifier</key>
+			<string>4D76B020-EFFD-42E7-A087-B14F55E25C74</string>
+			<key>PayloadOrganization</key>
+			<string>Alya Consulting</string>
+			<key>PayloadType</key>
+			<string>com.apple.TCC.configuration-profile-policy</string>
+			<key>PayloadUUID</key>
+			<string>9DF3BFE1-7446-4019-8845-859E9D63E897</string>
+			<key>PayloadVersion</key>
+			<integer>1</integer>
+			<key>Services</key>
+			<dict>
+				<key>SystemPolicyAppData</key>
+				<array>
+					<dict>
+						<key>Authorization</key>
+						<string>Allow</string>
+						<key>CodeRequirement</key>
+						<string>identifier "com.apple.Terminal" and anchor apple</string>
+						<key>Identifier</key>
+						<string>com.apple.Terminal</string>
+						<key>IdentifierType</key>
+						<string>bundleID</string>
+					</dict>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>PayloadDescription</key>
+	<string>Gives the Terminal app full disk access to app data</string>
+	<key>PayloadDisplayName</key>
+	<string>MAC Terminal Security</string>
+	<key>PayloadIdentifier</key>
+	<string>4D76B020-EFFD-42E7-A087-B14F55E25C74</string>
+	<key>PayloadOrganization</key>
+	<string>Alya Consulting</string>
+	<key>PayloadScope</key>
+	<string>System</string>
+	<key>PayloadType</key>
+	<string>Configuration</string>
+	<key>PayloadUUID</key>
+	<string>9BC0F699-7C57-4C82-9D4C-D4B172FC91FB</string>
+	<key>PayloadVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>

@@ -5,7 +5,7 @@ exec 1>>/Library/Logs/ch.alyaconsulting.office.outlookfont.log 2>&1
 
 echo "$(date) : installing ch.alyaconsulting.office.outlookfont"
 
-defFont="Arial"
+defFont="Calibri"
 defSize="11.0pt"
 defColor="black"
 
@@ -13,7 +13,7 @@ runDir=$pwd
 alyaDir="/Library/Alya"
 agentsDir="/Library/LaunchAgents"
 scriptsDir="/Library/Scripts"
-logsDir="/Library/Logs/Alya"
+logsDir="/Library/Alya/Logs"
 officeOutlookFontDir="$alyaDir/OfficeOutlookFont"
 officeOutlookFontUrl="https://raw.githubusercontent.com/pbowden-msft/OutlookFontPoke/master"
 officeOutlookFontReg="$officeOutlookFontUrl/OutlookFontPoke"
@@ -37,13 +37,16 @@ cd $runDir
 echo "$(date) : creating apply script"
 cat > /tmp/ch.alyaconsulting.office.outlookfont.tmp <<- EOF
 #!/bin/bash
+exec 3>&1 4>&2
+trap 'exec 2>&4 1>&3' 0 1 2 3
+exec 1>>$logsDir/ch.alyaconsulting.office.outlookfont.log 2>&1
 # send command to OutlookFontPoke by Paul Bowden https://github.com/pbowden-msft/OutlookFontPoke
 echo "\$(date) : running ch.alyaconsulting.office.outlookfont"
-loggedInUser=\$( scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ && ! /loginwindow/ { print \$3 }' )
+#loggedInUser=\$( scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ && ! /loginwindow/ { print \$3 }' )
 #echo "loggedInUser : \$loggedInUser"
 #echo "whoami : \$(whoami)"
 #su \$loggedInUser -c "cd $officeOutlookFontDir && ./OutlookFontPoke '$defFont' '$defSize' '$defColor'"
-sudo -u \$loggedInUser bash -c "cd $officeOutlookFontDir && ./OutlookFontPoke '$defFont' '$defSize' '$defColor'"
+bash -c "cd $officeOutlookFontDir && ./OutlookFontPoke '$defFont' '$defSize' '$defColor'"
 echo "\$(date) : done ch.alyaconsulting.office.outlookfont"
 EOF
 
