@@ -59,7 +59,14 @@ Write-Host "=====================================================`n" -Foreground
 $ssts = Get-ChildItem -Path "$AlyaData\exchange\smime" -Filter "*.sst"
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
     foreach ($sst in $ssts)
     {
         Write-Host "Importing $($sst.FullName)"

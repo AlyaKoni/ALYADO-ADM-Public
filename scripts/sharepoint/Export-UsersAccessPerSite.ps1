@@ -32,12 +32,14 @@
     ---------- -------------------- ----------------------------
     02.12.2020 Konrad Brunner       Initial Version
     11.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules, TODO test with UseAppAuthentication = true
+    27.01.2025 Konrad Brunner       New param IncludeOneDriveSites
 
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$UseAppAuthentication = $false
+    [bool]$UseAppAuthentication = $false,
+    [bool]$IncludeOneDriveSites = $false
 )
 
 #Reading configuration
@@ -57,6 +59,50 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "SharePoint | Export-UsersAccessPerSite | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Getting role groups
+$siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
+$web = Get-PnPWeb -Connection $siteCon
+
+$spAdminRoleName = "Company Administrator"
+try {
+    $gauser = $web.EnsureUser($spAdminRoleName)
+    $gauser.Context.Load($gauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $gauserLoginName = $gauser.LoginName
+}
+catch {
+    $spAdminRoleName = "Global Administrator"
+    try {
+        $gauser = $web.EnsureUser($spAdminRoleName)
+        $gauser.Context.Load($gauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $gauserLoginName = $gauser.LoginName
+    }
+    catch {
+        $gauserLoginName = $null
+    }
+}
+
+$spAdminRoleName = "SharePoint Service Administrator"
+try {
+    $sauser = $web.EnsureUser($spAdminRoleName)
+    $sauser.Context.Load($sauser)
+    Invoke-PnPQuery -Connection $siteCon
+    $sauserLoginName = $sauser.LoginName
+}
+catch {
+    $spAdminRoleName = "SharePoint Administrator"
+    try {
+        $sauser = $web.EnsureUser($spAdminRoleName)
+        $sauser.Context.Load($sauser)
+        Invoke-PnPQuery -Connection $siteCon
+        $sauserLoginName = $sauser.LoginName
+    }
+    catch {
+        $sauserLoginName = $null
+    }
+}
 
 # Getting site collections
 Write-Host "Getting site collections" -ForegroundColor $CommandInfo
@@ -85,7 +131,14 @@ else
 {
     $script:adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 }
-$sitesToProcess = Get-PnPTenantSite -Connection $script:adminCon -Detailed -IncludeOneDriveSites | Where-Object { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
+if ($IncludeOneDriveSites)
+{
+    $sitesToProcess = Get-PnPTenantSite -Connection $script:adminCon -Detailed -IncludeOneDriveSites | Where-Object { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
+}
+else
+{
+    $sitesToProcess = Get-PnPTenantSite -Connection $script:adminCon -Detailed | Where-Object { $_.Url -like "*/sites/*" -or $_.Url -like "*-my.sharepoint.com/personal*" }
+}
 $allUsers = Get-PnPAzureADUser -Connection $script:adminCon
 $allGroups = Get-PnPAzureADGroup -Connection $script:adminCon
 
@@ -116,156 +169,189 @@ function Process-Member
 			    "loginName" = $loginName
 			    "loginDisplayName" = $loginName
 			    "access" = $rolebinding.Name
+			    "exists" = "Yes"
 		    }
             $siteAcc.Add($obj) | Out-Null
 		}
         $members = Get-PnPGroupMember -Connection $script:siteCon -Identity $loginName #TODO does this work for sub webs?
         foreach($member in $members)
         {
-            if ($member.LoginName -like "*|federateddirectoryclaimprovider|*" -or $member.LoginName -like "*|tenant|*")
+            if ($gauserLoginName -eq $member.LoginName -or $sauserLoginName -eq $member.LoginName)
             {
-                $oGroupId = $member.LoginName.Substring($member.LoginName.LastIndexOf("|")+1)
-                if ($oGroupId.LastIndexOf("_") -gt -1)
+                $dispName = "Global Administrator"
+                if ($sauserLoginName -eq $member.LoginName) { $dispName = "SharePoint Administrator" }
+                foreach($rolebinding in $rolebindings)
                 {
-                    $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
+                    $obj = New-Object PSObject -Property @{
+                        "web" = $web.ServerRelativeUrl
+                        "parent" = $loginName
+                        "loginType" = "SharePointRoleGroup"
+                        "loginName" = $member.LoginName
+                        "loginDisplayName" = $dispName
+                        "access" = $rolebinding.Name
+                        "exists" = "Yes"
+                    }
+                    $siteAcc.Add($obj) | Out-Null
                 }
-                $oGroup = $allGroups | Where-Object { $_.id -eq $oGroupId }
-                if ($oGroup)
+            }
+            else
+            {
+                if ($member.LoginName -like "*|federateddirectoryclaimprovider|*" -or $member.LoginName -like "*|tenant|*")
                 {
-                    $grpType = "AadSecurityGroup"
-                    if ($oGroup.GroupTypes -contains "Unified")
+                    $oGroupId = $member.LoginName.Substring($member.LoginName.LastIndexOf("|")+1)
+                    if ($oGroupId.LastIndexOf("_") -gt -1)
                     {
-                        $grpType = "AadUnifiedGroup"
+                        $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
                     }
-                    $dispName = $oGroup.DisplayName
-                    if ($member.LoginName.EndsWith("_o"))
+                    $oGroup = $allGroups | Where-Object { $_.id -eq $oGroupId }
+                    if ($oGroup)
                     {
-                        $ogMembers = Get-PnPAzureADGroupOwner -Connection $script:adminCon -Identity $oGroupId
-                        $dispName += " Owners"
-                    }
-                    else
-                    {
-                        $ogMembers = Get-PnPAzureADGroupMember -Connection $script:adminCon -Identity $oGroupId
-                        $dispName += " Members"
-                    }
-                    foreach($rolebinding in $rolebindings)
-                    {
-                        $obj = New-Object PSObject -Property @{
-			                "web" = $web.ServerRelativeUrl
-			                "parent" = $loginName
-			                "loginType" = $grpType
-			                "loginName" = $member.LoginName
-			                "loginDisplayName" = $dispName
-			                "access" = $rolebinding.Name
-		                }
-                        $siteAcc.Add($obj) | Out-Null
-                    }
-                    foreach($ogMember in $ogMembers)
-                    {
-                        $ogUser = $allUsers | Where-Object { $_.Id -eq $ogMember.Id }
-                        if (-not $ogUser)
+                        $grpType = "AadSecurityGroup"
+                        if ($oGroup.GroupTypes -contains "Unified")
                         {
-                            Write-Warning "User $($ogMember.Id) not found"
+                            $grpType = "AadUnifiedGroup"
                         }
-                        $userType = "AadUser"
-                        $dispName = $ogUser.Mail
-                        if ($ogUser.UserPrincipalName -like "*#EXT#*")
+                        $dispName = $oGroup.DisplayName
+                        if ($member.LoginName.EndsWith("_o"))
                         {
-                            $userType = "AadGuest"
+                            $ogMembers = Get-PnPAzureADGroupOwner -Connection $script:adminCon -Identity $oGroupId
+                            $dispName += " Owners"
                         }
-                        if ([string]::IsNullOrEmpty($dispName))
+                        else
                         {
-                            if ($ogUser.OtherMails -and $ogUser.OtherMails.Count -gt 0)
-                            {
-                                $dispName = $ogUser.OtherMails[0]
-                            }
-                            else
-                            {
-                                if ($ogUser.UserPrincipalName -like "*#EXT#*")
-                                {
-                                    $dispName = $ogUser.UserPrincipalName
-                                    $dispName = $dispName.Substring(0, $dispName.IndexOf("@") - 5)
-                                    $dispName = $dispName.Substring(0, $dispName.LastIndexOf("_")) + "@" + $dispName.Substring($dispName.LastIndexOf("_")+1)
-                                }
-                                else
-                                {
-                                    $dispName = $ogUser.UserPrincipalName
-                                }
-                            }
+                            $ogMembers = Get-PnPAzureADGroupMember -Connection $script:adminCon -Identity $oGroupId
+                            $dispName += " Members"
                         }
                         foreach($rolebinding in $rolebindings)
                         {
                             $obj = New-Object PSObject -Property @{
-			                    "web" = $web.ServerRelativeUrl
-			                    "parent" = $member.LoginName
-			                    "loginType" = $userType
-			                    "loginName" = $ogUser.UserPrincipalName
-			                    "loginDisplayName" = $dispName
-			                    "access" = $rolebinding.Name
-		                    }
+                                "web" = $web.ServerRelativeUrl
+                                "parent" = $loginName
+                                "loginType" = $grpType
+                                "loginName" = $member.LoginName
+                                "loginDisplayName" = $dispName
+                                "access" = $rolebinding.Name
+                                "exists" = "Yes"
+                            }
                             $siteAcc.Add($obj) | Out-Null
+                        }
+                        foreach($ogMember in $ogMembers)
+                        {
+                            $exists = "Yes"
+                            $ogUser = $allUsers | Where-Object { $_.Id -eq $ogMember.Id }
+                            if (-not $ogUser -and $ogMember.Id -ne "SHAREPOINT\system")
+                            {
+                                Write-Warning "User $($ogMember.Id) not found [1]"
+                                $exists = "No"
+                            }
+                            $userType = "AadUser"
+                            $dispName = $ogUser.Mail
+                            if ($ogUser.UserPrincipalName -like "*#EXT#*")
+                            {
+                                $userType = "AadGuest"
+                            }
+                            if ([string]::IsNullOrEmpty($dispName))
+                            {
+                                if ($ogUser.OtherMails -and $ogUser.OtherMails.Count -gt 0)
+                                {
+                                    $dispName = $ogUser.OtherMails[0]
+                                }
+                                else
+                                {
+                                    if ($ogUser.UserPrincipalName -like "*#EXT#*")
+                                    {
+                                        $dispName = $ogUser.UserPrincipalName
+                                        $dispName = $dispName.Substring(0, $dispName.IndexOf("@") - 5)
+                                        $dispName = $dispName.Substring(0, $dispName.LastIndexOf("_")) + "@" + $dispName.Substring($dispName.LastIndexOf("_")+1)
+                                    }
+                                    else
+                                    {
+                                        $dispName = $ogUser.UserPrincipalName
+                                    }
+                                }
+                            }
+                            foreach($rolebinding in $rolebindings)
+                            {
+                                $obj = New-Object PSObject -Property @{
+                                    "web" = $web.ServerRelativeUrl
+                                    "parent" = $member.LoginName
+                                    "loginType" = $userType
+                                    "loginName" = $ogUser.UserPrincipalName
+                                    "loginDisplayName" = $dispName
+                                    "access" = $rolebinding.Name
+                                    "exists" = $exists
+                                }
+                                $siteAcc.Add($obj) | Out-Null
+                            }
+                        }
+                    }
+                    else
+                    {
+                        [regex]$guidRegex = '(?im)^[{(]?[0-9A-F]{8}[-]?(?:[0-9A-F]{4}[-]?){3}[0-9A-F]{12}[)}]?$'
+                        if ($oGroupId -match $guidRegex)
+                        {
+                            Write-Warning "Group with id $oGroupId not found [1]"
+                        }
+                        else
+                        {
+                            Write-Warning "Group $($member.LoginName) not found [1]"
                         }
                     }
                 }
                 else
                 {
-                    [regex]$guidRegex = '(?im)^[{(]?[0-9A-F]{8}[-]?(?:[0-9A-F]{4}[-]?){3}[0-9A-F]{12}[)}]?$'
-                    if ($oGroupId -match $guidRegex)
+                    $exists = "Yes"
+                    $dispName = $member.LoginName
+                    if ($dispName.LastIndexOf("|") -gt -1)
                     {
-                        Write-Warning "Group with id $oGroupId not found"
+                        $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
                     }
-                }
-            }
-            else
-            {
-                $dispName = $member.LoginName
-                if ($dispName.LastIndexOf("|") -gt -1)
-                {
-                    $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
-                }
-                $ogUser = $allUsers | Where-Object { $_.UserPrincipalName -eq $dispName -or $_.Mail -eq $dispName -or $_.DisplayName -eq $dispName }
-                if (-not $ogUser)
-                {
-                    Write-Warning "User $($dispName) not found"
-                }
-                if ($dispName -like "*#EXT#*")
-                {
-                    if ($ogUser)
+                    $ogUser = $allUsers | Where-Object { $_.UserPrincipalName -eq $dispName -or $_.Mail -eq $dispName -or $_.DisplayName -eq $dispName }
+                    if (-not $ogUser -and $dispName -ne "SHAREPOINT\system")
                     {
-                        $dispName = $ogUser.Mail
+                        Write-Warning "User $($dispName) not found [2]"
+                        $exists = "No"
                     }
-                }
-                if ($ogUser -and [string]::IsNullOrEmpty($dispName))
-                {
-                    if ($ogUser.OtherMails -and $ogUser.OtherMails.Count -gt 0)
+                    if ($dispName -like "*#EXT#*")
                     {
-                        $dispName = $ogUser.OtherMails[0]
-                    }
-                    else
-                    {
-                        if ($dispName -like "*#EXT#*")
+                        if ($ogUser)
                         {
-                            $dispName = $dispName.Substring(0, $dispName.IndexOf("@") - 5)
-                            $dispName = $dispName.Substring(0, $dispName.LastIndexOf("_")) + "@" + $dispName.Substring($dispName.LastIndexOf("_")+1)
+                            $dispName = $ogUser.Mail
+                        }
+                    }
+                    if ($ogUser -and [string]::IsNullOrEmpty($dispName))
+                    {
+                        if ($ogUser.OtherMails -and $ogUser.OtherMails.Count -gt 0)
+                        {
+                            $dispName = $ogUser.OtherMails[0]
                         }
                         else
                         {
-                            $dispName = $ogUser.UserPrincipalName
+                            if ($dispName -like "*#EXT#*")
+                            {
+                                $dispName = $dispName.Substring(0, $dispName.IndexOf("@") - 5)
+                                $dispName = $dispName.Substring(0, $dispName.LastIndexOf("_")) + "@" + $dispName.Substring($dispName.LastIndexOf("_")+1)
+                            }
+                            else
+                            {
+                                $dispName = $ogUser.UserPrincipalName
+                            }
                         }
                     }
+                    foreach($rolebinding in $rolebindings)
+                    {
+                        $obj = New-Object PSObject -Property @{
+                            "web" = $web.ServerRelativeUrl
+                            "parent" = $loginName
+                            "loginType" = "User"
+                            "loginName" = $member.LoginName
+                            "loginDisplayName" = $dispName
+                            "access" = $rolebinding.Name
+                            "exists" = $exists
+                        }
+                        $siteAcc.Add($obj) | Out-Null
+                    }
                 }
-                foreach($rolebinding in $rolebindings)
-                {
-                    $obj = New-Object PSObject -Property @{
-			            "web" = $web.ServerRelativeUrl
-			            "parent" = $loginName
-			            "loginType" = "User"
-			            "loginName" = $member.LoginName
-			            "loginDisplayName" = $dispName
-			            "access" = $rolebinding.Name
-		            }
-                    $siteAcc.Add($obj) | Out-Null
-		        }
             }
 		}
     }
@@ -281,132 +367,163 @@ function Process-Member
                     $oUserId = $oUserId.Substring(0, $oUserId.LastIndexOf("_"))
                 }
                 $ogUser = $allUsers | Where-Object { $_.Id -eq $oUserId }
-                if ($oUser)
+                $exists = "Yes"
+                if (-Not $oUser)
                 {
-                    foreach($rolebinding in $rolebindings)
-                    {
-                        $obj = New-Object PSObject -Property @{
-			                "web" = $web.ServerRelativeUrl
-			                "parent" = ""
-			                "loginType" = "AadUser"
-			                "loginName" = $loginName
-			                "loginDisplayName" = $oUser.UserPrincipalName
-			                "access" = $rolebinding.Name
-		                }
-                        $siteAcc.Add($obj) | Out-Null
-                    }
+                    Write-Warning "AzureAD user with id $oUserId not found [3]"
+                    $exists = "No"
                 }
-                else
+                foreach($rolebinding in $rolebindings)
                 {
-                    Write-Warning "AzureAD user with id $oUserId not found"
+                    $obj = New-Object PSObject -Property @{
+                        "web" = $web.ServerRelativeUrl
+                        "parent" = ""
+                        "loginType" = "AadUser"
+                        "loginName" = $loginName
+                        "loginDisplayName" = ($oUser.UserPrincipalName ? $oUser.UserPrincipalName : "")
+                        "access" = $rolebinding.Name
+                        "exists" = $exists
+                    }
+                    $siteAcc.Add($obj) | Out-Null
                 }
             }
             else
             {
-                $oGroupId = $loginName.Substring($loginName.LastIndexOf("|")+1)
-                if ($oGroupId.LastIndexOf("_") -gt -1)
+                if ($gauserLoginName -eq $loginName -or $sauserLoginName -eq $loginName)
                 {
-                    $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
-                }
-                $oGroup = $allGroups | Where-Object { $_.id -eq $oGroupId }
-                if ($oGroup)
-                {
-                    $grpType = "Security"
-                    if ($oGroup.GroupTypes -contains "Unified")
-                    {
-                        $grpType = "Office365Group"
-                    }
-                    $dispName = $oGroup.DisplayName
-                    if ($loginName.EndsWith("_o"))
-                    {
-                        $ogMembers = Get-PnPAzureADGroupOwner -Connection $script:adminCon -Identity $oGroupId
-                        $dispName += " Owners"
-                    }
-                    else
-                    {
-                        $ogMembers = Get-PnPAzureADGroupMember -Connection $script:adminCon -Identity $oGroupId
-                        $dispName += " Members"
-                    }
+                    $dispName = "Global Administrator"
+                    if ($sauserLoginName -eq $loginName) { $dispName = "SharePoint Administrator" }
                     foreach($rolebinding in $rolebindings)
                     {
                         $obj = New-Object PSObject -Property @{
-			                "web" = $web.ServerRelativeUrl
-			                "parent" = ""
-			                "loginType" = $grpType
-			                "loginName" = $loginName
-			                "loginDisplayName" = $dispName
-			                "access" = $rolebinding.Name
-		                }
+                            "web" = $web.ServerRelativeUrl
+                            "parent" = $loginName
+                            "loginType" = "SharePointRoleGroup"
+                            "loginName" = $member.LoginName
+                            "loginDisplayName" = $dispName
+                            "access" = $rolebinding.Name
+                            "exists" = "Yes"
+                        }
                         $siteAcc.Add($obj) | Out-Null
-                    }
-                    foreach($ogMember in $ogMembers)
-                    {
-                        $ogUser = $allUsers | Where-Object { $_.Id -eq $ogMember.Id }
-                        if (-not $ogUser)
-                        {
-                            Write-Warning "User $($ogMember.Id) not found"
-                        }
-                        $userType = "AadUser"
-                        if ($loginName -like "*#EXT#*")
-                        {
-                            $userType = "AadGuest"
-                        }
-                        $dispName = $ogUser.Mail
-                        if ([string]::IsNullOrEmpty($dispName))
-                        {
-                            if ($ogUser.OtherMails -and $ogUser.OtherMails.Count -gt 0)
-                            {
-                                $dispName = $ogUser.OtherMails[0]
-                            }
-                            else
-                            {
-                                if ($ogUser.UserPrincipalName -like "*#EXT#*")
-                                {
-                                    $dispName = $ogUser.UserPrincipalName
-                                    $dispName = $dispName.Substring(0, $dispName.IndexOf("@") - 5)
-                                    $dispName = $dispName.Substring(0, $dispName.LastIndexOf("_")) + "@" + $dispName.Substring($dispName.LastIndexOf("_")+1)
-                                }
-                                else
-                                {
-                                    $dispName = $ogUser.UserPrincipalName
-                                }
-                            }
-                        }
-                        foreach($rolebinding in $rolebindings)
-                        {
-                            $obj = New-Object PSObject -Property @{
-			                    "web" = $web.ServerRelativeUrl
-			                    "parent" = $loginName
-			                    "loginType" = $userType
-			                    "loginName" = $ogUser.UserPrincipalName
-			                    "loginDisplayName" = $dispName
-			                    "access" = $rolebinding.Name
-		                    }
-                            $siteAcc.Add($obj) | Out-Null
-                        }
                     }
                 }
                 else
                 {
-                    [regex]$guidRegex = '(?im)^[{(]?[0-9A-F]{8}[-]?(?:[0-9A-F]{4}[-]?){3}[0-9A-F]{12}[)}]?$'
-                    if ($oGroupId -match $guidRegex)
+                    $oGroupId = $loginName.Substring($loginName.LastIndexOf("|")+1)
+                    if ($oGroupId.LastIndexOf("_") -gt -1)
                     {
-                        Write-Warning "Group with id $oGroupId not found"
+                        $oGroupId = $oGroupId.Substring(0, $oGroupId.LastIndexOf("_"))
+                    }
+                    $oGroup = $allGroups | Where-Object { $_.id -eq $oGroupId }
+                    if ($oGroup)
+                    {
+                        $grpType = "Security"
+                        if ($oGroup.GroupTypes -contains "Unified")
+                        {
+                            $grpType = "Office365Group"
+                        }
+                        $dispName = $oGroup.DisplayName
+                        if ($loginName.EndsWith("_o"))
+                        {
+                            $ogMembers = Get-PnPAzureADGroupOwner -Connection $script:adminCon -Identity $oGroupId
+                            $dispName += " Owners"
+                        }
+                        else
+                        {
+                            $ogMembers = Get-PnPAzureADGroupMember -Connection $script:adminCon -Identity $oGroupId
+                            $dispName += " Members"
+                        }
+                        foreach($rolebinding in $rolebindings)
+                        {
+                            $obj = New-Object PSObject -Property @{
+                                "web" = $web.ServerRelativeUrl
+                                "parent" = ""
+                                "loginType" = $grpType
+                                "loginName" = $loginName
+                                "loginDisplayName" = $dispName
+                                "access" = $rolebinding.Name
+                                "exists" = "Yes"
+                            }
+                            $siteAcc.Add($obj) | Out-Null
+                        }
+                        foreach($ogMember in $ogMembers)
+                        {
+                            $exists = "Yes"
+                            $ogUser = $allUsers | Where-Object { $_.Id -eq $ogMember.Id }
+                            if (-not $ogUser -and $ogMember.Id -ne "SHAREPOINT\system")
+                            {
+                                Write-Warning "User $($ogMember.Id) not found [4]"
+                                $exists = "No"
+                            }
+                            $userType = "AadUser"
+                            if ($loginName -like "*#EXT#*")
+                            {
+                                $userType = "AadGuest"
+                            }
+                            $dispName = $ogUser.Mail
+                            if ([string]::IsNullOrEmpty($dispName))
+                            {
+                                if ($ogUser.OtherMails -and $ogUser.OtherMails.Count -gt 0)
+                                {
+                                    $dispName = $ogUser.OtherMails[0]
+                                }
+                                else
+                                {
+                                    if ($ogUser.UserPrincipalName -like "*#EXT#*")
+                                    {
+                                        $dispName = $ogUser.UserPrincipalName
+                                        $dispName = $dispName.Substring(0, $dispName.IndexOf("@") - 5)
+                                        $dispName = $dispName.Substring(0, $dispName.LastIndexOf("_")) + "@" + $dispName.Substring($dispName.LastIndexOf("_")+1)
+                                    }
+                                    else
+                                    {
+                                        $dispName = $ogUser.UserPrincipalName
+                                    }
+                                }
+                            }
+                            foreach($rolebinding in $rolebindings)
+                            {
+                                $obj = New-Object PSObject -Property @{
+                                    "web" = $web.ServerRelativeUrl
+                                    "parent" = $loginName
+                                    "loginType" = $userType
+                                    "loginName" = $ogUser.UserPrincipalName
+                                    "loginDisplayName" = $dispName
+                                    "access" = $rolebinding.Name
+                                    "exists" = $exists
+                                }
+                                $siteAcc.Add($obj) | Out-Null
+                            }
+                        }
+                    }
+                    else
+                    {
+                        [regex]$guidRegex = '(?im)^[{(]?[0-9A-F]{8}[-]?(?:[0-9A-F]{4}[-]?){3}[0-9A-F]{12}[)}]?$'
+                        if ($oGroupId -match $guidRegex)
+                        {
+                            Write-Warning "Group with id $oGroupId not found [4]"
+                        }
+                        else
+                        {
+                            Write-Warning "Group $loginName not found [4]"
+                        }
                     }
                 }
             }
         }
         else
         {
+            $exists = "Yes"
             $dispName = $loginName
             if ($dispName.LastIndexOf("|") -gt -1)
             {
                 $dispName = $dispName.Substring($dispName.LastIndexOf("|")+1)
             }
             $ogUser = $allUsers | Where-Object { $_.UserPrincipalName -eq $dispName -or $_.Mail -eq $dispName -or $_.DisplayName -eq $dispName }
-            if (-not $ogUser)
+            if (-not $ogUser -and $dispName -ne "SHAREPOINT\system")
             {
-                Write-Warning "User $($dispName) not found)"
+                Write-Warning "User $($dispName) not found [5]"
+                $exists = "No"
             }
             if ($dispName -like "*#EXT#*")
             {
@@ -444,6 +561,7 @@ function Process-Member
 			        "loginName" = $loginName
 			        "loginDisplayName" = $dispName
 			        "access" = $rolebinding.Name
+                    "exists" = $exists
 		        }
                 $siteAcc.Add($obj) | Out-Null
 		    }
@@ -528,7 +646,8 @@ foreach($site in $sitesToProcess)
 
 }
 
-$allSiteAcc | ConvertTo-Csv -NoTypeInformation | Set-Content -Path "$AlyaData\sharepoint\UsersPerSites.csv" -Encoding UTF8 -Force
+$allSiteAcc | ConvertTo-Csv -NoTypeInformation | Set-Content -Path "$AlyaData\sharepoint\UsersPerSites.csv" -Encoding $AlyaUtf8Encoding -Force
+Write-Host "Report expoted to $AlyaData\sharepoint\UsersPerSites.csv"
 
 #Stopping Transscript
 Stop-Transcript

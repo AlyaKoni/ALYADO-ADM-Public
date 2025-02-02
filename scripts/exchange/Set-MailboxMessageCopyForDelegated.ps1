@@ -69,7 +69,14 @@ Write-Host "Setting mailbox to save sent emails in own sent items folder"
 try
 {
     Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     foreach($mailboxUpn in $mailboxUpns)
     {

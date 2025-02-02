@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -30,60 +30,50 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    04.10.2021 Konrad Brunner       Initial Creation
+    29.01.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$appId = $null
 )
-
-if (-Not $appId)
-{
-    throw "Please specify the appId the access has to be restricted"
-}
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Setup-DoNotReplyAppAccess-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\planner\Export-Plans-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-# =============================================================
-# Exchange stuff
-# =============================================================
+# Logins
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Setup-DoNotReplyAppAccess | EXCHANGE" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-Write-Host "Configuring DoNotReply App Access"
-try
+# Export plans
+$groups = Get-PnPAzureADGroup -Connection $adminCon
+$extracted = @()
+foreach($group in $groups)
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
+    Write-Host "Group: $($group.DisplayName) $($group.GroupTypes)"
+    #Add-PnPAzureADGroupOwner -Connection $adminCon -Identity $group.Id -Users @("alyaadmin@flecopower.ch")
     try {
-        LoginTo-EXO
+        $extracted += Get-PnPPlannerPlan -Connection $adminCon -Group $group -ResolveIdentities
     }
     catch {
-        Write-Error $_.Exception -ErrorAction Continue
-        LogoutFrom-EXOandIPPS
-        LoginTo-EXO
+        Write-Warning $_.Exception.Message
     }
+}
 
-    $mailbox = Get-Mailbox -Identity "DoNotReply" -ErrorAction SilentlyContinue
-    $doNotReplyEmail = $mailbox.EmailAddresses[0].Replace("SMTP:","")
-    New-ApplicationAccessPolicy -AccessRight RestrictAccess -AppId $appId -PolicyScopeGroupId $doNotReplyEmail -Description "Restrict this app's access to $doNotReplyEmail"
-}
-catch
+# Export
+if (-Not (Test-Path "$AlyaData\planner"))
 {
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
+    New-Item -Path "$AlyaData\planner" -ItemType Directory -Force
 }
+$expFile = "$AlyaData\planner\plans-$($AlyaTimeString).json"
+Set-Content -Path $expFile -Value ($extracted | ConvertTo-Json -Depth 10)
+
+Write-Host "Plans exported to $expFile" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript

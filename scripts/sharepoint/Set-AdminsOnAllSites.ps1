@@ -73,6 +73,8 @@ do
 # Getting role groups
 $rootCon = LoginTo-PnP -Url $AlyaSharePointUrl
 $rweb = Get-PnPWeb -Connection $rootCon
+$gauser.Context.Load($rweb.CurrentUser)
+Invoke-PnPQuery -Connection $rootCon
 
 $spAdminRoleName = "Company Administrator"
 try {
@@ -114,7 +116,7 @@ catch {
     }
 }
 
-$owners = @($ctx.Web.CurrentUser.Email)
+$owners = @($rweb.CurrentUser.Email)
 if (-Not [string]::IsNullOrEmpty($gauserLoginName))
 {
     $owners += $gauserLoginName
@@ -130,6 +132,14 @@ if (-Not [string]::IsNullOrEmpty($sauserLoginName))
 else
 {
     Write-Warning "SharePoint Administrator Group not found"
+}
+
+foreach($AlyaSharePointNewSiteCollectionAdmin in $AlyaSharePointNewSiteCollectionAdmins)
+{
+    if ($AlyaSharePointNewSiteCollectionAdmin -ne "PleaceSpecify")
+    {
+        $owners += $AlyaSharePointNewSiteCollectionAdmin
+    }
 }
 
 # Setting site admins

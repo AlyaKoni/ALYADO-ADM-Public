@@ -5,6 +5,19 @@ exec 1>>/Library/Logs/ch.alyaconsulting.teams.backgrounds.preupgrade.log 2>&1
 
 echo "$(date) : pre upgrading ch.alyaconsulting.teams.backgrounds"
 
+runDir=$pwd
+alyaDir="/Library/Alya"
+logsDir="$alyaDir/Logs"
+backgroundsDir="$alyaDir/TeamsBackgrounds"
+
+echo "$(date) : preparing directories"
+[ -d $alyaDir ] || mkdir $alyaDir
+chmod 755 $alyaDir
+[ -d $backgroundsDir ] || mkdir $backgroundsDir
+chmod 755 $backgroundsDir
+[ -d $logsDir ] || mkdir $logsDir
+chmod 777 $logsDir
+
 echo "$(date) : done ch.alyaconsulting.teams.backgrounds.preupgrade"
 
 exit 0

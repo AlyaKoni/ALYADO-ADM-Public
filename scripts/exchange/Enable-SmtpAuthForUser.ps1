@@ -67,7 +67,14 @@ Write-Host "Enabling SMTP AUTH in exchange for user $userUpn"
 try
 {
     Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     Write-Host "  Checking SmtpClientAuthenticationDisabled" -ForegroundColor $CommandInfo
     $tconf = Get-CASMailbox -Identity $userUpn -ErrorAction SilentlyContinue

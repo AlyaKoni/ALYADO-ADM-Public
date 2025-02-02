@@ -90,7 +90,14 @@ if (-Not (Test-Path "$PSScriptRoot\configuration.xml"))
 Write-Host "Setting Exchange photo" -ForegroundColor $CommandInfo
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
     if ((Get-User -Identity $upn))
     {
         $photo = Get-UserPhoto -Identity $upn -ErrorAction SilentlyContinue
@@ -104,6 +111,9 @@ try
     {
         Write-Host "  User does not exist in O365"
     }
+}
+catch {
+    Write-Error $_.Exception -ErrorAction Continue
 }
 
 #Setting SharePoint photo

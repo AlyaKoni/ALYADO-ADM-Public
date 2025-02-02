@@ -76,7 +76,14 @@ Write-Host "Uploading Profile Pictures"
 $pics = Get-ChildItem -Path $picDir -File
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
     $pics = Get-ChildItem -Path $picDir -File
     foreach($pic in $pics)
     {
@@ -120,6 +127,9 @@ try
             Write-Host "  user not found!"
         }
     }
+}
+catch {
+    Write-Error $_.Exception -ErrorAction Continue
 }
 
 #Stopping Transscript

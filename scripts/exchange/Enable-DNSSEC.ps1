@@ -68,7 +68,14 @@ foreach ($dom in $AlyaAdditionalDomainNames)
 
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
     foreach ($dom in $domains)
     {
         Write-Host "Checking domain $dom"

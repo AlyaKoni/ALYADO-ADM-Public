@@ -60,7 +60,14 @@ Write-Host "Setting authentication policy in exchange"
 try
 {
     Write-Host "Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     Write-Host "Checking policy EnableBasicAuthPopImapSmtp" -ForegroundColor $CommandInfo
     $pol = Get-AuthenticationPolicy -Identity "EnableBasicAuthPopImapSmtp" -ErrorAction SilentlyContinue

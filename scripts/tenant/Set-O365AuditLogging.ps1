@@ -62,7 +62,14 @@ Write-Host "Setting auditing in exchange"
 try
 {
     Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     $cfg = Get-OrganizationConfig
     if ($cfg.IsDehydrated)

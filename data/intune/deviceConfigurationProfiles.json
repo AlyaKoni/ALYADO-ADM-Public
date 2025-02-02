@@ -818,6 +818,246 @@
     },
     {
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
+        "description": "Configures Windows Auditing settings",
+        "displayName": "WIN Auditing",
+        "omaSettings": [
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Credential Validation",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/AccountLogon_AuditCredentialValidation",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Security Group Management",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/AccountManagement_AuditSecurityGroupManagement",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit User Account Management",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/AccountManagement_AuditUserAccountManagement",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit PNP Activity",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/DetailedTracking_AuditPNPActivity",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Process Creation",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/DetailedTracking_AuditProcessCreation",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Account Lockout",
+            "description": "Failure",
+            "value": 2,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/AccountLogonLogoff_AuditAccountLockout",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Group Membership",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/AccountLogonLogoff_AuditGroupMembership",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Logon",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/AccountLogonLogoff_AuditLogon",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Other Logon/Logoff Events",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/AccountLogonLogoff_AuditOtherLogonLogoffEvents",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Special Logon",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/AccountLogonLogoff_AuditSpecialLogon",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Detailed File Share",
+            "description": "Failure",
+            "value": 2,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/ObjectAccess_AuditDetailedFileShare",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit File Share",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/ObjectAccess_AuditFileShare",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Other Object Access Events",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/ObjectAccess_AuditOtherObjectAccessEvents",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Removable Storage",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/ObjectAccess_AuditRemovableStorage",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Audit Policy Change",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/PolicyChange_AuditPolicyChange",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Authentication Policy Change",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/PolicyChange_AuditAuthenticationPolicyChange",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit MPSSVC Rule-Level Policy Change",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/PolicyChange_AuditMPSSVCRuleLevelPolicyChange",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Other Policy Change Events",
+            "description": "Failure",
+            "value": 2,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/PolicyChange_AuditOtherPolicyChangeEvents",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Sensitive Privilege Use",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/PrivilegeUse_AuditSensitivePrivilegeUse",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Other System Events",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/System_AuditOtherSystemEvents",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Security State Change",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/System_AuditSecurityStateChange",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit Security System Extension",
+            "description": "Success",
+            "value": 1,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/System_AuditSecuritySystemExtension",
+            "isReadOnly": false
+        },
+        {
+            "isEncrypted": false,
+            "displayName": "Audit System Integrity",
+            "description": "Success and Failure",
+            "value": 3,
+            "@odata.type": "#microsoft.graph.omaSettingInteger",
+            "secretReferenceValueId": null,
+            "omaUri": "./Vendor/MSFT/Policy/Config/Audit/System_AuditSystemIntegrity",
+            "isReadOnly": false
+        }
+        ],
+        "roleScopeTagIds": [
+            "0"
+        ]
+    },
+    {
+        "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "description": "Injects outlook admx and sets some settings",
         "displayName": "WIN Outlook Settings",
         "omaSettings": [

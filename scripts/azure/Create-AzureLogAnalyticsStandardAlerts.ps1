@@ -82,6 +82,8 @@ if (-Not $Context)
 # Functions
 function Create-Alert($Subscription, $AlertText,$AlertResourceGroupName,$LogAnaWrkspc,$ScheduledLogs,$ActionGroupId,$Severity,$QueryType,$ThresholdOperator,$Threshold,$FrequencyInMinutes,$UsesAzureResourceGraph = $false,$TimeWindowInMinutes,$Query)
 {
+  try {
+    
     # Checking alert
     $AlertName = "$($LogAnaWrkspc.Name) - $AlertText"
     Write-Host "Checking alert '$AlertName'" -ForegroundColor $CommandInfo
@@ -277,6 +279,10 @@ function Create-Alert($Subscription, $AlertText,$AlertResourceGroupName,$LogAnaW
           -Name $AlertName
 
     }
+  }
+  catch {
+    Write-Error $_.Exception -ErrorAction Continue
+  }
 }
 
 function Prepare-StandardAlerts ($AlertSubscriptionName, $AlertResourceGroupName, $WrkspcResourceGroupName, $ActionGroupResourceGroupName, $ActionGroupName, $WrkspcName)

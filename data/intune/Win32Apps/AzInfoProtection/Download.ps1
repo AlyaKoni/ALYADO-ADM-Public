@@ -31,6 +31,13 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
+$packageRoot = "$PSScriptRoot"
+$contentRoot = Join-Path $packageRoot "Content"
+if (-Not (Test-Path $contentRoot))
+{
+	$null = New-Item -Path $contentRoot -ItemType Directory -Force
+}
+
 try
 {
     $pageUrl = "https://www.microsoft.com/en-us/download/details.aspx?id=53018"
@@ -43,12 +50,6 @@ try
         $newUrl = [regex]::Match($req.Content, $regexAzp, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Groups[1].Value
     }
     $fileName = Split-Path -Path $newUrl -Leaf
-    $packageRoot = "$PSScriptRoot"
-    $contentRoot = Join-Path $packageRoot "Content"
-    if (-Not (Test-Path $contentRoot))
-    {
-        $null = New-Item -Path $contentRoot -ItemType Directory -Force
-    }
     Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
 }
 catch

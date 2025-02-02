@@ -5,6 +5,24 @@ exec 1>>/Library/Logs/ch.alyaconsulting.office.templates.postupgrade.log 2>&1
 
 echo "$(date) : post upgrading ch.alyaconsulting.office.templates"
 
+appLocation="/Library/Application Support/Microsoft/Office365/User Content.localized/Templates.localized"
+
+if [[ -f "$appLocation/HH2023_Document_print.dotx" ]];then
+    rm -f "$appLocation/HH2023_Document_print.dotx"
+fi
+
+if [[ -f "$appLocation/HH2023_Document.dotx" ]];then
+    rm -f "$appLocation/HH2023_Document.dotx"
+fi
+
+if [[ -f "$appLocation/HH2023_Letter_print.dotx" ]];then
+    rm -f "$appLocation/HH2023_Letter_print.dotx"
+fi
+
+if [[ -f "$appLocation/HH2023_Letter.dotx" ]];then
+    rm -f "$appLocation/HH2023_Letter.dotx"
+fi
+
 echo "$(date) : done ch.alyaconsulting.office.templates.postupgrade"
 
 exit 0

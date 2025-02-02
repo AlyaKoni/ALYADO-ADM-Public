@@ -60,7 +60,14 @@ Write-Host "Enabling SMTP Legacy Endpoint in exchange"
 try
 {
     Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     Write-Host "  Checking AllowLegacyTLSClients" -ForegroundColor $CommandInfo
     $tconf = Get-TransportConfig -ErrorAction SilentlyContinue

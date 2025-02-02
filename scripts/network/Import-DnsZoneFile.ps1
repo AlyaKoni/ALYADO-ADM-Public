@@ -247,6 +247,14 @@ foreach($entry in $entries)
             }
         }
         "CNAME" {
+            if ([string]::IsNullOrEmpty($values[5]))
+            {
+                $serverName =  $values[4].TrimEnd(".")
+            }
+            else
+            {
+                $serverName =  $values[5].TrimEnd(".")
+            }
             $toRecord = Resolve-DnsName -Name $values[0] -Type CNAME -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
             if (-Not $toRecord)
             {
@@ -265,7 +273,7 @@ foreach($entry in $entries)
             {
                 Write-Host "  Creating CNAME record"
                 try {
-                    $created += New-AzDnsRecordSet -Name $recordName -RecordType CNAME -ZoneName $Domain -ResourceGroupName $ResourceGroupName -Ttl $values[1] -DnsRecords (New-AzDnsRecordConfig -Cname $values[5].TrimEnd(".") )
+                    $created += New-AzDnsRecordSet -Name $recordName -RecordType CNAME -ZoneName $Domain -ResourceGroupName $ResourceGroupName -Ttl $values[1] -DnsRecords (New-AzDnsRecordConfig -Cname $serverName )
                 }
                 catch {
                     Write-Host "Error creating record: $($_.Exception.Message)" -ForegroundColor $CommandError
@@ -275,7 +283,7 @@ foreach($entry in $entries)
             {
                 Write-Host "  Updating CNAME record"
                 $recSet = Get-AzDnsRecordSet -Name $recordName -RecordType CNAME -ZoneName $Domain -ResourceGroupName $ResourceGroupName
-                $recSet.Records[0].Cname = $values[5].TrimEnd(".")
+                $recSet.Records[0].Cname = $serverName
                 $recSet.Ttl = $values[1]
                 Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
             }
@@ -288,6 +296,10 @@ foreach($entry in $entries)
                 if (-Not $toRecord)
                 {
                     $toRecord = Resolve-DnsName -Name ($values[0]+"."+$Domain) -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                    if (-Not $toRecord)
+                    {
+                        $toRecord = Resolve-DnsName -Name $Domain -Type MX -Server $toServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+                    }
                 }
             }
             $recordName = $values[0] -replace ("."+$Domain+"."), "" -replace ("."+$Domain), ""

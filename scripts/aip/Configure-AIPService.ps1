@@ -115,7 +115,14 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AIP | Configure-AIPService | Exchange Online" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-LoginTo-EXO
+try {
+    LoginTo-EXO
+}
+catch {
+    Write-Error $_.Exception -ErrorAction Continue
+    LogoutFrom-EXOandIPPS
+    LoginTo-EXO
+}
 $actConfiguration = Get-IRMConfiguration
 
 if (-Not $actConfiguration.SimplifiedClientAccessEnabled)

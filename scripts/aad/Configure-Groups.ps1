@@ -324,7 +324,14 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Configuring M365 group settings in exchange online" -ForegroundColor $CommandInfo
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     Write-Host "Checking M365 groups" -ForegroundColor $CommandInfo
     foreach ($group in $AllGroups)

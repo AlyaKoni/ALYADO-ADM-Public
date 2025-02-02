@@ -72,12 +72,32 @@ foreach ($dom in $AlyaAdditionalDomainNames)
 
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
+    $accDoms = Get-AcceptedDomain
     foreach ($dom in $domains)
     {
         try {
 			Write-Host "Checking domain $dom"
-			$conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
+            $conf = $null
+            $accDom = $accDoms | Where-object { $_.DomainName -eq $dom }
+            if (-Not $accDom)
+            {
+                throw "Domain $dom is not in your list of accepted domains!"
+            }
+            try {
+                $conf = Get-DkimSigningConfig -Identity $dom -ErrorAction SilentlyContinue
+                $memb = Get-Member -InputObject $conf -Name "Enabled" -ErrorAction SilentlyContinue
+                if (-Not $memb) { $conf = $null }
+            } catch {
+                $conf = $null
+            }
 			if (-Not $conf)
 			{
 				Write-Warning "Creating DKIM config for domain $dom"

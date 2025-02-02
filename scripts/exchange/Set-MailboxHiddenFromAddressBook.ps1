@@ -66,7 +66,14 @@ Write-Host "Setting mailbox to hidden in address book"
 try
 {
     Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     foreach($mailboxUpn in $mailboxUpns)
     {

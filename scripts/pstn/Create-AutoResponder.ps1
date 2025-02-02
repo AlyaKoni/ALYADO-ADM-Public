@@ -131,7 +131,14 @@ Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     #Distribution Group
     $dGrp = Get-DistributionGroup -Identity $callGroupName -ErrorAction SilentlyContinue

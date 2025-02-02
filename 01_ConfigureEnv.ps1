@@ -1922,7 +1922,8 @@ function LoginTo-IPPS()
 
 function LogoutFrom-EXOandIPPS()
 {
-    DisconnectFrom-EXOandIPPS
+    Write-Host "Disconnecting from EXO and IPPS" -ForegroundColor $CommandInfo
+    Disconnect-ExchangeOnline -Confirm:$false
 }
 
 function LogoutFrom-Msol()

@@ -61,7 +61,14 @@ Write-Host "EXCHANGE | Set-MailboxTrustedSenders | EXCHANGE" -ForegroundColor $C
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 Write-Host "Connecting to Exchange Online" -ForegroundColor $CommandInfo
-LoginTo-EXO
+try {
+    LoginTo-EXO
+}
+catch {
+    Write-Error $_.Exception -ErrorAction Continue
+    LogoutFrom-EXOandIPPS
+    LoginTo-EXO
+}
 
 Write-Host "Getting mailbox" -ForegroundColor $CommandInfo
 $mbx = Get-Mailbox -Identity $upn

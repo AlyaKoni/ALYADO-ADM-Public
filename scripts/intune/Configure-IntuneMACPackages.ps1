@@ -270,6 +270,11 @@ foreach($packageDir in $packages)
                 $fnd = $actAssignment
                 break
             }
+            if ($actAssignment.intent -eq "required" -and $actAssignment.target."@odata.type" -in @("#microsoft.graph.allLicensedUsersAssignmentTarget","#microsoft.graph.allDevicesAssignmentTarget"))
+            {
+                $fnd = $actAssignment
+                break
+            }
         }
         if (-Not $fnd)
         {

@@ -73,7 +73,14 @@ $ownerEmail = $Context.Account.Id
 
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
 
     $newNamingPart = ""
     if ($AlyaGeneralInformEmail.StartsWith("cloud."))

@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -30,60 +30,39 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    04.10.2021 Konrad Brunner       Initial Creation
+    29.01.2024 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$appId = $null
+    [Parameter(Mandatory=$true)]
+    [string]$GroupId,
+    [Parameter(Mandatory=$true)]
+    [string]$PlanId
 )
-
-if (-Not $appId)
-{
-    throw "Please specify the appId the access has to be restricted"
-}
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Setup-DoNotReplyAppAccess-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\planner\Delete-Plan-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-# =============================================================
-# Exchange stuff
-# =============================================================
+# Logins
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "EXCHANGE | Setup-DoNotReplyAppAccess | EXCHANGE" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-Write-Host "Configuring DoNotReply App Access"
-try
+# Getting plan
+$plan = Get-PnPPlannerPlan -Connection $adminCon -Group $GroupId -Identity $PlanId -ErrorAction SilentlyContinue
+if (-Not $plan)
 {
-    Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
-    try {
-        LoginTo-EXO
-    }
-    catch {
-        Write-Error $_.Exception -ErrorAction Continue
-        LogoutFrom-EXOandIPPS
-        LoginTo-EXO
-    }
+    throw "Plan with id $PlanId not found!"
+}
 
-    $mailbox = Get-Mailbox -Identity "DoNotReply" -ErrorAction SilentlyContinue
-    $doNotReplyEmail = $mailbox.EmailAddresses[0].Replace("SMTP:","")
-    New-ApplicationAccessPolicy -AccessRight RestrictAccess -AppId $appId -PolicyScopeGroupId $doNotReplyEmail -Description "Restrict this app's access to $doNotReplyEmail"
-}
-catch
-{
-    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-	Write-Error ($_.Exception) -ErrorAction Continue
-}
+# Removing plan
+Remove-PnPPlannerPlan -Connection $adminCon -Group $GroupId -Identity $PlanId -Confirm
 
 #Stopping Transscript
 Stop-Transcript

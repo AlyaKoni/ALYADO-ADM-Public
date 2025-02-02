@@ -69,7 +69,14 @@ Write-Host "=====================================================`n" -Foreground
 #Main
 try
 {
-    LoginTo-EXO
+    try {
+        LoginTo-EXO
+    }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
     Write-Host "Gettting users"
     $users = Get-User -ResultSize unlimited -RecipientTypeDetails usermailbox
     foreach($user in $users)
@@ -82,6 +89,9 @@ try
             [System.Io.File]::WriteAllBytes($picPath, $photo.PictureData)
         }
     }
+}
+catch {
+    Write-Error $_.Exception -ErrorAction Continue
 }
 
 #Stopping Transscript
