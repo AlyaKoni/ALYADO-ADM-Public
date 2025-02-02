@@ -131,6 +131,8 @@ Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 
 try
 {
+    # Logins
+    LoginTo-Teams
     try {
         LoginTo-EXO
     }
@@ -168,9 +170,6 @@ catch
     try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
-
-# Logins
-LoginTo-Teams
 
 Write-Host "Checking Application Instance $attendantUpn" -ForegroundColor $CommandInfo
 $appInstance = Find-CsOnlineApplicationInstance -SearchQuery $attendantUpn
