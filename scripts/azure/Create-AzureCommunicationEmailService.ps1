@@ -30,7 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    29.11.2024 Konrad Brunner       Initial version
+    02.02.2025 Konrad Brunner       Initial version
 
 #>
 
@@ -44,13 +44,15 @@ Param(
 #Starting Transscript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Create-AzureCommunicationEmailService-$($AlyaTimeString).log" | Out-Null
 
-# Constants
+# Checks
 if (-Not $AlyaResIdCommunicationEmailService)
 {
     Write-Warning "Please configure `$AlyaResIdCommunicationEmailService in ConfigureEnv.ps1 an rerun this script"
     Pause
     Exit 1
 }
+
+# Constants
 $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
 $CommEmailServiceName = "$($AlyaNamingPrefix)come$($AlyaResIdCommunicationEmailService)"
 $KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
@@ -147,71 +149,6 @@ else
     Set-AzKeyVaultAccessPolicy -VaultName $KeyVaultName -ObjectId $user.Id -PermissionsToCertificates "All" -PermissionsToSecrets "All" -PermissionsToKeys "All" -PermissionsToStorage "All" -ErrorAction Continue
 }
 
-# Checking custom role
-Write-Host "Checking custom role" -ForegroundColor $CommandInfo
-$scope = "/subscriptions/$($Context.Subscription.Id)"
-$role = Get-AzRoleDefinition -Name "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp" -Scope $scope -ErrorAction SilentlyContinue
-if (-Not $Role)
-{
-    $roleDef = @"
-{
-  "Name": "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp",
-  "IsCustom": true,
-  "Description": "Role to allow smtp email sending over azure communication services.",
-  "Actions": [
-    "Microsoft.Communication/CommunicationServices/Read",
-    "Microsoft.Communication/CommunicationServices/Write",
-    "Microsoft.Communication/EmailServices/write"
-  ],
-  "NotActions": [],
-  "DataActions": [],
-  "NotDataActions": [],
-  "AssignableScopes": [
-    "$scope"
-  ]
-}
-"@
-    $temp = New-TemporaryFile
-    $roleDef | Set-Content -Path $temp -Encoding UTF8 -Force
-    New-AzRoleDefinition -InputFile $temp.FullName
-    Remove-Item -Path $temp -Force
-    do
-    {
-        Start-Sleep -Seconds 10
-        $role = Get-AzRoleDefinition -Name "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp" -Scope $scope -ErrorAction SilentlyContinue
-    }
-    while (-Not $role)
-}
-
-# Checking smtp application
-Write-Host "Checking smtp application" -ForegroundColor $CommandInfo
-$AzureAdApplication = Get-AzADApplication -DisplayName "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp" -ErrorAction SilentlyContinue
-if (-Not $AzureAdApplication)
-{
-    Write-Warning "Azure AD Application not found. Creating the Azure AD Application $($AlyaCompanyNameShortM365)CommunicationServiceSmtp"
-
-    #Creating application and service principal
-    $KeyId = [Guid]::NewGuid()
-    $HomePageUrl = "https://portal.azure.com"
-    $AzureAdApplication = New-AzADApplication -DisplayName "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp" -HomePage $HomePageUrl -IdentifierUris ("http://$AlyaTenantName/$KeyId")
-    $AzureAdServicePrincipal = New-AzADServicePrincipal -ApplicationId $AzureAdApplication.AppId
-
-    #Create credential 
-    $startDate = (Get-Date)
-    $endDate = (Get-Date).AddMonths(120)
-    $AlyaServicePrincipalSecret = New-AzADAppCredential -ApplicationId $AzureAdApplication.AppId -CustomKeyIdentifier ([Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("KeyVault $KeyVaultName"))) -StartDate $startDate -EndDate $endDate
-
-    # Checking key vault secret
-    Write-Host "Writing app key to key vault" -ForegroundColor $CommandInfo
-    $AzureSecretName = "$($AlyaCompanyNameShortM365)CommunicationServiceSmtptSecret"
-    $PasswordSec = ConvertTo-SecureString $AlyaServicePrincipalSecret.SecretText -AsPlainText -Force
-    $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name $AzureSecretName -SecretValue $PasswordSec
-}
-else
-{
-    $AzureAdServicePrincipal = Get-AzADServicePrincipal -DisplayName "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp"
-}
-
 # Checking communication email service
 Write-Host "Checking communication email service" -ForegroundColor $CommandInfo
 $CommEmailService = Get-AzEmailService -ResourceGroupName $ResourceGroupName -Name $CommEmailServiceName -ErrorAction SilentlyContinue
@@ -231,8 +168,8 @@ else
     $CommEmailService = Update-AzEmailService -Name $CommEmailServiceName -ResourceGroupName $ResourceGroupName -Tag @{displayName="Communication Email Service"}
 }
 
-# Checking sender email domain
-Write-Host "Checking sender email domain" -ForegroundColor $CommandInfo
+# Checking sender email domains
+Write-Host "Checking sender email domains" -ForegroundColor $CommandInfo
 $domains = @($AlyaDomainName)
 $domains += $AlyaAdditionalDomainNames
 foreach($domain in $domains)
@@ -256,56 +193,95 @@ foreach($domain in $domains)
 
     Write-Host "  Checking records"
     $missing = $false
-    $rec = Resolve-DnsName -Name "$($dom.VerificationRecord.DKIMName).$($domain)" -Type $dom.VerificationRecord.DKIMType
-    if ($rec.NameHost -ne $dom.VerificationRecord.DKIMValue)
+    $rec = Resolve-DnsName -Name "$($dom.VerificationRecord.DKIMName).$($domain)" -Type $dom.VerificationRecord.DKIMType -ErrorAction SilentlyContinue
+    if (-Not $rec)
     {
-        Write-Warning "$($dom.VerificationRecord.DKIMType) record $($dom.VerificationRecord.DKIMName) should be changed from $($rec.NameHost) to $($dom.VerificationRecord.DKIMValue)"
         $missing = $true
     }
-
-    $rec = Resolve-DnsName -Name "$($dom.VerificationRecord.DKIM2Name).$($domain)" -Type $dom.VerificationRecord.DKIM2Type
-    if ($rec.NameHost -ne $dom.VerificationRecord.DKIM2Value)
+    else
     {
-        Write-Warning "$($dom.VerificationRecord.DKIM2Type) record $($dom.VerificationRecord.DKIM2Name) should be changed from $($rec.NameHost) to $($dom.VerificationRecord.DKIM2Value)"
-        $missing = $true
-    }
-
-    $recs = Resolve-DnsName -Name "$($domain)" -Type $dom.VerificationRecord.DomainType
-    $fnd = $false
-    foreach($rec in $recs)
-    {
-        if ($rec.Strings -eq $dom.VerificationRecord.DomainValue)
+        if ($rec.NameHost -ne $dom.VerificationRecord.DKIMValue)
         {
-            $fnd = $true
+            Write-Warning "$($dom.VerificationRecord.DKIMType) record $($dom.VerificationRecord.DKIMName) should be changed from $($rec.NameHost) to $($dom.VerificationRecord.DKIMValue)"
+            $missing = $true
         }
     }
-    if (-Not $fnd)
+
+    $rec = Resolve-DnsName -Name "$($dom.VerificationRecord.DKIM2Name).$($domain)" -Type $dom.VerificationRecord.DKIM2Type -ErrorAction SilentlyContinue
+    if (-Not $rec)
     {
-        Write-Warning "$($dom.VerificationRecord.SPFType) record $($dom.VerificationRecord.DomainName) should contain $($dom.VerificationRecord.DomainValue)"
         $missing = $true
     }
-
-    $recs = Resolve-DnsName -Name "$($domain)" -Type $dom.VerificationRecord.SPFType
-    $fnd = $false
-    foreach($rec in $recs)
+    else
     {
-        if ($rec.Strings -eq $dom.VerificationRecord.SPFValue)
+        if ($rec.NameHost -ne $dom.VerificationRecord.DKIM2Value)
         {
-            $fnd = $true
+            Write-Warning "$($dom.VerificationRecord.DKIM2Type) record $($dom.VerificationRecord.DKIM2Name) should be changed from $($rec.NameHost) to $($dom.VerificationRecord.DKIM2Value)"
+            $missing = $true
         }
     }
-    if (-Not $fnd)
+
+    $recs = Resolve-DnsName -Name "$($dom.VerificationRecord.DomainName)" -Type $dom.VerificationRecord.DomainType -ErrorAction SilentlyContinue
+    if (-Not $rec)
     {
-        Write-Warning "$($dom.VerificationRecord.SPFType) record $($dom.VerificationRecord.SPFName) should contain $($dom.VerificationRecord.SPFValue)"
+        $missing = $true
+    }
+    else
+    {
+        $fnd = $false
+        foreach($rec in $recs)
+        {
+            foreach($str in $rec.Strings)
+            {
+                if ($str -eq $dom.VerificationRecord.DomainValue)
+                {
+                    $fnd = $true
+                    break
+                }
+            }
+        }
+        if (-Not $fnd)
+        {
+            Write-Warning "$($dom.VerificationRecord.DomainType) record $($dom.VerificationRecord.DomainValue) should contain $($dom.VerificationRecord.DomainName)"
+            $missing = $true
+        }
+    }
+
+    $recs = Resolve-DnsName -Name "$($dom.VerificationRecord.DomainName)" -Type $dom.VerificationRecord.SPFType -ErrorAction SilentlyContinue
+    if (-Not $rec)
+    {
+        $missing = $true
+    }
+    else
+    {
+        $include = $dom.VerificationRecord.SPFValue.Split()[1]
+        $fnd = $false
+        foreach($rec in $recs)
+        {
+            foreach($str in $rec.Strings)
+            {
+                if ($str.Contains($include))
+                {
+                    $fnd = $true
+                    break
+                }
+            }
+        }
+        if (-Not $fnd)
+        {
+            Write-Warning "$($dom.VerificationRecord.SPFType) record $($dom.VerificationRecord.SPFName) should contain $($dom.VerificationRecord.SPFValue)"
+            $missing = $true
+        }
     }
 
     if ($missing)
     {
-        Write-Host "Please prepare following DNS records an rerun this script:"
+        Write-Host "Please prepare following DNS records in Domain $($domain) an rerun this script:"
         ($dom.VerificationRecord | ConvertFrom-Json).Domain | Format-List
-        ($dom.VerificationRecord | ConvertFrom-Json).SPF | fFormat-Listl
+        ($dom.VerificationRecord | ConvertFrom-Json).SPF | Format-List
         ($dom.VerificationRecord | ConvertFrom-Json).DKIM | Format-List
         ($dom.VerificationRecord | ConvertFrom-Json).DKIM2 | Format-List
+        exit
     }
     else
     {
@@ -346,60 +322,30 @@ foreach($domain in $domains)
         #     Invoke-AzEmailServiceInitiateDomainVerification -EmailServiceName $CommEmailServiceName -ResourceGroupName $ResourceGroupName -DomainName $domain -VerificationType "DMARC"
         #     #Stop-AzEmailServiceDomainVerification -EmailServiceName $CommEmailServiceName -ResourceGroupName $ResourceGroupName -DomainName $domain -VerificationType "DMARC"
         # }
+
+        $dom = Get-AzEmailServiceDomain -ResourceGroupName $ResourceGroupName -EmailServiceName $CommEmailServiceName -Name $domain -ErrorAction SilentlyContinue
+        $verifying = $false
+        if ($dom.DomainStatus -ne "Verified") { $verifying = $true }
+        if ($dom.DkimStatus -ne "Verified") { $verifying = $true }
+        if ($dom.Dkim2Status -ne "Verified") { $verifying = $true }
+        if ($dom.SpfStatus -ne "Verified") { $verifying = $true }
+        if ($verifying)
+        {
+            Write-Warning "Please rerun this script after verification has been done"
+            exit
+        }
     
     }
 
 }
 
-Write-Host "Checking sender"
+Write-Host "Checking sender" -ForegroundColor $CommandInfo
 $senders = Get-AzEmailServiceSenderUsername -EmailServiceName $CommEmailServiceName -ResourceGroupName $ResourceGroupName -DomainName $domain
-# $user = Get-AzAdUser -UserPrincipalName "donotreply@$($domain)" -ErrorAction SilentlyContinue
-# if (-Not $user)
-# {
-#     $user = Get-AzAdUser -UserPrincipalName "do-not-reply@$($domain)" -ErrorAction SilentlyContinue
-#     if (-Not $user)
-#     {
-#         $upn = Read-Host -Prompt "Please specify your DoNotReply E-Mail address:"
-#         $user = Get-AzAdUser -UserPrincipalName $upn -ErrorAction SilentlyContinue
-#         if (-Not $user)
-#         {
-#             Write-Error "Not able to find your DoNotReply user!" -ErrorAction Continue
-#             Exit 1
-#         }
-#     }
-# }
 foreach($sender in $senders)
 {
     Write-Host "    $($sender.Name)@$($domain)"
-    Write-Host "      To add more senders, please create a Microsoft ticket and request Default Sending Limits change"
 }
-
-# Checking role assignment
-Write-Host "Checking role assignment" -ForegroundColor $CommandInfo
-$RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp" -ObjectId $AzureAdServicePrincipal.Id -Scope $CommEmailService.Id -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $CommEmailService.Id }
-$Retries = 0;
-While ($null -eq $RoleAssignment -and $Retries -le 6)
-{
-    $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp" -ObjectId $AzureAdServicePrincipal.Id -Scope $CommEmailService.Id -ErrorAction SilentlyContinue
-    Start-Sleep -s 10
-    $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp" -ObjectId $AzureAdServicePrincipal.Id -Scope $CommEmailService.Id -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $CommEmailService.Id }
-    $Retries++;
-}
-if ($Retries -gt 6)
-{
-    throw "Was not able to set role assigment '$($AlyaCompanyNameShortM365)CommunicationServiceSmtp' for app $($AzureAdServicePrincipal.Id) on scope $($CommEmailService.Id)"
-}
-
-# Done
-Write-Host "Your SMTP configuration:"
-Write-Host "  Server: smtp.azurecomm.net"
-Write-Host "  Port: 587"
-Write-Host "  TLS/StartTLS: Enabled"
-Write-Host "  From address: $($senders[0].Name)@$($domain)"
-Write-Host "  Username: $username"
-Write-Host "  Password: $AlyaServicePrincipalPassword"
-Write-Host "Password stored in Secret $($AlyaCompanyNameShortM365)CommunicationServiceSmtptSecret in KeyVault $KeyVaultName"
-Write-Host "TLS 1.2 or higher is required"
+Write-Host "  To add more senders, please create a Microsoft ticket and request Default Sending Limits change"
 
 #Stopping Transscript
 Stop-Transcript

@@ -189,6 +189,7 @@ $AlyaResIdAvdHostSNetTest = "PleaseSpecify" #Example:"04"
 
 <# RESOURCE SETTINGS #>
 $AlyaResEnableInsightsAndAlerts = $false
+$AlyaAuditLogsRetentionYears = 2
 
 <# SHARING SETTINGS #>
 $AlyaSharingPolicy = "PleaseSpecify" #Example:"KnownAccountsOnly" #None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)

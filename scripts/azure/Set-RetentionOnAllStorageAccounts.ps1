@@ -36,7 +36,8 @@
 
 [CmdletBinding()]
 Param(
-    [string]$processOnlyStorageAccountWithName = $null
+    [string]$processOnlyStorageAccountWithName = $null,
+    [string]$subscriptionName = $null
 )
 
 # Loading configuration
@@ -54,7 +55,7 @@ Install-ModuleIfNotInstalled "Az.OperationalInsights"
 Install-ModuleIfNotInstalled "Az.Monitor"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName ([string]::IsNullOrEmpty($subscriptionName) ? $AlyaSubscriptionName : $subscriptionName)
 
 # =============================================================
 # Azure stuff

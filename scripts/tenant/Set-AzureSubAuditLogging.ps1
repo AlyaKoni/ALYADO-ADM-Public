@@ -128,6 +128,10 @@ if (-Not $StrgAccount)
     }
 }
 
+# Checking storage lifecycle management 
+Write-Host "Checking storage lifecycle management" -ForegroundColor $CommandInfo
+& "$($AlyaScripts)\azure\Set-RetentionOnAllStorageAccounts.ps1" -processOnlyStorageAccountWithName $StorageAccountName
+
 # Checking log analytics workspace
 Write-Host "Checking log analytics workspace" -ForegroundColor $CommandInfo
 $LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $ResourceGroupName -Name $LogAnaWrkspcName -ErrorAction SilentlyContinue

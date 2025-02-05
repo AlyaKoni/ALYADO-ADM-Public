@@ -111,5 +111,9 @@ if (-Not $StrgAccount)
     }
 }
 
+# Checking storage lifecycle management 
+Write-Host "Checking storage lifecycle management" -ForegroundColor $CommandInfo
+& "$($AlyaScripts)\azure\Set-RetentionOnAllStorageAccounts.ps1" -processOnlyStorageAccountWithName $StorageAccountName
+
 #Stopping Transscript
 Stop-Transcript
