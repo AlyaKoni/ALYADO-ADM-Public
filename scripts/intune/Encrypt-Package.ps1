@@ -255,32 +255,48 @@ namespace AlyaConsulting.Intune.MAC
 }
 "@
 
-$ReferencedAssemblies = 
-@(
-    'System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
-    'System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
-    'Microsoft.CSharp, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a',
-    'System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
-    'System.Data.DataSetExtensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
-    'System.Net.Http, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a',
-    'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
-    'System.Xml.Linq, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
-)
-
-$addTypeCommand = Get-Command -Name 'Add-Type'
-$addTypeCommandInstance = [Activator]::CreateInstance($addTypeCommand.ImplementingType)
-$resolveAssemblyMethod = $addTypeCommand.ImplementingType.GetMethod('ResolveReferencedAssembly', [Reflection.BindingFlags]'NonPublic, Instance')
-$compilerParameters = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters
-$compilerParameters.CompilerOptions = '/debug-'
-
-foreach ($reference in $ReferencedAssemblies)
+if ($AlyaIsPsCore)
 {
-    $resolvedAssembly = $resolveAssemblyMethod.Invoke($addTypeCommandInstance, $reference)
-    $null = $compilerParameters.ReferencedAssemblies.Add($resolvedAssembly)
-}
+    $ReferencedAssemblies = 
+    @(
+    )
+    $compilerParameters = @("-debug","-optimize","-nologo")
+    foreach ($reference in $ReferencedAssemblies)
+    {
+        $compilerParameters += "-reference:`"$reference`""
+    }
 
-$compilerParameters.IncludeDebugInformation = $true
-Add-Type -TypeDefinition $TypeDefinition -CompilerParameters $compilerParameters
+    Add-Type -TypeDefinition $TypeDefinition -CompilerOptions $compilerParameters
+}
+else
+{
+    $ReferencedAssemblies = 
+    @(
+        'System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
+        'System.Core, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
+        'Microsoft.CSharp, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a',
+        'System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
+        'System.Data.DataSetExtensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
+        'System.Net.Http, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a',
+        'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089',
+        'System.Xml.Linq, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
+    )
+
+    $addTypeCommand = Get-Command -Name 'Add-Type'
+    $addTypeCommandInstance = [Activator]::CreateInstance($addTypeCommand.ImplementingType)
+    $resolveAssemblyMethod = $addTypeCommand.ImplementingType.GetMethod('ResolveReferencedAssembly', [Reflection.BindingFlags]'NonPublic, Instance')
+    $compilerParameters = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters
+    $compilerParameters.CompilerOptions = '/debug-'
+    
+    foreach ($reference in $ReferencedAssemblies)
+    {
+        $resolvedAssembly = $resolveAssemblyMethod.Invoke($addTypeCommandInstance, $reference)
+        $null = $compilerParameters.ReferencedAssemblies.Add($resolvedAssembly)
+    }
+
+    $compilerParameters.IncludeDebugInformation = $true
+    Add-Type -TypeDefinition $TypeDefinition -CompilerParameters $compilerParameters
+}
 $encryptedInfo = [AlyaConsulting.Intune.MAC.Encryptor]::EncryptFile($sourceFile, $targetFile)
 $encryptedInfo | ConvertTo-Json
 
@@ -289,11 +305,12 @@ Usage from ps 7:
 $encInfo = powershell -File "C:\UntuneMacEncryptor.ps1" -sourceFile "C:\Content\Firefox Setup 124.0.dmg" -targetFile "C:\Package\Firefox Setup 124.0.dmg" | ConvertFrom-Json
 $encInfo | fl
 #>
+
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAMAd6RehweawG+
-# J2jDlo1dPFJw6j0Hoids2fgYKti71aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAwfHmqOlQ/Z2u5
+# 6YlDw3Lo5F0b46ySuj2MA/i9RjdXAaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -407,23 +424,23 @@ $encInfo | fl
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPcSJWK+
-# Zg7PbNiBiP53soHj+Q9MXlx/GhgZ1oBOrLDhMA0GCSqGSIb3DQEBAQUABIICAKy+
-# 1ji5c/qadyQQDd9gjRlhSteMf8NjwwlnbEYw4r5hf0D6rUaGbExoUjNzLwmBTFcY
-# +G4lUiGYxq2bGsouR4cwzP6jofyrdK01clHpILYbwvKYH5w6UqRxqN36qmzP12Bv
-# /F3JClMVN5X1ut1jmXwARXCtABr/jutGwqbxSfGJ8dsB+kBBQoixXKRGNI9FW20y
-# C0PqmFOiWCUfZpkUUq5VBW2YneFmQ00KuGK9vTiKavOFcbjjJepSUmkhHKiybmEl
-# SWltZlGAJHes2b+24qmD++MqSrJP8gxoz+L/hltn0mP4RsGdJ5y8QCGOu3/DrysB
-# AdUNLnQ2JAH0fj1BL0cvO6JN0uBsD1LKJTdwaDSb6TFA/jskI7ng53qtAjbCPWUZ
-# tiX1UFJPgqdnMx9UcmSXHtXr8R/C9vgnL3PsmVQPZxL+CEV7uPbjjOnJPvTR2B9K
-# HMpKOMTKbDyxIuCbsYe7TGpkK1LQWLRwBmu11m/oyamFoHfcO/ISORsWMhxRxOUH
-# 3avv8W0laLnuJFBQXXXXuYPJjaQM1lckX9piHgYvV5HT8G6V0z5y7ZJvvCwRwd18
-# m02tN5n1SDYxh1BlPkZow6bkNUO7JjAKe5MHn4AB8fuq5+l4d1dZNKQ+3huoRo3+
-# B6YA4uBLKNamLbuzJZdhG3Ss+iEIh28sj3LD+gP3oYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILn8uPrN
+# FI+J4qTScy2XChzckEGxkGLV5svJLpr8Q+L+MA0GCSqGSIb3DQEBAQUABIICAI0O
+# gBYWOsgQYgYzIRKh6OriTyMsmWLMJZaUyDrFTiRTF55ZT3vaPRM7d0XaDjBu897H
+# 8hTk+wDOtMfsHjb2r561dNih5t2GYGRZH8Pob7VBuT1ihlhesG8E4qnqzjQBDCH9
+# n4LjWBRu+K01agXRa5bxpke2apL6h048R8i38+N4PZUULrk9IO+scPNSUeZwKaFF
+# zQKu7oYtuAaJUT3645tvM1QZlMtDVQkEUHFZIdSDUVVi/ZggBhgWG65+9ySlqMmm
+# NDYXAulUPaUFMlFFeskac4zeivtNpiXuAFyHg2ZrbV1pFyl7TrOf0IALkoaJfAyt
+# KdJlbPBJYTaJmUMbJPWn3vwTQNLe0enL11B3OpvBje++eVkMYUjUGLTepMem5OhN
+# tNDKFHecWbSdepOGSR88MIGWts9Z6/jmT8TQH4/riyP7aV2j3thgwniNatRzydKR
+# ybyG/VXuXzJTDt2J8HYtLR2RW6QVzXXRA2rzslJfmkBTejYGifR6vyG4VEUljgps
+# ilh4Zi62B0YnwQ4ejYKclyi0jwgm5CamSzBMkUNSet5lchdBk2he2cvptDBC44bx
+# +qLTRZE2Zpfei9TDQmdBQ0aOxYW02WZA7/CW6r48SijapoBoQ1dBKNDMXZA5HUYJ
+# wUPD4Au76idV+l9PMX9Da35ZHt53rZzfquXz3BuuoYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCDfbu66im3CcLsyg9zcccR6quG+22LlQoZXD05uMwH5ggIUB9J1
-# GyVvoDrrY12NPuSLYUX278EYDzIwMjUwMjA2MTkyMjQ1WjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCAnq8mRAjuMHifsM2SzXTR0oLwjtv1XiIqoZZhFvY23ogIUbXH0
+# rpfk80dFH/pl7I3JZ1f1NWEYDzIwMjUwMzAzMjE0NTI5WjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -528,18 +545,18 @@ $encInfo | fl
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIKJIKM8uzDGoOzdwmH2iIdCujNDrLO/A
-# Alc9Q7GL0ygtMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEINIuBBJAWWcQKncV2NfKszt063ZwF2eD
+# rtTqD7LmSiUeMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGA3qIttk580LxhZ49unovCmWGQXlCBUlcR9DnEptoXWPIK
-# ZrYsZoOUGaA3+KHSuooOTLBG0J/NuCi6cOjjrIMyu5EbCByk/eMz2pP0tzz4sOXK
-# h9oDqJcIbkTKnpUMUQRc7CSx4W4dUZeJjVkISHjajmwYiMeZSPIYcSnIip3sf5JB
-# 2qRJlFwi5jS/Vhjx4+Uogj5JOZxrAhvK34xJZVxZU3H2ne2bSZP0Ml5yW26JKDMr
-# +vmn9eiXiiGefg+/QmZzyfNyc6LZyFTvG/BPD7Xc4X7ASM4n1Vs+v82WkGDBaShY
-# lvpmiEbhkTzHk7P9r+OYtyAZboxvUKK1gM/eSRsLWJ6HL/LmHkJfFI+nL9zVwvaE
-# qCt8J2XKRFb+9De/nCy75waVEczzwNU+XFF4kUSMR4l/8vinntRuvBZVtdSEOJhu
-# jOgl2xU1mxUt2uoX9Cy0pYw1pUNhaaAeDwdK5VcAN+gwzoLSqjsm0oB0F/Si2LoE
-# 4RNqUTIatbRycf/4+ZJ4
+# KoZIhvcNAQELBQAEggGApY9nCfIjmrtbnTDITvA37Gw8y6MywYyYbIPdMwYcvWIE
+# tM8s4YgKE0Y8JANYFsqdR0Jm+ec9jjIP/9xxHjOoslc2ao6KCdO/fk5TjGkYi8T8
+# E20U8A+H6udIEPy1W/UIUt8s83m70Gfa0fBZNej47gVhh/O1LUoFHosH37AYyIN9
+# wPtw36/W3ThKUgPdDXYSNhkpEaTOqYWn5mDayny+yoMJnNNL6fTDC6UthEoR/Yjz
+# KRCgk/Lx17yZhmgAQwIXvXCY8Mzks3e1pzjLu1c/i9TX2aATw/d24/oLDElLyTF3
+# SgTU7u7136Go/y8ZB0MOC5xLrjL/YaEMIAfN7CkqYe4gzGnDijDqHk+HlpvOGuhR
+# NwZT0k7n+A5ORznITuB+acXZyH+WmrURn5OjuQL9kRD5WFvAEzTdkZ887qz23Cdj
+# /2EKdqj2d+pQIu0/y9AzClpTtP8dTfYABCoMp1/zzONldDPdM1E1h21ITEiQqqq8
+# uN3Iqqn9DFq1aFJG/AQ8
 # SIG # End signature block

@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2024
+    Copyright (c) Alya Consulting, 2019-2025
 
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,278 +30,252 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    28.03.2024 Konrad Brunner       Initial Version
+    11.02.2025 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$ConfigureOnlyAppWithName = $null,
-    [string]$ContinueAtAppWithName = $null,
-    [string]$AppsPath = "MACApps"
 )
 
-# Loading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+#$env:PSModulePath = "D:\WindowsPowerShell\Modules;$($env:PSModulePath)"
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneMACPackages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+Start-Transcript -Path "$PSScriptRoot\Purge-VersionsOnAllSites-$($AlyaTimeString).log" | Out-Null
 
-# Constants
-$DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
-if (-Not (Test-Path $DataRoot))
-{
-    $null = New-Item -Path $DataRoot -ItemType Directory -Force
-}
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-
-# Logins
-LoginTo-MgGraph -Scopes @(
-    "Directory.Read.All",
-    "DeviceManagementManagedDevices.Read.All",
-    "DeviceManagementServiceConfig.Read.All",
-    "DeviceManagementConfiguration.Read.All",
-    "DeviceManagementApps.ReadWrite.All"
+# Members
+$AlyaTenantName = "PleaseSpecify"
+$AlyaPnPAppId = "PleaseSpecify"
+$AlyaSharePointAdminUrl = "PleaseSpecify"
+$AlyaSharePointUrl = "PleaseSpecify"
+$maxMajorVersionLimit = 250
+$maxMinorVersionLimit = 50
+$keepMajorVersions = 50
+$keepMinorVersions = 5
+$dryRun = $true
+$alreadyDone = @(
 )
 
-# =============================================================
-# Intune stuff
-# =============================================================
+# Checking modules
+Import-Module "PnP.PowerShell"
 
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Configure-IntuneMACPackages | Graph" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+# Login
+$adminCon = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $AlyaSharePointAdminUrl -ReturnConnection -Interactive -LaunchBrowser
 
-# Checking dependencies
-Write-Host "Checking dependencies" -ForegroundColor $MenuColor
-$packages = Get-ChildItem -Path $DataRoot -Directory
-$continue = $true
-foreach($packageDir in $packages)
+# Checking input
+if ($maxMajorVersionLimit -lt 1)
 {
-    if ($ContinueAtAppWithName -and $packageDir.Name -eq $ContinueAtAppWithName) { $continue = $false }
-    if ($ContinueAtAppWithName -and $continue) { continue }
-    if ($ConfigureOnlyAppWithName -and $packageDir.Name -ne $ConfigureOnlyAppWithName) { continue }
-    if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
+    Write-Error "maxMajorVersionLimit needs to be at least 1" -ErrorAction Continue
+    Exit
+}
+if ($maxMinorVersionLimit -lt 1)
+{
+    Write-Error "maxMinorVersionLimit needs to be at least 1" -ErrorAction Continue
+    Exit
+}
+if ($keepMajorVersions -lt 1)
+{
+    Write-Error "keepMajorVersions needs to be at least 1" -ErrorAction Continue
+    Exit
+}
+if ($keepMinorVersions -lt 1)
+{
+    Write-Error "keepMinorVersions needs to be at least 1" -ErrorAction Continue
+    Exit
+}
 
-    $dependenciesPath = Join-Path $packageDir.FullName "dependencies.json"
-
-    if ((Test-Path $dependenciesPath))
+# Getting site collections
+Write-Host "Getting site collections" 
+$retries = 10
+do
+{
+    try
     {
+        $sitesToProcess = Get-PnPTenantSite -Connection $adminCon -Detailed
+        break
+    }
+    catch
+    {
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Warning "Retrying $retries times"
+        Start-Sleep -Seconds 15
+        $retries--
+        if ($retries -lt 0) { throw }
+    }
+} while ($true)
 
-        Write-Host "Dependencies for package $($packageDir.Name)" -ForegroundColor $CommandInfo
+# Getting actual users mail
+$rootCon = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $AlyaSharePointUrl -ReturnConnection -Interactive -LaunchBrowser
+$rweb = Get-PnPWeb -Connection $rootCon
+$rweb.Context.Load($rweb.CurrentUser)
+Invoke-PnPQuery -Connection $rootCon
+$owners = @($rweb.CurrentUser.Email)
 
-        $configPath = Join-Path $packageDir.FullName "config.json"
-        $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+# # Setting site admins
+# Write-Host "Setting site admins" 
+# $ctx = Get-PnPContext -Connection $adminCon
+# $ctx.Load($ctx.Web.CurrentUser)
+# Invoke-PnPQuery -Connection $adminCon
+# foreach ($site in $sitesToProcess)
+# {
+#     if ($site.Template -like "Redirect*") { continue }
+#     if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
 
-        # Checking if app exists
-        Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-        $uri = "/beta/deviceAppManagement/mobileApps"
-        $allApps = Get-MsGraphCollection -Uri $uri
-        $app = $allApps | where { $_.displayName -eq $config.displayName }
-        if (-Not $app.id)
+#     # Setting site owner
+#     Write-Host "  Site: $($site.Url)"
+#     if (-Not $dryRun) { $null = Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $owners }
+# }
+
+# Purging versions
+Write-Host "Purging versions" 
+foreach ($site in $sitesToProcess)
+{
+    if ($site.Template -like "Redirect*") { continue }
+    if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
+    if ($site.Url -in $alreadyDone) { continue }
+
+    # Login to site
+    Write-Host ""
+    Write-Host "  Site: $($site.Url)"
+    $siteCon = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $site.Url -ReturnConnection -Interactive -LaunchBrowser
+
+    # Getting all doc libs
+    $retries = 10
+    do
+    {
+        try
         {
-            throw "The app with name $($config.displayName) does not exist. Please create it first."
+            $lists = Get-PnPList -Connection $siteCon -Includes @("ID", "Title", "Fields", "RootFolder", "EnableVersioning", "EnableMinorVersions", "MajorVersionLimit", "MajorWithMinorVersionsLimit") -ErrorAction SilentlyContinue
+            $docLibs = $lists | Where-Object { $_.BaseType -eq "DocumentLibrary" `
+                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/_catalogs") `
+                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/Style Library") `
+                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/FormServerTemplates") `
+                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/IWConvertedForms") `
+                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/SiteAssets") `
+                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/SitePages") }
+            break
         }
-        $appId = $app.id
-        Write-Host "    appId: $appId"
-
-        $dependencies = $null
-        $dependencies = Get-Content -Path $dependenciesPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
-
-        Write-Host "  Checking dependencies"
-        foreach ($dependency in $dependencies)
+        catch
         {
-            $depPath = Join-Path $DataRoot $dependency.app
-            $configPath = Join-Path $depPath "config.json"
-            $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
+            Write-Error $_.Exception -ErrorAction Continue
+            Write-Warning "Retrying $retries times"
+            Start-Sleep -Seconds 15
+            $retries--
+            if ($retries -lt 0) { throw }
+        }
+    } while ($true)
 
-            # Checking if app exists
-            Write-Host "  Checking if app $($config.displayName) exists"
-            Add-Member -InputObject $dependency -MemberType NoteProperty -Name "appName" -Value $config.displayName
-            $uri = "/beta/deviceAppManagement/mobileApps"
-            $allApps = Get-MsGraphCollection -Uri $uri
-            $app = $allApps | where { $_.displayName -eq $config.displayName }
-                if (-Not $app.id)
+    foreach ($docLib in $docLibs)
+    {
+        if ($docLib.EnableVersioning)
+        {
+            Write-Host "    DocLib: $($docLib.RootFolder.ServerRelativeUrl)"
+            $enableMinorVersions = $docLib.EnableMinorVersions
+
+            # Checking version history limit
+            Write-Host "      Checking version history limit"
+            if ($docLib.MajorVersionLimit -gt $maxMajorVersionLimit)
             {
-                throw "The app with name $($dependency.appName) does not exist. Dependency to $($packageDir.Name) can't be built. Please create it first."
+                Write-Host "        Setting MajorVersions to $maxMajorVersionLimit"
+                if (-Not $dryRun) { $null = Set-PnPList -Connection $siteCon -Identity $docLib -MajorVersions $maxMajorVersionLimit }
             }
-            Add-Member -InputObject $dependency -MemberType NoteProperty -Name "appId" -Value $app.id
-        }
-
-        Write-Host "  Getting existing dependencies"
-	    $uri = "/beta/deviceAppManagement/mobileApps/$appId/relationships"
-	    $actDependencies = (Get-MsGraphObject -Uri $uri).value
-        $newDependencies = @()
-        if ($actDependencies -and $actDependencies.Count -gt 0)
-        {
-            foreach ($actDependency in $actDependencies)
+            if ($docLib.MajorWithMinorVersionsLimit -gt $maxMinorVersionLimit)
             {
-                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.mobileAppDependency" }
-                $newDependency.targetId = $actDependency.targetId
-                $newDependency.dependencyType = $actDependency.dependencyType
-                $newDependencies += $newDependency
+                Write-Host "        Setting MinorVersions to $maxMajorVersionLimit"
+                if (-Not $dryRun) { $null = Set-PnPList -Connection $siteCon -Identity $docLib -MinorVersions $maxMinorVersionLimit }
             }
-        }
-        foreach ($dependency in $dependencies)
-        {
-            $fnd = $false
-            foreach ($actDependency in $actDependencies)
+
+            # Getting files
+            Write-Host "      Getting files"
+            $items = Get-PnPListItem -Connection $siteCon -List $docLib -PageSize 5000 -Fields "ID","Title","File.ServerRelativeUrl"
+            Write-Host "        $($items.Count) files"
+
+            foreach ($item in $items)
             {
-                if ($actDependency.targetId -eq $dependency.appId)
+                $ct = Get-PnPProperty -Connection $siteCon -ClientObject $item -Property "ContentType"
+                if ($ct.name -eq "Ordner" -or $ct.name -eq "Folder") { continue }
+                $file = Get-PnPProperty -Connection $siteCon -ClientObject $item -Property "File"
+                Write-Host "        $($item.File.ServerRelativeUrl)"
+                $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl | Sort-Object -Property "Created" -Descending
+                if (-Not $enableMinorVersions)
                 {
-                    $fnd = $true
-                    break
-                }
-            }
-            if (-Not $fnd)
-            {
-                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.mobileAppDependency" }
-                $newDependency.targetId = $dependency.appId
-                if ($dependency.autoInstall)
-                {
-                    $newDependency.dependencyType = "autoInstall"
+                    Write-Host "          $($versions.Count) major versions"
+                    if ($versions.Count -gt $keepMajorVersions)
+                    {
+                        $cnt = $versions.Count - $keepMajorVersions
+                        Write-Host "          purging $($cnt) versions"
+                        for ($i = $keepMajorVersions; $i -lt $versions.Count; $i++)
+                        {
+                            Write-Host "          deleting version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
+                            if (-Not $dryRun)
+                            {
+                                Remove-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl -Identity $versions[$i].ID -Force
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Write-Host "          nothing to purge"
+                    }
                 }
                 else
                 {
-                    $newDependency.dependencyType = "detect"
+                    Write-Host "          $($versions.Count) major/minor versions"
+                    $revs = $versions.VersionLabel | Where-Object { $_ -like "*.0" }
+                    Write-Host "          $($revs.Count) revisions"
+                    $revCnt = 0
+                    foreach ($rev in $revs)
+                    {
+                        Write-Host "            revision $($rev.VersionLabel)"
+                        $revCnt++
+                        if ($revCnt -eq $keepMajorVersions)
+                        {
+                            Write-Host "          keepMajorVersions reaged. Deleting now all minor versions"
+                        }
+                        $revStr = $rev.VersionLabel.Split(".")[0]+"."
+                        $minors = $versions | Where-Object { $_.VersionLabel -like "$revStr*" } | Sort-Object -Property "Created" -Descending
+                        Write-Host "              $($minors.Count) minor versions"
+                        $check = $keepMinorVersions
+                        if ($revCnt -ge $keepMajorVersions)
+                        {
+                            $check = 1
+                        }
+                        if ($minors.Count -gt $check)
+                        {
+                            $cnt = $minors.Count - $check
+                            Write-Host "              purging $($cnt) minor versions"
+                            for ($i = $check; $i -lt $minors.Count; $i++)
+                            {
+                                Write-Host "              deleting minor version $($minors[$i].VersionLabel) from $($minors[$i].Created)"
+                                if (-Not $dryRun)
+                                {
+                                    Remove-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl -Identity $minors[$i].ID -Force
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Write-Host "              nothing to purge"
+                        }
+
+                    }
                 }
-                $newDependencies += $newDependency
             }
         }
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/updateRelationships"
-        $body = @{}
-        $body.relationships = $newDependencies
-        $appCat = Post-MsGraph -Uri $uri -Body ($body | ConvertTo-Json -Depth 50)
-    }
-}
 
-# Configuring other stuff
-Write-Host "Configuring other stuff" -ForegroundColor $MenuColor
-$packages = Get-ChildItem -Path $DataRoot -Directory
-$continue = $true
-foreach($packageDir in $packages)
-{
-    if ($ContinueAtAppWithName -and $packageDir.Name -eq $ContinueAtAppWithName) { $continue = $false }
-    if ($ContinueAtAppWithName -and $continue) { continue }
-    if ($ConfigureOnlyAppWithName -and $packageDir.Name -ne $ConfigureOnlyAppWithName) { continue }
-    if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
-
-    Write-Host "Configuring package $($packageDir.Name)" -ForegroundColor $CommandInfo
-
-    $configPath = Join-Path $packageDir.FullName "config.json"
-    $categoryPath = Join-Path $packageDir.FullName "category.json"
-    $assignmentsPath = Join-Path $packageDir.FullName "assignments.json"
-
-    $config = $null
-    $category = $null
-    $assignments = $null
-
-    $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
-    $category = Get-Content -Path $categoryPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
-    $assignments = Get-Content -Path $assignmentsPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
-
-    # Checking if app exists
-    Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-    $uri = "/beta/deviceAppManagement/mobileApps"
-    $allApps = Get-MsGraphCollection -Uri $uri
-    $app = $allApps | where { $_.displayName -eq $config.displayName }
-    if (-Not $app.id)
-    {
-        Write-Error "The app with name $($config.displayName) does not exist. Please create it first." -ErrorAction Continue
-        continue
-    }
-    $appId = $app.id
-    Write-Host "    appId: $appId"
-
-    # Configuring category
-    Write-Host "  Configuring category" -ForegroundColor $CommandInfo
-    if ($category)
-    {
-        # Checking if category exists
-        Write-Host "    Checking if category exists"
-	    $caturi = "/beta/deviceAppManagement/mobileAppCategories/$($category.id)"
-	    $defCategory = Get-MsGraphObject -Uri $caturi
-        if (-Not $defCategory)
-        {
-            Write-Error "Can't find the category $($category.displayName)." -ErrorAction Continue
-            continue
-        }
-
-        # Getting existing categories
-        Write-Host "    Getting existing categories"
-	    $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories"
-	    $actCategories = Get-MsGraphCollection -Uri $uri
-        $isPresent = $actCategories | Where-Object { $_.id -eq $category.id }
-        if (-Not $isPresent)
-        {
-            # Adding category
-            Write-Host "    Adding category $($defCategory.displayName)"
-	        $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
-            $body = "{ `"@odata.id`": `"$AlyaGraphEndpoint$caturi`" }"
-	        $appCat = Post-MsGraph -Uri $uri -Body $body
-        }
-        else
-        {
-            Write-Host "    Category $($defCategory.displayName) already exists"
-        }
-    }
-
-    # Configuring assignments
-    Write-Host "  Configuring assignments" -ForegroundColor $CommandInfo
-
-    # Getting existing assignments
-    Write-Host "    Getting existing assignments"
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
-	$actAssignments = Get-MsGraphCollection -Uri $uri
-    $cnt = 0
-    foreach ($assignment in $assignments)
-    {
-        $cnt++
-        Write-Host "      Assignment $cnt with intent $($assignment.intent) and target $($assignment.target)"
-        $fnd = $null
-        foreach ($actAssignment in $actAssignments)
-        {
-            #TODO better handling here
-            if ($actAssignment.intent -eq $assignment.intent -and $actAssignment.target."@odata.type" -eq $assignment.target."@odata.type")
-            {
-                $fnd = $actAssignment
-                break
-            }
-            if ($actAssignment.intent -in @("required","available") -and $actAssignment.target."@odata.type" -in @("#microsoft.graph.allLicensedUsersAssignmentTarget","#microsoft.graph.allDevicesAssignmentTarget"))
-            {
-                $fnd = $actAssignment
-                break
-            }
-        }
-        if (-Not $fnd)
-        {
-            Write-Host "      Assignment not found. Creating"
-            # Adding assignment
-            Write-Host "        Adding assignment $($assignment.target."@odata.type")"
-	        $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
-            $body = $assignment | ConvertTo-Json -Depth 50
-	        $appCat = Post-MsGraph -Uri $uri -Body $body
-        }
-        else
-        {
-            Write-Host "      Found existing assignment"
-        }
-        #TODO Update
     }
 
 }
 
-#Stopping Transscript
+# Stopping Transscript
 Stop-Transcript
 
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAGtnNPO3aWMBCU
-# l+rjMhKxGbfYHb+SiZai+iEG+xp5paCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAJViK48Me5P2e6
+# PqTM4uQ0fZ3nRgWWC9N69wp7oPOo0qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -415,23 +389,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIWRAY7F
-# 5DwBH+BhmLdT3r8okTI4Jpuuf+VmNbnV/2hQMA0GCSqGSIb3DQEBAQUABIICADQq
-# sQhz74hEp18q012jHSmFbXb/Cv2/hH87ru+0s+a+BF3CBWDJoBzcCQKfu1eRL+Uv
-# /aWfXDht+dMTKChL7sgk/EEoGcQNaD+5g788rtzkD187C9/bijvc3Xrvhitq7bdD
-# ZIXBLqF7gr6qZ9Ws2usap0C6VtVQXxo/7JuP6ZO8IKDPlGSlw8j7jRop8AzNFv47
-# DLoB2Xx4OVKwOdxWw7iaDwJY11TSLT7f9qUtGm//BDr05cmOr+zUPu0FVYrcaeO9
-# kO+Nh+rTDBU5z7t/oWlBaZQH5Zd4EXduRCvXyt8WG7mRJWIwAFle3Cbo/6jDuYh1
-# pwGVmWUhTp6eUxuHQ7s1HMW8XWPL1nDFGGm10EaYzh8MP+6Vre87vfNePGIuB2vE
-# MeVqKVhgGTcrTg024HmQBlGQ5om4aJy8X1Vrumx4I0oP4fv00RtPk8G98g6QE9fn
-# dL6rGTIu+PLPBBQXOoPilrB8zheP9bWdcnwBfqt6TJjAX1J1/1yqmbUioky6Sbux
-# 1VrJArzW/AXuLcIZV1/DlTn7MNicBQUQp+jrcwUiiTgE+jmplgQVYP1Ei48fMJVz
-# nVBFSTMN3dFMTPHnnGgRNP+ye4RGZ/uxVLJX4vysMkWuCcv6Owh0bViUkHXRpCpa
-# TgKR/pyPtzgt1FaplmZtbUKrikjYh6E9CTuOm+15oYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJEDvtPN
+# mS3NWbtwCGNPeRfotp0OhjxoLurgnwR1vTEaMA0GCSqGSIb3DQEBAQUABIICAIfu
+# xW5LIXHRzD7Z+iAV/OymZRAvOENVuG+haIi4qEgIyBkvOIpQ3hxsL0jaFfP782ro
+# 39jdUcqi078OogVtMGdsUJhC4yUx7gytFPH0sVe5ubSErbB92nP/M5/jSHLuGnEC
+# yWzj3NJRvNfB1zBItWBkNfsaCSi3NX+tCsJPR569pHF3OIUd2njyUGDZ3MNMRWjh
+# EapF1G3rHgLqdzggPcwpQGISoYcgE47BbXeiuedHthR0+wibK67QeZ6dOf8h5O7y
+# Z6CVc5RjkvEleWcLse/BzK0i8XQXlYWvaCEfMzamfPIYY++jgYUoRPIDfIbea7+I
+# 4EgPVwxuOZ905RvkJj8ZgT1KWwt3MyjKO2MfACBK1Quxai/bCvrBRsxwoIfVa7z6
+# 7UQP451d5/sY/6lRQWqmhAiPIOc6r8DAMY2jD14wpkRbgmz8GKOF/3NmepZw5wK+
+# G3RY1obUBfffEP9hQZIZk61qHgxxoS81yKwj8coi3f3X7GvweAIf+cEKcVWmwnBm
+# k6JMJbAcTSgz3KzhGQO8ewnGjCxU925JiDKesBaccd5hBVA4nN4rIX3bWHUrjYxG
+# dXhwJ6XN8s99h42etI97Et7WX6BzmOAOdAASJVnBRIlYuJODLj2JGXfoJ+8rU97Q
+# y7ZEojnK8HBDAZGZbQ4JsX1rD54KsiAgzNd6p4D8oYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCBftsQZyThWb296phlqgu7jhA8KlfJGFVEGHBTxMu2BuwIUXjRT
-# hwnUR2BVvIW1LYqlirkJqBsYDzIwMjUwMjI4MTUwNzIwWjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCA5bcNKfcKjN5p56r3e7FMFLyMvlfsgc5Wq5FYv4AIJEQIUbLcG
+# LYamFaXKO/Hb/fb5y8ZvdTEYDzIwMjUwMjEzMjI0OTU5WjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -536,18 +510,18 @@ Stop-Transcript
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIPMomyXINjbsm49fJ45s8JCBxp9ikaCB
-# JCa4KyO+mr2cMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIP/ml7oek9z9z6tyMA2Bf80rHQOgI/jE
+# 91pA16x05K9AMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAbQ3hkwliMAf0gvWy07ZMlLXsF+62IhRgftE0poUbkMED
-# LRHJ2WCwrKfLE7iWgIA1WizWJCyZDiPbUDSmCMcI+Nv+gktc5ynslZ/fCNu93KX2
-# o6eoZYhlSGUqwKy0uvw4ZgiH/EXZ9xlGur7Yzv043Pztfzh/b/5q8ZT+p5ivZgUe
-# zrY3/Q8t/JvIWVJ+UYmtzwHh8IzvKWczJokk/cXx/tDijdqcubm4X4Dh8/dufgVP
-# NMpbYekadMXVtOK/hHVWFZISUB6UG09jg64y7hY4zH01ZwIKxMUrwm8WTuEx3+15
-# U/shyxKHgSRDbb3KHw9xTB9esg1aIFGsIG2MEFPUIBczM84pSxWM5wOxXomxm9YD
-# dnx2U8HicT5FqCHldXxHw7jJsDGxxWAIkbq15sgLIQD2ndvVKfhM4jDL9+K0Sq3Q
-# 9YLzHsb+HETIjPavPb8v+/WFG2RyGKW694YOm2FOKb79zKbnemTRePEQ/nxtLaHt
-# pMhmCQi6QkQwQa7jOen1
+# KoZIhvcNAQELBQAEggGAEQa+QcMZSR8kZ2hxDCIIoTOjxNcWHDGD7u9OTNvPd4wZ
+# sKTEAKcYW/uUwd6SwWC4osJZaZtgm8CgmImWJ11tSmd/tmTHZuhUYtLbuFIJd/ys
+# 9CCFjuOr4pwOGMThFW3RcjgUa+hGl0C6BnRFvmaP6q9V40aLd1eY4pYjOq5mqw6E
+# jJndkI5xPheCPtVZHeCC4G6EyiL5N/LmFKG2qfC68usFL0VaKB9HfoDfuU+fgGsG
+# UFaCpIvuVqcdgLx0CObophN2CD6lHMNrVttYF6y6wxcvSNILUFOxxzLL/w9oZDRm
+# aT4vkGa8kObzK0pndeitoO3DqVjtM5V2WjjNesbSg9xdZVmFrFECQWuK+go9MaGF
+# xK2jkgvr4KYU8IZcGRgEAX+dGMPGrfWXbZJkJHKM/XMF3fWC3jqQ8Nkbpqg+0iQA
+# SrskP6tEsI4CcahCUL8JkDB7zJZeHaGn51Eei88C1XVbhmoF6dfj60Ld1xYXenUA
+# kM7fwpfIDrMVVjJpkctx
 # SIG # End signature block

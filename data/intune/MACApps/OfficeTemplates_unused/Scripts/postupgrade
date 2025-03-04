@@ -1,12 +1,26 @@
 #!/bin/bash
 exec 3>&1 4>&2
 trap 'exec 2>&4 1>&3' 0 1 2 3
-exec 1>>/Library/Logs/ch.alyaconsulting.office.templates.postupgrade.log 2>&1
+exec 1>>/Library/Logs/ch.alyaconsulting.office.templates.postupgrade-$(uuidgen).log 2>&1
 
 echo "$(date) : post upgrading ch.alyaconsulting.office.templates"
 
-appLocation="/Library/Application Support/Microsoft/Office365/User Content.localized/Templates.localized"
+echo "$(date) : preparing directories"
+installDir="/Library/Application Support/Microsoft"
+[ -d "$installDir" ] || mkdir "$installDir"
+chmod 755 "$installDir"
+[ -d "$installDir/Office365" ] || mkdir "$installDir/Office365"
+chmod 755 "$installDir/Office365"
+[ -d "$installDir/Office365/User Content.localized" ] || mkdir "$installDir/Office365/User Content.localized"
+chmod 755 "$installDir/Office365/User Content.localized"
+[ -d "$installDir/Office365/User Content.localized/Templates.localized" ] || mkdir "$installDir/Office365/User Content.localized/Templates.localized"
+chmod 755 "$installDir/Office365/User Content.localized/Templates.localized"
+appLocation="$installDir/Office365/User Content.localized/Templates.localized"
 
+echo "$(date) : setting file access"
+find "$appLocation" -type f -exec chmod 644 {} +
+
+echo "$(date) : cleaning old files"
 if [[ -f "$appLocation/HH2023_Document_print.dotx" ]];then
     rm -f "$appLocation/HH2023_Document_print.dotx"
 fi

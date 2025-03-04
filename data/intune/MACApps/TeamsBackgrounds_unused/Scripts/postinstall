@@ -1,7 +1,7 @@
 #!/bin/bash
 exec 3>&1 4>&2
 trap 'exec 2>&4 1>&3' 0 1 2 3
-exec 1>>/Library/Logs/ch.alyaconsulting.teams.backgrounds.postinstall.log 2>&1
+exec 1>>/Library/Logs/ch.alyaconsulting.teams.backgrounds.postinstall-$(uuidgen).log 2>&1
 
 echo "$(date) : post installing ch.alyaconsulting.teams.backgrounds"
 
@@ -20,23 +20,22 @@ chmod 755 $backgroundsDir
 [ -d $logsDir ] || mkdir $logsDir
 chmod 777 $logsDir
 
-if [[ -f $scriptsDir/ch.alyaconsulting.teams.backgrounds.sh ]];then
-    rm -f $scriptsDir/ch.alyaconsulting.teams.backgrounds.sh
-fi
+echo "$(date) : setting file access"
+find "$backgroundsDir" -type f -exec chmod 644 {} +
 
 echo "$(date) : creating apply script"
 cat > /tmp/ch.alyaconsulting.teams.backgrounds.tmp <<- EOF
 #!/bin/bash
 exec 3>&1 4>&2
 trap 'exec 2>&4 1>&3' 0 1 2 3
-exec 1>>$logsDir/ch.alyaconsulting.teams.backgrounds.log 2>&1
+exec 1>>$logsDir/ch.alyaconsulting.teams.backgrounds-\$(uuidgen).log 2>&1
 echo "\$(date) : running ch.alyaconsulting.teams.backgrounds"
 teamsDir="\$HOME/Library/Containers/com.microsoft.teams2/Data/Library/Application Support/Microsoft/MSTeams/Backgrounds/Uploads"
-[ -d \$teamsDir ] || mkdir \$teamsDir
+[ -d "\$teamsDir" ] || mkdir -p "\$teamsDir"
 for f in $backgroundsDir/*; do
     if [[ "\$f" = *.png || "\$f" = *.PNG || "\$f" = *.jpg || "\$f" = *.JPG || "\$f" = *.gif || "\$f" = *.GIF ]]; then
         echo "Copying \$f"
-        cp -f \$f \$teamsDir
+        cp -f "\$f" "\$teamsDir"
     fi
 done
 echo "\$(date) : done ch.alyaconsulting.teams.backgrounds"

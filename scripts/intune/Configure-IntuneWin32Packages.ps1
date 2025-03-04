@@ -263,12 +263,17 @@ foreach($packageDir in $packages)
     foreach ($assignment in $assignments)
     {
         $cnt++
-        Write-Host "      Assignment $cnt with target $($assignment.target)"
+        Write-Host "      Assignment $cnt with intent $($assignment.intent) and target $($assignment.target)"
         $fnd = $null
         foreach ($actAssignment in $actAssignments)
         {
             #TODO better handling here
             if ($actAssignment.intent -eq $assignment.intent -and $actAssignment.target."@odata.type" -eq $assignment.target."@odata.type")
+            {
+                $fnd = $actAssignment
+                break
+            }
+            if ($actAssignment.intent -in @("required","available") -and $actAssignment.target."@odata.type" -in @("#microsoft.graph.allLicensedUsersAssignmentTarget","#microsoft.graph.allDevicesAssignmentTarget"))
             {
                 $fnd = $actAssignment
                 break
@@ -397,8 +402,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDwRJju8IuHJypk
-# jBpixiwOk52RVPl/KqtvdnP3/sFplqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDj9hF+Re2gYH3F
+# IpaiGb7Wn9irEq2n6s7yWOj0CzpDRaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -512,23 +517,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHWHaSFN
-# QWCvg8vFewqvpgjL0RN0JrIxBOoKeysFcrZzMA0GCSqGSIb3DQEBAQUABIICAJni
-# 0+1bay6Vn3kH0/C1mCBT+zTfFHHsD6AZnwAIcia2FOzmjoqjBEq4XAqWeyx8WSIb
-# x2jK44O683xfb1IH8Zuv/GBdyyMu8HIjOqF1OmBmqTeaH5HU+0fEa4A+rQEaJRuR
-# j5pchDJlMyF0vbZ2ZBsAuYWZo+nTOf6ekMyvgTIzu23V6qmSntiOuFAy1YedSIvj
-# WuSxrUQEoHyd/3B/3z03TuKq+eAmiPkOMyr2nqww6FZp/57E3tE352Cffd01CTMh
-# TpOhWLVwb2O5Opt3LQCm8BeD/YBf0GeHT34Q/G6Gjof3NCCqNT45N262TVnHv2Wp
-# /fLAFjB2Ec4dlviMF/i8CMm2uUIMyPIbWzHspRZxQj4AuRflhC61nlOPkHI20QEe
-# yzSiK6jBIg1ZfMQ+mSP4vutNG9YEOFru0lYyVr700TNyufrMeW7FyY/kL4CMfT4M
-# ZRiK0nVeGZzg0xp/hpdSWqlaFkW2tNLSopi2zyDnXGZt99cfC68RMD8t+kDQ9kRq
-# y3a8jyDiiQBmAeE0k92epJq62a3ahYRAzdSXgPjVZ5MuNgs0hcdHCMh47mOWROHG
-# PAwhbQhxnCwAVCfqbDxpUZLmrmAIh85OnaXmQDlqFZVOfVK5x2oCA96QDzDSr4j3
-# XwfVz9bcavrQuKd6pJ/yZTN/nyg1eRGydecvUtCXoYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKZglVU/
+# k3UI/6Dkb/XN5IPV+coKozL8i9bFW/akYiysMA0GCSqGSIb3DQEBAQUABIICAFDV
+# RslEw6n7WTXhxp5ZgrXqAX6OR1ylUZYOadNESZyNwSNuplWqndRzclfDRsstl0o6
+# SRKEyUgNyPPld6MRktl3Nm0Q6X+uA4j718EMbhMtEOsJyQbDN1hkEDvE6CA/KsbZ
+# f+uB55XkYicvnHfcG3nzrggHbjepwJ6kToFfoXRpoGD7sh4A3jHS86XKnADdDFkv
+# UQYHwAST5j1PO7WawJU68r+BlQMZxaQW6APlxRpCI0SfhNKbmJQ5hdTK/NwmMkNR
+# PuLCqmDPYovJ2ix0hugdo9a8nYQ4/DJLZqWr63fTE7I0gHDgBbO2OddynAHqCBQc
+# jzHtDXntZdsrEOxEczVJpR0q9hgH5qLzGc8+LOVwqd6/YkMV43vr3i8WqoxGkyvW
+# nMkQsbcchuk8jum0Jov3EfcbdYdwjw+5srEItpOZrpiycoNt7lhVoWmyxhyCVZ1s
+# jRgJCbiGZ1DgtynYl8heNtbK0AJ2JydWimyM37IAcOjhUsCOV79w5k8nc/wzCwjz
+# 92c018ZU/GkF/jSa0y5/uSqOAq7Xu1KGWyNJ0v3AHF97ZrEgTteENSY8W/yHFGkL
+# jzFH6HdK7+zfsMwX8jvIa46/nDBFm1TemBHIwI95zcj/28pZzMrwQdaA4sZ8ZY5I
+# ZyEI0Fb5Q/2dl9NXyqnK71i4VryQ9St2SOO/2x4coYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCBmCfs2v5YrNhvKBi4nPTyOV5ijcYmBNEE06PDKn+X13QIUL9xO
-# vk6l3V6u7h1fNhQe/r2gbHUYDzIwMjUwMjA2MTkyMjAwWjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCAZghwrPoVraYbWWbp2/5J0go6bk7qigowQdBc2BK1WIgIUUT7w
+# Yw84uNB6dycvdeCoVjkOc2QYDzIwMjUwMjI4MTUwNzI4WjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -633,18 +638,18 @@ Stop-Transcript
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIAM9wycfv3pcl+rzNB5B/2GZ6CotjVZc
-# 2cH5Kd57BU1jMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIDr5j2fXEhiJeNy2TfCE22pl5D5Dum8C
+# ffaejGktCLfdMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAmnA7PTvZXCsz0PrwwImwhvvA4D1PaEotZSIk98CYwFfv
-# yVcXyy4rG5ZZgGt6hf6edt2mWpwDj4WMt1qXoJyP4AmA+lSLlOly7qm6khLRAOYr
-# oQkFtpYbx7rqaz9BS8JRWxhLYiJvnKrEST7MOT2gR8tNTI1vKLuzTK69iKsmyTt6
-# HxCEuhn+vBcyhhwd94ZSLlwhrT12fjdd8e5EF4W71InytL17438AsMNKPxMeOmFK
-# Hh7eUGRSo12LHDrFXW+cu1QCG3rUdqc2qwCGbttZz0II6t1f6GDAryb7wi2z7/2B
-# U2olx96WQXUA1qZEA6zn1wzT8hDkKcxemHQtJyg9nKicNMrSKlfb7gWIp8mSpTSc
-# T7zQ8YnXv1bu/4Dbx34Iu1sV7XnlLI96Q+ehhjGHCsAQRty0Rt1WTK2aTIyot4pL
-# 5hf5zjebRpObs/PHE+7Lx5UqPQGpqsp33IDxb0R2T0biOXBSnvJuPi4pWUgxI8BK
-# Q5u3iMcB4HrkYMWVMpBW
+# KoZIhvcNAQELBQAEggGAsQ99/5fBcRBaKADqDpuEUgciXDq+OfwM1nXK51NKb8nO
+# XH6kIKzvpjvsnoCywWXULb6RFVco0gZFFw1jn4mGWZiuU726JXkOXq1plyKywHlK
+# DT2iwPCLGKn1Vs4vdNcy3R75PmaiMoONJ0qsheN/L55alplkHGDRGBg9BEZn0g1k
+# 0TgjLI2rFuPSZk34qNcPT+POV/DIoEOI9SatwhL6X/kB1vCrtavmJoKNh0ILHCuR
+# tNID3n2Uru9wG8PYrv3R6aMFwT4U36j6+TDW+u6jtQ+Q4buyW8qLq9m+s+A0eh4M
+# dkdhfafLwDPNX/pqVY0c1U1227cBrg2dmxokmdo9e/KaPhSnUkAhOHdLhqj1+Bjl
+# HsHXgOGvzeri5BMfbVZdxdfSgRyONBrUx4WBQBzehQWvuehX6wcCM6x4MAfdfSfQ
+# FiO15Ujdc/Ipy/4qapG8v710b76YxLcQS8CGH7OUD3v2Hk/pb82jGYWG2TuAfhHG
+# Vft/sMKC4cqPEjkDRD5e
 # SIG # End signature block

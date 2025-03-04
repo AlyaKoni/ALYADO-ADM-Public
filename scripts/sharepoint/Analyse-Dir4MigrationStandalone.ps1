@@ -1,5 +1,5 @@
 ﻿#Requires -Version 2.0
-#TODO #Requires -RunAsAdministrator
+#Requires -RunAsAdministrator
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -33,6 +33,7 @@
     ---------- -------------------- ----------------------------
     18.07.2024 Konrad Brunner       Initial Version
     02.09.2024 Konrad Brunner       Checking OneDrive sync path
+    03.03.2025 Konrad Brunner       PowerShell 7
 
 #>
 
@@ -60,12 +61,16 @@ Import-Module "ImportExcel"
 Write-Host "Compiling helper" -ForegroundColor $CommandInfo
 $TypeDefinition = @"
 using System;
-using System.Collections.Generic;
 using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 using System.Security.AccessControl;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using System.Text;
+using System.Security.Principal;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Runtime.Versioning;
 
 namespace SharePointFileShareMigrationAnalysis
 {
@@ -160,9 +165,9 @@ namespace SharePointFileShareMigrationAnalysis
         [StructLayout(LayoutKind.Sequential)]
         internal struct SECURITY_ATTRIBUTES
         {
-            public int nLength;
-            public IntPtr lpSecurityDescriptor;
-            public int bInheritHandle;
+            internal int nLength;
+            internal IntPtr lpSecurityDescriptor;
+            internal int bInheritHandle;
         }
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
@@ -170,6 +175,7 @@ namespace SharePointFileShareMigrationAnalysis
                 WIN32_FIND_DATA lpFindFileData);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool FindNextFile(IntPtr hFindFile, out
                 WIN32_FIND_DATA lpFindFileData);
 
@@ -177,10 +183,98 @@ namespace SharePointFileShareMigrationAnalysis
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool FindClose(IntPtr hFindFile);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern IntPtr LocalFree(
+            IntPtr handle
+        );
+
+        internal enum SE_OBJECT_TYPE
+        {
+            SE_UNKNOWN_OBJECT_TYPE,
+            SE_FILE_OBJECT,
+            SE_SERVICE,
+            SE_PRINTER,
+            SE_REGISTRY_KEY,
+            SE_LMSHARE,
+            SE_KERNEL_OBJECT,
+            SE_WINDOW_OBJECT,
+            SE_DS_OBJECT,
+            SE_DS_OBJECT_ALL,
+            SE_PROVIDER_DEFINED_OBJECT,
+            SE_WMIGUID_OBJECT,
+            SE_REGISTRY_WOW64_32KEY
+        }
+        internal enum SECURITY_INFORMATION
+        {
+            OWNER_SECURITY_INFORMATION = 1,
+            GROUP_SECURITY_INFORMATION = 2,
+            DACL_SECURITY_INFORMATION = 4,
+            SACL_SECURITY_INFORMATION = 8,
+        }
+
+        [DllImport("Advapi32.dll", SetLastError = true)]
+        internal static extern uint GetSecurityInfo(
+            IntPtr hFindFile,
+            SE_OBJECT_TYPE ObjectType,
+            SECURITY_INFORMATION SecurityInfo,
+            out IntPtr pSidOwner,
+            out IntPtr pSidGroup,
+            out IntPtr pDacl,
+            out IntPtr pSacl,
+            out IntPtr pSecurityDescriptor
+        );
+
+        [DllImport("Advapi32.dll", SetLastError = true)]
+        internal static extern uint GetNamedSecurityInfo(
+            string fileOrDirName,
+            SE_OBJECT_TYPE ObjectType,
+            SECURITY_INFORMATION SecurityInfo,
+            out IntPtr pSidOwner,
+            out IntPtr pSidGroup,
+            out IntPtr pDacl,
+            out IntPtr pSacl,
+            out IntPtr pSecurityDescriptor
+        );
+
+        [DllImport("advapi32.dll")]
+        internal static extern Int32 GetSecurityDescriptorLength(
+            IntPtr pSecurityDescriptor
+        );
+
+        [DllImport(
+           "advapi32.dll",
+           EntryPoint = "ConvertSidToStringSidW",
+           CallingConvention = CallingConvention.Winapi,
+           SetLastError = true,
+           ExactSpelling = true,
+           CharSet = CharSet.Unicode)]
+        [ResourceExposure(ResourceScope.None)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool ConvertSidToStringSid(
+            IntPtr Sid,
+            ref IntPtr StringSid
+        );
+
+        [DllImport(
+             "advapi32.dll",
+             EntryPoint = "ConvertSecurityDescriptorToStringSecurityDescriptorW",
+             CallingConvention = CallingConvention.Winapi,
+             SetLastError = true,
+             ExactSpelling = true,
+             CharSet = CharSet.Unicode)]
+        [ResourceExposure(ResourceScope.None)]
+        internal static extern bool ConvertSecurityDescriptorToStringSecurityDescriptor(
+            IntPtr securityDescriptor,
+            /* DWORD */ uint requestedRevision,
+            SECURITY_INFORMATION securityInformation,
+            out IntPtr resultString,
+            ref ulong resultStringLength
+        );
+
         internal class DirInfo
         {
-            public long Size { get; set; }
-            public long Files { get; set; }
+            internal long Size { get; set; }
+            internal long Files { get; set; }
         }
 
         // Limitations
@@ -238,7 +332,7 @@ namespace SharePointFileShareMigrationAnalysis
             IntPtr findHandle = FindFirstFile(filePath, out findData);
             if (findHandle != INVALID_HANDLE_VALUE)
             {
-                return (long)findData.nFileSizeLow + (long)findData.nFileSizeHigh * ((long)uint.MaxValue+1);
+                return (long)findData.nFileSizeLow + (long)findData.nFileSizeHigh * ((long)uint.MaxValue + 1);
             }
             else
             {
@@ -272,25 +366,59 @@ namespace SharePointFileShareMigrationAnalysis
 
         internal static bool IsFolderReadable(string directoryPath)
         {
-            FileSystemRights accessType = FileSystemRights.ListDirectory;
             bool hasAccess = true;
-            try
+            WIN32_FIND_DATA findData;
+            IntPtr findHandle = FindFirstFile(directoryPath, out findData);
+            if (findHandle != INVALID_HANDLE_VALUE)
             {
-                AuthorizationRuleCollection collection = Directory.
-                                            GetAccessControl(directoryPath)
-                                            .GetAccessRules(true, true, typeof(System.Security.Principal.NTAccount));
-                foreach (FileSystemAccessRule rule in collection)
+                IntPtr securityDescriptor = IntPtr.Zero;
+                try
                 {
-                    if ((rule.FileSystemRights & accessType) > 0)
+                    IntPtr ownerSid;
+                    IntPtr groupSid;
+                    IntPtr dacl;
+                    IntPtr sacl;
+
+                    uint returnValue = GetNamedSecurityInfo(directoryPath,
+                        SE_OBJECT_TYPE.SE_FILE_OBJECT,
+                        SECURITY_INFORMATION.OWNER_SECURITY_INFORMATION | SECURITY_INFORMATION.DACL_SECURITY_INFORMATION,
+                        out ownerSid, out groupSid, out dacl, out sacl, out securityDescriptor);
+
+                    IntPtr sidString = IntPtr.Zero;
+                    bool success = ConvertSidToStringSid(ownerSid, ref sidString);
+                    string sidStringLoc = Marshal.PtrToStringAuto(sidString);
+
+                    IntPtr daclString = IntPtr.Zero;
+                    ulong resultStringLength = 0;
+                    uint SDDL_REVISION_1 = 1;
+                    success = ConvertSecurityDescriptorToStringSecurityDescriptor(
+                        securityDescriptor,
+                        SDDL_REVISION_1,
+                        SECURITY_INFORMATION.OWNER_SECURITY_INFORMATION | SECURITY_INFORMATION.DACL_SECURITY_INFORMATION,
+                        out daclString,
+                        ref resultStringLength);
+                    string daclStringLoc = Marshal.PtrToStringAuto(daclString);
+
+                    if (daclString != IntPtr.Zero && sidString != IntPtr.Zero && daclStringLoc.Contains(sidStringLoc))
                     {
-                        return hasAccess;
+                        // we are able to read security decriptor so expecting read access
+                        hasAccess = true;
                     }
+                    else
+                    {
+                        hasAccess = false;
+                    }
+
+                    LocalFree(sidString);
+                    LocalFree(daclString);
                 }
+                finally
+                {
+                    LocalFree(securityDescriptor);
+                }
+
             }
-            catch (Exception)
-            {
-                hasAccess = false;
-            }
+
             return hasAccess;
         }
 
@@ -322,7 +450,7 @@ namespace SharePointFileShareMigrationAnalysis
             string name = GetName(di);
             if (!IsFolderReadable(di))
             {
-                lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "No access" }); }
+                lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { di, "Dir", "No access or not readable" }); }
                 DirInfo info = new DirInfo();
                 info.Size = 0;
                 info.Files = 0;
@@ -367,10 +495,12 @@ namespace SharePointFileShareMigrationAnalysis
                         long fileSize = GetFileSize(fi);
                         if (fileSize < 0)
                         {
-                            try {
+                            try
+                            {
                                 FileInfo finf = new FileInfo(fi);
                                 fileSize = finf.Length;
-                            } catch (Exception) {}
+                            }
+                            catch (Exception) { }
                         }
                         if (fileSize < 0)
                             lock (efi) { efi.WriteLine("\"{0}\"" + delemitter + "\"{1}\"" + delemitter + "\"{2}\"", new object[] { fi, "File", "Error getting file size" }); }
@@ -488,30 +618,45 @@ namespace SharePointFileShareMigrationAnalysis
     }
 }
 "@
-
-$ReferencedAssemblies = 
-@(
-    'System.Data.DataSetExtensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
-    'Microsoft.CSharp, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'
-    'System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
-    'System.Net.Http, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'
-    'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
-)
-
-$addTypeCommand = Get-Command -Name 'Add-Type'
-$addTypeCommandInstance = [Activator]::CreateInstance($addTypeCommand.ImplementingType)
-$resolveAssemblyMethod = $addTypeCommand.ImplementingType.GetMethod('ResolveReferencedAssembly', [Reflection.BindingFlags]'NonPublic, Instance')
-$compilerParameters = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters
-$compilerParameters.CompilerOptions = '/debug-'
-
-foreach ($reference in $ReferencedAssemblies)
+if (($PSVersionTable).PSEdition -eq "Core")
 {
-    $resolvedAssembly = $resolveAssemblyMethod.Invoke($addTypeCommandInstance, $reference)
-    $null = $compilerParameters.ReferencedAssemblies.Add($resolvedAssembly)
-}
+    $ReferencedAssemblies = 
+    @(
+    )
+    $compilerParameters = @("-debug","-optimize","-nologo")
+    foreach ($reference in $ReferencedAssemblies)
+    {
+        $compilerParameters += "-reference:`"$reference`""
+    }
 
-$compilerParameters.IncludeDebugInformation = $true
-Add-Type -TypeDefinition $TypeDefinition -CompilerParameters $compilerParameters
+    Add-Type -TypeDefinition $TypeDefinition -CompilerOptions $compilerParameters
+}
+else
+{
+    $ReferencedAssemblies = 
+    @(
+        'System.Data.DataSetExtensions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
+        'Microsoft.CSharp, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'
+        'System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
+        'System.Net.Http, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a'
+        'System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089'
+    )
+
+    $addTypeCommand = Get-Command -Name "Add-Type"
+    $addTypeCommandInstance = [Activator]::CreateInstance($addTypeCommand.ImplementingType)
+    $resolveAssemblyMethod = $addTypeCommand.ImplementingType.GetMethod("ResolveReferencedAssembly", [Reflection.BindingFlags]"NonPublic, Instance")
+    $compilerParameters = New-Object -TypeName System.CodeDom.Compiler.CompilerParameters
+    $compilerParameters.CompilerOptions = "/debug-"
+    
+    foreach ($reference in $ReferencedAssemblies)
+    {
+        $resolvedAssembly = $resolveAssemblyMethod.Invoke($addTypeCommandInstance, $reference)
+        $null = $compilerParameters.ReferencedAssemblies.Add($resolvedAssembly)
+    }
+    
+    $compilerParameters.IncludeDebugInformation = $true
+    Add-Type -TypeDefinition $TypeDefinition -CompilerParameters $compilerParameters
+}
 
 # =============================================================
 # LOCAL stuff
@@ -527,10 +672,10 @@ Write-Host "Analysing directories" -ForegroundColor $CommandInfo
 Write-Host "Exporting excel file:" -ForegroundColor $CommandInfo
 $outputFile = "$PSScriptRoot\FileSystemAnalysis4Migration.xlsx"
 Write-Host "$outputFile" -ForegroundColor $CommandInfo
-$SPShareAnalysisFiles = Import-Csv -Path "$PSScriptRoot\SPShareAnalysis_Files.csv"
-$SPShareAnalysisDirs = Import-Csv -Path "$PSScriptRoot\SPShareAnalysis_Dirs.csv"
-$SPShareAnalysisErrors = Import-Csv -Path "$PSScriptRoot\SPShareAnalysis_Errors.csv"
-$SPShareAnalysisTypes = Import-Csv -Path "$PSScriptRoot\SPShareAnalysis_Types.csv"
+$SPShareAnalysisFiles = Import-Csv -Path "$PSScriptRoot\SPShareAnalysis_Files.csv" -Delimiter $delemitter
+$SPShareAnalysisDirs = Import-Csv -Path "$PSScriptRoot\SPShareAnalysis_Dirs.csv" -Delimiter $delemitter
+$SPShareAnalysisErrors = Import-Csv -Path "$PSScriptRoot\SPShareAnalysis_Errors.csv" -Delimiter $delemitter
+$SPShareAnalysisTypes = Import-Csv -Path "$PSScriptRoot\SPShareAnalysis_Types.csv" -Delimiter $delemitter
 $SPShareAnalysisDirsCount = ($SPShareAnalysisDirs | Measure-Object).Count
 $SPShareAnalysisErrorsCount = ($SPShareAnalysisErrors | Measure-Object).Count
 $SPShareAnalysisTypesCount = ($SPShareAnalysisTypes | Measure-Object).Count
@@ -570,8 +715,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBwgwttr8KCXLTI
-# KxamCW7RTQgkMNiohzDwqcEVL52uuqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCEYbHTMCo86yA5
+# Nzhgx3NhreiENQq3j7hYttDCRc6qhKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -685,23 +830,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMIcWaim
-# /EEUZEZXcl+jvId0hYsAoK1qpls3vgH3oBq2MA0GCSqGSIb3DQEBAQUABIICAKeI
-# +1/w3cE4nJKsjyHDQC+G8harK9nCQZVEAh8tUPFgChMn9AHguZr0SSA3uYvX2Pnc
-# CM+Ip6i8KpCI+cioTQici9pu/fbm8nrobNgta+8OlABlZEeliO+WY7UJYJEivxae
-# coDRZziqJ2Dermtv6e2aJb9f1JMW1/xsqhxuBy5fqYzbU/0fqCEd1SgLkMlIcrtz
-# OaXrgAkhLH4pH8rYp3sxAFCHrU7i6EQqLxG5qlForcbt+/sW56bygOEDXgkGvcHi
-# wtcUPrlwX7miNNkMPn6eqQA2/2wIAB1AKqgL2/E/ySYlZ5pSEd3SENLsFHohHiNe
-# ydAq7MliaX4KlukoIVSQ2Lmna/cWGQgMHbOeZw04He60lmV4MiINg2EK17UY+GHs
-# jy4RjOb8G15XwO9RSo8/rbccEjyvn2T+sPPxmjLCSxyf/wVSXabOnnk5LTKchyoZ
-# IumxOdbPXJt4unKqP6JqiKJ1GNurcZUQo2yf8pjlki9X5W/qFCrT1ZjNX54Rig4C
-# oY/qBiJNFGGD8WLrIXAJqrg0CU9eq2SsgBgZq6139RnAczHm/IgGgxNLMadccZFg
-# lXsZ/3cy92uXRXItnBmXMqArT234EGm76faCVesBLw7jVvFCqhZLUQmpSNK3mUgL
-# vmwOBuxvS+i+QvDmttFJYenS/2D/SR2Mpgc+BgW4oYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGGkzN2I
+# aRrzuVJMPn6dItbeSuLpqEAZboIK7RnYNnNjMA0GCSqGSIb3DQEBAQUABIICALg4
+# HzVvYEALRq2FlDWcHjyNcpdg5+p55m5g0sKi9nNEKZCtIP155uFvQzRvg/3mN3NW
+# N3NL3kGtBOXwo4msmZ5ig6QfrNYZqoyFY/H07qStpFUqHa5hS/zURWBekaPojzwP
+# MbpMtUNBUfQ8CXvMOb1yYE8XNRRANKqAA262OZ6zagxPCQgo0rKSsTRAE3xFzTwx
+# pT2ORzHLk8M1KaCGTcj1G9dqzLESjW1hM84wpXRmd6k2aRdcaLwBjehnGS/0XuIV
+# AOhmL8fCMzhZepmUxvTDOWMV3Qau4z6D9ZZy6h1pDheHEtLUzfgId+Lxt0AvToAh
+# ++ngxpWEOwrz0awED2x7Ix7HL8locyj2mHrh4G2v1uSSU/bN+5C8n45aK5ntDIMi
+# mBvOba5SP3bFF/GqkiV35Vvg6WNmrhLQgP38V84q3oIGAbWEeLuWgCJH6YWVyGQx
+# TxiHAcx92o1GLpUysYzflNrF/HIL+rKs0HjTtCw/1BzrcYCcfFuKjllGQfFz+AY+
+# tA5TQXAjXk2jkFRrttCIPBOtvEZMed2FMU3B5L7NNlv269IvFXHtOEewRYIbdG6+
+# iX3C1c9o9LA2hZ3f1uCWln8oM0Zy0Jxub/JP42QnUtczY7VCuZHP0mKNyeC7YCW/
+# dT5jqV6j0GFgnWh8t8FMiIcUBkMUyty8iNUebkodoYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCUIsaJaRbJRCIjtq/ud0RPXS7LP+z563G9tvv56BxvvQIUZtrJ
-# gFT/EIpOfVNtEQLpXtrweBAYDzIwMjUwMjA2MTkzMTU0WjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCCUJwv0PqVYOUFiGJ1mLFpF6px8qUZU0S+MLh+RIgBEWwIUaOAo
+# pkl0AZ/8y1iA1ZBgYcN1FgoYDzIwMjUwMzAzMjE0MTI3WjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -806,18 +951,18 @@ Stop-Transcript
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIALdVwC7m4I5YRwvENTDs3Hhn1b9oMmB
-# 3EOoNnT/l079MIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIEthn+++QnPiL3Eg/yxJ6MuDAzv5AUtH
+# thKFsw537WdUMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAve4nDjOnli/r207cFhCfn+d00IKoZ9o6oFr2YU2Ad9Kd
-# G1VgBCIImruHWI/Q+UU1K/IgriB/Og221ewXS7sctCg4+eVHhPRNuZxYG6JyiKwk
-# ZuCVbhvp4GQvadmtJPlDgI0UMeB/LJ9KNEKVGsoPyqgVwNXYo1d3rT3e9Uk39Eka
-# dRR+jK/q57fjUpE4fWXfuN+LUpoWwNVZgateUO/zlVYhmDNAmK9NFChT6jx7OLls
-# HEEjYThgQir+yC56BBPPQhHYFg6/TiKR5SGt/HbrQEV3PpBuyFgM37OUuqK4/r5o
-# nQVJia4WdKoER8zVdLijs5e2UbRJJ32F/vVLUM+fJ++q9q/oV35d/unw0sCr8949
-# anL+EC1MxXFd9DCVkfp9X4lc8IwIXJyDNYplVbsL1OfjKLNoqQXMiOLbQUeDWQOz
-# /tO7z8D2QMrlWqpMbn7nvyCK6tOV6qKVEb5yW1AP94S8sBU3Fqk5Xkn2EAs68lF3
-# nilvTwNumYiBtWI/37kw
+# KoZIhvcNAQELBQAEggGAn5PDJ8PUh+4zKMf/1D1vYVfdI1MIq5XN7Or9iNUr41sO
+# Ro5fSdGyLkccnB0i3WI4sxPswyApSxdufNarOdmCSWsZe3HhEGTjQMAX50hAOKXx
+# RespCho3yLNVTaoroTRrQPrvsxwIcMDzzyR8jakIAHAG12dgLd0WlGWDmciI/MpV
+# GTbls+yxi9QWeKSGmFeXoZC8Nz2d4z8O0aunvH5CIxheI538ECBfB3VUUwb2E5IT
+# rHAE+4ytQ+9WvxAlw1nSZEasgzuVM99UZqQ/ZIsC8e4A7mZW8ZWtneJGvdhxF/eM
+# 0mRizTYGcaxrlzPwy4lVO1z9iC69gU/T+JpvQ+BtEH2gUEJT2WAH2GuUJQzSj81m
+# 0AlM+SNquQciauYkH+6RcYS/yqwhbB2F8xPsiaC0HWg38jbIxJ4dEgj2c/L85dLm
+# eNcwp+9fHlYK6oJMcNT0/o8a8wsw4bUCRgM03P6m6j/vm5IrdQeLTjcTSsfKbAc3
+# 50WADDjRaNzCBjXrlIBw
 # SIG # End signature block

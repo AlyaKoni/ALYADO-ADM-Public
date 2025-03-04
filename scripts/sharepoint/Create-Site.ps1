@@ -65,7 +65,8 @@ Param(
     [string[]]$siteReaders = $null,
     [string]$headerLayout = $null,
     [string]$headerEmphasis = $null,
-    [bool]$quickLaunchEnabled = $null
+    [bool]$quickLaunchEnabled = $null,
+    [string[]]$localesToHandle = @("en-us","de-de")
 )
 
 #Reading configuration
@@ -241,6 +242,21 @@ if (-Not $site)
     Write-Host "Site created. Waiting one minute."
     Start-Sleep -Seconds 60
 }
+
+# Updating site
+Write-Host "Updating site" -ForegroundColor $CommandInfo
+if (-Not $siteCon)
+{
+    $siteCon = LoginTo-PnP -Url $absSiteUrl
+}
+$web = Get-PnPWeb -Connection $siteCon -Includes TitleResource,DescriptionResource
+foreach($locale in $localesToHandle)
+{
+    $web.TitleResource.SetValueForUICulture($locale,$title)
+    $web.DescriptionResource.SetValueForUICulture($locale,$description)
+}
+$web.Update()
+Invoke-PnPQuery -Connection $siteCon
 
 # Setting admin access
 Write-Host "Setting admin access" -ForegroundColor $CommandInfo
@@ -543,8 +559,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAHqs2O88UBUN3W
-# gbSrhBonCLVwL/j6O7cg3BGjrraVcqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA//hXPdtnULL4s
+# Wf87xifx0rHA5hR6xwXqJCC+8uSe2KCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -658,23 +674,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJyaWh7g
-# 6HTBhYBVO/gcTUWDQsvYY0YPDqwFDA8pgEcFMA0GCSqGSIb3DQEBAQUABIICAKDS
-# 7d2fwMUIwXkgiEklmSwrDxgm2cWeQzfrzNea7Lw8BtegQElYVEQ2VlyqujPgigMi
-# dJ/kXjc1nb7R1v4FbMVvu6a+CsZzeLHVLPXscWuLEWzjf+yK4/n7zbLFtcIqrfpI
-# k+i+YtQl8uzihHyUlOEnno/I0AB/cwVnAPDoqYPaCrZ17WIL1C9TtwYkcyTUAbXZ
-# pY2bFrWyrvDTWI0GqGi5xFhN0daWkgWx2bbI0wZRO5oo8zRT/S7HLzun40LF8pPp
-# N5kBH0BmfMJvjsdZ1f9lvBbrQQ6QXQWdNQbzur8fW4HT9uGZk6WcOj0IrvOc2P2u
-# bu4oC5G4AaHERv98XfgxKXmWgGwQ3JCVXiXj59eUbx+i8dKM0lXX3NmumEzbGyqp
-# RHvxzKHUI8dS9A4Gm/l1XSnPKbrvN3JvwboJrmL48u1ZNSHK6tVxDE8tXrEhN/MX
-# PhHKyZ2FbO2cga7GqGzeUmcKzagRVAAu3oAiWiNan1bJWB+OSqvBkBOFnK2Ioo4m
-# Xeh4iM4RtoSYSub8YADRjswnQymCGe1uOz8uXliVe5MzC0LhIKsfKaeh9PYVe/OE
-# grI6681/t/RLVbfOfe9b86SjMnKmUyFYEHrhP5stTnmRewuQJZ5HlqRnhtpwaYrp
-# vxlQUgEJtPi/aigEVZRsS6ZBJw6D2ewck584oUoLoYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAbzaH31
+# Bj0i+yR9ejj5e7foRV4a31ngHKiQKjlOgyEkMA0GCSqGSIb3DQEBAQUABIICABim
+# V3Jhh/Bse2FMe50vO4EHmm/uTt5966cKKLD9/1qfhBR5zbXd4Bnx15oOwj7xHkJ4
+# 4NfiH1MnpP+ZwQbNP0+RDbpVV7PlnWvDyT+/2469K8jU7Qyx1vtSZOoSlKpuond/
+# ec3nZlrmn9eeEAsGMxFCVeR9JjMcSYyIJSndBAiGsLmL1uazzo+1gN0Hrx7z1H9u
+# PrTb1aqzSDgwPV+0vymBXSRFUT3mcjP1TzW6v5Lc4g01oVll2Nxsk0A5SBkpw6Y3
+# histbyM9uD8blt4BcZc85aLT4PKCJkvKmSmW/7XQXsQsu8Sk9ckyoyCvpDxeU+S3
+# l+1DqyjILoFj1TAZBjanqAxe6AzWsYMyYziQrx6Px0y07U5BHjo/+JM7ytHL4pWO
+# ha7stGiMKWw5dqIk2ipkQ8VjG9j08PVZ4uN8KPrnT1scUkXn2Z9/wBeckvBCBhra
+# aHJqo6p2vC0t3TdlCx7J66gD3ybVmqtfwCJduuYx4wnMPdZaBAEGN5RzaxmIfC1H
+# 6wNR7E2zCjxRjWX30Rc7YAIAh1wobOnicp9ZwyItEMoiS8kX1qIsyqMYIGiaevFv
+# tRt39XE/9IyNXQbdIYgxri/OW32xKEdrCAVxNLnrlMB/6Qi1MZdzXsrKvId6CLNe
+# BC5dAHLyP93WJBHivUiScc/FIKtBtA3Re7+n618doYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCimCkSOuBGMpk/qzwxH4ibqGVYRhNcVTpLk6YC/nVo2AIUI1r3
-# fVupEBH81V352CNPRcvSeeMYDzIwMjUwMjA2MTkzMjQ0WjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCDoJKhqFAGrJS+Bl4WuH4HQhV7xBrwN+hsRGMzm9ykpcgIUIkHm
+# VilG2kpDtBePMKhQqxmpylgYDzIwMjUwMjEyMTA0MjE5WjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -779,18 +795,18 @@ Stop-Transcript
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEILUkvjwh0TPKdwmIVSAqd/WhL+WCzT7A
-# 5giCyJLj2sRIMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEII8ycBne7mOVvWbvto5Pgt0FE1Ws22ML
+# ptMPyR/hqsdVMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAn0f1ZhyG6LZFTqOhErBBFHZg1B/VrW4xNW0xuciteuzA
-# 0/vaK5bKs15ZhwbCJ5IXnApioq+I/pj0nhFXl678hLvmIVO29mjpknxyf+35CaYn
-# Ys8XHdBkiVbc/KCUPKRpEeWL+xGHJhydLsUjaSP+Jd7nZBL7KUUE8xniiluEAzY7
-# ZKrVC8fwIPiPMZntSzj8wGKSjvsRJ6n5OmEnWEgbz+iNM7mqBeEz65fy72NyUOLc
-# MczwSeK8EdfV+UAM1pe8D5DiEOYKH/LGLXu+3HuOTa2V81rU16lmCAvhVEsXmrpz
-# OCJmW+a3lePp+YHCNG9s8fLctlxypl3IZ7vBmw6Gofthj9L5zqdJAkRf2QSpnGWT
-# NlRnnSodb35njTf6W1b772xdPtofuKIkUZbARVAve0BMUEWCYBe3xtFsplJ0aPP3
-# nMcIw+vhWvcCuT1gZFdSxTFA4uhZndpTTBvAPwVvMqn8ytBCRNo2YgGszZ+Ib4Ps
-# srxUY/BNglqCKqGFQitK
+# KoZIhvcNAQELBQAEggGAIRDE7QsQz2w5I3Fy1dduVAJ3mjxXF+3EQBCKmSlDrEOq
+# G9vq++bg/UV+diZkoTawnUWixBBLdC+IW1ZkQztkGERR3OhWnBxdfvzmMawkPJoK
+# EPaOI8o/iRfscKpiZgpD2ghXqTAtYDxyf9RurkD1YokY4aK8eP8m6qcK3qLwMWQ8
+# khcAR0DrJLxmYVF9JF7gq705bMvaVFkdDTyUdC7dW9D4nUaN54+b/Qer/+g2o+yi
+# S3zKZcgPB/uf+CUUIoLKj2/N6n0sLoOpciwWOkGgnWg4tJRaGRBsaPFrwTTEjKO6
+# 0h4cEfG9g/sO8fx/6A24A++LNil+rR0pjdP8FeVyYk/2zbqvXK+r4UrlJHi3mjiq
+# OhgS3Yh4JzLpUGHeBYEGlXSVHJ3smhjJs2tFYb2jNh6YOHnFzsbDO8sZKtroC9Ux
+# lXcKGVOlNdE3pBLF7EiIH2I2M+xRRyS4pWh1lkY8XWUS0D0olCHJXum2D1I0ck2v
+# udUJvxadBrsGS3M9+Ymq
 # SIG # End signature block

@@ -99,20 +99,16 @@ else
             Write-Host "$userName already exists"
         }
 
-        $admins = "Administrators"
-        if ((Get-WinSystemLocale).Name.Contains("de-"))
-        {
-            $admins = "Administratoren"
-        }
-        $member = Get-LocalGroupMember -Group $admins -Member $userName -ErrorAction SilentlyContinue
+        $adminsGroup = (New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")).Translate([System.Security.Principal.NTAccount]).Value
+        $member = Get-LocalGroupMember -Group $adminsGroup -Member $userName -ErrorAction SilentlyContinue
         if (-Not $member)
         {
-            Write-Host "adding $userName user to $admins group"
-            Add-LocalGroupMember -Group $admins -Member $userName
+            Write-Host "adding $userName user to $adminsGroup group"
+            Add-LocalGroupMember -Group $adminsGroup -Member $userName
         }
         else
         {
-            Write-Host "$userName is already member of the $admins group"
+            Write-Host "$userName is already member of the $adminsGroup group"
         }
 
         Write-Host "done $exitCode"
@@ -132,8 +128,8 @@ exit $exitCode
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDPzuPWey3M+FlY
-# p2DWuvyE1KqbYbpMSr1d87Z2TEUnG6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBV4UJIHeKIQPs3
+# EtpeVzhuv1lSBeA4l1LCp0BZsEsSU6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -247,23 +243,23 @@ exit $exitCode
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHzTlQl5
-# +msgRvClxfqdtOVY+tcqTM227mnXfKmNVcm1MA0GCSqGSIb3DQEBAQUABIICAFH0
-# VSmwww9c49BeFmV/Hul3TZxwWfGuWD99bWjNMClE0PYHjKadZKWVDyvkv7gPvQYe
-# rFnsHMVd4usTAmQdh20ps6/AocwCnWiOf4lLfaCvn+wIXQIN/QnvwNxJn7xbAcQ9
-# bBGS9DPNUvD5jj2BAJjAS+tsVTsNLUl/gG+2B8WfGZwEnylZKmH4jjbnO5lQdQBw
-# 1ZdqwotZVIfX9cyKQd13I85ZykZTQwUzHlIYsMQd4zEMA6Y3e355yDb5u5UpECZA
-# AbPso6m8tWbo7I7kUm0UdJIzarhMjVukWh12CbgjvcVCnpW9YsN8o99eTqHiCQMW
-# FgeSwftiMlU3s5En8fMBsT5SZc0YRSqFLoqFUki+I404t9hVToudS29zHGi7B2MK
-# VxZMdDnx41aYDje6GT6fP/sRo6cc19GuGVvWf1p5vh2cyWBpc10R7iisZY8NS/es
-# 5RDAIHJrzgblodQIB3tU1vYTZLAIG2ODMg0IHAcr4nFhBEh205aHMjR3cYeWGGMo
-# BFktt2YCJyHhwvUs4Np5mNGPafhUB6+Yo5JV3uxoB3hohzYTnDUXdmZjh5+stvtv
-# XuyiOH678BbbuuWW6gzadX6iQF99wr2cyY4g2nTEq5O810W2wy9K1ZihxXZ7trjN
-# UQK7uSH2J2J8sGSrO2MVCQy2vlsMeQhumpu/qQ5XoYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIM2VxwwT
+# CVEMxfdT02igqEqY52PJNv5ZyTHOddzd53xeMA0GCSqGSIb3DQEBAQUABIICAKg8
+# 3spL8EWxICqEnMJdiz0Qvw9m1cCJKKIuFBkRDy7h3mqvtqTY3dw/haBAxPCPdSdL
+# bvxinQhUWvvFeXh4Q1tSssvuIvVBdKcv3F4Dbxca7JuioDPuq1+CwQCICXkWwz3A
+# 54EU0Bvc6EADPrpnhYGdo8wnO8eC3jSfU1gThUnPFydlP2SrQkjj97Mc9ZVOchGO
+# 6jhB7mPhtxP+OMuOXbftwkYrrA6LSwVfY32HLWkqK/I3f8NhOStzcvuY9h4GSZWK
+# 1qYQa/ug1yHC8f67O8f80m3BDsHGQA0Wu7ZvoZbya7zjYUMrAvsbQUg+LQhgI20z
+# 001AGe9Mj7pMfEL/Cj3V88VMBRXzzNU5X3iVtLtXCp4yyA+EroM/YXBKg/I9Xxau
+# MMJVwz03ETl+AT5T0XxV/a543OFrHXqmPWhsuJDE69HnFGCKnuamKAr6JyYUUpHf
+# fqDq2av64lIXWN6USlWT5OOCDzM4KaajgTDGZch5a0qwMJMRQeSK5ZO5EskLbgnP
+# P/5jV0InAwhftK7y/9zefa2T9VdgrJnSil1pkHwXiS41M/iemcjCxgpKAuJmY5xX
+# jVCTaCM9pksSVntm7lg+nsqvL2gJkemoEhPpjlThuQtiUAwlu0Bv+QOuyDMXkgBr
+# IMZNUbpoUbvf9TtZBInKexPWQ2p2C9zMxsDm58+BoYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCDYOsRpWviRuKDRDvwHPgLdVr7KHGxAsB/XvtwnryowbAIUO8jb
-# nP7+xEO2X+WtRSzuujp3QjoYDzIwMjUwMjA2MTg0NzIyWjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCAbSx/ZMDpxZ8fUhT3APm3rvSBR2hufsBb3WC0pVeJcrwIUBgo4
+# 4s40dGSOeQb4p3DDFungHG4YDzIwMjUwMjIwMDUxNzQzWjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -368,18 +364,18 @@ exit $exitCode
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIDJbZokyNiG1UhLjwso2pdikVEIncRqS
-# FBjHDtkrzSmqMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIJIc8ofPoF2zUFPr6hpqE06ty7PxEjex
+# LyrDXMRWIJlVMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAa4l/Tk135mgjAV/hEXrIvmS4vdWrjD/m5tvewECZcuSJ
-# dfvOQXLs6ULhxOHn4pv+RknHfWWcCwtWGEAfPfh2ygRMabw2hj+WtJbT/akBpEyq
-# YJwhemr8kKukkCjeUWLMhtYl4B0JNjpnjXx5tXXl1DnfYRvE85UOhQbz7kcUymdd
-# E73JfCtW1yKeM9b3s2cXSJg/jU7oNZNS88p6USP8U8Nln+sCpsNATmrWFGjwrveu
-# 8CMG5/MavPu8aQl6bIhactPfwwmv5UakrB/IF47nh+EYo6yrt2LBAJA8J0lmikmn
-# WwlmrOWfITsIsHU9jVI6Pi2OV5ZzyL2JSrgtkjlcEV1r2gSYoOfi4M3Qg9fISjag
-# DowARwBaArq7fJPG5BuB8gjcasN/idrER6jI2ZrpasB1DOeE1aG2XbZm4/VnAegd
-# asurDsNK9+c+bjipcOznyDvegaBosVxTC+/DIma3ae1KiJO1M6P00uXH2Nkgf3O+
-# 5sR36fyiE10YTjx0/UIT
+# KoZIhvcNAQELBQAEggGAV2SZvrP25RI1hJSVUWI8XfsePhXylYT+shX3vu+mizk8
+# tR7Yht7ml447MtoPjVL1DOKLOCROINP7B2QJ6JDsAfXW1i02HLg7nsRs1I59hvrI
+# ozBHLWiAH494Q2FBdo9xQ0Dg2uoHGKR4AGbxHkkvI4jXd9OVDZGXbOl/D+568nhJ
+# gl6PDivLz5LRDn8AA1C9s/g55UBj444r+C/OKaJ66Z6aaYiq0FAiVu8rOaGYpAzw
+# 3g7Ci/yNleCW9Jo/I1g7QNJG8rdC/9iuLm239HD3wFQg5+L9mm+r2UEN92nLOzkC
+# rUZDPj0VZnoAMtRtRlEziW8UZdcRr0BkSqYNGyrvQuRPFiyfIllLJVgg0oKy5Rl7
+# ziYXeK3HiTgy9gR7QbTlzTEQks2Ygrneu0XXcfcjtH167K+zQoY2n0+SrDZgYEwK
+# e9IhPk3qyOBqugVwFCfDPreg2EXh9g3tNegQDWXRw1AnMqD94z2N0Eoq9/rpWkuh
+# CuMcYVPivV3845wRC9SX
 # SIG # End signature block

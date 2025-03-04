@@ -5,7 +5,7 @@ exec 1>>/Library/Logs/ch.alyaconsulting.background.log 2>&1
 
 echo "$(date) : installing ch.alyaconsulting.background"
 
-dekstopBackgroundUrl="https://hhaginfpstrg000.blob.core.windows.net/backgrounds/DesktopDefaultHHAG.jpg"
+dekstopBackgroundUrl="https://hhaginfpstrg000.blob.core.windows.net/backgrounds/DesktopDefault.jpg"
 
 runDir=$pwd
 alyaDir="/Library/Alya"
@@ -28,23 +28,52 @@ cd $backgroundsDir
 curl -O $dekstopBackgroundUrl
 cd $runDir
 
+echo "$(date) : removing old bash script version"
 if [[ -f $scriptsDir/ch.alyaconsulting.background.sh ]];then
     rm -f $scriptsDir/ch.alyaconsulting.background.sh
 fi
 
+echo "$(date) : checking CommandLineTools installtion"
 if ! [[ -d /Library/Developer/CommandLineTools ]]; then
-	#xcode-select --install
-    #touch /tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress
+    echo "CommandLineTools not found"
+    tempFile="/tmp/.com.apple.dt.CommandLineTools.installondemand.in-progress"
+    touch $tempFile
     PROD=$(softwareupdate -l | grep "\*.*Command Line" | tail -n 1 | sed 's/^[^C]* //')
-    softwareupdate -i "$PROD" --verbose
+    if [[ -n "$PROD" ]]; then
+        echo "Installing over softwareupdate '$PROD'"
+        softwareupdate -i "$PROD" --verbose
+        xcode-select --switch /Library/Developer/CommandLineTools
+    else
+        echo "NBot able to get CommandLineTools with softwareupdate"
+    fi
+    rm -f $tempFile
+else
+    echo "CommandLineTools already installed"
+fi
+if ! [[ -d /Library/Developer/CommandLineTools ]]; then
+    echo "CommandLineTools still not found"
+    echo "Installing over xcode-select"
+    xcode-select --install
+    sleep 1
+    # TODO access needed? inject with pfile? Accessibility > sshd-keygen-wrapper
+    # /usr/libexec/sshd-keygen-wrapper, PPPC Utility
+    osascript <<EOD
+tell application "System Events"
+    tell process "Install Command Line Developer Tools"
+    keystroke return
+    click button "Agree" of window "License Agreement"
+    end tell
+end tell
+EOD
 fi
 toolsPath=$(xcode-select -p)
 echo "$(date) : command line tools: $toolsPath"
 
+echo "$(date) : fixing modulemap if required"
 if [[ -f /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap ]]; then
-	osv=`sw_vers --productVersion`
-	if [[ $osv == *"5.1.1"* ]]; then
-		echo "$(date) : implementing swift fix for 5.1.1"
+	osv=`sw_vers --productVersion | awk -F'[^0-9]+' '{ print $1 }'`
+	if [[ $osv -ge 15 ]]; then
+		echo "$(date) : implementing swift fix for 15 and higher"
 		mv /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap /Library/Developer/CommandLineTools/usr/include/swift/module.modulemap.orig
 	fi
 fi
@@ -55,8 +84,9 @@ cat > /tmp/ch.alyaconsulting.background.tmp <<- EOF
 import Foundation
 import AppKit
 let date = Date()
+let uuid = UUID().uuidString
 var msg = ""
-let logFile = URL(string: "file:///Library/Alya/Logs/ch.alyaconsulting.background.log")
+let logFile = URL(string: "file:///Library/Alya/Logs/ch.alyaconsulting.background-\(uuid).log")
 msg = "\(Date()) : running ch.alyaconsulting.background"
 print( msg )
 do { try msg.write(to: logFile!, atomically: true, encoding: String.Encoding.utf8) } catch {}

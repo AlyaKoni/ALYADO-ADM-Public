@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 2
 
 <#
     Copyright (c) Alya Consulting, 2019-2024
@@ -27,281 +27,28 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
-    History:
-    Date       Author               Description
-    ---------- -------------------- ----------------------------
-    28.03.2024 Konrad Brunner       Initial Version
-
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$ConfigureOnlyAppWithName = $null,
-    [string]$ContinueAtAppWithName = $null,
-    [string]$AppsPath = "MACApps"
+    [bool]$reuseExistingPackages = $false,
+    [bool]$askForSameVersionPackages = $true
 )
 
-# Loading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneMACPackages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
-
-# Constants
-$DataRoot = Join-Path (Join-Path $AlyaData "intune") $AppsPath
-if (-Not (Test-Path $DataRoot))
+if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\OpenVPN\Package\*.intunewin" -PathType Leaf)))
 {
-    $null = New-Item -Path $DataRoot -ItemType Directory -Force
+	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "OpenVPN"
 }
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-
-# Logins
-LoginTo-MgGraph -Scopes @(
-    "Directory.Read.All",
-    "DeviceManagementManagedDevices.Read.All",
-    "DeviceManagementServiceConfig.Read.All",
-    "DeviceManagementConfiguration.Read.All",
-    "DeviceManagementApps.ReadWrite.All"
-)
-
-# =============================================================
-# Intune stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Configure-IntuneMACPackages | Graph" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Checking dependencies
-Write-Host "Checking dependencies" -ForegroundColor $MenuColor
-$packages = Get-ChildItem -Path $DataRoot -Directory
-$continue = $true
-foreach($packageDir in $packages)
-{
-    if ($ContinueAtAppWithName -and $packageDir.Name -eq $ContinueAtAppWithName) { $continue = $false }
-    if ($ContinueAtAppWithName -and $continue) { continue }
-    if ($ConfigureOnlyAppWithName -and $packageDir.Name -ne $ConfigureOnlyAppWithName) { continue }
-    if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
-
-    $dependenciesPath = Join-Path $packageDir.FullName "dependencies.json"
-
-    if ((Test-Path $dependenciesPath))
-    {
-
-        Write-Host "Dependencies for package $($packageDir.Name)" -ForegroundColor $CommandInfo
-
-        $configPath = Join-Path $packageDir.FullName "config.json"
-        $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
-
-        # Checking if app exists
-        Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-        $uri = "/beta/deviceAppManagement/mobileApps"
-        $allApps = Get-MsGraphCollection -Uri $uri
-        $app = $allApps | where { $_.displayName -eq $config.displayName }
-        if (-Not $app.id)
-        {
-            throw "The app with name $($config.displayName) does not exist. Please create it first."
-        }
-        $appId = $app.id
-        Write-Host "    appId: $appId"
-
-        $dependencies = $null
-        $dependencies = Get-Content -Path $dependenciesPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
-
-        Write-Host "  Checking dependencies"
-        foreach ($dependency in $dependencies)
-        {
-            $depPath = Join-Path $DataRoot $dependency.app
-            $configPath = Join-Path $depPath "config.json"
-            $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
-
-            # Checking if app exists
-            Write-Host "  Checking if app $($config.displayName) exists"
-            Add-Member -InputObject $dependency -MemberType NoteProperty -Name "appName" -Value $config.displayName
-            $uri = "/beta/deviceAppManagement/mobileApps"
-            $allApps = Get-MsGraphCollection -Uri $uri
-            $app = $allApps | where { $_.displayName -eq $config.displayName }
-                if (-Not $app.id)
-            {
-                throw "The app with name $($dependency.appName) does not exist. Dependency to $($packageDir.Name) can't be built. Please create it first."
-            }
-            Add-Member -InputObject $dependency -MemberType NoteProperty -Name "appId" -Value $app.id
-        }
-
-        Write-Host "  Getting existing dependencies"
-	    $uri = "/beta/deviceAppManagement/mobileApps/$appId/relationships"
-	    $actDependencies = (Get-MsGraphObject -Uri $uri).value
-        $newDependencies = @()
-        if ($actDependencies -and $actDependencies.Count -gt 0)
-        {
-            foreach ($actDependency in $actDependencies)
-            {
-                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.mobileAppDependency" }
-                $newDependency.targetId = $actDependency.targetId
-                $newDependency.dependencyType = $actDependency.dependencyType
-                $newDependencies += $newDependency
-            }
-        }
-        foreach ($dependency in $dependencies)
-        {
-            $fnd = $false
-            foreach ($actDependency in $actDependencies)
-            {
-                if ($actDependency.targetId -eq $dependency.appId)
-                {
-                    $fnd = $true
-                    break
-                }
-            }
-            if (-Not $fnd)
-            {
-                $newDependency = @{ "@odata.type" = "#Microsoft.Graph.mobileAppDependency" }
-                $newDependency.targetId = $dependency.appId
-                if ($dependency.autoInstall)
-                {
-                    $newDependency.dependencyType = "autoInstall"
-                }
-                else
-                {
-                    $newDependency.dependencyType = "detect"
-                }
-                $newDependencies += $newDependency
-            }
-        }
-        $uri = "/beta/deviceAppManagement/mobileApps/$appId/updateRelationships"
-        $body = @{}
-        $body.relationships = $newDependencies
-        $appCat = Post-MsGraph -Uri $uri -Body ($body | ConvertTo-Json -Depth 50)
-    }
-}
-
-# Configuring other stuff
-Write-Host "Configuring other stuff" -ForegroundColor $MenuColor
-$packages = Get-ChildItem -Path $DataRoot -Directory
-$continue = $true
-foreach($packageDir in $packages)
-{
-    if ($ContinueAtAppWithName -and $packageDir.Name -eq $ContinueAtAppWithName) { $continue = $false }
-    if ($ContinueAtAppWithName -and $continue) { continue }
-    if ($ConfigureOnlyAppWithName -and $packageDir.Name -ne $ConfigureOnlyAppWithName) { continue }
-    if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
-
-    Write-Host "Configuring package $($packageDir.Name)" -ForegroundColor $CommandInfo
-
-    $configPath = Join-Path $packageDir.FullName "config.json"
-    $categoryPath = Join-Path $packageDir.FullName "category.json"
-    $assignmentsPath = Join-Path $packageDir.FullName "assignments.json"
-
-    $config = $null
-    $category = $null
-    $assignments = $null
-
-    $config = Get-Content -Path $configPath -Raw -Encoding $AlyaUtf8Encoding | ConvertFrom-Json
-    $category = Get-Content -Path $categoryPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
-    $assignments = Get-Content -Path $assignmentsPath -Raw -Encoding $AlyaUtf8Encoding -ErrorAction SilentlyContinue | ConvertFrom-Json
-
-    # Checking if app exists
-    Write-Host "  Checking if app exists" -ForegroundColor $CommandInfo
-    $uri = "/beta/deviceAppManagement/mobileApps"
-    $allApps = Get-MsGraphCollection -Uri $uri
-    $app = $allApps | where { $_.displayName -eq $config.displayName }
-    if (-Not $app.id)
-    {
-        Write-Error "The app with name $($config.displayName) does not exist. Please create it first." -ErrorAction Continue
-        continue
-    }
-    $appId = $app.id
-    Write-Host "    appId: $appId"
-
-    # Configuring category
-    Write-Host "  Configuring category" -ForegroundColor $CommandInfo
-    if ($category)
-    {
-        # Checking if category exists
-        Write-Host "    Checking if category exists"
-	    $caturi = "/beta/deviceAppManagement/mobileAppCategories/$($category.id)"
-	    $defCategory = Get-MsGraphObject -Uri $caturi
-        if (-Not $defCategory)
-        {
-            Write-Error "Can't find the category $($category.displayName)." -ErrorAction Continue
-            continue
-        }
-
-        # Getting existing categories
-        Write-Host "    Getting existing categories"
-	    $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories"
-	    $actCategories = Get-MsGraphCollection -Uri $uri
-        $isPresent = $actCategories | Where-Object { $_.id -eq $category.id }
-        if (-Not $isPresent)
-        {
-            # Adding category
-            Write-Host "    Adding category $($defCategory.displayName)"
-	        $uri = "/beta/deviceAppManagement/mobileApps/$appId/categories/`$ref"
-            $body = "{ `"@odata.id`": `"$AlyaGraphEndpoint$caturi`" }"
-	        $appCat = Post-MsGraph -Uri $uri -Body $body
-        }
-        else
-        {
-            Write-Host "    Category $($defCategory.displayName) already exists"
-        }
-    }
-
-    # Configuring assignments
-    Write-Host "  Configuring assignments" -ForegroundColor $CommandInfo
-
-    # Getting existing assignments
-    Write-Host "    Getting existing assignments"
-	$uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
-	$actAssignments = Get-MsGraphCollection -Uri $uri
-    $cnt = 0
-    foreach ($assignment in $assignments)
-    {
-        $cnt++
-        Write-Host "      Assignment $cnt with intent $($assignment.intent) and target $($assignment.target)"
-        $fnd = $null
-        foreach ($actAssignment in $actAssignments)
-        {
-            #TODO better handling here
-            if ($actAssignment.intent -eq $assignment.intent -and $actAssignment.target."@odata.type" -eq $assignment.target."@odata.type")
-            {
-                $fnd = $actAssignment
-                break
-            }
-            if ($actAssignment.intent -in @("required","available") -and $actAssignment.target."@odata.type" -in @("#microsoft.graph.allLicensedUsersAssignmentTarget","#microsoft.graph.allDevicesAssignmentTarget"))
-            {
-                $fnd = $actAssignment
-                break
-            }
-        }
-        if (-Not $fnd)
-        {
-            Write-Host "      Assignment not found. Creating"
-            # Adding assignment
-            Write-Host "        Adding assignment $($assignment.target."@odata.type")"
-	        $uri = "/beta/deviceAppManagement/mobileApps/$appId/assignments"
-            $body = $assignment | ConvertTo-Json -Depth 50
-	        $appCat = Post-MsGraph -Uri $uri -Body $body
-        }
-        else
-        {
-            Write-Host "      Found existing assignment"
-        }
-        #TODO Update
-    }
-
-}
-
-#Stopping Transscript
-Stop-Transcript
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "OpenVPN" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "OpenVPN"
 
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAGtnNPO3aWMBCU
-# l+rjMhKxGbfYHb+SiZai+iEG+xp5paCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB4bOHDkEo/w6Jc
+# gcHoS/GBLBmzRO5yQRL1rqxUjhwARqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -415,23 +162,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIWRAY7F
-# 5DwBH+BhmLdT3r8okTI4Jpuuf+VmNbnV/2hQMA0GCSqGSIb3DQEBAQUABIICADQq
-# sQhz74hEp18q012jHSmFbXb/Cv2/hH87ru+0s+a+BF3CBWDJoBzcCQKfu1eRL+Uv
-# /aWfXDht+dMTKChL7sgk/EEoGcQNaD+5g788rtzkD187C9/bijvc3Xrvhitq7bdD
-# ZIXBLqF7gr6qZ9Ws2usap0C6VtVQXxo/7JuP6ZO8IKDPlGSlw8j7jRop8AzNFv47
-# DLoB2Xx4OVKwOdxWw7iaDwJY11TSLT7f9qUtGm//BDr05cmOr+zUPu0FVYrcaeO9
-# kO+Nh+rTDBU5z7t/oWlBaZQH5Zd4EXduRCvXyt8WG7mRJWIwAFle3Cbo/6jDuYh1
-# pwGVmWUhTp6eUxuHQ7s1HMW8XWPL1nDFGGm10EaYzh8MP+6Vre87vfNePGIuB2vE
-# MeVqKVhgGTcrTg024HmQBlGQ5om4aJy8X1Vrumx4I0oP4fv00RtPk8G98g6QE9fn
-# dL6rGTIu+PLPBBQXOoPilrB8zheP9bWdcnwBfqt6TJjAX1J1/1yqmbUioky6Sbux
-# 1VrJArzW/AXuLcIZV1/DlTn7MNicBQUQp+jrcwUiiTgE+jmplgQVYP1Ei48fMJVz
-# nVBFSTMN3dFMTPHnnGgRNP+ye4RGZ/uxVLJX4vysMkWuCcv6Owh0bViUkHXRpCpa
-# TgKR/pyPtzgt1FaplmZtbUKrikjYh6E9CTuOm+15oYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICiYfAJ/
+# C3F8fwma6SrHZXFYT3SE0gdqwy0JckOjNaBQMA0GCSqGSIb3DQEBAQUABIICAKPW
+# R6LfR4RnZJ6EcA8Ip2yx32M3JZVKRWC5TT9h0QTp3ge7nuOVRuHxBk/95WAZyajZ
+# 5TSNEq7hzN/t9CZoxYg9BM6wUI3Dy2xL26+aFhNj/wJ9Vz9QDLLSxXeunsdGE/h5
+# kKclczhr/JZr1kd9nG+e0CuhbeJuRvJqVl0AnDebSuSSVQX3sH/IFDe2Jw7kNMYW
+# k4eXJ7NFjbygoh3688RRGjf1yT0uBa3kafCpJWIuT7z7eDR+yfrF9AEfPkWEg3Vp
+# Y4zsM3GblpFPDOtfkD4KPykcV6gWm7K2RpwY687wHMZqNzZZQW4scEP+IVfw2Kuk
+# mc3ymIwac2zJcWlCqdkxjLVPnKw44AHYPSMzoO0c85LJ0fT26Za0AuqwUC+Q3WPW
+# AAlSKwBssou/bnE0Es6Smnfte3QejN+pUYtHnRmuGeN6NXXj9Wzq8XJZIPm8APdM
+# Qya8v9duF4+tKksqF24AIp8/lDq1UCWeZdoB5FpRRvRee21281ugaf1b3IvMsmoX
+# 7VQd+Hmz6iWKoS1V/k/8BYG+NlU5KTqwqS3uB8SZmRxTofZ+EKfqUi3GwwoZJ+o3
+# Jbagd2Byy7dNls8cDDA1nFI+CW4noZ2UVR7Jw9g6ST4fck1IrQnnl8sh4p6p2EWP
+# OU2rjKReCNI1vQnHMiaIs7FHmoyPA2CaZVHvgCzgoYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCBftsQZyThWb296phlqgu7jhA8KlfJGFVEGHBTxMu2BuwIUXjRT
-# hwnUR2BVvIW1LYqlirkJqBsYDzIwMjUwMjI4MTUwNzIwWjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCCAvvy+1qWWHvnfqQ5Outy1LiK2mk8EegSFlrCSxXEXYAIUSm0/
+# cyU7k6cL9/+dcjukqFsSCocYDzIwMjUwMjExMjIxMDUxWjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -536,18 +283,18 @@ Stop-Transcript
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIPMomyXINjbsm49fJ45s8JCBxp9ikaCB
-# JCa4KyO+mr2cMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIM9x72edRmZ2DGYgmD4JdtSVQLOR32Bs
+# ku4DqEfv7OtJMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAbQ3hkwliMAf0gvWy07ZMlLXsF+62IhRgftE0poUbkMED
-# LRHJ2WCwrKfLE7iWgIA1WizWJCyZDiPbUDSmCMcI+Nv+gktc5ynslZ/fCNu93KX2
-# o6eoZYhlSGUqwKy0uvw4ZgiH/EXZ9xlGur7Yzv043Pztfzh/b/5q8ZT+p5ivZgUe
-# zrY3/Q8t/JvIWVJ+UYmtzwHh8IzvKWczJokk/cXx/tDijdqcubm4X4Dh8/dufgVP
-# NMpbYekadMXVtOK/hHVWFZISUB6UG09jg64y7hY4zH01ZwIKxMUrwm8WTuEx3+15
-# U/shyxKHgSRDbb3KHw9xTB9esg1aIFGsIG2MEFPUIBczM84pSxWM5wOxXomxm9YD
-# dnx2U8HicT5FqCHldXxHw7jJsDGxxWAIkbq15sgLIQD2ndvVKfhM4jDL9+K0Sq3Q
-# 9YLzHsb+HETIjPavPb8v+/WFG2RyGKW694YOm2FOKb79zKbnemTRePEQ/nxtLaHt
-# pMhmCQi6QkQwQa7jOen1
+# KoZIhvcNAQELBQAEggGADMkas9Xw13MsGA4hB6ZB+uI/Eh6q34JlTN3d26zG45YS
+# caOQ6zB8pbeJ4I6r5vNrm/X7yDvYTKwmTFrAamOLIf+Euw464Ee6ZC9tA8qTTs8d
+# O6s8ruItRHnPRuE2Sghfyfe0F7y94P7cFWZ2ZbZUAVGBWeRTUGtcyM1a80U+tUZ1
+# P80hkeOclgVfh6C+uMDVuoW1f8EqMrCB/2laxv+JEbnTVzRL8pWUOUPxAKS3oDB1
+# ppr4vWVaMLddUbVh7XwPqMHFizDrq4ufLqfzaf4qnDC2fm9/8dNa4P0C4RofGQyh
+# SgkjA3dhYxlKVD8spMiG3tAUvQQCx2IrchaE2JQJEtZoXrNyIFFpjpYyUvLttWGI
+# XVzR/9rM6D4gUk2AjocU+db5lT4EXnuW/sm6zQqFrIV4aiC+efkpZzbpXKdEmtEL
+# 9ZMQcubrzp6CLycvkanuGEnNK6ZOjLczgqnroPKr6iMSRZlHt3J0F8qu/E7r3I6d
+# zzV35qTJ5LRL3Hyeji5J
 # SIG # End signature block
