@@ -33,12 +33,14 @@
     01.12.2020 Konrad Brunner       Initial version
     24.12.2022 Konrad Brunner       Added cname and more additionalCopies 
     28.06.2023 Konrad Brunner       Added new record names and AAAA 
+    13.03.2025 Konrad Brunner       New DNSSEC records, better additional domain handling, fixes
 
 #>
 
 [CmdletBinding()]
 Param(
-    [string]$fromServer = $null
+    [string]$fromServer = $null,
+    [string]$onlyDomain = $null
 )
 
 #Reading configuration
@@ -56,12 +58,14 @@ $additionalCopies = @(
     "_carddav._tcp",
     "_carddavs._tcp",
     "_dmarc",
+    "_domainconnect",
     "_ischedule._tcp",
     "_msradc",
     "_sip._tls",
     "_sipfederationtls._tcp",
     "_xmpp-client._tcp",
     "_xmpp-server._tcp",
+    "##DOM##._report._dmarc",
     "alt",
     "autoconfig",
     "autodiscover",
@@ -72,6 +76,7 @@ $additionalCopies = @(
     "enterpriseregistration",
     "cam",
     "cgi",
+    "cms",
     "control",
     "exchange",
     "ftp",
@@ -88,18 +93,25 @@ $additionalCopies = @(
     "pop3",
     "selector1._domainkey",
     "selector2._domainkey",
+    "he215430._domainkey",
     "service",
     "services",
     "shop",
     "sip",
     "smtp",
     "spf",
+    "support",
     "webmail",
     "wvd",
     "www",
     "webcam",
     "xas",
-    "xwa"
+    "xwa",
+    "migrate",
+    "suport",
+    "test",
+    "testhomepage",
+    "homepage"
 )
 
 # Checking modules
@@ -136,24 +148,32 @@ if (-Not $ResGrp)
 
 # Checking main DNS zone
 Write-Host "Checking main DNS zone" -ForegroundColor $CommandInfo
-$dnsZone = Get-AzDnsZone -Name $AlyaDomainName -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
-if (-Not $dnsZone)
+if ([string]::IsNullOrEmpty($onlyDomain) -or $onlyDomain -eq $AlyaDomainName)
 {
-    throw "DNS zone not found. Please create first the DNS zone $AlyaDomainName"
+    $dnsZone = Get-AzDnsZone -Name $AlyaDomainName -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
+    if (-Not $dnsZone)
+    {
+        throw "DNS zone not found. Please create first the DNS zone $AlyaDomainName"
+    }
 }
 
 # Checking additional DNS zones
 Write-Host "Checking additional DNS zones" -ForegroundColor $CommandInfo
+$additionalDnsZones = @()
 foreach($zone in $AlyaAdditionalDomainNames)
 {
-    $addDnsZone = Get-AzDnsZone -Name $zone -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
-    if (-Not $addDnsZone)
-    {
-        throw "DNS zone not found. Please create first the DNS zone $zone"
+    try {
+        $addDnsZone = Get-AzDnsZone -Name $zone -ResourceGroupName $ResourceGroupName -ErrorAction Stop
+        $additionalDnsZones += $addDnsZone
+    }
+    catch {
+        Write-Warning "DNS zone $zone not found. Please create it first."
+        $additionalDnsZones += "NotFound"
     }
 }
 
-# Checking DNS server
+# Checking main DNS server
+Write-Host "Checking main DNS server" -ForegroundColor $CommandInfo
 if (-Not $fromServer)
 {
     $nameServer = Resolve-DnsName -Name $AlyaDomainName -Type NS -DnsOnly -NoHostsFile
@@ -162,6 +182,15 @@ if (-Not $fromServer)
 else
 {
     $fromDnsServer = $fromServer
+}
+
+# Checking additional DNS server
+Write-Host "Checking additional DNS server" -ForegroundColor $CommandInfo
+$additionalFromDnsServers = @()
+foreach($zone in $AlyaAdditionalDomainNames)
+{
+    $nameServer = Resolve-DnsName -Name $zone -Type NS -DnsOnly -NoHostsFile
+    $additionalFromDnsServers += $nameServer[0].Server
 }
 
 # Function definitions
@@ -173,32 +202,59 @@ function CopyDomain
         [string]$toServer
     )
     Write-Host "Copying domain to zone: $domainName" -ForegroundColor $CommandInfo
-    $records = Resolve-DnsName -Name $domainName -Type All -Server $fromServer -DnsOnly -NoHostsFile
     $allRecords = @()
+    $records = Resolve-DnsName -Name $domainName -Type All -Server $fromServer -DnsOnly -NoHostsFile
+    foreach($record in $records)
+    {
+        $allRecords += $record
+    }
+    $records = Resolve-DnsName -Name $domainName -Type MX -Server $fromServer -DnsOnly -NoHostsFile
+    foreach($record in $records)
+    {
+        $allRecords += $record
+    }
+    $records = Resolve-DnsName -Name $domainName -Type TXT -Server $fromServer -DnsOnly -NoHostsFile
+    foreach($record in $records)
+    {
+        $allRecords += $record
+    }
+    $records = Resolve-DnsName -Name $domainName -Server $fromServer -DnsOnly -NoHostsFile
     foreach($record in $records)
     {
         $allRecords += $record
     }
     foreach($additionalCopy in $additionalCopies)
     {
-        $records = Resolve-DnsName -Name ($additionalCopy+"."+$domainName) -Type All -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
+        $recName = $additionalCopy.Replace("##DOM##", $domainName)+"."+$domainName
+        $records = Resolve-DnsName -Name $recName -Type All -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile -ErrorAction SilentlyContinue | Where-Object { $_.Section -eq "Answer" }
         $allRecords += $records
     }
     foreach($record in $allRecords)
     {
-        Write-Host "Record $($record.Type) Name:$($record.Name)" -ForegroundColor $CommandInfo
+        $recordType = $record.Type
+        if (-Not $recordType) { $recordType = $record.QueryType }
+        Write-Host "Record $($recordType) Name:$($record.Name)" -ForegroundColor $CommandInfo
         try
         {
-            switch($record.Type)
+            switch($recordType)
             {
                 "SOA" {
                     $fromRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Type -eq "SOA" }
                     $toRecord = Resolve-DnsName -Name $record.Name -Type SOA -Server $toServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Type -eq "SOA" }
-                    Write-Warning "  We do not update SOA records. Please check difference and update by hand!"
+                    Write-Warning "  We do not update SOA records. Please check difference and update by hand if required!"
                     Write-Warning "  From record:"
                     Write-Host (($fromRecord | Format-List | Out-String).Trim())
                     Write-Warning "  To record:"
                     Write-Host (($toRecord | Format-List | Out-String).Trim())
+                }
+                "NS" {
+                    Write-Warning "  We do not update NS records. Please check difference and update by hand if required!"
+                }
+                "RRSIG" {
+                    Write-Warning "  We do not yet support RRSIG records."
+                }
+                "NSEC" {
+                    Write-Warning "  We do not yet support NSEC records."
                 }
                 "MX" {
                     $fromRecord = Resolve-DnsName -Name $record.Name -Type MX -Server $fromServer -DnsOnly -NoRecursion -NoHostsFile | Where-Object { $_.Section -eq "Answer" }
@@ -246,7 +302,10 @@ function CopyDomain
                     $ttl = 3600
                     foreach($from in $fromRecord)
                     {
-                        $value.Add((New-AzDnsRecordConfig -Value $from.Strings.Trim())) | Out-Null
+                        foreach($string in $from.Strings.Trim())
+                        {
+                            $value.Add((New-AzDnsRecordConfig -Value $string)) | Out-Null
+                        }
                         $ttl = $from.TTL
                     }
                     if (-Not $toRecord)
@@ -390,10 +449,8 @@ function CopyDomain
                         Set-AzDnsRecordSet -RecordSet $recSet -Overwrite
                     }
                 }
-                "NS" {
-                }
                 default {
-                    Write-Error "Record type $($record.Type) is not yet implemented!"
+                    Write-Error "Record type $($recordType) is not yet implemented!"
                 }
             }
         }
@@ -406,18 +463,30 @@ function CopyDomain
 
 # Copying main DNS zone
 Write-Host "Copying main DNS zone" -ForegroundColor $CommandInfo
-$toDnsServer = $dnsZone.NameServers[0]
-Write-Host "  fromDnsServer: $fromDnsServer" -ForegroundColor $CommandInfo
-Write-Host "  toDnsServer: $toDnsServer" -ForegroundColor $CommandInfo
-CopyDomain -domainName $AlyaDomainName -fromServer $fromDnsServer -toServer $toDnsServer
+if ([string]::IsNullOrEmpty($onlyDomain) -or $onlyDomain -eq $AlyaDomainName)
+{
+    $toDnsServer = $dnsZone.NameServers[0]
+    Write-Host "  fromDnsServer: $fromDnsServer" -ForegroundColor $CommandInfo
+    Write-Host "  toDnsServer: $toDnsServer" -ForegroundColor $CommandInfo
+    CopyDomain -domainName $AlyaDomainName -fromServer $fromDnsServer -toServer $toDnsServer
+}
 
 # Copying additional DNS zones
 Write-Host "Copying additional DNS zones" -ForegroundColor $CommandInfo
 foreach($zone in $AlyaAdditionalDomainNames)
 {
-    $addDnsZone = Get-AzDnsZone -Name $zone -ResourceGroupName $ResourceGroupName -ErrorAction SilentlyContinue
-    $toDnsServer = $addDnsZone.NameServers[0]
-    CopyDomain -domainName $zone -fromServer $fromDnsServer -toServer $toDnsServer
+    if ([string]::IsNullOrEmpty($onlyDomain) -or $onlyDomain -eq $zone)
+    {
+        $idx = $AlyaAdditionalDomainNames.IndexOf($zone)
+        $fromDnsServer = $additionalFromDnsServers[$idx]
+        if ($additionalDnsZones[$idx] -ne "NotFound")
+        {
+            $toDnsServer = $additionalDnsZones[$idx].NameServers[0]
+            Write-Host "  fromDnsServer: $fromDnsServer" -ForegroundColor $CommandInfo
+            Write-Host "  toDnsServer: $toDnsServer" -ForegroundColor $CommandInfo
+            CopyDomain -domainName $zone -fromServer $fromDnsServer -toServer $toDnsServer
+        }
+    }
 }
 
 Write-Host "`n`nMore information about the domain: https://dnsdumpster.com/`n`n" -ForegroundColor $CommandSuccess
@@ -428,8 +497,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBY0b7jkyFnCUc5
-# JzEqhVEtxar5AM1wluMwUdoTbfLXQKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAzNmsiT1+em5cj
+# +RdLE8rPN+hYnrCvk447NSe9NLDJ/aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -543,23 +612,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIP4i9flA
-# YY1+sEnRXe2su26GBKvP8ULMDqR2WBVT4k+NMA0GCSqGSIb3DQEBAQUABIICAF2w
-# B30a5e3AZCioi8PHbQVuyVcu7RzFo22sgmCprUk0qA03XBApXu1qE1Ve0QOR3v/v
-# 2zS+7zt0Og3C/WuB0OdvlGFOanpqiOSRgWqkJQsGx1PpNheKIcnJkl65YRIOnyXf
-# sDXQej3+F31ULndGT4Z0JPj3Msu+80n4DRUnLuPkFM5fm0tX/mtxBAbhUT8u/vhs
-# iExfSRMd9DhgS5OUPNOLtHdVRUHQ4aOT8cDAAg+eGt3ifqHm9AVGBGGTmnm8ZKYJ
-# Z5toHdkZPEjH3STmilgOSp5ZN/Bxkm3O1hxLUvBTMhCycOZPQMjaNMjcS2WvrUgR
-# v7jYeoIl98brBwfnSwZUvDFCfYsJLUDRTRbTYghyXf/7zyMlEyviTPuwhw1FxC16
-# 4VzEyaC5+svRNTD3Po4p751IMolKnN2P2OXxuPUlVVKTi08nxUQS9z3YWIoyuUGi
-# ijO73YAeZZPSiBh0nKqvL/sL7q4QVy3IdGKPekZ/4ycfeaKoWmOe/mGtWfgZueZh
-# udkPoZwDC/iJ04n3xkDFgM0MYacCSJBMVvAXtXnMypeFTbzri8dHWM+DhWP33t0J
-# PhqSIgtTcFxn9PMdx0bWEg0COWR4Z5QrWn8A4sVpQ6UITy5iQ/V9OZI5POm/cUf6
-# ad8vxeeS7GgaxEAqhpGKzWxz5Qw9VeMmZg4YNGOxoYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMlAE1EX
+# JWZCE0r8byxZ6II9v3MyOEse1SE71XsR12NJMA0GCSqGSIb3DQEBAQUABIICAEYj
+# 1bQoWFdbn3kY53KPwntO2cjsI7vAbEXAy/rKQCk2ygBkIltHbjIq83tt3xaWat76
+# 1QxDYb2MNi/xNNUMF63cXH7dqDOIF51IrwjCu7E4+9sD1saPg95WV1Aw5/thCEa2
+# 59rBIapWL2M9dGpk4updXBGok2939HyDGxeKDzeaGBiVdcWf5wn8nLJW6uihgVuJ
+# jfPN8u9xOGF+w2aRKqFJ8j3/JiZkc9JsXdXm0KepZIDjKfB05jSJD83nJ4uLwNr4
+# ybqMDPMkCHz3u8Agar7jKGDQMRov9Rg2faa+qneNysHvqm1fsIRhGPILfF07dD3A
+# Obq3PnSMD4G3VEHsUfOsQu2PVkb2YNKFTcrmjGcgJQJXCiTKD0SvcPCB3uPr8JzY
+# sGTWOTXZ0GVURjt3pEZ8hm987j6o5vvGm8O4M66K7qBjvGZvYaIHvzx2XzCL8oeY
+# t/AqUhBrD5E4NDSl9acrT5DElroGiR0oFcP+DiQCXcTx1YKvuO2gsKe7JUKDjy0y
+# AY4+vPepc8ak4+JgrHMis/qIoUML1qUAE0bqv0RfCaO7FeA4HzPbUkKDPPbBQjTg
+# P00ehfgc+Pm9e7psXr06W+fkeZLe1mrB1Ph4BFg9TYdl+ZDkGfkDG49DGMKgnC6r
+# NiyDHkOnmT7hImVdr+hmbHGe0RE+dstdhFdXRFdVoYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCBG4qfI7X8BNVhlPm4//wi0cW+qNOXHdWyi1hJmtdCRUgIUHm2N
-# KxObHW0VM/Ck8OwF88fqpGAYDzIwMjUwMjA2MTkyNTIxWjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCBOVQacj9IYGtRBczQjcuoNbb3vbYTuHyJpZRMB4pn/BwIUGbhB
+# OgMLYLf/rRIfqNdnlZQJkdUYDzIwMjUwMzE3MTczNTAwWjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -664,18 +733,18 @@ Stop-Transcript
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIE3RIb5sKy3a4j9VgrZbW8nMx9rq+QVk
-# szpyPt6AXd8bMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIPTyP2b0e7JZSY1xHS15eVAuUtl71D08
+# Ul9IBTV3MM09MIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAzPm5zZdw/pD5Ir4GxE+p1GP1y7KDrDi0SqkgD3otBUxV
-# pIGjPwBCufCBLMI8wb7hkaQBOjg/lodZRBlJhHKpGF0IWJvkDLaj2cFwy3btHix4
-# f1eyL9QXBCtOBdjsPKcEYK/8h2B7MldKQfEeSxr4HxxE8hasDi5ak954ANUYsSfA
-# RfYh+vRsuIGjzuCaqKqv+sOZq0Ex/Kxek+V1DZ6WnGO85P7eK5SAOKH5QMEOgzVK
-# d43aJ4FN89Oej/UzWAh3T1A40MNLBrp+H23iprDvE2Iez0rw/gU1wxB7Xb6A4fGV
-# aZQBebLdn8lo4HWr0dUaSmyF3d9x1Uud5T6h9mXx0BDQsjlsUlnppVxZRNL0dloF
-# 9dK8rRHRTSGO9n1AcqKEP0SvgvnlXZNIvnPX/xxsiltVy82yXfUjuSKSYA8JS4kB
-# 0uUNQKZa/Y7yFU8zdUQMHajTBeh6doqYnnQg185reIZVGAmdGOjf5CxaGqAbLprO
-# YiDyug+F+jxWEZ5XK1pb
+# KoZIhvcNAQELBQAEggGALGM5+up4hgdRcGRXkgdW97eMWUEuCrabwtXhPFVTRHlT
+# B2+Quvoqn8eAIfiRtKcDxdajrvB2rT8k1gD+1EJklZE+W9eMdKzFDnY7EbcP7pwZ
+# AbOh7jcHSsCKeOd9/mSqynkrV5wryjamEwUyqogzmsiMJmY3uIJ2OHVKfxffSw8+
+# 9L0XZfuJnmUEFZW8ivcWnOP1pqvbX2xOcmevCIx9oA+T7mOEFhNtPMe6IxgIdgaa
+# HACC7tBh7yIMZjrPzZvLlcnssOaWg0f+rY8Ehv/2PP93FFBjQ5fzk00Qb/Wzj9By
+# R8Q6AXJXVVjBnHe7RSnGAqD2swtFy/eLnHFMs5g3jV26fFBPuZU1n1LyktZiq6Ld
+# AoGqiaANAkoZ9bNfBNi77NSJJ85SuGs/Vk+HaD0hxYnU9wfbwOJVWmP60M3Ed9Kv
+# i3dkS15XfbG4sdf2H8S/TZ7Naqv7WwcraNeLGZ9/eDoTHoSsg6auIu1ldIddYmea
+# 3xY86DJ9B7O25FGUyTwa
 # SIG # End signature block

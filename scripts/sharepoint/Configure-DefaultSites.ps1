@@ -46,7 +46,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-DefaultSites-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\data\sharepoint\Configure-DefaultSites-$($AlyaTimeString).log" | Out-Null
 
 # Constants
 if ($hubSitesConfigurationFile)
@@ -119,6 +119,7 @@ foreach($siteDef in $siteStrcuture)
 
     & "$($AlyaScripts)\sharepoint\Create-Site.ps1" `
         -title $siteDef.Title `
+        -siteUrl $siteDef.Url `
         -description $siteDef.Description `
         -hub $siteDef.Hub `
         -siteDesignName $null `
@@ -130,6 +131,8 @@ foreach($siteDef in $siteStrcuture)
         -overwritePages $overwritePages `
         -hubSitesConfigurationFile $hubSitesConfigurationFile `
         -siteOwners $AlyaSharePointNewSiteCollectionAdmins `
+        -groupOwners $siteDef.GroupOwners `
+        -groupMembers $siteDef.GroupMembers `
         -headerLayout $siteDef.HeaderLayout `
         -headerEmphasis $siteDef.HeaderEmphasis `
         -quickLaunchEnabled $siteDef.QuickLaunchEnabled
@@ -141,8 +144,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBcXqnyoSdoDW95
-# bScJCAberzZciEmBAgxAnu/wQ4MOOKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAYjirbH/6Kdshb
+# 9NASrrtgLKFNfXNeoSd7FH8HHlQewqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -256,23 +259,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILaITGJx
-# A8131fglluOC0J8LFm5HRk3Qh6e2ATj3B6bbMA0GCSqGSIb3DQEBAQUABIICADvm
-# foISz2i+6Lv+3d0FtZiR4Y+wP7fbosq0tJG7QPUV+GMkGTPM/dXNSv1BtIGS4dU+
-# ViDEcRCU3SKlWcvvzn4mN4dzCMrPQgJqZpSJjf7Hfdi1Z+l2P/UHOqHiG4z/EqlU
-# mb+HLjjplSeAloQIa3ykpWz5vVt5I/RTXKRj69al/Pmfd1x6wKzHreCy9ylqXyxd
-# aU6H0H3vf/FP2jgmfADsUJOMHGqAbW3qoJYhIB5ht+CMn5XBzdbJtH+u9E9jslzE
-# kVJnsgn653OjbK1TXmvQ/MNzj7khMJDuB1KU52I1FTu+XlWiwzLEO2CrmjxXBAbI
-# 7+2IH7yCbObyC1f4OuGaS5L/ZzQq1Dmy+91fHO8ZesZ30Di+/gQt1/x0Nd/PpJji
-# GscvegmBzu5qeSPNwo3kSiDsum9pfXS7HQHZqAe7MCiKJUJofPKUbOX2FhB488YN
-# cgb6EQbhJHlS1QSAUdWqUpEjB+7V/xuqOIPKK6jppPWm1OhT7lI5TFgk7V5vb4dT
-# 63YKerN2+nVVHh+gBjoGaEGDSCMWXulcI9N/G3Yv+WedYiSsQTAeVl/LloYWAnIj
-# PYkleuHxk81J3Z65EVk+EzrYvRQ8BOwyPzQvZefhuSNREAsiHenzIyO+U90fVUF2
-# zIiUpc3/44PTV+wqibc3zWKuaNOW0uQoOhz9J5BeoYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGIz0Xjy
+# 6Psa5qq+4C6uQLG19mqiu90jyjoor39j0rC0MA0GCSqGSIb3DQEBAQUABIICACoJ
+# Aal75p06GCJ4KSCvjtAk8SaH1HNZz8S5XE6rt5XNO5RTXFT7xFCdMWIkuD3VUAoD
+# F6V3q5ZOmVKWDbMMJ1Z/Ye/UIJhPqmsFTlUPFYioSlmUvHZ1+SOm+5GBFzGedauw
+# hF/MpL1LPrtFRWDpfxDsq8RW8zFZ0V8jqaWRqrv8tLAdthVs9Y5OEvSeJyXOo+JZ
+# tgUx+B/nd/+FndeHXyuFsOsvsH9kCyTMnU2G8C4a1IiOrJWVsdDPJxR4rWT56l5k
+# N2awMwrA8A8oEzJS4iDWGLzLZ8ZU4S5b+uecFwrsBw/ES5QaBXywPYlqHnp1HUn8
+# LlDad5rCgao4dAxf4teWbiKZ3ieAwu26BruuR93zg6cOCGz0WpTtjdEFXXFxLypL
+# hSsuS9K5/OE44jX9OoyCGP1yNqYPMTJqhwRdy07Dz5cFI+RPpUfMRb6rkbiZJ26f
+# Zk/S3ivLmVlPDn3/pxIbCHwjUV+xH6Ye1I/zmjwZO7vaBR7rvRvOIFcJWDQ0D21m
+# vnKHXATPBB+HikGQSIT9kn+2ptGxjNl6v+UIw6CbGt445SG7i78d4z/z9AXJnPCl
+# mmMfLN7Alk9keBB+nD56Jfwm98CiGcUxKMPIQhSQ2vyw8OBWiXoU7e4pnDR1+kpU
+# qShOGA5BY3dxrcZ21NkybKEQDT2foKeZsi/xI8dNoYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCDEHib3p3/42ibLOCbQy2L298YGyPtAuyE8PoeXzTnDKwIUAUug
-# 8Xpk9BoBgMZWOw87fN02yg4YDzIwMjUwMjA2MTkzMjEyWjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCCshokGkFy1SWAv3dpv+bF7ow+AF8xrnKSNLBtWjtR7BAIUUliQ
+# QYVe6FLnNwpUV8Yw1SJhA0IYDzIwMjUwMzA3MTAyMTM5WjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -377,18 +380,18 @@ Stop-Transcript
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIMkuqleR8R2Nzqdn5OOceZ3ZzAdqhT8B
-# 3QQ+rE8cAjZMMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIIk0VlAoNcvUaxkBKS8fXSNNOr/L9kGI
+# aRj+5z6Fc41ZMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAGiEbJ6lpUSGpnAo33NsfNgbQyfcaNCka6KM+Rk1QaL+H
-# pXJgI2mi2sWcXfWi8OS/N8sbWvATLcoiEMMrk/5/F+cBL8cw17eTKMvaoilPukXg
-# DMjpIZpsE6yNozcltGZEgH2mXuuPeHuBN9gVqlPXc/vcLaG7B0aJMTP1AUU+955C
-# doWAe5vlmGBhc8btU7sDVk4oO6YDJygRkuaoA3BuAmnAhVxPerM+h57pFr7W/krH
-# /wbfg1XCJzkgrZkFYXl47FjFh+X5JqZtY4R4VUIC9Ll7Ui+SANTw/mbvvglGC6hw
-# nMYrcQkpieE0qmcbXMMVlho/uu9nAvCsN70YzkP7eYfTqv475iPuOW6T8PTsOg9S
-# 9HRjyFEg22rCHPuh2oronkNtN5GoCmFIwP5xxdMXRp0fuRvF/LBUa78aQPgt5EeY
-# JD7eaaaewwVZ+VYMZsQ8m9qWxb8NwGs4KBBocup7N97PE/y5rbUM3TZFhiJmTt1F
-# cEQl4aoBG3ZLrcSifYuN
+# KoZIhvcNAQELBQAEggGAqOk/ChFtpjxVKCvsFVu843dwajXU5sFQxg5tLiMR/PGM
+# OUQqN8ZRpuDT1jAvWws0Txk9yqPBUBbl1pdY1L+hmeRqNWK/S5OvyuHc4hoFCCA/
+# 0iwkgRPTPBa68GD27fi8Q4dQXp27ogMhE4RInLZ83gFVkyCysC56MHDZJr+n5Yku
+# N6T3q/dD0VOPDGgGdH04uAxXdvCDYuiEZUpFKAwuNEnPlPsyf72L1ryghahNUaq1
+# IK8VyY3aSscctXv3H6wWxLaZaytJ2v/z7mMUARZlIvsmXpWpCATlumL/ByMgxe2B
+# 5gUJCe3N51EkNeaKH7Uo70B2E6oL+Kp/XO5PqmoDE/jrKrKdUM4nlTmvk9QeUyk0
+# lJo9l1zgy2X46gp1038Z47/A/I6veFd5XerRXHaAIlZgNouvhp2q4r0lewVJEhVc
+# N+hlj7IKv1p5c+pBdSOK5ms0RB0rB/nyth5i65YOs/+uidc+5yqzu1D0iqWykXaZ
+# HnxDe5zej6K2N4aLyEym
 # SIG # End signature block

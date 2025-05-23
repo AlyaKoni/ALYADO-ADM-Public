@@ -30,261 +30,84 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    24.10.2020 Konrad Brunner       Initial version
-    20.04.2023 Konrad Brunner       Updated module list and added cleaning old once
-    16.10.2023 Konrad Brunner       Not loading modules on update
+    12.03.2025 Konrad Brunner       Initial Version
+
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory=$true)]
+    [string]$sourceGroup,
+    [Parameter(Mandatory=$true)]
+    [string]$destinationGroup
 )
 
 #Reading configuration
-. $PSScriptRoot\01_ConfigureEnv.ps1
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\04_PrepareModulesAndPackages-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Sync-Groups-$($AlyaTimeString).log" | Out-Null
 
-#Main
-$modules = @(
-	"PackageManagement", 
-	"PowershellGet", 
-	"AIPService", 
-	"Az", 
-	"Az.Accounts", 
-	"Az.ADDomainServices", 
-	"Az.Advisor", 
-	"Az.Aks", 
-	"Az.AnalysisServices", 
-	"Az.ApiManagement", 
-	"Az.App", 
-	"Az.AppConfiguration", 
-	"Az.ApplicationInsights", 
-	"Az.Attestation", 
-	"Az.ArcResourceBridge", 
-	"Az.Automanage", 
-	"Az.Automation", 
-	"Az.Batch", 
-	"Az.Billing", 
-	"Az.Cdn", 
-	"Az.CloudService", 
-	"Az.CognitiveServices", 
-	"Az.Communication",
-	"Az.Compute", 
-	"Az.ConnectedMachine",
-	"Az.ConfidentialLedger", 
-	"Az.ContainerInstance", 
-	"Az.ContainerRegistry", 
-	"Az.CosmosDB", 
-	"Az.DataBoxEdge", 
-	"Az.Databricks", 
-	"Az.DataFactory", 
-	"Az.DataLakeAnalytics", 
-	"Az.DataLakeStore", 
-	"Az.DataProtection", 
-	"Az.DataShare", 
-	"Az.DeploymentManager", 
-	"Az.DesktopVirtualization", 
-	"Az.DesktopVirtualization.Utility",
-	"Az.DevCenter", 
-	"Az.DevTestLabs", 
-	"Az.Dns", 
-	"Az.DnsResolver", 
-	"Az.ElasticSan", 
-	"Az.EventGrid", 
-	"Az.EventHub", 
-	"Az.FrontDoor", 
-	"Az.Functions", 
-	"Az.HDInsight", 
-	"Az.HealthcareApis", 
-	"Az.HealthDataAIServices", 
-	"Az.IotHub", 
-	"Az.KeyVault", 
-	"Az.Kusto", 
-	"Az.LogicApp", 
-	"Az.LoadTesting", 
-	"Az.MachineLearning", 
-	"Az.MachineLearningServices", 
-	"Az.Maintenance", 
-	"Az.ManagedServiceIdentity", 
-	"Az.ManagedServices", 
-	"Az.MarketplaceOrdering", 
-	"Az.Media", 
-	"Az.Migrate", 
-	"Az.Monitor", 
-	"Az.MonitoringSolutions", 
-	"Az.MySql", 
-	"Az.Network", 
-	"Az.NetworkCloud", 
-	"Az.Nginx", 
-	"Az.NotificationHubs", 
-	"Az.Oracle",
-	"Az.OperationalInsights", 
-	"Az.PolicyInsights", 
-	"Az.PostgreSql", 
-	"Az.PowerBIEmbedded", 
-	"Az.PrivateDns", 
-	"Az.RecoveryServices", 
-	"Az.RedisCache", 
-	"Az.RedisEnterpriseCache", 
-	"Az.Relay", 
-	"Az.ResourceMover", 
-	"Az.ResourceGraph", 
-	"Az.Resources", 
-	"Az.Security", 
-	"Az.SecurityInsights", 
-	"Az.ServiceBus", 
-	"Az.ServiceFabric", 
-	"Az.SignalR", 
-	"Az.Sql", 
-	"Az.SqlVirtualMachine", 
-	"Az.StackHCI", 
-	"Az.StackHCIVM", 
-	"Az.Storage", 
-	"Az.StorageMover", 
-	"Az.StorageSync", 
-	"Az.StreamAnalytics", 
-	"Az.Support", 
-	"Az.Synapse", 
-	"Az.TrafficManager", 
-	"Az.Websites", 
-	"Az.Workloads", 
-	"AzTable", 
-	"DataGateway.Profile", 
-	"DataGateway", 
-	"ExchangeOnlineManagement", 
-	"ImportExcel", 
-	"Microsoft.Graph", 
-	"Microsoft.Graph.Authentication", 
-	"Microsoft.Graph.Applications", 
-	"Microsoft.Graph.Bookings", 
-	"Microsoft.Graph.BackupRestore",
-	"Microsoft.Graph.Calendar", 
-	"Microsoft.Graph.ChangeNotifications", 
-	"Microsoft.Graph.CloudCommunications", 
-	"Microsoft.Graph.Compliance", 
-	"Microsoft.Graph.CrossDeviceExperiences", 
-	"Microsoft.Graph.DeviceManagement", 
-	"Microsoft.Graph.DeviceManagement.Actions", 
-	"Microsoft.Graph.DeviceManagement.Administration", 
-	"Microsoft.Graph.DeviceManagement.Enrollment", 
-	"Microsoft.Graph.DeviceManagement.Functions", 
-	"Microsoft.Graph.Devices.CloudPrint", 
-	"Microsoft.Graph.Devices.CorporateManagement", 
-	"Microsoft.Graph.Devices.ServiceAnnouncement", 
-	"Microsoft.Graph.DirectoryObjects", 
-	"Microsoft.Graph.Education", 
-	"Microsoft.Graph.Files", 
-	"Microsoft.Graph.Financials", 
-	"Microsoft.Graph.Groups", 
-	"Microsoft.Graph.Identity.DirectoryManagement", 
-	"Microsoft.Graph.Identity.Governance", 
-	"Microsoft.Graph.Identity.Partner", 
-	"Microsoft.Graph.Identity.SignIns", 
-	"Microsoft.Graph.Intune", 
-	"Microsoft.Graph.Mail", 
-	"Microsoft.Graph.Notes", 
-	"Microsoft.Graph.People", 
-	"Microsoft.Graph.PersonalContacts", 
-	"Microsoft.Graph.Planner", 
-	"Microsoft.Graph.Reports", 
-	"Microsoft.Graph.SchemaExtensions", 
-	"Microsoft.Graph.Search", 
-	"Microsoft.Graph.Security", 
-	"Microsoft.Graph.Sites", 
-	"Microsoft.Graph.Teams", 
-	"Microsoft.Graph.Users", 
-	"Microsoft.Graph.Users.Actions", 
-	"Microsoft.Graph.Users.Functions", 
-	"Microsoft.Graph.WindowsUpdates", 
-	"Microsoft.Graph.Beta", 
-	"Microsoft.Graph.Beta.Applications", 
-	"Microsoft.Graph.Beta.BackupRestore",
-	"Microsoft.Graph.Beta.Bookings", 
-	"Microsoft.Graph.Beta.BusinessScenario",
-	"Microsoft.Graph.Beta.Calendar", 
-	"Microsoft.Graph.Beta.ChangeNotifications", 
-	"Microsoft.Graph.Beta.CloudCommunications", 
-	"Microsoft.Graph.Beta.Compliance", 
-	"Microsoft.Graph.Beta.CrossDeviceExperiences", 
-	"Microsoft.Graph.Beta.DeviceManagement", 
-	"Microsoft.Graph.Beta.DeviceManagement.Actions", 
-	"Microsoft.Graph.Beta.DeviceManagement.Administration", 
-	"Microsoft.Graph.Beta.DeviceManagement.Enrollment", 
-	"Microsoft.Graph.Beta.DeviceManagement.Functions", 
-	"Microsoft.Graph.Beta.Devices.CloudPrint", 
-	"Microsoft.Graph.Beta.Devices.CorporateManagement", 
-	"Microsoft.Graph.Beta.Devices.ServiceAnnouncement", 
-	"Microsoft.Graph.Beta.DirectoryObjects", 
-	"Microsoft.Graph.Beta.Education", 
-	"Microsoft.Graph.Beta.Files", 
-	"Microsoft.Graph.Beta.Financials", 
-	"Microsoft.Graph.Beta.Groups", 
-	"Microsoft.Graph.Beta.Identity.DirectoryManagement", 
-	"Microsoft.Graph.Beta.Identity.Governance", 
-	"Microsoft.Graph.Beta.Identity.Partner", 
-	"Microsoft.Graph.Beta.Identity.SignIns", 
-	#"Microsoft.Graph.Beta.Intune", 
-	"Microsoft.Graph.Beta.ManagedTenants", 
-	"Microsoft.Graph.Beta.Mail", 
-	"Microsoft.Graph.Beta.NetworkAccess",
-	"Microsoft.Graph.Beta.Notes", 
-	"Microsoft.Graph.Beta.People", 
-	"Microsoft.Graph.Beta.PersonalContacts", 
-	"Microsoft.Graph.Beta.Planner", 
-	"Microsoft.Graph.Beta.Reports", 
-	"Microsoft.Graph.Beta.SchemaExtensions", 
-	"Microsoft.Graph.Beta.Search", 
-	"Microsoft.Graph.Beta.Security", 
-	"Microsoft.Graph.Beta.Sites", 
-	"Microsoft.Graph.Beta.Teams", 
-	"Microsoft.Graph.Beta.Users", 
-	"Microsoft.Graph.Beta.Users.Actions", 
-	"Microsoft.Graph.Beta.Users.Functions", 
-	"Microsoft.Graph.Beta.WindowsUpdates", 
-	"Microsoft.Online.SharePoint.PowerShell", 
-	"Microsoft.PowerApps.PowerShell", 
-	"Microsoft.PowerApps.Administration.PowerShell", 
-	"Microsoft.PowerShell.SecretManagement", 
-	"Microsoft.PowerShell.SecretStore", 
-	"Microsoft.Xrm.Tooling.CrmConnector.PowerShell", 
-	"MicrosoftTeams", 
-	"MSAL.PS", 
-	"MSIdentityTools", 
-	"MSOnline", 
-	"MSStore", 
-	"PnP.PowerShell", 
-	"PSWindowsUpdate", 
-	"WindowsAutoPilotIntune"
-)
-foreach($module in $modules)
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
+
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
+
+# =============================================================
+# AAD stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "AAD | Sync-Groups | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+Write-Host "Checking source group $sourceGroup" -ForegroundColor $CommandInfo
+$srcGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($sourceGroup)'" -ErrorAction SilentlyContinue
+if (-Not $srcGrp)
 {
-	try {
-		Install-ModuleIfNotInstalled $module -doNotLoadModules $true
-	}
-	catch {
-		Write-Error $_ -ErrorAction Continue
-	}
+    $srcGrp = Get-MgBetaGroup -Filter "Id eq '$($sourceGroup)'" -ErrorAction SilentlyContinue
 }
-# if (-Not $AlyaIsPsUnix) {
-#     Install-ModuleIfNotInstalled "Pscx" -doNotLoadModules $true
-# }
-Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\Microsoft.SharePointOnline.CSOM"
-Remove-OneDriveItemRecursive "$($AlyaTools)\Packages\log4net"
-Install-PackageIfNotInstalled "Microsoft.SharePointOnline.CSOM"
-Install-PackageIfNotInstalled "log4net"
-Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
-Uninstall-ModuleIfInstalled "AzureAd"
-Uninstall-ModuleIfInstalled "AzureADPreview"
-
-. $PSScriptRoot\07_CleanOldModules.ps1
-
-$modulesD = Get-ChildItem -Path $AlyaModulePath
-foreach($module in $modulesD)
+if (-Not $srcGrp)
 {
-    if ($modules -notcontains $module.Name)
+    throw "Source group $sourceGroup not found"
+}
+
+Write-Host "Checking destination group $destinationGroup" -ForegroundColor $CommandInfo
+$dstGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($destinationGroup)'" -ErrorAction SilentlyContinue
+if (-Not $dstGrp)
+{
+    $dstGrp = Get-MgBetaGroup -Filter "Id eq '$($destinationGroup)'" -ErrorAction SilentlyContinue
+}
+if (-Not $dstGrp)
+{
+    throw "Destination group $destinationGroup not found"
+}
+
+Write-Host "Getting members" -ForegroundColor $CommandInfo
+$srcGrpMembers = Get-MgBetaGroupMember -GroupId $srcGrp.Id -All
+$dstGrpMembers = Get-MgBetaGroupMember -GroupId $dstGrp.Id -All
+
+Write-Host "Adding missing members" -ForegroundColor $CommandInfo
+foreach ($member in $srcGrpMembers)
+{
+    if ($member.Id -notin ($dstGrpMembers.Id))
     {
-        Write-Warning "New module found: $($module.Name)"
+        Write-Host "Adding member $($member.AdditionalProperties.userPrincipalName)"
+        New-MgBetaGroupMember -GroupId $dstGrp.Id -DirectoryObjectId $member.Id
+    }
+}
+
+Write-Host "Removing members not in source" -ForegroundColor $CommandInfo
+foreach ($member in $dstGrpMembers)
+{
+    if ($member.Id -notin ($srcGrpMembers.Id))
+    {
+        Write-Host "Removing member $($member.AdditionalProperties.userPrincipalName)"
+        $null = Remove-MgBetaGroupMemberByRef -GroupId $dstGrp.Id -DirectoryObjectId $member.Id
     }
 }
 
@@ -294,8 +117,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCiiF6GDASXoL6K
-# pRb7ypg0dAUndn04LC+AyBnpflQ5FaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD6LYRcV/kyw3MH
+# yL5NWmaS/Y5PL+EIqFoF9TdAdU17jaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -409,23 +232,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBpyhvaG
-# yAMlZ15Tz3oOCcn3iIa+UG9Y3UpNb06l8eLtMA0GCSqGSIb3DQEBAQUABIICAG2P
-# kxzlJwZj5VVaBacbYpGy9VlsKuR0Ii0GGV6+XnEP0FHkPmVM5EGsHH83z9iz4oaE
-# WJi81rozgZvZznbl0R7sas6QRBvTkN/sP9X6DSDNALA7d1NVYilpwfvmPJBvKOis
-# fOo86BXF3Y0ktOu/wTegfbHCgt4mB7IjGuHEmbmv9+qAXyu1McxUIT2H5Fq9HnUZ
-# Lub02WLo25HKMeMhP0C0lf1ZNoWGSufP9G9arpygcVRkgQUAN27Rq+FqXgQzkEai
-# q7YLd9OpaSsj8AhUBxHQJgnNEpN50sdaRuRL1lpLhuD8CpYJ7qvEUUvn2exRhalu
-# Qm19im0ZUb6S9P3a3Hs1IDjYh5yZ3LDPH0VONVtocjKoH3uPagtIq05R2xJJSYLM
-# 6qzwfOddW5XZytc6Gz2zvc7wUZ2t39JtrHR025u6/z2K2pKFQahpi+8YGhtVX8D/
-# HkIIrRSod1MT8ZNRTkBwUZZP31upi4eWO1lKdLA5a8wZbOymAGLLXi9jFsH6su6F
-# htZh9IYNAIywbnlCB72GDJTgWRY4CPS/R4nlhJ3VL8yRTb73OucDDQz7ec7nYjgH
-# 4zst4f5RkreKyPqoMgxMmTUAn33R7lMKjwZvDt7LwneQiRV8EX+OoSmE6zDe2qJy
-# lhGN65HYXjJrms4PtuhhVciKmSq6tZDUnboB16PEoYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAMYmee4
+# 82uc8AfHC/ug8hVV8QVk2xgqGIBIbFco/uMnMA0GCSqGSIb3DQEBAQUABIICAJlP
+# lcUMhAtizS+rG6sEbalZqWi9eMA4kr3RODruRoiMkKENyCnFl4BR4kMcKM4NCw1D
+# SRGmy+WLjJEeyw/1zy1q21z+dEweSP2pOEdOkuYFRqisLMAWS17vdGcxO0C/N7VY
+# +YD9IMphsrWuX/LiurkZBmrBAS/kOlrSUFw1kKmrzKng9dpHTKC3U7TSn9bOeoBd
+# Ny4L5GrIsye7P2jSS2ROzbYMiTuA+lrGsp0MbYSjyP5wIndXX6tTZdYSNBRPs8sq
+# cS3olNMUWM8JNVyKMaEGrfg317XD3OweUI9uP0CVZx8CcTbKSf86iHVt6WIrFcWs
+# mzea4gd1Vy0towcgcPONBkjBH1XN4jB6Hupv5WQKUDLLVjiRX655K+6fp8lX++3Y
+# FfJ9nHAGuLdU2osmVOOwnNpeu6ehjTOBx5+eMktx74Z7nN/eGPcWE+O65a/m7tbp
+# JdTy3wiWud+oVZ/R5DMZ+xAxIZezzyWO3KEOdtejOde2qarRpgEN5BgwDKK1DYt0
+# g11/xLCf8j9Cxu4IqCDGUCh7K6T4Nw6TrxIy+AvfB1Pt6hOkKp31/3Qyrm16rGZk
+# xdHgWwuJO3VBHCWSA2BEkDBcow/3pl3MrZkUHi6bZMVDIOnPT8n1v2ExZbziaLQC
+# jHa67Pa9Wa8hy2eVRQs6trujfm7d3ZBxzevP803foYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCAXQzWIjAAIv6KuVQNWziSTkc6Q4ZR/wAmmuVmkVUGFpgIUbLkn
-# 22OAyGlsaXAMwDUQHfymi6IYDzIwMjUwMzEwMDkzMzU0WjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCADvbmyPFi6TXvrzTxIeVGldeLZ6h/w/qDvCcqJDc05tgIUT0Tq
+# fue91U0zkeRwERhsU5Vs45sYDzIwMjUwMzEyMTUzODQyWjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -530,18 +353,18 @@ Stop-Transcript
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIOWa+sg1nIXwQSt04dYo6+jEeoMOJt93
-# YDNEVN6e4lTIMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEII9SG4Dm4g9o0rtgzkLsEaOXuOxTjBW+
+# /eEL7geCNeNEMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAGqT7f/huAhqm/iJ+6NSakOee76yJliAZNJaZ7+F5YmWU
-# b0fsL1nzFDk666TOmjTu71SAYfxTlbqxLkaeVrSzFrBL5lnmH1r3oAMqzdW4GKrx
-# DDkbVe08LT0hq+HgC7a9nkR08GCbTaC9HctJPVQSj7BtHBX9HZ5/SKmhhjeRuDiH
-# XzJAmrXSvvmk6DkNr7l6Giez4EIqLDRXTjCKaaGYpsxdq4opH+690Zy9q9k9+1Zz
-# u1wQeUseX5SgJSptYOOCQoSPC4u17SWIyCtEgQUs3JnvS3BczalDdFsO9hA6GENN
-# 8zvqKa4fEIF8aFzslUugrOCS2RWRJSgcGER9JoeONGIncutLUkbTtZuKrS9jtRt+
-# jOa/lDYj/qZ1NCuj4G2etDAmoC2fh2PNLXQRAonSE7wwHYAojrXTf0PRxKRCMJWo
-# 4HDhBOMTT5TgxyL56wPw5uWZOJKgt6pEcO7fMJf7PxdxEK/WKxpfm2rdSmtaI+xw
-# geWCmXaiNNB9oWlyo8zD
+# KoZIhvcNAQELBQAEggGA5t2orodq2IPteincmTHQyAqmg/yeg/SRWfiIg6NJLJtS
+# j+8Xh8f39awmUX2PVZyYyM7nS/GokflHdTAInFAbQa0HJheaL0BURf/sl6QYDzYy
+# gaK1GPedLBNxF6881sDWOZQZ7DKmYz1IUFKTYZzjkWOD8Q0E0ElHY+NJqRbQIW5E
+# 9uXSZO8oHY8VYlbbSs/J86x8GiAKlN5Tie6Hre9/jUqDV+hyp0uzVYAoFXJ7bPrR
+# +/86sqsxYGBxDd0krogYXKBKeJPVOBaNrmgetHQMg9sl+olfiqE67z5czj0Njs1U
+# Wa3dtJ5jJPfr+30Gp8fGdXa5isijumMiw/sRrkBF92EbX4s4aybrRWpWmNW246Oq
+# NxFygaybLb6NE0MelniuCuqfnqKDnvC0gxW8biYYOTh4Sr1iq+AvL/aYGvzo+9ON
+# 0P+3yLN22Nh3OXX0tKfrmUQIGIWxXHij+A/pCEZcb8khg9s8Xjufy/dD5z8F6gml
+# 5AvPx2d/cZ4nWBo7ieCO
 # SIG # End signature block

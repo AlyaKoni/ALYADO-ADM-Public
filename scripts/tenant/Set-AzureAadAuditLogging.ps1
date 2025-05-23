@@ -280,6 +280,27 @@ $body = @"
                     "enabled": false,
                     "days": 0
                 }
+            }, {
+                "category": "NetworkAccessConnectionEvents",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "MicrosoftServicePrincipalSignInLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
+            }, {
+                "category": "AzureADGraphActivityLogs",
+                "enabled": true,
+                "retentionPolicy": {
+                    "enabled": false,
+                    "days": 0
+                }
             }
         ],
         "metrics": [],
