@@ -39,6 +39,7 @@ if (-not $AlyaIsPsUnix)
 $appName = "ch.alyaconsulting.office.templates"
 $appLocation = "/Library/Application Support/Microsoft/Office365/User Content.localized/Templates.localized"
 $packageRoot = "$PSScriptRoot"
+& "$PSScriptRoot/IncreaseVersion.ps1"
 $versionFile = Join-Path $packageRoot "version.json"
 $appVersion = (Get-Content -Path $versionFile -Raw | ConvertFrom-Json).Version
 $contentZip = Join-Path $packageRoot "ContentZip"
@@ -49,6 +50,9 @@ if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
+Get-ChildItem -Path $contentScripts | ForEach-Object {
+    chmod 755 $_
+}
 
 pkgbuild --sign $AlyaMacPackageInstallCertName --root $contentZip --identifier $appName --version $appVersion --install-location $appLocation --scripts $contentScripts $packagePath
 
@@ -58,8 +62,8 @@ pkgbuild --sign $AlyaMacPackageInstallCertName --root $contentZip --identifier $
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBRrKlxDmP5JvoI
-# q8D+qhN1Wtc1YYPixjXdsZxdBqY2JaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCk/+f/PixQ1qyH
+# IRmdkULxkHYZ4KlL0WvpEYHDOgzKTKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -173,23 +177,23 @@ pkgbuild --sign $AlyaMacPackageInstallCertName --root $contentZip --identifier $
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIB2KfMl8
-# oVj9j144KV5sC6JdTpmTtrew2Z0hRjg41V6/MA0GCSqGSIb3DQEBAQUABIICAG8D
-# 7KLFJuYT5W9xo/fs4i5w//BDF9nj7P4Liljh467AXwtQSw8EDW65eIG1ffckOe6t
-# gRsI8qFS83rbgERNrXDNKFvOTKETdl+iGx632j7bZtAa+lovSXRG3IOtmrf+v4J1
-# kxhR1sPWJFwP5KRU2rIXGaulb6bQIhsAvTNR8NBRFPQNUGn1uNMevr4Wex4fiKbT
-# XS169RlWTzpna2vWFkJk1B53UoXK8XcK0jywPrvQnueSsSF7JcsORUhCiRm/W9eb
-# g0hiD0Z3zxqQCH6ycJSvNqk9PfKtFz5LN9WzofRyMkE0gMmpMn38Am2KcmO07pu8
-# v5LESUMbeWnQxv/zxVIdnBBFitXggjnLYZNc/VWY6ZKhkgniKHZJecQZXJH+UxB9
-# QKRQBXMO36YtLROOPqfAa1377g98LyvPrz9XAiedS9QBXYpoP4+JYHzT3hEiR6gp
-# BIu9xRqnudYPxoPxPQBz1KtnM2Gazjyjqcc41llmI4p75A+YdKsNsQ0eV6k+xClx
-# TQfHhjLwcfOu5XSXJn5K51U+XrJfUs/QDGZDKZPzMyWiZl+pExVmSf7tikkPMeRB
-# BJfquK1opWclzQOZPXk0IGQF3OCq4kGjpTiV5KYKEDZiPkrF1Kj8Z2gslffDK8M9
-# VCFaJH6O+YkHCFIjoHahwvPU3Ns32OFNXpotxzVdoYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIC9vx5Dj
+# aTpAVdn2gwRftiSkpdd7JXGlgtRnVl4qA94DMA0GCSqGSIb3DQEBAQUABIICAGcE
+# K2CRJwRMe4kERcafIRF9HiRCiRZzGlvZODg+E397+lO5fPnUSgjzXvQDhaORZs1i
+# r/yNgEwMDruONt9RsGJaarhy0/B3E37Tyh/xbg4j6FH00jK0/Tbg8JuTB1TnToLD
+# 6efDdsU9GAMwseC9w7yak7nBqExjNZ7K97GYwa4wJEF7kPixsIYY+Z8y7RYg8Qib
+# G4krJ6NtqRL0LFSsfSCTo/i1hdLebY3oIWZWEE581k1Ub0RYWwN5scLscfTJ7pzx
+# gKhh5ZN43KK/L5h2IxnoOVRHK3goxecYp5QJ7w/l8BtRFfD5PODUidMQR8vB2/VT
+# tro1gz50YWncctBmf5jVEVXEDkfc2oJaz4JVg2K/RBTsk4Hc4oqz+eEyrKU3aEyJ
+# Z50+O4QZiAuoW7WA9GmxncPlW6P1HEOT0R+zDq5Y3G27DGyjYa/5IvmRbo7x6Cos
+# xIyUFyDd9V1kbZPWKK2OG0xJzs7HtHbTenXROSydGGmzw5bsfbLyz1TLyJ7YC7Ef
+# FBzzz6DGQnPP2VbA/thE4w5myo2qKfkCIY5wZqBkBQG6tCqo2JpjuOmGJ0sqrzg4
+# G3Px5wnVHuE2s6MIalrCJPrBo/c/TQuGqqWiu7Cy+dEQQa2apLV9UYEiO9ciw6Og
+# 0RTqCUU5L3iLq4iY25Z+Nmn+leaE8t7zzSAPFKquoYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCp6Y8cWkcZVIDHCQ8PHoZpF0bRpIsmHw4I3KAaQsfdTAIUJZDT
-# zC4gviHNUEzsMaXkupMkGkwYDzIwMjUwMjA2MTg0NTQxWjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCAQsFhqR+VMGBFZX/CWxjXurtSwcPeuP+xqaeM7i9Q5fgIUD8gv
+# 8C0VQ+HaFRjjoFJkbj9r7yAYDzIwMjUwMjA3MDAxMDQzWjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -294,18 +298,18 @@ pkgbuild --sign $AlyaMacPackageInstallCertName --root $contentZip --identifier $
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIE6wSyh0olzyw2ojGP2MqJyqOFc3wCLC
-# USeYss2OnIG/MIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEILLBNU41IFvMDaer/zQcQrWk5aw0MbYw
+# fFdYT7I5+PAFMIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAl12d0zMxfO+/h+HCBkhPuloI8KG6WU8Qr1ePdYkMzG9l
-# hZgcLD2t0a6ArARieWjI+LULMiL+VT2BkovCv5zIQb8dnG4l5+ix6+32uWHNADvH
-# VsdQu7AGzKdfLmUoJqIjS7PZMbbx8kcUy0+kct8D2DPyF4tPheaECUQRf9QMS2xw
-# XUMtFgAc0Zk2odYxHMnxnExLtpudrz9K02AwccMGmtpzx/kZuMEJIYQ/84pnX92m
-# 828Yv9Ez+x/BEzeUhG5Atp3NI9Bmc3bFtyO7DZKLD8f+St5ulm6p0botFTzo599z
-# YiwxamMPES7hMNjVP+dTsHdvKB2808kAmaJJgsH0s8tSAthYC9zQB3dRx0VuT2tN
-# JNDqmtMGYqgCZ1Jb1VMNZdf59ES9i8RtZTeA4KVZjimgp3j3CF+6YzuOwf/LzkMi
-# or6aP0hE8AdwuRUdUOPZ3Mrmu9JtohlDGsMesXcp6Ji/KHWFkSPl9VCCA/HZy9Yw
-# suaA2A75Edc+kEMTn/LO
+# KoZIhvcNAQELBQAEggGAB5AM6kIWJN02KbHuNFeQ0ZKeSig5YiVdRwJOZ6okfi0q
+# UXC5G0YnKSyWqGgZR8rOvGdzyjsX2A8IQN/MlHjIufzqEqqlPdSisPm1MFQR7pkl
+# s7HpdxHUK47ajuAUlR2wWwEIaBmsk7uTtEtx/lK7dWMgeR7UZX3FJAJqy7OSNo4+
+# q9p6I9yCaWpKzriGEhvXlTcfs5N7kP235Qz/TvvBJjb5gcSHEn17YXiRY4zj6d3S
+# oHtb/gezdYXRLctOPdNClc1vpKketHi2SY4YuHNnJ2iXcAgBUoeokOT3lvNQSULH
+# izApNpNzalyUgKcXyCjLuJjYGlUO4sC3JMwOPhmPUHTN1JSfQhpRO9nRPQe5whFk
+# 4zQ+f4x2bTmAMISSGibe/M2RoJbro9AgmcthTjRnV5EpesyaWDG6CiRiLU2hoW3+
+# /PCRKqWKs3LZwEJUoEJSh3nJxQ4aXydTbOrfcmssTxJbW35WeXiInUdJPzqhgOXL
+# NGnV60fN+WlWL/VGvSIp
 # SIG # End signature block

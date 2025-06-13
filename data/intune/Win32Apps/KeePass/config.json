@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN KeePass",
-  "description": "Installs KeePass-2.57.1-Setup.exe",
+  "description": "Installs KeePass-2.58-Setup.exe",
   "publisher": "keepass.info",
   "largeIcon": {
     "type": "image/png",
@@ -15,7 +15,7 @@
   "developer": null,
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "KeePass-2.57.1-Setup.intunewin",
+  "fileName": "KeePass-2.58-Setup.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,7 +24,7 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": null,
-  "setupFilePath": "KeePass-2.57.1-Setup.exe",
+  "setupFilePath": "KeePass-2.58-Setup.exe",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -45,7 +45,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "2.57.1.0"
+      "detectionValue": "2.58.0.0"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "2.57.1.0"
+      "comparisonValue": "2.58.0.0"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "2.57.1.0"
+  "displayVersion": "2.58.0.0"
 }

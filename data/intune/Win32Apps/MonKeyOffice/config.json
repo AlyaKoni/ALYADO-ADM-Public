@@ -40,12 +40,12 @@
   "detectionRules": [
     {
       "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
-      "path": "%ProgramFiles%\\ProSaldo\\MonKey Office 2024",
-      "fileOrFolderName": "MonKey Office 2024.exe",
+      "path": "%ProgramFiles%\\ProSaldo\\MonKey Office 2025",
+      "fileOrFolderName": "MonKey Office 2025.exe",
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "22.0.2"
+      "detectionValue": "22.1.1"
     }
   ],
   "requirementRules": [],
@@ -53,12 +53,12 @@
     {
       "@odata.type": "#microsoft.graph.win32LobAppFileSystemRule",
       "ruleType": "detection",
-      "path": "%ProgramFiles%\\ProSaldo\\MonKey Office 2024",
-      "fileOrFolderName": "MonKey Office 2024.exe",
+      "path": "%ProgramFiles%\\ProSaldo\\MonKey Office 2025",
+      "fileOrFolderName": "MonKey Office 2025.exe",
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "22.0.2"
+      "comparisonValue": "22.1.1"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "22.0.2"
+  "displayVersion": "22.1.1"
 }

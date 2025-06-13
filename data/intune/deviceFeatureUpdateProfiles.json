@@ -26,7 +26,7 @@
         "description": "Configures features on windows11 devices",
         "displayName": "WIN11 Feature Configuration",
         "endOfSupportDate": "2025-10-14T00:00:00Z",
-        "featureUpdateVersion": "Windows 11, version 22H2",
+        "featureUpdateVersion": "Windows 11, version 24H2",
         "roleScopeTagIds": [
             "0"
         ],

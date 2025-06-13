@@ -1,36 +1,32 @@
 try
 {
-    $fileDir = "##FILEPATH##"
-    $fileName = "##FILENAME##"
-	$filePath = "$fileDir\$fileName"
-    if (-Not (Test-Path $filePath))
-	{
-		if ($filePath.StartsWith("$($env:ProgramFiles)\"))
-		{
-			$filePath = $filePath.Replace("$($env:ProgramFiles)\", "$(${env:ProgramFiles(x86)})\")
-		}
-		if ($filePath.StartsWith("$(${env:ProgramFiles(x86)})\"))
-		{
-			$filePath = $filePath.Replace("$(${env:ProgramFiles(x86)})\", "$($env:ProgramFiles)\")
-		}
-	}
-    if (Test-Path $filePath)
+    $keyPath = "##KEYPATH##"
+    $keyName = "##KEYNAME##"
+    $keyPath = [Regex]::Replace($keyPath, "Computer\\HKEY_LOCAL_MACHINE\\", "HKLM:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $keyPath = [Regex]::Replace($keyPath, "HKEY_LOCAL_MACHINE\\", "HKLM:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $keyPath = [Regex]::Replace($keyPath, "Computer\\HKEY_CURRENT_USER\\", "HKCU:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $keyPath = [Regex]::Replace($keyPath, "HKEY_CURRENT_USER\\", "HKCU:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $actVers = [Version](Get-ItemProperty -Path $keyPath -Name $keyName -ErrorAction SilentlyContinue).$keyName
+    if (-Not $actVers)
     {
-        $file = Get-Item -Path $filePath
-        $actVers = [Version]$file.VersionInfo.FileVersionRaw
-        $tobeVers = [Version]"##FILEVERSION##"
+        $keyPath = [Regex]::Replace($keyPath, "\\SOFTWARE\\", "\\SOFTWARE\\WOW6432Node\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+        $actVers = [Version](Get-ItemProperty -Path $keyPath -Name $keyName -ErrorAction SilentlyContinue).$keyName
+    }
+    if (-Not $actVers)
+    {
+        Write-Host "Not required"
+    }
+    else
+    {
+        $tobeVers = [Version]"##KEYVERSION##"
         if ($actVers -ge $tobeVers)
         {
             Write-Host "Not required"
         }
-		else
+	    else
         {
             Write-Host "Required"
         }
-    }
-    else
-    {
-        Write-Host "Not required"
     }
 } catch {
     Write-Host "$($_.Exception.GetType().Name): $($_.Exception.Message)"
@@ -40,8 +36,8 @@ try
 # SIG # Begin signature block
 # MIIvGwYJKoZIhvcNAQcCoIIvDDCCLwgCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBsgOBSXhsW9aqT
-# vR/0VOCfrJb1Q9aib3TQIstpb2DESqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCPIsgVRDrTQFDN
+# REqv0wLZl8drjlY6yUJpQ9M/Tl7CqaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -155,23 +151,23 @@ try
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOI/RV/i
-# 8vsNPnWx3slioswKnPe8bSoglABp8hp/adOtMA0GCSqGSIb3DQEBAQUABIICAHuq
-# QVk+DNleLUplxMRwyLhWWJqaFiE2oOnqWsisc2gnYVLpQhqt1Ghp0ipzmCELdkKb
-# +yA92wGL2lfiYcnraHX2d1DMkRIrF0IRLlATCsYo4LJvQgprpnuGpPUf5Euz73zm
-# zTGW7ndyrLq6yMbENohahFgZQq3bsVaLjzpMu16HIhDn68WfACejghriUxa+HFkR
-# UgXlE37u/ty+7ECH+iZ/bZBxUXTBFTYP9LIcSQA9K+7PECY8+U5ubSuiyZr+d4P/
-# bGedsQUpG40XhHO08q2E+qs28N2AT5N/GF/SOJLVZ8S63gnJqyN6qedFqA+f5DyJ
-# B6fuYzjcOOMbkadNjJd97/dtu4GlDM0MLQx+D5Mq/mcU9qqzgUm96KXz/tXVhQoi
-# 4VXUGi1/DtgqLttHuDFjlb3Q96ecEruTwWUQoldKGz9EnvcCleXFm4wuACRY+28Z
-# CKSKu0gqPP/L1CaQwLYp+PNvmjsMWaxzkNsvCS/QFLRQfD3KCapoYZfjxWsEy8Sd
-# lQzyY2Se0K2nc5nVzVMR/8qYdUT2YT9LXgwCon7PrLfFn+KAnTQj5tC3h5J/cldM
-# +mgCHj07my1Rhf/UxMCkz0emPIVrKB9I6GHr4LvZ2R1yQMzePpYP1n6aHoYFup9S
-# X2fO373G9J723OQwZUwOxth+BA5txKG4l1pt5iO7oYIWzTCCFskGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIK5DiTMW
+# /iKPaF71PlQarSqf+b6G0Xz511JsTA7ZZYgtMA0GCSqGSIb3DQEBAQUABIICAJ7l
+# 4Fk79ShdAGxDU3TsNLRmnU6xEnW4AFhF4FOcsBnAcgzkKgQoBQvr+c+uDZodMgrI
+# z4iLr7vQ+Cbp/eoO98kAKtTyUKV6JGw0zqmDxEC4RtOJ/GhKkF3K3ZRzriPckOQu
+# XqTW97H0lS3S+AnSuGevUXh7O5SfcLvcTboR2Q5w1pEEBcLM60vnt07g6nSygLN9
+# oLhS7eKWRBzO3i2QabXPrtZbBlRoXdo9ToOMlUikPXVrgLPnsR/fsEs0yHbBp5fn
+# CJIepG7BbLsGhcTmEviX1AQhcmWntL1bSmGPcVt0QGw50Opb8QPFhv/W+82ju9+/
+# ClKfKGfKgToOgCFZH2FVpoUHBn3BoN0JQ0HxtjlWVBd9uefIbNgZR33jCLc4JX1r
+# FA3OmPl+mimhsFH9HBI5GUwUs0Wp5anu1N457gPHquKJ/2n9O1Roqp6Aj62oQdwF
+# c8QZVO1HW+waKVgq41A0/ALGULtksm4d670K4FJ4Ffudl9VoLZ8bEwy9LDkiWeS7
+# eahYsdjpk31y6U2ezFq6mZSh+txuWpKvVAXQ41N7yUy0h9Abd4O95OmtwCz/KoKJ
+# a/wrPjb2p4kJW/9REo0coXnhrVVnRxIbNfTgonmaaJjDcltuFwN86Fq2ECD6lDsD
+# UhwUxY1h+P7ot7wKHcSYeNsQPxu9Ri37U0tIHPy5oYIWzTCCFskGCisGAQQBgjcD
 # AwExgha5MIIWtQYJKoZIhvcNAQcCoIIWpjCCFqICAQMxDTALBglghkgBZQMEAgEw
 # gegGCyqGSIb3DQEJEAEEoIHYBIHVMIHSAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCDXMbrb6VCPT8EMZZJKBLdu+bTkA9vkaxeZzwq1KT1/fgIUVJA1
-# ZoQjTO8/l0suKuHjFDHBPMYYDzIwMjUwMjA2MTg1NTU0WjADAgEBoGGkXzBdMQsw
+# SAFlAwQCAQUABCCfAZygM6humwqyzNUeHADhLStNoy6EYWi47cLREWWgIgIUXI0k
+# MyNq4/TqlSIAcr+MbO6FqFsYDzIwMjUwMjA2MTg0ODU0WjADAgEBoGGkXzBdMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEzMDEGA1UEAwwq
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2IC0gMjAyMzExoIISVDCC
 # BmwwggRUoAMCAQICEAGb6t7ITWuP92w6ny4BJBYwDQYJKoZIhvcNAQELBQAwWzEL
@@ -276,18 +272,18 @@ try
 # BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb
 # 6t7ITWuP92w6ny4BJBYwCwYJYIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYL
 # KoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZI
-# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIPCPmSwpaBczq3erFryw74nahwiZwJIu
-# toM6mDJzUkr9MIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
+# hvcNAQELBQAwLwYJKoZIhvcNAQkEMSIEIAFzW5hGvxl/FeaAfWHQdI4VTzu/jfE2
+# AIh1NRD/cyz3MIGwBgsqhkiG9w0BCRACLzGBoDCBnTCBmjCBlwQgOoh6lRteuSpe
 # 4U9su3aCN6VF0BBb8EURveJfgqkW0egwczBfpF0wWzELMAkGA1UEBhMCQkUxGTAX
 # BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAGb6t7ITWuP92w6ny4BJBYwDQYJ
-# KoZIhvcNAQELBQAEggGAs4OuAPd+b9NFMD8ikqJypFuAysGfA2oiNU+qeBiTzahp
-# w1e7exvMy/hMPqVEkLcDbFBLDIhtE63DKVt/xD4tb96d3rlAj5H3gkWhItfVvsL6
-# GU4Zt5H3qOt9k9zRh+HCgjTj/yFxRH8e/cdIkgkzMl4TzcsQ5xjS/B0Bb8y237hF
-# pDyoUxxyg3Q3hSZh90yIr3m+cop+cJqWmewLhpH8brcEB3a36wUXt4xmbrtlNhPu
-# X6TCqTFhuRrMkcCHGzn0M0DNJ+l1+DAMkmETaq5JdVR1SL9OLWuTWT9C4chID6de
-# 58eeuQCI4uPZRA2n9KsP9mFEE7uMPuQq2mlUkqlE/GNF2xpeQMJuisfarqvBTOcy
-# +wN6HE7kEIolp3oX7CbGIQCbFKra+KW0pUI5B76FGT89TL3pE5m+Ow5DOdt3C7h3
-# ceWWfB6moGA6Q0QBReAhJ1gI/LV+X7n8to8Br8HmTbHz+AHepyUEQsbq56ADM+L1
-# HfoF88Pw3hdq01m08yiN
+# KoZIhvcNAQELBQAEggGAvMFPJ6uZjh8S94qFMAdDF50mXuHPJF4Jouirk/IOe2/1
+# 0Nf/MxAOwGBHLm6uWfOf3UR+ji9rrX1ABHAkrtsSFZfvY54VqLGupuffHrOxB1ZT
+# pNlHjZJCVio18V7QquNTRWOoFQQ6d+/vHik8Nw13ihZ+9Tp45yyHTs6HDxvjpp1k
+# VfmBdjxF+7hR8h5tEvnuHsdOW6/FAAY9E2H5DuKYfbx7WBn/MdQwdiALLrSkT6kl
+# QmBLK4cU/lTAdBVgiTlpvxYy7XwGmggzbYKBX6Kb5CnIQ0OFOy/V9GZTo12/Ip2z
+# r0faf+YZH6DFt/GuiNUb17JFv0JQ1CKjcD3EK+6t72UH0Pa7GXMjv1gB2vtVG7T0
+# hDrBxJgTPDH8qb0YRw2SNLEJaV6oP3dTwjuJfImjaxgNF0P8ArZwN35k/wL29fEH
+# +0FL2eO1c8g1lQ6NLKl7XBEagkEMpfW+8leV30hlt3lYBb38kXv9FNjd6iPRKQ6O
+# pGeX+n+x5rkG8b3QJZp2
 # SIG # End signature block

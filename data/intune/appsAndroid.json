@@ -1,10 +1,8 @@
-﻿[
-    {
+﻿[{
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.adobe.reader",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.adobe.reader&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Mit Adobe Acrobat Reader Dokumente direkt von deinem Gerät ausdrucken.",
         "developer": null,
         "displayName": "Adobe Acrobat Reader für PDF",
@@ -16,15 +14,12 @@
         "packageId": "com.adobe.reader",
         "privacyInformationUrl": null,
         "publisher": "Adobe",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "ch.admin.babs.alertswiss",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=ch.admin.babs.alertswiss&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Bundesamt für Bevölkerungsschutz (BABS)",
         "developer": null,
         "displayName": "Alertswiss",
@@ -36,15 +31,12 @@
         "packageId": "ch.admin.babs.alertswiss",
         "privacyInformationUrl": null,
         "publisher": "Bundesamt für Bevölkerungsschutz",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.ipviewer",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.ipviewer&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Sicher mit anderen zusammenzuarbeiten, indem Sie und die gemeinsame Nutzung von geschützten Dateien.",
         "developer": null,
         "displayName": "Azure Information Protection",
@@ -56,15 +48,12 @@
         "packageId": "com.microsoft.ipviewer",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.hp.printercontrol",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.hp.printercontrol&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "HP Drucker einrichten, freigeben und verwalten sowie damit scannen und drucken",
         "developer": null,
         "displayName": "HP Smart",
@@ -76,15 +65,12 @@
         "packageId": "com.hp.printercontrol",
         "privacyInformationUrl": null,
         "publisher": "HP Inc.",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.android.keepass",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.android.keepass&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "KeePass for your phone",
         "developer": null,
         "displayName": "KeePassDroid",
@@ -96,15 +82,12 @@
         "packageId": "com.android.keepass",
         "privacyInformationUrl": null,
         "publisher": "Brian Pellin",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.azure.authenticator",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.azure.authenticator&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Verwenden Sie Microsoft Authenticator für eine einfache und sichere Anmeldung.",
         "developer": null,
         "displayName": "Microsoft Authenticator",
@@ -116,15 +99,12 @@
         "packageId": "com.azure.authenticator",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.emmx",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.emmx&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Erstklassige Leistung, bessere Privatsphäre, höhere Produktivität, mehr Wert.",
         "developer": null,
         "displayName": "Microsoft Edge: KI-Browser",
@@ -136,15 +116,12 @@
         "packageId": "com.microsoft.emmx",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.office.excel",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.excel&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Aussagekräftige Tabellen erstellen. Dokumente unterwegs komfortabel bearbeiten.",
         "developer": null,
         "displayName": "Microsoft Excel: Spreadsheets",
@@ -156,15 +133,12 @@
         "packageId": "com.microsoft.office.excel",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.launcher",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.launcher&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Personalisieren Sie Ihr Smartphone und behalten Sie unterwegs alles im Blick.",
         "developer": null,
         "displayName": "Microsoft Launcher",
@@ -176,15 +150,12 @@
         "packageId": "com.microsoft.launcher",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.skydrive",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.skydrive&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Kostenlos von überall auf Fotos, Dokumente und mehr zugreifen und sie teilen.",
         "developer": null,
         "displayName": "Microsoft OneDrive",
@@ -196,15 +167,12 @@
         "packageId": "com.microsoft.skydrive",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.office.onenote",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.onenote&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Leistungsstarker Notizblock zum Erfassen von Ideen.",
         "developer": null,
         "displayName": "Microsoft OneNote: Save Notes",
@@ -216,35 +184,12 @@
         "packageId": "com.microsoft.office.onenote",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
-        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "appIdentifier": "com.microsoft.office.officehubrow",
-        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.officehubrow&hl=de-CH",
-        "appTracks": [
-        ],
-        "description": "Eine App für Dokumente, Kalkulationstabellen, Präsentationen, PDFs und mehr.",
-        "developer": null,
-        "displayName": "Microsoft 365 (Office)",
-        "informationUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.officehubrow&hl=de-CH",
-        "isFeatured": false,
-        "largeIcon": null,
-        "notes": null,
-        "owner": null,
-        "packageId": "com.microsoft.office.officehubrow",
-        "privacyInformationUrl": null,
-        "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.office.outlook",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.outlook&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Die offizielle App von Microsoft Outlook für Android-Handys und Tablets.",
         "developer": null,
         "displayName": "Microsoft Outlook",
@@ -256,15 +201,12 @@
         "packageId": "com.microsoft.office.outlook",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.planner",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.planner&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Für diese App ist ein passendes gewerbliches Office 365-Abonnement erforderlich.",
         "developer": null,
         "displayName": "Microsoft Planner",
@@ -276,15 +218,12 @@
         "packageId": "com.microsoft.planner",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.powerbim",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.powerbim&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Ihre Daten sind jederzeit griffbereit - ganz gleich, wo Sie gerade sind.",
         "developer": null,
         "displayName": "Microsoft Power BI",
@@ -296,15 +235,12 @@
         "packageId": "com.microsoft.powerbim",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.office.powerpoint",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.powerpoint&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Die echte Microsoft PowerPoint-App für Android-Smartphones und Tablets.",
         "developer": null,
         "displayName": "Microsoft PowerPoint",
@@ -316,15 +252,12 @@
         "packageId": "com.microsoft.office.powerpoint",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.sharepoint",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.sharepoint&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Mit SharePoint-Websites, -Neuigkeiten, -Personen und -Dateien verbunden bleiben",
         "developer": null,
         "displayName": "Microsoft SharePoint",
@@ -336,15 +269,12 @@
         "packageId": "com.microsoft.sharepoint",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.touchtype.swiftkey",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.touchtype.swiftkey&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Die beste Tastatur mit Text-Vorhersagen – Android Central",
         "developer": null,
         "displayName": "Microsoft SwiftKey KI-Tastatur",
@@ -356,15 +286,12 @@
         "packageId": "com.touchtype.swiftkey",
         "privacyInformationUrl": null,
         "publisher": "SwiftKey",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.teams",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.teams&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Microsoft Teams ist Ihr Hub für Teamwork in Office 365.",
         "developer": null,
         "displayName": "Microsoft Teams",
@@ -376,15 +303,12 @@
         "packageId": "com.microsoft.teams",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.todos",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.todos&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Eine einfache, intelligente Aufgabenliste mit Ihrem Tag im Mittelpunkt.",
         "developer": null,
         "displayName": "Microsoft To Do: Lists & Tasks",
@@ -396,15 +320,12 @@
         "packageId": "com.microsoft.todos",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.translator",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.translator&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Übersetzen Sie Text, Sprache, Bilder und Konversationen in über 70 Sprachen",
         "developer": null,
         "displayName": "Microsoft Übersetzer",
@@ -416,15 +337,12 @@
         "packageId": "com.microsoft.translator",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.windowsintune.companyportal",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.windowsintune.companyportal&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Microsoft Intune Untern.-Portal",
         "developer": null,
         "displayName": "Microsoft Untern.-Portal",
@@ -436,15 +354,12 @@
         "packageId": "com.microsoft.windowsintune.companyportal",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.office.word",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.word&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "App zum mobilen Schreiben. Mit Office Dokumente leicht erstellen und bearbeiten.",
         "developer": null,
         "displayName": "Microsoft Word: Edit Documents",
@@ -456,15 +371,12 @@
         "packageId": "com.microsoft.office.word",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.msapps",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.msapps&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Business in App-Geschwindigkeit",
         "developer": null,
         "displayName": "Power Apps",
@@ -476,15 +388,12 @@
         "packageId": "com.microsoft.msapps",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.flow",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.flow&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Erstellen Sie automatisierte Workflows Benachrichtigungen zu erhalten, synchronisieren Dateien und vieles mehr.",
         "developer": null,
         "displayName": "Power Automate",
@@ -496,35 +405,12 @@
         "packageId": "com.microsoft.flow",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
-        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
-        "appIdentifier": "com.microsoft.rdc.androidx",
-        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx&hl=de-CH",
-        "appTracks": [
-        ],
-        "description": "Mit Microsoft Remote Desktop können Sie eine Verbindung zu Remote-PCs und virtuellen Apps herstellen.",
-        "developer": null,
-        "displayName": "Remote Desktop",
-        "informationUrl": "https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx&hl=de-CH",
-        "isFeatured": false,
-        "largeIcon": null,
-        "notes": null,
-        "owner": null,
-        "packageId": "com.microsoft.rdc.androidx",
-        "privacyInformationUrl": null,
-        "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.microsoft.surfaceaudio",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.surfaceaudio&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Aktualisieren Sie Surface Earbuds und Surface Headphones und passen Sie die Einstellungen an.",
         "developer": null,
         "displayName": "Microsoft Surface",
@@ -536,15 +422,12 @@
         "packageId": "com.microsoft.surfaceaudio",
         "privacyInformationUrl": null,
         "publisher": "Microsoft Corporation",
-        "roleScopeTagIds": [
-        ]
-    },
-    {
+        "roleScopeTagIds": []
+    }, {
         "@odata.type": "#microsoft.graph.androidManagedStoreApp",
         "appIdentifier": "com.whatsapp",
         "appStoreUrl": "https://play.google.com/store/apps/details?id=com.whatsapp&hl=de-CH",
-        "appTracks": [
-        ],
+        "appTracks": [],
         "description": "Einfach. Persönlich. Sicher.",
         "developer": null,
         "displayName": "WhatsApp Messenger",
@@ -556,7 +439,59 @@
         "packageId": "com.whatsapp",
         "privacyInformationUrl": null,
         "publisher": "WhatsApp Inc.",
-        "roleScopeTagIds": [
-        ]
+        "roleScopeTagIds": []
+    }, {
+        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
+        "appIdentifier": "com.microsoft.rdc.androidx",
+        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx&hl=de-CH",
+        "appTracks": [],
+        "description": "Mit der Windows-App können Sie eine Verbindung zu Remote-PCs und virtuellen Apps herstellen.",
+        "developer": null,
+        "displayName": "Windows App",
+        "informationUrl": "https://play.google.com/store/apps/details?id=com.microsoft.rdc.androidx&hl=de-CH",
+        "isFeatured": false,
+        "largeIcon": null,
+        "notes": null,
+        "owner": null,
+        "packageId": "com.microsoft.rdc.androidx",
+        "privacyInformationUrl": null,
+        "publisher": "Microsoft Corporation",
+        "roleScopeTagIds": []
+    }, {
+        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
+        "appIdentifier": "com.microsoft.rdc.android",
+        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.rdc.android&hl=de-CH",
+        "appTracks": [],
+        "description": "Microsoft Remote Desktop bietet Remote-Zugriff auf Windows-Desktops und-Anwendungen.",
+        "developer": null,
+        "displayName": "Remote Desktop 8",
+        "informationUrl": "https://play.google.com/store/apps/details?id=com.microsoft.rdc.android&hl=de-CH",
+        "isFeatured": false,
+        "largeIcon": null,
+        "notes": null,
+        "owner": null,
+        "packageId": "com.microsoft.rdc.android",
+        "privacyInformationUrl": null,
+        "publisher": "Microsoft Corporation",
+        "roleScopeTagIds": []
+    }, {
+        "@odata.type": "#microsoft.graph.androidManagedStoreApp",
+        "appIdentifier": "com.microsoft.office.officehubrow",
+        "appStoreUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.officehubrow&hl=de-CH",
+        "appTracks": [],
+        "description": "Copilot, Word, Excel, and More",
+        "developer": null,
+        "displayName": "Microsoft 365 Copilot",
+        "informationUrl": "https://play.google.com/store/apps/details?id=com.microsoft.office.officehubrow&hl=de-CH",
+        "isFeatured": false,
+        "largeIcon": null,
+        "lastModifiedDateTime": "2025-06-13T10:59:34Z",
+        "notes": null,
+        "owner": null,
+        "packageId": "com.microsoft.office.officehubrow",
+        "privacyInformationUrl": null,
+        "publisher": "Microsoft Corporation",
+        "publishingState": "published",
+        "roleScopeTagIds": []
     }
 ]

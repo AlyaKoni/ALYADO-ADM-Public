@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN Notepad++",
-  "description": "Installs npp.8.7.5.Installer.x64.exe",
+  "description": "Installs npp.8.8.1.Installer.x64.exe",
   "publisher": "notepad-plus-plus.org",
   "largeIcon": {
     "type": "image/png",
@@ -15,7 +15,7 @@
   "developer": null,
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "npp.8.7.5.Installer.x64.intunewin",
+  "fileName": "npp.8.8.1.Installer.x64.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,7 +24,7 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": null,
-  "setupFilePath": "npp.8.7.5.Installer.x64.exe",
+  "setupFilePath": "npp.8.8.1.Installer.x64.exe",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -45,7 +45,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "8.7.5.0"
+      "detectionValue": "8.8.1.0"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "8.7.5.0"
+      "comparisonValue": "8.8.1.0"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "8.7.5.0"
+  "displayVersion": "8.8.1.0"
 }

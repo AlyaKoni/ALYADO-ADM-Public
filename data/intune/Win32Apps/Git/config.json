@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN Git",
-  "description": "Installs Git-2.47.1.2-64-bit.exe",
+  "description": "Installs Git-2.49.0-64-bit.exe",
   "publisher": "gitforwindows.org",
   "largeIcon": {
     "type": "image/png",
@@ -15,7 +15,7 @@
   "developer": null,
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "Git-2.47.1.2-64-bit.intunewin",
+  "fileName": "Git-2.49.0-64-bit.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,7 +24,7 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": null,
-  "setupFilePath": "Git-2.47.1.2-64-bit.exe",
+  "setupFilePath": "Git-2.49.0-64-bit.exe",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -45,7 +45,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "2.47.1.2"
+      "detectionValue": "2.49.0.1"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "2.47.1.2"
+      "comparisonValue": "2.49.0.1"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "2.47.1.2"
+  "displayVersion": "2.49.0.1"
 }

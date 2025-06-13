@@ -81,7 +81,19 @@ else
     try
     {
         $ErrorActionPreference = "Stop"
-
+		
+        # Stopping running processes
+		$prc = Get-Process -Name "Inkscape" -ErrorAction SilentlyContinue
+		if (-Not $prc)
+		{
+			$prc = Get-Process -Name "Inkscape.exe" -ErrorAction SilentlyContinue
+		}
+		if ($prc)
+		{
+			$prc | Stop-Process -Force
+		}		
+		
+        # Uninstall
         $regPlats = @("","\WOW6432Node")
         foreach($regPlat in $regPlats)
         {

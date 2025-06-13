@@ -304,5 +304,35 @@
         ],
         "storageRequireEncryption": true,
         "systemIntegrityProtectionEnabled": true
+    }, {
+        "@odata.type": "#microsoft.graph.aospDeviceOwnerCompliancePolicy",
+        "description": "Checks the compliance of company owned android AOSP devices",
+        "displayName": "AND AOSP Owned Compliance Policy",
+        "minAndroidSecurityPatchLevel": null,
+        "osMaximumVersion": null,
+        "osMinimumVersion": null,
+        "passwordMinimumLength": 4,
+        "passwordMinutesOfInactivityBeforeLock": 60,
+        "passwordRequired": true,
+        "passwordRequiredType": "numeric",
+        "roleScopeTagIds": ["0"],
+        "securityBlockJailbrokenDevices": true,
+        "storageRequireEncryption": null,
+        "scheduledActionsForRule": [
+            {
+                "@odata.type": "#microsoft.graph.deviceComplianceScheduledActionForRule",
+                "ruleName": "DefaultPolicy",
+                "scheduledActionConfigurations": [
+                    {
+                        "@odata.type": "#microsoft.graph.deviceComplianceActionItem",
+                        "actionType": "block",
+                        "gracePeriodHours": 8760,
+                        "notificationMessageCCList": [
+                        ],
+                        "notificationTemplateId": ""
+                    }
+                ]
+            }
+        ]
     }
 ]

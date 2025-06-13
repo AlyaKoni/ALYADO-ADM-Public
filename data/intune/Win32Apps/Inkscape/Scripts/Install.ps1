@@ -81,6 +81,9 @@ else
     try
     {
         $ErrorActionPreference = "Stop"
+		
+        # Uninstalling old version
+		& "$AlyaScriptDir\Uninstall.ps1"
 
         # Install msi
         $toInstall = Get-ChildItem -Path $AlyaScriptDir -Filter "*.msi"

@@ -1,12 +1,12 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN TelegramDesktop",
-  "description": "Installs tsetup-x64.5.10.3.exe",
+  "description": "Installs tsetup-x64.5.14.3.exe",
   "publisher": "telegram.org",
   "largeIcon": {
-    "@odata.type": "#Microsoft.Graph.mimeContent",
+    "type": "image/png",
     "value": "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",
-    "type": "image/png"
+    "@odata.type": "#Microsoft.Graph.mimeContent"
   },
   "isFeatured": true,
   "privacyInformationUrl": "https://telegram.org/faq",
@@ -15,7 +15,7 @@
   "developer": null,
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "tsetup-x64.5.10.3.intunewin",
+  "fileName": "tsetup-x64.5.14.3.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,7 +24,7 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": null,
-  "setupFilePath": "tsetup-x64.5.10.3.exe",
+  "setupFilePath": "tsetup-x64.5.14.3.exe",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -45,7 +45,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "5.10.3.0"
+      "detectionValue": "5.14.3.0"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "5.10.3.0"
+      "comparisonValue": "5.14.3.0"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "5.10.3.0"
+  "displayVersion": "5.14.3.0"
 }

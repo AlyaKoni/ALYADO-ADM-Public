@@ -45,7 +45,7 @@
       "check32BitOn64System": true,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "3.1.105.0"
+      "detectionValue": "3.1.251.0"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "check32BitOn64System": true,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "3.1.105.0"
+      "comparisonValue": "3.1.251.0"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "3.1.105.0"
+  "displayVersion": "3.1.251.0"
 }

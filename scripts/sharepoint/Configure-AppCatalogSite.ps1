@@ -222,8 +222,10 @@ Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSit
 # Configuring access to catalog site for internals and externals
 Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
 $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
-Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllInternals@$AlyaDomainName" -SendEmail:$false
-Add-PnPGroupMember -Connection $siteCon -Group $vgroup -EmailAddress "$AlyaAllExternals@$AlyaDomainName" -SendEmail:$false
+$agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $AlyaAllInternals
+Add-PnPGroupMember -Connection $siteCon -Group $vgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
+$agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $AlyaAllExternals
+Add-PnPGroupMember -Connection $siteCon -Group $vgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
 
 # Configuring permissions
 Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
@@ -263,8 +265,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDXckIqKDvcx8d8
-# d4pSA5c9dCSIRNShBaZW5GfkiySVbaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAjKzkcOzFa+zH9
+# 85WthKNwietOwd5XqbjjvEeLSZKB/KCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -348,23 +350,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOHCR9C2L16FRd4F
-# KrBfJR4cq/pJ1Ts5dWLz8YoCFts/MA0GCSqGSIb3DQEBAQUABIICAH4/s/DkQg/p
-# obU+onca9ZUxyKr/YpGNus7yEVfTKMkGAnPzw/Ybl1tttvKThlDtm3nK/q68pz78
-# 5ylmQtpR1CvKEWtdOiqGSFZQr0o11qgJT6CMLbgVMSj1a4bC+LxMCu3z5ud7ViPP
-# OcRF82s3NJ6KVKMOsGZniXeqQ6zROEEZXd981ujTJ/5xYrj0dm0Vj3khngLdkOUt
-# 4uhdUW6dmaZ9kIN43N+9/EIB+b8GDNB2QSrp23aewvKmirMsFSEUfJTu2WgVG4Fw
-# 4qWviiXTIkb3oKebeNXtj7osL2Mi6ti33jblnMtYMqudyHgZMJ2eTYKYbsRbaRYv
-# xL2cMktLvHvX9a1+ypSEIYOR2m00ayj6Hn8YxWuMRu2EtOrmE3KXUqFQRLme76WK
-# T11rIaUfxz0bPpsdeexecXEzbNYIxEQkNw8NkOvJiqFOt9xp1AheqXBf4QYCkWLg
-# NdAMYeqd+OmbqQFMMop7cPb2pBXVIMhqrnrC1dCaG8c9qhJtHfKacScjXK6DQrzV
-# DETduHOYQr/H3dWvqp60Z389ouG0w7e6BYXY2Fsbv8v0z5BEkbyRMnBmYE9/dwI0
-# pZJqwlV9cqP6188Znek3boVQE0nBqw4bE8VZRqwfE9Dic+uHnLD0BhtGw9MtooJF
-# wg1MJXJozFaJ9JpvDNgebWQhniculRB1oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFFX2YQ1uA3jQGem
+# J96yn4nFkaGafEsnZfH6RkmldfJzMA0GCSqGSIb3DQEBAQUABIICAKhjDeioNndj
+# Jabf9u0OIYiALoX2F+fBwxOJ6dO735D5AQpR4Fe6dmZv9EvR8p2cTBX8d+ISmHpP
+# K+zfbV9r0ygPQJrxQzNFHf8nQb9UmbntURVw1t16Hs6qXXCj54CEo7o3y9eg9Nty
+# ChPNk/PXmTz+SxyuSw1BEM77YOVdP4repu8sPf3Sct7EGSOJshSpqkcwu1cb1JKm
+# zeciXAmuhYQavpEhS1lB+QCTGsQwbz6AvEcbdQxkyHAAu55aynVn/4sWj31H57fX
+# ZLdYUmGqkB/Pj9EwSyJrNLZT+qUa1cNQ1PQGqLhssMH2yveyhkVaatseIMpm8vNw
+# 6czrR7MXK2XeCspsZIQhRz+qO+SwQKC+maJjTkzECdigl23FffMSwp2g3NmhhGr2
+# xGGKW1/d3GYViXtqxV2q5Ju+cR3VMWJR8IN4Et0XD3+DbXMVzajxSwTopmMdyEel
+# OQD1BMPvxDuusNPR5UMmgz4WMUUQ3/iJUzChm8MJpaGP2505FguWdq9hIe6TWpaD
+# 4mee6KtcwrpFj0bSSJVwgEjhrT8Z3gKp0ib7OER5qBlhRpIAW6iBThukw5b+IDqh
+# Sj2IE2EA6Xo5wAC+SVTi5S46LAoqjNlniNkGheS6KpBL9C6qKSVlEyJwZ4+a5svn
+# /m/m8SVxGzB6Zulsls4poqQ9mUrdjU7zoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAKrq4kkBB/dJ5DbPGL4xDspM56QIYPiBUdZMCmYb7p3wIURgYw8x0CJvkr
-# mjqGC8dEuEFxSFUYDzIwMjUwNDI4MTUzNjMwWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDFfvAP+x146SODb26d2OYmvYZ1Gfooto+OuwcoqAFU1AIUTg0oAS3d/k+A
+# nlBZ7+n53kQkOSAYDzIwMjUwNTI2MTkyMzUwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -469,17 +471,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IJpGzSmQdzaJk8bBvHTH4/xzXC1kLeEZzPwTAcL7H2MwMIGwBgsqhkiG9w0BCRAC
+# IHSgWxhJV+YWNq+zN5oGHoaD27T2hohEdGQfzrh/SA7pMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGATVRCcZgvesnr
-# agyln/stesINvX9QpwzWUQww2Gc2SYI+Ottd8GMGh0J5hoHjVXyYr7He3M9OLs56
-# /ukrJCEsG2pOcRLpL3SuvqIatsNeTDqtEibT2lyhxeLtCQ9NR/QRiW0W5NNcDtbK
-# oYtb8P8r6x/0TDwlg/pTc9fFOb7s7XVLXME4EToexXcn0zONYB+YYrVRcBQ3uppE
-# 79+8kRqGfdvjh6oaof66Qs+LcEAosDqTJcWR0eVxxso9zueFH2mJXze5PjffNaoL
-# edLLWrgPo5c+daJdXMXxcsAqFrQqTKJ5bCev0XX+q35ZceIjlXKuEsLIa8gWaUex
-# FTpwM3GBM3f9cSg+3pQFT4MrFzUWSRzy6JUjsM4xMD1RIBTMX/ygNWdR4VVCSxL4
-# ewl3xQ08R4LP+e8r5zt+6H259d5GPbpeS3rU4W+x+LvvaWMzSNTkjDVsi7fwKyKM
-# W3cR4cDRiJ6WvY3UoUNpVlz9OWSx1UWajrAZPOf3m/z2aQ6ISCei
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAHZmZ6N7DnurJ
+# Xn7C652bVx1RqvHJ2Mch6GAxNaumFaMiqW+yfcTxLJtsdVllEJBiWJtkdZrRL+/v
+# ojh5b5pS+x01x68aS2WXTroe11/Uh0nHWvjLm4FUVzl2bhMl1jiwpBGyubeluCkQ
+# EFBHvRYCFbwLQW9uSyMTE54BkGmQdW5JcqHDsYahbl2Gfhrl4YjXNKcRBnDGWqqu
+# uf2wGKIUT66rz59vg3PAj/WpLd2xVMIvuesjedl7kWLdYpzzYcwtpAPMuO5BbQ83
+# CqGYuv1R6jtJPMZazCFSHRQdSOue5YsCdnxaFOW9IF6vrrBe0BT9FaTix2FjtSya
+# 7QQm/IEqPRm61hM2+6Hl68UHpuKAgw7EkPcrcc07uWVgXnoRx9B1uX45IBhYVQPm
+# NgawnxBLMQDbkyfFzi379eTZ7u3d0o1sNqxrJqkR3HerkiMAJP88p6T9kZtwBO5r
+# 36D1wed9QJIMik7w8A7AVmA5CXWQXtBQ2UVx7ypOQlRYgZEluMhX
 # SIG # End signature block

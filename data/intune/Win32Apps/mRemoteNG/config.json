@@ -24,13 +24,13 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "productVersion": "1.76.20.24615",
-    "publisher": "Next Generation Software",
     "packageType": "PerMachine",
-    "requiresReboot": "false",
+    "productName": "mRemoteNG",
+    "productVersion": "1.76.20.24615",
     "productCode": "{381B1560-3850-4E80-BD01-781486364F7B}",
     "upgradeCode": "{DD678A54-CA75-4791-8DFE-D818095684F8}",
-    "productName": "mRemoteNG"
+    "publisher": "Next Generation Software",
+    "requiresReboot": "false"
   },
   "setupFilePath": "mRemoteNG-Installer-1.76.20.24615.msi",
   "minimumSupportedWindowsRelease": "1607",

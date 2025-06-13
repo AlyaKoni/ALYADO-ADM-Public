@@ -23,13 +23,13 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "productCode": "{23170F69-40C1-2702-2409-000001000000}",
-    "productVersion": "24.09.00.0",
-    "requiresReboot": "false",
+    "packageType": "DualPurpose",
     "productName": "7-Zip 24.09 (x64 edition)",
-    "publisher": "Igor Pavlov",
+    "productVersion": "24.09.00.0",
+    "productCode": "{23170F69-40C1-2702-2409-000001000000}",
     "upgradeCode": "{23170F69-40C1-2702-0000-000004000000}",
-    "packageType": "DualPurpose"
+    "publisher": "Igor Pavlov",
+    "requiresReboot": "false"
   },
   "fileName": "7z2409-x64.intunewin",
   "setupFilePath": "7z2409-x64.msi",
