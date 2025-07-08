@@ -426,7 +426,23 @@ if($null -ne $sitePagesList) {
         break 
     }
     Add-PnPPageWebPart -Connection $siteCon -Page $clvPage -Component "Microsoft 365 learning pathways"
-    $clv = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningViewer.aspx</Value></Eq></Where></Query></View>"
+    $retry = 30
+    do
+    {
+        try
+        {
+            $clv = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningViewer.aspx</Value></Eq></Where></Query></View>"
+            break
+        }
+        catch{
+            Start-Sleep -Seconds 2
+            $retry--
+            if ($retry -lt 0)
+            {
+                throw $_.Exception
+            }
+        }
+    } while ($true)
     $clv["PageLayoutType"] = "SingleWebPartAppPage"
     $clv.Update()
     $clv.File.Publish("Updated by Alya cloud configuration")
@@ -441,7 +457,23 @@ if($null -ne $sitePagesList) {
     $claPage = Add-PnPPage -Connection $siteCon "CustomLearningAdmin" -Publish
     $claSection = Add-PnPPageSection -Connection $siteCon -Page $claPage -SectionTemplate OneColumn -Order 1
     Add-PnPPageWebPart -Connection $siteCon -Page $claPage -Component "Microsoft 365 learning pathways administration"
-    $cla = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningAdmin.aspx</Value></Eq></Where></Query></View>"
+    $retry = 30
+    do
+    {
+        try
+        {
+            $cla = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningAdmin.aspx</Value></Eq></Where></Query></View>"
+            break
+        }
+        catch{
+            Start-Sleep -Seconds 2
+            $retry--
+            if ($retry -lt 0)
+            {
+                throw $_.Exception
+            }
+        }
+    } while ($true)
     $cla["PageLayoutType"] = "SingleWebPartAppPage"
     $cla.Update()
     $cla.File.Publish("Updated by Alya cloud configuration")
