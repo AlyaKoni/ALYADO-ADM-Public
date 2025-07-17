@@ -34,6 +34,7 @@
     25.03.2023 Konrad Brunner       Permissions added
     06.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
     05.08.2023 Konrad Brunner       Added role admins
+    12.07.2025 Konrad Brunner       Supporting M365 groups
 
 #>
 
@@ -417,7 +418,22 @@ $siteCon = LoginTo-PnP -Url $absSiteUrl
 $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedOwnerGroup
 foreach ($usrEmail in $siteOwners)
 {
-    Add-PnPGroupMember -Connection $siteCon -Group $mgroup -LoginName $usrEmail
+    try
+    {
+        Add-PnPGroupMember -Connection $siteCon -Group $mgroup -LoginName $usrEmail
+    }
+    catch
+    {
+        $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $usrEmail -ErrorAction SilentlyContinue
+        if ($agroup)
+        {
+            Add-PnPGroupMember -Connection $siteCon -Group $mgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
+        }
+        else
+        {
+            Write-Error "User or group $($usrEmail) not found . Please check the it exists and is not deleted."
+        }
+    }
 }
 
 # Setting siteMembers access
@@ -425,7 +441,23 @@ Write-Host "Setting siteMembers access" -ForegroundColor $CommandInfo
 $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
 foreach ($usrEmail in $siteMembers)
 {
-    Add-PnPGroupMember -Connection $siteCon -Group $mgroup -LoginName $usrEmail
+    try
+    {
+        Add-PnPGroupMember -Connection $siteCon -Group $mgroup -LoginName $usrEmail
+    }
+    catch
+    {
+        $usrEmail
+        $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $usrEmail -ErrorAction SilentlyContinue
+        if ($agroup)
+        {
+            Add-PnPGroupMember -Connection $siteCon -Group $mgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
+        }
+        else
+        {
+            Write-Error "User or group $($usrEmail) not found . Please check the it exists and is not deleted."
+        }
+    }
 }
 
 # Configuring member permissions
@@ -564,8 +596,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC/+ztrzTuUlS3O
-# GcMdOgUkTVbf2aZaskJRbvuILhvjh6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBgz1zTnX3lOZIF
+# 7AadLn64tZekbUH7EPpbhJs2WJRPdqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -679,23 +711,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPkzs8Iw
-# eIrmcR13nDalbeKaIzMozF6CliTMPEHl0XPbMA0GCSqGSIb3DQEBAQUABIICAHJV
-# WeFknAcjynSfZ750DWwu9vruI8pQ3e+qGE35/qc4NiJHUHTTdeY0+du9ykX1f8zA
-# KCtZvEL14O7Z3RhZlS5eE3KGMXVyTPrpp0kk0TunsiGLbxS+k7iqHa3nevC1PlKw
-# YTGqwCqgcpBSFCfsCItQIEjddW5rB3E6R5bKaUVsSGa8vmrcbKCsKsRN9aT91gy6
-# +OwkD7UJINg7psuKLkIW9Gx4F1Jm3OcajFCP6AmTL4mZZDCPspseTsvR7Vz9jGAM
-# WI+SQAFeizbRKaL6qsv+IOKqj0KJtDg+P/41jE9rkteYEzPEZz5NTmjJDBZuWpaA
-# CRSwiFw2xLXuQl+hCFgfH4XPCUMrX615hgxBQseS5TTwYEgKrVyVWIO1h5+G+LW/
-# 68xPu6Y7q594akqFnYL4EYRH7SQIS9TbpV4ZQifsCeZWfBR5xS90BBIW5L9V5iIJ
-# QooBuFNnKsa9JCGIin7kZhQcmqB/OKYgtkJ1XhxHwVN+fDgiXxZ/sm/v0HK6MY34
-# MYN4RtUm40mAK6x4Lwuuj5Ns6m+NE9cg6J5JoBl0cLSX/kKI9gpN9EiNuImigzeR
-# bOvzRNChpAru4IcipmyxI+KCE9UdU3l5a2OZUHBOhMjxw0djLn6Aai2ijXQgaSyy
-# O/toswS5JlFnPOqo2GzpvSKzj4ilc+0rYf8O7+uhoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINN5eWYT
+# 0Sr+/vgAh1PnidMB6jdcg0oGGB/n9ISQhDkeMA0GCSqGSIb3DQEBAQUABIICAJJu
+# ausxbitYY0X2ZmrATa4a24xRoktbXqkDDDfAbz/tfolhTvoPIaojB04ccioVCCWY
+# 8tpPjb4mFn6TG74tYhN60tk29H+NGIB3FNeUc7U5jaEja9RQ2rKGkQL8RcNjk2u+
+# vNaSU+q0wvA33y4sYV4d5SbWVodqpB/cPTMbRREpKMRRI4iKiqWUvfSFpaQKa4tk
+# hLZCBwWtbm8wxV/RjIHR3Hl4N/r0/EDDle+n5GJJ419O5CQDe0SwL5zkKe/6WzLI
+# uHXXB6wbHc9xioQ24kw/fD951k4ldDma9yUFZS88IsyG+A8v5RAwTnRsc5+ll+Xg
+# iMKMu6WmS1E1GqMccKbiuUr8nuRxf5nAdooIpGVCSyu1BJNlmweEv/Hcn3LcTjMc
+# 6S8MruPgM7In0VMPanBzd6mSIWZHAsP986hQlncjwgDTUgIG5ftgudmNLIT8R2j6
+# b/vMFn8+WeMtQ4+9J0ljcd5taS8UEEq1t7Ce6B7bKymvpYnV+MFYVJKLGNZmSA1R
+# BuBgL0QghQkX6FXAw5S06NBVFBrJi4oMHH93oHb4M7pw/dMJKbZJpJkxrCImKCav
+# xY9kqtO0cRz5s3W2mxvpvpzDRRjTa5XCs0Y3Ucc0Ebw2kc5hfMBlbQqmWiCs+W7K
+# JEgtpK/KCPW2s5n3aJWnTg8XgEDVl2JavbValczzoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCDD6YuBfZ3LAgA0zusM85GXsC8YVka2wKsBPLNbtamk3QIUeSsb
-# HQ3EblyWibZy9mI4JkboKiEYDzIwMjUwNTE1MTQ0MjAwWjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCBBtOicG+/3xdCK+BY/2IZYX1Jiww7+fPNWbkI16FtOsAIUFBb4
+# CBPmcaiLEu0LWBKEvZZURm0YDzIwMjUwNzExMjIyNTMwWjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -800,17 +832,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIGniRUnfdW/IXOMVGeFd2kvs/dHfe9xo/RG36qQ0dSVuMIGwBgsqhkiG
+# AQkEMSIEIDr1ICoaFoTfpEgVVJkEAUurT0uw0c17LYzzC5m8W5EnMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAAImc
-# 9HsP7+vtHzQYzmaD2IFdPXB7g3CQQr6PGCilwtJ7bprzLim6qFnvFS9ykMF/ZN2p
-# NYuQf+HC1H9JZ2nnsBnLcuY0j35BWClVswZOoJjBk+7ehPwTHqXgWUrOh7hi6W8/
-# P090SPz8bJVBQ8yW3eKTHk5svqHvthwnCFfcEaB+TY7toRG+B1I5Vi/kNKTtmev6
-# VlVUWdrK/TEIdSAhsin+0FyJRcrwB2TOB0XWQaQoYrrF7ge9GYwPIZrR7lFMQGDV
-# +vQsot4LvOnTom4am2RzY/VF8Ix/QnHdhffxA6Z8yMH21TpZCifrHUWMkFtvD/f8
-# xnouOwdt/KcNHIE7OJvn8iNJe0Gg+H8mJV1MiKtL5bYNDvE5H+y1VqpASXeDo2kA
-# rkiYXAAkYXN+ImhBREDVKkAokNEZl38+ybO8fFaYnsLJRtdB8K1ug2QoiO3kV+Wc
-# e8s/2qzATQ+7dgB+5JBQ3hTQCG8QeC0lkFMVv3Gl+sMrR0LVbpxRm6P377zt
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAH0pN
+# UCS+7Vsh/0N+O4FxW8syUBwSdCPcLPwrGPzTdn2XXyyO+ym8hHccsX1kxyOeBXzZ
+# rU6d0lannb9OTd+7SwBF2SPMofSsRnSTq3Tl7775kKoFggOJomn0BpjA3Ef0IMgb
+# baed6QpdsRP7/o26qrQFEwQLjWtbMXw4eWn/yAssh+AOpUaekjY7sh6KEYhxWIte
+# yURbKVlBuBnFnfaw8RpN2Idt3fR26aez8vVEQxRTUJUk8cu7KwUAHkZ8YlcNTCHE
+# c3qbAF0mRLyVI1Y66WDSXSjmWpGdMKkldcCiabhHpRlKlpPrIMusNEJ2X5kN9du5
+# z1UNzYZUriPLTm9//DeXHOerOqrz5qcIFfBtNHACqOBHU8/2VV+PcR9ujyWdpEKP
+# tzl/RmoRQKihHkBJh84p/8zP1giBP6u7ptWsUPw+PgX+ESqFLkOkXCz7rQgMmisA
+# gIg0b0D+Ov9GNDhUwUMJS+WJIOKNazEnbAZflwFdtawbCRCR6AxyQ9MqJ7Dl
 # SIG # End signature block

@@ -50,9 +50,6 @@ Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-
 # =============================================================
 # Exchange stuff
 # =============================================================
@@ -79,7 +76,7 @@ try
     if (-Not $mailbox)
     {
         Write-Warning "Creating the shared mailbox DoNotReply"
-        New-Mailbox -Shared -Name "DoNotReply" -DisplayName "DoNotReply" -Alias "DoNotReply"
+        New-Mailbox -Shared -Name "DoNotReply" -DisplayName "DoNotReply" -Alias "DoNotReply" -PrimarySmtpAddress "DoNotReply@$AlyaDomainName"
     }
 
     Write-Host "  Configuring mailbox" -ForegroundColor $CommandInfo
@@ -121,6 +118,7 @@ Write-Host "=====================================================`n" -Foreground
 if ($doNotReplyUserId)
 {
     Write-Host "  Blocking DoNotReply account from login"
+	LoginTo-Az -SubscriptionName $AlyaSubscriptionName
     Update-AzADUser -ObjectId $doNotReplyUserId -EnableAccount $false
 }
 

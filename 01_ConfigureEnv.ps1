@@ -57,6 +57,7 @@
     01.05.2024 Konrad Brunner       Supporting MAC
     13.09.2024 Konrad Brunner       AlyaPnPAppId
     04.12.2024 Konrad Brunner       New EXO login behaviour
+    11.07.2025 Konrad Brunner       Added Graph DevOps login
 
 #>
 
@@ -135,6 +136,11 @@ if ($AlyaIsPsUnix) {
     $AlyaPathSep = ":"
 }
 $PSDefaultParameterValues['out-file:width'] = 2000
+$AlyaIsDevOpsPipeline = $false
+if (-Not [string]::IsNullOrEmpty($env:AZURE_DEVOPS_CACHE_DIR))
+{
+    $AlyaIsDevOpsPipeline = $true
+}
 
 <# TLS Connections #>
 [Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls12, [Net.SecurityProtocolType]::Tls13)
@@ -1560,8 +1566,7 @@ function LoginTo-Az(
     try { Update-AzConfig -Scope Process -DisplaySurveyMessage $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -EnableDataCollection $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
 
-    $AZURE_DEVOPS_CACHE_DIR = $env:AZURE_DEVOPS_CACHE_DIR
-    if (-Not [string]::IsNullOrEmpty($AZURE_DEVOPS_CACHE_DIR))
+    if ($AlyaIsDevOpsPipeline)
     {
         Write-Host "  within DevOps"
         $AlyaContext = Get-CustomersContext
@@ -1715,57 +1720,74 @@ function LoginTo-MgGraph(
 
     try { Set-MgGraphOption -EnableLoginByWAM $false -ErrorAction SilentlyContinue | Out-Null } catch {}
 
-    $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
-    if ($mgContext)
+    if ($AlyaIsDevOpsPipeline)
     {
-        Write-Host "  checking existing graph context"
-        foreach($Scope in $Scopes)
+        Write-Host "  within DevOps"
+
+        LoginTo-Az -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+        $token = Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -TenantId $AlyaTenantId -AsSecureString
+        Connect-MGGraph -AccessToken $token.Token -Environment $AlyaGraphEnvironment -NoWelcome
+
+        $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+        if (-Not $mgContext)
         {
-            if ($mgContext.Scopes -notcontains $Scope)
-            {
-                $mgContext = $null
-                break
-            }
+            throw "Not able to get devOps graph context. Please select a connection in the pipeline task."
         }
     }
-
-    if (-Not $mgContext)
+    else 
     {
-        if ($null -ne $AlyaGraphAppId) {
-            Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
-        } else {
-            Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
-        }
         $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
-        if (-Not $Global:AlyaMgContext)
+        if ($mgContext)
         {
-            #Required after a consent, otherwise you run into a login mess
-            # TODO check bug still there, way to check if consent happended
-            $mgContext = Disconnect-MgGraph
+            Write-Host "  checking existing graph context"
+            foreach($Scope in $Scopes)
+            {
+                if ($mgContext.Scopes -notcontains $Scope)
+                {
+                    $mgContext = $null
+                    break
+                }
+            }
+        }
+
+        if (-Not $mgContext)
+        {
             if ($null -ne $AlyaGraphAppId) {
                 Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
             } else {
                 Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
             }
             $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
-            $Global:AlyaMgContext = $mgContext
-        }
-
-        foreach($Scope in $Scopes)
-        {
-            if ($mgContext.Scopes -notcontains $Scope)
+            if (-Not $Global:AlyaMgContext)
             {
-                Write-Error "Was not able to get required scope $Scope" -ErrorAction Continue
-                $mgContext = $null
-                break
+                #Required after a consent, otherwise you run into a login mess
+                # TODO check bug still there, way to check if consent happended
+                $mgContext = Disconnect-MgGraph
+                if ($null -ne $AlyaGraphAppId) {
+                    Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                } else {
+                    Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                }
+                $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+                $Global:AlyaMgContext = $mgContext
+            }
+
+            foreach($Scope in $Scopes)
+            {
+                if ($mgContext.Scopes -notcontains $Scope)
+                {
+                    Write-Error "Was not able to get required scope $Scope" -ErrorAction Continue
+                    $mgContext = $null
+                    break
+                }
             }
         }
-    }
 
-    if (-Not $mgContext)
-    {
-        Write-Error "Not logged in to Graph!" -ErrorAction Continue
-        Exit 1
+        if (-Not $mgContext)
+        {
+            Write-Error "Not logged in to Graph!" -ErrorAction Continue
+            Exit 1
+        }
     }
 }
 #LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
@@ -1790,7 +1812,7 @@ function LoginTo-DataGateway()
     return $null
 }
 
-function Get-AzAccessToken(
+function Get-AudienceAccessToken(
     [string] [Parameter(Mandatory = $false)] $audience = "74658136-14ec-4630-ad9b-26e160ff0fc6",
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
@@ -3309,8 +3331,8 @@ function Run-ScriptInRunspace()
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD7wDEHqT6gTIAS
-# uspG0Uv7ucp0T+ifwSn/pqDQ2Rwo+qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB6fG3vpHLkmK/q
+# uA+g0OTfA/3Gc+9tFDMZX6zQrq8MdaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -3424,23 +3446,23 @@ function Run-ScriptInRunspace()
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIENo8BQc
-# pEsmumtvjsrIfLe4L5RCAryQO612TcABEoC0MA0GCSqGSIb3DQEBAQUABIICAEes
-# ijrhFyB2CAZd6Hi37a6ykXLRw+jibMwd+CS6Qfwiiu1IQVqhq4J0XmZBrWRCxE7B
-# a36Zy7BiFu6cejzUCe7mlI1KDkT4fhl0C+IG/FbvkarGeph0PCtIgD33kpGO6MmZ
-# fQec8eSH2o+kilXbecTOjt0ffSQ493vOwppL7d+DTU5+6BvMy22bEwWGaD5XjRKD
-# 809k3Ac4/hIUOORpD2MISz2R5ZgUBOIY38iN3bjShTpGSNrdwT7W6RaWfXSWXAO9
-# qReD6teJ0RFE/HuRgUMZObokztxobvXDcdGdTlN8V4P+UpkzeMtDISBKAw1vnR/N
-# 6iscD+lbRGhdl6AITey7/li+XNxDPhDJqYQtruo3KRACb6nnzHzBKazcZD/ijG3w
-# rnmGjkyPZBsZ0Mwj5VgGWoQTAPlYMNG6h5sjtTeEK82pRa/eQele50Zp4FkgAgn4
-# 4wiBTh1D6Ip14s95/FV2N3mNJRbH/83tFyG0X7bqpYAkzHlNQ6EZm36J3BrvWHwz
-# SCu61FUzvE1+I5Bem70R1mUOjcGNv9dmpw+QiDVSWK3pjzXnTHiJnqrhsnucsmTE
-# 4EVdhf3a2KkMZ67r/W5qae377GwBN0vUZsIHykO8ydCsLEZxaqDvTJVBqMT/bqk0
-# 2u1daT7c+F1BUn9VLsLypGW+lSxMr9wQI0ikHrZxoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDuFcQyq
+# 2eWr1HL7iVvF0meHcsrMJUhX6EYv6TY+YWsSMA0GCSqGSIb3DQEBAQUABIICAKsv
+# cMRh8pntHwidAC39/T9YBOScP9dtNDMaoF1gBXzwtwq+3VJ31hA3fUthYsjQogNW
+# gLpfYApk18cjkSIdiQLeNrbavhLYqzP5Iz/eKn75NofczWaLfgQnYQ1iduhgsR1x
+# qID1VQpDEmT60tr2/zFz0HoNogcwY3BbP9NiIQX3/Tann5FxvnP7fPqMCFk9OvsZ
+# XlnI0FqbOhVvJCHMv4sMWCyqa2CPPbf/bn16Y09743Zq5S3KKASPP1RKuiLLV4eM
+# rtPG3xXkmbpqKeN+HPabHC6H4o0iUTodRMgBExoQAQDzxje5NylRkJZeQT5kq/0C
+# B7qRgTA+FM6L09K8zuaoBtRf7bBz60/WokVuzKpWXzFxcQcfGFImgp16v60CiFL1
+# CVphddiT6YfdRYcW/CyDFAz3MAYkeMVZitVX+hTA5L3MGKl1gjIFvKkoe8OnGhnX
+# a261V9WW8k5c/wwrjcGF9IeL34Vk3p/2ZLR4cMEPq5RwHXKnqeYmQuDSUKmV5eT4
+# K393MpzO2XICkCdb97ua/R7tlEJSfcSoxV6PwkT+XTtip22XvLoatjaGJ66BW/Te
+# ycg+WWowcK1CAyIzpXXyt9GV4GRV41HZjqb34XRUmmts91m9Q7tuadVeOimRxQ2i
+# VB+G1AN1WQtEA7I+lj7tIz/1R5utGjE5dQIRNT3JoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCAs4lL6/FNqxYOeBnqm2n51hQ/IysVPg4SRnyH1GaciDwIUBzfN
-# sf2EWSdKaUQ/T0lk/jq8StgYDzIwMjUwNTE1MTQ0NjQ4WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCCpwu7PkZjWfpK2zFTL0uXQFL4zfcJ3t4bp+xQCh8HOjwIUFa1l
+# o1oi+XTJFRpP6fiq3jJVB4QYDzIwMjUwNzExMDU0NDA3WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -3545,17 +3567,17 @@ function Run-ScriptInRunspace()
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIF5XDwTb1iev9vQH96PkFAAkaM3BD62Ps/sM11KXwddPMIGwBgsqhkiG
+# AQkEMSIEIOAV84ypyojtjAyzdPOJGdpsBywvHayNADOdp8Um1vHGMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAb66w
-# pTSfD/cQ+yERIr7HhfyP4pwUaJXatUg3EMrpwTEdHRZj8oSBvOdSUJPNlxZ2d4oe
-# WM9rDPwu1k2YgLPGL5oDvz+vUafyhZ22rAcoybhb0ulCFLUNVsc/wrawL71+WrtN
-# YExd7V5JoEvdLEbnbJJFjjVUChtWSVtK0B2nFFDLCaair0n11hpYYkpQtYEBpr4c
-# NoRGJdhPmmEMSCuJ/vgzGk8W1yK99OspzLwUVHqQ5Rfo7WT5TVijAK99ErVDbG5Y
-# XEM4SXXsuli4Asvdmd21i/1FvVCUgF+RKiI42Lu8sEV82UvTiHKYSMvl1wuTL/Tx
-# ZbR1ObTFJ3zPyNB5l5RbS3MhP9CMX8gRswgZlQKmNSIMlkBvDZX0zgChGYqzZZx6
-# 27z20Nj47WpKRs3fAe1kGrlXAenLPDWEz9t9C+zF/Bwk7TPGeC0Y6RJMVVtlBpAT
-# G1byQjGreRnw6F/h/JVay5IvkJTtVQ5TzCSEeMfbp7xLbA7BzuThdtEorH0x
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAT80D
+# DhVJpyH1umI/O5p6kfZZm3cwkNgTsXLX/7I9NRbTg8xofW6CyyVBL0uhm8roU+y/
+# fwmNR5FFbhJtaLJz1gMmGmsHYJFC7XpdPmvX29EwRmwBoukzrkaOa2/5oxLcSxR2
+# 7dQXYRO//Rg3JtkdgoR9EmGDIUIJtLTaug2ne8/ok2vn4L/Hpw+C1XC//HlfUS+u
+# Y6z2e6Ui5bUtzG6WuHwpmHIaGwudCbCgR9axgaz7QWUe7me+AHpYXy2EwUhuRvSP
+# FR4VXLSKl4QsuFKFegqFcKAsQ8uRbydGWml8cQbO5UnSUP3KN85sURRo97HleNLY
+# nqTfuf3N5Q1vSlOhCFLlJdI/UcFh3F7N76L81HT/kFJXnKi9w3LPLgUPQGzaI3cT
+# CZIqlVajeyfpQrRgG/ilGqlJTa0g5+AgcOeXFUcWAibansIgtI2vDt1cSK5X2voK
+# Lvp9LnyrNxmgYiK202oyPpEK/htLjcu85v8ki9HLPShYfuXcpnvJ977J48Fo
 # SIG # End signature block

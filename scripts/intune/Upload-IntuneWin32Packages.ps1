@@ -368,6 +368,8 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
 
         # Committing the app
         Write-Host "  Committing the app '$($app.displayName)'"
+        $attr = Get-Member -InputObject $appConfig -MemberType NoteProperty -Name "applicableArchitectures" -ErrorAction SilentlyContinue
+        if ($attr) { $appConfig.PSObject.Properties.Remove("applicableArchitectures") }
         $uri = "/beta/deviceAppManagement/mobileApps/$appId"
         $appP = Patch-MsGraph -Uri $uri -Body ($appConfig | ConvertTo-Json -Depth 50)
     }

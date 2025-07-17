@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     18.10.2021 Konrad Brunner       Initial Creation
     14.11.2023 Konrad Brunner       New naming option
+    10.07.2025 Konrad Brunner       Removed Az
 
 #>
 
@@ -48,11 +49,6 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Create-DefaultDistribution
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 # =============================================================
 # Exchange stuff
@@ -61,15 +57,6 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "EXCHANGE | Create-DefaultDistributionGroups | EXCHANGE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
-$ownerEmail = $Context.Account.Id
 
 try
 {
@@ -82,6 +69,7 @@ try
         LoginTo-EXO
     }
 
+    $ownerEmail = (Get-ConnectionInformation).UserPrincipalName
     $newNamingPart = ""
     if ($AlyaGeneralInformEmail.StartsWith("cloud."))
     {

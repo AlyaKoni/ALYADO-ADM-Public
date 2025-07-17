@@ -1,50 +1,50 @@
 [
   {
+    "Order": 4,
     "PackageFamilyName": "Microsoft.LanguageExperiencePacken-US_8wekyb3d8bbwe",
+    "LanguageTag": "en-CH",
+    "LicenseType": "online",
+    "GeoId": 223,
     "InputLanguageID": "0409:00000807",
     "Locale": "en-US",
-    "LicenseType": "online",
-    "GeoId": 223,
     "ProductTitle": "English (United States) Local Experience Pack",
-    "LanguageTag": "en-CH",
-    "Order": 4,
-    "ProductId": "9PDSCC711RVF",
-    "SkuId": "0016"
+    "SkuId": "0016",
+    "ProductId": "9PDSCC711RVF"
   },
   {
+    "Order": 3,
     "PackageFamilyName": "Microsoft.LanguageExperiencePackit-IT_8wekyb3d8bbwe",
+    "LanguageTag": "it-CH",
+    "LicenseType": "online",
+    "GeoId": 223,
     "InputLanguageID": "0810:00000807",
     "Locale": "it-IT",
-    "LicenseType": "online",
-    "GeoId": 223,
     "ProductTitle": "italiano Pacchetto di esperienze locali",
-    "LanguageTag": "it-CH",
-    "Order": 3,
-    "ProductId": "9P8PQWNS6VJX",
-    "SkuId": "0016"
+    "SkuId": "0016",
+    "ProductId": "9P8PQWNS6VJX"
   },
   {
+    "Order": 2,
     "PackageFamilyName": "Microsoft.LanguageExperiencePackfr-FR_8wekyb3d8bbwe",
+    "LanguageTag": "fr-CH",
+    "LicenseType": "online",
+    "GeoId": 223,
     "InputLanguageID": "100c:00000807",
     "Locale": "fr-FR",
-    "LicenseType": "online",
-    "GeoId": 223,
     "ProductTitle": "Module d\\u0027expérience locale français (France)",
-    "LanguageTag": "fr-CH",
-    "Order": 2,
-    "ProductId": "9NHMG4BJKMDG",
-    "SkuId": "0016"
+    "SkuId": "0016",
+    "ProductId": "9NHMG4BJKMDG"
   },
   {
+    "Order": 1,
     "PackageFamilyName": "Microsoft.LanguageExperiencePackde-DE_8wekyb3d8bbwe",
-    "InputLanguageID": "0807:00000807",
-    "Locale": "de-DE",
+    "LanguageTag": "de-CH",
     "LicenseType": "online",
     "GeoId": 223,
+    "InputLanguageID": "0807:00000807",
+    "Locale": "de-DE",
     "ProductTitle": "Deutsch Local Experience Pack",
-    "LanguageTag": "de-CH",
-    "Order": 1,
-    "ProductId": "9P6CT0SLW589",
-    "SkuId": "0016"
+    "SkuId": "0016",
+    "ProductId": "9P6CT0SLW589"
   }
 ]

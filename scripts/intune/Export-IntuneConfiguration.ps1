@@ -64,6 +64,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
 LoginTo-MgGraph -Scopes @(
+    "Organization.Read.All",
     "Directory.Read.All",
     "DeviceManagementManagedDevices.Read.All",
     "DeviceManagementServiceConfig.Read.All",
@@ -379,22 +380,23 @@ $uri = "/beta/deviceManagement/ndesconnectors"
 $ndesconnectors = Get-MsGraphObject -Uri $uri
 $ndesconnectors | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CertificationAuthority\"+(MakeFsCompatiblePath("ndesconnectors.json"))) -Force
 
+if (-Not $AlyaIsDevOpsPipeline)
+{
+    ##### Starting exports CompanyPortalBranding
+    #####
+    Write-Host "Exporting CompanyPortalBranding" -ForegroundColor $CommandInfo
+    if (-Not (Test-Path "$DataRoot\CompanyPortalBranding")) { $null = New-Item -Path "$DataRoot\CompanyPortalBranding" -ItemType Directory -Force }
 
-##### Starting exports CompanyPortalBranding
-#####
-Write-Host "Exporting CompanyPortalBranding" -ForegroundColor $CommandInfo
-if (-Not (Test-Path "$DataRoot\CompanyPortalBranding")) { $null = New-Item -Path "$DataRoot\CompanyPortalBranding" -ItemType Directory -Force }
+    #intuneBrand
+    $uri = "/beta/deviceManagement/intuneBrand"
+    $intuneBrand = Get-MsGraphObject -Uri $uri
+    $intuneBrand | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CompanyPortalBranding\"+(MakeFsCompatiblePath("intuneBrand.json"))) -Force
 
-#intuneBrand
-$uri = "/beta/deviceManagement/intuneBrand"
-$intuneBrand = Get-MsGraphObject -Uri $uri
-$intuneBrand | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CompanyPortalBranding\"+(MakeFsCompatiblePath("intuneBrand.json"))) -Force
-
-#intuneBrandingProfiles
-$uri = "/beta/deviceManagement/intuneBrandingProfiles"
-$intuneBrandingProfiles = Get-MsGraphObject -Uri $uri
-$intuneBrandingProfiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CompanyPortalBranding\"+(MakeFsCompatiblePath("intuneBrandingProfiles.json"))) -Force
-
+    #intuneBrandingProfiles
+    $uri = "/beta/deviceManagement/intuneBrandingProfiles"
+    $intuneBrandingProfiles = Get-MsGraphObject -Uri $uri
+    $intuneBrandingProfiles | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\CompanyPortalBranding\"+(MakeFsCompatiblePath("intuneBrandingProfiles.json"))) -Force
+}
 
 ##### Starting exports CompliancePolicy
 #####
@@ -1211,8 +1213,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCmumzIwdlKthd/
-# LqFPV11oz0W2WnP4vmIsNNAA99pAA6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA6JoMDGjWU05IC
+# Hbwz9jGgnsyMAHC5fGtnsK/smEuYK6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -1326,23 +1328,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBuQ1geq
-# R4RlF31tICx1rIgf530XVd8Z7mR4zuCJCtrEMA0GCSqGSIb3DQEBAQUABIICAHsv
-# iuiMOKH2zoav77WFZL/pKNflv0mQ5sSRwACRBUWABraV/DTJIY71sB/Sixe2t8t6
-# 5V+tPnS7g1UHX8Ykv/2f1PdBbnFtE8zbzpRKji20e+2GQGs5av1xpH1PVh9MJ5UR
-# FCN7ta3dJgrYIS+VZc5Zn3m8+E/By7+STws/g/X4sOlJhHj4z4fsdwBugnkZjLP4
-# XJfrZBmDPSMWjrfjs7LufpuOTxBHsipzidifZ1EvFFBA1DzpGy5s8QkjTG+z3MOP
-# uCOBiPcZuD+WE7UjW0XVmbphSnE4OFju8vWa4/v01IKMceXF8DFyemtl4k7AqVJi
-# VvDj2fC7xt+RUF2POfqFoiDbNkGuIQPcga7amGiorbGnHTkCmaYz4dSLaHsJb4sv
-# 7dMUlMfhP0GwWqiu4MFUfouKVYEXxexwQsRobddMbnmSxNY2D1dK6jMBhKAJbndw
-# RhZyrYAt6FfedqLvy9Ah9fRLlbtFb7jDg1d4zwt8XORm9U5d+qMki4lR1LYnV8nM
-# eva7eolgEJ6dy9sBLgKMgJSvtFj4eu0iKu0iutjwmaM/PZlRcj46e77jOe4kQZy4
-# b7c/v0/czbpWKvLHVQjNrakd0PaD+Ee7hLwQ+JNBk2kwn1N79k48wKX9bYthXHKF
-# J1SnXn3vtq/B68A0Z4CbdCjJw4T4+OIuS2HaPm8soYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPWMrYci
+# PmVDSxrXkEnUXtbXYiKS9eRxBCqoQ+gY39VaMA0GCSqGSIb3DQEBAQUABIICAH21
+# PrXgovdhmJL4WhzQsy/R0Mw0huJ4lC1p7huyKuBcKUCEAfZb/d4nlKILfuLN05oN
+# V24NEqrlNUnFnZzqU/2NCutLZZG15GCm8XEwjkwThXnJc66eSa1WXLExT5PVqyzW
+# 4PkWwpDTwIW1n//vBwN2jnRiZiiAPeR/rZrPy37j+AW+K4iUEzTjbFYDn//WO6j2
+# y34Bzm2cFZA4f3Nf1Fsp8jAuSIvmY41VImyN1E7xl6U9L+Fb/SbzhicFnxa7RSV3
+# E59HrrbZmEWL0mbvJOp8Vd59JK2qTYUNuTBYN1yU3uwWV4ySvDPDrclG/N551N18
+# ifTw/F0jjdTRbCCHrYLh4T1SldGgznnwShIrG35kdITleGoPYHo3m/R9QJYRyuTm
+# g7USyTxXgjFbcM6YA0K2QXSPG1QZDtlMXv5VhNEVP18wKkueFUF+tcG1fBdvnlHr
+# eW0KE96E5XT+OtNzZ8zstikET6EoL2w4Xd/nxPjhwC8g54uMEZ68ZbgCefK2T1Mi
+# WoXM2wYFfKDE7VE8XGOmVG6U0CLrykwZpGI1FzL1LyCQ+ylNtLNY82Vmq9cewk27
+# oCgqjiJiqhaYUcSOxgPw3gzHN0QbaoPOwXXUxMSdQTHK7sjFlbJVvAskc55lEAZN
+# ykK9Md/6zCrIgpN8AJDfplrgoMu06Tb9xsZqtmw8oYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCDynuCUQASn3eqnPU/3gzMuzVByIK25DNxDpp4jMXGhDAIURMOC
-# 2oMLPnWj3V/PYXekjxCdUOwYDzIwMjUwNzA0MDYwMTI5WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCAiZBJhlRq/PGO54NAACdnfpi7NGq6rPOHTV6AMnLaRPAIUV9cY
+# QMb4Z6sDTrheWGkiXprj9MwYDzIwMjUwNzExMDU0NDA2WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -1447,17 +1449,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIHrpWcqz9x24RjI8Cge6AWGVzoWu4jLcyNKLajACXJg3MIGwBgsqhkiG
+# AQkEMSIEIHWJ+AYwfo7NosriJW+LYfavSfqGye3d800QbsUoBuSzMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAU7im
-# 49HneCzRkxzLLBSyNYL14PIzyskOvPlhdvM3/jljje8iJMk2eHkWYM+VP6M6yLYz
-# qz7238mX0upvrHIZA103efGUCcT2jZt8qe4jEkZE9tTM1lMha06/ibQPCiNYMsIR
-# GyQhpcjwgVHgftVVIrE6D21EbCxEqW5y94+VHvFy++hU6STPP2P3+z1r3awLl0xd
-# C4l8CpOpQzIZSa2eKTdGHNL3MB8gc9eGqSq3V+WT4C8pqFbqKTx+aUFMRmt2PGbp
-# +twIZXkbtYyM4jDXs5ZD7aBnywYit/K9+URMbsWOpZURMAW4bPiBlkxquNmbKAKp
-# WPvbyN2aodMlB4L3OEypr1Titkmj4y3YXyo4voUaXQ9uc07I5NpVCvgJJ5pwjoDz
-# wOMxNXt8ngxPXgH19b5MpEK5LT1OXTb06ip/4+II5MLkZq3L7Aqq77g4Q3tEHTMw
-# CmkR8q+D7nI5EaNpUznafXLTj+vNpTqMpo+xsoGIW0YIAkgh81zFaCGEfyrQ
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAN4C1
+# B3GAta4IsErCuViULWi463kTBpOoosn+9g15L1zYSM9kNN5/3EWAb62oD2CS/Cnp
+# orIb9e39RAnmC1zQ4NMxR6ryQsuOZKJqe0oycPfRnM9f3zsVa/DBNdepOLa0+JwU
+# 4ly60M9oeHHRj0eCa9z7tfXfH59xuHTbAnRKEf8QKXxM05BJVzkRlAVM+6elAf5L
+# evlIF/VzDiGwnJQTc21j+CEhfn3498teW5QiJ7Gcf6c+Y8pHPz1ZA9dSIOiF0bwq
+# gZWGqXfyqkXHH6UPr4Az6O58ANzar015ADwtUY6ePzXDc1IdltOzlnxA63gsuLfu
+# ssVnYD0tKXw663d3tvcV94c973VYq6DICFed8p50gxF6ZyWvSbhJfHJ6DfcxU2vi
+# Uu7Xq5mcE2BL9aFRSL3ZeGTgRFobSvyqdwiKQW6TG8HsY72H9sNmjjUsA+y5zLqW
+# 4a2bBevE3qGKmoOiitVou6WXfQisdBDvyndCidwn4QJOOMewNHpNjmyR4wP3
 # SIG # End signature block

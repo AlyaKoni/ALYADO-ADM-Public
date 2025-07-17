@@ -59,8 +59,11 @@ if ([string]::IsNullOrEmpty($TeamPicturePath)) { $TeamPicturePath = $AlyaLogoUrl
 if ([string]::IsNullOrEmpty($CompanyName))
 {
     $CompanyName = $AlyaCompanyNameShortM365
-    $TeamPicturePath = Get-Variable -Name "AlyaLogoUrlQuadDark$CompanyName" -ValueOnly
-    if ([string]::IsNullOrEmpty($TeamPicturePath)) { $TeamPicturePath = Get-Variable -Name "AlyaLogoUrlQuad$CompanyName" -ValueOnly }
+}
+else
+{
+    $TeamPicturePath = Get-Variable -Name "AlyaLogoUrlQuadDark$($CompanyName.ToUpper())" -ValueOnly
+    if ([string]::IsNullOrEmpty($TeamPicturePath)) { $TeamPicturePath = Get-Variable -Name "AlyaLogoUrlQuad$($CompanyName.ToUpper())" -ValueOnly }
 }
 [string]$TitleAndGroupName = "$($CompanyName.ToUpper())TM"
 [string]$Description = "Haupt Team fuer alle Benutzer. Intern und Extern."
@@ -141,6 +144,7 @@ do
 while (-Not $Team -or -Not $Team.GroupId)
 if ($TeamPicturePath)
 {
+    Write-Host "Setting team logo" -ForegroundColor $CommandInfo
     if ($TeamPicturePath.StartsWith("http"))
     {
         $fname = Split-Path -Path $TeamPicturePath -Leaf
