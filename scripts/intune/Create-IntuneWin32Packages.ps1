@@ -38,7 +38,7 @@
 [CmdletBinding()]
 Param(
     [string]$CreateOnlyAppWithName = $null,
-    [string]$ContinueAtAppWithName = "Notepad++",
+    [string]$ContinueAtAppWithName = $null,
     [string]$AppsPath = "Win32Apps",
     [bool]$ReuseExistingPackages = $false
 )

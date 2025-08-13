@@ -186,16 +186,34 @@ foreach($policy in $policies)
         Write-Host "  Checking if policy exists"
         $searchValue = [System.Web.HttpUtility]::UrlEncode($policy.displayName)
         $uri = "/beta/deviceManagement/deviceCompliancePolicies?`$filter=displayName eq '$searchValue'"
-        $actPolicy = (Get-MsGraphObject -Uri $uri).value
+        $retries = 10
+        while ($retries -gt 0)
+        {
+            $retries--
+            try {
+                $actPolicy = (Get-MsGraphObject -Uri $uri).value
+                if ($actPolicy.id) { break }
+            }
+            catch {
+                Write-Host "    Policy not found. Retrying..." -ForegroundColor $CommandInfo
+                Start-Sleep -Seconds 6
+            }
+        }
         if ($actPolicy.id)
         {
 
             $tGroups = @()
-            if ($policy.displayName.StartsWith("WIN "))
+            if ($policy.displayName.StartsWith("WIN") -and -not $policy.displayName.StartsWith("WIN365") -and -not $policy.displayName.StartsWith("WIN10") -and -not $policy.displayName.StartsWith("WIN11"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
                 if (-Not $sGroup) {
                     Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WINMDM not found. Can't create assignment."
+                } else {
+                    $tGroups += $sGroup
+                }
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM not found. Can't create assignment."
                 } else {
                     $tGroups += $sGroup
                 }
@@ -317,8 +335,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAMm5mcpRkRU47L
-# Oylf8AGuD0eqhwjLBipXHzGQuwWoSKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBdqqFJG63p1CoS
+# AEKX7BV6zFUAdPx3sxBq8pS1Rl3e8KCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -432,23 +450,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOU1Cv+y
-# 6gKZbbEG0BFN6YjEgGykp/6sgsMcYI0TcBS+MA0GCSqGSIb3DQEBAQUABIICALqX
-# 02Un7jDGf11DifgqOQAbYnajAzgDXazGprdGM2ntPlmO5s1wLtHO0pF2u7vgEWP8
-# AFggb1fPWbAYN2RDWl3Ai1aMAB0GKKrI1lrsLHXdS7kNjuFety77JVTrQC5RAXy1
-# iCylUzWulcs4ujaCOWgmjq2yVmdk+jpwbE2LkT5p5/B867LOoa3kPLKFNRDe5lYI
-# T0me8a7kiXk7IqV4fpDfhJRE9ifcK3w8ex/WH3GVnit+f+MRJI9nqOqmGhYv4D66
-# WPjLNI39C2x5hsY4th7H5v94C7oTXJ9Ye5fji+t5P8/pYP8YhBpaqAXD0sB423BW
-# FourxMSp14/z43y4UDfFBD1pRysFlFDfwby2XhXzCCQhh2LzpNOO2gyvWrVbWeIA
-# FOTSgm/sTRW6ZwpNCW88YM6JEBXMN2+zV50VPDzljmCWAV9OeIvgJEWk3Z5DQAT7
-# sa1kalEG9e7RSZDyy4bpM2TEs2gccW57p9B9GB0T5XprYxH+DHBMFa/t/qZ65MGv
-# t8o9xNBNVIEL5ohf3k3/+g6xI8P/QC4OH3xHIoNIaR56g2suITyKbOpOYeogS1m3
-# codEgCNC6aYXXJ8b8nKoe5aUk+Xaw12fAakTTt5z5vkfuO+9qlxZgJ2Um/wLGttu
-# OsPiWqKI1I0zdrT4os1lCFtwjxqHVOq4UMy2Xo1OoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDMNSww4
+# I9JmhrkmMexaZ7gp6qghFy9XBWpEkyiFXihvMA0GCSqGSIb3DQEBAQUABIICAHY8
+# ha7QXR6WFCL3QNQ0AqyKh2DUWEFBlFlwNW7xYSrtJ3fHqPGWUrdccHu4ywOoIKXH
+# 3/1c3IMYn0gYlLoGy+neXsu6bpfED+2yiH0PAC0lLJKdAP2i4qhSY9cjAqU26e0z
+# cZH5s1gsuM5ZrqdJa68WU0YeHn8DBkIWgQC5zduye+V8pbr//bzlSz4AcyVnncnu
+# pMP5Z1vITw0owvivXIqez7m8SEvKHaymRV4SBtgiO1X+xbJwSNFwf7+yTbVj3CDx
+# syFAUO5E99dO2MVscLTo7xD9GQw1LEuMhE9I+rwCHORHvXgYEmm048gVixAqmXIh
+# gql8OWUQaAheew/ZUQKVRAhdmBy8eiUpzqEay06eVWoT2jA7vM64oW9lfzhYm1Ul
+# mf4gFMPrPdx++SdRSmAJvrVwXFpOilmikDlXJABP0+qwYPGkkb8HsnTRCSfQshVS
+# peUdFAKSoJwRS7Iz1bPLVyPrfWKoHj/rPt0sgLnQqbzbHAZh7mW4O1939gNw1gFq
+# MyABHEtGlUb/1ahs6QCePyIwjJsYcpKNGdx+CscokSQPxwQC49A7BMwSlldIhMDZ
+# JD/UDYAYiKd3g1zFJakJ+mjbF7kwG8pAhklPWx2qKTmJCnRaApvi73PRNrHkJu8M
+# dz20gp8txEMfy5fMIxrYO8TFOfw6XT/DG0ilKMbDoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCA3fSqNm9WZqTqAxenMUON5Rki2etT+c8VbMgJGYBGykQIUYm9o
-# Qsz8zzlVi7gquAhK9gas6AEYDzIwMjUwNjExMjAyNzA4WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCAJSf6eW2diq0a5lMxhDwCE9Fs6U0AgLP/csfv2nY8OTwIUYdDA
+# VYxR146Zfd0jdDo4KaB6tCIYDzIwMjUwODA3MDcyMDU3WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -553,17 +571,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIPUxG19hQtLm9jihSzJT9lxqh94fOO6k/XlQIpWEJ2llMIGwBgsqhkiG
+# AQkEMSIEILVE/eXPVgYafoYQdFN9Wc+h+MCugtHgqWWjFs3wTBpMMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAeBUk
-# WHaf+s8F+QjPyx7GI4UjgS7rYiTo2VTdYNtY06KpMWJ/H3qLuX/pnZt735Jy/StQ
-# kVp16w2xHF0kUBihbMekZMR2oNe+3j5J5KT3687hmEN3Ey6Tig38INWReAJ3oHIU
-# /OSZnqN4M8eawZTOofpAYo3Xg1YeycB5H4l3iZvoZ6pK7yDXA2o+XnRYPIOkkPeA
-# TtCzI677y5CT8BsbafPSWJenJsxf0oZtD/xuY6vzLfMPbQXe8J9Um47EMfjZJT1o
-# FW0kk68tAMlYSoDyUWNxKQDPCaFWG7tW5Dg7B1P5rxpQOPNGZJY1WfyOv+M6COY/
-# M6Zq7C8/NYnQKXqfZWBLD4AyBwTSAMU+5KgkLxkWGZfhhLnBk5F+BwxQ0GuOh6Mo
-# qI5vnRRTRAiilx0HOTR3MxUZXnibC6gVHdLIoyYrj5TbSw0XAfZTY8UwuvraPfxD
-# 5U8Qg1B6fqZhwYND706yTQxOVxyA//+gs7ocajFGEGNusTqVPbFfWoIWtX2F
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAJ2ON
+# Zlm830kTjiQ4YWPqpw7Kut9+j85Q4Gyo1HtnQjhsAKUVkxP0CvkXwGwWgw0X3ibC
+# hgtLQ3JiUSI6RSCI0H4amgRKoLGvHaVsG6J9mVMiPYvwokjQIdXw8b2KCM3Kndzd
+# 73iFj6I5a/pwXxe+Rp5Ha+0anR8mVJKJ9xK7MWo9Cf2kARwXmz6h9PiA6EPB5HBl
+# /7PE0vP7e2zVFDzz9ttBtoK6wDSflI1Oi6x2StI+ODokDU8p/9qwpYseIvbYtLvd
+# jncisYsFlmYELVa02TWX7APVG9lDUVPPwtStjWGzPX/+u1flD9h2wUcTFc1ft491
+# qmhuDwaFY1SVzRp60EyZeIUxHnpdnsz9PjhJ5CfTuvw1u2ZBp+Lf3IkKLxMlei8U
+# cKldcd4HtKcdDjrXG0RYS491OoCbXpXIu2i2XMbvLFI8Gxz4BxEI9Ivf6sgzjpoC
+# 4bR8uXMuX78/ARPcAVj3d+azCAVsATVrBjdofQ4L6UhYjALlW3ZYP0qf+7Oq
 # SIG # End signature block

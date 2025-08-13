@@ -1499,6 +1499,122 @@ function Install-ScriptIfNotInstalled (
 }
 #Install-ScriptIfNotInstalled "Get-WindowsAutoPilotInfo"
 
+<# DEVOPS FUNCTIONS #>
+
+function Get-JwtExpiration {
+    param ([string]$jwt)
+    $parts = $jwt.Split('.')
+    if ($parts.Length -ne 3) { return $null }
+    $payload = $parts[1].Replace('-', '+').Replace('_', '/')
+    switch ($payload.Length % 4) {
+        2 { $payload += '==' }
+        3 { $payload += '=' }
+    }
+    $bytes = [System.Convert]::FromBase64String($payload)
+    $json = [System.Text.Encoding]::UTF8.GetString($bytes)
+    return ($json | ConvertFrom-Json).exp
+}
+
+function Refresh-DevOpsOidcToken {
+    Param(
+        [Parameter()]
+        [string]
+        $AccessToken = $env:AlyaDevOpsAccessToken,
+        [Parameter()]
+        [string]
+        $OidcRequestUri = $env:AlyaDevOpsOidcRequestUri
+    )
+    if ([string]::IsNullOrEmpty($AccessToken))
+    {
+        throw "No access token specified!"
+    }
+    try {
+        $exp = Get-JwtExpiration -jwt $AccessToken
+        $now = [int][double]::Parse((Get-Date -UFormat %s))
+        $expInMinutes = [Math]::Round(($exp - $now) / 60, 2)
+    }
+    catch {
+        Write-Host "Exception: $($_.Exception)"
+    }
+    if ($expInMinutes -lt 0)
+    {
+        throw "Access token already expired since $expInMinutes minutes! Not able to refresh OpenID Connect token."
+    }
+
+    Write-Host "Checking existing OpenID Connect token"
+    try {
+        $oidcToken = $env:idToken
+        if ([string]::IsNullOrEmpty($oidcToken))
+        {
+            if ([string]::IsNullOrEmpty($env:AlyaDevOpsIdToken))
+            {
+                throw "Unable to determine oidcToken."
+            }
+            $env:idToken = $env:AlyaDevOpsIdToken
+        }
+        $exp = Get-JwtExpiration -jwt $env:idToken
+        $now = [int][double]::Parse((Get-Date -UFormat %s))
+        $expInMinutes = [Math]::Round(($exp - $now) / 60, 2)
+    }
+    catch {
+            Write-Error "Exception: $($_.Exception)" -ErrorAction Continue
+            throw
+    }
+
+    if ($expInMinutes -ge 2)
+    {
+        Write-Host "OpenID Connect token expires in $expInMinutes minutes. Refresh not required."
+    }
+    else
+    {
+
+        Write-Host "Refreshing OpenID Connect token"
+        $IdTokenUri = $OidcRequestUri
+        if ([string]::IsNullOrEmpty($IdTokenUri))
+        {
+            try {
+                $ServiceConnectionId = (Get-ChildItem -Path Env: -Recurse -Include ENDPOINT_DATA_*)[0].Name.Split('_')[2]
+            }
+            catch {
+                throw "Unable to determine service connection ID."
+            }
+            #https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/oidctoken/create
+            $IdTokenUri = "${env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${env:SYSTEM_TEAMPROJECTID}/_apis/distributedtask/hubs/build/plans/${env:SYSTEM_PLANID}/jobs/${env:SYSTEM_JOBID}/oidctoken?serviceConnectionId=${ServiceConnectionId}&api-version=7.1-preview.1"
+        }
+        try {
+            $Response = Invoke-RestMethod -Headers @{
+                    Authorization  = "Bearer $AccessToken"
+                    'Content-Type' = 'application/json'
+                } `
+                -Uri $IdTokenUri `
+                -Method Post
+        }
+        catch {
+            Write-Host $_.Exception
+            Write-Host "$($response | ConvertTo-Json -Depth 5)"
+            throw
+        }
+        $env:idToken = $Response.oidctoken
+
+        try {
+            $exp = Get-JwtExpiration -jwt $env:idToken
+            $now = [int][double]::Parse((Get-Date -UFormat %s))
+            $expInMinutes = [Math]::Round(($exp - $now) / 60, 2)
+            Write-Host "  expires in $expInMinutes minutes"
+        }
+        catch {
+            Write-Error "Exception: $($_.Exception)" -ErrorAction Continue
+            throw
+        }
+        if ($expInMinutes -le 9)
+        {
+            throw "OpenID Connect token refresh failed."
+        }
+
+    }
+
+}
+
 <# LOGIN FUNCTIONS #>
 function LogoutAllFrom-Az()
 {
@@ -1569,10 +1685,11 @@ function LoginTo-Az(
     if ($AlyaIsDevOpsPipeline)
     {
         Write-Host "  within DevOps"
+        Refresh-DevOpsOidcToken
         $AlyaContext = Get-CustomersContext
         if (-Not $AlyaContext)
         {
-            throw "Not able to get devOps az context. Please select a connection in the pipeline task."
+            throw "Not able to get DevOps az context. Please select a connection in the pipeline task."
         }
     }
     else 
@@ -1723,16 +1840,60 @@ function LoginTo-MgGraph(
     if ($AlyaIsDevOpsPipeline)
     {
         Write-Host "  within DevOps"
+        Refresh-DevOpsOidcToken
+        try {
 
-        LoginTo-Az -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
-        $token = Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -TenantId $AlyaTenantId -AsSecureString
-        Connect-MGGraph -AccessToken $token.Token -Environment $AlyaGraphEnvironment -NoWelcome
+            $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+            if ($mgContext)
+            {
+                Write-Host "  checking existing graph context"
+                foreach($Scope in $Scopes)
+                {
+                    if ($mgContext.Scopes -notcontains $Scope)
+                    {
+                        $mgContext = $null
+                        break
+                    }
+                }
+            }
 
-        $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
-        if (-Not $mgContext)
-        {
-            throw "Not able to get devOps graph context. Please select a connection in the pipeline task."
+            if (-Not $mgContext)
+            {
+                $token = Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -TenantId $AlyaTenantId -AsSecureString
+                Connect-MGGraph -AccessToken $token.Token -Environment $AlyaGraphEnvironment -NoWelcome
+
+                $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+                if (-Not $mgContext)
+                {
+                    throw "Not able to get DevOps graph context without login."
+                }
+            }
+
         }
+        catch
+        {
+
+            Write-Error $_.Exception -ErrorAction Continue
+            Write-Warning "Getting token failed. Trying LoginTo-Az"
+
+            try {
+                LoginTo-Az -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+                $token = Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com" -TenantId $AlyaTenantId -AsSecureString
+                Connect-MGGraph -AccessToken $token.Token -Environment $AlyaGraphEnvironment -NoWelcome
+                
+                $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+                if (-Not $mgContext)
+                {
+                    throw "Not able to get DevOps graph context. Please select a connection in the pipeline task."
+                }
+            }
+            catch {
+                Write-Error $_.Exception -ErrorAction Continue
+                Write-Warning "LoginTo-Az failed"
+            }
+            
+        }
+        
     }
     else 
     {
@@ -3331,8 +3492,8 @@ function Run-ScriptInRunspace()
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB6fG3vpHLkmK/q
-# uA+g0OTfA/3Gc+9tFDMZX6zQrq8MdaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAJT3A4zRN6Pbpy
+# sjY1Ub+1Is27GhjA9ge5rJolYcVJb6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -3446,23 +3607,23 @@ function Run-ScriptInRunspace()
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDuFcQyq
-# 2eWr1HL7iVvF0meHcsrMJUhX6EYv6TY+YWsSMA0GCSqGSIb3DQEBAQUABIICAKsv
-# cMRh8pntHwidAC39/T9YBOScP9dtNDMaoF1gBXzwtwq+3VJ31hA3fUthYsjQogNW
-# gLpfYApk18cjkSIdiQLeNrbavhLYqzP5Iz/eKn75NofczWaLfgQnYQ1iduhgsR1x
-# qID1VQpDEmT60tr2/zFz0HoNogcwY3BbP9NiIQX3/Tann5FxvnP7fPqMCFk9OvsZ
-# XlnI0FqbOhVvJCHMv4sMWCyqa2CPPbf/bn16Y09743Zq5S3KKASPP1RKuiLLV4eM
-# rtPG3xXkmbpqKeN+HPabHC6H4o0iUTodRMgBExoQAQDzxje5NylRkJZeQT5kq/0C
-# B7qRgTA+FM6L09K8zuaoBtRf7bBz60/WokVuzKpWXzFxcQcfGFImgp16v60CiFL1
-# CVphddiT6YfdRYcW/CyDFAz3MAYkeMVZitVX+hTA5L3MGKl1gjIFvKkoe8OnGhnX
-# a261V9WW8k5c/wwrjcGF9IeL34Vk3p/2ZLR4cMEPq5RwHXKnqeYmQuDSUKmV5eT4
-# K393MpzO2XICkCdb97ua/R7tlEJSfcSoxV6PwkT+XTtip22XvLoatjaGJ66BW/Te
-# ycg+WWowcK1CAyIzpXXyt9GV4GRV41HZjqb34XRUmmts91m9Q7tuadVeOimRxQ2i
-# VB+G1AN1WQtEA7I+lj7tIz/1R5utGjE5dQIRNT3JoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJ3q0B86
+# XKpkGtb6qU6zxhFpvoD9Ae4VRUzNpZKpGymxMA0GCSqGSIb3DQEBAQUABIICAIjo
+# EXOZCwnaKGspuEXPVNYndH1MRFDz8kIYaFVAg1uVI0uaUSzYGi8aoxreB7OVBJjh
+# QkjU9ONsmg9H3VERQvhVUzlSqF0zUUQP1lLk4YvBvNBJyfnUyLtwPHpjNy4TY+Zl
+# JwH/UrJ3ajwsZ9fpVKvSNK3ITiOB686hjvSZyDWPQQusOVvSyBza8yiYOaPxqLQh
+# fZ508qgp+lE4LmYfdV5Cg6frAICJeFb2fqDQyb4jc/SSDuC+1hTMPjkWKlD6AzSn
+# djEKCPuOd5AK/WFAJf1lPW/DYruGreKnlOxF1kqIKO1NePRDcGHDLH+KJAtYxKy3
+# KNQkN0ocGcfXi4EBxTtDIyGoATeACd5D+QU/LsDQWjpFHLIVRxgDWo7cDqkMHfQl
+# hg3w33lnJPzsVW21XDiAwMlfx7Uhj6AIMdxcWNSjXKll5qI9aFTqoO1m4+3k7tyz
+# hTLTBn6NZ3jU6duOuvsb6zx4yFkEr7zRFx5eIH/QtsMsxtNdq5VZeRgf4f3/boMY
+# 3kTsWeK+EboK9dkL6KU/iYFC0hjpSsJbiXo20IKMkGSDelhFRLpv8svgN49TfoMl
+# VgOHXdS7oAcSWPbbSMEri4i+BDZJn9BnxfX/KglHsC/cjuM1NpMkkL7uteKd/FnO
+# H5fE8BZRoyfb3l3EFcnHSgIp87SbsK9ICzKS4ZSioYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCpwu7PkZjWfpK2zFTL0uXQFL4zfcJ3t4bp+xQCh8HOjwIUFa1l
-# o1oi+XTJFRpP6fiq3jJVB4QYDzIwMjUwNzExMDU0NDA3WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCCEmtdXeBKLAi3WhiRZDaMtVv1NzIQHdi/YR+mC5fNH0QIUBECJ
+# NR9av9PBYzIgR2472+AKm4wYDzIwMjUwODA1MjExNzMwWjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -3567,17 +3728,17 @@ function Run-ScriptInRunspace()
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIOAV84ypyojtjAyzdPOJGdpsBywvHayNADOdp8Um1vHGMIGwBgsqhkiG
+# AQkEMSIEIFR3TqgvhHeAcM15cwdfZ5dd179mCsxX3NNitvyLBN15MIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAT80D
-# DhVJpyH1umI/O5p6kfZZm3cwkNgTsXLX/7I9NRbTg8xofW6CyyVBL0uhm8roU+y/
-# fwmNR5FFbhJtaLJz1gMmGmsHYJFC7XpdPmvX29EwRmwBoukzrkaOa2/5oxLcSxR2
-# 7dQXYRO//Rg3JtkdgoR9EmGDIUIJtLTaug2ne8/ok2vn4L/Hpw+C1XC//HlfUS+u
-# Y6z2e6Ui5bUtzG6WuHwpmHIaGwudCbCgR9axgaz7QWUe7me+AHpYXy2EwUhuRvSP
-# FR4VXLSKl4QsuFKFegqFcKAsQ8uRbydGWml8cQbO5UnSUP3KN85sURRo97HleNLY
-# nqTfuf3N5Q1vSlOhCFLlJdI/UcFh3F7N76L81HT/kFJXnKi9w3LPLgUPQGzaI3cT
-# CZIqlVajeyfpQrRgG/ilGqlJTa0g5+AgcOeXFUcWAibansIgtI2vDt1cSK5X2voK
-# Lvp9LnyrNxmgYiK202oyPpEK/htLjcu85v8ki9HLPShYfuXcpnvJ977J48Fo
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAXerK
+# 9tXTrPrf9A9CAz4KdmgsLSW59YMJqfp2WUTcgHkK1T3y08zU/88rkajuvpOFbGXl
+# eyCqsWN7aHSb7sHsfBNreZn5gIn7R7MDzn1zFvlvQLnecGvHF+VXuQPT+fyDni+e
+# ikWtM1uJuY8my02RQd79AcWHhmO++9uTqmnFCcJEU2TZah4UywquDQbdxqh2NjIZ
+# lnQAsYXU8qFjmUiKOgQlSyLkmB7IaxzHN3ENCokZNlX2pffPeH3xfBPJrRnYPusc
+# 3D2VmFLXY5ST0zbwevGueWSsmIdiyDD8XSA9x3JAnS9hMtTQEDgMdrPB7mZH1AUn
+# H8+e5js7Alxyz0OD9oo5vzJcRAAMsAQkJa16wCVEQqAnqZvKwH15lrnmJ3dBqcPz
+# 4nv228kbR4MDbp1naNqsScTv0TaeKaCCt1vhlM+PYkNh/K4LUHhPaN9nZpeLv/zT
+# ugDk7YGAYb+ckBCYlOB5JFF35E8eUUMqzWeHtIcKXrWUGNycG+O+0IBlHfcV
 # SIG # End signature block

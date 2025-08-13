@@ -119,7 +119,6 @@ foreach($definedPolicy in $definedPolicies)
         $uri = "/beta/deviceManagement/configurationPolicies?`$filter=name eq '$searchValue'"
         $extPolicy = (Get-MsGraphObject -Uri $uri).value
         $mpolicy = $definedPolicy | ConvertTo-Json -Depth 50 -Compress | ConvertFrom-Json
-        $mpolicySettings = $mpolicy.settings
 
         if ($mpolicy.templateReference.templateId)
         {
@@ -167,6 +166,7 @@ foreach($definedPolicy in $definedPolicies)
         Write-Warning "    Updating policy values not yet working"
         #TODO not working!!!
         # Write-Host "    Updating policy values"
+        # $mpolicySettings = $mpolicy.settings
         # $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)/settings"
         # $extPolicySettings = Get-MsGraphCollection -Uri $uri
         # $nextId = ($extPolicySettings.id | Measure-Object -Maximum).Maximum
@@ -220,12 +220,12 @@ if ($hadError)
 }
 
 # Assigning defined policys
-foreach($policy in $definedPolicies)
+foreach($definedPolicy in $definedPolicies)
 {
-    if ($policy.Comment1 -and $policy.Comment2 -and $policy.Comment3) { continue }
-    if ($policy.name.EndsWith("_unused")) { continue }
+    if ($definedPolicy.Comment1 -and $definedPolicy.Comment2 -and $definedPolicy.Comment3) { continue }
+    if ($definedPolicy.name.EndsWith("_unused")) { continue }
     if (-Not [string]::IsNullOrEmpty($onlyPolicy) -and $definedPolicy.name -ne $onlyPolicy) { continue }
-    Write-Host "Assigning ConfigurationPolicy policy '$($policy.name)'" -ForegroundColor $CommandInfo
+    Write-Host "Assigning ConfigurationPolicy policy '$($definedPolicy.name)'" -ForegroundColor $CommandInfo
 
     try {
         
@@ -233,12 +233,24 @@ foreach($policy in $definedPolicies)
         Write-Host "  Checking if policy exists"
         $searchValue = [System.Web.HttpUtility]::UrlEncode($definedPolicy.name)
         $uri = "/beta/deviceManagement/configurationPolicies?`$filter=name eq '$searchValue'"
-        $actPolicy = (Get-MsGraphObject -Uri $uri).value
+        $retries = 10
+        while ($retries -gt 0)
+        {
+            $retries--
+            try {
+                $actPolicy = (Get-MsGraphObject -Uri $uri).value
+                if ($actPolicy.id) { break }
+            }
+            catch {
+                Write-Host "    Policy not found. Retrying..." -ForegroundColor $CommandInfo
+                Start-Sleep -Seconds 6
+            }
+        }
         if ($actPolicy.id)
         {
 
             $tGroups = @()
-            if ($policy.name.StartsWith("WIN"))
+            if ($definedPolicy.name.StartsWith("WIN") -and -not $definedPolicy.name.StartsWith("WIN365") -and -not $definedPolicy.name.StartsWith("WIN10") -and -not $definedPolicy.name.StartsWith("WIN11"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "displayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
                 if (-Not $sGroup) {
@@ -253,7 +265,16 @@ foreach($policy in $definedPolicies)
                     $tGroups += $sGroup
                 }
             }
-            if ($policy.name.StartsWith("WIN10"))
+            if ($definedPolicy.name.StartsWith("WIN365"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM not found. Can't create assignment."
+                } else {
+                    $tGroups += $sGroup
+                }
+            }
+            if ($definedPolicy.name.StartsWith("WIN10"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "displayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10'"
                 if (-Not $sGroup) {
@@ -262,7 +283,7 @@ foreach($policy in $definedPolicies)
                     $tGroups += $sGroup
                 }
             }
-            if ($policy.name.StartsWith("WIN11"))
+            if ($definedPolicy.name.StartsWith("WIN11"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "displayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11'"
                 if (-Not $sGroup) {
@@ -277,7 +298,7 @@ foreach($policy in $definedPolicies)
                     $tGroups += $sGroup
                 }
             }
-            if ($policy.name.StartsWith("AND") -and $policy.name -like "*Personal*")
+            if ($definedPolicy.name.StartsWith("AND") -and $definedPolicy.name -like "*Personal*")
             {
                 $sGroup = Get-MgBetaGroup -Filter "displayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL'"
                 if (-Not $sGroup) {
@@ -286,7 +307,7 @@ foreach($policy in $definedPolicies)
                     $tGroups += $sGroup
                 }
             }
-            if ($policy.name.StartsWith("AND") -and $policy.name -like "*Owned*")
+            if ($definedPolicy.name.StartsWith("AND") -and $definedPolicy.name -like "*Owned*")
             {
                 $sGroup = Get-MgBetaGroup -Filter "displayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED'"
                 if (-Not $sGroup) {
@@ -295,7 +316,7 @@ foreach($policy in $definedPolicies)
                     $tGroups += $sGroup
                 }
             }
-            if ($policy.name.StartsWith("IOS"))
+            if ($definedPolicy.name.StartsWith("IOS"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "displayName eq '$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM'"
                 if (-Not $sGroup) {
@@ -304,7 +325,7 @@ foreach($policy in $definedPolicies)
                     $tGroups += $sGroup
                 }
             }
-            if ($policy.name.StartsWith("MAC"))
+            if ($definedPolicy.name.StartsWith("MAC"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "displayName eq '$($AlyaCompanyNameShortM365)SG-DEV-MACMDM'"
                 if (-Not $sGroup) {
@@ -345,7 +366,9 @@ foreach($policy in $definedPolicies)
                 Post-MsGraph -Uri $uri -Body $body
             }
         } else {
-            Write-Host "Not found!" -ForegroundColor $CommandError
+            Write-Warning "Policy $($definedPolicy.name) not found! Please create it and rerun the script." -ForegroundColor $CommandError
+            pause
+            $hadError = $true
         }
     }
     catch {
@@ -361,8 +384,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCEbMZzFcjFdDFR
-# qZb5kFjoPxo1nZ17KOC6ZieyRoFHE6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCrL2WmWLRkbHmq
+# 8EzJK0zpmKBVVbdThvy0dTDhudw/8qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -476,23 +499,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEID4/23Ol
-# ws6bi7kqD8tJDN3Qd/pmyPMC4/BtpRpS19oAMA0GCSqGSIb3DQEBAQUABIICAGHi
-# ui8oBiwtM9bwCNAAXgsKcMg6U3+SICDkDUSAXWZ82KZc7JUWun2hIJFx9nUuonKd
-# DBkvy6l/XaFCBal6GbTYZE+dVeRKynv2fUIhY6BkngPsOzjUzUXguzPjLK1jnAyF
-# q9lhxEcXoFDk5iLh9g0eTfRLl6UFn3atXrwFJtVqw82nOw77njaCwCkXrchpvahn
-# bdO20yi7JRfIJuHfmrj2RwQXbabZ9m0lLvEX6Iuu1IMnD80FX/v35X1u9iRXpOak
-# 98G8VNjbmzkKsoVU96F3Y2E3fZjmUvZdcScG27FsAXp8eCOysdP2LIEp6bdjN9cu
-# omKuFG2R6rGwbOXrjEIcI0227XvzLlW/nYFfJCN8wXutpIo/IO4/L/fVI3RY0m62
-# DP3DMHzyMbX2i6RdaOpgMdxfbQQSDrUOWihrFNylvDO8Nlmh42L0IhSsws40u5l4
-# 0hUGpXsRT2r4Yy1nZiqa7t/SDUBj8mZSIWR8xB1XZc63B+kCgj+/LcKwMa5f6uEc
-# lYlpGM4JEI5IWS4G0oTBbAVN6t3HOGuSQRhlX5hmlpW5GEVdpO+gImNGp0aXm/qh
-# V9HreOSLRvSZHwup5NmR7bVY9+TQpdBHm4ntIBiPpB40Q0FdYN996CtdXqT4UmpU
-# GiwBdDyho5hFbpWcWDDEX5RLFSqv8XfxQTic0EszoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBphcJ+F
+# vS44Iqb8Nulh223S2Y7DuuXR7tNA6lLWBfvcMA0GCSqGSIb3DQEBAQUABIICALPc
+# FzCoTWHYkFN0h7uOMIbM6maNC6TDai68LgQf/VkSqX4Oz0EsVWm8VttNKzI8ZRW7
+# iYs5wuZWOcqq0wHgb0vFIEo7HIO1pxcHRylyXjVjStrN3UYY71rlWuwWyeaQIbQb
+# U/AHqMxM1hbHyC2LWGoGGoILBsWBQLidxlKsKQyatKPR74CafvXHzTx4/Kj85/zs
+# JDHLaPh+1rrJRAka3IS42NfIcijgsEQhzMeI6Af5gN9y1lPzLwx2E9UOd+7YUscf
+# vqqwxmcgbuuRH5cYioVgsuArzczRAzcbkWBqbRzfAMXT+hLA7Io/D5FkLypHFwTj
+# 5RROfg3KTF0te0mU8l3U3qgkL7w3l438qs36exS8dZ8Ll+8ViZKu3RnlQSCUMI4t
+# GDJWoVmZ//rL6XAO924sq0L5vsAngE74P8yv8yr1ibVLilwQgXjH4CdrsHr77MOl
+# 3A8bHFVPEV5ZtmodTx+Nxy3QrEIeBm/o/36nJXEJv3zgJomQu36vGW2iEN6V2U5O
+# PlEWOSwnUdUslc0n6H0V+zTvPnmPBSXamyDrwVasWWud2BUC3g7QTmxfiuK0QeHK
+# Wx/POqmAkVJPA+L5UzpwzWT9HS0oxLheyYDjg7mGKr7VZFTCE7e3RiEQsXsSCMPC
+# AzCwiCPOB8ZPuTKsDND/BLm0/it/64w87ZEUDYthoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCByJn8wXeDTcwdvmmN06+GkKnf7Pewdou7hseTwaC0g9QIUHe7J
-# PACM0FAEoECYSDtm5rH9P7YYDzIwMjUwNjExMTg1MzM0WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCCROk2JBgtNZ6KkL9jee25O8HjegQWm3RiJAthf1G4DugIUDYHZ
+# K2q4nth2xfiioK0rTvBAfugYDzIwMjUwODA3MDgzNjA0WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -597,17 +620,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIGv1Rz4pbxryfgob21e+9CUfs/88v9z/UYTYf6W49YLXMIGwBgsqhkiG
+# AQkEMSIEIJx3tA2i0I/JQQ42+PwQgCnC3T1nDAWjg6IB8LuafPanMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAD7dZ
-# 80TJPvJap7qGJehmFkrBnzHhLIBlcp6pfppKKlOKXXT4ulB5EuQ6FRPIifXvTMvm
-# RyymH8EwCHi8XgpF9OS8tjgLivIt5HKYVbXGY/cAZsrl8844y5Yi08LA39csKyql
-# OOKydaH/iFaCWvHWmmaW1AAb3L2JJnmA5S/xB1T3H4xQuphETR7lmBKMY2C8N2fI
-# 9VoK/oMYABa3+c+V3qlnMOIGkVTSSmZdln9BlRKcX8fQ9YOdqMl2j3XIrNC4QHbP
-# FwsHNgjSoay+bvXyREJ3KNhKJUSrt3MCw46mKVlp7hrCATaN807f0BEZrvLMsn+v
-# 3z89uUilevrD4APyfCRS2plP5lOxTuPSHRuAuGhXBl5QQ11hl1LPNU2eW4hlwT0E
-# 7ux7mpkfw3icCZMvo1TD+lxdS42BBtkDVnY+Fs2AdhwAt/j87bl9LLXR7m9FPd3f
-# FB0kWfXhwEbCEU4uRoMtU1+pbpk+ccFlDSssjMdYLP0yJUmYDyZHwe+w1bs6
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAlAQ+
+# fgOs7XJDRqZY8X0JQoyUfYNEIP9uUPW4aUEqmIyWByLN7MDpcFEugX4/q79p/1ZA
+# alDX4QsPNSDm5NaI4ENC47+BFu5RjBdeU+DZ6iff/iIXvpaZED8Ijw2RJQwT/2E7
+# SSFjIiSMeCIT9GlZIlipNdFyKIywvCajHdxxHe//bKvMNx/CFa0CS7IrrXQ5T9CI
+# 6QnVoZxqQSwbcHgAJ2p621ypU7IuCYXiUnAsFTPFkYo68Z2j8UuNMnVNnPolNsVI
+# 8tZWIydJjolUIp25XO3ARlnEaHFvSQMFFs89vHWeC7vD/dSTdHJMdSDI8pODSQKw
+# cOjTJq58XNXuGcu/irzkxS1xurnqeCFRkjXf3ck3/05e1n4RA03GiQG1bPFYCquv
+# M869sEqnNmYQ1fuYFZurQCMlFl4awdxvXv4zdqfqcXvJXMdfnDHQN59B6ArOmXZy
+# pvqcVWy7fHB50JcfTfSoFyuEMTxeDzLvtPyXkLU9SOTvUCezvHf4dLL0/P8z
 # SIG # End signature block

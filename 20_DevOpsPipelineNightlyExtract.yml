@@ -12,29 +12,83 @@ schedules:
     - master
   always: true
 
-pool:
-  vmImage: 'windows-latest'
-
-steps:
-- checkout: self
-  displayName: Checkout Repo
-  persistCredentials: true
-  clean: true
-- task: AzurePowerShell@5
-  displayName: Extract Templates
-  inputs:
-    azureSubscription: '!!!PleaseSpecify!!!'
-    ScriptType: 'FilePath'
-    ScriptPath: '.\20_ExtractAll.ps1'
-    FailOnStandardError: true
-    azurePowerShellVersion: 'LatestVersion'
-- task: CmdLine@2
-  displayName: Commit Changes
-  inputs:
-    script: |
-      git config --global user.email "info@alyaconsulting.ch"
-      git config --global user.name "Alya DevOps Pipeline"
-      git checkout -b master
-      git add -A
-      git commit -m "Commited by pipeline [skip ci]"
-      git push -u origin master
+jobs:
+- job: ExtractAzure
+  timeoutInMinutes: 120
+  pool:
+    vmImage: 'windows-latest'
+  steps:
+  - checkout: self
+    displayName: Checkout Repo
+    persistCredentials: true
+    clean: true
+  - task: AzureCLI@2
+    displayName: 'OIDC token renewal'
+    inputs:
+      azureSubscription: '!!!PleaseSpecify!!!'
+      scriptType: 'pscore'
+      scriptLocation: 'scriptPath'
+      scriptPath: '29_RenewDevOpsOidcToken.ps1'
+      scriptArguments:
+        -AccessToken $(System.AccessToken)
+      addSpnToEnvironment: true
+      failOnStandardError: true
+  - task: AzurePowerShell@5
+    displayName: Extract
+    inputs:
+      azureSubscription: '!!!PleaseSpecify!!!'
+      ScriptType: 'FilePath'
+      ScriptPath: '.\20_ExtractAzure.ps1'
+      FailOnStandardError: true
+      azurePowerShellVersion: 'LatestVersion'
+  - task: CmdLine@2
+    displayName: Commit Changes
+    inputs:
+      script: |
+        git config --global user.email "info@alyaconsulting.ch"
+        git config --global user.name "Alya DevOps Pipeline"
+        git checkout -b master
+        git pull origin master
+        git add -A
+        git commit -m "Commited by pipeline [skip ci]"
+        git push -u origin master
+- job: ExtractIntune
+  dependsOn: ExtractAzure
+  timeoutInMinutes: 120
+  pool:
+    vmImage: 'windows-latest'
+  steps:
+  - checkout: self
+    displayName: Checkout Repo
+    persistCredentials: true
+    clean: true
+  - task: AzureCLI@2
+    displayName: 'OIDC token renewal'
+    inputs:
+      azureSubscription: '!!!PleaseSpecify!!!'
+      scriptType: 'pscore'
+      scriptLocation: 'scriptPath'
+      scriptPath: '29_RenewDevOpsOidcToken.ps1'
+      scriptArguments:
+        -AccessToken $(System.AccessToken)
+      addSpnToEnvironment: true
+      failOnStandardError: true
+  - task: AzurePowerShell@5
+    displayName: Extract
+    inputs:
+      azureSubscription: '!!!PleaseSpecify!!!'
+      ScriptType: 'FilePath'
+      ScriptPath: '.\20_ExtractIntune.ps1'
+      FailOnStandardError: true
+      azurePowerShellVersion: 'LatestVersion'
+  - task: CmdLine@2
+    displayName: Commit Changes
+    inputs:
+      script: |
+        git config --global user.email "info@alyaconsulting.ch"
+        git config --global user.name "Alya DevOps Pipeline"
+        git checkout -b master
+        git pull origin master
+        git add -A
+        git commit -m "Commited by pipeline [skip ci]"
+        git push -u origin master

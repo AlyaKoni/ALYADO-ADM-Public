@@ -504,7 +504,15 @@ foreach($packageDir in $packages)
                 if ($toInstall.VersionInfo.FileVersion -And -Not [string]::IsNullOrEmpty($toInstall.VersionInfo.FileVersion.Trim()))
                 {
                     $version = $toInstall.VersionInfo.FileVersion
-                    Write-Host "    got version from file version: $version"
+                    if ($version -like "*AppVersion*")
+                    {
+                        $version = $toInstall.VersionInfo.ProductVersion
+                        Write-Host "    got version from product version: $version"
+                    }
+                    else
+                    {
+                        Write-Host "    got version from file version: $version"
+                    }
                 }
                 elseif ($toInstall.VersionInfo.ProductVersion)
                 {

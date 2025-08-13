@@ -215,41 +215,41 @@ else
 # Processing defined profiles
 $hadError = $false
 $latestQualUpdate = $null
-foreach($profile in $profiles)
+foreach($pprofile in $profiles)
 {
-    if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
-    if ($profile.displayName.EndsWith("_unused")) { continue }
-    if (-Not $profile.displayName.StartsWith($AppPrefix))
+    if ($pprofile.Comment1 -and $pprofile.Comment2 -and $pprofile.Comment3) { continue }
+    if ($pprofile.displayName.EndsWith("_unused")) { continue }
+    if (-Not $pprofile.displayName.StartsWith($AppPrefix))
     {
-        $profile.displayName = $profile.displayName.Replace("WIN ", $AppPrefix)
+        $pprofile.displayName = $pprofile.displayName.Replace("WIN ", $AppPrefix)
     }
-    Write-Host "Configuring profile '$($profile.displayName)'" -ForegroundColor $CommandInfo
+    Write-Host "Configuring profile '$($pprofile.displayName)'" -ForegroundColor $CommandInfo
 
     # Checking if poliy is applicable
     Write-Host "  Checking if profile is applicable"
-    if ($profile."@odata.type" -eq "#Microsoft.Graph.iosConfigurationProfile" -and -not $appleConfigured)
+    if ($pprofile."@odata.type" -eq "#Microsoft.Graph.iosConfigurationProfile" -and -not $appleConfigured)
     {
         Write-Warning "iosConfigurationProfile is not applicable"
         continue
     }
-    if ($profile."@odata.type" -eq "#Microsoft.Graph.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
+    if ($pprofile."@odata.type" -eq "#Microsoft.Graph.androidDeviceOwnerGeneralDeviceConfiguration" -and -not $androidConfigured)
     {
         Write-Warning "androidConfigurationProfile is not applicable"
         continue
     }
 
     # Replacing constants
-    Replace-AlyaStrings -obj $profile -depth 1
-    if (($profile | ConvertTo-Json -Depth 50).IndexOf("##Alya") -gt -1)
+    Replace-AlyaStrings -obj $pprofile -depth 1
+    if (($pprofile | ConvertTo-Json -Depth 50).IndexOf("##Alya") -gt -1)
     {
-        ($profile | ConvertTo-Json -Depth 50)
+        ($pprofile | ConvertTo-Json -Depth 50)
         throw "Some replacement did not work!"
     }
 
     try {
         
         # Getting latest windows update
-        if ($profile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile" -and $null -eq $latestQualUpdate)
+        if ($pprofile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile" -and $null -eq $latestQualUpdate)
         {
             Write-Host "  Getting latest windows securityupdate"
             try {
@@ -258,31 +258,31 @@ foreach($profile in $profiles)
                 $_
             }
         }
-        if ($profile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile" -and $null -ne $latestQualUpdate)
+        if ($pprofile.'@odata.type' -eq "#Microsoft.Graph.windowsQualityUpdateProfile" -and $null -ne $latestQualUpdate)
         {
-            $profile.expeditedUpdateSettings.qualityUpdateRelease = $latestQualUpdate.releaseDateTime
+            $pprofile.expeditedUpdateSettings.qualityUpdateRelease = $latestQualUpdate.releaseDateTime
         }
         
         # Checking if profile exists
         Write-Host "  Checking if profile exists"
         $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
         $actProfiles = (Get-MsGraphObject -Uri $uri).value
-        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
+        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $pprofile.displayName }
         if (-Not $actProfile.id)
         {
             # Creating the profile
             Write-Host "    Profile does not exist, creating"
-            Add-Member -InputObject $profile -MemberType NoteProperty -Name "id" -Value "00000000-0000-0000-0000-000000000000"
+            Add-Member -InputObject $pprofile -MemberType NoteProperty -Name "id" -Value "00000000-0000-0000-0000-000000000000"
             $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
-            $actProfile = Post-MsGraph -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+            $actProfile = Post-MsGraph -Uri $uri -Body ($pprofile | ConvertTo-Json -Depth 50)
         }
 
         # Updating the profile
         Write-Host "    Updating the profile"
         $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles/$($actProfile.id)"
-        $profile.PSObject.Properties.Remove("releaseDateDisplayName")
-        $profile.PSObject.Properties.Remove("deployableContentDisplayName")
-        $actProfile = Patch-MsGraph -Uri $uri -Body ($profile | ConvertTo-Json -Depth 50)
+        $pprofile.PSObject.Properties.Remove("releaseDateDisplayName")
+        $pprofile.PSObject.Properties.Remove("deployableContentDisplayName")
+        $actProfile = Patch-MsGraph -Uri $uri -Body ($pprofile | ConvertTo-Json -Depth 50)
     }
     catch {
         $hadError = $true
@@ -295,24 +295,36 @@ if ($hadError)
 }
 
 # Assigning defined profiles
-foreach($profile in $profiles)
+foreach($pprofile in $profiles)
 {
-    if ($profile.Comment1 -and $profile.Comment2 -and $profile.Comment3) { continue }
-    if ($profile.displayName.EndsWith("_unused")) { continue }
-    Write-Host "Assigning profile '$($profile.displayName)'" -ForegroundColor $CommandInfo
+    if ($pprofile.Comment1 -and $pprofile.Comment2 -and $pprofile.Comment3) { continue }
+    if ($pprofile.displayName.EndsWith("_unused")) { continue }
+    Write-Host "Assigning profile '$($pprofile.displayName)'" -ForegroundColor $CommandInfo
 
     try {
         
         # Checking if profile exists
         Write-Host "  Checking if profile exists"
         $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
-        $actProfiles = (Get-MsGraphObject -Uri $uri).value
-        $actProfile = $actProfiles | Where-Object { $_.displayName -eq $profile.displayName }
+        $retries = 10
+        while ($retries -gt 0)
+        {
+            $retries--
+            try {
+                $actProfiles = (Get-MsGraphObject -Uri $uri).value
+                $actProfile = $actProfiles | Where-Object { $_.displayName -eq $pprofile.displayName }
+                if ($actProfile.id) { break }
+            }
+            catch {
+                Write-Host "    Profile not found. Retrying..." -ForegroundColor $CommandInfo
+                Start-Sleep -Seconds 6
+            }
+        }
         if ($actProfile.id)
         {
 
             $tGroups = @()
-            if ($profile.displayName.StartsWith("WIN "))
+            if ($pprofile.displayName.StartsWith("WIN") -and -not $pprofile.displayName.StartsWith("WIN365") -and -not $pprofile.displayName.StartsWith("WIN10") -and -not $pprofile.displayName.StartsWith("WIN11"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM'"
                 if (-Not $sGroup) {
@@ -327,7 +339,16 @@ foreach($profile in $profiles)
                     $tGroups += $sGroup
                 }
             }
-            if ($profile.displayName.StartsWith("WIN10"))
+            if ($pprofile.displayName.StartsWith("WIN365"))
+            {
+                $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM'"
+                if (-Not $sGroup) {
+                    Write-Warning "Group $($AlyaCompanyNameShortM365)SG-DEV-WIN365MDM not found. Can't create assignment."
+                } else {
+                    $tGroups += $sGroup
+                }
+            }
+            if ($pprofile.displayName.StartsWith("WIN10"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM10'"
                 if (-Not $sGroup) {
@@ -336,7 +357,7 @@ foreach($profile in $profiles)
                     $tGroups += $sGroup
                 }
             }
-            if ($profile.displayName.StartsWith("WIN11"))
+            if ($pprofile.displayName.StartsWith("WIN11"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-WINMDM11'"
                 if (-Not $sGroup) {
@@ -351,7 +372,7 @@ foreach($profile in $profiles)
                     $tGroups += $sGroup
                 }
             }
-            if ($profile.displayName.StartsWith("AND") -and $profile.displayName -like "*Personal*")
+            if ($pprofile.displayName.StartsWith("AND") -and $pprofile.displayName -like "*Personal*")
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMPERSONAL'"
                 if (-Not $sGroup) {
@@ -360,7 +381,7 @@ foreach($profile in $profiles)
                     $tGroups += $sGroup
                 }
             }
-            if ($profile.displayName.StartsWith("AND") -and $profile.displayName -like "*Owned*")
+            if ($pprofile.displayName.StartsWith("AND") -and $pprofile.displayName -like "*Owned*")
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-ANDROIDMDMOWNED'"
                 if (-Not $sGroup) {
@@ -369,7 +390,7 @@ foreach($profile in $profiles)
                     $tGroups += $sGroup
                 }
             }
-            if ($profile.displayName.StartsWith("IOS"))
+            if ($pprofile.displayName.StartsWith("IOS"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-IOSMDM'"
                 if (-Not $sGroup) {
@@ -378,7 +399,7 @@ foreach($profile in $profiles)
                     $tGroups += $sGroup
                 }
             }
-            if ($profile.displayName.StartsWith("MAC"))
+            if ($pprofile.displayName.StartsWith("MAC"))
             {
                 $sGroup = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaCompanyNameShortM365)SG-DEV-MACMDM'"
                 if (-Not $sGroup) {
@@ -435,8 +456,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCUXotpZhKEJo2g
-# GSivVaonXzGrKg/pOQy0dj00vHWaSaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDayYZ+l01xKory
+# 1zM2ossOVieUw87hg+LmRHqDXEVgoqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -550,23 +571,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBUQVEWE
-# HM26z67OaRxu4DAPPES5oQApSWGIOBonwdC0MA0GCSqGSIb3DQEBAQUABIICAMlZ
-# OkhN9iwvF32V+EdGw15IOnp/FPWYf/3jPcDw49F2PEwU+zl6LLO8x0hjFZ9CH0uH
-# B9UKi8U0o1ZzG36NMD99IrYLZLNzonxMY/vFkXuv7o16cZsnuc14cSQ1YOm/49Kn
-# cZ2K3aHF8ceYeZoILTuLUwtw3t18PQVs9QD1PfRHgVflreFcOEzAVyrGebihhj/6
-# ERn4Y5qufpWsGtQqj++fHXN+HT4bQ7R4x5o70lMbsJvbf51spnI44PuNniB6/dDl
-# gl1sozyGlmBvg/hGe5d5ZCP86Q19sQe+4Bu/ziVKKAIPhqNMyS3INqI+/nXqkRjC
-# e2XY342NTWJMkppBXn+01aF2DMPU0iNK+851Qrskp6csNkRyTlmzZqZ3A6nt1o78
-# n8BBRnG6Fij11F2TDt6geTazYgol32vWLe0CAJtOFVjLx+lYp8rt/cqztWgfqcgc
-# bueEUildg+9ykOXgpFscfYQlzAk5dFr1ctJhfoQzsskfmyvILntU1k/4jj5s5m7O
-# ibcKW69vEZ5xCMR+MvrUHNLtqA8lkYXZGdXgGDjfmpPyAbC3JingpUNI+d496CQa
-# PAXIOASR5V6s0qCUVfGBoxbHfxDpKGbCeZaJ8atsGBytiJUqP2j3pd+38EjCVXcp
-# nnT5u9oHGkmIStCZTtqJCYdNWdNmQ8tGuhSJZ2HaoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIA5VXAsQ
+# u4C+MGWyxBm+7SepAfngH2TWrFN4n5cgilveMA0GCSqGSIb3DQEBAQUABIICAL2y
+# Pyh9P6z7V+MRp4MTOKMghE9ebfpHd9OXzFUVyXb0qO00nEpQWEpaRiXABIMKRaI2
+# WwANjvTiYFJ+jhB23/z2QAVcrfKlW8xn8RaLGGFxgOyYe4qpmUdUSSl3K8oWQCbw
+# HYHNf0RBEfiFKyaz27acwffqVKiBjfpxH2RpSWfWEIgKxeTh/aTJ2V+xj4ccyveE
+# pgnCG07x/YIhMurHdmOfq8aBOfh4DkSEmrbA+lt7RaWmemiqml9QBE4poPSsaU1M
+# W66Hv0zXwyK396g7S6hfBfHaNmy3YM74vqR1ZzvJMZ34qM0hi3gFKUpIO80k0boS
+# 87bC4cjHecolwLTxq1k2cx/iR9qoBoatO9ZGkvjaVQO7N8IDkrHIBag5bmNtCJ8r
+# yDpLVsopahJPjCVSWimXoKu+H6sklr0Cv83ak+OMLEg+1j6O5RQqRllKp4lP4aji
+# Hdl2z1YtR2EY1dqKudHfu3G4Dq+H7EWfHGeZkcbafOvk2x1bkO3iqGVOS3a9Tooi
+# A3IeBrlKwGwudouFLvSchnO+oTaGa4/mCVb01eqVmtFsbRy3ptRHQdEh5lOUQHiC
+# dKuaQ741WUDc187/Oo9r6KcHZ8iA8ZwDUaWZuRQKUggthXstVSErTB0LFwTKEetG
+# /exoi0HMUD5gvdcX71tu9XNVEOa2nxlh4ysjVqaooYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCBRbu2FKfBVN7eKibjcLKpxGRuHly1gQiQCQNE4KCTRUgIUSor/
-# lKk/Ye0rqCOnBZgLKOG8vi8YDzIwMjUwNjExMjA1NjU3WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCAaIuGBJfoTIVa3oSYGatio33ibtGzySU8NdrdVG6c1nwIUPcYM
+# tEoolvG4Pntz5gPzx6N1jiMYDzIwMjUwODA3MDcyMTAxWjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -671,17 +692,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIJuK+ajueIiU/SBzPFyNIbIllC21dN98Sm3XNGHhGCtbMIGwBgsqhkiG
+# AQkEMSIEIHwwM/ThzY9STOI2Z8A6NRQuct+wRtXlvYHh6BxnJOeZMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAFfdA
-# QdIrOJWncLQPYsNtZXZJkNRQDctYR0ZgT0VAFw0pFRQ8cUDl3o67+cEPkYQtdid4
-# XTXpusjNM8xU5ub3bTTI27iye3De+K1sNhsguX0vvrbGZJL15pGyqdRVOlshCfc6
-# SyatXOmfqrohEl29Gmeh4clB9zZkrEashI9eCx8losXVCv3TMonqgAyo6hP7NSKk
-# n9PVrP9/xuyknHvHPApR2/LyEa0NWkhi9gU2kZG5SwgzDlrK4NpXhKEHlfJxUyfV
-# 7shw61XE+HN0RnkNcyYlz5BhhZjd/pl3MO54dX6vWJIPtIJiLMSBBJNAKMdncGMd
-# 8/3AywQYxKMX6dzHGw30oBfODlc+joPn1gbRGT0BFX//uuAyAc1GhtfZthxpu9eS
-# uq/p8vTJ9q4IMa0ONSog4NALIECfERbJ8U2+SNqm2uGbBXOhWWKFNjPjKIFSmVay
-# h9IVyV8UAUVZ9Ma/RnXHXcWT7j66qLv6KtanQhbENu61AFCCnwbr5mOyhsD4
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAmkIH
+# tyao6ERE838vcY+6U2i7Nzt0HKJkbFdz6jknXsGuxDqR+n0oXeBS/7clwym75ytS
+# EF/zJFk7ft8/0WWYdY4wXgzt7fBbrRN3ntt/PyVG3IZRDmkeUaF81IjS8nLu/5Oh
+# 4YhGNLO4UfE/r23AlO4mZ+sme58NRdmLSGdycuWhmDB8TQalqsYel2FHw0JaN5jM
+# XKH1qpeq5pQMxHSZZ9yaBGclXju2TnT4Q2GaGN8y8tfcdVg2hXWRlZKDSAevld0z
+# saZIk6WnLHENozDi+jyUJapgEHUt9r5t2NB4E2mQ5qDKa42cFBLCLUE8kvvMkcUp
+# LILJmOXocKIOcj6iwAuUYrsXY24NIDXTqRN8t/BaPXUGQcy+7YhjLUmRz8an1vF/
+# i9y1+o9ypbM5IZ2oH7cF0L4RQtFGyyjvAUN/bdM1wHCKLjFDBLeCLVza1VQ/iDMu
+# mE/sScUYXoSC0LL77WSgOrNkquw/SkFLHZ2TkcJO+mJyRqVrvugfx2basEgK
 # SIG # End signature block
