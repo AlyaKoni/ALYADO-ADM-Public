@@ -1,0 +1,22 @@
+# Commit pipeline
+name: 'Token Refresh'
+
+trigger:
+- none
+
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- task: AzureCLI@2
+  displayName: 'OIDC token renewal'
+  inputs:
+    azureSubscription: '!!!PleaseSpecify!!!'
+    scriptType: 'pscore'
+    scriptLocation: 'scriptPath'
+    scriptPath: '29_RenewDevOpsOidcToken.ps1'
+    scriptArguments:
+      -AccessToken $(System.AccessToken)
+      -OidcRequestUri $(System.OidcRequestUri)
+    addSpnToEnvironment: true
+    failOnStandardError: true
