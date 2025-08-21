@@ -83,6 +83,26 @@ if ($expInMinutes -le 0)
         throw "Access token already expired since $expInMinutes minutes! Not able to refresh OpenID Connect token."
 }
 
+Write-Host "Defining Token Uri"
+try {
+    $ServiceConnectionId = (Get-ChildItem -Path Env: -Recurse -Include ENDPOINT_DATA_*)[0].Name.Split('_')[2]
+}
+catch {
+    throw "Unable to determine service connection ID."
+}
+#Write-Host "  OidcRequestUri $OidcRequestUri"
+if ([string]::IsNullOrEmpty($OidcRequestUri))
+{
+    Write-Host "  building IdTokenUri"
+    #https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/oidctoken/create
+    $IdTokenUri = "${env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${env:SYSTEM_TEAMPROJECTID}/_apis/distributedtask/hubs/build/plans/${env:SYSTEM_PLANID}/jobs/${env:SYSTEM_JOBID}/oidctoken?serviceConnectionId=${ServiceConnectionId}&api-version=7.1-preview.1"
+}
+else
+{
+    $IdTokenUri = "${OidcRequestUri}?serviceConnectionId=${ServiceConnectionId}&api-version=7.1-preview.1"
+}
+#Write-Host "  IdTokenUri $IdTokenUri"
+
 Write-Host "Checking existing OpenID Connect token"
 try {
     $oidcToken = $env:idToken
@@ -110,21 +130,6 @@ else
 {
 
     Write-Host "Refreshing OpenID Connect token"
-    $IdTokenUri = $OidcRequestUri
-    if ([string]::IsNullOrEmpty($IdTokenUri))
-    {
-        Write-Host "  building IdTokenUri"
-        try {
-            $ServiceConnectionId = (Get-ChildItem -Path Env: -Recurse -Include ENDPOINT_DATA_*)[0].Name.Split('_')[2]
-        }
-        catch {
-            throw "Unable to determine service connection ID."
-        }
-        #https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/oidctoken/create
-        $IdTokenUri = "${env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${env:SYSTEM_TEAMPROJECTID}/_apis/distributedtask/hubs/build/plans/${env:SYSTEM_PLANID}/jobs/${env:SYSTEM_JOBID}/oidctoken?serviceConnectionId=${ServiceConnectionId}&api-version=7.1-preview.1"
-    }
-
-    Write-Host "  IdTokenUri: $IdTokenUri"
     try {
         $Response = Invoke-RestMethod -Headers @{
                 Authorization  = "Bearer $AccessToken"
@@ -159,11 +164,15 @@ else
 
 Write-Host "The OpenID Connect token has been renewed. Adding env variables."
 Write-Host "##vso[task.setvariable variable=AlyaDevOpsAccessToken;]$AccessToken"
-Write-Host "##vso[task.setvariable variable=AlyaDevOpsOidcRequestUri;]$env:AlyaDevOpsOidcRequestUri"
+Write-Host "##vso[task.setvariable variable=AlyaDevOpsOidcRequestUri;]$IdTokenUri"
 Write-Host "##vso[task.setvariable variable=AlyaDevOpsIdToken;]$env:idToken"
 Write-Host "##vso[task.setvariable variable=AlyaDevOpsServicePrincipalId;]$env:servicePrincipalId"
-Write-Host "##vso[task.setvariable variable=AlyaDevOpsServicePrincipalKey;]$env:servicePrincipalKey"
 Write-Host "##vso[task.setvariable variable=AlyaDevOpsTenantId;]$env:tenantId"
+Write-Host "AlyaDevOpsAccessToken $AccessToken"
+Write-Host "AlyaDevOpsOidcRequestUri $IdTokenUri"
+Write-Host "AlyaDevOpsIdToken $env:idToken"
+Write-Host "AlyaDevOpsServicePrincipalId $env:servicePrincipalId"
+Write-Host "AlyaDevOpsTenantId $env:tenantId"
 
 # Stopping Transscript
 Stop-Transcript
@@ -171,8 +180,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDT3onDJKBZqjhT
-# UupGENa/Ja3i/fv6hNT2uHQ0dySpeKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCc/wYYusLP+9Nd
+# 0M9Qn5SFMF396aqA5tGDuzqiWCBK6qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -286,23 +295,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOpVbPhm
-# 8TAR6gGRqrekx2Wg/e3lmwTcTCuX4+9UfhaDMA0GCSqGSIb3DQEBAQUABIICABiE
-# ThPMZAMZk1nWFvC/mkF/RTjJcnpH6EePqU4gp8o5k2JyAb3d/HaDN3WrIp9I9F92
-# 3c6cqY0dr18ob/6jcWiWyoi9cOK4IqSJ52WyOrYKcqTNAQaznckv9VYA3jqbR6dp
-# HdwyWUKb05Sm+XxfuY5YQtpdt/7+7u8CIFHEL0v+bMoSsJowMDFw4aDbiBer5As/
-# nJWQ16zLUMPSKTn4+reyJm1mVTcBUpbMWtFaiIO1BB6bSOV3HcdHP5e4k3VOxYCb
-# xegV/p82evqnd/7I2XcmGIO5TBjRjhzp/GEHntHKmpzmtNxknJqlN905+GgNgbcB
-# 4u+1x1CV4PWBwLlYn35HZi9Ed6tKXBW8aMaWqwO8GnkIVpROWqcA3J8MPMeALEHX
-# qn/POhOcMn2YoV2jkh5GM8JUnflJDFYdr6h8yuMs8jmWngaY4SAXrAWQb6JEQ1DV
-# 4DuFYxSAkDKlTnNXDmJO4ng5yAk2dYildLVg+ni2dxgSkLcBZ/8wO/pD3C9nhGrT
-# GZ9A3GFT8gHeRE6SQsNqgrH2DsZ+baAW0wXy3cj0kARG87O6e+n9TGw4VpZvjQfN
-# Tv/BPgXnu3/scG0OuG96ba6dag6EzvCiy0qXn21afv37GiVB4Id3F/drhxfsmzCg
-# Mp1QIjEf8KGNz4vN+DocCWMYTz7lVv2pbcDiRtmHoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMXnKjYH
+# /eSzjG8SYqy+Bv7ptqk/vAQIxBLclwm/7YtyMA0GCSqGSIb3DQEBAQUABIICAGbW
+# E5UEYQ1QaUWR1f/lwhRoPZFuEzr5wkHmjlyexOtFz+nRxHf0KvXLeweogVUtQyXJ
+# 8or25tPu3pemgRc4Z+0Sa3/Yk7LtJ0Oe/cl6eu3gZQw0de9wJqCRsUoYRlkXsDP/
+# uKUED9yI5lJYjRu8acxr6zpS3YH/6Yd2yXcNd/8qQ7C69fDSNJ4gAv5n3EOJPI+l
+# MFefGiUbQVyX1+yp4vJno1whlvzv2WBZJS3xptzvj04vUaCyayqmkPd6yApFcy2x
+# D9yOy/dRl14fziQPWh7g98lIiagquEzzHMBF+Kf2cKsOY+dSGGV2pCTVTyPLbUfz
+# CE5YRdLCFWpEMHt8M1sX/qbLqR3darefkCh1qRFlWLu95UH2OD37zhm5YttNq4O/
+# blsDzPlOnmdyplSnBJiX85YxuYvLTQxRhqQLPViU3dhQZs84Z+P9BBSPPOe+b+LO
+# oaqBprQ/2VOQ9Qmpier6rwGfgP1oIIuWisJdEuOJeBjV+Zyaes7AqD0VPh4i8w43
+# QohCfYm47tOw+QImXrFGXIObTA5FGA9miFjFHnVPmPUuOLErW+G7RDozwZrZOjlG
+# pODROnHfibwvXcOLE2KKDfJQVZ5rGdGFVGxS3QfYuuQLcHt2lyzn/9h5vaY0LhHl
+# EX3+ZD4Y/MkyCk65B1KSl7I9q1alPNPi6cdUla1eoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCBg9BK6uRKFBC2wmFAsv07gTiO6idSpPBizZmOVc5z9egIUGv1k
-# r+GUYthMhRmTeQ+DO9qMIBcYDzIwMjUwODA1MjEwNjM5WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCBG9wkIs4wS2lmzI2YyRhvCyRT9dZze/JIH4JK+vQ8UcwIUaogQ
+# PilkB/Txl9IaNbOtO6x6/nsYDzIwMjUwODE0MDczNzE4WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -407,17 +416,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEINQ+fGvpPllsoi0usJWJ12jnBDCsonNuKQ8x5mrZywz5MIGwBgsqhkiG
+# AQkEMSIEIIDN8gsIX/U3wBeuJsR4pZMofurq7OM2uNMWre2yYJwGMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAekFG
-# h0Xh81bmpdb3ltRkjJYMEidi0id0KLbUHA3vUQaVkE09ouY5EZSdbz652Ll/km7f
-# 9n7xYul6xxBDmaeU0fBRwrT8ECBz946iwd46vYzV6c+oAo0AdgLY/axzf9OKDhUM
-# saRnN/QyhVH/shJht1whk9ASDfgYBC5Vne1nTvKBBeCFUGX3QSKqX+reT8rF81qn
-# Cry6BM38egFRjWgs/5vZx9U6qGtnlTaYUhHhk06XGLK7JkzalICYhj6DKKCtTqlq
-# HVUJH7EF9fRY0ByAGpiuyCtVVj6ZCLTsK+YNrRpLEE0N7nBZrmbrw9PdXuzsYXCu
-# tGQrVuNEPt8EK1esOnWQgvdMwJfNp5QN6RZr41uBL15CMZxH7sWL4825UQolwn2/
-# 8zx98orIFMikNEu64THK0TaNbNMnBMyzvoMIrX/zrEo+kYNacpZM9h7CKQ3dBZxd
-# Os8bLRMZrEzjVaOPJYZF3RCkRHUFzShMtV/bopiLme/yMatzlRMqNwCvIDU6
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAeRIt
+# +dK1bO0+U5LoGYFJwc6OUec+Is7bOudmfXHYcciHXnnNRhp6MEiQ2//twsDxb3Pf
+# +1io+BYOVkKIMEiV7n7Y/Dymn/vHwLriswWkYCB4Ee6sDvYyJV2sRh+tdIa2+zSq
+# wWvuNYDv4UTO3Vn4YcYqkyquDNcWPyhi6o374hVPT3HQOn3FVUQ+5hCcr0+h8E9e
+# pNILnGOHsllp/Z5DAKr7Gsp8w09NiaPbFB/tyCnSzPzh9fkwLFFPkdwKFywFpxc+
+# Guto8wmhsseNKcJpCS2P3nOIxkKnerQAmghEYQPS1KaO8H8ePBBkS62Pr07Birdk
+# t08XheDj1jWGarYcplFX3wr8/toe5mQhSbohVBwqYuzsJnGhR5KdovG9GY/w94LB
+# fooVTeM+i/MRF5HPstxK1oh5lUzpEWH0zV3nYo3wHBsWUqHVi8zwlMRzagqskvcI
+# pHoJ/bLTMYHafHdaIrI3T7kQs5VXk2y5aN5mCQr4Nd8Fwm1hDmDTTw0Mj5lq
 # SIG # End signature block

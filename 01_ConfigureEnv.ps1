@@ -1524,6 +1524,7 @@ function Refresh-DevOpsOidcToken {
         [string]
         $OidcRequestUri = $env:AlyaDevOpsOidcRequestUri
     )
+
     if ([string]::IsNullOrEmpty($AccessToken))
     {
         throw "No access token specified!"
@@ -1569,17 +1570,17 @@ function Refresh-DevOpsOidcToken {
     {
 
         Write-Host "Refreshing OpenID Connect token"
-        $IdTokenUri = $OidcRequestUri
-        if ([string]::IsNullOrEmpty($IdTokenUri))
+        if ([string]::IsNullOrEmpty($OidcRequestUri))
         {
-            try {
-                $ServiceConnectionId = (Get-ChildItem -Path Env: -Recurse -Include ENDPOINT_DATA_*)[0].Name.Split('_')[2]
+            throw "OidcRequestUri is not configured"
+        }
+        else
+        {
+            if ($OidcRequestUri -notlike "*serviceConnectionId=*")
+            {
+                throw "Missing serviceConnectionId in OidcRequestUri: $OidcRequestUri"
             }
-            catch {
-                throw "Unable to determine service connection ID."
-            }
-            #https://learn.microsoft.com/en-us/rest/api/azure/devops/distributedtask/oidctoken/create
-            $IdTokenUri = "${env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${env:SYSTEM_TEAMPROJECTID}/_apis/distributedtask/hubs/build/plans/${env:SYSTEM_PLANID}/jobs/${env:SYSTEM_JOBID}/oidctoken?serviceConnectionId=${ServiceConnectionId}&api-version=7.1-preview.1"
+            $IdTokenUri = $OidcRequestUri
         }
         try {
             $Response = Invoke-RestMethod -Headers @{
@@ -3492,8 +3493,8 @@ function Run-ScriptInRunspace()
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAJT3A4zRN6Pbpy
-# sjY1Ub+1Is27GhjA9ge5rJolYcVJb6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD5LRYKY96SBWwI
+# crLL4TVi7mucfYEB4HfYxT+5div1WKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -3607,23 +3608,23 @@ function Run-ScriptInRunspace()
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJ3q0B86
-# XKpkGtb6qU6zxhFpvoD9Ae4VRUzNpZKpGymxMA0GCSqGSIb3DQEBAQUABIICAIjo
-# EXOZCwnaKGspuEXPVNYndH1MRFDz8kIYaFVAg1uVI0uaUSzYGi8aoxreB7OVBJjh
-# QkjU9ONsmg9H3VERQvhVUzlSqF0zUUQP1lLk4YvBvNBJyfnUyLtwPHpjNy4TY+Zl
-# JwH/UrJ3ajwsZ9fpVKvSNK3ITiOB686hjvSZyDWPQQusOVvSyBza8yiYOaPxqLQh
-# fZ508qgp+lE4LmYfdV5Cg6frAICJeFb2fqDQyb4jc/SSDuC+1hTMPjkWKlD6AzSn
-# djEKCPuOd5AK/WFAJf1lPW/DYruGreKnlOxF1kqIKO1NePRDcGHDLH+KJAtYxKy3
-# KNQkN0ocGcfXi4EBxTtDIyGoATeACd5D+QU/LsDQWjpFHLIVRxgDWo7cDqkMHfQl
-# hg3w33lnJPzsVW21XDiAwMlfx7Uhj6AIMdxcWNSjXKll5qI9aFTqoO1m4+3k7tyz
-# hTLTBn6NZ3jU6duOuvsb6zx4yFkEr7zRFx5eIH/QtsMsxtNdq5VZeRgf4f3/boMY
-# 3kTsWeK+EboK9dkL6KU/iYFC0hjpSsJbiXo20IKMkGSDelhFRLpv8svgN49TfoMl
-# VgOHXdS7oAcSWPbbSMEri4i+BDZJn9BnxfX/KglHsC/cjuM1NpMkkL7uteKd/FnO
-# H5fE8BZRoyfb3l3EFcnHSgIp87SbsK9ICzKS4ZSioYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIC3ZqNjv
+# I1pNR0XOMW+V2pofnxDSrEwWhxJ1uWs9oVUIMA0GCSqGSIb3DQEBAQUABIICAH56
+# WQKurIvtK50mBjlUJgTRQgYBSNbDf5D7axSWLX2txYcBWJQmDDSM3bPGa/5A0m64
+# SDef2tFZgSSbN9at/pkgneY0TXubKmXaTr6LokR0fPvvqQZy5Qn9m6m66s2wsaWe
+# Hc2f5f+lSkc75J9cvNTsrk9IgQ7U8DuFovYsK2NE0DrYqxikDmO3okSPgJrpH0NG
+# LKTUAk1zCI/vQkRYth2Zyt6k3eYhawDeBot/8wMDdXWp6YhAoCQzjSQq26RkPnky
+# u15QEm/EMirGbI93bWBHRpP+mRvDw8GAueR4sJYWNw4M5U1lJiNZhR0pWUot2jvs
+# cWwUGzABEJ7aloqDYqp0w9u0XfrDz57k9sHpcsiGowrqT7aIy0omo9ZUAamn/8Zr
+# Yw0nvuwIL6nk4Qe4Nm92jNcw4a6LzPM3pQ8Unp/lWBmGHebHS7moiDsDw/n3m7L9
+# qgFV3YwwsDQE8cE3oXYz2NF45d07PeFevcGnpli6+accezIIErCrRHF3Ab1CLk6h
+# ozioLNkvN9bjPktQKddzE/RlfVIe3P6nG0wInAdxsekjv7nGDtJhBSM0wZqFxlsj
+# RV6kNwQzfVhlOwpm2Js9N2567/HZluGFdITxI1Iq4SU4dzMon9Jhf3rJddNe+AeH
+# q88+W90M2pc/wgGZjGUdFNjTIQCQtjfV6XTIoMM0oYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCEmtdXeBKLAi3WhiRZDaMtVv1NzIQHdi/YR+mC5fNH0QIUBECJ
-# NR9av9PBYzIgR2472+AKm4wYDzIwMjUwODA1MjExNzMwWjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCBKBycwtNn36S+L0kbfGkkVdLzpKibpq7VrOWPfyqVUowIUGyIA
+# xWBPtBy56QkAyKwoq+gDChMYDzIwMjUwODE0MDczNzQ5WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -3728,17 +3729,17 @@ function Run-ScriptInRunspace()
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIFR3TqgvhHeAcM15cwdfZ5dd179mCsxX3NNitvyLBN15MIGwBgsqhkiG
+# AQkEMSIEIOkVcl2c/B2Th9gfRs+DhaW5QgfmATD986JJiAHWU5EWMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAXerK
-# 9tXTrPrf9A9CAz4KdmgsLSW59YMJqfp2WUTcgHkK1T3y08zU/88rkajuvpOFbGXl
-# eyCqsWN7aHSb7sHsfBNreZn5gIn7R7MDzn1zFvlvQLnecGvHF+VXuQPT+fyDni+e
-# ikWtM1uJuY8my02RQd79AcWHhmO++9uTqmnFCcJEU2TZah4UywquDQbdxqh2NjIZ
-# lnQAsYXU8qFjmUiKOgQlSyLkmB7IaxzHN3ENCokZNlX2pffPeH3xfBPJrRnYPusc
-# 3D2VmFLXY5ST0zbwevGueWSsmIdiyDD8XSA9x3JAnS9hMtTQEDgMdrPB7mZH1AUn
-# H8+e5js7Alxyz0OD9oo5vzJcRAAMsAQkJa16wCVEQqAnqZvKwH15lrnmJ3dBqcPz
-# 4nv228kbR4MDbp1naNqsScTv0TaeKaCCt1vhlM+PYkNh/K4LUHhPaN9nZpeLv/zT
-# ugDk7YGAYb+ckBCYlOB5JFF35E8eUUMqzWeHtIcKXrWUGNycG+O+0IBlHfcV
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZyI0
+# mNaJj2VRJc5rvHZwvhE2kqVc1ajnZBxgCNvi7w2vHSfinXOgtKm3rYhfmxMrMIkq
+# 8fCKkXvIygJ4fjx2oTY+FFSUcgDnEKv/WsL6KbqIROOBR1rzY7giCa6rk3O/v81V
+# tRv4pR2zFf/w89RSiecRP9BxgVFahv61ItXW4GVDEUinQuYF26G/DT9umZDeA5lC
+# 8qscmsbp437PydmK825FAb5JdkQTi61qPzGYLaEQ6j66Q3VLtf2QPkMcR6rbvRQ5
+# rBsUvyxCSuVfQ5D5dNHv9MmHQOGmIStlXmm3yMqbHjT4rp0k/mSVO1DrowxPYl+l
+# AjM7gh7gmvYlgsB71v6XCfaGFXRyR7CtyRAMnKlT8JsbNob+J6QVUZvwdC/+xDMW
+# sOqnXCYJoe/9wO4THTausUrqe0nphUWWVm0JVEBS2MJ+FtINfBKh7tyVzv847/En
+# TuFirZ0/WOV2wGXgKp8+eq+6hgGQwPCdQHR+suBGN/BWmD05qEf1vs+WLu2w
 # SIG # End signature block

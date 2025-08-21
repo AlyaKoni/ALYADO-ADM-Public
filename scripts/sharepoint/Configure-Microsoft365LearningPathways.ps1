@@ -60,11 +60,8 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # Constants
+$learningPathwaysTitle = "M365LearningPathways"
 if ($siteLocale -eq "de-CH")
-{
-    $learningPathwaysTitle = "M365LearningPathways"
-}
-else
 {
     $learningPathwaysTitle = "M365LearningPathways"
 }
@@ -426,23 +423,7 @@ if($null -ne $sitePagesList) {
         break 
     }
     Add-PnPPageWebPart -Connection $siteCon -Page $clvPage -Component "Microsoft 365 learning pathways"
-    $retry = 30
-    do
-    {
-        try
-        {
-            $clv = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningViewer.aspx</Value></Eq></Where></Query></View>"
-            break
-        }
-        catch{
-            Start-Sleep -Seconds 2
-            $retry--
-            if ($retry -lt 0)
-            {
-                throw $_.Exception
-            }
-        }
-    } while ($true)
+    $clv = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningViewer.aspx</Value></Eq></Where></Query></View>"
     $clv["PageLayoutType"] = "SingleWebPartAppPage"
     $clv.Update()
     $clv.File.Publish("Updated by Alya cloud configuration")
@@ -457,23 +438,7 @@ if($null -ne $sitePagesList) {
     $claPage = Add-PnPPage -Connection $siteCon "CustomLearningAdmin" -Publish
     $claSection = Add-PnPPageSection -Connection $siteCon -Page $claPage -SectionTemplate OneColumn -Order 1
     Add-PnPPageWebPart -Connection $siteCon -Page $claPage -Component "Microsoft 365 learning pathways administration"
-    $retry = 30
-    do
-    {
-        try
-        {
-            $cla = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningAdmin.aspx</Value></Eq></Where></Query></View>"
-            break
-        }
-        catch{
-            Start-Sleep -Seconds 2
-            $retry--
-            if ($retry -lt 0)
-            {
-                throw $_.Exception
-            }
-        }
-    } while ($true)
+    $cla = Get-PnPListItem -Connection $siteCon -List $sitePagesList -Query "<View><Query><Where><Eq><FieldRef Name='FileLeafRef'/><Value Type='Text'>CustomLearningAdmin.aspx</Value></Eq></Where></Query></View>"
     $cla["PageLayoutType"] = "SingleWebPartAppPage"
     $cla.Update()
     $cla.File.Publish("Updated by Alya cloud configuration")
