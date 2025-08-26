@@ -77,108 +77,6 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Intune | Upload-IntuneWebApps | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Functions
-function Replace-AlyaString($str)
-{
-    $str =  $str.Replace("##AlyaDomainName##", $AlyaDomainName)
-    $str =  $str.Replace("##AlyaDesktopBackgroundUrl##", $AlyaDesktopBackgroundUrl)
-    $str =  $str.Replace("##AlyaLockScreenBackgroundUrl##", $AlyaLockScreenBackgroundUrl)
-    $str =  $str.Replace("##AlyaWelcomeScreenBackgroundUrl##", $AlyaWelcomeScreenBackgroundUrl)
-    $str =  $str.Replace("##AlyaWebPage##", $AlyaWebPage)
-    $str =  $str.Replace("##AlyaPrivacyUrl##", $AlyaPrivacyUrl)
-    $str =  $str.Replace("##AlyaCompanyNameShort##", $AlyaCompanyNameShort)
-    $str =  $str.Replace("##AlyaCompanyName##", $AlyaCompanyName)
-    $str =  $str.Replace("##AlyaTenantId##", $AlyaTenantId)
-    $str =  $str.Replace("##AlyaKeyVaultName##", $KeyVaultName)
-    $str =  $str.Replace("##AlyaSupportTitle##", $AlyaSupportTitle)
-    $str =  $str.Replace("##AlyaSupportTel##", $AlyaSupportTel)
-    $str =  $str.Replace("##AlyaSupportMail##", $AlyaSupportMail)
-    $str =  $str.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
-    $domPrts = $AlyaWebPage.Split("./")
-    $AlyaWebDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
-    $str =  $str.Replace("##AlyaWebDomains##", $AlyaLocalDomains)
-    $str =  $str.Replace("##AlyaLocalDomains##", $AlyaLocalDomains)
-    return $str
-}
-
-function Replace-AlyaStrings($obj, $depth)
-{
-    if ($depth -gt 3) { return }
-    foreach($prop in $obj.PSObject.Properties)
-    {
-        if ($prop.Value)
-        {
-            if ($prop.Value.GetType().Name -eq "String")
-            {
-                if ($prop.Value.Contains("##Alya"))
-                {
-                    $prop.Value = Replace-AlyaString -str $prop.Value
-                }
-            }
-            else
-            {
-                if (-Not ($prop.Value.GetType().IsValueType))
-                {
-                    $cnt = 1
-                    $cntMem = Get-Member -InputObject $prop.Value -Name Count
-                    if ($cntMem)
-                    {
-                        $cnt = $prop.Value.Count
-                    }
-                    else
-                    {
-                        $cntMem = Get-Member -InputObject $prop.Value -Name Length
-                        if ($cntMem)
-                        {
-                            $cnt = $prop.Value.Length
-                        }
-                        else
-                        {
-                            $cnt = ($prop.Value | Measure-Object | Select-Object Count).Count
-                        }
-                    }
-                    if ($cnt -gt 1)
-                    {
-                        foreach($sobj in $prop.Value)
-                        {
-                            if ($sobj.GetType().Name -eq "String")
-                            {
-                                if ($sobj.Contains("##Alya"))
-                                {
-                                    #TODO will this work?
-                                    $sobj = Replace-AlyaString -str $sobj
-                                }
-                            }
-                            elseif (-Not ($sobj.GetType().IsValueType))
-                            {
-                                Replace-AlyaStrings -obj $sobj -depth ($depth+1)
-                            }
-                        }
-                    }
-                    else
-                    {
-                        $sobj = $prop.Value | Select-Object -First 1
-                        if ($sobj.GetType().Name -eq "String")
-                        {
-                            if ($sobj.Contains("##Alya"))
-                            {
-                                $prop.Value[0] = Replace-AlyaString -str $sobj
-                            }
-                        }
-                        else
-                        {
-                            if (-Not ($sobj.GetType().IsValueType))
-                            {   
-                                Replace-AlyaStrings -obj $sobj -depth ($depth+1)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
 # Main
 $packages = Get-ChildItem -Path $DataRoot -Directory
 $continue = $true
@@ -267,8 +165,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAAB3nTOWPl/ik5
-# 9eP/AtbyhY8aQIKnXIV1ugxfe2fRSqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCO4yYVNZOxOWiN
+# /U45jx8ve36dL8sZopHoVAzpyI4FW6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -352,23 +250,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPkPDyQhQkNOZ1DO
-# ZyBK7szzqyn+OeSAfhs1EPzsIzd6MA0GCSqGSIb3DQEBAQUABIICAF+RoIdx4aNI
-# ObM0QYbNHKOzGqjiGds55dLETIFX6yaFnjXJW8fLqxjrEC6Ro+V9cWjs33xsULmz
-# oETZ/p8gwM8jgCi0mHcCNVatCcBZy3DXvk9dwomcNfXqg/7cGEG9WIU/tx1VSw/t
-# SPjLXZoMBbhBwjPYoY1hbUlZGtNkW6WPwRi6PUht33VDyu/JOu8BH65wfc25AkY8
-# GOOkSopl5dH3ek0uCiYbwZ2uC3dmJMJe7WIHOx4o9QZCPFfiuxyq6cW3MJxulSCA
-# 2vlEK/U74q1iROg+OKPaFQq6M3ELrO0iMiYmTQbIqR2CkJGpDTMgL/SVb0zb/1Ar
-# 23ngxNSqCc/3R7ImFrV+wiaI49CcEb5hIk46SAj1kEqB/1t/TpamLXQ8A1fcuj0x
-# zfJLSizh0IqT7kiFjHW+Z1ytYjDBAdGXE3XN1VPWREgeL2vLvRS69e9BWvKyTfRM
-# U77O6vW9gXYfWux3H0ifGa2fChnQ8JquvI+69lzOmEi0TwoenytKvss3IgasYWNh
-# 7DbynHmsGnQUu61ajqZlg2UJm5Qp2irSSB8sx4EU/eDsnVs/mEv6QAuF9RGy+9JT
-# rFY0T46YiJQxJrGODheDGMLzGeaOMzdSe/naSE8iKUBzA4KSQRA0frVKTimtuLol
-# JIMs1JXztES0ioZ/OBCzyQELVWcuuxTRoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIbyZrJaPtT6QkDN
+# 3/MJDNmbVCvOokHsiRe67AHrYb+UMA0GCSqGSIb3DQEBAQUABIICAJQOxZEqbelQ
+# diGn9uJ6H4VAaovhl5OS5SILLdeoQsEHL85Ni3Y5ouAG9KkLo4bDYasjmAkiAlWH
+# 6tf94KNbadEqzaBTwRwgtGQFtf7Zh4ET1OR4/kEp/omNP1a2PReAhxgzx1X4hvrY
+# dBtnNIlwYD3/nA1+DF8bAtk3dbTms7VuX1JHBVn8bBZWI0kc+URfjJocpYVaTIdY
+# Rb9cQQmuDRBKyQOfxDZ5/cuZAxvsuF/w5QSkKPcGS4zMGHfoYnJjmMS9OkyZhugC
+# Mo1LYIazl90gF9bHHEd4RPvaEo4bkKZDv/2oORUuf8JCHShFl2M6Ux+Li+v6OnMQ
+# XSBj2qHJ1lYCh+ikCJ2ZEX/UUwTZrE+15oHXVd+Pa3zGy9ESIY7IE3IKgFSibxeO
+# ZwxUdgMPyGakU2hpoiOdwfyudFGEePfUpaODKw+ACnEfklq/8XGUXKCraMfncChN
+# PuK5/lTNZwVqguVyrVnjotbjB2L81aMwCIQRlLKQSYMzckJACVHzWOJoG2I5NcS1
+# yv7Pa7WbiLgQSHUK9oHSRr4I8gwRuS6jrlLl2uT5Mu9/OXsJOwa6HcnlrGYiGvac
+# jXWz7t4FHDV08Mb1zPS2GQJcp8gi+MJ8J0nYEKH1RbIJeVv0U3fcocB18sY8WhQo
+# fRCGxMkLMo5QvXDbWLoGRjtzCj491hLjoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCC6Zs7EgidZEpnoMRMWZBmV9MRlHPWWGA5mEmxRllH4qQIUQQJylXBKgc6x
-# 6E6MJ5E4aT9um0AYDzIwMjUwODI1MTU0MDM4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCklWDSBOex4YjeVGOl7r4E2/OQTYmKWGLoL4AUK/umuAIUaFtU3rRE+UbP
+# VHCLdWfp9nDZYZMYDzIwMjUwODI2MTEzNTA2WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -473,17 +371,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IBFrr8cCEQWs8jcGhfgGN0jAi9S9JeQZ6P3YHzVdKLQgMIGwBgsqhkiG9w0BCRAC
+# IBV0S8e1vMAsvlHdtW+hnqo+tA06X+p+Qd5pes+himQXMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAWKsixZqYb3xB
-# /8OQeo3BieBE7ShD8vM7yGoOEPIK0BEjMKeuqLzZHTVGgrIslg7Gc2cIZ4edjdZn
-# IXTFDWSw73yPmJjQR5xv/GK7LA+jMNg03fjlJq9uKI7oKLq3G/g8FentaQBbw+jG
-# TdKKRZ3qfEHjnbN3cT4HQDaDvD2p7NNSOGvPFzSIifD1lUjd89wJXB2b7dKgh8Im
-# v7Td511l6OOz3viuf67TcyRD1+/QzjhjAx9gknlHnmlrxXxfpnS2GRkwbBlaP14A
-# I71Y0AmJ/8G1U2+ximn4uA67K/G1Bl0Hq3Zg5LNK2A4OCFCjyRTuT7fLYz8BjFGk
-# Bdmmpc9AE+CV6HVO/+rUwUq12r1+wtuWSAEjW+QmKAUjduWqP7j8QQXde0DI1GBd
-# gQNGbhkAligKXHR+Z3sECj07+x6wjAUUDuRcKEjbNGlM7D9n/p6F1PDqASYihe7K
-# CMTNKa/UIjpkWtZ+TkwkGA5Yz6yvfQkfAiSu7s+LWkhzhxffnzew
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAkn4DiZB/Ml0A
+# Ig6TswtvFAgnzcGGRkxKF51RfUFnHo8m3txWpkswbDcCWI3XdzljuHYolmKiRbUq
+# 82dpPEj0a3hcSepNHwH9UZCk9NH3jG9e+d2QnloT6QD3FjqDembqTIuVU+0es1nl
+# AxCEJJx50chrg0bvbAykGOZrfOPhfKX1MsQU+mLEjJebrDZvbsDJnDMCwsTNpVQ7
+# 7gNh15bVORxQR/rpg4cqL3RPUab5ZKVBOApCfoBQQPmw32BEKFmtVIwzmQtgl6Iy
+# 3JtUoGXzqczFweyhuiYpepkfOpc9Z8x2Wv4hho7yM2SLGNzWB5KYG71s2tp7H7UM
+# OjkzaBuU16xRIomSWft+UGlRYJ8jsXTu6bpK27RoQEWUU+EpXWeg3xoT6TfRtkXZ
+# caABWBlOnVv+X2DwbJNVBeiiQDbk6ZBLEjcWa5FFSKisc9ZeEhf1nIiN6T9fihnd
+# HhYg4iAjt7vN4rOKzQa2RostdGtxiPz1xuWVAOpMtWi6Gegai7ME
 # SIG # End signature block

@@ -3490,11 +3490,118 @@ function Run-ScriptInRunspace()
 }
 #Run-ScriptInRunspace "$AlyaScripts\tenant\Set-AdHocSubscriptionsDisabled.ps1"
 
+# Alya String Functions
+function Replace-AlyaString($str)
+{
+    $str =  $str.Replace("##AlyaDomainName##", $AlyaDomainName)
+    $str =  $str.Replace("##AlyaDesktopBackgroundUrl##", $AlyaDesktopBackgroundUrl)
+    $str =  $str.Replace("##AlyaLockScreenBackgroundUrl##", $AlyaLockScreenBackgroundUrl)
+    $str =  $str.Replace("##AlyaWelcomeScreenBackgroundUrl##", $AlyaWelcomeScreenBackgroundUrl)
+    $str =  $str.Replace("##AlyaWebPage##", $AlyaWebPage)
+    $str =  $str.Replace("##AlyaPrivacyUrl##", $AlyaPrivacyUrl)
+    $str =  $str.Replace("##AlyaCompanyNameShort##", $AlyaCompanyNameShort)
+    $str =  $str.Replace("##AlyaCompanyName##", $AlyaCompanyName)
+    $str =  $str.Replace("##AlyaTenantId##", $AlyaTenantId)
+    $str =  $str.Replace("##AlyaKeyVaultName##", $KeyVaultName)
+    $str =  $str.Replace("##AlyaSupportTitle##", $AlyaSupportTitle)
+    $str =  $str.Replace("##AlyaSupportTel##", $AlyaSupportTel)
+    $str =  $str.Replace("##AlyaSupportMail##", $AlyaSupportMail)
+    $str =  $str.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
+    $str =  $str.Replace("##AlyaTimeZone##", $AlyaTimeZone)
+    $domPrts = $AlyaWebPage.Split("./")
+    $AlyaLocalDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
+    $str =  $str.Replace("##AlyaWebDomains##", $AlyaLocalDomains)
+    $str =  $str.Replace("##AlyaLocalDomains##", $AlyaLocalDomains)
+    if ($str.IndexOf("##Alya") -gt -1)
+    {
+        throw "Replace-AlyaString: Some replacement did not work or missing!"
+    }
+    return $str
+}
+
+function Replace-AlyaStrings($obj, $depth)
+{
+    if ($depth -gt 3) { return }
+    foreach($prop in $obj.PSObject.Properties)
+    {
+        if ($prop.Value)
+        {
+            if ($prop.Value.GetType().Name -eq "String")
+            {
+                if ($prop.Value.Contains("##Alya"))
+                {
+                    $prop.Value = Replace-AlyaString -str $prop.Value
+                }
+            }
+            else
+            {
+                if (-Not ($prop.Value.GetType().IsValueType))
+                {
+                    $cnt = 1
+                    $cntMem = Get-Member -InputObject $prop.Value -Name Count
+                    if ($cntMem)
+                    {
+                        $cnt = $prop.Value.Count
+                    }
+                    else
+                    {
+                        $cntMem = Get-Member -InputObject $prop.Value -Name Length
+                        if ($cntMem)
+                        {
+                            $cnt = $prop.Value.Length
+                        }
+                        else
+                        {
+                            $cnt = ($prop.Value | Measure-Object | Select-Object Count).Count
+                        }
+                    }
+                    if ($cnt -gt 1)
+                    {
+                        foreach($sobj in $prop.Value)
+                        {
+                            if ($sobj.GetType().Name -eq "String")
+                            {
+                                if ($sobj.Contains("##Alya"))
+                                {
+                                    #TODO will this work?
+                                    $sobj = Replace-AlyaString -str $sobj
+                                }
+                            }
+                            elseif (-Not ($sobj.GetType().IsValueType))
+                            {
+                                Replace-AlyaStrings -obj $sobj -depth ($depth+1)
+                            }
+                        }
+                    }
+                    else
+                    {
+                        $sobj = $prop.Value | Select-Object -First 1
+                        if ($sobj.GetType().Name -eq "String")
+                        {
+                            if ($sobj.Contains("##Alya"))
+                            {
+                                $prop.Value[0] = Replace-AlyaString -str $sobj
+                            }
+                        }
+                        else
+                        {
+                            if (-Not ($sobj.GetType().IsValueType))
+                            {   
+                                Replace-AlyaStrings -obj $sobj -depth ($depth+1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBl6OtdUtbDrRvF
-# XjTFa/XGr47GkO9y/6VIs0+cr9AoEqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCsmYEjTdwAT35e
+# vLptS3JjKXR8BDskoDlybEsE8sO2HKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -3578,23 +3685,23 @@ function Run-ScriptInRunspace()
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAB223OgskjPNqLw
-# mfa4RQGYbeHDiRF3T4VVrtT9lC4EMA0GCSqGSIb3DQEBAQUABIICAJB/WtDwNoY5
-# +wIiqLqe37xmzVnew2+L3nalghyB1CvCiNZRL1OBNbwHAPu3Zb9j6hQ5mJovtWwx
-# 6WRUVkNPoantu5RLdd3MAmryeECNor9pkmfM4AvgaCT90cz6ZlR1fd6EIf/OBak3
-# fJqcURCNgCw+m6xjvOK1lx++J+/7CU8943956BusBeyfpVMqxC5iwkk7imOlFYhN
-# Mw+UBflXrzyBUNMl3kseVPDO3dgPmnfnCOeaK5mCRZ6nbw7jNO6qn+FYbRikhB98
-# yyb5gXo2+ZL03p4K/q0spB25so/uNtGvAxjXf7VcN9JYboINvUjDOzMqy8yYKDIh
-# gQe9o+kS3Rc4Wkvhm+oOGGvbd3Xru0b9hwf7L9SZmByPZuAQBBhgSqDnX9J/wyDQ
-# bhV9J1OkYAv7l6kA7WVkp7HjD3SYwgMjr7Ihloz34oRistMjVSGg6f22aGfDi4e7
-# pbptNGT9VK0GpLEAR+gIypxi/jVwLP/pNroHQyS8YbPxzGAJHtuqeEwgT6aeGgsN
-# XAIgLUMgC93ObVlYY6xZQyNBL8rJ/tZFRNzdQYvFgc0z4KOh5NMXPJ+FY2nxg1qk
-# B6a/T7XXb+6wRePCc6m84fwcTfwLAFHqjl0OUNTnmeo5pYszA76sPg+hYMwGplhf
-# ETmzmK75t3kOL25u1M60EceKd6S3ksrtoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDdBoGREZQWo9xob
+# Fn8LtlJb5IWEq2+eTij2xCd7Wy6jMA0GCSqGSIb3DQEBAQUABIICADaLJURQgLck
+# XbrEzISCc8TSDnKxmm/e3ch2s4dEGH9f98s6iUVIo9l0/XLxH+zsY947ozIGYz23
+# ANnLS2Tdr24m/ZgVjjyxLJq/9ESPt8hOTcEgpBO/MYr43cGdxOP1zeBql0KROi6e
+# +VXOsTq12+I2bG80CUU/MlLnX87k8LrVfeya5llCO+nOpdJ2abg/xetVUWgdCcaj
+# xMfG92oNSAnitJe9iJ/oDNea/5gGeDkdG6/0lCBUzJkqQb9e7pEmfeIhp5E7k53e
+# p0AcKl//6h+PxhvA5vy74AOG54Psj8nf1vHP3BjeWBMBaivEPKYFV/RC1QQGWA04
+# NFklGRTcfvaf9U009RkwjgmqKcjXuwXxKZNKj+hTOZPg7mkKYDHfxNoVI4SNyw3m
+# 6ar9OKj+GbPVbmcOB2WLAxtJudaOqOffZ/hZSHIwXVJdzP+QE0IxHVouQT6zL182
+# ZchjPTs6yGX7+ZKVVgLEKnqXDkGstMJeeh28i3YHqznnX88CnnaG2Kh7HGaMJOdb
+# WzyPBS/y3K5PAQvQGx0RVPlCpssEnOT4ME+gEIYAGRqYzhZ0TN8vn1qY9P4es1k8
+# s42B0atWZDbqkgYjY2nUUQsD0xCvgV5DM9NNjXm4twYN6tQ7zqHUP239MhSxp2Cn
+# S2sl0SaJ8LdYDUHjPIAXcJKIp8VogW0doYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCC272RVvpWpSnm5MwSpmTgOB6/bWRojBE89xqaoy6siLAIUVYmAoDdmQ2iO
-# Xqi5IK2DbvF6w3EYDzIwMjUwODI1MTYwMjAyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAaEBdn2eETo9EKHDuiaUJLdrhg1LtAb+thlJnnj+HZJQIUK/RlsBd17azU
+# /q0RR1aNI+Pu8U4YDzIwMjUwODI2MTEzODE3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -3699,17 +3806,17 @@ function Run-ScriptInRunspace()
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IEGDX46IY7GNButH8tI2f5P4hM3qZoB2p9xZu814PfYIMIGwBgsqhkiG9w0BCRAC
+# IHDrnZU5BAI+BA/9EldCFIKH/+1HTtllsGoRcOe+XzGYMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAlUOwS3QlYOA0
-# x5VVrJi4W6psFeeCpSDMZ3GLBclRxEdzwXCOfoQHU2RokR5xLI782V8bJ3RVRNQA
-# +foveVEvtbzzuWTr2T5n8sDcLe+HEb9SKG32zIeeWtx6qz5yxNuGJ4i7Tkuqg07P
-# eO+wYj/rSChAfHRwYn91Q80byG0TEv9HY20l9SB+J7LkNR7EJhizDG/FHWXKlmb1
-# M291QXWcCA7bA9v+9Y3AQdk+hGDqNW/64axT89HJXmXtIy6o+ejZxFAN8U/c34Fl
-# OFVVeU7lnL5aWZqP+c1bX4vUhBeMnUkQH2H4Z7c/Ysue+ie62/By8VFZo1d77vcs
-# V9PUelH0XLRxC/eCJbYP7jTEFsC/Fk9u0KqPkTslp2l+J0SwezIawYRjjCZ8+Qc0
-# MDMXSHvDAH7Sv/au7SP0hWIdXbmpGqK4fNsBJcPjY1fCVqBTibrjUHfjBui1dAkN
-# DFzd6YNRqPt4Njz1CJNa+O6ckD9whqICtnbdFgss1kU3LnOeE1wh
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGABzp7wrj8NOC8
+# 7CAkrKF0D9NMs4aG8HY/IqwQefKEwq4JlPQJ5jyxDmZWBrmeRzDjiJx1Xao5f8aF
+# 2J9g0HIkIUXPg87GxKkGavQiFohcsIauRuGaFKd+LZcIBiH3qZiQhT7p7oyKUWgL
+# PyAkLhM2vz01oNzI9fDBcwJxooVvfi89OMtUhOIJ19TIwptlZUVgf3UKHNi38usL
+# H7DqHxyJi/sZFe0yoTXC+AKis90nSW07HdrYo/CJtdvuqYxWfDUdPhTb1htN3PPO
+# BSvoyMbD/TCg+StyTLAqCxG7zWsVlkhgFyPq/IpoZd9JV23dDLJARtFQq6LkTHID
+# u3DL0ezwWud1skZtgRN2RiLsKGJ8/y/QyOCigAUsHT5n5RGL85GZ9rLWvVM9duO6
+# Ef7GJWtVssFOQeHrRBvWo5+PaTWILnIHtee602So3rl39m3MM2FF6Er7dmJDmrhs
+# rsAIFZjUEaEvQklEvelvzmkPqlsmP8ppEM07j/etWNFLOQ01/a5z
 # SIG # End signature block

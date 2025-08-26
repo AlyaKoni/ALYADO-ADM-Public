@@ -77,28 +77,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Main
 $definedProfilesStr = Get-Content -Path $definedProfileFile -Raw -Encoding $AlyaUtf8Encoding
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaDomainName##", $AlyaDomainName)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaDesktopBackgroundUrl##", $AlyaDesktopBackgroundUrl)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaLockScreenBackgroundUrl##", $AlyaLockScreenBackgroundUrl)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaWelcomeScreenBackgroundUrl##", $AlyaWelcomeScreenBackgroundUrl)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaWebPage##", $AlyaWebPage)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaPrivacyUrl##", $AlyaPrivacyUrl)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaCompanyNameShort##", $AlyaCompanyNameShort)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaCompanyName##", $AlyaCompanyName)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaTenantId##", $AlyaTenantId)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaKeyVaultName##", $KeyVaultName)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaSupportTitle##", $AlyaSupportTitle)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaSupportTel##", $AlyaSupportTel)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaSupportMail##", $AlyaSupportMail)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
-$domPrts = $AlyaWebPage.Split("./")
-$AlyaLocalDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaWebDomains##", $AlyaLocalDomains)
-$definedProfilesStr =  $definedProfilesStr.Replace("##AlyaLocalDomains##", $AlyaLocalDomains)
-if ($definedProfilesStr.IndexOf("##Alya") -gt -1)
-{
-    throw "Some replacement did not work!"
-}
+$definedProfilesStr = Replace-AlyaStrings -str $definedProfilesStr
 $definedProfiles = $definedProfilesStr | ConvertFrom-Json
 
 # Processing defined profiles
@@ -381,8 +360,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA+VzdP6iy6pZAW
-# Ew/RQhQB+LRIUd45voE4Vo1Gv+9zr6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCiZLmovE514k/6
+# yi+TqFS/mhxayh95il/4cwYayZndL6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -466,23 +445,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIC5nSoOrAjOsoWO+
-# vkP4CRjaNV1LwGjwfWYtzEc2NaqDMA0GCSqGSIb3DQEBAQUABIICAC5VGDL0+KyH
-# vstHuKahn3AykLnuhZnfmeT/OLtKMX0y9n/KFU55PKiipNxNegLjxxbRqTcJastv
-# rgRJyUQp+Rd5zL8cOEdQFKb4TH+toZ5C7X+tuYXP1zShf9jSCG10EMPn+VtdOdbu
-# FIDvFZEglkwNhu1ZTLA8X69tQUEfdddPiVzeGA2Q0eoCVQa9MIYA0+nvjM0AWfNt
-# N1VJC00Te2hKLKdA4mWbSQ3aDdB3YQSRqs92QVg4XqllFSKnO7AfCz3g/IMghgJN
-# huapw9UA7iVz8fbYzaUc/uANOAabIa5TZm8bBXTm3Es4Vpqr5qYjCEwmqsv96Nc2
-# xvBXxbsHpT9MHo8jvkeshvLEtfTpLJaEkHdjdfdRZfKdn3l8B5eAuwfINPWHZGP/
-# U8lWrA7WJfJim5Hcp5OBw10/Qf1CzcfLl2EtDLqrV5gN6VNCCwsEZ2Lnh+9f5oRt
-# SjS93j5ZB8up9Qka7dXcP4EqSBmVpuWp5oXJOj3mJwZDmpGjY/28InRomwgaH9dH
-# eLOHym9xDN3cbZnu7VU53M25rz8O9kTbI+P7I+lSQxIWVs6JMYg+69e/AxX2sxDu
-# jaTqCK5/W+ZCqOQge1NnhhgXvxM5jLtV6LWEtMOt/kptXrn2TibqhW1/thB/fQu/
-# vePHOWkxQHBeYs3WkiYF4I140QuP6ppsoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIISTn2AorfFIbn5Q
+# h4aMRDMjNKc1MRAv9O5dVPBn78zmMA0GCSqGSIb3DQEBAQUABIICAAMe0Wrjar8D
+# 4P1duAeCpr7efZfh3zOn9tG9oPOwt5wegN3jrKblidPHeyKuDiwtP9wyDh4vBxEn
+# C5A3tHtFMlBN8Dq3tIkUqjJdXbEIRYMJBHtolsEDTr7i7LWK92lJNblIxdYiOp1F
+# 8EVOufGhCexfwDn+cwQeM1bsh0EYwDk9YI9779+q3gyaGfArmwTtm/1Z2rUaigUA
+# XAeXczIL66+70ja+9L1Tlq0P1iYmoSc0zNr2JcSVIWfBcYhFhvooX467xi2n78gI
+# k0QpvcXHFh/wOF1rWdv4TJzr0xUmk6E4+TtrsFrGX617vNokUebi/EEArGO2yL1n
+# VB5JhLNSdPSBaKM2h8kBg2G7MrQyclzUYA8ac3OKb2CDCp+VoGl/QsspdiI73RlV
+# j47zu3lHyXvxGSRg563JT2i70IABSNnVALu58zh14GRypySZ1H3OJGKZOIx5MUtU
+# 5yLmN16LU2wpNyOrz022/s99g5M8X2YMTYwxuV3rZ1ItvgxvbHlf5zZXgSHjxfhm
+# afyBdmHZ51F6021FoSxgSFn+KyhnvMsJPQI+4PQ4r4fyXBpoZ3xIH9EOABMmb0aF
+# W1ZJnpNCbZeWR0zfKGilVk5aVgkeZN+b20qtVSswmMeQaWGzR/jwMxY55o1IHFpO
+# v0rKwgMIXSQHLDHclbm1v7VPKpw8i+fRoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCC3txAOn/5nKdcokQoOrufXgM3ceUD4W5oJEaabkKL4dwIUNyQhLY1y+E/C
-# iA76q9uY9gWiVzIYDzIwMjUwODI1MTUzODE1WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAxGsczmk3QuQbBqvOe4E4gBJTnNHO33TICUsTAP5h6UgIUPUEI3KEDnzSW
+# qOY+3z+Jg/vATfwYDzIwMjUwODI2MTEzODI0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -587,17 +566,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IHShPYBjLT+lE4rkBxHSeW7xBESvDCIk8KQzL4GX3J0yMIGwBgsqhkiG9w0BCRAC
+# ILxONJ0/02ijnnyAX3rD5Zu1wscinIMWhGgzOou/2l/gMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAI5vN8txxRpP9
-# VJN7xN8tqmkSYySAfPq5A67mj5iby0321SgFRn1Sf4Uy/F41RXcAQuqteZA9xZYU
-# JNu8In/n6PPoJSRrteThjMvFtYnWjR0Vz9CTqaqV9FoSRRW+HDiz1hQKlhMSibb4
-# 05WP5lFmFkGh6TwxcsqQOdz8CW9dmsO4FzB6ghNFds8OXE/+CFpqxkETE5dsQj2D
-# KgG8NPKwG44qyKhJ8vqPy0bel1Nigl7h7mrwMq/5jNI6/V8zjSUREPL626pFq90X
-# hhv1BUUfY9eoOnDUuFPgjAa9Re2/k7oBZIqgz6IVn3dxqyVeOl/koFRBm9zdZ9t6
-# oJNFKnCLnkYbk65G7s03xOFBnPrJO/N5PXQeDnBpHTWciSnOfmCqMRakCsYEo3ir
-# U+T0CnfFMOXUFe62jcHhmaqhV6FGWW6nZ7ac5qGJrCMyZ63oi9xn0THgIpcwlvv7
-# 2/QtFF8xV3NTB2eu8h/s5x05rlWxmuPnqkBDVk8PMRG9r7NWdOro
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAd4H5iCeF5kWQ
+# QdYAEF01or7Fbt88pZ2q6w3/Ek3SmfQPaL1u04hB250T+l2BXmw7T2d6Nm0Pd6hU
+# 2zWkaG6JSko46bEydN+5+vYcoUJGE74frqhjy3lBgZIirLUxSCguFwtFhsjhWJUC
+# GteAaKEA31ouEwVV3xRP5SCziVJZbZ8mBU7dVKHZ6leOY52H9TvhQPZR0pa8Jimj
+# UYEZz5IPhYiGRmPVEFjI06a9Ez3Rp0T/DlXmgP1/Wl/Y12mcWbj4QWnZ462wbYJ3
+# 4jSjQtyU32mQSTDNs2DLU8rgXfRfuDDR2Yd21jn33YTRgxMmBMGw8glrj0YdFIy8
+# aGGtrcKtd+vGIOd2Y0BCKqVd3dM/efKmoQT2iYQmQqqNP+MXiLrw6CYFf9Bmq+dq
+# Fja0pSuXJGYLCeohfwqco6UCNpOEan2bF+tj04C3jnf7FJ+1MlrcaKYiUmASuezV
+# z7C/rEPgK+Kp6d/8+6Tzd7m2Q/RX1qkdZohkBevRMtvByo9MQnJn
 # SIG # End signature block

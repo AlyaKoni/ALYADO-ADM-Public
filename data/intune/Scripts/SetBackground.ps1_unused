@@ -33,6 +33,7 @@
     01.04.2020 Konrad Brunner       Initial Version
     04.11.2021 Konrad Brunner       Enhanced the script
     15.10.2024 Konrad Brunner       Fixed path, 64bit powershell, error handling, logging
+    26.08.2025 Konrad Brunner       Changed url to AlyaLockScreenBackgroundUrl
 
 #>
 
@@ -84,7 +85,7 @@ else
     {
         $ErrorActionPreference = "Stop"
 
-        $WallpaperUrl = "https://alyainfpstrg001.blob.core.windows.net/corporate/backgrounds/Hintergrund_3000_2000.jpg"
+        $WallpaperUrl = "##AlyaDesktopBackgroundUrl##"
         $WallpaperStyle = "Fill"
 
         Write-Host "configuring registry"
