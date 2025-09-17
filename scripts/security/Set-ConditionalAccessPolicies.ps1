@@ -38,6 +38,7 @@
     13.09.2023 Konrad Brunner       Handling OnPrem groups
     08.11.2023 Konrad Brunner       Key Authentication
     05.03.2024 Konrad Brunner       Excluding Intune Apps
+    26.08.2025 Konrad Brunner       Get-MgBetaIdentityConditionalAccessPolicy fix
 
 #>
 
@@ -72,6 +73,20 @@ LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Policy.ReadWrite.Conditiona
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "Tenant | Set-ConditionalAccessPolicies | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Get-MgBetaIdentityConditionalAccessPolicy fix
+# This cmdlet is sometimes there and sometimes not. If not, we use Get-MgIdentityConditionalAccessPolicy
+$GetMgCAP = "Get-MgBetaIdentityConditionalAccessPolicy"
+$NewMgCAP = "New-MgBetaIdentityConditionalAccessPolicy"
+$UpdMgCAP = "Update-MgBetaIdentityConditionalAccessPolicy"
+$cmd = Get-Command -Name $GetMgCAP -ErrorAction SilentlyContinue
+if (-Not $cmd)
+{
+    Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
+    $GetMgCAP = "Get-MgIdentityConditionalAccessPolicy"
+    $NewMgCAP = "New-MgIdentityConditionalAccessPolicy"
+    $UpdMgCAP = "Update-MgIdentityConditionalAccessPolicy"
+}
 
 # Checking intune apps
 Write-Host "Checking intune apps" -ForegroundColor $CommandInfo
@@ -189,7 +204,7 @@ $ExcludeRoleIds += $syncrole.Id
 
 # Getting actual access policies
 Write-Host "Getting actual access policies" -ForegroundColor $CommandInfo
-$ActPolicies = Get-MgBetaIdentityConditionalAccessPolicy -All
+$ActPolicies = & $GetMgCAP -All
 
 # Specifying processing state
 $procState = "Enabled"
@@ -265,7 +280,7 @@ if ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne
     if (-Not $policyObj)
     {
         Write-Warning "Conditional access policy not found. Creating the policy 'KEY: Required for specific users'"
-        $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
+        $policyObj = & $NewMgCAP `
             -DisplayName "KEY: Required for specific users" `
             -State $procState `
             -Conditions $conditions `
@@ -274,7 +289,7 @@ if ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne
     else
     {
         Write-Host "Updating policy $PolicyName"
-        $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
             -DisplayName "KEY: Required for specific users" `
             -Conditions $conditions `
             -GrantControls $grantcontrols
@@ -305,7 +320,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "MFA: Required for
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'MFA: Required for all admins'"
-    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
+    $policyObj = & $NewMgCAP `
         -DisplayName "MFA: Required for all admins" `
         -State $procState `
         -Conditions $conditions `
@@ -314,7 +329,7 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "MFA: Required for all admins" `
         -Conditions $conditions `
         -GrantControls $grantcontrols
@@ -361,7 +376,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "MFA: Required for
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'MFA: Required for all users'"
-    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
+    $policyObj = & $NewMgCAP `
         -DisplayName "MFA: Required for all users" `
         -State $procState `
         -Conditions $conditions `
@@ -370,7 +385,7 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "MFA: Required for all users" `
         -Conditions $conditions `
         -GrantControls $grantcontrols
@@ -404,7 +419,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: For all 
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: For all admins'"
-    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
+    $policyObj = & $NewMgCAP `
         -DisplayName "SESSION: For all admins" `
         -State $procState `
         -Conditions $conditions `
@@ -413,7 +428,7 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "SESSION: For all admins" `
         -Conditions $conditions `
         -SessionControls $sessioncontrols
@@ -446,7 +461,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: For all 
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: For all users'"
-    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
+    $policyObj = & $NewMgCAP `
         -DisplayName "SESSION: For all users" `
         -State $procState `
         -Conditions $conditions `
@@ -455,13 +470,14 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "SESSION: For all users" `
         -Conditions $conditions `
         -SessionControls $sessioncontrols
 }
 
 # Checking risky sign-in session policy
+<#
 Write-Host "Checking risky sign-in session policy" -ForegroundColor $CommandInfo
 $conditions = @{ 
     Applications = @{
@@ -482,7 +498,7 @@ $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: Reauthen
 if (-Not $policyObj)
 {
     Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: Reauthenticate risky sign-in'"
-    $policyObj = New-MgBetaIdentityConditionalAccessPolicy `
+    $policyObj = & $NewMgCAP `
         -DisplayName "SESSION: Reauthenticate risky sign-in" `
         -State $procState `
         -Conditions $conditions `
@@ -491,11 +507,12 @@ if (-Not $policyObj)
 else
 {
     Write-Host "Updating policy $PolicyName"
-    $policyObj = Update-MgBetaIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyObj.Id `
+    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
         -DisplayName "SESSION: Reauthenticate risky sign-in" `
         -Conditions $conditions `
         -SessionControls $sessioncontrols
 }
+#>
 
 # Disabling security defaults
 Write-Host "Disabling security defaults" -ForegroundColor $CommandInfo
@@ -507,8 +524,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDO/0wVTKl09ABo
-# gXpQiSjfgbHHj/6IaftGZpnxezQLWaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBYRZj23+KBNWcP
+# 0Htm7mIZMUDI6v1YckrTVL5XHdZMKqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -592,23 +609,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDOR6LZKiAQvNbgY
-# ABHALDKiX+crvHemHsCCnf6SleLIMA0GCSqGSIb3DQEBAQUABIICACae1M1INQ/n
-# XwWZH4Ka6h+MoQO2w/AiRFgD9G3M4gJbQO8HQml7TR+y54wvk0J1f4YFTMYSnhlT
-# mVlEkJxCSaMJ+aS9Pnu5QnWwrxS5CSy4h+lpaZENd6B0ml+g2431DhR5t6cmg+rS
-# X2WwxjUPHuvU3Ai0Dsj99jJtFwaJjzEN7toybOGD2/E2RcIFfTXgIRTHlWPgy46J
-# 1S7GGnYvOGjYisajbbga8QDSs2Bfy2zhEsUI/mDlO6XQk5F7fFeQQAhghG7Fyfyi
-# /oW1E4eyFZBPf9KauYgw8Radg16plXaX584h3y6/kLaoy8poIB5y5L7BggR/xm6x
-# T5k5BtFLZuZQgArJxXfvcs15lA8YBjyXY6neEqpdluA21u5M2vzljvJgsIhglNiL
-# yLeDaNVWTBnotK7KJFoMemnZwzPsSBhYY6G2H7s/DpRWuTlw1Cek7hKr2gUwEL5Q
-# QRoetQPcN8hVU3c8zar+e1iRL5J0xe61SvSpVhMscfQnf7klhNy/ea8e1FeKTlR9
-# FkZ2qHDgJm3qBu9qRaQQQn+iVb86Zs4NxMMyU6t2rWAFupIUjMPrbB+LRFgOu7uc
-# NLFNAMr0zx1YZA1K7Mlq92K/wzJlex3pDWARBiTAVBNvqZjM290vJk+LkkmAUqWF
-# 1E67YBgzFWcqD0Mmp8o26LgRKrOEIdqCoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAwRA3kUTFBorykz
+# k1Xbv4Gniuy41Cq121YKzkC3ZhKTMA0GCSqGSIb3DQEBAQUABIICAHgBrhDrBMTo
+# bONi62Xi1RWBFJsMeywc2o5C+58PypEk1gzwOo0GfOdRoyZ6V9t7N8/KmRVFZeB1
+# Wocy3656ta24yyQCZyLIzPAG7/FSvBSMrWOlDIDYEmdMCKq+dtzfCmNtmEXL48Sf
+# w92erIMkCI4Bw54ZZhqnY1u4WrhuHXWltA/Ppn3nG6ntdvEb460ixwJB6vEB0tkv
+# v92Q5flzoYDDnTZp8NWb9s3KEbblR8FHFb90jI7Ml7ncuwyTKp1YutYBhiwVO9DD
+# WfevmwengfzKi0W9OOLHB2GNh3p7bVoWwJGcdkQlwWenEmEhF0/hZRLkr34u9AxF
+# FaSNwVfSd+FQMDfX/Y0SMbWy+KEb/ogwIj7Z9PpSDaHjVq3uzDXt859u1QmkJivI
+# Kzz7kwi7iZN2oAlMmhRFR+HsAnbRK0QERQOgDwJWl2T4Gg8YInQugTqw6EJaU2ZJ
+# I0fthvV9p03GT/ZB9BsrFcVXkoaYdvO1SsVpp8byEptVZPtO+yheawPHcEKdHJvw
+# f5Pde9814jIOk8E4TGxQ5K2vblQEo0nnsLy7GRiPC8Xwow5QLzUwIzL+fq3rCjnI
+# ll04FbFcEeyyq9IWt8gHEdNFIFtF28quL6WHaNuj7pvp3NPVtVGgbYtbeo5tIKhv
+# 5Y3ilbAU7JLk5T0kBtvb6gfDoD6VJ3FmoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBWDQavbjKLkXe8Icy2Rsa264fOP1kTd2ehBv6GOZFiPAIUQYbvHo0rrjoQ
-# S998Dk752xXVUXoYDzIwMjUwODI1MTU0NTM4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCI9vsJZ5T++zwLcKFEtNz4+L3ApfTHyNCO2r0sUPXrIwIUGuoXiK42eW1P
+# f8PliK/QMuwzeYYYDzIwMjUwODI2MTI0NDAxWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -713,17 +730,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IAx9YTF3K5MdpHcN/fvY4poVe+3o/+7y3vm/bMJopfPFMIGwBgsqhkiG9w0BCRAC
+# IM3yAokTh5a7TsgyMcfH5VA/751vd17R+LdPpHbbXHXoMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAIG7PDegAkghy
-# jp7txZOJJh+96lu4IV13dew+vapcY1gg/cYwF03ngxWDxBk4CKmqxAqd/pG9L9Dd
-# QnWT6Vp4065QsdorMO1Jk2XVqPYMPLsYNeHiJoAhi9/oCh2CLEsRZwVLoohUnrBk
-# 09g1WC26VK+P8n0Or4YE53KUXA9Dla3cqZSiR6SujS31YD0mXdoGchIlS5rDRO9i
-# vJp1T8NwklxMTaLIXoxqvVkJAonUGMRtuzwtqd0HEKSaYi5aiQ4r8cjxX3qOMYIK
-# pVqyKBZW0hUh8reMpG79X19Y5UiKHSK4MBHwnoY5vNLzjP+Mq0Nh8ax3eWA7ZBau
-# IOte5QzuoUJnl8WayAtmiSj5oBwcNrWNuxnvuhgVuuUOk9fKz+Q+kiR7W816NLLk
-# inR/KuS5w+2+i+98nzsBWPD+pFj4Bhm2dhQIrLjsGnRtFoTXO6pxuiuzi/puEiMs
-# Ew0F3uyBxdm/P38oMUvgOf674AANUAn/m0GdLkP3udvNicdfuOzS
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAE1wygBk7HaNN
+# jdOVYfgu90Fu0RMepL0nuoYMEOkRhXFR7Fch2fX+Od+Ncu314j57VIWKufpRxvsg
+# H2ioyjMMCbCIjl4obGIQgZJFSPnEws5N9QwGqguLWW9hQHZLQnTDNMwDdOg+q3Mq
+# sPe+QVZuf2d0v1ar2MpWem9bikqowp70wsA+dPDuoI24QpWVGg28HJbjvoTzQk77
+# OUM4X0YBVtH3I3bUHMxYgiXzHczKZBnhsRr0H8dBTotlueafrbhB2+YxSkc4p15Y
+# a4w+c5+qIPqN0r9LGq6mwCSYm+9EV4ShRqmULysud78hmSVjHjhXPyxw+z4UVu4H
+# 7IiCzVR/oKqBa1fnrwlpqwcytrFFUPkbZd8ctlFc+tFVStw1ihuvZ/RS4Me8FgaL
+# s1pnhFqbKHuQ+OLhnXprTdCzOq53eAq/kaR0F6P3/1YMscEQz3fx7AlwkYUc5S5n
+# Ag8DVSUsxLiTvOSAdJWtL+giev7vyXALbzOLdfMei4LcD3bBBZIn
 # SIG # End signature block

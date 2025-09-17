@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2025
@@ -27,29 +27,143 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    12.09.2025 Konrad Brunner       Initial Version
+
 #>
 
-sfc /scannow
-Dism /Online /Cleanup-Image /ScanHealth
-Dism /Online /Cleanup-Image /CheckHealth
-Dism /Online /Cleanup-Image /RestoreHealth
+[CmdletBinding()]
+Param(
+    [bool]$updateExisting = $true,
+    [hashtable]$subscriptionReplacers = @{  "t" = "p" },
+    [string[]]$ignoreWorkspaces = @()
+)
 
-taskkill /F /IM explorer.exe
-taskkill /F /IM StartMenuExperienceHost.exe
-taskkill /F /IM ShellExperienceHost.exe
+# Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-Remove-Item -Path "$($env:LOCALAPPDATA)\Microsoft\Windows\Explorer\iconcache*" -Force
-Remove-Item -Path "$($env:LOCALAPPDATA)\Microsoft\Windows\Explorer\thumbcache*" -Force
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\data\azure\Create-MonitoringDataCollectionRules-$($AlyaTimeString).log" | Out-Null
 
-Get-AppxPackage -AllUsers | Foreach-Object { Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml" }
+# Constants
+$dcrs = @("ins","win","winsec","winsrv","lin")
+$AuditingResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
+$StorageAccountName = "$($AlyaNamingPrefix)strg$($AlyaResIdAuditStorage)"
+$LogAnaWrkspcName = "$($AlyaNamingPrefix)loga$($AlyaResIdLogAnalytics)"
 
-Restart-Computer -Force
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+
+# Checking storage account
+Write-Host "Checking storage account" -ForegroundColor $CommandInfo
+$StrgAccount = Get-AzStorageAccount -ResourceGroupName $AuditingResourceGroupName -Name $StorageAccountName -ErrorAction SilentlyContinue
+if (-Not $StrgAccount)
+{
+    throw "Storage account not found. Create the storage account with the script Create-AzureLogAnalyticsWorkspace.ps1"
+}
+
+# Checking log analytics workspace
+Write-Host "Checking log analytics workspace" -ForegroundColor $CommandInfo
+$LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $AuditingResourceGroupName -Name $LogAnaWrkspcName -ErrorAction SilentlyContinue
+if (-Not $LogAnaWrkspc)
+{
+    throw "Log analytics workspace not found. Create the log analytics workspace with the script Create-AzureLogAnalyticsWorkspace.ps1"
+}
+
+# Processing subscriptions
+Write-Host "Processing subscriptions" -ForegroundColor $CommandInfo
+foreach($subscription in $AlyaAllSubscriptions)
+{
+    Write-Host "  Subscription $subscription"
+    $sub = Get-AzSubscription -SubscriptionName $subscription
+    $null = Set-AzContext -SubscriptionObject $sub
+
+    # Checking log analytics workspace
+    Write-Host "    Checking log analytics workspaces"
+    $LogAnaWrkspcsFromSub = Get-AzOperationalInsightsWorkspace -ErrorAction SilentlyContinue | Where-Object { $_.Name -notin $ignoreWorkspaces }
+
+    $LogAnaWrkspcsToProcess = @($LogAnaWrkspc)
+    if (-Not $LogAnaWrkspcsFromSub -or $LogAnaWrkspcsFromSub.Count -eq 0)
+    {
+        foreach($replacer in $subscriptionReplacers.Keys)
+        {
+            $psubscription = $subscription.Replace($replacer, $subscriptionReplacers[$replacer])
+            if ($LogAnaWrkspcsMap.ContainsKey($psubscription))
+            {
+                Write-Warning "No log analytics workspaces found. Using partner log analytics workspace."
+                $LogAnaWrkspcsToProcess = $LogAnaWrkspcsMap[$psubscription]
+            }
+            else
+            {
+                Write-Warning "No log analytics workspaces found. Using main log analytics workspace."
+            }
+        }
+    }
+    else
+    {
+        $LogAnaWrkspcsToProcess = $LogAnaWrkspcsFromSub
+    }
+    if (-Not $LogAnaWrkspcsToProcess -or $LogAnaWrkspcsToProcess.Count -eq 0)
+    {
+        throw "Can't find the log analytics workspace"
+    }
+
+    foreach($LogAnaWrkspc in $LogAnaWrkspcsToProcess)
+    {
+        Write-Host "    Checking rules for workspace $($LogAnaWrkspc.Name)"
+
+        Write-Host "      Checking resource group $($LogAnaWrkspc.ResourceGroupName)"
+        $resg = Get-AzResourceGroup -Name $LogAnaWrkspc.ResourceGroupName -ErrorAction SilentlyContinue
+        if (-Not $resg)
+        {
+            Write-Warning "Ressource group not found. Creating..."
+            $srcResg = Get-AzResourceGroup -Id "/subscriptions/$($LogAnaWrkspc.ResourceId.Split("/", [StringSplitOptions]::RemoveEmptyEntries)[1])/resourcegroups/$($LogAnaWrkspc.ResourceGroupName)"
+            $resg = New-AzResourceGroup -Name $LogAnaWrkspc.ResourceGroupName -Location $srcResg.Location -Tag $srcResg.Tags
+        }
+
+        foreach($dcr in $dcrs)
+        {
+            $ruleName = "$($subscription)dcr_$($dcr)_$($LogAnaWrkspc.Name)".Replace(".json","")
+            if ($ruleName.Length -gt 64) { $ruleName = $ruleName.Substring(0,63) }
+            Write-Host "      Checking dcr $ruleName"
+            $dcrSrcFile = "$AlyaScripts\azure\Create-MonitoringDataCollectionRules-$($dcr).json"
+            $dcrFile = "$AlyaData\azure\dcr\$($ruleName).json"
+            $dcrContent = Get-Content -Path $dcrSrcFile -Encoding $AlyaUtf8Encoding -Raw
+            $dcrContent = $dcrContent.Replace("##ALYALOCATION##", $LogAnaWrkspc.Location)
+            $dcrContent = $dcrContent.Replace("##ALYADCRRULENAME##", $ruleName)
+            $dcrContent = $dcrContent.Replace("##ALYAWORKSPACERESOURCEID##", $LogAnaWrkspc.ResourceId)
+            $dcrContent | Set-Content -Path $dcrFile -Encoding $AlyaUtf8Encoding -Force
+
+            $rule = Get-AzDataCollectionRule -ResourceGroupName $LogAnaWrkspc.ResourceGroupName -Name $ruleName -ErrorAction SilentlyContinue
+            if (-Not $rule)
+            {
+                Write-Warning "Rule $ruleName not found. Creating..."
+            }
+            else
+            {
+                if (-Not $updateExisting) { 
+                    Write-Host "      Rule $ruleName exists."
+                    continue
+                }
+                Write-Host "      Rule $ruleName exists. Updating..."
+            }
+            $null = New-AzResourceGroupDeployment -Name $ruleName -ResourceGroupName $LogAnaWrkspc.ResourceGroupName -TemplateFile $dcrFile
+        }
+
+    }
+}
+
+#Stopping Transscript
+Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCizjtariPqLG9L
-# LMzih7beNIySj1hx6KjwaqU0/NlK96CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBO0gEsAIG2r3LH
+# DTjATc6BOj2xtQhr1ewtnCpNBPQg0qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -133,23 +247,23 @@ Restart-Computer -Force
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICy1BjWAp5KNKhGR
-# 09r0REjph/Sgbqw80aq6T8QEASg5MA0GCSqGSIb3DQEBAQUABIICAJee4lPu0qy4
-# bgHkSk8qNkwoNO1FPo1YI0I11nMV9s3c8s8rfO4G98TAFHHqVvbTYg4JMP3MAArN
-# Ox1F9hn4WN4GMCcwrMaaBws+cNWJNFgS2WjiXO82NccW0AaZF0u0TEtBTod8n0S1
-# a8DsWCAUKlucgyobyPZAu+/DC9nAU+0XM8La6UlzaLjIXlP6HL0BRO7m0o2h3G3k
-# 1jWYay3H6iC6MylBPNn79nfkP77YLs0norhmiugqprnmTUo4wKv8+HEM4mHbNRlO
-# NXKlWItZoJJxr2Oa3obVzwEd/XgWHkrVfRF95am5l+iOYU4fCCWjmcl2kdK0LKcx
-# Gat44hYrWuvdtPvSpZbJMudvL43zwidTvl1FMefAq+BAWpHFtU5qjJa/DltjN773
-# rw8SfRiLsmlwoTXvE68p9+Lj2uHMEgf/72Yq3n1dLYBpYMcLJtmkNBy4Caq1Y607
-# E9LfG9ZemvWaXCWae59rB6s6IQFjf/AJMMd6cqKpa2H/Ixf+h8mDUGB6qbN00D8Z
-# tp/SDrB12ZyQZRsiDA+5J1OoE9oHq4omeCC0eGJuzdo4sUkEgK+0N4gxrhXlSnCb
-# BFmYRKDizb0NYgBEfjaRSsV3vtKv+Hx6BA8t2Q5NOZer2LeZ3SjKVMy+qyeW/aFI
-# dP9xVwWEj+T8ivIRQdIoeFyNRwcngRnXoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBcaRV313zllqQAI
+# VAw0bFvWE3RfMBFRc+rMGuF73vqHMA0GCSqGSIb3DQEBAQUABIICAAZ427J9xpXf
+# TH0NmJwN2l2f5jgSYVFCEeMqvRRIxHZ/foIOKHJBr6KUYXlTiGJUYClp5uorHWjw
+# KY/YLmiPk6+prEmqYc3NktUurISOcXJf+rxBcBqXR+AW94jByLUpMdl/9BVfaoNT
+# 8FXTIJwAkFCofoKyWxhX/fNKUEi7yCCiY3XZ/3wCMugX/e1jAlrUPe8SMpDO0MxG
+# JQ/2euJjnAasSBhpnjhoVdFzmyiZi+8MUThO+GRvHBcQA7Cucf94FGm4RbCSxwG0
+# Iz+/N4jnsDML9+lmvkygQIXV4eJopsreNFRJKM77tIzEEwUXxMOCnhqqHEmkgkUA
+# fDMJDhulEu6AoN68fuL1JA/9Tt1jFHl9GeqDND462pVVyoYqYaSU0xyQtEspjJ7Z
+# +WY1yyMi6+S41FiJVtnx0sPjWGjaY5mWYfI90Y+2vI1wCVNKMexPov8jfry+4l8s
+# bRZfqJFG0ze+kxx2wr1yqZ+d1SGnPU8Cb7NagjewpSGNt6RBstXuWVn0SNs3YHM6
+# Yso76YVpyAoOatnV/EdNPwB1RnHZ1UfBGZvdKF1c9XnCslpD8Pen/OO/Wy+P1Aau
+# SSheRviFQfeaXJPseJ5g55RnCjBu+d9qGAKvIJrBSXZUv4loQk72hxTaBGf0Fan3
+# 8AA7idDU+eQ10oZ03bOaNzx1pyOq9xCtoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDXkXvH7C9GFvG3j+dsSAYoH1mTEXBzQlkQVMkOs4letgIUQkA2wOqhrtYO
-# AgA3m86B29Y1tFIYDzIwMjUwODI1MTUzMjI3WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCC4zpRwr5ajSkOifJr8N848pFp57EVWC2jW2Ji7n+9TywIUQLOtTcGWFFR+
+# NKdqIc5Hko8S1sMYDzIwMjUwOTE1MTYxNTEwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -254,17 +368,17 @@ Restart-Computer -Force
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IGmuOAtWngjnG9xEVg3vdb2tuzBfmTMH98y/RZwcysBYMIGwBgsqhkiG9w0BCRAC
+# IOVEl2GGaGsRS6FY6ypBHL5VShTM30DujHrwzaX12duFMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGANHpNHTSkPyMG
-# U/567ypRZLmDSpRBJAGeyHWrm8+2yq4/tCft4/NAu9hVPchraNgZ5yaoRGdHt+pV
-# CFQYmLbWVO5+KX2wTtvv7Geq9tzv6boFgISTyhg61fw9oeyGWTc/hiEvI7CF0pNr
-# ZATrC1GeQ0+P2g7kV4+rDUe7prm+iK+cbQzX7BCR3wWAFZA87G2q4crbLJ+nkHWN
-# DdFEFtkFhSI+HZzb7pkfNRZiDUvqYKjzXdkNxruIAykUEgQUQgqaIPwsFcrsTtL3
-# 37CVsdCMKvPh0axOH2pfKbOIQtsUR7JGMOoT+875rR306pXAPNC00x0MmjL4g5OM
-# hHfVJjgL6Xy2g3Ch2joaqkw/cXwYKTuMLIJRRyZ/t81qV1iCYuZ0qPpP/d+0WF3t
-# RoCWg/wDf6l0DM9XLEhr/tR7kyAnbbrf/OcOuwg8uXNHO7jgLEkdeGdXq1+j4dJP
-# faS9LZMVZcRJNYFJK6C7oDYuWImu7hS4FEX8zXF4oWOzPCkvSao6
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGATula5bjkuiH8
+# 0jnXUxm82dIpUIuYDe6N4O1OyAa9TB4jPgASSR3aiGAsz5pCI9N5uTc7vDUYcl0e
+# /6qNrTRrVXp7sgHR4k71CS//ahDyrp+JzUXZtGVIj11Gz3tJwrFBt92SRBSj90q/
+# a5UN6MCW0DIlBE+r8F5yeWqDrR7/+jGOuGFiBKG29+mo1Dh4r3hHmZtZwdfeFrTZ
+# IXwhzC+JWH5Zg+p0VRhGiT5Gk7U7KtjHkJ+3OSuo6C+zt5R7mbguwlLG6gZ6y4nx
+# VI0vBzl+IKQBE40gXbCxf6m4I4Woyp7b680XYG9Brm2JrnlHU2QrNYVnwIO8/Gw9
+# MofCsfAnh0b6sH8RoYbo1WpoEy0pqQjpj+/QHQsn1LbLLJIYtJ+9JJn9R+Vf6zV2
+# hNq4HAVoz4woHGe8YNv27Yz+e9u+/HrnHK5sDm7A9cP7GxMb7AhTyr6DytT4OYSk
+# tIGlhhYlVTzoPNguaM7kY9fSpUftdQJnXy3HMODvbgT/QG0aZlT5
 # SIG # End signature block

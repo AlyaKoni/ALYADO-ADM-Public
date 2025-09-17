@@ -1,0 +1,234 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dcrLocation": {
+            "defaultValue": "##ALYALOCATION##",
+            "metadata": {
+                "description": "The location of the DCR. DCR is a regional resource."
+            },
+            "type": "string"
+        },
+        "dcrName": {
+            "defaultValue": "##ALYADCRRULENAME##",
+            "metadata": {
+                "description": "The name of the Data Collection Rule as it will appear in the portal."
+            },
+            "type": "string"
+        },
+        "logAnalyticsWorkspaceArmId": {
+            "defaultValue": "##ALYAWORKSPACERESOURCEID##",
+            "metadata": {
+                "description": "The ARM Id of the log analytics workspace destination"
+            },
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2022-06-01",
+            "kind": "Linux",
+            "location": "[parameters('dcrLocation')]",
+            "name": "[parameters('dcrName')]",
+            "properties": {
+                "dataFlows": [
+                    {
+                        "destinations": [
+                            "myloganalyticsworkspace"
+                        ],
+                        "outputStream": "Microsoft-Perf",
+                        "streams": [
+                            "Microsoft-Perf"
+                        ],
+                        "transformKql": "source"
+                    },
+                    {
+                        "destinations": [
+                            "myloganalyticsworkspace"
+                        ],
+                        "outputStream": "Microsoft-Syslog",
+                        "streams": [
+                            "Microsoft-Syslog"
+                        ],
+                        "transformKql": "source"
+                    }
+                ],
+                "dataSources": {
+                    "performanceCounters": [
+                        {
+                            "counterSpecifiers": [
+                                "\\Physical Disk(*)\\Avg. Disk sec/Read",
+                                "\\Physical Disk(*)\\Avg. Disk sec/Transfer",
+                                "\\Physical Disk(*)\\Avg. Disk sec/Write",
+                                "\\Physical Disk(*)\\Physical Disk Bytes/sec"
+                            ],
+                            "name": "perfCounterLinuxPhysicalDisk300",
+                            "samplingFrequencyInSeconds": 300,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\Logical Disk(*)\\% Free Inodes",
+                                "\\Logical Disk(*)\\% Free Space",
+                                "\\Logical Disk(*)\\% Used Inodes",
+                                "\\Logical Disk(*)\\% Used Space",
+                                "\\Logical Disk(*)\\Disk Read Bytes/sec",
+                                "\\Logical Disk(*)\\Disk Reads/sec",
+                                "\\Logical Disk(*)\\Disk Transfers/sec",
+                                "\\Logical Disk(*)\\Disk Write Bytes/sec",
+                                "\\Logical Disk(*)\\Disk Writes/sec",
+                                "\\Logical Disk(*)\\Free Megabytes",
+                                "\\Logical Disk(*)\\Logical Disk Bytes/sec"
+                            ],
+                            "name": "perfCounterLinuxLogDisk300",
+                            "samplingFrequencyInSeconds": 300,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\Processor(*)\\% DPC Time",
+                                "\\Processor(*)\\% Idle Time",
+                                "\\Processor(*)\\% Interrupt Time",
+                                "\\Processor(*)\\% IO Wait Time",
+                                "\\Processor(*)\\% Nice Time",
+                                "\\Processor(*)\\% Privileged Time",
+                                "\\Processor(*)\\% Processor Time",
+                                "\\Processor(*)\\% User Time"
+                            ],
+                            "name": "perfCounterLinuxProcessor300",
+                            "samplingFrequencyInSeconds": 300,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\Memory(*)\\% Available Memory",
+                                "\\Memory(*)\\% Available Swap Space",
+                                "\\Memory(*)\\% Used Memory",
+                                "\\Memory(*)\\% Used Swap Space",
+                                "\\Memory(*)\\Available MBytes Memory",
+                                "\\Memory(*)\\Available MBytes Swap",
+                                "\\Memory(*)\\Page Reads/sec",
+                                "\\Memory(*)\\Page Writes/sec",
+                                "\\Memory(*)\\Pages/sec",
+                                "\\Memory(*)\\Used MBytes Swap Space",
+                                "\\Memory(*)\\Used Memory MBytes"
+                            ],
+                            "name": "perfCounterLinuxMemory300",
+                            "samplingFrequencyInSeconds": 300,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\Process(*)\\Pct Privileged Time",
+                                "\\Process(*)\\Pct User Time",
+                                "\\Process(*)\\Used Memory kBytes",
+                                "\\Process(*)\\Virtual Shared Memory"
+                            ],
+                            "name": "perfCounterLinuxProcess300",
+                            "samplingFrequencyInSeconds": 300,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\Network(*)\\Total Bytes Transmitted",
+                                "\\Network(*)\\Total Bytes Received",
+                                "\\Network(*)\\Total Bytes",
+                                "\\Network(*)\\Total Packets Transmitted",
+                                "\\Network(*)\\Total Packets Received",
+                                "\\Network(*)\\Total Rx Errors",
+                                "\\Network(*)\\Total Tx Errors",
+                                "\\Network(*)\\Total Collisions"
+                            ],
+                            "name": "perfCounterLinuxNetwork300",
+                            "samplingFrequencyInSeconds": 300,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\System(*)\\Free Physical Memory",
+                                "\\System(*)\\Free Space in Paging Files",
+                                "\\System(*)\\Free Virtual Memory",
+                                "\\System(*)\\Processes",
+                                "\\System(*)\\Size Stored In Paging Files",
+                                "\\System(*)\\Uptime",
+                                "\\System(*)\\Users"
+                            ],
+                            "name": "perfCounterLinuxSystem300",
+                            "samplingFrequencyInSeconds": 300,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        }
+                    ],
+                    "sysLog": [
+                        {
+                            "facilityNames": [
+                                "alert",
+                                "audit",
+                                "auth",
+                                "authpriv",
+                                "clock",
+                                "cron",
+                                "daemon",
+                                "ftp",
+                                "kern",
+                                "local0",
+                                "local1",
+                                "local2",
+                                "local3",
+                                "local4",
+                                "local5",
+                                "local6",
+                                "local7",
+                                "lpr",
+                                "mail",
+                                "news",
+                                "nopri",
+                                "ntp",
+                                "syslog",
+                                "user",
+                                "uucp"
+                            ],
+                            "logLevels": [
+                                "Warning",
+                                "Error",
+                                "Critical",
+                                "Alert",
+                                "Emergency"
+                            ],
+                            "name": "sysLogs",
+                            "streams": [
+                                "Microsoft-Syslog"
+                            ]
+                        }
+                    ]
+                },
+                "description": "Default azure monitor linux data collection rule",
+                "destinations": {
+                    "azureMonitorMetrics": {
+                        "name": "myazuremonitormetrics"
+                    },
+                    "logAnalytics": [
+                        {
+                            "name": "myloganalyticsworkspace",
+                            "workspaceResourceId": "[parameters('logAnalyticsWorkspaceArmId')]"
+                        }
+                    ]
+                }
+            },
+            "type": "Microsoft.Insights/dataCollectionRules"
+        }
+    ]
+}

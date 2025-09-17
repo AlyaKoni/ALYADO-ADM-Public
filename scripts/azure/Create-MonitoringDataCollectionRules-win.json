@@ -1,0 +1,223 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dcrLocation": {
+            "defaultValue": "##ALYALOCATION##",
+            "metadata": {
+                "description": "The location of the DCR. DCR is a regional resource."
+            },
+            "type": "string"
+        },
+        "dcrName": {
+            "defaultValue": "##ALYADCRRULENAME##",
+            "metadata": {
+                "description": "The name of the Data Collection Rule as it will appear in the portal."
+            },
+            "type": "string"
+        },
+        "logAnalyticsWorkspaceArmId": {
+            "defaultValue": "##ALYAWORKSPACERESOURCEID##",
+            "metadata": {
+                "description": "The ARM Id of the log analytics workspace destination"
+            },
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2022-06-01",
+            "kind": "Windows",
+            "location": "[parameters('dcrLocation')]",
+            "name": "[parameters('dcrName')]",
+            "properties": {
+                "dataFlows": [
+                    {
+                        "destinations": [
+                            "myloganalyticsworkspace"
+                        ],
+                        "outputStream": "Microsoft-Perf",
+                        "streams": [
+                            "Microsoft-Perf"
+                        ],
+                        "transformKql": "source"
+                    },
+                    {
+                        "destinations": [
+                            "myloganalyticsworkspace"
+                        ],
+                        "outputStream": "Microsoft-Event",
+                        "streams": [
+                            "Microsoft-Event"
+                        ],
+                        "transformKql": "source"
+                    }
+                ],
+                "dataSources": {
+                    "performanceCounters": [
+                        {
+                            "counterSpecifiers": [
+                                "\\Hyper-V Hypervisor Logical Processor(*)\\% Total Run Time",
+                                "\\LogicalDisk(_Total)\\% Disk Read Time",
+                                "\\LogicalDisk(_Total)\\% Disk Time",
+                                "\\LogicalDisk(_Total)\\% Disk Write Time",
+                                "\\LogicalDisk(_Total)\\% Free Space",
+                                "\\LogicalDisk(_Total)\\% Idle Time",
+                                "\\LogicalDisk(_Total)\\Avg. Disk Queue Length",
+                                "\\LogicalDisk(_Total)\\Avg. Disk Read Queue Length",
+                                "\\LogicalDisk(_Total)\\Avg. Disk Write Queue Length",
+                                "\\LogicalDisk(_Total)\\Avg. Disk sec/Read",
+                                "\\LogicalDisk(_Total)\\Avg. Disk sec/Transfer",
+                                "\\LogicalDisk(_Total)\\Avg. Disk sec/Write",
+                                "\\LogicalDisk(_Total)\\Disk Bytes/sec",
+                                "\\LogicalDisk(_Total)\\Disk Read Bytes/sec",
+                                "\\LogicalDisk(_Total)\\Disk Reads/sec",
+                                "\\LogicalDisk(_Total)\\Disk Transfers/sec",
+                                "\\LogicalDisk(_Total)\\Disk Write Bytes/sec",
+                                "\\LogicalDisk(_Total)\\Disk Writes/sec",
+                                "\\LogicalDisk(_Total)\\Free Megabytes",
+                                "\\Memory\\% Committed Bytes In Use",
+                                "\\Memory\\Available Bytes",
+                                "\\Memory\\Cache Bytes",
+                                "\\Memory\\Committed Bytes",
+                                "\\Memory\\Page Faults/sec",
+                                "\\Memory\\Pages/sec",
+                                "\\Memory\\Pool Nonpaged Bytes",
+                                "\\Memory\\Pool Paged Bytes",
+                                "\\Network Interface(*)\\Bytes Received/sec",
+                                "\\Network Interface(*)\\Bytes Sent/sec",
+                                "\\Network Interface(*)\\Bytes Total/sec",
+                                "\\Network Interface(*)\\Packets Outbound Errors",
+                                "\\Network Interface(*)\\Packets Received Errors",
+                                "\\Network Interface(*)\\Packets Received/sec",
+                                "\\Network Interface(*)\\Packets Sent/sec",
+                                "\\Network Interface(*)\\Packets/sec",
+                                "\\Process(_Total)\\Handle Count",
+                                "\\Process(_Total)\\Thread Count",
+                                "\\Process(_Total)\\Working Set - Private",
+                                "\\Process(_Total)\\Working Set",
+                                "\\Processor Information(_Total)\\% Privileged Time",
+                                "\\Processor Information(_Total)\\% Processor Time",
+                                "\\Processor Information(_Total)\\% User Time",
+                                "\\Processor Information(_Total)\\Processor Frequency",
+                                "\\System\\Context Switches/sec",
+                                "\\System\\Processes",
+                                "\\System\\Processor Queue Length",
+                                "\\System\\System Up Time"
+                            ],
+                            "name": "perfCounterWindows60",
+                            "samplingFrequencyInSeconds": 60,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\Cluster CSV File System(*)\\IO Read Bytes/sec",
+                                "\\Cluster CSV File System(*)\\IO Read Latency",
+                                "\\Cluster CSV File System(*)\\IO Reads/sec",
+                                "\\Cluster CSV File System(*)\\IO Write Bytes/sec",
+                                "\\Cluster CSV File System(*)\\IO Write Latency",
+                                "\\Cluster CSV File System(*)\\IO Writes/sec",
+                                "\\Hyper-V Hypervisor Virtual Processor(*)\\% Total Run Time",
+                                "\\Hyper-V Virtual Storage Device(*)\\Read Bytes/sec",
+                                "\\Hyper-V Virtual Storage Device(*)\\Read Operations/Sec",
+                                "\\Hyper-V Virtual Storage Device(*)\\Write Bytes/sec",
+                                "\\Hyper-V Virtual Storage Device(*)\\Write Operations/Sec",
+                                "\\LogicalDisk(*)\\Avg. Disk sec/Read",
+                                "\\LogicalDisk(*)\\Avg. Disk sec/Transfer",
+                                "\\LogicalDisk(*)\\Avg. Disk sec/Write",
+                                "\\LogicalDisk(*)\\Current Disk Queue Length",
+                                "\\LogicalDisk(*)\\Disk Bytes/sec",
+                                "\\LogicalDisk(*)\\Disk Read Bytes/sec",
+                                "\\LogicalDisk(*)\\Disk Reads/sec",
+                                "\\LogicalDisk(*)\\Disk Transfers/sec",
+                                "\\LogicalDisk(*)\\Disk Write Bytes/sec",
+                                "\\LogicalDisk(*)\\Disk Writes/sec",
+                                "\\Memory\\Available MBytes",
+                                "\\Process(*)\\% Processor Time",
+                                "\\Processor(*)\\% Processor Time",
+                                "\\TCPv4(*)\\Connections Established"
+                            ],
+                            "name": "perfCounterWindows300",
+                            "samplingFrequencyInSeconds": 300,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\LogicalDisk(*)\\Free Megabytes",
+                                "\\LogicalDisk(*)\\% Free Space"
+                            ],
+                            "name": "perfCounterWindows600",
+                            "samplingFrequencyInSeconds": 600,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        },
+                        {
+                            "counterSpecifiers": [
+                                "\\Hyper-V Dynamic Memory VM(*)\\Guest Visible Physical Memory",
+                                "\\Hyper-V Dynamic Memory VM(*)\\Physical Memory",
+                                "\\Memory\\Commit Limit",
+                                "\\NUMA Node Memory(_Total)\\Available MBytes",
+                                "\\NUMA Node Memory(_Total)\\Total MBytes"
+                            ],
+                            "name": "perfCounterWindows1800",
+                            "samplingFrequencyInSeconds": 1800,
+                            "streams": [
+                                "Microsoft-Perf"
+                            ]
+                        }
+                    ],
+                    "windowsEventLogs": [
+                        {
+                            "name": "eventLogsWindows",
+                            "streams": [
+                                "Microsoft-Event"
+                            ],
+                            "xPathQueries": [
+                                "Application!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "MSNIPAK!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-ClusterAwareUpdating/Admin!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Desired State Configuration/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-FailoverClustering-CsvFs/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-FailoverClustering/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-GroupPolicy/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-Config/Admin!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-High-Availability/Admin!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-Integration/Admin!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-Shared-VHDX/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-SynthNic/Admin!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-VMMS/Admin!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-VMMS/Networking!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-VMMS/Storage!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-Hyper-V-Worker-Admin!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-NetworkProfile/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-SMBServer/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-TaskScheduler/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-TerminalServices-LocalSessionManager/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Microsoft-Windows-VHDMP/Operational!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Operations Manager!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Setup!*[System[(Level=1 or Level=2 or Level=3)]]",
+                                "Security!*[System[(band(Keywords,4503599627370496))]]",
+                                "System!*[System[(Level=1 or Level=2 or Level=3)]]"
+                            ]
+                        }
+                    ]
+                },
+                "description": "Default azure monitor windows data collection rule",
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "name": "myloganalyticsworkspace",
+                            "workspaceResourceId": "[parameters('logAnalyticsWorkspaceArmId')]"
+                        }
+                    ]
+                }
+            },
+            "type": "Microsoft.Insights/dataCollectionRules"
+        }
+    ]
+}

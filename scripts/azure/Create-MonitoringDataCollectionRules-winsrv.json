@@ -1,0 +1,72 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dcrLocation": {
+            "defaultValue": "##ALYALOCATION##",
+            "metadata": {
+                "description": "The location of the DCR. DCR is a regional resource."
+            },
+            "type": "string"
+        },
+        "dcrName": {
+            "defaultValue": "##ALYADCRRULENAME##",
+            "metadata": {
+                "description": "The name of the Data Collection Rule as it will appear in the portal."
+            },
+            "type": "string"
+        },
+        "logAnalyticsWorkspaceArmId": {
+            "defaultValue": "##ALYAWORKSPACERESOURCEID##",
+            "metadata": {
+                "description": "The ARM Id of the log analytics workspace destination"
+            },
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2022-06-01",
+            "kind": "Windows",
+            "location": "[parameters('dcrLocation')]",
+            "name": "[parameters('dcrName')]",
+            "properties": {
+                "dataFlows": [
+                    {
+                        "destinations": [
+                            "myloganalyticsworkspace"
+                        ],
+                        "outputStream": "Microsoft-Event",
+                        "streams": [
+                            "Microsoft-Event"
+                        ],
+                        "transformKql": "source"
+                    }
+                ],
+                "dataSources": {
+                    "windowsEventLogs": [
+                        {
+                            "name": "eventLogsWindows",
+                            "streams": [
+                                "Microsoft-Event"
+                            ],
+                            "xPathQueries": [
+                                "System!*[System[(EventID=7036)]]"
+                            ]
+                        }
+                    ]
+                },
+                "description": "Default azure monitor windows data collection rule",
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "name": "myloganalyticsworkspace",
+                            "workspaceResourceId": "[parameters('logAnalyticsWorkspaceArmId')]"
+                        }
+                    ]
+                }
+            },
+            "type": "Microsoft.Insights/dataCollectionRules"
+        }
+    ]
+}

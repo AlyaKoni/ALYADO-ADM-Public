@@ -1,0 +1,94 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "dcrLocation": {
+            "defaultValue": "##ALYALOCATION##",
+            "metadata": {
+                "description": "The location of the DCR. DCR is a regional resource."
+            },
+            "type": "string"
+        },
+        "dcrName": {
+            "defaultValue": "##ALYADCRRULENAME##",
+            "metadata": {
+                "description": "The name of the Data Collection Rule as it will appear in the portal."
+            },
+            "type": "string"
+        },
+        "logAnalyticsWorkspaceArmId": {
+            "defaultValue": "##ALYAWORKSPACERESOURCEID##",
+            "metadata": {
+                "description": "The ARM Id of the log analytics workspace destination"
+            },
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2022-06-01",
+            "location": "[parameters('dcrLocation')]",
+            "name": "[parameters('dcrName')]",
+            "properties": {
+                "dataFlows": [
+                    {
+                        "destinations": [
+                            "myloganalyticsworkspace"
+                        ],
+                        "outputStream": "Microsoft-InsightsMetrics",
+                        "streams": [
+                            "Microsoft-InsightsMetrics"
+                        ],
+                        "transformKql": "source"
+                    },
+                    {
+                        "destinations": [
+                            "myloganalyticsworkspace"
+                        ],
+                        "outputStream": "Microsoft-ServiceMap",
+                        "streams": [
+                            "Microsoft-ServiceMap"
+                        ],
+                        "transformKql": "source"
+                    }
+                ],
+                "dataSources": {
+                    "extensions": [
+                        {
+                            "extensionName": "DependencyAgent",
+                            "extensionSettings": {
+                            },
+                            "name": "dependencyAgentDataSource",
+                            "streams": [
+                                "Microsoft-ServiceMap"
+                            ]
+                        }
+                    ],
+                    "performanceCounters": [
+                        {
+                            "counterSpecifiers": [
+                                "\\VmInsights\\DetailedMetrics"
+                            ],
+                            "name": "insightsDataSource",
+                            "scheduledTransferPeriod": "PT1M",
+                            "samplingFrequencyInSeconds": 60,
+                            "streams": [
+                                "Microsoft-InsightsMetrics"
+                            ]
+                        }
+                    ]
+                },
+                "description": "Default azure monitor insights and dependency rule",
+                "destinations": {
+                    "logAnalytics": [
+                        {
+                            "name": "myloganalyticsworkspace",
+                            "workspaceResourceId": "[parameters('logAnalyticsWorkspaceArmId')]"
+                        }
+                    ]
+                }
+            },
+            "type": "Microsoft.Insights/dataCollectionRules"
+        }
+    ]
+}

@@ -30,9 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.03.2020 Konrad Brunner       Initial Version
-	16.08.2021 Konrad Brunner		Added provider registration
-
+    04.09.2025 Konrad Brunner       Initial version
 #>
 
 [CmdletBinding()]
@@ -43,152 +41,31 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\network\Configure-VirtualNetworks-$($AlyaTimeString).log" | Out-Null
-
-# Constants
-$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
-$VirtualNetworkName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
-$DefaultSubnetName = "$($VirtualNetworkName)snet{0}"
-$DefaultSubnetSecGrpName = "$($VirtualNetworkName)snet{0}sgrp"
-$NatGatewayName = "$($AlyaNamingPrefix)ngtw$($AlyaResIdVirtualNetwork)"
-$NatGatewayIpName = "$($NatGatewayName)pip"
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "Az.Network"
-
-# Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AadSyncConfiguration-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
-# Azure stuff
+# AD stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Network | Configure-VirtualNetworks | Azure" -ForegroundColor $CommandInfo
+Write-Host "AAD | Get-AadSyncConfiguration | LOCAL" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
-{
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
-}
+#Main
+Get-ADSyncConnector
 
-# Checking resource provider registration
-Write-Host "Checking resource provider registration Microsoft.Network" -ForegroundColor $CommandInfo
-$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Network" -Location $AlyaLocation
-if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
-{
-    Write-Warning "Resource provider Microsoft.Network not registered. Registering now resource provider Microsoft.Network"
-    Register-AzResourceProvider -ProviderNamespace "Microsoft.Network" | Out-Null
-    do
-    {
-        Start-Sleep -Seconds 5
-        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Network" -Location $AlyaLocation
-    } while ($resProv[0].RegistrationState -ne "Registered")
-}
+Get-ADSyncGlobalSettings
 
-# Checking ressource group
-Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
-if (-Not $ResGrp)
-{
-    Write-Warning "Ressource Group not found. Creating the Ressource Group $ResourceGroupName"
-    $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="Main Network Services";ownerEmail=$Context.Account.Id}
-}
+Get-ADSyncGlobalSettingsParameter
 
-# Checking virtual network
-Write-Host "Checking virtual network" -ForegroundColor $CommandInfo
-$VNet = Get-AzVirtualNetwork -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
-if (-Not $VNet)
-{
-    Write-Warning "Virtual network not found. Creating the virtual network $VirtualNetworkName"
-    $VNet = New-AzVirtualNetwork -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkName -Location $AlyaLocation -AddressPrefix $AlyaProdNetwork
-}
+((Get-ADSyncGlobalSettings).Parameters | ? {$_.Name -Like "*ServerConfigurationVersion"}).Value
 
-# Calculating subnets
-Write-Host "Calculating subnets" -ForegroundColor $CommandInfo
-$Networks = Split-NetworkAddressWithGateway -netwandcidr $AlyaProdNetwork -gwcidr $AlyaGatewayPrefixLength -splitcidr $AlyaSubnetPrefixLength
-
-# Checking network subnets and security groups
-Write-Host "Checking network subnets and security groups" -ForegroundColor $CommandInfo
-$VNet = Get-AzVirtualNetwork -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
-$Subnets = $VNet.Subnets
-$dirty = $false
-for ($i = 1; $i -lt $Networks.Count; $i++)
-{
-    $SubnetName = "$DefaultSubnetName" -f "$i".PadLeft(2, "0")
-    $SubnetSecGrpName = "$DefaultSubnetSecGrpName" -f "$i".PadLeft(2, "0")
-    $Subnet = $Networks[$i-1]
-    $exist = $Subnets | Where-Object { $_.Name -eq $SubnetName }
-    if (-Not $exist)
-    {
-        $SubnetSecGrp = Get-AzNetworkSecurityGroup -ResourceGroupName $ResourceGroupName -Name $SubnetSecGrpName -ErrorAction SilentlyContinue
-        if (-Not $SubnetSecGrp)
-        {
-            Write-Warning "Network security group not found. Creating the network security group $SubnetSecGrpName"
-            $SubnetSecGrp = New-AzNetworkSecurityGroup -ResourceGroupName $ResourceGroupName -Name $SubnetSecGrpName -Location $AlyaLocation
-        }
-        Write-Warning "Subnet not found. Creating the subnet $SubnetName"
-        Add-AzVirtualNetworkSubnetConfig -VirtualNetwork $VNet -Name $SubnetName -AddressPrefix $Subnet -NetworkSecurityGroup $SubnetSecGrp
-        $dirty = $true
-    }
-}
-$GatewaySubnetName = "GatewaySubnet"
-$exist = $Subnets | Where-Object { $_.Name -eq $GatewaySubnetName }
-if (-Not $exist)
-{
-    Add-AzVirtualNetworkSubnetConfig -VirtualNetwork $VNet -Name $GatewaySubnetName -AddressPrefix $Networks[$Networks.Count-1]
-    $dirty = $true
-}
-if ($dirty)
-{
-    $VNet | Set-AzVirtualNetwork
-}
-
-if ($AlyaDeployNATGateway -eq $true)
-{
-    Write-Host "Checking NAT gateway public ip" -ForegroundColor $CommandInfo
-    $natGwPip = Get-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $NatGatewayIpName -ErrorAction SilentlyContinue
-    if (-Not $natGwPip)
-    {
-        Write-Host "Does not exist. Creating it now" -ForegroundColor $CommandWarning
-        $natGwPip = New-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $NatGatewayIpName -Sku "Standard" -Tier "Regional" -IpAddressVersion "IPv4" -AllocationMethod "Static" -Location $AlyaLocation -Tag @{displayName="NAT Gateway Public IP";ownerEmail=$Context.Account.Id}
-    }
-    else
-    {
-        Write-Host "Updating"
-        $null = Update-AzTag -ResourceId $natGwPip.Id -Tag @{displayName="NAT Gateway Public IP";ownerEmail=$Context.Account.Id} -Operation Replace
-    }
-
-    Write-Host "Checking NAT gateway" -ForegroundColor $CommandInfo
-    $natGw = Get-AzNatGateway -ResourceGroupName $ResourceGroupName -Name $NatGatewayName -ErrorAction SilentlyContinue
-    if (-Not $natGw)
-    {
-        Write-Host "Does not exist. Creating it now" -ForegroundColor $CommandWarning
-        $natGw = New-AzNatGateway -ResourceGroupName $ResourceGroupName -Name $NatGatewayName -PublicIpAddress $natGwPip -Sku "Standard" -Location $AlyaLocation -Tag @{displayName="NAT Gateway";ownerEmail=$Context.Account.Id}
-    }
-    else
-    {
-        Write-Host "Updating"
-        $null = Update-AzTag -ResourceId $natGw.Id -Tag @{displayName="NAT Gateway";ownerEmail=$Context.Account.Id} -Operation Replace
-    }
-
-    #TODO: Associate NAT gateway to subnets
-}
-
-#Stopping Transscript
-Stop-Transcript
 
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBRYvpmSdyVlqg8
-# 9rzX0JIDiOIbqVWs/tagPg6+YrIYOKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDfVRFA5gwO4aI1
+# aWkjXTgLxN+nWrJ/+8r9UD0OoKqzw6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -302,23 +179,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIw3kmoU
-# m9fCOlGR1gDmwb+Zx0nXhOH4L0z2eXB3ONr8MA0GCSqGSIb3DQEBAQUABIICACf6
-# CE6Dkv9KlQS0dS8w4Strb7b5+UQMAaHZeN+a9RifR8Dvy2U18Nz8J90wMQZPap/G
-# ObNrDRYWmddRMKzWT9lVHrBOKZ27kcAGakJ9RC+F/ZC9iBQV5CJoS/XK5mvLjGp4
-# SK9+v+x4yU+ncuwvz8Rnby5ukYtoBEKVMdd7CUr/CHlA1ZQNycJTq4Z7bpUj37SF
-# ymHARshVaaeJLh+Tc7d6fHggbj2nFy6mZUdp5aTxzbxyaDHhjqKl+K0rRCgO0H6c
-# p2s3lismUA85GCZ0AMxnGU/Yhk/2q7aWHyza3UUNWACRTZX3PDF6JTsQNawgvfah
-# EN9YvoaH//Gb7Pc/hsey1Art0FHvfMR681eyi6EYQyP1uu/GciBSkRwW2WhU0fbx
-# aDTTaRrFkL+1lheok38bxyApL02QbIPBWe5v/Ok75fQS4LT4RsoHO5zQiSzPvrQn
-# h6PKuXy/91/GJgAqU3wcelAU4s00QH1OHBMA4pKH7tOvGtbMLMGtqn0JcVbnSLum
-# QoKOjGGa1EZCViPShP5hlCDjVmg34MTzKJ/nuq2l1qM8ZdoaMTXLYEpj4WaHBSw9
-# Lu4bISVFyEgnWVSw5hX0JhksdmOvYbrFM1Gf1AvRHio347kgH4/5UCvwnTN+h/il
-# jjVKNEA2Y3rP7Hfj4ATCreBqdk3ShwKpuXvJuzo4oYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPYJwQo3
+# br1Li38s8Gm69FmjXzMIuKC0movn1Mt6fv5bMA0GCSqGSIb3DQEBAQUABIICAI6k
+# FYsPIM8lxtcl7s9CAGxNCSYmJtRdxZ0I+CyKfCRabHe81EpIjZdrT6D1LFX/RwfK
+# uUsxfaXeicLDB+AYfT8/qCj4Yehil+7OeKdT7fBk42lYj9n2DHPsxuj52epXHasq
+# trkk/gAjxtLpSjDQjyUsq0YYe5iSgqLkn14u79CVXzeRgKxJtnlBVJfzU0txDbna
+# aSp+aOgbMIhD+lFduzYgNEsxz5jYt5tJFxrAmtlvbId0w4zSmpCdw5Rw1apOGo1E
+# AyGynA0moihtAQes64qkstJ3Z0LruMyanKMsXTHj8IqKtDwv/bEou8ePGsGDsve7
+# dibUbTgqD8/DFt8ZHMpeGnl2F5VIMjFeX3gVds5fuWAwRpA6+UGl8AbIz8fWPT41
+# g4Dyv8imr7zxenzutq6l0NJrNjLe/esx6vDAosFOhL04V0igFDKjZk7LjwRdQzYL
+# waUpI1BHPhGQ9aBSYXf9h3Ra8WjZEC+ZE42+Gk+oeS3EHA+eFlwb48wPMSNiBa0q
+# B/aUnMRKTHZw70cO+jtbLoZzgfIKPGMGM9CXnhVq8uQUbM5jht6jWtYEyZy+fN8m
+# wceeK3nva3DTXyJ/mPX0UIT+vkAsrzKh2N6CDfoyRt9tsNUWQ9VbtIhMxcaqOmmc
+# XNSsvw6iOm6byRkvYGfqXkPW+kHDleIf+nfV2+zgoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCJwa9nLZpGJ6NZyOuSOvDnsPHj7NwHSbwUQXOhnZDIkAIUdRqd
-# WfJ+mX5coDRE1jRSr+XGMEsYDzIwMjUwOTEyMTEyMzAzWjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCATjKSYcSIhZcXrfmBqH2SLofmFGBXHgeqDwdg7G86kDwIUVa/g
+# DF3PIqiKaxAhPhqb6f4FsnoYDzIwMjUwOTA0MTYwNDEwWjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -423,17 +300,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIACjcjkmGz3eKKb6RVYOn3UOKc7u7UKe34AXpCIQ6RO1MIGwBgsqhkiG
+# AQkEMSIEIGSPgU/Pk/6tdEaMZbEGf4NnxK2oVcIYkIFjzjWmdsTnMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAT809
-# tn7mzVw3NKAH+5Ft4KFji8zCp0asby/SEHRkscAI+7rvin2YbNNcMTD8vL94xwS4
-# WfHHXo6h6CjO3IXq6iu72aziIQ342HlOlKx/TjhhGvjCwMuCEbfIgk9v/IX2M3g1
-# LvtaEmmulkIpfKJri80ScEy+YVj38AyMxz7Co2hxmLwzu6kb/yIFXuM/+XvbxOc/
-# mUSObOE4LTw0w3OeQduLVJAeX9mdczGqrzKBCsf1s3gXvCDiBsx/TxWoRoJmdjtU
-# fQAvo0R99+oxHfT2EIfN96pboy9D1q1IrJcrdtes90ue96691OM6t1rvwKYcmU0P
-# 7sc+i4z8AwbIHHYZtLuiEK+73QlbC4fHem0UbvyBqRqeSHk6dMu95+lq6Z0DuR1W
-# TBjXeLCsL114LjnOeCHCBhP3SYdgsj5DoPb5esUw6uR47s6JB5ZQ2wGxTDMrtXeW
-# Y3HdEMdXHX6yFWBI80LnhS1uIhThkloWePqUkCyIfSLZpLXhjQ1tUD4zN6zr
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAlUeX
+# S40oL4AuWQBGr9TKscRn3EIZr1JOzHkwysJEcik68k2CGn3oT96pjtjQNt33R0Hi
+# KBC4Vb1II+bNMi4KJ/jxT9krQ1ZbkgAqRII2PxW5HJs2kqZs9OVdlJCMid07l2la
+# arLFbHMk0AUjjYf1EqNxB/SDFUxv/hPDAn0GzumnCwb672DPgUW/lkgVOIundmYc
+# 69iqiZLXk1tmClIpU9kcisiRev7wF+FOGnP2nUIy4TcwABfs9YtV70hNQW9i5sN1
+# QDdNmms5360dVmXS4A79L1KeSlHc0RbIAWVintSlQnAXqzLyMj56sIuYFGxLDIV6
+# LeBn/DmhbfNvVTFNBTYj8bXAiJbKd/Zc+LmI6FmxArv/Pv9PcFyITGr05nHmvcEB
+# DDUvn4pF9Sh7BoIpL9vC2RTMnKiTJu/TmBiwAG3LKWeEW7zxbGcLhnTmy0OowGjz
+# rHvuarqyWLcPaCTQ3AOW2TPajTgEX5j3gPIKw1FOCG4cK/UBrfJfNtq2QShD
 # SIG # End signature block
