@@ -1,4 +1,6 @@
-﻿#R<#
+﻿#Requires -Version 2.0
+
+<#
     Copyright (c) Alya Consulting, 2019-2025
 
     This file is part of the Alya Base Configuration.
@@ -26,7 +28,10 @@
 
 #>
 
-equires -Version 7
+[CmdletBinding()]
+Param(
+    [switch]$nonInteractive
+)
 
 Add-Type -AssemblyName System.Web
 $tenant = $null
@@ -35,15 +40,21 @@ foreach($par in (Get-ChildItem HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts)) {
     $tenantId = $null
     $tenantName = $null
     $serviceEndpointUri = $null
-    if (-Not $par.Name.EndsWith("Personal"))
-    {
-        $tenantId = Get-ItemPropertyValue -Path $par.PSPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
-        $tenantName = Get-ItemPropertyValue -Path $par.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
-        $serviceEndpointUri = Get-ItemPropertyValue -Path $par.PSPath -Name "ServiceEndpointUri" -ErrorAction SilentlyContinue
+    try {
+        if (-Not $par.Name.EndsWith("Personal"))
+        {
+                $tenantId = Get-ItemPropertyValue -Path $par.PSPath -Name "ConfiguredTenantId" -ErrorAction SilentlyContinue
+                $tenantName = Get-ItemPropertyValue -Path $par.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
+                $serviceEndpointUri = Get-ItemPropertyValue -Path $par.PSPath -Name "ServiceEndpointUri" -ErrorAction SilentlyContinue
+        }
+        $userFolder = Get-ItemPropertyValue -Path $par.PSPath -Name "UserFolder" -ErrorAction SilentlyContinue
+        $userEmail = Get-ItemPropertyValue -Path $par.PSPath -Name "UserEmail" -ErrorAction SilentlyContinue
+        $cid = Get-ItemPropertyValue -Path $par.PSPath -Name "cid" -ErrorAction SilentlyContinue
     }
-    $userFolder = Get-ItemPropertyValue -Path $par.PSPath -Name "UserFolder" -ErrorAction SilentlyContinue
-	$userEmail = Get-ItemPropertyValue -Path $par.PSPath -Name "UserEmail" -ErrorAction SilentlyContinue
-	$cid = Get-ItemPropertyValue -Path $par.PSPath -Name "cid" -ErrorAction SilentlyContinue
+    catch {
+        Write-Warning "Broken registry at $($par.PSPat)"
+        continue
+    }
     $bname = $par.PSChildName
     $tenants += @{
         tenantId = $tenantId
@@ -59,16 +70,27 @@ if ($tenants.Count -eq 0) {
     Write-Warning "No OneDrive configuration found. Please sync one SharePoint site and restart script."
     exit
 }
-if ($tenants.Count -gt 1) {
-	$tenantName = $tenants.tenantName | Out-GridView -Title "Pleas select the tenant" -OutputMode Single
-    if (-not $tenantName) {
-        Write-Warning "No tenant selected."
+if ($nonInteractive)
+{
+    $tenant = $tenants | Where-Object { $_.tenantName -eq "Alya Consulting Inh. Konrad Brunner" }
+    if ($tenants.Count -eq 0) {
+        Write-Warning "No OneDrive configuration found. Please sync one SharePoint site and restart script."
         exit
     }
-    $tenant = $tenants | Where-Object { $_.tenantName -eq $tenantName }
 }
-else {
-    $tenant = $tenants[0]
+else
+{
+    if ($tenants.Count -gt 1) {
+        $tenantName = $tenants.tenantName | Out-GridView -Title "Pleas select the tenant" -OutputMode Single
+        if (-not $tenantName) {
+            Write-Warning "No tenant selected."
+            exit
+        }
+        $tenant = $tenants | Where-Object { $_.tenantName -eq $tenantName }
+    }
+    else {
+        $tenant = $tenants[0]
+    }
 }
 
 $iniFile = "$($env:LOCALAPPDATA)\Microsoft\OneDrive\settings\$($tenant.businessName)\$($tenant.cid).ini"
@@ -133,8 +155,8 @@ Write-Host "}" -ForegroundColor DarkCyan
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDtbvKrOLce9O2K
-# 6T8d6RbFLcBqjQ3OKmV9et4zBFrD96CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDV9DcIDs74XhNN
+# dhdS/kmDaiMOwC/fwhSYe1Pigwb77qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -218,23 +240,23 @@ Write-Host "}" -ForegroundColor DarkCyan
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICPEgpXmprrbAhpB
-# LoiNHBnEzjBR73bbJ9UvOaKijzsvMA0GCSqGSIb3DQEBAQUABIICAH/FN0OtkC2B
-# V8RepTgpGFCwZ4Ryt9aiCPchbpkr7RS8WNsCCSvemPh1i1ZDkjiSSeheCxZPoXPb
-# WEDrDz5ZUDrXGSW2fvdiyPkzrrJW4JyrLohSV4DIOxnH3LDzb8t17LXyxhPEu6uj
-# A4DRJwmxTKDb61OJ44LMXft9qx+FP3m9Mztsc3iyLixxsIYp7lbR+Z6uCfFBukME
-# b1hr6lC6w/dz5uYS48uI8tB7ou/iHqed6j6G455zaH5yQupKoxmF5BRKUt9rLnqK
-# u/J1Ot3HAshEwnZLKfelbhIdWkmrm7T6+z+ITOtAcX9YtGYWMbdtRjT8txMD2xYY
-# PNSDwK44NYBTrMXPaUbLq/k0xLox79QQdMt0HaOSt9Pj4rmgcGdrUKjeIqksNTF5
-# Ld8TkAQ2B3kQnCxuh6isUR4tzaCkSHE/7873VapPsxeJCl/B4SpoxUZpVL2zzANw
-# BH+mE7o8hsYELAc7xan5nyAUF3t0Zs7q+7g//CXxIlEpHjoJ+RcWKpblUJwFMnIz
-# xzbkkkjuoCyLeNRoGBYHSNAzBvNfHXgyXYY5fXWNwRefU74bi1ngwxq1FxYaG8Sg
-# DdnWgNmxYQ1hCMR55kiciRdIrLrTk4IFyzlIbgILWXIvRBAtPnHgPIt5vyOuw5ZE
-# PnbZ/h/vp0aki/X0yLqmahyN8pQglcH4oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGKMwVhT/F6WGloq
+# I93avr+CZvTTYiGQq/5RCVG23t77MA0GCSqGSIb3DQEBAQUABIICAKgNo2aGeDtp
+# d1x3H5PdQ/qgD74qZD/0X80l5++80MRC/JcpsXEssdkG8S5yisPhVLCmJl7MXZKA
+# qmUeX1CZTpwrsCgVExTRwvCf62BEFqE+RQS72JwfztPT9bCGkOZIBO+nb1JyFS+i
+# 5+z2PlQdIph0fFQ8OuhAgnNFZsg7ee8hGcF6eaF03RULEaPIF5S8N28Lts6VSkz9
+# DqfnTKkijQLDo6UO4sx83JUTmPtSP35C/+1sLA6AUVbGBYESMbNRmygm/pTWUs2Z
+# c9O/qHisvcfoyX7CBQVTVJ2f71PgvCQpA0ToagCVSKRceqGWAtGKFeUfz/boddd6
+# osvvWSoNM0fj4gxzS1Wh5uagFmKBLN9opo/gGIX0n5kgY0cydkPdOY9uhol0kdnj
+# f0KHBEbzWZG1ATf3cqi8s/vezaOCZiNEtl+8kOavjCfNR/vsGV+6YCvyUIMzMxy3
+# GHfLZEw0ulzJ4xY+DT4mjQWxRCTNLU0SjYQqqz+xK6hFyQ3jH7tIBG3sPS5KTvqQ
+# 0/VTnBRIuOwq9KM8qpnNBrpd7mqMKRhe3a4Vo4MauoIVTImvJX9lUHE5XTG+u5RD
+# rqm+/iAPzbbFfzk5QtT2BzVjhLrUC1AdAZB9/fIB3xypioeDaRDN48fyRG+7UgYM
+# sbOePsKL1GcHbwb81IRfoos+JMmlDMhtoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDIs2URnHf0B7bOWXkoBJRBjF1JLOU162kmjy2nfEJ69wIUdTfRkG1UAmW1
-# THg0DCaNJf/M8scYDzIwMjUwODI1MTU0MjE4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCC4hRm3Cx+g/GEZL3O8Ii0chXtJa94Uo4nVgK+ffof2GAIUFEyCVYJLRw1X
+# Xu55BXlkplvdyWYYDzIwMjUxMDAyMDkyMTI5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -339,17 +361,17 @@ Write-Host "}" -ForegroundColor DarkCyan
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ICBRPhbBRapvFgO3vJYjDnHsyI0oF/kOVHccDnRHTCxlMIGwBgsqhkiG9w0BCRAC
+# IDVFX6vA6wMS3zpx4zVNS6kCV0tVeYZHxCRUpAjT5Cz0MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAiV7XqpuVM7Yr
-# 0VC/gKUvOvQOd/+ZJ+xIKbHP0UuqtGSJNGY0iDD5DplWxb0WQ51I208IeCwtecE3
-# I4U/C2pWOrGWUqzLVYzMHYzYDYlk//iTnpdnCulcaaKsEUExyf1FPeCcegFm4SO8
-# ErnARmyEMnw3bNo8J9ooYSBo5Z9ob8tfZNEQhPyFZkGlnffKeOAYCmIuUKEEcdQK
-# KWwAwW4HIPSlat/s79VG5LNEx0Dqx3OleSJZ9+dHqPXyxVz2otT/bgEJ1ueMk1OC
-# 24ntGyEBymMD3eAsXdt0jX22CPm3fecuNTJnvpUTLD4j7GVL0LrAlQ2wxL3FiaZm
-# ZpqNDEe+5v7y3abvYHORUSfK2ro92iU8MvZ5hHt7BISmTajNt9iAlPcVT8HwhzDc
-# ZZE3SLz8VEXreQJrQcDKBdLgdh17cygyY3QOp1stcdC25xfPfrwkFV9MPSdXMKW/
-# Ns2mvsLquRBaLa8wavEIsN+1koecyJSd7nSaQ2reKLXgnDrgSBuW
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAWKdL2/A80psQ
+# hBdon7XSFt20oeT6GSb7MqP5eDE+VBNeY7y/rowQmpP8HkuIuNsyhBL2MBTExrsG
+# TrBbe5+Wje3iqG8AiF5CJTWzIOwkO6tg1OVzv+WtPdEp0LOwWxvjELKFqCvlqK8e
+# deslnSswOMg+Hd9X3wlUe+f5MrMQUXdrIDBKY/P4PJRCmpvloWZpimQ9X/f6wFJU
+# FTNkgTMaVthNHnv2EtdChw13OrRnZ7Vm50FG9KCm5Ck8TuxxRKNueuOTUagp+rfS
+# igiFQJd4RPJ6u1kmo6d2h3T1IED6a5PnJMJmjNfQx1W7Uw5x23KuyFg/O3rI2Yfe
+# LCVVbCnrIzXY+/cNaPu/RcITNx8Tpi+wTawD7w4XvAWnVZjSLUwGJ96bPuwvMz3x
+# uauLsVktshI9HcJrc8sKipmFUibAVNfMzDxGs1aOPPpJGL1G0T0KztsyQVlkVlga
+# ixFB9TfZ7jcKs5LfqbwvI+mYdM/lyAIi34rbbtCGhLJ8yJtq0dBA
 # SIG # End signature block

@@ -30,53 +30,37 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    11.09.2025 Konrad Brunner       Initial Version
+    01.10.2025 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [string]$processOnlyStorageAccountWithName = $null,
+    [string]$subscriptionName = $null
 )
 
-#Reading configuration
+# Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\network\Configure-VPNGateway-$($AlyaTimeString).log" | Out-Null
-
-# Constants
-$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainNetwork)"
-$VirtualNetworkName = "$($AlyaNamingPrefix)vnet$($AlyaResIdVirtualNetwork)"
-$GatewaySubnetName = "GatewaySubnet"
-$VirtualNetworkGatewayName = "$($AlyaNamingPrefix)vpng$($AlyaResIdVirtualNetwork)"
-$VirtualNetworkGatewayConfigName = "$($VirtualNetworkGatewayName)cfg"
-$VirtualNetworkGatewayIpName = "$($VirtualNetworkGatewayName)pip"
-$NumCerts = $AlyaVPNGatewayClientCertCount
-if ($NumCerts -eq "PleaseSpecify") { $NumCerts = 0}
-$CertFileLocation = "$($AlyaData)\network\vpnClientCerts"
-if (-Not (Test-Path $CertFileLocation))
-{
-    $null = New-Item -Path $CertFileLocation -ItemType Directory -Force
-}
-$KeyVaultResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdMainInfra)"
-$KeyVaultName = "$($AlyaNamingPrefix)keyv$($AlyaResIdMainKeyVault)"
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Migrate-AllStorageAccountsToV2-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "Az.Network"
-Install-ModuleIfNotInstalled "Az.KeyVault"
+Install-ModuleIfNotInstalled "Az.Storage"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-Az -SubscriptionName ([string]::IsNullOrEmpty($subscriptionName) ? $AlyaSubscriptionName : $subscriptionName)
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Network | Configure-VPNGateway | Azure" -ForegroundColor $CommandInfo
+Write-Host "Monitor | Migrate-AllStorageAccountsToV2 | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context
@@ -87,179 +71,39 @@ if (-Not $Context)
     Exit 1
 }
 
-# Checking resource provider registration
-Write-Host "Checking resource provider registration Microsoft.Network" -ForegroundColor $CommandInfo
-$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Network" -Location $AlyaLocation
-if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+# Checking subscriptions
+foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ? $AlyaAllSubscriptions : @($subscriptionName)) | Select-Object -Unique))
 {
-    Write-Warning "Resource provider Microsoft.Network not registered. Registering now resource provider Microsoft.Network"
-    Register-AzResourceProvider -ProviderNamespace "Microsoft.Network" | Out-Null
-    do
+    Write-Host "Checking subscription $AlyaSubscriptionName" -ForegroundColor $MenuColor
+  
+    # Switching to subscription
+    $sub = Get-AzSubscription -SubscriptionName $AlyaSubscriptionName
+    $null = Set-AzContext -Subscription $sub.Id
+    $Context = Get-AzContext
+
+    $StrgAccounts = Get-AzStorageAccount
+    foreach ($StrgAccount in $StrgAccounts)
     {
-        Start-Sleep -Seconds 5
-        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Network" -Location $AlyaLocation
-    } while ($resProv[0].RegistrationState -ne "Registered")
-}
+        $StorageAccountName = $StrgAccount.StorageAccountName
+        if (-Not [string]::IsNullOrEmpty($processOnlyStorageAccountWithName) -and $processOnlyStorageAccountWithName -ne $StorageAccountName)
+        {
+            continue
+        }
 
-# Checking ressource group
-Write-Host "Checking ressource group" -ForegroundColor $CommandInfo
-$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
-if (-Not $ResGrp)
-{
-    throw "Ressource Group not found."
-}
+        Write-Host "Checking storage account $StorageAccountName" -ForegroundColor $CommandInfo
+        if ($StrgAccount.Kind -eq "StorageV2")
+        {
+            Write-Host "Already v2"
+        }
+        else
+        {
+            Write-Warning "Migrating to v2"
+            Set-AzStorageAccount -ResourceGroupName $StrgAccount.ResourceGroupName -Name $StorageAccountName -UpgradeToStorageV2 -Force -Confirm:$false
+        }
 
-# Checking virtual network
-Write-Host "Checking virtual network" -ForegroundColor $CommandInfo
-$VNet = Get-AzVirtualNetwork -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkName -ErrorAction SilentlyContinue
-if (-Not $VNet)
-{
-    throw "Virtual network not found."
-}
-
-# Checking network subnet
-Write-Host "Checking network subnet" -ForegroundColor $CommandInfo
-$gws = Get-AzVirtualNetworkSubnetConfig -Name $GatewaySubnetName -VirtualNetwork $vnet
-if (-Not $gws)
-{
-    throw "Gateway subnet not found"
-}
-
-# Checking key vault
-Write-Host "Checking key vault" -ForegroundColor $CommandInfo
-$KeyVault = Get-AzKeyVault -ResourceGroupName $KeyVaultResourceGroupName -VaultName $KeyVaultName -ErrorAction SilentlyContinue
-if (-Not $KeyVault)
-{
-    throw "Key vault not found"
-}
-
-# Checking public ip
-Write-Host "Checking public ip" -ForegroundColor $CommandInfo
-$gwip = Get-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkGatewayIpName -ErrorAction SilentlyContinue
-if (-Not $gwip)
-{
-    Write-Warning "Public ip not found. Creating the public ip $VirtualNetworkGatewayIpName"
-    $gwip = New-AzPublicIpAddress -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkGatewayIpName -Location $AlyaLocation -Sku "Basic" -AllocationMethod "Dynamic" -IpAddressVersion "IPv4" -DomainNameLabel $VirtualNetworkGatewayIpName -Tag @{displayName="VPN Gateway Public IP";ownerEmail=$Context.Account.Id}
-}
-else
-{
-    Write-Host "Updating"
-    $null = Update-AzTag -ResourceId $gwip.Id -Tag @{displayName="VPN Gateway Public IP";ownerEmail=$Context.Account.Id} -Operation Replace
-}
-
-# Checking VPN Gateway
-Write-Host "Checking VPN Gateway" -ForegroundColor $CommandInfo
-$gw = Get-AzVirtualNetworkGateway -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkGatewayName -ErrorAction SilentlyContinue
-if (-Not $gw)
-{
-    Write-Warning "Virtual network gateway not found. Creating the virtual network gateway $VirtualNetworkGatewayName"
-    $ipc = New-AzVirtualNetworkGatewayIpConfig -Name $VirtualNetworkGatewayConfigName -SubnetId $gws.Id -PublicIpAddressId $gwip.Id
-    $gw = New-AzVirtualNetworkGateway -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkGatewayName `
-        -Location $AlyaLocation -IpConfigurations $ipc -GatewayType "Vpn" -VpnType "RouteBased" `
-        -GatewaySku "Basic" -VpnClientAddressPool $AlyaVPNGatewayClientIpRange -Tag @{displayName="VPN Gateway";ownerEmail=$Context.Account.Id}
-}
-else
-{
-    Write-Host "Updating"
-    $null = Update-AzTag -ResourceId $gw.Id -Tag @{displayName="VPN Gateway";ownerEmail=$Context.Account.Id} -Operation Replace
-}
-#Set-AzVirtualNetworkGateway -VirtualNetworkGateway $gw -VpnClientAddressPool $AlyaVPNGatewayClientIpRange
-
-# Checking Root Certificate in key vault 
-Write-Output "Checking Root Certificate in key vault"
-$RootCertificateSecretName = "VpnGatewayRootCertificate"
-$AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $RootCertificateSecretName -ErrorAction SilentlyContinue
-if (-not $AzureKeyVaultCertificate)
-{
-
-    # Creating Root Certificate
-    Write-Host "Creating Root Certificate"
-    $SelfSignedCertNoOfMonthsUntilExpired = 120
-    $SelfSignedCertPlainPassword = "R"+[Guid]::NewGuid().ToString()+"#"
-    $PfxCertPathForRunAsAccount = Join-Path $CertFileLocation "RootCert.pfx"
-    $PfxCertPathForRunAsAccountCer = Join-Path $CertFileLocation "RootCert.cer"
-    $CerPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
-    $Cert = New-SelfSignedCertificate -Subject "CN=$($VirtualNetworkGatewayName)Root" -Type "Custom" `
-        -KeyExportPolicy "Exportable" -KeySpec "Signature" -KeyUsage "CertSign" -KeyUsageProperty "Sign" -KeyLength 2048 `
-        -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
-        -CertStoreLocation Cert:\CurrentUser\My -HashAlgorithm SHA256 `
-        -NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
-    Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
-    $base64certificate = @"
------BEGIN CERTIFICATE-----
-$([System.Convert]::ToBase64String($Cert.Export('Cert'), [System.Base64FormattingOptions]::InsertLineBreaks))
------END CERTIFICATE-----
-"@
-    Set-Content -Path $PfxCertPathForRunAsAccountCer -Value $base64certificate
-
-    # Updating Root Certificate in key vault 
-    Write-Output "Updating Root Certificate in key vault"
-    $AzureKeyVaultCertificate = Import-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $RootCertificateSecretName -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword
-    $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $RootCertificateSecretName
-
-    # Updating Root Certificate Password in key vault 
-    Write-Output "Updating Root Certificate Password in key vault"
-    $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "$($RootCertificateSecretName)Pwd" -SecretValue $CerPassword
-
-    # Uploading root certificate
-    Write-Host "Uploading root certificate"
-    $CertBase64 = [System.Convert]::ToBase64String($Cert.RawData)
-    Add-AzVpnClientRootCertificate -ResourceGroupName $ResourceGroupName -VirtualNetworkGatewayname $VirtualNetworkGatewayName -VpnClientRootCertificateName "RootCert.cer" -PublicCertData $CertBase64
-    #TODO update
-}
-
-# Client Certificates
-for ($i=1; $i -lt ($NumCerts+1); $i++)
-{
-    Write-Host "$i. Client Certificate"
-    $ClientCertSecretName = "VpnGatewayClientCert$i"
-    $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $ClientCertSecretName -ErrorAction SilentlyContinue
-    if (-not $AzureKeyVaultCertificate)
-    {
-        $SelfSignedCertNoOfMonthsUntilExpired = 120
-        $SelfSignedCertPlainPassword = "C"+[Guid]::NewGuid().ToString()+"C"
-        $PfxCertPathForRunAsAccount = Join-Path $CertFileLocation "ClientCert$i.pfx"
-        $CerPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
-        $CCert = New-SelfSignedCertificate -Subject "CN=$($VirtualNetworkGatewayName)Client$i" -Type "Custom" `
-            -Signer $Cert -DnsName "$($VirtualNetworkGatewayName)Client$i" `
-            -KeyExportPolicy "Exportable" -KeySpec "Signature" -KeyLength 2048 `
-            -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
-            -CertStoreLocation Cert:\CurrentUser\My -HashAlgorithm SHA256 `
-            -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.2') `
-            -NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
-        Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $CCert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
-
-        # Updating Client Certificate in key vault 
-        Write-Output "Updating Client Certificate in key vault"
-        $AzureKeyVaultCertificate = Import-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $ClientCertSecretName -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword
-        $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $ClientCertSecretName
-
-        # Updating Client Certificate Password in key vault 
-        Write-Output "Updating Client Certificate Password in key vault"
-        $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "$($ClientCertSecretName)Pwd" -SecretValue $CerPassword
     }
-    #TODO Update
-}
 
-# Checking VPN client profile 
-Write-Output "Checking VPN client profile"
-$vpnprofile = New-AzVpnClientConfiguration -ResourceGroupName $ResourceGroupName -Name $VirtualNetworkGatewayName -AuthenticationMethod "EapTls"
-$tmpFile = New-TemporaryFile
-Invoke-WebRequestIndep -Uri $vpnprofile.VPNProfileSASUrl -Method Get -UseBasicParsing -OutFile "$($tmpFile).zip"
-$tmpScript = New-TemporaryFile
-$zip = [System.IO.Compression.ZipFile]::OpenRead("$($tmpFile).zip")
-$zip.Entries | Where-Object {$_.Fullname -eq "WindowsPowershell\VpnProfileSetup.ps1"} | ForEach-Object {
-    [System.IO.Compression.ZipFileExtensions]::ExtractToFile($_,"$($tmpScript).ps1")
 }
-$zip.Dispose()
-Remove-Item -Path "$($tmpFile).zip" -Force
-Remove-Item -Path $tmpFile -Force
-$scriptContent = Get-Content -Path "$($tmpScript).ps1" -Raw -Encoding utf8
-$scriptContent = $scriptContent.Replace("Get-VpnConnection -Name $VirtualNetworkName","Get-VpnConnection -Name $VirtualNetworkName -ErrorAction SilentlyContinue")
-$scriptSec = ConvertTo-SecureString $scriptContent -AsPlainText -Force
-$AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "$($VirtualNetworkGatewayName)VpnProfile" -SecretValue $scriptSec -ContentType "VpnProfileSetup.ps1"
-Remove-Item -Path "$($tmpScript).ps1" -Force
-Remove-Item -Path $tmpScript -Force
 
 #Stopping Transscript
 Stop-Transcript
@@ -267,8 +111,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAoDXWcFA8p0t+/
-# elAOKAoDquMtwf5z7uxqWSqFVDfxT6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBwNJ1MtpHB9DPQ
+# asJyIIdi4BhLEulRUHdlATTEDE7sVaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -352,23 +196,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICD2DPvvpP4WyZZv
-# UOSXKjHs1ap4hxr2whtVYuYx48iBMA0GCSqGSIb3DQEBAQUABIICAATaoZ7Qn2fA
-# 7wa7SYbx7KAe5pIdJpTvMnyFZZKD/3mlv+1cerWbJYqxlq4ykBADvOr3EG0Cjhnq
-# iS1FaaFtEox5T/OaIebN2omQPhyJIRaA5dCU9THTcevKkBKwEvEMueKt5UefEXg+
-# oMLkudYb5na06yelJBQD8h+cLBokwSWF1aVMsGY0gnZGSouXb+vU6LImuPviJP/n
-# khqpQPbK9TCF5sRSZNo+7Wq3oISKbBuSvUsWKn2waMvnkXcRrP1zZH3BXJbIQbUh
-# bb2GzyPM4BODa2I482Kbo/mVG0F06Ro1mkW7pFJ20pnIP5AgH5IHbV8nLp3bYA3C
-# 98Q+GMjqe1/I7D4clG38lAfTrE4wPhankhbaJ6dkAb75FR44NI2Lbv407Y3fO2oD
-# fkaK7PA5J1ohXCqEtgkGFA+H946P9DWyz3rn2i+3m20MfPM3nvewjphHhvjRH82Y
-# ynUPUS0KYCMrE2GkWBXEAaLikEuERsn8Jfr0AHFx9v7c2h94s+T4GRT7McR+IAmm
-# WBKGazjbXj3n+rYq2HRKVKy3YEtZbSSAbwI+ffI2H7aTqrpx4E9eR1upUC7JcLRX
-# elEhnN9hr4l5Vr9pqqFovHQVhq419D5Olm7v00YUOUw2CleAzAR4ojcqy8vbiiBh
-# qtFS8b1KKFEauO26fa3w8PJ+IQet656NoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFKgGLY3RPwaHveb
+# srtG5nQ0mH6ZH34G+nY3tDc2KbAfMA0GCSqGSIb3DQEBAQUABIICAGlhIXs4N5Sn
+# 3Yo+13u+JzGZR9RkfYNq9JLMT96pA0M8Ks4s27uB1N+Prs4wdnSMIwTbD4vOI2uK
+# /6is6x9SqUfCKpBBv3DAqSOu8Y84T7v97ZCYcTPsBFeckyRpDGv/CoedEdb+K36o
+# rHWcME16bOOZ3zNW7rbt7eryVEA+/GMjqMihgLwiPIqX/2ppVThQE3qP7TCXZu5B
+# SFIofr8Ka6dVTBHp3wEjEAcGlM+es4MIBaLaiJ4qxJ3Y7RswqsLJgMtUZk4BqRp2
+# iqyN7g132XPmhuntkwAtYgO2dEFlyNQNfkG2JVvuV8WxNwLz+IhucyrzXPvmGl45
+# 3varVIjY+ayQW1inGPch5cjE+P6OuxrAZy635n2X0s5FW3AJ0hdt69TlpSR8iO+k
+# xx1fiTfkn741beaw5fHKXE6WRfB8hVC3AC9fOy3vMRJSmK+tqsN7ae0JgWMbxnQz
+# HfI7xCoqkgk5LS2vxTOX/WKMZrHBSjP/vbSgDq3mTnWI2kAR9L4NZa38a8KS/huj
+# C23ISHcn4S1GqD9gW2IEA/guYg/hjFzd9M/GcOWvdSFBQlaphj3A6t1tiEiz7+RL
+# jyRH9k+HjI9Z12egDkYkUYXg5LrhkzZJcMAfICaqv1cRMw2l5uFi8ULSR7HrtMFO
+# Czf74wdB8LgjLjVVKRUCqwm0DLHkc6eAoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCB8SePryq9gcbi9Hnmz8Eao2K3L3ZCvJt1qQmFHQ5fD4AIUBE4PmxOrdZzJ
-# A4jpl2Dc43sDO3cYDzIwMjUxMDAyMDkyNTA3WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCi/SUcc7KTH4ECDuc3pr7lxgf0ePSuEJLukjw46p1HEAIUA1V9TYqAje6d
+# yk1jAaWoaMdVxAcYDzIwMjUxMDAxMDcwMTE0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -473,17 +317,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IP5oTm1Lrtr0FQ1UiEduDtDBIxvOXMRkBxDk9w/4DoNaMIGwBgsqhkiG9w0BCRAC
+# IK5eqY9VJFKviKu3sYArvJ3cx8uspraFo0yHGDw09cvgMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAeYv1QC9k5EI+
-# dccNvRFpl1sH6J7Hm1FPvOT/fbF63a2zPvbZpZEoJhjtpSpzQwsh/hJguJLbNwAY
-# qx6gpfK9E8UDOTcKNE3gZTBRep1F81Uw9ozRoWyEOmd47v99LhAaVnQariEJ/Rwv
-# kbA5RLj+J+B3XxZJv+qMWNObegqQb/pzLzn+Iw86G5KTDlY6Yi4/1VZwzCGbisHP
-# S3O//wj19bbypw3zBCdTf75I2INODGT+aGPKdQHJollsqgLwGo0Isgh4Qph/0VEF
-# MaoLTpy5hpgKOktpkqKCOfmn+/ZJIAWvtmqfgLSfgb4R/08hu4AABYnkc78Lu5uG
-# XIUoYuZbnKsM/GFs/0s/mxcbAbO3HaMc6Ub+OWz6yhjno+CRpVjuRUOXY+F+k5cX
-# MjrGwto2o6j4rZsRNAMEpVztOMg0oMbAYv7ddVzyi86d8PwFsSZVbUi+MK0UmYBT
-# qbBpD7YS0wQYBXI7gHB94ozjUQnBM+ufW0DmaHoZYAAHeB/c9eNG
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAAe2WxXAiOO4P
+# kOuFRtdZRnAtAMV1k2WS4UqVGqmfajiQFCbX4hnbARoes3Y8CnZqU40fiB2X7BAd
+# IzLYxVVo1DsbaPtIGDR6X55507h8vkJXnJF/P79eK1999gLX6kmOvnYxFG7Qigkv
+# rNjIcj/SS7200s3oAVKrBZFNlwnh1oEVmqtSY6O7mZisiYx3/j1iPGVZ2sbmadBn
+# GzbMJf90DpGwaA5f1ZHuN6F8ScHc/9wOp0Dkj2DTxhNu5fDr4onp0CZVcpy5QxPm
+# hT9gUJ1P9XyUaOaTtaBvathyKIK0sOGNHEmx06F8+BlMU0RpxuUM1bUwUMWzCYuh
+# qjNUli6n5rKrIEslDvJkAzoClfVwiRRGTXpYTM0yXkmFUj5ZiQ7P4hu9kciZBn/f
+# FL32xVAagLVmDUhzKT0q+4Q9UicEgUXBxVQdaavntmjeDx44Jed2l9uSFqtES7mL
+# WfyeCwV2S4IiFZZRAUyTl24PA8mCbnjXOu1c5PlZnesV3BXSq1bO
 # SIG # End signature block
