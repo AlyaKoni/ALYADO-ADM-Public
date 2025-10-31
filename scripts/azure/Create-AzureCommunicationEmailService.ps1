@@ -37,6 +37,7 @@
 
 [CmdletBinding()]
 Param(
+    [string]$processOnlyDomain = $null
 )
 
 #Reading configuration
@@ -176,6 +177,10 @@ $domains += $AlyaAdditionalDomainNames
 foreach($domain in $domains)
 {
     Write-Host "Domain $domain"
+    if (-Not [string]::IsNullOrEmpty($processOnlyDomain) -and $domain -ne $processOnlyDomain)
+    {
+        Write-Host "  Ignored"
+    }
     $dom = Get-AzEmailServiceDomain -ResourceGroupName $ResourceGroupName -EmailServiceName $CommEmailServiceName -Name $domain -ErrorAction SilentlyContinue
     if (-Not $dom)
     {

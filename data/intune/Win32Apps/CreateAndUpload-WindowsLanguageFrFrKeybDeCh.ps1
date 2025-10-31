@@ -32,7 +32,8 @@
 [CmdletBinding()]
 Param(
     [bool]$reuseExistingPackages = $false,
-    [bool]$askForSameVersionPackages = $true
+    [bool]$askForSameVersionPackages = $true,
+    [bool]$overwriteSameVersionPackages = $true
 )
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
@@ -46,7 +47,7 @@ if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\
 {
 	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "WindowsLanguageFrFrKeybDeCh"
 }
-& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsLanguageFrFrKeybDeCh" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "WindowsLanguageFrFrKeybDeCh" -askForSameVersionPackages $askForSameVersionPackages -overwriteSameVersionPackages $overwriteSameVersionPackages
 & "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "WindowsLanguageFrFrKeybDeCh"
 
 # SIG # Begin signature block

@@ -74,7 +74,6 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-SPO
 
 # =============================================================
 # O365 stuff
@@ -95,7 +94,7 @@ function Get-AdminUrlForSite($site)
         }
         else
         {
-        return "https://$($sharePointDomain)$($site)-admin.sharepoint.com"
+            return "https://$($sharePointDomain)$($site)-admin.sharepoint.com"
         }
     }
     else
@@ -157,6 +156,24 @@ if (-Not $mySite)
     throw "Looks like the user does not have a OneDrive site or you don't have the correct access rights!"
 }
 Write-Host "Users mySite is $mySite"
+$sourceSite = $null
+foreach($site in $sateliteSites)
+{
+    if ($sateliteDomains -and $sateliteDomains.ContainsKey($site))
+    {
+        $chk = "https://$($sateliteDomains[$site])-my.sharepoint.com"
+    }
+    else
+    {
+        $chk = "https://$($sharePointDomain)$($site)-my.sharepoint.com"
+    }
+    if ($mySite -like "$chk*")
+    {
+        $sourceSite = $site.ToUpper()
+        break
+    }
+}
+Write-Host "Source data location is $sourceSite"
 if ($preferredDatalocation -in $sateliteSites -and $mySite.IndexOf($preferredDatalocation.ToLower()+"-my.sharepoint.com") -gt -1)
 {
     Write-Host "Users OneDrive location is already in the right location!"
@@ -168,9 +185,13 @@ if ($preferredDatalocation -eq $centralSite.ToUpper() -and $mySite.IndexOf($shar
     exit 0
 }
 
+# Login to source site
+Write-Host "Login to source site" -ForegroundColor $CommandInfo
+LoginTo-SPO -AdminUrl (Get-AdminUrlForSite -site $sourceSite)
+
 # Getting multi geo status
 Write-Host "Getting multi geo status" -ForegroundColor $CommandInfo
-$status = Get-SPOGeoMoveCrossCompatibilityStatus | Where-Object { $_.DestinationDataLocation -eq $preferredDatalocation -and $_.CompatibilityStatus -ne "Compatible" }
+$status = Get-SPOGeoMoveCrossCompatibilityStatus | Where-Object { $_.DestinationDataLocation -eq $preferredDatalocation -and "Compatible" -notin $_.CompatibilityStatus.Value }
 if ($status)
 {
     $status
@@ -212,8 +233,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC7Jd3Z6caqyohl
-# 5ScI6y42s2olLP6psQtH79k+tfqc5aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAqZdEY9OsbMdTm
+# +ltd/6RNECbU/1wKX8uQL8PYc1m0u6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -327,23 +348,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIB2Xn0IN
-# fVeLNnDsy8UAoVLEN3zenMuNdKqKYVF1YrirMA0GCSqGSIb3DQEBAQUABIICAIuO
-# v2bWd7/3BVi8XPoEw0xwWxJXEpIcazUYN8BcSFVkIINDOy19fVupOxR2sp+RTD6n
-# ycYmYbs4g3gSlkPI7DTh49e8eMrgYuzCvY/RmQyEDKdaYXSOvVv/TWL/iF+lx+rU
-# BofadErqAZ01LGEJKTFUuHqL779pSSMU11AD4MiiFYWKDcX6PTWfm5Y7pyJ29AyI
-# arvZVHITdIarepuOrE6KMjXezLRfAkQFos6NYf3jEXxYpeDVQMfrmx+W00JgcXDJ
-# iQRY2N19lWFExBG1e5ElEvsHIt1EsrWEg0k83Yfny23H56Mj7cALPIkfBddQ2mZg
-# xAg4hsO83XEsnw6HQ/Qz5/lY5psxjGXKRiArOISCc03QrdBS9+gKmMZgSdHcW+01
-# PCiR9LZgQ7TXgHt4dmIFUoJdh7UsVO0vxJumNlG3a6PawL87Ddj24NTLlgY4X7v/
-# T5apw1BIiCGtXyr1OtHEso8gUkqboCi6n5xdixO9I5Cgsf4w9NakecoIlj6Qsv73
-# Ze/piv60nsc0iHwheaWQWthzqZDJM+aZSK3yk8DTml/gAw4NIxZDAcx4yrilj9zL
-# AYDNDtIZ6ljU6bvdsbIefJz0ohE9FHXdGYAorFerAnxc6CXSeYglk0lOlE48iY94
-# 2sbfB2BTxQCyewAezO2P3allbOMMq2TYidenulEcoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIB3cMPxQ
+# MSHNcAeKE7E/jfgR15KFOxXCnSXP/GuWQCSBMA0GCSqGSIb3DQEBAQUABIICAGs9
+# B1Ih+BdJM9bPL891ciZpPSe9T0o2kaNIb2kv1qeqV5kaA3uyR63nDzaBvgsxLvvm
+# aOFWYqTBlFLKGfjH1OVNHyTczGxgzQUk7x6Pgp4dWHDCvOSmJtUkOzEYuxE4Pxhq
+# 76IWyItfo+n1bCF8zxMlO+Zmz+ujaf5mpLnM9As0tjX4r8zeLknZOa/pu7nm/vYw
+# XoLlzlTcXFFlbsPBHtlYjJ/w/4uI8HUYnuicGPsgZRY+uTjvhFbtRreYUyX+fyAY
+# ZgwdcViL5YYKlCwf+71wrMGBcyZAhztXc1gd0riItkhTqLMcWw72MTbyP7cSLI/M
+# Al89jGRWWMsKGlSGjjIBnG7G3pVZLBlKspPZvkKdNzE/zLvOKch/qEU/Ff8JvZ0T
+# 9ySytg6ql6bam1/WGDKq0GaMiWyYjNPWSRWF4DO44g7eFEM1z6YdPCm2WG8dfmuB
+# cVRAIv/Aa7WBdIVZprXu/xvGyCq1hJLI1dCGHK4xVObJdDaEjD2NgXtEWBCotOGg
+# ycl+cIySOfyywvQov9Rdf7jeb6oFjGWTuPwmEMkLTctRYDsvU9DMsLcGtoROqrmj
+# RQI/EUGXhtn460U+OMYNvHqnhWbjdIQfTxdW7kMfxM+U+UIpubZnEr3VEKlQlJYe
+# GxiZucJu89PeOqMREp9mxi451H3hQz0jKnGM75N4oYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCC1IN4cfjN/WZegVU9J2U9a2t4ytvVyMYHttOhZaRB48wIUbHvV
-# mjPcngfZ2Z3ypvIwC6vU0gQYDzIwMjUwOTE4MTkzMjI4WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCAOhxn84M01RqZi/aCOn3IoaV2jXseoIQ/ng0xNUz5V1QIUNvGA
+# QjKhvMSl88/0wZZWaxTEII4YDzIwMjUxMDIzMTUwMTA5WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -448,17 +469,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIMt6Q6eDn60GUu76UA3voXYR1Ub4E1y9TCWHvSn73cxmMIGwBgsqhkiG
+# AQkEMSIEIHHnbMO+AViE7/dKPOoNRDA1g87epwE+2vD8rbuidlLXMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAC2tn
-# aZUwhNpj7w1LTBQ/fLfIvke+3dWWj1YJRnCt2rhUQ3N0d30YBdoedEVH835OCzpJ
-# Mx8bMUMkcRyNP9aHdzmSA0pk1ymovT5HdOQ7YGZKbHY++8btkCztBLikq2XqGdaw
-# iUEfv12myVaqA3CzFDxtZEmzcNOs+5altuU9qrWbK4ZsIsCssjekTUKT8io5P1t+
-# r/uC6wKeITvAm5Snw/X2f7TDPQiUdERRUiHXc09PQ8lvHUD/VytgYEHc8lI8P0ut
-# tcecFPYzu7mC7DojXVFKvGNvjqny/6oTbr542SjQLEhmguaxiHMfVFgUDmiEGh5e
-# S/Cq00EwN7HzZcSmDs+zUsUxqG4a5cKlapTmh/BcHcUT/ZWxXRV9FDbe4dBO/6Ia
-# FRZqeyiT43nl4TcdZM0UFpLqbAsvSQDXOUC7tHoojxWgI1gzYPshVUYGgMppAxCq
-# JL6w7hC0pR0jqgpcR9imZVMzs16BMmHBcHiJIkivdG2VGHXD3kcurEDdLSwh
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGACIOh
+# JfbqtMRIF8Ecr4KciOL/HZhKZeg0ew9g9IKlQhZWGyL4u5apC5naLGGgFsWiRceH
+# 63WlGhPiYu599DfOrUM+h9j2nVdEfKNMKrrNuX2BqnHH9S4mxZxXnttm74pTifoK
+# fuBexUU0lyVJ2p7DAircOJ5yHcf5oIUew6KC8w0zLU+451N7frnMDE+SJSMklCU6
+# bArtP36Zoov6V8peZhDScTVbMtkBOL/pFBLninAMmxBUTDKdyO+On3h+dF6TiEfK
+# 9n4cdSoKsMZA3rtNBClhI3TVtMKlL0HZU+TDdyEVpWiPYUXNSv6AI1E/kamQaXPU
+# Ls94GCuMoOcbNxevgtzFaEWpLEXgV5ZFbatxE1VfuuoetKK6RTw+7Prt77yZjuE9
+# DNOjtSTpDd9RZG2lRLFDwqt1Jqrw8i5y2LhpbaFnBHrmtPUtQ9p3DH2xiA6hbew7
+# qaEmVCtDSBGyqCwfk058r8Eat1eE4m4H0qWPhcqAALFFRxv3atAl6MHe1uE4
 # SIG # End signature block

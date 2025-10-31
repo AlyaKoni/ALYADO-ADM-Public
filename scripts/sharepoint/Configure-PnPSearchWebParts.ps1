@@ -31,13 +31,16 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     18.08.2025 Konrad Brunner       Initial Version
+    26.10.2025 Konrad Brunner       Multi-Geo support
 
 #>
 
 [CmdletBinding()]
 Param(
     [Parameter(Mandatory=$false)]
-    [object]$seleniumBrowser = $null
+    [object]$seleniumBrowser = $null,
+    [Parameter(Mandatory=$false)]
+    [string]$multiGeoAdminUrl = $null
     )
 
 #Reading configuration
@@ -50,8 +53,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-PnPSearchWebPa
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
+# Members
+if ([string]::IsNullOrEmpty($multiGeoAdminUrl))
+{
+    $multiGeoAdminUrl = $AlyaSharePointAdminUrl
+}
+
 # Logging in
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCon = LoginTo-PnP -Url $multiGeoAdminUrl
 
 # =============================================================
 # O365 stuff
@@ -144,11 +153,11 @@ if (-Not $app -or -Not $app.Deployed)
 }
 
 Write-Warning "Please approve access requests"
-Write-Host "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
+Write-Host "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
 if (-Not $browser) {
-    Start-Process "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
+    Start-Process "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
 } else {
-    $browser.Url =  "$AlyaSharePointAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
+    $browser.Url =  "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
 }
 
 #Stopping Transscript

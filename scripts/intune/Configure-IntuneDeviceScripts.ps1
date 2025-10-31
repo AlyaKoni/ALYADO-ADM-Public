@@ -71,6 +71,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
 # Logins
 LoginTo-MgGraph -Scopes @(
     "DeviceManagementServiceConfig.ReadWrite.All",
+    "DeviceManagementScripts.ReadWrite.All",
     "DeviceManagementConfiguration.ReadWrite.All",
     "DeviceManagementManagedDevices.Read.All",
     "Directory.Read.All"

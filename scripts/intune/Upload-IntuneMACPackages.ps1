@@ -247,7 +247,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
                                 Start-Sleep -Seconds 45
                             }
                             else {
-                                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                                 throw
                             }
                         }
@@ -318,7 +318,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
                     Start-Sleep -Seconds 45
                 }
                 else {
-                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                     throw
                 }
             }

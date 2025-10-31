@@ -1,12 +1,12 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN BIMVision",
-  "description": "Installs BIMvision 3.0.4 Setup.exe",
+  "description": "Installs BIMvision 3.1.0 Setup.exe",
   "publisher": "Datacomp IT Sp. z o.o.",
   "largeIcon": {
+    "@odata.type": "#Microsoft.Graph.mimeContent",
     "value": "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",
-    "type": "image/png",
-    "@odata.type": "#Microsoft.Graph.mimeContent"
+    "type": "image/png"
   },
   "isFeatured": false,
   "privacyInformationUrl": "https://bimvision.eu/privacy-policy/",
@@ -15,7 +15,7 @@
   "developer": null,
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "BIMvision 3.0.4 Setup.intunewin",
+  "fileName": "BIMvision 3.1.0 Setup.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,7 +24,7 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": null,
-  "setupFilePath": "BIMvision 3.0.4 Setup.exe",
+  "setupFilePath": "BIMvision 3.1.0 Setup.exe",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -45,7 +45,7 @@
       "check32BitOn64System": true,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "3.0.4"
+      "detectionValue": "3.1.0.0"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "check32BitOn64System": true,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "3.0.4"
+      "comparisonValue": "3.1.0.0"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "3.0.4"
+  "displayVersion": "3.1.0.0"
 }

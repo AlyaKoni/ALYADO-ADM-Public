@@ -44,6 +44,7 @@ Param(
     [string]$ContinueAtAppWithName = $null,
     [string]$AppsPath = "Win32Apps",
     [bool]$AskForSameVersionPackages = $true,
+    [bool]$OverwriteSameVersionPackages = $false,
     [bool]$ShowProgressBar = $false
 )
 
@@ -131,17 +132,24 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         Write-Host "    Looks like this version has already been uploaded!" -ForegroundColor $CommandWarning
         Write-Host "      Existing version: $($detectVersion)" -ForegroundColor $CommandWarning
         Write-Host "      Version to upload: $($version)" -ForegroundColor $CommandWarning
-        if ($AskForSameVersionPackages -eq $false)
+        if ($OverwriteSameVersionPackages -eq $true)
         {
-            $doUpload = $false
+            $doUpload = $true
         }
         else
         {
-            $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
-            $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
-            $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
-            $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
-            if ($resp -eq 0) { $doUpload = $false }
+            if ($AskForSameVersionPackages -eq $false)
+            {
+                $doUpload = $false
+            }
+            else
+            {
+                $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
+                $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
+                $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
+                $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
+                if ($resp -eq 0) { $doUpload = $false }
+            }
         }
     }
 
@@ -245,7 +253,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
                                 Start-Sleep -Seconds 45
                             }
                             else {
-                                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                                try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                                 throw
                             }
                         }
@@ -316,7 +324,7 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
                     Start-Sleep -Seconds 45
                 }
                 else {
-                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+                    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
                     throw
                 }
             }
@@ -501,7 +509,13 @@ foreach($packageDir in $packages)
                 {
                     $toInstall = $toInstall[0]
                 }
-                if ($toInstall.VersionInfo.FileVersion -And -Not [string]::IsNullOrEmpty($toInstall.VersionInfo.FileVersion.Trim()))
+
+                $version = $null
+                if ($toInstall.VersionInfo.FileVersionRaw)
+                {
+                    $version = $toInstall.VersionInfo.FileVersionRaw
+                    Write-Host "    got version from file versionRaw: $version"
+                }elseif ($null -eq $version -and $toInstall.VersionInfo.FileVersion -And -Not [string]::IsNullOrEmpty($toInstall.VersionInfo.FileVersion.Trim()))
                 {
                     $version = $toInstall.VersionInfo.FileVersion
                     if ($version -like "*AppVersion*")
@@ -549,13 +563,21 @@ foreach($packageDir in $packages)
 
     if ($version)
     {
+        $detectionVersion = $version
+        $detectionVersionPath = Join-Path $packageDir.FullName "ComparisonVersionCustomizer.ps1"
+        if (Test-Path $detectionVersionPath)
+        {
+            $detectionVersion = & $detectionVersionPath -Version $version
+            Write-Host "Customized detection version: OLD:$($version) NEW:$($detectionVersion)"
+        }
+
         Write-Host "    version: $($version)"
         if ($regPath)
         {
             foreach($ruleWVersion in $appConfig.detectionRules)
             {
                 if ($ruleWVersion.detectionType -eq "version") {
-                    $ruleWVersion.detectionValue = $version
+                    $ruleWVersion.detectionValue = $detectionVersion
                     $ruleWVersion.keyPath = $regPath
                     $ruleWVersion.valueName = $regValue
                 }
@@ -563,7 +585,7 @@ foreach($packageDir in $packages)
             foreach($ruleWVersion in $appConfig.rules)
             {
                 if ($ruleWVersion.operationType -eq "version") {
-                    $ruleWVersion.comparisonValue = $version
+                    $ruleWVersion.comparisonValue = $detectionVersion
                     $ruleWVersion.keyPath = $regPath
                     $ruleWVersion.valueName = $regValue
                 }
@@ -574,13 +596,13 @@ foreach($packageDir in $packages)
             foreach($ruleWVersion in $appConfig.detectionRules)
             {
                 if ($ruleWVersion.detectionType -eq "version") {
-                    $ruleWVersion.detectionValue = ([Version]$version).ToString()
+                    $ruleWVersion.detectionValue = ([Version]$detectionVersion).ToString()
                 }
             }
             foreach($ruleWVersion in $appConfig.rules)
             {
                 if ($ruleWVersion.operationType -eq "version") {
-                    $ruleWVersion.comparisonValue = ([Version]$version).ToString()
+                    $ruleWVersion.comparisonValue = ([Version]$detectionVersion).ToString()
                 }
             }
         }
@@ -751,8 +773,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB5GyIw9jYGPbHr
-# zfvVwfmsuPM3u7cnkv7Y2j0JlG8lxqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAEmJNKqdC9Rwyu
+# U0E1cBEYDllP2qmMA6IVWKAS6CmZO6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -836,23 +858,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINwnhM1Ta+HC8J14
-# F9IBwKTzCK5YhP/FFCTLiAh4111vMA0GCSqGSIb3DQEBAQUABIICABVq/d6pEXBE
-# sCNc/8jRm5cajEWvxj8haQ3W1+k0PxtNTDOHRirLXSoo/BovtFc76O/ypkPBhOe/
-# LMtyoCcHQSmVBQQgYUNWE5xvUItInUsacNCkjwGgr40tkRbWe9Z0h7yrgPZloTBj
-# IqBuD93mLIeeo/Jz/7vPCD0EHX1o82AMQWY+bIklk7lWjQ/6Yir8a2FmL1koqaCf
-# 5eeKmG2Lq+mrAvZhxzo9BwKb+Ha69ovbmLSD1XLZgPHrdeDNkOnCIW38G24gwZPo
-# wmCFYP8TObKWOM25cYR6ZspZgoS+8TrRwmvoDRvuCf+ODOjD6l49w+W5MXwIFJxF
-# Ikrto7pwZbR5QVW11BbdBJ0yJIXsaUK93UlsIMDyU2/lUUPhBtsAO+AA3IEnbX7K
-# fgPicFJ9KcpnJ51rFefemK9GwlqmLz8NlzdPt6DAY0yGqzmGkt3E8F68eddfKrkl
-# FO9w522aB7h+FK5CHtN97p1KX5NZAIG1IVvlspzTPRTU0xvak4KHmN3TI5kxkTou
-# FbLQL8jXjvyYk5gpJpDRR2GQU0AkC36cVg20UNnQ13+6jrlOqYrp1pDG8j9PD7qi
-# F3M5KzDgeTD2C9gQz3JdnIQqG/HtbCwRvv7WyFMnGzyp/bRe/4nkE3RjaHs2BdOv
-# ZqCjep7QCprwODO4ZpcoNKTEAwBA2KTioYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMFJu1j1b7n1OW+d
+# uK/po0+W/H/DEHm2i6RedBbgkIdqMA0GCSqGSIb3DQEBAQUABIICABWsXsoKy8nV
+# fziRCG3ijTttfSc/K1AVLweDRRgvTCteVQ3w1IFN6YThXd8qFKevUMuZQlkIMRVi
+# nwF8XrMW7QUm8KPQg4tNqwMmQCz65UVW/ZAESpAU8RPqPkTOXaM90eNE1FioFgJU
+# AjeXbd0KTPDTbgOxfZ6HjFwLsJepUYuLk4Hbh3OXR7FUlRAVf0ELyOO9rd9+Nsof
+# NNGY2xz7NEXOdUYQj1Edl//GU/JEU2PtHLiZFs3HLk7bcX0lruoGxyspcpQJGAk4
+# mlhIJ0/1tCuudRB6dwZe2nQljJjaKAlOSt60TqjPCDw5ZtmiGpCj1T7hvvfkdi4H
+# 9nld0mqeq+uMbjlt5OHROItrDgBmd6rGoYqE7r3lDU/ptqVKLBSeOhObDSmg6sK5
+# /7gb+AA6qvy5CnI18iugSS6WKsmOVrnkYkJUX5DUXlXNO909F8vHrOLgbqR0h6mB
+# xZUr13oCP/TPydyJAHbIn1ikxKrxzG+seBz289oYzVNxlu/sF9QTFS4kX4IziTJs
+# i8Pan/yRR8SH8hC4WHNDrNfckSc6ynzfSvxAaVWNPCpLZyOMoWU34tOFrAh7bFih
+# FrcFef/F1jFGhgiMsuotowOHMHZ9gJJ4LqS3bt4qb4oXmrzYuDNLzwvHbgD5F2KV
+# k0YGSCLhNjBLJYOSde9my74keDz2H15noYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAysbFe3bbotTkQ/In5IbVU4s50oZXIZiz7mxEeK7j0wAIUaDEcgUaXo/m5
-# pKTq2Vf8p/O6lmcYDzIwMjUwODI1MTU0MDQyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBdst5eDBhQipVAMk34XuI7YlCuknwubRDACWF8dapUCQIUS3EuwXA7iZ/g
+# fFCMCoPDc/lWXh4YDzIwMjUxMDEzMTAyNDMyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -957,17 +979,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ID2iDOxbz4H8mH2gxcITusk8dmWixOVasAiNrTFC/IzHMIGwBgsqhkiG9w0BCRAC
+# IPN+D1Ah3FuKuIWoY3saxChkJBTfXXvEBf4Q3sRnztfVMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAcjnaEx1fufGG
-# mtRFX9MQls7yAAT4R7gDSsNw8WYjfIzShiaJwjN39SxeDr3Hi4ucG58De2mhGTtq
-# b7xl9yn13DwPfvnYplm9q5pCHZg3FpgagQ2K0l+XviPYill+1+RDXljNfxoor4Br
-# cAZd2I1I9D6ua+YOxv/OnjsuQlvCJgh2JfVKVSWzsV87BVZ8+C9KvqqkqFMzJ3df
-# MsA/DQ2V2nhSkbTjDljbmqIsU3O340Bibat7Uc8LfvIuL/kVuHa6k6TlNSCh0HEn
-# Nr/ve9NCw3gU5B+NwJpz1bgIQ2A7MhjsDSpK0rayLwuFS7caCZPT/igKSaOEhcDO
-# Q//TyJZpo1+okDHN9qTnbIu93wP36R9dVTonf6fLMVLKq99CEreTl7u5jCiupWL5
-# ts8jTjYs18BM7AtwpY6R1QnI9RMaDAEt6R0tXB0G8JL8kZE3v3xhVE0GgyFR+R24
-# tNUU0eoKwrEV+HR8GAEZ8hgegz8NSHnJ8pOZpGV/gCTYfhCOydMR
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAm/4JpxNiEzNX
+# oDId3kqZZgQNl1QxVXcGfk/fatNyJfJHr64NkHdmqlH3m+9hlvxLSgFbZzSOl/uk
+# YK4J6WDk+Qv+zl2NteguI+zlL7U6dn5pn2cPcKGQY0qsESYtF24wT814CISwBQW3
+# DZccr9u3NZ64nJ3R3p69UWSAKtXThW/D3XsKs3O8YhOMFPF1W1lPHbrbIj9aPib4
+# +ggEviFjApSPg4Ir5O0MMcmZDpqJ6Mbgnoy3s/74YTDZgpjW4JUegU5oT9D6LKMO
+# aX5thBlydQ6cIyzpwn8KgqHF3xD9gqbU1P0OjDdkUO7ow4BqlUEWRjcuunZjgqTX
+# SaeazxHj0Tr/exKZ+xFi3aqpHtU0+ewHwWW0l/XofaFFYtYacd5jpAiUlPHYLmMq
+# uNkt64uu9kdQIbM1YScCE8njUxG1GEetTQ9Nq0YdizkIrv7Y+OhE9cy7XmzyzPlk
+# O4mWc76dlfZNKwjdJMmtDPjyAa1ptf340baMKNPxqZ4yBP2d+PuQ
 # SIG # End signature block

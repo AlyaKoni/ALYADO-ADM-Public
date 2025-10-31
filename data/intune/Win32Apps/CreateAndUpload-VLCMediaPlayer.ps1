@@ -32,7 +32,8 @@
 [CmdletBinding()]
 Param(
     [bool]$reuseExistingPackages = $false,
-    [bool]$askForSameVersionPackages = $true
+    [bool]$askForSameVersionPackages = $true,
+    [bool]$overwriteSameVersionPackages = $true
 )
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
@@ -41,7 +42,7 @@ if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\
 {
 	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "VLCMediaPlayer"
 }
-& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "VLCMediaPlayer" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "VLCMediaPlayer" -askForSameVersionPackages $askForSameVersionPackages -overwriteSameVersionPackages $overwriteSameVersionPackages
 & "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "VLCMediaPlayer"
 
 # SIG # Begin signature block

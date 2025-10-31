@@ -32,7 +32,7 @@
   <Property Name="AUTOACTIVATE" Value="FALSE" />
   <Property Name="FORCEAPPSHUTDOWN" Value="TRUE" />
   <Property Name="DeviceBasedLicensing" Value="0" />
-  <Updates Enabled="TRUE" />
+  <Updates Enabled="TRUE" Channel="Current" />
   <RemoveMSI />
   <AppSettings>
     <User Key="software\microsoft\office\16.0\excel\options" Name="developertools" Value="1" Type="REG_DWORD" App="excel16" Id="L_DisplayDeveloperTab" />

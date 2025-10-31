@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     13.04.2022 Konrad Brunner       Initial Version
+    15.10.2025 Konrad Brunner       Removed AzureAdPreview with Graph
 
 #>
 
@@ -46,13 +47,11 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-CustomDomain-$($AlyaTime
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
-    
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Domain.ReadWrite.All")
 
 # =============================================================
 # Azure stuff
@@ -64,75 +63,109 @@ Write-Host "=====================================================`n" -Foreground
 
 # Configuring custom domain
 Write-Host "Configuring custom domain" -ForegroundColor $CommandInfo
-$dom = Get-AzureADDomain -Name $AlyaDomainName -ErrorAction SilentlyContinue
+$dom = Get-MgBetaDomain -Filter "id eq '$AlyaDomainName'" -ErrorAction SilentlyContinue
 if (-Not $dom)
 {
     Write-Warning "Please register first your custom domain and rerun this script"
     pause
     exit
 }
-if ($dom.SupportedServices.Count -eq 0)
+$found = $true
+foreach($serv in @("Email","OfficeCommunicationsOnline","Intune"))
+{
+    if ($serv -notin $dom.SupportedServices)
+    {
+        $found = $false
+        $dom.SupportedServices += $serv
+    }
+}
+if (-Not $found)
 {
     Write-Warning "Supported services on domain not yet configured. Configuring them now"
-    $null = Set-AzureADDomain -Name $AlyaDomainName -SupportedServices @("Email","OfficeCommunicationsOnline","Intune") #OrgIdAuthentication, Yammer
+    $null = Update-MgBetaDomain -DomainId $AlyaDomainName -SupportedServices $dom.SupportedServices #OrgIdAuthentication, Yammer
 }
 
 # Your domain configuration
 Write-Host "Your domain configuration" -ForegroundColor $CommandInfo
-$domConfigs = Get-AzureADDomainServiceConfigurationRecord -Name $AlyaDomainName
-$domConfigs | Select-Object -Property * -ExcludeProperty DnsRecordId,SupportedService,IsOptional | Format-List
+$domConfigs = Get-MgBetaDomainServiceConfigurationRecord -DomainId $AlyaDomainName
+$domConfigs | Select-Object -Property * -ExcludeProperty Id,SupportedService,IsOptional | Format-List
 
 # Checking domain configuration
 Write-Host "Checking domain configuration" -ForegroundColor $CommandInfo
 foreach($domConfig in $domConfigs)
 {
+    #$domConfig = $domConfigs[0]
     Write-Host "$($domConfig.RecordType) $($domConfig.Label)"
     if ($domConfig.RecordType -eq "CName")
     {
         $rec = Resolve-DnsName $domConfig.Label CName -DnsOnly
-        if ($rec.NameHost -ne $domConfig.CanonicalName)
+        if ($domConfig.SupportedService -eq "SharepointDefaultDomain") { continue }
+        if ($rec.Type -eq "SOA")
         {
-            Write-Warning "Wrong value in DNS: $($rec.NameHost)"
+            Write-Warning "Record not found!"
+            continue
+        }
+        if ($rec.NameHost -ne $domConfig.AdditionalProperties.canonicalName)
+        {
+            Write-Warning "Wrong value in DNS: $($rec.NameHost) - Should be: $($domConfig.AdditionalProperties.canonicalName)"
         }
     }
     if ($domConfig.RecordType -eq "Mx")
     {
         $rec = Resolve-DnsName $domConfig.Label MX -DnsOnly
-        if ($rec.Exchange -ne $domConfig.MailExchange)
+        if ($rec.NameExchange -ne $domConfig.AdditionalProperties.mailExchange)
         {
-            Write-Warning "Wrong Exchange in DNS: $($rec.Exchange)"
+            Write-Warning "Wrong Exchange in DNS: $($rec.Exchange) - Should be: $($domConfig.AdditionalProperties.mailExchange)"
         }
-        if ($rec.Preference -ne $domConfig.Preference)
+        if ($rec.Preference -ne $domConfig.AdditionalProperties.preference)
         {
-            Write-Warning "Wrong Preference in DNS: $($rec.Preference)"
+            Write-Warning "Wrong Preference in DNS: $($rec.Preference) - Should be: $($domConfig.AdditionalProperties.preference)"
         }
     }
     if ($domConfig.RecordType -eq "Txt")
     {
-        $rec = Resolve-DnsName $domConfig.Label TXT -DnsOnly
-        if ($rec.Text -ne $domConfig.Text)
+        $recs = Resolve-DnsName $domConfig.Label TXT -DnsOnly
+        if ($recs.Count -gt 0)
         {
-            Write-Warning "Wrong Text in DNS: $($rec.Text)"
+            $found = $false
+            foreach($rec in $recs)
+            {
+                if ($rec.Text -eq $domConfig.AdditionalProperties.text)
+                {
+                    $found = $true
+                }
+            }
+            if (-Not $found)
+            {
+                Write-Warning "Text '$($domConfig.AdditionalProperties.text)' not found in DNS"
+            }
+        }
+        else
+        {
+            if ($rec.Text -ne $domConfig.AdditionalProperties.text)
+            {
+                Write-Warning "Wrong Text in DNS: $($rec.Text) - Should be: $($domConfig.AdditionalProperties.text)"
+            }
         }
     }
     if ($domConfig.RecordType -eq "Srv")
     {
         $rec = Resolve-DnsName $domConfig.Label SRV -DnsOnly
-        if ($rec.NameTarget -ne $domConfig.NameTarget)
+        if ($rec.NameTarget -ne $domConfig.AdditionalProperties.nameTarget)
         {
-            Write-Warning "Wrong NameTarget in DNS: $($rec.NameTarget)"
+            Write-Warning "Wrong NameTarget in DNS: $($rec.NameTarget) - Should be: $($domConfig.AdditionalProperties.nameTarget)"
         }
-        if ($rec.Priority -ne $domConfig.Priority)
+        if ($rec.Priority -ne $domConfig.AdditionalProperties.priority)
         {
-            Write-Warning "Wrong Priority in DNS: $($rec.Priority)"
+            Write-Warning "Wrong Priority in DNS: $($rec.Priority) - Should be: $($domConfig.AdditionalProperties.priority)"
         }
-        if ($rec.Weight -ne $domConfig.Weight)
+        if ($rec.Weight -ne $domConfig.AdditionalProperties.weight)
         {
-            Write-Warning "Wrong Weight in DNS: $($rec.Weight)"
+            Write-Warning "Wrong Weight in DNS: $($rec.Weight) - Should be: $($domConfig.AdditionalProperties.weight)"
         }
-        if ($rec.Port -ne $domConfig.Port)
+        if ($rec.Port -ne $domConfig.AdditionalProperties.port)
         {
-            Write-Warning "Wrong Port in DNS: $($rec.Port)"
+            Write-Warning "Wrong Port in DNS: $($rec.Port) - Should be: $($domConfig.AdditionalProperties.port)"
         }
     }
 }
@@ -143,8 +176,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB/W69dRLvCuv2E
-# ZjVmF+Ajpku/QTkcujLjihg4pLjMsqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBj0hF5xnKTk/Ut
+# Fd3/t+Zdh4d7m1/nKiZzNGhk9VZKjaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -228,23 +261,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPzk6MNu1AFe40Qj
-# cjxK2FwBLsV3x75cMCQiJwmygksnMA0GCSqGSIb3DQEBAQUABIICAAuXxhQW5/vG
-# b70YCz6IASiYIBHFRCGHQNIIKmf4V11xRpAFQlHhO+WqFJ38cU8re/OLqRaUMz76
-# AILIhLdArgDUN/iynj1jukwPURlqi8TTAVKbGFAg6JV0YC0AuknzHv5r2JXYLLiV
-# 3Ne1IYWrb12IDrQCo9bRedNh7n3pwgs4NHDwczBg0d0xJZQN+3/s/yPd5PQUXpOy
-# yZc9jHWXugx+v+VBDfWEkMUNzPYu/bOhQNiFiurP+jGz37WG60sSq2NQx3q8IWiR
-# /89HJQv/wmr52+zVZhmZBbHimVGj2+g3NE6pbitLQH/VMXNtPEyYyV0TavoaWjxB
-# UCnrqlynBB0fKCu+y5sZjsoYVayKLtQ17hesrBPXcpepFXzrVC2oz1K6R+kqJ28g
-# fPVOtMDfshD8SxPjJ771BLRVke9LRh8MQCV4P6VUzBRNo9e/m/4pIBapVMHg/TJ6
-# gbKQh7emVP2snk09N1cwLQ9sglD7H62JzbCeG2fuq7wvmN11kUUdEuFqdjf0+HWD
-# lca23nQY4z12qZpRVFOm6AsHfs482hFvx4gLOkPh0SUKFtJuaMIAvgN3EDyDySdF
-# 8Vmgnsjz0z3z7Bk0Ts3zmB9ctRoKx0/j8zjPZbWY9GbNsy3D79NTxNy6xpUZeSzG
-# fCuHePe1UBJHJqQHdAMLUbWaxZkEdZPPoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDf7A1aXWiyhOj4J
+# h1sbLFmN06lzYIgnYbcRCgRpnIvaMA0GCSqGSIb3DQEBAQUABIICAEvQHUGUTkJA
+# NXHkWOqB+HL4784emIe+L464DvUaW+ehSe9IqQM81WerKOJp5KdfnR6P5jQjDK9Q
+# YKs2WOhk4FXY9SV19I4G7br7G5q8xtUXlkp983Pn1l63DvcHcS8q8NKQYRemECr7
+# 3H5F+SU8dPG9cAQ1HKBAYSbvzL9WODYWnJ59M9o+GTAYROyZsL9sCnk99M7iROfc
+# 2vhf1Q2362gS2dOcH0MhN4GzLfbaCaBv/DXJ00NkiBd8dISBILYLEYsjvBTBGsO3
+# zwecgEWCEDP2bFudfdXrG2TMlWTmsATiyuwr4bnGlJDxCV2qYe8E3uz3a+jFnjiR
+# xGb8CIJzUbUPUXA1MNFeit5qrgwC5E9LrPoRB9Eu8dSN3/4eunbSHVjVsdB+DXxs
+# Druh3PwUaH4Kd+jLJFmk6HYroapJatpEATfhihLXdZ+mG8IxirmM31MpEsBRq8Q0
+# IlLpkdm+I6rfxF6DLg3c9Ja1mfJsxmB4IMUVfarkAZ9qF+FFcyCa8H2HqUlncE7t
+# mWU3EG+twzRrejQUxWOZJRVQn94HUdiU+yj+f6Xi4Gbw+1WX2Jkx82WjHMpeOl0w
+# wlUUbNdpJAlz4mxEeiwNIxH1n1hCsHaKufo1m3ClBEW69gByFg12j0wFSqa5blHA
+# VUi2E5lTNut6uItb3B8NsjfG3zu/fYEwoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDLRGAMo2PMxy8gJphzKYFlEntUHHfsJ/A164bifipzxgIURRdn0TMm3GXf
-# Wf/RfZOYLJPy4OQYDzIwMjUwODI1MTU1MjQyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDrYC2ZsupA4AtgAIw27HbGy+FwLrAeMEoVmWlLCzhRYAIUKuwOBUkx+bKV
+# EFKWkmSqDBfvGX4YDzIwMjUxMDE1MTAwMjA3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -349,17 +382,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IEH9+9EFYgoz2Prmir1bHB+mf3XS90WGFvRZLgtgQheoMIGwBgsqhkiG9w0BCRAC
+# IJzZTjf3LGjSqNZtoybRVrzL8A27arffYYsCLwKeY50QMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAeMlpcp2XPW4n
-# DVR+ma+HIW9CWZPCq1BJTCo4cg8oeE6Mxklp2vbJ15OrEskki7PONnzggNozSAGl
-# Y6C0GdMW1utHK5la5Pd/+z1fmqMKMO4evVDNqFzqYTjze1nX+DJtVqV+sWSnP3Fy
-# 9AKjHLKUenO0Z+CmeyHJSto6RLH29apTC3H/uXMHLbWXfVS+ZLOWX8JQF2/lq7Ww
-# VkInhVtd9M6HLLCgGUyP0yTJ9/dFZrmD5mZ7H7i2tmWAfaYNJ5dAqvk01tSlwcf+
-# hq8iGRFzWMDk/iMSlRXnWlPz+pWcYtzGKkTAomCjOL42ouQxUooKBhJXg2sHIHe3
-# Mjo0+N+sRtX57SOpgi/op0GefKh7blqfa8eNUhOdF9NAoqbT1OAEubLxxoc4uAs/
-# /CsTWUIBTfxjj0A+i+soTxQYH0Z96A4dYdsBhWHSNQyV4Epklw/fCD5Q2WYJyo3n
-# YAoBAIYkSxRsiZIt0jixUgVyAp6Wwe1ggmkw1qXkwQEqsRTQT74C
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAiOoTNduayBi7
+# dmEUx24m7pTXhOA8+fZLmUGnrId/XOlNnX9DE9q1HPFRAfaYDHunQPN4uGVl2eZY
+# tZCeNL1VLrUBOtPfzUBLoMsrI1jQNK9B9DUouJG7ZIhhIkEyKOec+Hfws7kQLA6k
+# 9nQSZf6Eq+SrvaXqw7GpFf922opnwpqWldR99Rywwlkdks4a2V3JrON3v+lvhVag
+# HSg9SQuqQZSex5n/qN3xwCt7yQRETnrWNYZ11r6sBskuidAs17aMdJtr9vZd1SjR
+# oR/Al1bwckWfrD4Y85k8AYxMPVn5WKp1FyIMvpBlNhk3GfDG2r/rE31v9WxGGpxh
+# DO25GG3lC1I5gjSfQj9cm8vNbtvSYZYfrwhKJkmv7yTrrnIqCF7dD+PGp7XHopMR
+# VkFWmYYBDVDuFUCqb5gnj4R9dTC0MwgnhaDtnuNj5/06ZUx1FW4oY9HvGomutYTA
+# 25+dN9Isfaem/X/ekqurEljM1+9BMSI9MX0UHJv9ldi1ztRH8Dn0
 # SIG # End signature block

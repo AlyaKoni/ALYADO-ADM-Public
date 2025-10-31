@@ -76,7 +76,7 @@ try
     if (-Not $mailbox)
     {
         Write-Warning "Creating the shared mailbox Intune"
-        New-Mailbox -Shared -Name "Intune" -DisplayName "Intune" -Alias "Intune" -PrimarySmtpAddress "Intune@$AlyaDomainName"
+        New-Mailbox -Shared -Name "Intune" -DisplayName "Intune" -Alias "Intune" -PrimarySmtpAddress "Intune@$AlyaTenantName"
     }
 
     Write-Host "  Configuring mailbox" -ForegroundColor $CommandInfo

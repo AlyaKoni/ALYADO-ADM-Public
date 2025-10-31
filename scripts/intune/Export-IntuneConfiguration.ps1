@@ -71,7 +71,8 @@ LoginTo-MgGraph -Scopes @(
     "DeviceManagementServiceConfig.Read.All",
     "DeviceManagementConfiguration.Read.All",
     "DeviceManagementApps.Read.All",
-    "DeviceManagementRBAC.Read.All"
+    "DeviceManagementRBAC.Read.All",
+    "DeviceManagementScripts.ReadWrite.All"
 )
 
 # =============================================================
@@ -1500,7 +1501,7 @@ if ($doUserDataExport)
                 $deviceManagementScriptsForUser | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path ("$DataRoot\IntuneDataExport\$($upn)\"+(MakeFsCompatiblePath("deviceManagementScripts.json"))) -Force
             }
 	    } catch { 
-		    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 2) -ForegroundColor $CommandError } catch {}
+		    try { Write-Host ($_.Exception | ConvertTo-Json -Depth 1) -ForegroundColor $CommandError } catch {}
 		    try { Write-Host $_.Exception -ForegroundColor $CommandError } catch {}
 	    }
     }

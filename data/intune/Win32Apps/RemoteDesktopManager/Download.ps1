@@ -32,13 +32,20 @@
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
 try {
-    $pageUrl = "https://devolutions.net/remote-desktop-manager/home/downloadfree/"
+    $pageUrl = "https://devolutions.net/remote-desktop-manager/downloadfree/"
     $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*msi[^`"]*free[^`"]*windows[^`"]*"
     $pageUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     if ([string]::IsNullOrEmpty($pageUrl))
     {
-        throw "Download link not found"
+        $pageUrl = "https://devolutions.net/remote-desktop-manager/home/downloadfree/"
+        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+        [regex]$regex = "[^`"]*msi[^`"]*free[^`"]*windows[^`"]*"
+        $pageUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+        if ([string]::IsNullOrEmpty($pageUrl))
+        {
+            throw "Download link not found"
+        }
     }
     $pageUrl = "https://devolutions.net" + $pageUrl
     $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get

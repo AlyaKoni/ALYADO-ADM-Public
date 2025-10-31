@@ -32,7 +32,8 @@
 [CmdletBinding()]
 Param(
     [bool]$reuseExistingPackages = $false,
-    [bool]$askForSameVersionPackages = $true
+    [bool]$askForSameVersionPackages = $true,
+    [bool]$overwriteSameVersionPackages = $true
 )
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
@@ -41,7 +42,7 @@ if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\
 {
 	& "$($AlyaScripts)\intune\Create-IntuneWin32Packages.ps1" -CreateOnlyAppWithName "O365AppsProjects"
 }
-& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "O365AppsProjects" -askForSameVersionPackages $askForSameVersionPackages
+& "$($AlyaScripts)\intune\Upload-IntuneWin32Packages.ps1" -UploadOnlyAppWithName "O365AppsProjects" -askForSameVersionPackages $askForSameVersionPackages -overwriteSameVersionPackages $overwriteSameVersionPackages
 & "$($AlyaScripts)\intune\Configure-IntuneWin32Packages.ps1" -ConfigureOnlyAppWithName "O365AppsProjects"
 
 # SIG # Begin signature block

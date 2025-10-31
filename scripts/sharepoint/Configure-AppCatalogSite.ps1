@@ -34,13 +34,16 @@
     07.07.2022 Konrad Brunner       New PnP Login and some fixes
     20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
     05.08.2023 Konrad Brunner       Added role admins, changed internal access to visitors
+    26.10.2025 Konrad Brunner       Multi-Geo support
 
 #>
 
 [CmdletBinding()]
 Param(
     [string]$siteLocale = "de-CH",
-    [string]$hubSitesConfigurationFile = $null
+    [string]$hubSitesConfigurationFile = $null,
+    [Parameter(Mandatory=$false)]
+    [string]$multiGeoAdminUrl = $null
 )
 
 #Reading configuration
@@ -53,8 +56,14 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-AppCatalogSite
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "PnP.PowerShell"
 
+# Members
+if ([string]::IsNullOrEmpty($multiGeoAdminUrl))
+{
+    $multiGeoAdminUrl = $AlyaSharePointAdminUrl
+}
+
 # Logging in
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+$adminCon = LoginTo-PnP -Url $multiGeoAdminUrl
 
 # Constants
 if ($siteLocale -eq "de-CH")

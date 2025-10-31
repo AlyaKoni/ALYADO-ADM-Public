@@ -31,7 +31,7 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://git-scm.com/downloads/win"
+$pageUrl = "http://git-scm.com/install/windows"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
 [regex]$regex = "[^`"]*windows[^`"]*Git[^`"]*64-bit\.exe"
 $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value

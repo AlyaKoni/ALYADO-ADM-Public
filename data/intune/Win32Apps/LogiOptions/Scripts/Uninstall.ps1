@@ -30,7 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    07.04.2020 Konrad Brunner       Initial Version
+    29.09.2020 Konrad Brunner       Initial Version
 
 #>
 
@@ -38,160 +38,125 @@
 Param(
 )
 
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+$exitCode = 0
+$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+$AlyaScriptName = Split-Path $PSCommandPath -Leaf
+$AlyaScriptDir = Split-Path $PSCommandPath -Parent
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Configure-AIPService-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "AIPService"
-    
-# Logins
-LoginTo-AIP
-
-# =============================================================
-# AADRM stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Configure-AIPService | AIP" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-Write-Host "Checking AipService" -ForegroundColor $CommandInfo
-$enabled = Get-AipService
-if ($enabled -ne "Enabled")
+if (![System.Environment]::Is64BitProcess)
 {
-    Write-Host "Enabling AipService"
-    $null = Enable-AIPService
-}
-else
-{
-    Write-Host "AipService was already enabled"
-}
-
-Write-Host "Checking AipServiceIPCv3" -ForegroundColor $CommandInfo
-$enabled = Get-AipServiceIPCv3
-if ($enabled -ne "Enabled")
-{
-    Write-Host "Enabling AipServiceIPCv3"
-    $null = Enable-AIPServiceIPCv3
-}
-else
-{
-    Write-Host "AipServiceIPCv3 was already enabled"
-}
-
-Write-Host "Checking AipServiceDevicePlatform" -ForegroundColor $CommandInfo
-$enabled = Get-AipServiceDevicePlatform -All
-$enabled = $enabled | Where-Object { $_.Value -eq $false }
-if ($enabled)
-{
-    Write-Host "Enabling AipServiceDevicePlatform All"
-    $null = Enable-AIPServiceDevicePlatform -All
-}
-else
-{
-    Write-Host "AipServiceDevicePlatform All was already enabled"
-}
-
-Write-Host "Checking AipServiceDocumentTrackingFeature" -ForegroundColor $CommandInfo
-$enabled = Get-AipServiceDocumentTrackingFeature
-if ($enabled -ne "Enabled")
-{
-    Write-Host "Enabling AipServiceDocumentTrackingFeature"
-    $null = Enable-AIPServiceDocumentTrackingFeature -Force
-}
-else
-{
-    Write-Host "AipServiceDocumentTrackingFeature was already enabled"
-}
-
-$aipConfiguration = Get-AipServiceConfiguration
-$aipConfiguration | Format-List
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "AIP | Configure-AIPService | Exchange Online" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-try {
-    LoginTo-EXO
-}
-catch {
-    Write-Error $_.Exception -ErrorAction Continue
-    LogoutFrom-EXOandIPPS
-    LoginTo-EXO
-}
-$actConfiguration = Get-IRMConfiguration
-
-if (-Not $actConfiguration.SimplifiedClientAccessEnabled)
-{
-    Write-Warning "SimplifiedClientAccessEnabled was disbled. Enabling it now."
-    Set-IRMConfiguration -SimplifiedClientAccessEnabled $true
-}
-if (-Not $actConfiguration.LicensingLocation)
-{
-    Write-Warning "LicensingLocation was not configured. Configuring it now."
-    Set-IRMConfiguration -LicensingLocation $aipConfiguration.LicensingIntranetDistributionPointUrl
-}
-else
-{
-    if ($actConfiguration.LicensingLocation -ne $aipConfiguration.LicensingIntranetDistributionPointUrl)
+    Write-Host "Launching 64bit PowerShell"
+    $arguments = ""
+    foreach($key in $MyInvocation.BoundParameters.keys)
     {
-        throw "LicensingLocation wrong configured. Please check."
+        switch($MyInvocation.BoundParameters[$key].GetType().Name)
+        {
+            "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $arguments += "-$key " } }
+            "String"          { $arguments += "-$key `"$($MyInvocation.BoundParameters[$key])`" " }
+            "Int32"           { $arguments += "-$key $($MyInvocation.BoundParameters[$key]) " }
+            "Boolean"         { $arguments += "-$key `$$($MyInvocation.BoundParameters[$key]) " }
+        }
     }
+    $sysNativePowerShell = "$($PSHOME.ToLower().Replace("syswow64", "sysnative"))\powershell.exe"
+    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+    $pinfo.FileName = $sysNativePowerShell
+    $pinfo.Arguments = "-ex bypass -file `"$PSCommandPath`" $arguments"
+    $pinfo.RedirectStandardError = $true
+    $pinfo.RedirectStandardOutput = $true
+    $pinfo.CreateNoWindow = $true
+    $pinfo.UseShellExecute = $false
+    $p = New-Object System.Diagnostics.Process
+    $p.StartInfo = $pinfo
+    $p.Start() | Out-Null
+    $stdout = $p.StandardOutput.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout }
+    $stderr = $p.StandardError.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stderr)) { Write-Error $stderr }
+    $exitCode = $p.ExitCode
 }
-if (-Not $actConfiguration.InternalLicensingEnabled)
+else
 {
-    Write-Warning "InternalLicensingEnabled was disbled. Enabling it now."
-    if (-Not $actConfiguration.RMSOnlineKeySharingLocation)
+    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\LogiOptions-$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+
+    try
     {
-        Set-IRMConfiguration -RMSOnlineKeySharingLocation "https://sp-rms.eu.aadrm.com/TenantManagement/ServicePartner.svc"
+        $ErrorActionPreference = "Stop"
+
+        $regPlats = @("","\WOW6432Node")
+        foreach($regPlat in $regPlats)
+        {
+            foreach($reg in (Get-ChildItem -Path "HKLM:\SOFTWARE$regPlat\Microsoft\Windows\CurrentVersion\Uninstall"))
+            {
+                $displayName = $null
+                $publisher = $null
+                $uninstallString = $null
+                try {
+                    $displayName = Get-ItemPropertyValue -Path $reg.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
+                } catch {}
+                try {
+                    $publisher = Get-ItemPropertyValue -Path $reg.PSPath -Name "Publisher" -ErrorAction SilentlyContinue
+                } catch {}
+                if ($displayName -like "Logi Options*" -and $publisher -eq "Logitech")
+                {
+                    Write-Host "Uninstalling $displayName"
+                    Write-Host "with infos from $($reg.Name)"
+					try {
+						$uninstallString = Get-ItemPropertyValue -Path $reg.PSPath -Name "QuietUninstallString" -ErrorAction SilentlyContinue
+                    } catch {}
+                    if (-Not $uninstallString)
+                    {
+                        $uninstallString = (Get-ItemPropertyValue -Path $reg.PSPath -Name "UninstallString") + " /S"
+                    }
+                    if (-Not $uninstallString.Contains("msiexec"))
+                    {
+                        $uninstallStringNew = ""
+                        $uninstallParts = $uninstallString.Split()
+                        foreach($uninstallPart in $uninstallParts)
+                        {
+                            if (($uninstallStringNew -eq "") -and (-Not $uninstallPart.StartsWith("`"")))
+                            {
+                                $uninstallStringNew += "`""
+                            }
+                            if ($uninstallPart.Contains(".exe") -and -not $uninstallPart.Contains("`""))
+                            {
+                                $uninstallPart = $uninstallPart + "`""
+                            }
+                            $uninstallStringNew += $uninstallPart + " "
+                        }
+                        $uninstallString = $uninstallStringNew
+                    }
+                    $uninstallString += " /L* `"C:\ProgramData\AlyaConsulting\Logs\LogiOptions-Uninstall-$AlyaTimeString.log`""
+                    Write-Host "command: $uninstallString"
+                    Write-Host "EXE Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+                    cmd /c "$uninstallString"
+					Write-Host "CMD returned: $LASTEXITCODE at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+                    do
+                    {
+                        Start-Sleep -Seconds 5
+                        $process = Get-Process -Name "uninstall.exe" -ErrorAction SilentlyContinue
+                    } while ($process)
+                    Write-Host "EXE End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+                }
+            }
+        }
     }
-    #Import-RMSTrustedPublishingDomain -RMSOnline -Name "RMS Online"
-    Set-IRMConfiguration -InternalLicensingEnabled $true
-}
-if (-Not $actConfiguration.ExternalLicensingEnabled)
-{
-    Write-Warning "ExternalLicensingEnabled was disbled. Enabling it now."
-    Set-IRMConfiguration -ExternalLicensingEnabled $true
-}
-if (-Not $actConfiguration.AzureRMSLicensingEnabled)
-{
-    Write-Warning "AzureRMSLicensingEnabled was disbled. Enabling it now."
-    Set-IRMConfiguration -AzureRMSLicensingEnabled $true
-}
-if (-Not $actConfiguration.AutomaticServiceUpdateEnabled)
-{
-    Write-Warning "AutomaticServiceUpdateEnabled was disbled. Enabling it now."
-    Set-IRMConfiguration -AutomaticServiceUpdateEnabled $true
-}
-if (-Not $actConfiguration.EnablePortalTrackingLogs)
-{
-    try {
-        #Only E5
-        Set-IRMConfiguration -EnablePortalTrackingLogs $true
-        Write-Warning "EnablePortalTrackingLogs was disbled. Enabling it now."
-    } catch {}
-}
-if (-Not $actConfiguration.AutomaticServiceUpdateEnabled)
-{
-    Write-Warning "EnablePortalTrackingLogs was disbled. Enabling it now."
-    Set-IRMConfiguration -AutomaticServiceUpdateEnabled $true
-}
-#Test-IRMConfiguration -Sender first.last@domain.ch
+    catch
+    {   
+        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+        Write-Error ($_.Exception) -ErrorAction Continue
+        $exitCode = -1
+    }
 
-Get-IRMConfiguration | Format-List
+    Stop-Transcript
+}
 
-#Stopping Transscript
-Stop-Transcript
+exit $exitCode
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBnzz5nYMrH185j
-# fSwNiSiBDHNOBFLrmgI4ELSOXEQehaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCk7CqgEHnykWcl
+# sQl3/8fyT9Q4qq8WHCasBetAE4fIYaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -275,23 +240,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIH554ozls+wXki2D
-# BPwGSSjd2DCJhKvG8L6BDC86LG4pMA0GCSqGSIb3DQEBAQUABIICAGvK2rnlXS6R
-# KN7wDvheIkMKniqE+l3YVcFqLT5rVFInBMP2NcY6fbQzuR09dTd+wMquKFzACMUX
-# EH1tWx7YPohvv9Y1knCEjUd95yx9tF/ZZm/Aj2H7Xd9bMa2Qv6ZlXikaeuUvqiiy
-# 3m6zJNfiANL8g73NCvRviSyb1Unhqj+FNCgxwc87edT7opoTRvhB7zvKzbHXfvNy
-# c4yb42EJrDLOgUUvCfbx2EgM1zxxmHaHissFLyB8Y6WHpmEcZR791v35ISjWTiok
-# z04knbP2oBii2iSt94NCry//N/tPJnrBpJuKQIKLuAGI7ITfffmO4GibL/mp9LQ4
-# Z3eEdBu48+xlYUW/E3BNXH9jEQQbsXeheLyHSxcae6wMgpg7GRM2VJ/vKLsffdLk
-# JC3rAOrJpti7s6+GkelkfFxOKYEPCV7P3eylATBmFW4oac128A4MDVSimokziobG
-# +A7vtNH+uXO0seOT+bDZF3vCHYlbi48bSZQo6xgytuifK2lPzVt6miEXNM9QLiCp
-# XUz8FlsTIdZHXuXYqcLrJ384137cuEEIUeYPPesM84vQIzn5xPvyGYbPPJsH+wvZ
-# RfOiJIVm3rVJe8GQEfGTn5Oe/vZB+FBBX2VQ+JshIfyb2/gAvmpzrQarcthDQLmz
-# jUm9esrUWvdQZBzId1EnkKVUNpAY1yYyoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJv4/pnIPONLNobz
+# DqVdaTdIM2rb80W6Hczp6mrKWDNCMA0GCSqGSIb3DQEBAQUABIICAHzz/hf1Hl+w
+# Uz/rcDpqUhH6AldGnjC3qwbbDJaxYhMtC8zb6F0H87GIhU7QFoGPDfeVoKf1+79X
+# lQxMoPUNvDa9RxVzL0g1qBu7XAiYjwrd7v0NqnKLxlfUTvNsj4rKKjssJHmZwXYY
+# YJyktyueaKd5nGalWJmaWAnEv3iccm6bwrUB8Rx/zw2iyo/MWB1lrFqo8yLyXftR
+# 4jjHwsNE8mm2jdkNLDR1YSPGv+c9emTkNLXBOfzfra5yP93QAvRS/2nCWLo4DZSu
+# zDNa5NsOAocK9mwoYUEI02+d+Y7ZPCdDC+l//SMZZVVXyTeWIEQRpYfI7GH2bh9X
+# ECNO4xybk1t9N/My6d4HBCtic7QL8PiY3a3r7KljuAB3+fm1Ji/aAK5o80cE5G1I
+# H1qMT/6jo+sStXNPpFfL6PH/A9fvvLiER195FD3Q0vI2/ivMTlRLFSdwtZuDomHJ
+# 08bYOsKh15wskSGVAkInkEJUKNRKSyMnS0QijiyeZVDepVUpKjC62dGFK+c6bQu5
+# 9k3IqGsjS//OS6fRYeFU3H5+HXt50jSRXqwuqaWWicywtM5sENkZ5Bdre4z0TJq9
+# XSZFgdcWxV1ApL38e7cWyxZt0yGaUM7uc1DR/zTnwEEyyl7trzByFiHYxHavql5u
+# X/kYNK2S1RbAL6xJcLQbnU35l84BhFAwoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAswP/gkF9pDxecmLOvBGFbSzGzwWeWlU7DzxVx5oP+kwIUB1X+372H3Ddv
-# wHIbfbR6YN4Hdw8YDzIwMjUwODI1MTUyNjEyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBheCZ7c8LtBqpIrBEEQHYOv8d1MsXaqGpF+RRUrND8aAIUJj+BHOHqbn3o
+# 2KgFLwFI5CE/DwcYDzIwMjUxMDEzMDkwOTQ0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -396,17 +361,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ID6BWKXNSyevZzL2rJoNdotzn0YwKAAv9ysXTt9e0cLCMIGwBgsqhkiG9w0BCRAC
+# IBJg57qk+yUv77QxWIgDGfVxvSS06r/kNzFKXnVJ4AopMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAFbENPVqUnDQ4
-# FKr1BKuCY34T6Hx9Fk0ejY6c8T7jJ9ZPLSjGM3BtKbSMY2eOptH2lMXlmy8lLMCN
-# UXJbHFLl0JJofYu7GCSpuQz7RMqwZxCO+f/TGP6SWtiQRF9I6h4ujozSBs+ZSREe
-# HAMWSUPwUsytEURAUBTB8y4KizqnzIAhEmfxrf4AIzrMRvoqNZ8DJMHpds9r9LI+
-# 2/LnMEUrmP5j0efIFSGwHADpPF7NsEXPupx5AYCnkgUgWmeJbn3fe4jBVJ/dbl0w
-# gM9nQkjuwBkYhIzy4enZ1Hb+CFOoAXZK1gT4390uDBs7AsJ9vhiQ7AV/1UeM22A1
-# qQPQ1n6rLUl8aedOq2P54XQvf/9uUI/LMP5xn8Vo45jVS+ENByYNAQ+TTlEAcZ9t
-# A5a+mCWS2GJzuxbifrgTDYjhGZdt5a4cLrufck8earGwfVR2m/OVHr4+q4VuzPBj
-# AUMmO/zkdXJMQLWUY3LPl0AlFrfa6R3q4x3NXFh3yvqBq/ROfuIQ
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAcxHw1QVJuWfY
+# Diyuo9u6ngJ2japriWo/eecDJi3xkfMcnWMKfcaIFAnEz6oKiV4Zgw8F588Uz5cT
+# C5ZoChoUG4oHQY99UfJVY3+cXVL1+nPuBJFSUbK0GnrqBKaVBVAAyPpmXaTpAx1Z
+# dtnL8cW0mAFQlt4P1Fw3NlpeUyYQXxSyCqQRFw6KRsHorjpo1yl++HbGEpuj+Got
+# WfG1zPbFngJ1S0ZNpNWGRrT9Lvzu8MFrGCFD81J6gvjEAogrzjJGvmqlQ6xZrtaj
+# w730Qgd28CdHgZTfVTzSmdY81+UwXcBJtAXI5f8jlpAgZ5AZZt62mQcVgAF9sD3a
+# KWbOLqzY1EDo2EWpmSG+rVWVAtEK6KfLAbTWHgGdJRnAbmJESy0daj186WPpmw4/
+# GOs/sql3OH0Cyb2Q/1KUHDz1iJYVRUwuIkRRi0QLB8ijgpL8RO85ohIin5HLEgJ1
+# yB8iv6Ymsyz0me2BNyh4LG/GzGU7i1VGrmJUY3ebDqgJSAr/IniP
 # SIG # End signature block
