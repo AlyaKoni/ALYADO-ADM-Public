@@ -97,6 +97,7 @@ $AlyaServerOuProd = $null #Example:"OU=PROD,OU=Avd,OU=SERVERS,OU=CLOUD,DC=ALYACO
 $AlyaServerOuTest = $null #Example:"OU=TEST,OU=Avd,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
 $AlyaTokenLifetimeMFA = 30
 $AlyaTokenLifetimeAUTH = 30
+$AlyaMacPackageInstallCertName = "AlyaConsulting"
 
 <# LOGOS AND BACKGROUNDS #>
 $AlyaLogoUrlFavicon = "PleaseSpecify" #Example:"https://alyainfpstrg001.blob.core.windows.net/logos/Favicon.png" # exact 32x32 and max 5KB
