@@ -45,7 +45,7 @@ Param(
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\20_20_ExtractAzure-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+Start-Transcript -Path "$($AlyaLogs)\20_ExtractAzure-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
 Write-Host "Extracting Azure templates" -ForegroundColor $CommandInfo

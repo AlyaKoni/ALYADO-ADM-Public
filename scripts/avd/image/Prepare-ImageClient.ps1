@@ -169,6 +169,12 @@ Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -li
 Write-Host '      Get-AppxProvisionedPackage -Online | where {$_.PackageName -like "Microsoft.PPIProjection_*" } | Remove-AppxProvisionedPackage -Online -ErrorAction Continue'
 Write-Host '      }'
 Write-Host '      & "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown'
+Write-Host '      while($true) {'
+Write-Host '        $imageState = (Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\State).ImageState'
+Write-Host '        Write-Output $imageState'
+Write-Host '        if ($imageState -eq "IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE") { break }'
+Write-Host '        Start-Sleep -s 5'
+Write-Host '      }'
 Write-Host '  - Wait until the vm has stopped state'
 Write-Host '  - In case of troubles, follow this guide: https://learn.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image'
 <#

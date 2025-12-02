@@ -247,7 +247,7 @@ if (-Not (Test-Path $vsCodeProfileDir))
 $AlyaOfficeToolsOnTaskbar = @("OUTLOOK.EXE", "WINWORD.EXE", "EXCEL.EXE", "POWERPNT.EXE") #WINPROJ.EXE, VISIO.EXE, ONENOTE.EXE, MSPUB.EXE, MSACCESS.EXE
 
 <# URLS #>
-$AlyaGitDownload = "https://git-scm.com/downloads/win"
+$AlyaGitDownload = "https://git-scm.com/install/windows"
 $AlyaDeployToolDownload = "https://www.microsoft.com/en-us/download/details.aspx?id=49117"
 $AlyaAipClientDownload = "https://www.microsoft.com/en-us/download/details.aspx?id=53018"
 $AlyaIntuneWinAppUtilDownload = "https://github.com/microsoft/Microsoft-Win32-Content-Prep-Tool.git"
@@ -1679,11 +1679,14 @@ function LogoutFrom-Az(
     $AlyaContext = Get-CustomersContext -TenantId $TenantId -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
     if ($AlyaContext)
     {
-        Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+        Disconnect-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
         Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
         Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
         $AlyaContext = $null
     }
+    Disconnect-AzAccount -Scope CurrentUser -ErrorAction SilentlyContinue | Out-Null
+    Disconnect-AzAccount -Scope Process -ErrorAction SilentlyContinue | Out-Null
+    Clear-AzContext -Scope Process -ErrorAction SilentlyContinue | Out-Null
 }
 function LoginTo-Az(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
@@ -1720,7 +1723,7 @@ function LoginTo-Az(
             }
             if ($AlyaContext.Tenant.Id -ne $TenantId)
             {
-                Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+                Disconnect-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
                 Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
                 Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
                 $AlyaContext = $null
@@ -1740,7 +1743,7 @@ function LoginTo-Az(
                 if (-Not $user)
                 {
                     Write-Host "  existing context not working"
-                    Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+                    Disconnect-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
                     Remove-AzAccount -ContextName $AlyaContext.Name -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
                     Remove-AzContext -InputObject $AlyaContext -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
                     $AlyaContext = $null
@@ -2012,6 +2015,21 @@ function LoginTo-DataGateway()
 {
     Write-Host "Login to DataGateway" -ForegroundColor $CommandInfo
 
+    if ([string]::IsNullOrEmpty($AlyaDataGatewayAppId) -or $AlyaDataGatewayAppId -eq "PleaseSpecify")
+    {
+        Write-Warning "We need to register the Data Gateway app"
+        & "$AlyaScripts\powerplattform\Register-DataGatewayApp.ps1"
+        throw "Please restart this script"
+    }
+    if ([string]::IsNullOrEmpty($AlyaDataGatewayAppKeyVault) -or $AlyaDataGatewayAppKeyVault -eq "PleaseSpecify")
+    {
+        throw "AlyaDataGatewayAppKeyVault has to be configured in ConfigureEnv.ps1"
+    }
+    if (([string]::IsNullOrEmpty($AlyaDataGatewayAppKeySecretName) -or $AlyaDataGatewayAppKeySecretName -eq "PleaseSpecify") -and ([string]::IsNullOrEmpty($AlyaDataGatewayAppCertificateSecretName) -or $AlyaDataGatewayAppCertificateSecretName -eq "PleaseSpecify"))
+    {
+        throw "AlyaDataGatewayAppKeySecretName or AlyaDataGatewayAppCertificateSecretName has to be configured in ConfigureEnv.ps1"
+    }
+
     $isLoggedIn = $false
     try
     {
@@ -2021,8 +2039,19 @@ function LoginTo-DataGateway()
     catch { }
     if (-Not $isLoggedIn)
     {
-        $creds = Get-Credential -Message "Please provide DataGatewayApp credentials. User is the AppId. Password is the the client secret."
-        return Connect-DataGatewayServiceAccount -ApplicationId $creds.UserName -ClientSecret $creds.Password -Tenant $AlyaTenantId
+        LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+        if ([string]::IsNullOrEmpty($AlyaDataGatewayAppKeySecretName) -or $AlyaDataGatewayAppKeySecretName -eq "PleaseSpecify")
+        {
+            throw "Not yet implemented"
+        }
+        else
+        {
+            $AzureKeyVaultSecret = Get-AzKeyVaultSecret -VaultName $AlyaDataGatewayAppKeyVault -Name $AlyaDataGatewayAppKeySecretName
+            if (-Not $AzureKeyVaultSecret) {
+                throw "Not able to find keyvault secret"
+            }
+            return Connect-DataGatewayServiceAccount -ApplicationId $AlyaDataGatewayAppId -ClientSecret $AzureKeyVaultSecret.SecretValue -Tenant $AlyaTenantId
+        }
     }
     return $null
 }
@@ -2380,6 +2409,8 @@ function LoginTo-PnP(
     [object] [Parameter(Mandatory = $false)] $AdminConnection = $null,
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
     [string] [Parameter(Mandatory = $false)] $Thumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $CertFile = $null,
+    [securestring] [Parameter(Mandatory = $false)] $CertPassword = $null,
     [bool] [Parameter(Mandatory = $false)] $Relogin = $false
     )
 {
@@ -2391,6 +2422,42 @@ function LoginTo-PnP(
         & "$AlyaScripts\sharepoint\Register-PnPApp.ps1"
         throw "Please restart this script"
     }
+
+    if ($AlyaIsDevOpsPipeline)
+    {
+        Write-Host "  within DevOps"
+        $CertPasswordPlain = "!#$($AlyaTenantId)=%"
+        $CertPassword = ConvertTo-SecureString -String $CertPasswordPlain -AsPlainText -Force
+        $CertFile = "$($env:TEMP)\$AlyaTenantId.xpy"
+        if (-Not (Test-Path $CertFile))
+        {
+            if ([string]::IsNullOrEmpty($AlyaSharePointRunAsCertificateKeyVault))
+            {
+                throw "AlyaSharePointRunAsCertificateKeyVault has to be configured in ConfigureEnv.ps1"
+            }
+            if ([string]::IsNullOrEmpty($AlyaSharePointRunAsCertificateSecretName))
+            {
+                throw "AlyaSharePointRunAsCertificateSecretName has to be configured in ConfigureEnv.ps1"
+            }
+            if ([string]::IsNullOrEmpty($AlyaSharePointRunAsClientId))
+            {
+                throw "AlyaSharePointRunAsClientId has to be configured in ConfigureEnv.ps1"
+            }
+            $ClientId = $AlyaSharePointRunAsClientId
+            LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+            $AzureKeyVaultCert = Get-AzKeyVaultCertificate -VaultName $AlyaSharePointRunAsCertificateKeyVault -Name $AlyaSharePointRunAsCertificateSecretName
+            if (-Not $AzureKeyVaultCert) {
+                throw "Not able to find keyvault secret"
+            }
+            $CertificateRetrieved = Get-AzKeyVaultSecret -VaultName $AlyaSharePointRunAsCertificateKeyVault -Name $AlyaSharePointRunAsCertificateSecretName
+            $CertificateBytes = [System.Convert]::FromBase64String(($CertificateRetrieved.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password }))
+            $CertCollection = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
+            $CertCollection.Import($CertificateBytes, $null, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
+            $ProtectedCertificateBytes = $CertCollection.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, $CertPasswordPlain)
+            [System.IO.File]::WriteAllBytes($CertFile, $ProtectedCertificateBytes)
+        }
+    }
+
 
     if ([string]::IsNullOrEmpty($TenantAdminUrl))
     {
@@ -2404,7 +2471,7 @@ function LoginTo-PnP(
 
     $AlyaConnection = $null
     $CreatedConnection = $false
-    if ($ClientId -and $Thumbprint)
+    if ($ClientId)
     {
         $AlyaConnection = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") -and $_.ClientId -eq $ClientId }
     }
@@ -2416,7 +2483,7 @@ function LoginTo-PnP(
     if ($null -ne $AlyaConnection -and $Relogin)
     {
         $null = Disconnect-PnPOnline
-        if ($ClientId -and $Thumbprint)
+        if ($ClientId)
         {
             $Global:AlyaPnpConnections = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -ne $Url.TrimEnd("/") -and $_.ClientId -ne $ClientId }
         }
@@ -2429,15 +2496,26 @@ function LoginTo-PnP(
 
     if ($null -eq $AlyaConnection)
     {
-        if ($ClientId -and $Thumbprint)
+        if ($ClientId)
         {
-            $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -Tenant $AlyaTenantName
+            if ($Thumbprint)
+            {
+                $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint
+            }
+            elseif ($CertFile)
+            {
+                $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $CertFile -CertificatePassword $CertPassword
+            }
+            else
+            {
+                throw "With ClientId at least thumprint or certFile has to be specified"
+            }
         }
         else
         {
             if (-Not $AdminConnection) {
                 if ($AlyaPnpEnvironment -eq "Production") {
-                    $AdminConnection = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive
+                    $AdminConnection = Connect-PnPOnline -Tenant $AlyaTenantName -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive -ValidateConnection
                 } else {
                     $AdminConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -ClientId $AlyaPnPAppId -Url $TenantAdminUrl -ReturnConnection -Interactive -ValidateConnection
                 }
@@ -2586,6 +2664,50 @@ function Make-PascalCase(
 {
     if ([string]::IsNullOrEmpty($string)) {return $string}
     return (Get-Culture).TextInfo.ToTitleCase($string)
+}
+
+<# MODULE DEPENDENCIES CHECK #>
+function Find-ModuleDependencyDuplicates()
+{
+    $allDlls = Get-ChildItem -Path $AlyaModulePath -Filter *.dll -Recurse | Sort-Object -Property Name
+    $dllNames = $allDlls | ForEach-Object { $_.Name } | Sort-Object -Unique
+    foreach($dllName in $dllNames)
+    {
+        $dlls = $allDlls | Where-Object { $_.Name -eq $dllName }
+        if ($dlls.Count -gt 1)
+        {
+            $versionStrs = $dlls | ForEach-Object { $_.VersionInfo.FileVersion }
+            $versions = @()
+            foreach($versionStr in $versionStrs)
+            {
+                if (-Not [string]::IsNullOrEmpty($versionStr))
+                {
+                    try {
+                        $versions += [Version]$versionStr
+                    }
+                    catch {
+                        try {
+                            $versions += [Version]$versionStr.Split()[0]
+                        }
+                        catch {
+                            <#Do this if a terminating exception happens#>
+                        }
+                    }
+                }
+            }
+            $versions = $versions | Sort-Object -Unique -Descending
+            if ($versions.Count -gt 1)
+            {
+                Write-Host "Multiple DLLs found with the same name '$dllName' and different versions:"
+                foreach($version in $versions)
+                {
+                    Write-Host "  Version $version"
+                    $dllsForVersion = $dlls | Where-Object { $_.VersionInfo.FileVersion -like "$version*" }
+                    $dllsForVersion | ForEach-Object { Write-Host "    $($_.FullName)" }
+                }
+            }
+        }
+    }
 }
 
 <# MICROSOFT GRAPH FUNCTIONS #>
@@ -3659,8 +3781,8 @@ function Replace-AlyaStrings($obj, $depth)
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBGaEcaz06DTzLm
-# kcUdI7I2R1RhrU4e9ziI0bPMy8BgA6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBU5wdRMtUfQxC6
+# vUEeFMiUdnhkgxgxzwy2EmjWWk6zoqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -3744,23 +3866,23 @@ function Replace-AlyaStrings($obj, $depth)
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIJk80K4AAEdqD7e
-# kjLmYw0sc1g/XHhGilll3J6niiVGMA0GCSqGSIb3DQEBAQUABIICABByzV3tdQTm
-# +swkEV5Yki+/JMW3WcFzI6HqGiT+/FD+Sw3X2Kq4HiIolG/qbRHy5OWtNJem2Ssf
-# YGjvAReRd/5hEEXriVduLCQ1P2zjBKKxOdkl/gveQmFCI/GsN1wRX0WUiHcN2Bbh
-# jKNsxk1qUkFQiHo64O+Rsi4YTZixmTSYCjuEqdESydirZUZS76V6dA29ttCzPeH6
-# UwBqkWXCX4O1paKQNM105WX2Afk7uX3xmahCYzQF4hDr96/QucV13+AOcPlInDcN
-# F41Q7T8HJxnwfQysf3F6vY0dQsRMtn+i1B7yGIOjDB6/Blo2lPUUKfHOGKUORQoH
-# xSmwriIx2kJB3Jw4foR6rd+E2nYulXloOxCcAx2QM8NAP4oFlz1Vvm0mwKDnB3qQ
-# 2brk/G5dbSL22YxDj2ImGb/zTNuUin5hR8ceQ/YDOM8vVPqZjZ4N/ywnMjSN329H
-# uJLZsNm7KVV8DyGSLlYpdRl3rZHiMOLNnsD48Gj779sza5lX8tiNq5T+lrg8h8XD
-# o9Bj6El2zhKgV25jcLGoeygECG91KUPO8oxRkctZpCCDohaTVdRfo/AmyaAFjtW0
-# r9nnW2KzDV60omnUUtEjRKopxzi2+vWyobl0aSskUM00/IGFIzTYDJnK0ptBRVbH
-# r3bm3T3rRzXiXu2t9/hyq0AfLRkFCoPNoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIB6d1A+fEMEVU2D+
+# pkZ2BDC7ODWjbq1hFrzrN3GZMPdaMA0GCSqGSIb3DQEBAQUABIICAIsQ+GDh8ppr
+# IxBoKRH7gpc/CfAYowxkpPYvwxKlfYpXPdv9kNai/Qf6levp3nds0jTJdvPvbgrv
+# p6tD1cZEcHkIWHPWU3t0OfdBglSOKmjSlxcI/fnie/hOxWZ1KkRJh7hxORq5kjqn
+# zPFBe0Ojt0I2sXPYgMQkZmD1gMI9bux7JonpbY6SmaipPVxR9Xm9vO3PrUNNY4hJ
+# vMIbUEoDx2PwgBAPQFz0XQaQP2QiACzr/EDYDUTkmhIEOpsZjPaLVEOYKROkAaMj
+# Fjv+aQmLHyLNjxNZPyvyedHrujIORTNHaFS1Uwgn4+DiihffLhlDstb3fz1lx+YK
+# 96JGPuzjs/3sATllTnZ4czDXW71oLcMxrwtstbASTfn02Ym+IB0W8zadUiodh6bU
+# 4zhB6Y+tpPENHCK7PLy+LKajxNXq6893sT8dJtQHYP2W4r9nA71pYMVSd6EpZ+As
+# cKtm7aTrWK6blJB3TbHjHdZlMOpX+soY10rijwsbjx1nu+W42XLA7dR9wPALVlV+
+# l4XDM+Q9ExXIyjCoTqwFWE6mOErNMG677sfNt4c8KabAm1RvUA6XLpk3Y8nSjpsS
+# 25ZmJXMuiUB7zRxd1U6BVKa7u0dJQJ35Ot96Q1SimO/cHjBILfHxCaYnSC3y7ITe
+# qnMeENVE+AejGWCbY9WjLmBSnZ80YsmboYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDFFI2wx8EyErhMKSCiZZ2NXihO9mGQQ6iZOlNlmb1W8AIUTvkOvDk1gXCx
-# RzBs7kfYni5XEe0YDzIwMjUxMDEzMTkyNjM1WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCtp3dbBOsKZ7DwGDn8DvIckVyMIqpVaKQ7GNhjOihEKQIUQzTIEcK0fdDg
+# sIeBaW1Igs0x0rUYDzIwMjUxMTE3MDkwNTI0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -3865,17 +3987,17 @@ function Replace-AlyaStrings($obj, $depth)
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IJeruJkL2Tx6IeXo64s+BNITc+C6/FUuGfAdgt71XaZzMIGwBgsqhkiG9w0BCRAC
+# IJSMyyk6DWO8NvoVQFHMkDkBHmHwgrsXhyNQ5QPP5WA5MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAfLHrLZi1CTcv
-# HbULtyo5pRHF4bmeYjepSE2X4KUwlk3i5rneqyV9A7qZcqaHIdHLe0jU92s8I9Cf
-# iQFt/YPrpnBdhwsiMOTKLQPaqIuRuEK9SYf3WnfC1fGwwbkFLIZnLdcdJCvvgYEj
-# 6DowF602mpcYm7DFo4kTXztd2Ppmq6/XquZOgooVuEXCaiHy7PcRhVxNeQcfbWrZ
-# Sm1Mhve8fRHiFTkbm/3eRZ2jzxjbKTh2IR/yzS7a8YG5qRnZtask4lrYWDpjbCX+
-# RoTzjH0hZys5FDMdVY2fGLZwbOeE7rOYBt7lGwGfRkobZ5axsx6GDcoN6mnjOurq
-# x3eL8DeOIOPrdCdVpZGHe6dHa9uu9lZYawcWMbjjB083eSCNEF7+XvxT9GHg24m7
-# CG2f+IVdpjeTAuxoEpA5xwpMZ2XU6hHQAVidlN5nE808+pJSIjqPAD/vQsgWUfzC
-# b/gWtwv6X+PlGHFvn1fNKmsbUeQ/lc1/WwvT6en32HuxxCbWOrHj
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAbjkhSsxW40Cd
+# fALFmzcGhTu6ad0LvSAx5lJ7G3MreTLwNLrwCHXpM1GWe6F2JejmeWGPzttpPVRd
+# TE1/P5b4ChdAucrxABdJYtyp6iymWUlwcIN+IGOM35DPVAM+U08lnZzRsfZmb0w+
+# XqjRedStT2e3zEh3hSjwoErG4VdYVGrHKvAgAxFjjOsr5FZbygzKYto6sUxmO1RI
+# jz7hmM6OeSJAdJMHI1CRzpLGLmkYaKmKLAgflKcnLkGtcq8yE3f/muzDvwlNwwto
+# zqNcm05EjvIxoyANerobO3F6j+77t1oQEetoDJC6aqpkkJM+brBntcM+A4Nu8kmz
+# DmNOn6ARpRnbGI8zNc0FwAwCuIjv5PqequXNPVYDY9LaX/kBD7IHlkFMvTBOMpnq
+# nWa35Ucfybr/70ZH+GXymkm1WTgxCHZohiDhQr4TTWdlU61/Agu2JeqTwd58+U+1
+# YGixNxGFlWW5Kyox5q3YDX2/m2ggC01+JKCZN+uszlNc86MUSoJ8
 # SIG # End signature block

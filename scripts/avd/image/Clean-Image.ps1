@@ -55,6 +55,12 @@ Get-AppxPackage -AllUsers | Where-Object {$_.PackageFullName -like "InputApp_*" 
 Get-AppxPackage -AllUsers | Where-Object {$_.PackageFullName -like "Microsoft.PPIProjection_*" } | Remove-AppxPackage
 
 cmd /c "$Env:SystemRoot\system32\sysprep\sysprep.exe" /generalize /oobe /shutdown
+while($true) {
+  $imageState = (Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Setup\State).ImageState
+  Write-Output $imageState
+  if ($imageState -eq 'IMAGE_STATE_GENERALIZE_RESEAL_TO_OOBE') { break }
+  Start-Sleep -s 5
+}
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor

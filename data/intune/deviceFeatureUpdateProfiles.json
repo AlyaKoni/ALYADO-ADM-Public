@@ -7,26 +7,10 @@
     {
         "@odata.type": "#microsoft.graph.windowsFeatureUpdateProfile",
         "deployableContentDisplayName": null,
-        "description": "Configures features on windows10 devices",
-        "displayName": "WIN10 Feature Configuration",
-        "endOfSupportDate": "2024-10-08T00:00:00Z",
-        "featureUpdateVersion": "Windows 10, version 22H2",
-        "roleScopeTagIds": [
-            "0"
-        ],
-        "rolloutSettings": {
-            "offerEndDateTimeInUTC": null,
-            "offerIntervalInDays": null,
-            "offerStartDateTimeInUTC": null
-        }
-    },
-    {
-        "@odata.type": "#microsoft.graph.windowsFeatureUpdateProfile",
-        "deployableContentDisplayName": null,
         "description": "Configures features on windows11 devices",
         "displayName": "WIN11 Feature Configuration",
         "endOfSupportDate": "2025-10-14T00:00:00Z",
-        "featureUpdateVersion": "Windows 11, version 24H2",
+        "featureUpdateVersion": "Windows 11, version 25H2",
         "roleScopeTagIds": [
             "0"
         ],
