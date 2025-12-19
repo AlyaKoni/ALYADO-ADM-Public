@@ -15,7 +15,7 @@
   "developer": "geek software GmbH",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "pdf24-creator-11.28.2-x64.intunewin",
+  "fileName": "pdf24-creator-11.29.0-x64.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -25,14 +25,14 @@
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
     "publisher": "geek software GmbH",
+    "productVersion": "11.29.0",
     "upgradeCode": "{8D2DF301-CE53-4939-81C2-D659E7B857BE}",
-    "productName": "PDF24 Creator",
-    "productVersion": "11.28.2",
+    "requiresReboot": "false",
     "packageType": "PerMachine",
-    "productCode": "{807B6B52-8124-4C81-A657-DC8DF91A8B37}",
-    "requiresReboot": "false"
+    "productName": "PDF24 Creator",
+    "productCode": "{E698BDD7-0905-43A0-94E9-F29F134EB826}"
   },
-  "setupFilePath": "pdf24-creator-11.28.2-x64.msi",
+  "setupFilePath": "pdf24-creator-11.29.0-x64.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "11.28.2"
+      "detectionValue": "11.29.0"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "11.28.2"
+      "comparisonValue": "11.29.0"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "11.28.2"
+  "displayVersion": "11.29.0"
 }

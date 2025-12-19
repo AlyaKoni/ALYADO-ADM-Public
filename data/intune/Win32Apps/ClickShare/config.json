@@ -25,12 +25,12 @@
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
     "publisher": "Barco N.V.",
+    "productVersion": "4.47.0.13",
     "upgradeCode": "{F51D70F2-7691-4180-833B-1A955ED53CEF}",
-    "productName": "ClickShare Desktop App Machine-Wide Installer",
-    "productVersion": "4.46.0.4",
+    "requiresReboot": "false",
     "packageType": "PerMachine",
-    "productCode": "{FD996617-B71E-4086-921D-F957196912F0}",
-    "requiresReboot": "false"
+    "productName": "ClickShare Desktop App Machine-Wide Installer",
+    "productCode": "{9F4EB5D5-F141-4D7F-8BE4-6485E9D2AD2F}"
   },
   "setupFilePath": "ClickShare_Installer.msi",
   "minimumSupportedWindowsRelease": "1607",
@@ -53,7 +53,7 @@
       "valueName": "MSIInstallationVersion",
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "4.46.0.4"
+      "detectionValue": "4.47.0.13"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "valueName": "MSIInstallationVersion",
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "4.46.0.4"
+      "comparisonValue": "4.47.0.13"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "4.46.0.4"
+  "displayVersion": "4.47.0.13"
 }

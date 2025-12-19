@@ -24,15 +24,15 @@
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
     "publisher": "Devolutions inc.",
+    "productVersion": "2025.3.26.0",
     "upgradeCode": "{2707F3BF-4D7B-40C2-882F-14B0ED869EE8}",
-    "productName": "Remote Desktop Manager",
-    "productVersion": "2025.3.20.0",
+    "requiresReboot": "false",
     "packageType": "PerMachine",
-    "productCode": "{61D5C360-3146-4BA8-B785-028F812A86E0}",
-    "requiresReboot": "false"
+    "productName": "Remote Desktop Manager",
+    "productCode": "{7B8EA833-0D77-4A22-89F2-138F960B21E1}"
   },
-  "fileName": "Setup.RemoteDesktopManager.2025.3.20.0.intunewin",
-  "setupFilePath": "Setup.RemoteDesktopManager.2025.3.20.0.msi",
+  "fileName": "Setup.RemoteDesktopManager.2025.3.26.0.intunewin",
+  "setupFilePath": "Setup.RemoteDesktopManager.2025.3.26.0.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "2025.3.20.0"
+      "detectionValue": "2025.3.26.0"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "2025.3.20.0"
+      "comparisonValue": "2025.3.26.0"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "2025.3.20.0"
+  "displayVersion": "2025.3.26.0"
 }

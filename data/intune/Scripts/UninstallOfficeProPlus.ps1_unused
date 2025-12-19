@@ -49,7 +49,7 @@ if (-Not (Test-Path ".\setup.exe"))
     $req = Invoke-WebRequest -Uri $AlyaDeployToolDownload -UseBasicParsing -Method Get
     [regex]$regex = "[^`"]*officedeploymenttool_[^`"]*.exe"
     $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-    $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\officedeploymenttool.exe"
+    $req = Invoke-WebRequest -Uri $url -Method Get -OutFile ".\officedeploymenttool.exe" -UseBasicParsing
     &(".\officedeploymenttool.exe") /extract:"." /quiet
     do
     {

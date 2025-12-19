@@ -24,15 +24,15 @@
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
     "publisher": "Mythicsoft Ltd",
+    "productVersion": "9.3.3544.1",
     "upgradeCode": "{AEF83BF3-5D5E-4C7B-8CB8-CCC7FDCD81B3}",
-    "productName": "Agent Ransack",
-    "productVersion": "9.3.3536.1",
+    "requiresReboot": "false",
     "packageType": "PerMachine",
-    "productCode": "{F7D83551-EAA3-41CB-8E4C-70DEB7A54563}",
-    "requiresReboot": "false"
+    "productName": "Agent Ransack",
+    "productCode": "{EF3CC03B-C448-47AA-9196-77E09F4DCDA7}"
   },
-  "fileName": "agentransack_x64_3536.intunewin",
-  "setupFilePath": "agentransack_x64_3536.msi",
+  "fileName": "agentransack_x64_3544.intunewin",
+  "setupFilePath": "agentransack_x64_3544.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "9.3.3536.1"
+      "detectionValue": "9.3.3544.1"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "9.3.3536.1"
+      "comparisonValue": "9.3.3544.1"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "9.3.3536.1"
+  "displayVersion": "9.3.3544.1"
 }

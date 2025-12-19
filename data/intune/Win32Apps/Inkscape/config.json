@@ -24,12 +24,12 @@
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
     "publisher": "Inkscape",
-    "upgradeCode": "{4D5FEDAA-84A0-48BE-BD2A-08246398361A}",
-    "productName": "Inkscape",
     "productVersion": "1.4.2",
+    "upgradeCode": "{4D5FEDAA-84A0-48BE-BD2A-08246398361A}",
+    "requiresReboot": "false",
     "packageType": "PerMachine",
-    "productCode": "{B90496FF-9F08-4BEB-8928-F49AB6308EEB}",
-    "requiresReboot": "false"
+    "productName": "Inkscape",
+    "productCode": "{B90496FF-9F08-4BEB-8928-F49AB6308EEB}"
   },
   "fileName": "inkscape-1.4.2_2025-05-13_f4327f4-x64.intunewin",
   "setupFilePath": "inkscape-1.4.2_2025-05-13_f4327f4-x64.msi",

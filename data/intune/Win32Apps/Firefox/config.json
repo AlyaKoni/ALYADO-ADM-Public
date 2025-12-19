@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN Firefox",
-  "description": "Installs Mozilla Firefox 144.0.2 x64 en-US",
+  "description": "Installs Mozilla Firefox 146.0 x64 en-US",
   "publisher": "Mozilla",
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
@@ -15,7 +15,7 @@
   "developer": "Mozilla",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "Firefox Setup 144.0.2.intunewin",
+  "fileName": "Firefox Setup 146.0.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -25,14 +25,14 @@
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
     "publisher": "Mozilla",
+    "productVersion": "146.0.0.0",
     "upgradeCode": "{3118AB4C-B433-4FBB-B9FA-8F9CA4B5C103}",
-    "productName": "Mozilla Firefox 144.0.2 x64 en-US",
-    "productVersion": "144.0.2.0",
+    "requiresReboot": "false",
     "packageType": "PerMachine",
-    "productCode": "{1294A4C5-9977-480F-9497-C0EA1E630130}",
-    "requiresReboot": "false"
+    "productName": "Mozilla Firefox 146.0 x64 en-US",
+    "productCode": "{1294A4C5-9977-480F-9497-C0EA1E630130}"
   },
-  "setupFilePath": "Firefox Setup 144.0.2.msi",
+  "setupFilePath": "Firefox Setup 146.0.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "144.0.2.0"
+      "detectionValue": "146.0.0.0"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "144.0.2.0"
+      "comparisonValue": "146.0.0.0"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "144.0.2.0"
+  "displayVersion": "146.0.0.0"
 }

@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN FileZilla",
-  "description": "Installs FileZilla_3.69.3_win64-setup.exe",
+  "description": "Installs FileZilla_3.69.5_win64-setup.exe",
   "publisher": "filezilla-project.org",
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
@@ -15,7 +15,7 @@
   "developer": null,
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "FileZilla_3.69.3_win64-setup.intunewin",
+  "fileName": "FileZilla_3.69.5_win64-setup.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,7 +24,7 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": null,
-  "setupFilePath": "FileZilla_3.69.3_win64-setup.exe",
+  "setupFilePath": "FileZilla_3.69.5_win64-setup.exe",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -45,7 +45,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "3.69.3.0"
+      "detectionValue": "3.69.5.0"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "3.69.3.0"
+      "comparisonValue": "3.69.5.0"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "3.69.3.0"
+  "displayVersion": "3.69.5.0"
 }

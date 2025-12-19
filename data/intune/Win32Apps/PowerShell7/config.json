@@ -25,12 +25,12 @@
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
     "publisher": "Microsoft Corporation",
-    "upgradeCode": "{31AB5147-9A97-4452-8443-D9709F0516E1}",
-    "productName": "PowerShell 7-x64",
     "productVersion": "7.5.4.0",
+    "upgradeCode": "{31AB5147-9A97-4452-8443-D9709F0516E1}",
+    "requiresReboot": "false",
     "packageType": "PerMachine",
-    "productCode": "{E8159677-ACF8-4D64-9D36-5C36B8BBEA39}",
-    "requiresReboot": "false"
+    "productName": "PowerShell 7-x64",
+    "productCode": "{E8159677-ACF8-4D64-9D36-5C36B8BBEA39}"
   },
   "setupFilePath": "PowerShell-7.5.4-win-x64.msi",
   "minimumSupportedWindowsRelease": "1607",

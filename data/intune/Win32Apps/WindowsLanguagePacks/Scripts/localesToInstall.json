@@ -1,50 +1,50 @@
 [
   {
-    "ProductId": "9PDSCC711RVF",
-    "Locale": "en-US",
-    "ProductTitle": "English (United States) Local Experience Pack",
-    "SkuId": "0016",
-    "Order": 4,
-    "PackageFamilyName": "Microsoft.LanguageExperiencePacken-US_8wekyb3d8bbwe",
     "InputLanguageID": "0409:00000807",
     "GeoId": 223,
     "LicenseType": "online",
-    "LanguageTag": "en-CH"
+    "ProductId": "9PDSCC711RVF",
+    "ProductTitle": "English (United States) Local Experience Pack",
+    "Locale": "en-US",
+    "LanguageTag": "en-CH",
+    "PackageFamilyName": "Microsoft.LanguageExperiencePacken-US_8wekyb3d8bbwe",
+    "SkuId": "0016",
+    "Order": 4
   },
   {
-    "ProductId": "9P8PQWNS6VJX",
-    "Locale": "it-IT",
-    "ProductTitle": "italiano Pacchetto di esperienze locali",
-    "SkuId": "0016",
-    "Order": 3,
-    "PackageFamilyName": "Microsoft.LanguageExperiencePackit-IT_8wekyb3d8bbwe",
     "InputLanguageID": "0810:00000807",
     "GeoId": 223,
     "LicenseType": "online",
-    "LanguageTag": "it-CH"
+    "ProductId": "9P8PQWNS6VJX",
+    "ProductTitle": "italiano Pacchetto di esperienze locali",
+    "Locale": "it-IT",
+    "LanguageTag": "it-CH",
+    "PackageFamilyName": "Microsoft.LanguageExperiencePackit-IT_8wekyb3d8bbwe",
+    "SkuId": "0016",
+    "Order": 3
   },
   {
-    "ProductId": "9NHMG4BJKMDG",
-    "Locale": "fr-FR",
-    "ProductTitle": "Module d\\u0027expérience locale français (France)",
-    "SkuId": "0016",
-    "Order": 2,
-    "PackageFamilyName": "Microsoft.LanguageExperiencePackfr-FR_8wekyb3d8bbwe",
     "InputLanguageID": "100c:00000807",
     "GeoId": 223,
     "LicenseType": "online",
-    "LanguageTag": "fr-CH"
+    "ProductId": "9NHMG4BJKMDG",
+    "ProductTitle": "Module d\\u0027expérience locale français (France)",
+    "Locale": "fr-FR",
+    "LanguageTag": "fr-CH",
+    "PackageFamilyName": "Microsoft.LanguageExperiencePackfr-FR_8wekyb3d8bbwe",
+    "SkuId": "0016",
+    "Order": 2
   },
   {
-    "ProductId": "9P6CT0SLW589",
-    "Locale": "de-DE",
-    "ProductTitle": "Deutsch Local Experience Pack",
-    "SkuId": "0016",
-    "Order": 1,
-    "PackageFamilyName": "Microsoft.LanguageExperiencePackde-DE_8wekyb3d8bbwe",
     "InputLanguageID": "0807:00000807",
     "GeoId": 223,
     "LicenseType": "online",
-    "LanguageTag": "de-CH"
+    "ProductId": "9P6CT0SLW589",
+    "ProductTitle": "Deutsch Local Experience Pack",
+    "Locale": "de-DE",
+    "LanguageTag": "de-CH",
+    "PackageFamilyName": "Microsoft.LanguageExperiencePackde-DE_8wekyb3d8bbwe",
+    "SkuId": "0016",
+    "Order": 1
   }
 ]

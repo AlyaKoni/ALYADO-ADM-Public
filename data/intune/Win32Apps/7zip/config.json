@@ -24,12 +24,12 @@
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
     "publisher": "Igor Pavlov",
-    "upgradeCode": "{23170F69-40C1-2702-0000-000004000000}",
-    "productName": "7-Zip 25.01 (x64 edition)",
     "productVersion": "25.01.00.0",
+    "upgradeCode": "{23170F69-40C1-2702-0000-000004000000}",
+    "requiresReboot": "false",
     "packageType": "DualPurpose",
-    "productCode": "{23170F69-40C1-2702-2501-000001000000}",
-    "requiresReboot": "false"
+    "productName": "7-Zip 25.01 (x64 edition)",
+    "productCode": "{23170F69-40C1-2702-2501-000001000000}"
   },
   "fileName": "7z2501-x64.intunewin",
   "setupFilePath": "7z2501-x64.msi",

@@ -7,6 +7,13 @@
             "@odata.type": "#microsoft.graph.allLicensedUsersAssignmentTarget",
             "deviceAndAppManagementAssignmentFilterId": null,
             "deviceAndAppManagementAssignmentFilterType": "none"
+        },
+        "settings": {
+            "@odata.type": "#microsoft.graph.win32LobAppAssignmentSettings",
+            "notifications": "showAll",
+            "restartSettings": null,
+            "installTimeSettings": null,
+            "deliveryOptimizationPriority": "notConfigured"
         }
     }
 ]

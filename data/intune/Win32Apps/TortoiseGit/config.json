@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN TortoiseGit",
-  "description": "Installs TortoiseGit 2.17.0.2 (64 bit)",
+  "description": "Installs TortoiseGit 2.18.0.1 (64 bit)",
   "publisher": "tortoisegit.org",
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
@@ -15,7 +15,7 @@
   "developer": "TortoiseGit",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "TortoiseGit-2.17.0.2-64bit.intunewin",
+  "fileName": "TortoiseGit-2.18.0.1-64bit.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -24,15 +24,15 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "publisher": "TortoiseGit",
+    "productName": "TortoiseGit 2.18.0.1 (64 bit)",
+    "productCode": "{F7CC5B9C-115F-4D1B-AB7D-EC61BC32B79A}",
     "upgradeCode": "{F46D0E11-F71A-48A0-8A7B-FD8669B5080C}",
-    "productName": "TortoiseGit 2.17.0.2 (64 bit)",
-    "productVersion": "2.17.0.2",
     "packageType": "PerMachine",
-    "productCode": "{01FAC96A-A140-440B-BACE-0318CB99722A}",
-    "requiresReboot": "false"
+    "requiresReboot": "false",
+    "publisher": "TortoiseGit",
+    "productVersion": "2.18.0.1"
   },
-  "setupFilePath": "TortoiseGit-2.17.0.2-64bit.msi",
+  "setupFilePath": "TortoiseGit-2.18.0.1-64bit.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -47,26 +47,26 @@
   },
   "detectionRules": [
     {
-      "@odata.type": "#microsoft.graph.win32LobAppRegistryDetection",
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
+      "path": "%ProgramFiles%\\TortoiseGit\\bin",
+      "fileOrFolderName": "TortoiseGitProc.exe",
       "check32BitOn64System": false,
-      "keyPath": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{01FAC96A-A140-440B-BACE-0318CB99722A}",
-      "valueName": "DisplayVersion",
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "2.17.0.2"
+      "detectionValue": "2.18.0.1"
     }
   ],
   "requirementRules": [],
   "rules": [
     {
-      "@odata.type": "#microsoft.graph.win32LobAppRegistryRule",
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemRule",
       "ruleType": "detection",
+      "path": "%ProgramFiles%\\TortoiseGit\\bin",
+      "fileOrFolderName": "TortoiseGitProc.exe",
       "check32BitOn64System": false,
-      "keyPath": "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\{01FAC96A-A140-440B-BACE-0318CB99722A}",
-      "valueName": "DisplayVersion",
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "2.17.0.2"
+      "comparisonValue": "2.18.0.1"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "2.17.0.2"
+  "displayVersion": "2.18.0.1"
 }

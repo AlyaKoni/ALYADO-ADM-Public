@@ -23,7 +23,15 @@
   "minimumMemoryInMB": 100,
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
-  "msiInformation": null,
+  "msiInformation": {
+    "productCode": "{FEC1A2AD-5101-43CA-A6DB-D8D051B8007E}",
+    "packageType": "PerMachine",
+    "upgradeCode": "{5D9EC71D-960E-4E58-ADA1-C43B094DAE72}",
+    "publisher": "Microsoft Corporation",
+    "productName": "Microsoft Purview Information Protection",
+    "requiresReboot": "false",
+    "productVersion": "3.1.310.0"
+  },
   "setupFilePath": "PurviewInfoProtection.exe",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
