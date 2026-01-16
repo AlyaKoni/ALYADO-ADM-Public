@@ -21,6 +21,8 @@ jobs:
   - checkout: self
     displayName: Checkout Repo
     persistCredentials: true
+    fetchDepth: 1
+    fetchTags: false
     clean: true
   - task: AzureCLI@2
     displayName: 'OIDC token renewal'
@@ -62,6 +64,8 @@ jobs:
   - checkout: self
     displayName: Checkout Repo
     persistCredentials: true
+    fetchDepth: 1
+    fetchTags: false
     clean: true
   - task: AzureCLI@2
     displayName: 'OIDC token renewal'
@@ -103,6 +107,8 @@ jobs:
   - checkout: self
     displayName: Checkout Repo
     persistCredentials: true
+    fetchDepth: 1
+    fetchTags: false
     clean: true
   - task: AzureCLI@2
     displayName: 'OIDC token renewal'

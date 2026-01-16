@@ -61,6 +61,7 @@
     30.09.2025 Konrad Brunner       Added Microsoft.VSCode_profile.ps1
     03.10.2025 Konrad Brunner       New AIP app login
     19.10.2025 Konrad Brunner       LoginTo-MgGraph with clientid and cert
+    06.01.2026 Konrad Brunner       LoginTo-Entra
 
 #>
 
@@ -1700,7 +1701,7 @@ function LoginTo-Az(
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
     if (-Not $TenantId) { $TenantId = $AlyaTenantId }
 
-    try { Update-AzConfig -Scope Process -EnableLoginByWam $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
+    #try { Update-AzConfig -Scope Process -EnableLoginByWam $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -DisplaySurveyMessage $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -EnableDataCollection $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
 
@@ -1884,7 +1885,7 @@ function LoginTo-MgGraph(
         Write-Host "Login to Graph" -ForegroundColor $CommandInfo
     }
 
-    try { Set-MgGraphOption -EnableLoginByWAM $false -ErrorAction SilentlyContinue | Out-Null } catch {}
+    #try { Set-MgGraphOption -EnableLoginByWAM $false -ErrorAction SilentlyContinue | Out-Null } catch {}
 
     if ($AlyaIsDevOpsPipeline)
     {
@@ -2014,6 +2015,115 @@ function LoginTo-MgGraph(
 #LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
 #Get-MgUser -UserId "any@alyaconsulting.ch"
 
+function LogoutAllFrom-Entra()
+{
+    Disconnect-Entra
+}
+function LoginTo-Entra(
+    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
+    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
+    [string[]] [Parameter(Mandatory = $false)] $Scopes = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientId = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null
+)
+{
+    if (-Not [string]::IsNullOrEmpty($ClientId))
+    {
+        Write-Host "Login to Entra with app '$($ClientId)'" -ForegroundColor $CommandInfo
+        $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        if (-Not $cert)
+        {
+            $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        }
+        if (-Not $cert)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' not found"
+        }
+        if (-Not $cert.HasPrivateKey)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' does not has a private key"
+        }
+    }
+    else
+    {
+        Write-Host "Login to Entra" -ForegroundColor $CommandInfo
+    }
+
+    #try { Set-MgEntraOption -EnableLoginByWAM $false -ErrorAction SilentlyContinue | Out-Null } catch {}
+
+    if ($AlyaIsDevOpsPipeline)
+    {
+        Write-Host "  within DevOps"
+        throw "Not yet implemented"
+    }
+    else 
+    {
+        $mgContext = Get-EntraContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+        if ($mgContext)
+        {
+            Write-Host "  checking existing entra context"
+            foreach($Scope in $Scopes)
+            {
+                if ($mgContext.Scopes -notcontains $Scope)
+                {
+                    $mgContext = $null
+                    break
+                }
+            }
+        }
+
+        if (-Not $mgContext)
+        {
+            if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                    Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
+            } else {
+                if ($null -ne $AlyaGraphAppId) {
+                    Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                } else {
+                    Connect-Entra -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                }
+            }
+
+            $mgContext = Get-EntraContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+            if (-Not $Global:AlyaMgContext)
+            {
+                #Required after a consent, otherwise you run into a login mess
+                # TODO check bug still there, way to check if consent happended
+                $mgContext = Disconnect-Entra
+                if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                        Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
+                } else {
+                    if ($null -ne $AlyaGraphAppId) {
+                        Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                    } else {
+                        Connect-Entra -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                    }
+                }
+                $mgContext = Get-EntraContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
+                $Global:AlyaMgContext = $mgContext
+            }
+
+            if ($null -eq $ClientId) {
+                foreach($Scope in $Scopes)
+                {
+                    if ($mgContext.Scopes -notcontains $Scope)
+                    {
+                        Write-Error "Was not able to get required scope $Scope" -ErrorAction Continue
+                        $mgContext = $null
+                        break
+                    }
+                }
+            }
+        }
+
+        if (-Not $mgContext)
+        {
+            Write-Error "Not logged in to Entra!" -ErrorAction Continue
+            Exit 1
+        }
+    }
+}
+
 function LoginTo-DataGateway()
 {
     Write-Host "Login to DataGateway" -ForegroundColor $CommandInfo
@@ -2057,22 +2167,6 @@ function LoginTo-DataGateway()
         }
     }
     return $null
-}
-
-function Get-AudienceAccessToken(
-    [string] [Parameter(Mandatory = $false)] $audience = "74658136-14ec-4630-ad9b-26e160ff0fc6",
-    [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
-    [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
-    [string] [Parameter(Mandatory = $false)] $TenantId = $null)
-{
-    if (-Not $TenantId) { $TenantId = $AlyaTenantId }
-    $AlyaContext = Get-CustomersContext -TenantId $TenantId -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
-    $token = [Microsoft.Azure.Commands.Common.Authentication.AzureSession]::Instance.AuthenticationFactory.Authenticate($AlyaContext.Account, $AlyaContext.Environment, $TenantId, $null, "Never", $null, $audience)
-    if (-Not $token -or -Not $token.AccessToken)
-    {
-        throw "Can't aquire an access token."
-    }
-    return $token.AccessToken
 }
 
 function Get-AdalAccessToken(
@@ -2459,7 +2553,7 @@ function LoginTo-PnP(
             [System.IO.File]::WriteAllBytes($CertFile, $ProtectedCertificateBytes)
         }
     }
-
+    $CertPasswordSec = ConvertTo-SecureString -String $CertPassword -AsPlainText -Force
 
     if ([string]::IsNullOrEmpty($TenantAdminUrl))
     {
@@ -2472,7 +2566,6 @@ function LoginTo-PnP(
     $env:PNPPOWERSHELL_DISABLETELEMETRY = "true"
 
     $AlyaConnection = $null
-    $CreatedConnection = $false
     if ($ClientId)
     {
         $AlyaConnection = $Global:AlyaPnpConnections | Where-Object { $_.Url.TrimEnd("/") -eq $Url.TrimEnd("/") -and $_.ClientId -eq $ClientId }
@@ -2512,10 +2605,10 @@ function LoginTo-PnP(
             elseif ($CertFile)
             {
                 try {
-                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $CertFile -CertificatePassword $CertPassword -ValidateConnection
+                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $CertFile -CertificatePassword $CertPasswordSec -ValidateConnection
                 }
                 catch {
-                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $CertFile -CertificatePassword $CertPassword
+                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $CertFile -CertificatePassword $CertPasswordSec
                 }
             }
             else
@@ -3821,8 +3914,8 @@ function Replace-AlyaStrings($obj, $depth)
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCvOzv/fU0V9g3X
-# +OmCu8r5+4Fud8iPs21RmAb/fZiDq6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAxfpMS74Pj6RbS
+# iPBWmyoyytSmWjcYeNDoqt/ugrA0QaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -3936,23 +4029,23 @@ function Replace-AlyaStrings($obj, $depth)
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINml2MOA
-# DrqU4jgNreqxn4nfI/HyFq2m7bpmLcHy0fnxMA0GCSqGSIb3DQEBAQUABIICAKuQ
-# kcWBqUEt8IEyKEiozwGk9pBiXr25eJ696n5EJrukSyioZj4k5cD24Y5ORxskEDeH
-# Ywz9RyJ7Wnqx63/HzWuA/nX8vDMsxLlSPvh/87vowax20QFKPtIM+RGp0IDQ+YfV
-# bFhrqTvDVOG7XYNozME2OM4aq9X+/WoRm470BmL/0UBwDxzapgpsgTmN8vwt0cp0
-# MEqwDoPPTDrCwx/dvBCuGG6QYkVVDGaAaKLesZOQ1HZrm++rUfyUFgKLjmxNwuZq
-# dHyeb1mvQjEo5v2zFwaGbddZ4m9POcm875ieNNfk687C21DFC6NFDFX39+UumHnr
-# 12sn+pwWEKgkPF2OyNSvConggSHeXkYJYB/cGcA6WLKcofROcU162IZryKbjfxZx
-# SsQqTGme2mJx6xdMAwdvo0ET9ryhCEMXg8hlr2l466CZyvKkKqVAJPLWUmYAUi3x
-# uUFbr9Zca+uLZrwK3DA26vDrdqxmtwlHCyzvcUp0iMsOkvB4yqVSYoahpLNMcm0E
-# BlxoaIKoHi2SCNXF2zh0uruMbP5p3KMDmgGJqUw6KJx7u42/0TLiJScryoA/7C3o
-# K+8N+7qxcPjuGyTuzMBBwjmEa3q8ggSmk4CwSzvSYLZ+iVT6vaPvsbYzdrJb++hb
-# eKSusrwodF1ju/VvlI+qYuKin6cAZ+HRUOr+R+6JoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDI3QfEa
+# T4C2AZScNJ7DWSbEMmJSDgHYot2tSibFN3DIMA0GCSqGSIb3DQEBAQUABIICAF3x
+# qZe1QtUowAYf1LbYCarWl9soygip1Bg+KbsMIt+843R0/qlzoOib70H18iLrlHSP
+# z32vM2INTBMbWbCmcbYRQ6V7gG6Lr5RSIjLD5onWpH5P9/pHH/7vtYebXvrEuxz/
+# P0FNASD8OXZd7tQbP36M7h0iPPIp+E7ed3XcaehwPfnoIjrWzuA8KHF45qCOhw6Y
+# 3AbArJG34t5tOB6Qwg9hf3DsyOBET4VoSsYpdefFxRa/G9G14Uyfmj28+cN07+Kb
+# sxWgcDcVFbuQE+eVKrV+tveqrNug1NFzQRWYQYZDAV+pIrZzLxdeMldbNm+atFJx
+# ij6vBiIhcA3LLxWcE62UmN0E6M9Ykd6vZtH8OhCqs/LLnpZ8DXE7uyhlMjzfLimX
+# 72FBcmeiuUzM7zPxO+AyZa+zn1xwxImr5IW6ZbfCj23mJi2IVWqM3RhgNZjZIgob
+# bLTOxnSmjrfw88zplkcYe0TSrEB8g9T5uHAnIN4JBu4LxOGfC+it8E98gy6gI0KB
+# ZfNoIK7nkriP3Jx6dI1Nv0x7jHHlcaXYyY3pbD539NiOfe1QR4brAlyIc1loL+F+
+# 2l99XOjD6BQAiw3w71DG2jzGhh7n6SNCkgpeWzS4ocCqfSCK68pBs7cZOrRwiyIY
+# I+t37N7Wef4TZHfe7pdcGpE749usMIkVOaweUV8hoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCBn5T1uGQlfWu4v04w3eMnT/7LRRSEc/zaKCwTg+LZ6QQIUEsda
-# ubrm1RPIZWeCh8/du1KNs68YDzIwMjUxMjE5MDY1OTI0WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCDVRT7XY84EDFPK8XExd7Y4pJtsdv65CrVELoeDJOCPqAIUBIRc
+# 1lG8pmR9Qb6G48iZNvbMUhEYDzIwMjYwMTE2MTIyNTIyWjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -4057,17 +4150,17 @@ function Replace-AlyaStrings($obj, $depth)
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIKapEaAvpW205h3wPGErW4N5jq2z0XBklVLeUEY9aaYpMIGwBgsqhkiG
+# AQkEMSIEIHMRmNdaentJ6KP+jtngj6104NPScisEKxGNerEGc/lkMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMbwa
-# jUILaB8gZngDCSOPgQuT3T46eUnZQ3uctbgHORaccXjM7CYYo/3zzNC94NP+HGDC
-# Kbl+jvI+5IZp8B+MNkon5nqYDx3vVT3518+CW9kUgjAt6KtJiQz3b1N9FBeUfsrp
-# boTdeEo7xk7dyTFDhn5sjimNsx8RubqYpFpnlCa7p4itDwMBwBM4hDaQq1Q4TK0e
-# zLsFz09/BzDpTcsMNKVUyHQ8arcy/goQdG7ZrGIzsEWDFc/BI3e4YkJLrapHlkRM
-# 6ue1DtX7hYtBpQsW13pu7/JeNbKgEmB9ZxbQC8jMrJB3jYBwMBD6gUkKAJtyVc0G
-# sahMG8yQxSDkBIdIvGYWh3yv/e85b3DkRmofYiifoBYgq7+VAm2zhHAXzFrbbQ4c
-# nAZXQPv9zrSMAfU/Pj0igHTYAcMbZ6v7y1o4iR3x8UQuqmYcBFdvfSaXptU6DLVi
-# aJbBP+7XL1gWD63woKaekQgkLPASifx2TTDpKDQXvEndvMBCqSEK5Hbq3NbH
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAHhlX
+# LQI7OXazJgHQWbKV0JhGHI6wwdmDHSzL2Slo4y5jcH/NzijO1Koaw4eP83sLWvtb
+# 1nJ/eeXyCETw++8/wXqaS1idIl0Vsnrf8RPgDFhmlietqOUx25kcG5xTRzOiKX+q
+# 0EWdJQ19clNPf64mHylWimgw8RjgJxSftW09Giu5V22QHYBv0fMbey8igjn84IYD
+# ZRTnuezCXgSR3DIXInwqyMpm5XLDuxk78b4hYyf5fxzWt8vJEKaRFt8KB6lrKKqL
+# bv+e7REsWtox6uF1Zqm0kBgRyT8Hb/oI6ey+WL56QrHD2Wsdo075NhUxy68FtT7u
+# 0TQKxERwkPhLQtVzuzexOzzzl0+cTt9PsA1MAJALOvQ5DQm/BAELPg7tKP5ui/VH
+# Mb/FJq7QJablA/fI6AuuBQFeqB40/VJaZMKy028Aba2tksWHmt96A1T7MauWRVyK
+# brcgc7Vx8VW0m/CJznNU6ogbSDD2OQrZKYbE/elhRJFaEBDJV/IPyRZiusX7
 # SIG # End signature block

@@ -46,8 +46,7 @@ Param(
     [switch]$SetExchangeRbacForUPN = $null,
     [string]$PublicClientRedirectUri = $null,
     [string]$SignInAudience = "AzureADMyOrg",
-    [string]$IdentifierUri = $null,
-    [switch]$SetPrincipalAdminConsent
+    [string]$IdentifierUri = $null
 )
 
 # Loading configuration
@@ -293,39 +292,19 @@ if ($RequiredResourceAccess -or $SetRequiredResourceAccessForContacts -or $SetRe
     Start-Sleep -Seconds 60 # Looks like there is some time issue for admin consent #TODO 60 seconds enough
 
     #Admin consent
-    $apiToken = Get-AudienceAccessToken
-    if (-Not $apiToken)
+    Write-Host "Setting principal admin consent" -ForegroundColor $CommandInfo
+    foreach($resourceAccess in $RequiredResourceAccess)
     {
-        Write-Warning "Can't aquire an access token. Please give admin consent to application '$($ApplicationName)' in the portal!"
-        pause
-    }
-    else
-    {
-        $header = @{'Authorization'='Bearer '+$apiToken;'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-        $url = "https://main.iam.ad.ext.azure.com/api/RegisteredApplications/$($MgApplication.AppId)/Consent?onBehalfOfAll=true"
-        Invoke-RestMethod -Uri $url -Headers $header -Method POST -ErrorAction Stop
-        #TODO consent was working?
-        Write-Warning "Please check in portal if admin consent was working"
-    }
-
-    #Principal admin consent
-    if ($SetPrincipalAdminConsent)
-    {
-        Write-Host "Setting principal admin consent" -ForegroundColor $CommandInfo
-        foreach($resourceAccess in $RequiredResourceAccess)
-        {
-            $appId = $resourceAccess.ResourceAppId
-            $app = Get-MgBetaServicePrincipal -Filter "AppId eq '$appId'" -Property "*"
-            $perms = $resourceAccess.ResourceAccess
-            $scopes = ($app.PublishedPermissionScopes | Where-Object { $_.Id -in $perms.Id }).Value -join " "
-            try {
-                New-MgBetaOauth2PermissionGrant -ClientId $MgServicePrincipal.Id -ConsentType "AllPrincipals" -ResourceId $app.Id -Scope $scopes -ExpiryTime ([DateTime]::MaxValue)
-            }
-            catch {
-                #TODO something wrong here?
-                #TODO remove grant already given or check if this grant also gives admin consent in registered application
-                Write-Warning "Principal admin consent was not working. Please check in portal if principal admin consent was given to application '$($ApplicationName)'!"
-            }
+        $appId = $resourceAccess.ResourceAppId
+        $app = Get-MgBetaServicePrincipal -Filter "AppId eq '$appId'" -Property "*"
+        $perms = $resourceAccess.ResourceAccess
+        $scopes = ($app.PublishedPermissionScopes | Where-Object { $_.Id -in $perms.Id }).Value -join " "
+        try {
+            New-MgBetaOauth2PermissionGrant -ClientId $MgServicePrincipal.Id -ConsentType "AllPrincipals" -ResourceId $app.Id -Scope $scopes -ExpiryTime ([DateTime]::MaxValue)
+        }
+        catch {
+            Write-Error $_.Exception -ErrorAction Continue
+            Write-Warning "Principal admin consent was not working. Please check in portal if principal admin consent was given to application '$($ApplicationName)'!"
         }
     }
 }
@@ -492,8 +471,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCaW0wI44JXajOv
-# Pn0voh4jOAwWLxX5jmctWDjVsjlDJ6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD1XL7cGo2Yvp0T
+# bGNR47caNXFTuXbc0rh237AEMILNOaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -607,23 +586,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIE1Ikno8
-# IgZ5N8HtbF9gKuYfzuZfr9EMDfjKhyP6125aMA0GCSqGSIb3DQEBAQUABIICADoh
-# 8Dk+d9LrQHoKeNElx3zylRX3bXgSgHxqxyBU3MWaDLlDJZQxRdhkISdIYrYU+BLk
-# TzS+utS1T/FdRVJ/jArrkQ3y93N1sqRPBfja7AHsCOHG3YudvVCQvszIc1vFKbaZ
-# YJA3OetbbL/tGbLVoNegXijavcAYjJt8QNNTPDY50jQyhjsjjlmdpoAQwtaGVTJd
-# NYWaUNTjOujHZik4HPhJpoT9wlG21VFgnF6Yi9c/QLkAFTO2EfqqulEGM6kjaRfi
-# 7ONKxkwlJhMkr6Y4MdjnrtVXewuG6hCcbjc7FcQGKyJ+a9aZeV/mngzH2ZraQl8G
-# Z9gs6go8XY/BY3YkV2dMgu9SCHvWnMXsBTXCTWoDvK+vTF9mg8FCTxx9ou+u66WW
-# RXglHBtSsD92rk3vBbvmYwPixWNMtKPsGyEK68g90sYsxEDprGFIyJO9YrTfj6YF
-# CiLjQkZPk+7rO0d08OWhQKK/9Rym9BJlP54yMlEV0b3FJkkLTpL1oc2qyhLUcTNG
-# mNABcVPMtz490YbtF0VYTihTvmhQZUYg2iLbGc7HGn7Ksj3vEjCw4he26Y58+A+1
-# z2TEnIkY6TAa0hNjQv6w6VYaDXxO1rZnmohYZy/71w2DdN8+zCVRAwcd6c/TSsw4
-# PhJPJ7+7GUKrrXn6EiSaRQfq3/nCq+Q8fyAVy3pEoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIB8DrEJd
+# uBVcm95cFpEJRF6mAksydBBQJrGh2PfI565jMA0GCSqGSIb3DQEBAQUABIICABZ5
+# NMFUocWo5Zqrlcb/G5g45SbHdNnF2JrJPU80MkCyG7M0NTjpuSCxuNT/keipqZra
+# 6h/W9g8m9xylUeXTZD/nkjo5xixhgmLSDcspDpYQ9LKZ9hZBlpELkFk6ovf3vGry
+# O6WXl73xRSJLqqkTbY6PmES+YFteSB/nNWtn5hymUUQk9pusG7MrD1deTYgZPn9U
+# BwTSVbIOnjJ7GlkSUP+zRJc6ywPbuvRCZE/WNeKYdjrsmkeJYJaTAICCx6qh9iae
+# kFAbU93J8P+ROY6xX14Q2lAYXTr0OGbtLbjdycMc8rEi3kDrrUKWqd+jsvlZHLVq
+# ta5Iva9Di+uTy78KF0ke5HADuJD2VDo4fIzQCW37a8AwEJJd3Z6gu3NMt5vCROiL
+# /ROf1Dz600M+gpGs+F6W0l/29vreCyIrHYzn6iQE2LXySpTxX4byONJa2r1C9d6q
+# boSJk+d8BTFt8oT6saXI7y0kQsKAvnNQ5A68Eab3O+kLczvOcQQYvlT1RB5WoQXt
+# ZpJOIBYXViu3i9XFVzLe4X51mRH3fSc2Z1wTXpL/+IcaFc1lNO4qDVDO28HO+0vF
+# Mw696i99OfMVuM0vLIcK60ZnDw2iniwnNQa0FdotIrVbQSS7JAbq549N/PXMDq3m
+# 5bBCwk4FETLbu/OpM9VjpuEiE3oIeFVbmjNG9mbYoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCAZynk5pJfZPxrLB890r4CwKjrNkoREwvkD3Z6IprviagIUcH0T
-# wxWPEobBFlo0UrPgA547Rx8YDzIwMjUxMDAzMDg0MjAxWjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCDQvIPBfs5KwdFFgOZRTWqnVXpqJ8s601DfLwJK8rfs1QIUclew
+# b7sNG9C5x48tA+ClKLneNekYDzIwMjYwMTE1MjAxODE3WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -728,17 +707,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIBhL197iMQ5ampnTxE7nChTF1ML8EiePf7/mg9BWyX9cMIGwBgsqhkiG
+# AQkEMSIEINsoPOhz6iShDS/ostyWZx98zaDqGxshgu372D5RxyldMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAKi3c
-# kVq6VOFiff5RoX/z4BhGjYIcW3AVWx9B2NH8V1yF3/r+YuPnV4BZxgpdxGXHNCVQ
-# ngBkMDRoP46WyR2Yh4yRKy78EFElzJmsx8FZL2KNWb0BEiFWS93Ub8hO0L/HRPkV
-# jueI8q74U1RPbrU8S2QVMLuJUD3p9JWmUyHwNbQJbcxvkv9ZB9KBCP/ZQ9QEs5Ti
-# IwKAVLLutB0b44rDu0VKnxWGixLnQGziocQDyStjWUeUo9HhSt9QQqcxBbkkafDf
-# RwPK7FrQoDVmCiA04/yhd7kRuo3MHvHsP1IyJ8pgKOS53Riix0ZtKwFyH5iVHIjC
-# 8pTFN1bBkva34kIrMerK7eQy/6IZIQSpBCC3oCAYJGIrP30MbsTtTH0BmvaSv5L9
-# N4EFqWtuLrMPkSDCwE/QO9K6KzZpVWjUUo2xZsU6rchHErrXwp5OUyZT9O4An5Jc
-# FUBS2AxEqOZsE4YP2TU1O5DLA1bLs82vLvCnLl5p/iJf7ilgTeYPLHoVGjaM
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAbjmp
+# cc54gFlTvySZT6MrexTAkl9iU33ZLmEhyE7uDPb87kwgSqGXVwAe281cNzkkIPRx
+# NaaUX4blFNFvdC/uebvFWpklARUawo0vkP1AWkTuVECl4xJvwFCpxtN4qsmaceWj
+# airj0JolafdpIlDHuDyaoVSTM9XtfJ2UzVtuU06ewBamI97/EHpUWFwAFSr+XaOG
+# z/l28BltsrxV9/2l4stulZ3URqakaiY9V8UroFMhrxJBJ1N02uLbRKR2IUJm4ymk
+# A5xe+fJUBxC7/slRlHH6kLy88UKBwokqMrnlXcvtDKZhFTIESE9OdZlGmpAZ7+N4
+# BAQOyyzE/ymvkHtWGijYxk5Oc/oypic1AMM3PsWfh1L55mMsknsEJqx0HFUXyEtx
+# tMNILaGBgJ38EMx7dSiJ4zF2lsiyEfLzEhdHtbzp4ajnOcyPa5MzpuCAAD3pQU+p
+# N9RVG89116eVX8nUk8lmr/GuMXSVE6VOkEYH0MW25EGq04BUCyX/CthRQzQQ
 # SIG # End signature block
