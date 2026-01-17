@@ -1167,7 +1167,7 @@
     }, {
         "creationSource": null,
         "description": "Configures System policies for windows devices",
-        "name": "WIN System Admin Templates",
+        "name": "WIN System Settings",
         "platforms": "windows10",
         "priorityMetaData": null,
         "roleScopeTagIds": ["0"],
