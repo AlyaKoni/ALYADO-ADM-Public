@@ -611,7 +611,7 @@
         "defenderScheduledScanTime": null,
         "defenderSignatureUpdateIntervalInHours": null,
         "defenderSubmitSamplesConsentType": "sendSafeSamplesAutomatically",
-        "defenderSystemScanSchedule": null,
+        "defenderSystemScanSchedule": "friday",
         "description": "ONLYIF(NODEFENDER) Configures device restrictions on windows devices",
         "developerUnlockSetting": "blocked",
         "deviceManagementBlockFactoryResetOnMobile": false,
@@ -1514,7 +1514,11 @@
     },
     {
         "@odata.type": "#microsoft.graph.windowsDefenderAdvancedThreatProtectionConfiguration",
-        "advancedThreatProtectionAutoPopulateOnboardingBlob": true,
+        "advancedThreatProtectionOnboardingBlob": null,
+        "advancedThreatProtectionOnboardingFilename":  null,
+        "advancedThreatProtectionOffboardingBlob": null,
+        "advancedThreatProtectionOffboardingFilename": null,
+        "advancedThreatProtectionAutoPopulateOnboardingBlob": false,
         "allowSampleSharing": false,
         "description": "Configures Windows Defender ATP on windows Devices",
         "displayName": "WIN Defender ATP",
@@ -1662,10 +1666,10 @@
         "deviceManagementApplicabilityRuleDeviceMode": null,
         "deviceManagementApplicabilityRuleOsEdition": null,
         "deviceManagementApplicabilityRuleOsVersion": null,
-        "displayName": "MAC Defender OnBoarding",
+        "displayName": "MAC Defender ATP",
         "payload": "",
         "payloadFileName": "WindowsDefenderATPOnboarding.xml",
-        "payloadName": "MAC Defender OnBoarding",
+        "payloadName": "MAC Defender ATP",
         "roleScopeTagIds": [
             "0"
         ]
