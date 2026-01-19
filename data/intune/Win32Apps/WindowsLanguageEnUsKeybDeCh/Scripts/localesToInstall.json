@@ -1,50 +1,50 @@
 [
   {
-    "InputLanguageID": "0409:00000807",
-    "GeoId": 223,
     "LicenseType": "online",
-    "ProductId": "9PDSCC711RVF",
-    "ProductTitle": "English (United States) Local Experience Pack",
     "Locale": "en-US",
-    "LanguageTag": "en-CH",
     "PackageFamilyName": "Microsoft.LanguageExperiencePacken-US_8wekyb3d8bbwe",
+    "ProductId": "9PDSCC711RVF",
     "SkuId": "0016",
-    "Order": 1
+    "Order": 1,
+    "GeoId": 223,
+    "LanguageTag": "en-CH",
+    "ProductTitle": "English (United States) Local Experience Pack",
+    "InputLanguageID": "0409:00000807"
   },
   {
-    "InputLanguageID": "0810:00000807",
-    "GeoId": 223,
     "LicenseType": "online",
-    "ProductId": "9P8PQWNS6VJX",
-    "ProductTitle": "italiano Pacchetto di esperienze locali",
     "Locale": "it-IT",
-    "LanguageTag": "it-CH",
     "PackageFamilyName": "Microsoft.LanguageExperiencePackit-IT_8wekyb3d8bbwe",
+    "ProductId": "9P8PQWNS6VJX",
     "SkuId": "0016",
-    "Order": 4
+    "Order": 4,
+    "GeoId": 223,
+    "LanguageTag": "it-CH",
+    "ProductTitle": "italiano Pacchetto di esperienze locali",
+    "InputLanguageID": "0810:00000807"
   },
   {
-    "InputLanguageID": "100c:00000807",
-    "GeoId": 223,
     "LicenseType": "online",
-    "ProductId": "9NHMG4BJKMDG",
-    "ProductTitle": "Module d\\u0027expérience locale français (France)",
     "Locale": "fr-FR",
-    "LanguageTag": "fr-CH",
     "PackageFamilyName": "Microsoft.LanguageExperiencePackfr-FR_8wekyb3d8bbwe",
+    "ProductId": "9NHMG4BJKMDG",
     "SkuId": "0016",
-    "Order": 3
+    "Order": 3,
+    "GeoId": 223,
+    "LanguageTag": "fr-CH",
+    "ProductTitle": "Module d\\u0027expérience locale français (France)",
+    "InputLanguageID": "100c:00000807"
   },
   {
-    "InputLanguageID": "0807:00000807",
-    "GeoId": 223,
     "LicenseType": "online",
-    "ProductId": "9P6CT0SLW589",
-    "ProductTitle": "Deutsch Local Experience Pack",
     "Locale": "de-DE",
-    "LanguageTag": "de-CH",
     "PackageFamilyName": "Microsoft.LanguageExperiencePackde-DE_8wekyb3d8bbwe",
+    "ProductId": "9P6CT0SLW589",
     "SkuId": "0016",
-    "Order": 2
+    "Order": 2,
+    "GeoId": 223,
+    "LanguageTag": "de-CH",
+    "ProductTitle": "Deutsch Local Experience Pack",
+    "InputLanguageID": "0807:00000807"
   }
 ]

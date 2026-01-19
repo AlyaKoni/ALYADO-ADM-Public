@@ -31,34 +31,50 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://www.mythicsoft.com/agentransack/download/"
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-[regex]$regex = "[^`"]*agentransack[^`"]*x64[^`"]*msi[^`"]*\.zip"
-$newUrl = "https:"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
-$fileName = Split-Path -Path $newUrl -Leaf
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
-{
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
-}
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
-$cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
-if ($cmdTst)
-{
-    Expand-Archive -Path "$contentRoot\$fileName" -DestinationPath $contentRoot -Force
-}
-else
-{
-    Expand-Archive -Path "$contentRoot\$fileName" -OutputPath $contentRoot -Force
-}
-Remove-Item -Path "$contentRoot\$fileName" -Force
+$retries = 10
+do {
+    try {
+        $pageUrl = "https://www.mythicsoft.com/agentransack/download/"
+        $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
+        [regex]$regex = "[^`"]*agentransack[^`"]*x64[^`"]*msi[^`"]*\.zip"
+        $newUrl = "https:"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+        $fileName = Split-Path -Path $newUrl -Leaf
+        $packageRoot = "$PSScriptRoot"
+        $contentRoot = Join-Path $packageRoot "Content"
+        if (-Not (Test-Path $contentRoot))
+        {
+            $null = New-Item -Path $contentRoot -ItemType Directory -Force
+        }
+        Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+        $cmdTst = Get-Command -Name "Expand-Archive" -ParameterName "DestinationPath" -ErrorAction SilentlyContinue
+        if ($cmdTst)
+        {
+            Expand-Archive -Path "$contentRoot\$fileName" -DestinationPath $contentRoot -Force
+        }
+        else
+        {
+            Expand-Archive -Path "$contentRoot\$fileName" -OutputPath $contentRoot -Force
+        }
+        Remove-Item -Path "$contentRoot\$fileName" -Force -ErrorAction SilentlyContinue
+        break
+    }
+    catch {
+        Write-Warning $_.Exception.Message
+        $retries--
+        Start-Sleep -Seconds 10
+        if ($retries -lt 0)
+        {
+            Write-Error $_.Exception -ErrorAction Continue
+            throw "Not able to download installer after 10 retries"
+        }
+    }
+} while ($true)
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDz/tI9Yp687MAB
-# 8AQn5gM5jiwnGoaHUTcOTo6fPZlM8KCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBz1U8oRAPKSBrE
+# Ngz7r0fHetA8FgHoeZgLH2N9RwHCMaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -142,23 +158,23 @@ Remove-Item -Path "$contentRoot\$fileName" -Force
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIL0flgHXEs+eNgtf
-# JvCTkd2USTpYCkSM26bA5HxfhC1kMA0GCSqGSIb3DQEBAQUABIICAJt99pT33BqK
-# wxNWJ2dqVSE5mUIzUw1OlLu7/3bUtvqWLmpGVo+gwRq3lu0JBjm9JEOOAo//K7n8
-# 7tUdpRAKAKeX9gf6Uj3QSm6f7/PiC4WTE4oQv/4qDsQiAh9sYp3v16xQggvluH7C
-# d1vdJJ0wywLda3qXPfY7iXrodDWGh+wZKDASL8LOorokBkHMKDv3yXy7TzQ2xXFN
-# gg+c2rU9VbCr8eE0aG+jQs9VikLen+uFEjNGG8zOAZgBraDbPkxsZiWfqVe3J7FC
-# DZgcQhBWYuqcOPG/UEXdklWjNWs8Af+MfG5WTjxvXXHEhfaWFllRCvEs0DAYvDrC
-# SNS1F3U7s179uYq3Zgs3XGK+AUcr+gkyQvWmg8Er8J3mpih6MNIP9qsYgZ7U89GK
-# C4MD2Min8RUCIHYtUQCR4w5b1DahSgtfGtIflTlR51Cm9ha2KHSZDZ34MRUyEoUu
-# /q+ktdHtqiBSPHgaxfYWCmIWWfwmMZk8AV59cWOkErGkWcwGmr9xA4LpF9FbldQz
-# H5NAyBfg8gI91hDxweR3idcZyJ0RbdlFQ5/Bb9LMj6TKYDcdLOMq8slrr1qMu4Cp
-# dkmrgt1lYdGN68lqAVr4jO3comi61tCYCJwU3lNne5MT2toJfLRAwSBdXn/64Hb7
-# vfeIipfFn7jK5aoPwAIGagbOgeycyp4HoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIO8HHV8dDoIJpR5o
+# aqpwxuojKYKx2DbX5HJAmnDqGoL2MA0GCSqGSIb3DQEBAQUABIICAI/rTjWyXY1A
+# VrFbV9Sy1ajK/rxK1a2cskMcqRMgU6D9ot5UubRVP+Zjl5FSEBetgNWo98FWj6re
+# GGYLGMLum1q8+YdVq0RqbyK/cabkNnv9HpjfoKHS/+k1+7gc8IhnJSBMPJTlqgrq
+# OE+ZQfYcIAUMPNrQllvd0WaV5wfoeGLHat+o6ZV5w8qvzb0A+o8MyEaNE+iPYUNy
+# b6nezR1fHPACee4I1mmdUn+kxLDh4CCrsSNUiZZZMjB/6hGwRcLfisOCZ4Jg5dGe
+# I3hENXazJKmEbPtmJOFFvHjAp+DUL0lXAas3cfA9qurpCaK8PB/VurD1LFEEm5J+
+# WGo6bWCIX145d4lVMZXZnlVqnqAdkYjjrn+epfHawHdi5DFIHrhyLdyvx7e3PvCl
+# DQN/hp1rIznZsc1xKLsR9QF0F4WCEQjzoeIKqJQOwJLT2+6jzCbtzmCN6N035hU4
+# VvUH1Fm98n6wZGB2BHtpY4WG3O1FNMbmIjWf3siUoqyvFwKLUA54QUVCJa/Hc4wz
+# RBddBPRhk33+X10WAfrnrrg01o1o13oDQXlJPW3txfQ3/ahHIsJFz0YrYnhIyb2S
+# i6vKOvV4MS5MD4RujGXYxLVZ3bmRVy5ZR48D1BypGUVnA9N+NHq7Er4TyristJkQ
+# 4KmrUmQWRcrBlZ7yTUhlBmNZl/tdLHdeoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCD9EIbLuHy8aiF7tgUUbgpRoR+a+Okde5aSlOEENNXvNwIUEupP4coS0Lv7
-# Z0fyvu/I/NYOfkYYDzIwMjUwODI1MTUwNTI2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDRqgDjIJzEj7TB+1C1f1PFfPxOBGJz7rrno5XL6N1ydgIUa84e8boQzDuD
+# wmcug/BwPYH1w9AYDzIwMjYwMTE5MTI0MzIyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -263,17 +279,17 @@ Remove-Item -Path "$contentRoot\$fileName" -Force
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IC+8UP4q+X4dr7YPfeYhPCnFUL+5ORUxMZyICZaAKhPfMIGwBgsqhkiG9w0BCRAC
+# IGRrIrAi99RgQ63RsU/bphv/2Svrnsvu/oBAX8lTdxmIMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGATtunZfGcS1v3
-# KzCgf028SK02XGLjftk5wKJc6utxPzkLCD8PX0CyntR12ZoSXeEMRcJ2dY+7kjix
-# SxxwEVvBbWOp34LUS89paaxX/a0p6UYc+VOmQYTrjIDql1b3BZg4uZl4kCjyFVIq
-# vU2Vg1C4pity8LDSWb3HOnRPqwRXyHXa5TsYsW3PXe2AbwSYmxMqI1hEsP9w3WXI
-# zjeGeFmAxKOE39a78FV9erDVU0u5Jzme2Tg0pyPpTkCSIecNnQek/ossGWoIJeFF
-# P2fZ7nRSmdRY1cfCbAKUnD31Fdl3Mw7FNZqx9f2UyB82rnTxjsY6eiX+Kl4zI+n2
-# Sgd+mfv3IblQDIUeJJnOTCwFQHm7fYYVwu0Eqq+V++wLoQlZ9X5DssJ3AoXRkhLz
-# j0VWuRBEXoEeiGAxmb/Gco46iMxKqBEXU7bDIxv3yRo8aGXgfJRmEPUKmyJbfP0q
-# tJ2XHimngPoIKHJDtzLUZoNtduGjWJs2VWTg2UBJBcYbkUyUs+R5
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAUlBD0tCVbmEN
+# 68h6lB6MIEhENa7+lybyGeiIovoE6Y9r5F45lmNZWbMs+RWbxb8Z5CAJjNH/DIJ8
+# mKQCmFmBdIcV6Nk+zBv1UG08KsVxE7ISgTwSHRY6S7zF10BLx9vU9Ti4wVWcgUSi
+# Y+TPYNoHXvnnkEFTSSqxAzVWNIYjvVT2ZqJmhRvDx+wC0eEL4fQIYzvluWnDf9PX
+# Tfo3wUk96iJL4ZFLA0WjBuOvsLDGS/9rBZEURkGdVV7geF+KAMREz7w/mLNJtFmq
+# UH9DvX+N9XOZiXvf/9PB1uMHqtOJeU7ST0mWMXfNgnG36Rs6IdCHZr9H6tJ+9q7R
+# jMdlvGgPBubdjz6UdG28OyjT0Zca8KsI9KH6+ouN062D36RzaiSpLCg6g1wtFw/a
+# RPN6O5ZxRihfWF9Q6WMBLfTLfo/6BrTodWvtO+gScA/TW+eFoux656LvAg45i61L
+# swIRdqa4NRs0+k0o7Uor7iwlyAQS1WMMCUka5Zj/dNycBBQ6Uukh
 # SIG # End signature block

@@ -49,13 +49,17 @@ if (-Not (Test-Path "$AlyaDeployToolRoot"))
 {
     try
     {
-        $req = Invoke-WebRequestIndep -Uri $AlyaDeployToolDownload -UseBasicParsing -Method Get -UserAgent "Wget"
+        $req = Invoke-WebRequestIndep -Uri $AlyaDeployToolDownload -UseBasicParsing -Method Get
         [regex]$regex = "[^`"]*download/[^`"]*officedeploymenttool_[^`"]*.exe"
         $url = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
         if ([string]::IsNullOrEmpty($url))
         {
             [regex]$regexAzp = "`"url`"\s*:\s*`"([^`"]*officedeploymenttool_[^`"]*.exe)"
             $url = [regex]::Match($req.Content, $regexAzp, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Groups[1].Value
+        }
+        if ([string]::IsNullOrEmpty($url))
+        {
+            throw "Not able to get download url!"
         }
         $req = Invoke-WebRequestIndep -Uri $url -Method Get -OutFile "$AlyaTemp\officedeploymenttool.exe"
         Write-Warning "Attention: UAC window!"
