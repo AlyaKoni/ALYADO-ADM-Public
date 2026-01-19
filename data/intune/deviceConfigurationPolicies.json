@@ -224,7 +224,7 @@
                                 "simpleSettingValue": {
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
                                     "settingValueTemplateReference": null,
-                                    "value": "https://alyaconsulting.ch"
+                                    "value": "##AlyaWebPage##"
                                 }
                             }
                         ],
@@ -272,7 +272,7 @@
                                 "simpleSettingValue": {
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
                                     "settingValueTemplateReference": null,
-                                    "value": "[{\"url\":\"https://alyaconsulting.ch\",\"title\":\"AlyaConsulting\",\"pinned\":true},{\"url\":\"https://google.com\",\"title\":\"Google\",\"pinned\":true},{\"url\":\"https://portal.office.com\",\"title\":\"Office365\",\"pinned\":true},{\"url\":\"https://myaccount.microsoft.com\",\"title\":\"MyAccount\",\"pinned\":true}]"
+                                    "value": "[{\"url\":\"##AlyaWebPage##\",\"title\":\"##AlyaCompanyName##\",\"pinned\":true},{\"url\":\"https://google.com\",\"title\":\"Google\",\"pinned\":true},{\"url\":\"https://portal.office.com\",\"title\":\"Office365\",\"pinned\":true},{\"url\":\"https://myaccount.microsoft.com\",\"title\":\"MyAccount\",\"pinned\":true}]"
                                 }
                             }
                         ],
@@ -309,7 +309,7 @@
                                 "simpleSettingCollectionValue": [{
                                         "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
                                         "settingValueTemplateReference": null,
-                                        "value": "https://alyaconsulting.ch"
+                                        "value": "##AlyaWebPage##"
                                     }
                                 ]
                             }
@@ -900,7 +900,7 @@
                                 "simpleSettingValue": {
                                     "@odata.type": "#microsoft.graph.deviceManagementConfigurationStringSettingValue",
                                     "settingValueTemplateReference": null,
-                                    "value": "f2fa7496-3af7-42c7-a036-5169143b03b0"
+                                    "value": "##AlyaTenantId##"
                                 }
                             }
                         ],
@@ -1167,7 +1167,7 @@
     }, {
         "creationSource": null,
         "description": "Configures System policies for windows devices",
-        "name": "WIN System Admin Templates",
+        "name": "WIN System Settings",
         "platforms": "windows10",
         "priorityMetaData": null,
         "roleScopeTagIds": ["0"],
