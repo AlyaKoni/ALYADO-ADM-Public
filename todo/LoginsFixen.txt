@@ -1,5 +1,0 @@
-Get-AppxPackage Microsoft.AAD.BrokerPlugin
-Get-AppxPackage Microsoft.Windows.CloudExperienceHost
-
-Add-AppxPackage -Register "$env:windirSystemAppsMicrosoft.AAD.BrokerPlugin_cw5n1h2txyewyAppxmanifest.xml" -DisableDevelopmentMode -ForceApplicationShutdown
-Add-AppxPackage -Register "$env:windirSystemAppsMicrosoft.Windows.CloudExperienceHost_cw5n1h2txyewyAppxmanifest.xml" -DisableDevelopmentMode -ForceApplicationShutdown

@@ -1,7 +1,7 @@
 ﻿#Requires -Version 2
 
 <#
-    Copyright (c) Alya Consulting, 2019-2025
+    Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -31,7 +31,11 @@
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://go.microsoft.com/fwlink/?LinkId=708343&clcid=0x409"
+$pageUrl = "https://azure.microsoft.com/en-us/products/storage/storage-explorer"
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
+[regex]$regex = "<a class=`"menu-list__item-link`" href=`"(https://go.microsoft.com/fwlink.*?)`".*Windows x64"
+$fileUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Groups[1].Value)
+
 $fileName = "StorageExplorer-windows-x64.exe"
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
@@ -39,13 +43,13 @@ if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\$fileName"
+Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $fileUrl -Outfile "$contentRoot\$fileName"
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBlFPncZS4pTcNM
-# y+2lJaLnU4RoRVenfUcBmhK35qQ7n6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDXZpZczPhpvKLF
+# kygiWxzbG1vL8cVwG+Tz51jKeUY95aCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -129,23 +133,23 @@ Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $page
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPXMiCQeZWr9wGey
-# vH+UF6Kz1hm3IoRus1fG7ung1OLbMA0GCSqGSIb3DQEBAQUABIICADJTtaixM2AZ
-# dSh53qgxwWaqnFzYWdT0u5K+tDZmwt5sISEpLNDrv6iHKG0v43tLSNrDm9fPnnBB
-# L8FFczaBSUxqL4F0u7+kmUkIU77I8n/oVXgA2P26sWLOVhReOnGGJbZvh5qcD6lD
-# OfhWwVarNIkVGqolA6kCvhs2PKn8wccZI2/hRAhNorGZ8uc41MYfIwB3gJP4gAm6
-# 2rMGDj7tcGZDG+HPBZ1cOfj9cfvWiBc3LNo/dXRAZ4A07NAkJ+WdXc5sKAfKDBDX
-# NN1y4HmJkCH4YsBj0/fofKZM3ujf5Q47fDNA4klFWcAQ9F0rUgshfG8wY2avZaj2
-# 8vxiPXTh28uNYT9NRKRXxIJfLMT0zQ7VmxRVSAQpbvlTaFAC7KCCyDV7NJh+WGvh
-# fFIy/aVkvpPA6BfyeHzFpwg+Mm8EEzxcgv3iydWCKYRaEldF9oqE4c+JxELXLn2h
-# Nkpe37bY8GB7YcSysyBWqTTpydBqfdVScYWZGENW0kKDItQkI11aj0guAEugVwxs
-# NaOWLdKUcVJGLNRUc+KzKO8N8uA02uxK9FrX6i3ZDAJ1w6vCOJ/Suuf5UJUlCj6P
-# dHzZlqfOdfcG2p8CKdz1yDv9O1QRRnIfUlnZMMOMDgNMVpx7tvDConx8ekMmwPEu
-# ipjEjdaK+PfRWItZNWOD/gUqIWwRKyNboYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEnZ42VVTYmCaJRB
+# 1LvG/D0uWsJc7yIv8dcHBthysH54MA0GCSqGSIb3DQEBAQUABIICAGMhjBMPdACE
+# QCoLDJPM8M7PrO5FCTfGuhTYbACkA0g5s5LkrUM55C5xc1j3A9GL9jB/MU1fkT7s
+# +Isp4ffd6HB1RFsfVP0gGW3H9trwRgP1VxNmCVXA+DI/nrwNzIHYuuoRKBYfXZix
+# mWuyl5HiI4EcrxEgSndSaADdUmwwb/8CoYWG3dQtI4ao+qH3huEAqrYH8rH469kh
+# 510FEscXIKnqAErKvNROAGDuq0Tfm3tRKk3G5ak4mU3uiQDBY61TIoTPNfrxPia5
+# Q9KDJ8Vt9ms5jpKfLUloN0vbx8P3+iHNOzd2AH4800JJTcLiGIfa166DwEai/BEw
+# AB5CU6/SIdFuBfqX16s8HfHiQscowofoQ8mdCav4AUtfs7PHkAkltvAsSk1LzCXo
+# xwRv9cNL8wKrw9w2hhqRiGqiT6ymNbnsIEzff8/lYL1j8W/aKdR0IECSKJtqgqin
+# j/k8OQZnNoZEjSbUzNTaD2Nod0R+jIXDMf7rld3pMjJqEAAthifISXdXzjpSBIe2
+# 4tq7k8rkLbukUfzJSpEMho32jKtsCP9bqBq03xrng46OER46cBe6jSiSlty896Va
+# ZzQauE/ziuv2Xv1OSHLwIYJ+vu2BM5YJIw00riczzl587fiKGjtOZbGXBtFnxTAn
+# RJ6SG2+GS59eYiYFQPcI6TUqLf7m0D4goYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCA5cV8k6oDHpelXlxVtoJLLPuhAWO3dNOOK18vlG3MY2QIUZzoHzL3u9gx5
-# h+GYsoX2YunBwoAYDzIwMjUwODI1MTUwNTUzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCA6XgKN536fDZl5TlXYgZA+ghYug9mr6bTeiQ0SMik5hAIUW/8T3JvbRRcR
+# XMr43B8/wRarteIYDzIwMjYwMTIwMDkyNzAzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -250,17 +254,17 @@ Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $page
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# INiSW6G0gCK6XtwHo8jKGh7AwFNToxKm8VXR/h5AZq98MIGwBgsqhkiG9w0BCRAC
+# IJmwlJm7GbA5axOcoCj/GHlC55pVlCyOvfHebMC0TwWuMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAO1z3bykCl0sl
-# cYcDEvTbt7cU2CoulWcS1SNYDuX3Gp5foJjfJmHqlfUmB6YBerGsbZmRV5yWBxyw
-# ePZtz2JwJ0MPC/wIlbyZYzemtsdrGmEClJPdWPQ7CtQ6JbzQzyegez9C+EQBgJZc
-# TmLZCQBMkb4TYB5twOF92R4ySNoMLtgOa+98rc/j21DXAxPhR0X/H9y9As6inP2B
-# XK9aZALeCCa4IdvyCNRtxFcCKCWUJC986QRNycvmzcki+VEzDL4WJ/rXw1wdw/TW
-# 88e8Ae9e54iLDXMlDEtdjgSSuRQsu7jUgw3aRJRR42Bow+oDXA8kys1wFEHRjffG
-# 0qdsiyIj6nngQaRvAFFNyjwofNibHZucRzVayo65I7OqlrWNQNORclM7SqbTQLSv
-# HDJj8v7A0j2a/kWN4hOyxXzmYxEG59X+hTQjtlube7swNBRbxoluHUrvT2hyaYEG
-# hi4zeHQnNUucCoxL/NZRpCmWmwwUG69GPj0f5cwedfre8x/sZpJm
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAA4EP3WX6xGYl
+# b70eVU9QukOoavr2yG4ERTHSmq8AI1J/dRo7R2GkOz/uM2lBWQ1xdiGsLIg+gDh2
+# r2rUE5CBDpRh0HeDuDZKTZH78gM2sXrFQ6+D+Ex8if5b1uiKL7UyWD5wFHEqzzbw
+# lH2x/ae/83/qhavBAO04YoV/wCsbQGq2R4fbVKEFPEOEot05iSPICRUPGaURaCwF
+# Fq2kdLbKAKPRZFzEzAvs3OJ8nKTb51mq6tKRVPOfWMCIgoFRs2tV7OykBwldb0N/
+# SUO5TMQBMQFKNzfDn2mtNnoMuVTCA54iGVhAb8357/fSiVLzKnvi7HL+RmTu6GCo
+# o2n4xzW8GEqyVRJM6fYDIGi7STuVbq2BtbFhSKkQsVD47ck+7VeK6ua2x7F3J/5s
+# dG4//q2dQjdcVmcoRp5qL7dPu2+PJyM7kUXmshpp7ogb+VRmL0jrt/n6vsYQdFgl
+# Lk08ojNlFqnyipHQAWDY2iN7FPGvDYl4QxpUSgUH8Uqp6KiFCkQU
 # SIG # End signature block

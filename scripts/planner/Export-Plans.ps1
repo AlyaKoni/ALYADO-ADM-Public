@@ -1,7 +1,7 @@
 ﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2025
+    Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -50,19 +50,54 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 # Logins
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
+# =============================================================
+# O365 stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Planner | Export-Plans | O365" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
 # Export plans
 $groups = Get-PnPAzureADGroup -Connection $adminCon
 $extracted = @()
 foreach($group in $groups)
 {
-    Write-Host "Group: $($group.DisplayName) $($group.GroupTypes)"
-    #Add-PnPAzureADGroupOwner -Connection $adminCon -Identity $group.Id -Users @("alyaadmin@flecopower.ch")
-    try {
-        $extracted += Get-PnPPlannerPlan -Connection $adminCon -Group $group -ResolveIdentities
-    }
-    catch {
-        Write-Warning $_.Exception.Message
-    }
+    if ($group.GroupTypes -notcontains "Unified") { continue }
+    # $ownerAdded = $false
+    Write-Host "Group: $($group.DisplayName) '$($group.GroupTypes)'"
+    # $owners = Get-PnPAzureADGroupOwner -Connection $adminCon -Identity $group.Id
+    # $actUser = (Get-PnPProperty -Connection $adminCon -ClientObject (Get-PnPWeb -Connection $adminCon) -Property CurrentUser).Email
+    # if ($owners.Email -notcontains $actUser)
+    # {
+    #     Add-PnPAzureADGroupOwner -Connection $adminCon -Identity $group.Id -Users @($actUser)
+    #     $ownerAdded = $true
+    # }
+    # $retries = 5
+    # do {
+        try
+        {
+            $extracted += Get-PnPPlannerPlan -Connection $adminCon -Group $group -ResolveIdentities
+    #         break
+        }
+        catch
+        {
+            Write-Warning $_.Exception.Message
+    #         $retries--
+    #         if ($retries -lt 0)
+    #         {
+    #             Write-Error "Not able to get plan after 5 retries!" -ErrorAction Continue
+    #         }
+    #         else
+    #         {
+    #             Start-Sleep -Seconds 5
+    #         }
+        }
+    # } while ($retries -gt 0)
+    # if ($ownerAdded)
+    # {
+    #     Remove-PnPAzureADGroupOwner -Connection $adminCon -Identity $group.Id -Users @($actUser)
+    # }
 }
 
 # Export
@@ -81,8 +116,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDoMJ8s+C9I49fv
-# PmOOP1e+roob+IkU+a/TwXpCJZ9ig6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCGge12xNBIcBNH
+# l13cmFuqmqEGKl1y8EYxR5Bl6jUECqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -166,23 +201,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMN6txV7N+U8t7/X
-# Xy9cJf9LffSozKyMVDEeuiE7c5geMA0GCSqGSIb3DQEBAQUABIICAE+Ownq4YmEP
-# oD5vrVEbsXiZmHqZxp9WXbmypPtbXVmsKU5cxSC0MlEgCWwXHeh28fhg46SNqGg5
-# y2eom+oJ2H4whQVxYbqRBOKNi3LXECc9zDs6ej+avA7fvIrHG8CUsgk7jAFt85qU
-# cQ7G2MK197HKPtDrVSnpIBhq2joy6O1nuMLSDYRsCRCFMYdyFAMRMjxUvSpURBcW
-# 5DA47ocIJwZz742VAts79a/glqLxR1ow6Nn1zIXnuBIwTYQhCAGch16tTV4VcoMv
-# Yml5QwktDvWc9g74x0DIU8GP61DGBlSN5TxejRJk2JT64TDPiJkGGYDgLBJ0Ied4
-# 2h3RHl0eO0ZoYPbrFoqhV+uviMhz8SVln7MOJL2sQuzqSq+SE/QWOf90bfZ2HrVU
-# /gZnDwrr+N0mLJkPIwIxSN89Rb7r3ZA7iJ88kUkDGpZUJ8ZK7ACdLk6+e9G+y4Jm
-# SRq3nnRC2G8tFODEmFzxgfi5D1Dzj86uFMrpOjYAkb0rsEUYPXonolzTk0EsmhEV
-# Z14+ja3YtJ+MsqS5PhslAt2HE2Zu62coqkmmMzod2uw98F7R0Ff+XxlZ4vrPTqao
-# sU5xMWNcSubShMrd8D9FpbZHuMc96+P71X2pHA1Re6AMqmkOU23ZDBOKPPa8VLQz
-# vUtqvCjB2O9dyLVsH9vit/C5RhCT+NQnoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIK731WlqG3j4gx8C
+# r4OzmgvVCXeLRnDvFkvbOyYNgjz6MA0GCSqGSIb3DQEBAQUABIICABFQz41VOWYq
+# Uz/fpfvjHQqkMZ0tQifmiok0hqCvaMGE+ctNsx/qMZfpY8ecSGVGNrqdj0HQIykt
+# ccjJeyQoADyQ6kn4zd4o94meIiWysqnZ6ODMipbaEIyszhC7LkDhTl+hctlttH7b
+# pLYtuSa4qCCDPeimG2xdZ7pilYA20KKgUJW1unY2xKsxN7XWdQY009F/g7DWRCBA
+# dMZjeGvalKSK5XdyWi0VFNQdxY5HcgfYe1NO1SrcAjvRhtEFqmIfjYstwzyAfO7n
+# ef8HoQhC6oOnxtJ6gLGoOTsDZrQ8aQy/48gO18zSq93siXHBRHYwSEa0RGxcS5m/
+# ta5ADH6sFn0N8R7YvnQYVh78dNRQQhpLF8t2xSJ7Hvi6gfVwHneS0qnQUCJtr76F
+# L/WUSWsKgw7nHzROTaj1uN7x5sxO3YsAUYiWrTNmm0k+5awSSt4wpgcP3UTeLFar
+# cFq+o4tE24CpX9geV+oRnTahWMcsSzNGTqPFAmHrPjME0UcrCWAPUVRpyVj5qiRC
+# r3ZvPBclydqFMITXyy+MEhaG1TUpPIiYBPt+7/sHgJwxBVtRPVzAoH3C0OlLJKQ1
+# fmjQA0gD1PsKNgL2cTiLR+OWw8nO0w1nFqJavFWB0PFa4BEzQTPc9ZKuEhSWW0xz
+# qkJDmPOVrcsVFxyCob7hOv79zvYq3XikoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCZo1w8M7OoAlJ0uD3AL/sI/Wncf0nKrcUFwYNMFTZY4wIUNP+GFoWAgnht
-# QRw/u2PB4vCPafMYDzIwMjUwODI1MTU0MjM4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAuWo+1HGtHh0EwK2mJvahFw1irlPBbHx14izCCWozU0wIUDQYUwEk0cYVc
+# jrTBbfokR6Q+JakYDzIwMjYwMTIwMTIwODMyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -287,17 +322,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IF+GiEJw6GrIffvgZFpCTuAfE8KzXyxW/V5lSA2qW4opMIGwBgsqhkiG9w0BCRAC
+# IMg3ZYQEYoXmACEF4yYOKEBDXgOsKFd0okyq4sH7SoL0MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAN+9XVMpgRbfK
-# 7obZvtxubMkt6LfYyc0A6cfQgSgoTNMUYn5qQtP2mdV9JaJHNnRbKJEuuNbUZl0m
-# 2Qd0TxvDB4MD7S4q0YV6vJuYRPv3ZY8UCsSBHwSCXvljzppbU9wb5JIPwkWtgb3a
-# vOT5QLocmVL33L5P7Yq7utut2qX5P8xtT+KPsvPtA4MP30w0kURyWZ94WVBheJxc
-# cYxW45y9Zm8uCP1Gm6/FfgLWkXxszAiN8fcHWAgfrUqulTzI+ItTKjkCI3of7fzQ
-# h+q+2qTuGHxH7uktYd5cLkzB7sBtmxVE8M2STXR5ynbXtqqFw2rtMZwIomSpbVHv
-# PnZu53ABZgc2qkVvj8uWuAODtHwynOF29BR0aHCH1X79cDaW9Hk2asCjHV7YGx67
-# TWBng0Vt04E/N08E5uKFnNaXyl6Cu46uGU6/LLwn8oRcXWTOgkjkHMtsISsQf/0n
-# Rg/37o4sFqgW4Lh2LEdf1wRkYs+hvkJaOlUJPkyZVyIW9Y452xJO
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMAw/BZVv7Qrx
+# Vmap0GHGqS7JUaFesgpF1tAo9tsNtSslMUQXnaAY4scDhEoHJtLAp7FvipdlpKof
+# EEdmrs94ahWt4SMBwlN8CgamjFnTO/AZXcrNTovPwL1KBYmJh0PzKJp5qYWaVUIX
+# V/t2qpkC8LDuebj61edv5yZ5beZ8NRv4cx4/lS0FgEU460tk32KZjjYpf4j6bp59
+# mBO363vjgPjuf9W2JQlbMA7JmBLxcP4VYRBSwwhkfWA5+F74v8HfgBK270ydmGYd
+# iNbalLNXbJUl8Wy9StSlzqPKKtvOj3Mio/+ydnC2kNSyG0lahKzV8CtN4Vnsl9wX
+# md1mlLAh91Lcr39sp4e+J5/tbU5TL9/YlOnQdEYdwEpaWKLak1H+586l7DFqVoxW
+# nfcpBj/koC+H4xk7l+cIA3jpprWPtg7hbDgf1XiGNoT796zkLuCGlEc48d/250k8
+# 0JGL9kXiaOq/MRIzpcB6oXI0v3YAoRzG2/xuhpNWcFiWoqKCaDXt
 # SIG # End signature block
