@@ -32,24 +32,26 @@
     ---------- -------------------- ----------------------------
     11.02.2025 Konrad Brunner       Initial Version
     15.10.2025 Konrad Brunner       Added ByBackupPolicy
+    21.01.2026 Konrad Brunner       Bug fixes and ExcelExport
 
 #>
 
-[CmdletBinding(DefaultParameterSetName = "KeepNumberOfVersions")]
+[CmdletBinding(DefaultParameterSetName = "ByBackupPolicy")]
 Param(
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
     [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
     [ValidateScript({$_ -is [int] -and $_ -gt 0 -and $_ -lt 50000})]   
-    [int]$maxMajorVersionLimit = 250,
+    [int]$maxMajorVersionLimit = 500,
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
     [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
-    [Parameter(Mandatory = $false)]
     [ValidateScript({$_ -is [int] -and $_ -gt 0 -and $_ -lt 510})]
     [int]$maxMinorVersionLimit = 50,
 
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
+    [ValidateScript({$_ -is [int] -and $_ -gt 0})]
     [int]$keepMajorVersions = 50,
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
+    [ValidateScript({$_ -is [int] -and $_ -gt 0})]
     [int]$keepMinorVersions = 5,
 
     [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
@@ -63,8 +65,24 @@ Param(
 
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
     [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
+    [bool]$dryRun = $true,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
+    [string]$ClientId = $null,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
+    [string]$Thumbprint = $null,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
+    [string]$CertFile = $null,
+
+    [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
+    [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
     [Parameter(Mandatory = $false)]
-    [bool]$dryRun = $true
+    [string]$CertPassword = $null
 )
 
 # Reading configuration
@@ -74,36 +92,15 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Purge-VersionsOnAllSites-$($AlyaTimeString).log" | Out-Null
 
 # Members
-$alreadyDone = @(
-)
+$alreadyDone = @()
+$startDate = Get-Date
 
 # Checking modules
 Install-ModuleIfNotInstalled "PnP.PowerShell"
+Install-ModuleIfNotInstalled "ImportExcel"
 
 # Login
-$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-
-# Checking input
-if ($maxMajorVersionLimit -lt 1)
-{
-    Write-Error "maxMajorVersionLimit needs to be at least 1" -ErrorAction Continue
-    Exit
-}
-if ($maxMinorVersionLimit -lt 1)
-{
-    Write-Error "maxMinorVersionLimit needs to be at least 1" -ErrorAction Continue
-    Exit
-}
-if ($keepMajorVersions -lt 1)
-{
-    Write-Error "keepMajorVersions needs to be at least 1" -ErrorAction Continue
-    Exit
-}
-if ($keepMinorVersions -lt 1)
-{
-    Write-Error "keepMinorVersions needs to be at least 1" -ErrorAction Continue
-    Exit
-}
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -ClientId $ClientId -Thumbprint $Thumbprint -CertFile $CertFile -CertPassword $CertPassword
 
 # Getting site collections
 Write-Host "Getting site collections" -ForegroundColor $CommandInfo
@@ -126,25 +123,28 @@ do
 } while ($true)
 
 # Getting actual users mail
-$rootCon = LoginTo-PnP -Url $AlyaSharePointUrl
+$rootCon = LoginTo-PnP -Url $AlyaSharePointUrl -ClientId $ClientId -Thumbprint $Thumbprint -CertFile $CertFile -CertPassword $CertPassword
 $rweb = Get-PnPWeb -Connection $rootCon
 $rweb.Context.Load($rweb.CurrentUser)
 Invoke-PnPQuery -Connection $rootCon
 $owners = @($rweb.CurrentUser.Email)
 
-# Setting site admins
-Write-Host "Setting site admins" -ForegroundColor $CommandInfo
-$ctx = Get-PnPContext -Connection $adminCon
-$ctx.Load($ctx.Web.CurrentUser)
-Invoke-PnPQuery -Connection $adminCon
-foreach ($site in $sitesToProcess)
+if (-Not $ClientId)
 {
-    if ($site.Template -like "Redirect*") { continue }
-    if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
+    # Setting site admins
+    Write-Host "Setting site admins" -ForegroundColor $CommandInfo
+    $ctx = Get-PnPContext -Connection $adminCon
+    $ctx.Load($ctx.Web.CurrentUser)
+    Invoke-PnPQuery -Connection $adminCon
+    foreach ($site in $sitesToProcess)
+    {
+        if ($site.Template -like "Redirect*") { continue }
+        if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
 
-    # Setting site owner
-    Write-Host "  Site: $($site.Url)"
-    if (-Not $dryRun) { $null = Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $owners }
+        # Setting site owner
+        Write-Host "  Site: $($site.Url)"
+        if (-Not $dryRun) { $null = Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Owners $owners }
+    }
 }
 
 $Cult = Get-Culture
@@ -153,351 +153,608 @@ $FirstDayOfWeek = $Cult.DateTimeFormat.FirstDayOfWeek.value__
 
 # Purging versions
 Write-Host "Purging versions" -ForegroundColor $CommandInfo
+$purgedVersions = [System.Collections.ArrayList]@()
+$purgeErrors = [System.Collections.ArrayList]@()
+$purgeWarnings = [System.Collections.ArrayList]@()
 foreach ($site in $sitesToProcess)
 {
-    if ($site.Template -like "Redirect*") { continue }
-    if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
-    if ($site.Url -in $alreadyDone) { continue }
-    $alreadyDone += $site.Url
-
-    # Login to site
-    Write-Host ""
-    Write-Host "  Site: $($site.Url)"
-    $siteCon = LoginTo-PnP -Url $site.Url
-
-    # Getting all doc libs
-    $retries = 10
-    do
+    try
     {
-        try
-        {
-            $lists = Get-PnPList -Connection $siteCon -Includes @("ID", "Title", "Fields", "RootFolder", "EnableVersioning", "EnableMinorVersions", "MajorVersionLimit", "MajorWithMinorVersionsLimit") -ErrorAction SilentlyContinue
-            $docLibs = $lists | Where-Object { $_.BaseType -eq "DocumentLibrary" `
-                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/_catalogs") `
-                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/Style Library") `
-                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/FormServerTemplates") `
-                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/IWConvertedForms") `
-                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/SiteAssets") `
-                -and -not $_.RootFolder.ServerRelativeUrl.Contains("/SitePages") }
-            break
-        }
-        catch
-        {
-            Write-Error $_.Exception -ErrorAction Continue
-            Write-Warning "Retrying $retries times"
-            Start-Sleep -Seconds 15
-            $retries--
-            if ($retries -lt 0) { throw }
-        }
-    } while ($true)
 
-    foreach ($docLib in $docLibs)
-    {
-        Write-Host "    DocLib: $($docLib.RootFolder.ServerRelativeUrl)"
-        if ($docLib.EnableVersioning)
-        {
-            $minorVersionsEnabled = $docLib.EnableMinorVersions
+        if ($site.Template -like "Redirect*") { continue }
+        if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
+        if ($site.Url -in $alreadyDone) { continue }
+        $alreadyDone += $site.Url
 
-            # Checking version history limit
-            Write-Host "      Checking version history limit"
-            if ($docLib.MajorVersionLimit -gt $maxMajorVersionLimit)
+        # Login to site
+        Write-Host ""
+        Write-Host "  Site: $($site.Url)"
+        $siteCon = LoginTo-PnP -Url $site.Url -ClientId $ClientId -Thumbprint $Thumbprint -CertFile $CertFile -CertPassword $CertPassword
+
+        # Getting all doc libs
+        $retries = 10
+        do
+        {
+            try
             {
-                Write-Host "        Setting MajorVersions to $maxMajorVersionLimit"
-                if (-Not $dryRun) { $null = Set-PnPList -Connection $siteCon -Identity $docLib -MajorVersions $maxMajorVersionLimit }
+                $lists = Get-PnPList -Connection $siteCon -Includes @("ID", "Title", "Fields", "RootFolder", "EnableVersioning", "EnableMinorVersions", "MajorVersionLimit", "MajorWithMinorVersionsLimit") -ErrorAction SilentlyContinue
+                $docLibs = $lists | Where-Object { $_.BaseType -eq "DocumentLibrary" `
+                    -and -not $_.RootFolder.ServerRelativeUrl.Contains("/_catalogs") `
+                    -and -not $_.RootFolder.ServerRelativeUrl.Contains("/Style Library") `
+                    -and -not $_.RootFolder.ServerRelativeUrl.Contains("/FormServerTemplates") `
+                    -and -not $_.RootFolder.ServerRelativeUrl.Contains("/IWConvertedForms") `
+                    -and -not $_.RootFolder.ServerRelativeUrl.Contains("/SiteAssets") `
+                    -and -not $_.RootFolder.ServerRelativeUrl.Contains("/SitePages") }
+                break
             }
-            if ($minorVersionsEnabled -and $docLib.MajorWithMinorVersionsLimit -gt $maxMinorVersionLimit)
+            catch
             {
-                Write-Host "        Setting MinorVersions to $maxMinorVersionLimit"
-                if (-Not $dryRun) { $null = Set-PnPList -Connection $siteCon -Identity $docLib -MinorVersions $maxMinorVersionLimit }
+                Write-Error $_.Exception -ErrorAction Continue
+                Write-Warning "Retrying $retries times"
+                Start-Sleep -Seconds 15
+                $retries--
+                if ($retries -lt 0) { throw }
             }
+        } while ($true)
 
-            # Getting files
-            Write-Host "      Getting files"
-            $items = Get-PnPListItem -Connection $siteCon -List $docLib -PageSize 5000 -Fields "ID","Title","ContentType","File","File.ServerRelativeUrl"
-            Write-Host "        $($items.Count) files"
-
-            foreach ($item in $items)
+        foreach ($docLib in $docLibs)
+        {
+            try
             {
-                $ct = $item.ContentType
-                if ($ct.name -eq "Ordner" -or $ct.name -eq "Folder") { continue }
-                #$file = $item.File
-                Write-Host "        $($item.File.ServerRelativeUrl)"
-                if (-Not $minorVersionsEnabled)
+
+                Write-Host "    DocLib: $($docLib.RootFolder.ServerRelativeUrl)"
+                if ($docLib.EnableVersioning)
                 {
-                    switch ($PSCmdlet.ParameterSetName)
+                    $minorVersionsEnabled = $docLib.EnableMinorVersions
+
+                    # Checking version history limits
+                    Write-Host "      Checking version history limits"
+                    $limit = $docLib.MajorVersionLimit
+                    if ($limit -gt $maxMajorVersionLimit)
                     {
-                        "KeepNumberOfVersions"
+                        Write-Host "        Setting MajorVersions from $limit to $maxMajorVersionLimit"
+                        if (-Not $dryRun) { $null = Set-PnPList -Connection $siteCon -Identity $docLib -MajorVersions $maxMajorVersionLimit }
+                        $null = $purgeWarnings.Add([PSCustomObject]@{
+                            SiteUrl = $site.Url
+                            DocLib  = $docLib.RootFolder.ServerRelativeUrl
+                            ItemId  = $null
+                            Warning = "MajorVersions changed from $limit to $maxMajorVersionLimit"
+                        })
+                    }
+                    $limit = $docLib.MajorWithMinorVersionsLimit
+                    if ($minorVersionsEnabled -and $limit -gt $maxMinorVersionLimit)
+                    {
+                        Write-Host "        Setting MinorVersions from $limit to $maxMinorVersionLimit"
+                        if (-Not $dryRun) { $null = Set-PnPList -Connection $siteCon -Identity $docLib -MinorVersions $maxMinorVersionLimit }
+                        $null = $purgeWarnings.Add([PSCustomObject]@{
+                            SiteUrl = $site.Url
+                            DocLib  = $docLib.RootFolder.ServerRelativeUrl
+                            ItemId  = $null
+                            Warning = "MinorVersions changed from $limit to $maxMinorVersionLimit"
+                        })
+                    }
+
+                    # Getting files
+                    Write-Host "      Getting files"
+                    $items = Get-PnPListItem -Connection $siteCon -List $docLib -PageSize 5000
+                    Write-Host "        $($items.Count) files"
+
+                    foreach ($item in $items)
+                    {
+                        try
                         {
-                            $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl | Sort-Object -Property "Created" -Descending
-                            Write-Host "          $($versions.Count) major versions"
-                            if ($versions.Count -gt $keepMajorVersions)
+
+                            if ($item.FileSystemObjectType -eq "Folder") { continue }
+                            #$file = $item.File
+                            Write-Host "        $($item.FieldValues.FileRef)"
+                            if (-Not $minorVersionsEnabled)
                             {
-                                $cnt = $versions.Count - $keepMajorVersions
-                                Write-Host "          purging $($cnt) versions"
-                                for ($i = $keepMajorVersions; $i -lt $versions.Count; $i++)
+                                if ($item.FieldValues["_UIVersionString"] -eq "1.0") { continue }
+                                switch ($PSCmdlet.ParameterSetName)
                                 {
-                                    Write-Host "          deleting version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
-                                    if (-Not $dryRun)
+                                    "KeepNumberOfVersions"
                                     {
-                                        Remove-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl -Identity $versions[$i].ID -Force
+                                        $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.FieldValues.FileRef | Sort-Object -Property "Created" -Descending
+                                        Write-Host "          $($versions.Count) major versions"
+                                        if ($versions.Count -gt $keepMajorVersions)
+                                        {
+                                            $cnt = $versions.Count - $keepMajorVersions
+                                            Write-Host "          purging $($cnt) versions"
+                                            for ($i = $keepMajorVersions; $i -lt $versions.Count; $i++)
+                                            {
+                                                Write-Host "          deleting version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
+                                                $null = $purgedVersions.Add([PSCustomObject]@{
+                                                    VersionLabel = $versions[$i].VersionLabel
+                                                    Created      = $versions[$i].Created
+                                                    ContentType  = $item.FieldValues.ContentTypeId
+                                                    ServerRelativeUrl = $item.FieldValues.FileRef
+                                                    FileSize = [math]::Round(($versions[$i].Length / 1MB), 2)
+                                                })
+                                                if (-Not $dryRun)
+                                                {
+                                                    $retries = 5
+                                                    do
+                                                    {
+                                                        try
+                                                        {
+                                                            Remove-PnPFileVersion -Connection $siteCon -Url $item.FieldValues.FileRef -Identity $versions[$i].ID -Force
+                                                            break
+                                                        }
+                                                        catch
+                                                        {
+                                                            Write-Error $_.Exception -ErrorAction Continue
+                                                            Write-Warning "Retrying $retries times"
+                                                            Start-Sleep -Seconds 10
+                                                            $retries--
+                                                            if ($retries -lt 0) { throw }
+                                                        }
+                                                    } while ($true)
+                                                }
+                                            }
+                                        }
+                                        else
+                                        {
+                                            Write-Host "          nothing to purge"
+                                        }
+                                        break
+                                    }
+                                    "ByBackupPolicy"
+                                    {
+                                        $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.FieldValues.FileRef | Sort-Object -Property "Created"
+                                        Write-Host "          $($versions.Count) major versions"
+                                        for ($i = 0; $i -lt $versions.Count; $i++)
+                                        {
+                                            Write-Host "          Version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
+                                            $keepThisVersion = $true
+                                            if ($versions[$i].Created.ToLocalTime().AddDays($keepDays) -lt (Get-Date))
+                                            {
+                                                $DT = $versions[$i].Created.ToLocalTime()
+                                                $WeekRuleDay = [int]($DT.DayOfWeek.Value__ -ge $FirstDayOfWeek ) * ( (6 - $WeekRule) - $DT.DayOfWeek.Value__ )
+                                                $weekNumber = $Cult.Calendar.GetWeekOfYear(($DT).AddDays($WeekRuleDay), $WeekRule, $FirstDayOfWeek)
+                                                if (($i+1) -lt $versions.Count)
+                                                {
+                                                    $DT = $versions[$i+1].Created.ToLocalTime()
+                                                    $WeekRuleDay = [int]($DT.DayOfWeek.Value__ -ge $FirstDayOfWeek ) * ( (6 - $WeekRule) - $DT.DayOfWeek.Value__ )
+                                                    $nextWeekNumber = $Cult.Calendar.GetWeekOfYear(($versions[$i+1].Created.ToLocalTime()).AddDays($WeekRuleDay), $WeekRule, $FirstDayOfWeek)
+                                                    if ($weekNumber -eq $nextWeekNumber)
+                                                    {
+                                                        Write-Debug "            same week number as next version, not keeping this version"
+                                                        $keepThisVersion = $false
+                                                    }
+                                                }
+                                                if ($keepThisVersion)
+                                                {
+                                                    if ($versions[$i].Created.ToLocalTime().AddDays($keepWeeks*7) -lt (Get-Date))
+                                                    {
+                                                        if (($i+1) -lt $versions.Count)
+                                                        {
+                                                            $DT = $versions[$i+1].Created.ToLocalTime()
+                                                            if ($DT.Month -eq $versions[$i].Created.ToLocalTime().Month -and $DT.Year -eq $versions[$i].Created.ToLocalTime().Year)
+                                                            {
+                                                                Write-Debug "            same month and year as next version, not keeping this version"
+                                                                $keepThisVersion = $false
+                                                            }
+                                                        }
+                                                        if ($keepThisVersion)
+                                                        {
+                                                            if ($versions[$i].Created.ToLocalTime().AddMonths($keepMonths) -lt (Get-Date))
+                                                            {
+                                                                if (($i+1) -lt $versions.Count)
+                                                                {
+                                                                    $DT = $versions[$i+1].Created.ToLocalTime()
+                                                                    if ($DT.Year -eq $versions[$i].Created.ToLocalTime().Year)
+                                                                    {
+                                                                        Write-Debug "            same year as next version, not keeping this version"
+                                                                        $keepThisVersion = $false
+                                                                    }
+                                                                }
+                                                                if ($keepThisVersion)
+                                                                {
+                                                                    if ($versions[$i].Created.ToLocalTime().AddYears($keepYears) -lt (Get-Date))
+                                                                    {
+                                                                        Write-Debug "            older than year range, not keeping this version"
+                                                                        $keepThisVersion = $false
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        Write-Debug "            keeping yearly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within year range)"
+                                                                    }
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                Write-Debug "            keeping monthly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within month range)"
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        Write-Debug "            keeping weekly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within week range)"
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Write-Debug "            keeping daily version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within day range)"
+                                            }
+                                            if (-Not $keepThisVersion)
+                                            {
+                                                Write-Host "            deleting version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
+                                                $null = $purgedVersions.Add([PSCustomObject]@{
+                                                    VersionLabel = $versions[$i].VersionLabel
+                                                    Created      = $versions[$i].Created
+                                                    ContentType  = $item.FieldValues.ContentTypeId
+                                                    ServerRelativeUrl = $item.FieldValues.FileRef
+                                                    FileSize = [math]::Round(($versions[$i].Length / 1MB), 2)
+                                                })
+                                                if (-Not $dryRun)
+                                                {
+                                                    $retries = 5
+                                                    do
+                                                    {
+                                                        try
+                                                        {
+                                                            Remove-PnPFileVersion -Connection $siteCon -Url $item.FieldValues.FileRef -Identity $versions[$i].ID -Force
+                                                            break
+                                                        }
+                                                        catch
+                                                        {
+                                                            Write-Error $_.Exception -ErrorAction Continue
+                                                            Write-Warning "Retrying $retries times"
+                                                            Start-Sleep -Seconds 10
+                                                            $retries--
+                                                            if ($retries -lt 0) { throw }
+                                                        }
+                                                    } while ($true)
+                                                }
+                                            }
+                                        }
+                                        break
                                     }
                                 }
                             }
                             else
                             {
-                                Write-Host "          nothing to purge"
-                            }
-                            break
-                        }
-                        "ByBackupPolicy"
-                        {
-                            $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl | Sort-Object -Property "Created" -Ascending
-                            Write-Host "          $($versions.Count) major versions"
-                            for ($i = 0; $i -lt $versions.Count; $i++)
-                            {
-                                $keepThisVersion = $true
-                                if ($versions[$i].Created.ToLocalTime().AddDays($keepDays) -lt (Get-Date))
+                                if ($item.FieldValues["_UIVersionString"] -eq "0.1") { continue }
+                                switch ($PSCmdlet.ParameterSetName)
                                 {
-                                    $DT = $versions[$i].Created.ToLocalTime()
-                                    $WeekRuleDay = [int]($DT.DayOfWeek.Value__ -ge $FirstDayOfWeek ) * ( (6 - $WeekRule) - $DT.DayOfWeek.Value__ )
-                                    $weekNumber = $Cult.Calendar.GetWeekOfYear(($DT).AddDays($WeekRuleDay), $WeekRule, $FirstDayOfWeek)
-                                    if (($i+1) -lt $versions.Count)
+                                    "KeepNumberOfVersions"
                                     {
-                                        $DT = $versions[$i+1].Created.ToLocalTime()
-                                        $WeekRuleDay = [int]($DT.DayOfWeek.Value__ -ge $FirstDayOfWeek ) * ( (6 - $WeekRule) - $DT.DayOfWeek.Value__ )
-                                        $nextWeekNumber = $Cult.Calendar.GetWeekOfYear(($versions[$i+1].Created.ToLocalTime()).AddDays($WeekRuleDay), $WeekRule, $FirstDayOfWeek)
-                                        if ($weekNumber -eq $nextWeekNumber)
+                                        $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.FieldValues.FileRef | Sort-Object -Property "Created" -Descending
+                                        Write-Host "          $($versions.Count) major/minor versions"
+                                        $revs = $versions.VersionLabel | Where-Object { $_ -like "*.0" }
+                                        Write-Host "          $($revs.Count) revisions"
+                                        $revCnt = 0
+                                        foreach ($rev in $revs)
                                         {
-                                            $keepThisVersion = $false
-                                        }
-                                    }
-                                    if ($keepThisVersion)
-                                    {
-                                        if ($versions[$i].Created.ToLocalTime().AddWeeks($keepWeeks) -lt (Get-Date))
-                                        {
-                                            if (($i+1) -lt $versions.Count)
+                                            Write-Host "            revision $($rev.VersionLabel)"
+                                            $revCnt++
+                                            if ($revCnt -eq $keepMajorVersions)
                                             {
-                                                $DT = $versions[$i+1].Created.ToLocalTime()
-                                                if ($DT.Month -eq $versions[$i].Created.ToLocalTime().Month -and $DT.Year -eq $versions[$i].Created.ToLocalTime().Year)
+                                                Write-Host "          keepMajorVersions reaged. Deleting now all minor versions"
+                                                $null = $purgeWarnings.Add([PSCustomObject]@{
+                                                    SiteUrl = $site.Url
+                                                    DocLib  = $docLib.RootFolder.ServerRelativeUrl
+                                                    ItemId  = $item.Id
+                                                    Warning = "keepMajorVersions reaged. Deleting now all minor versions"
+                                                })
+                                            }
+                                            $revStr = $rev.VersionLabel.Split(".")[0]+"."
+                                            $minors = $versions | Where-Object { $_.VersionLabel -like "$revStr*" } | Sort-Object -Property "Created" -Descending
+                                            Write-Host "              $($minors.Count) minor versions"
+                                            $check = $keepMinorVersions
+                                            if ($revCnt -ge $keepMajorVersions)
+                                            {
+                                                $check = 1
+                                            }
+                                            if ($minors.Count -gt $check)
+                                            {
+                                                $cnt = $minors.Count - $check
+                                                Write-Host "              purging $($cnt) minor versions"
+                                                for ($i = $check; $i -lt $minors.Count; $i++)
                                                 {
-                                                    $keepThisVersion = $false
+                                                    Write-Host "              deleting minor version $($minors[$i].VersionLabel) from $($minors[$i].Created)"
+                                                    $null = $purgedVersions.Add([PSCustomObject]@{
+                                                        VersionLabel = $versions[$i].VersionLabel
+                                                        Created      = $versions[$i].Created
+                                                        ContentType  = $item.FieldValues.ContentTypeId
+                                                        ServerRelativeUrl = $item.FieldValues.FileRef
+                                                        FileSize = [math]::Round(($versions[$i].Length / 1MB), 2)
+                                                    })
+                                                    if (-Not $dryRun)
+                                                    {
+                                                        $retries = 5
+                                                        do
+                                                        {
+                                                            try
+                                                            {
+                                                                Remove-PnPFileVersion -Connection $siteCon -Url $item.FieldValues.FileRef -Identity $versions[$i].ID -Force
+                                                                break
+                                                            }
+                                                            catch
+                                                            {
+                                                                Write-Error $_.Exception -ErrorAction Continue
+                                                                Write-Warning "Retrying $retries times"
+                                                                Start-Sleep -Seconds 10
+                                                                $retries--
+                                                                if ($retries -lt 0) { throw }
+                                                            }
+                                                        } while ($true)
+                                                    }
                                                 }
                                             }
-                                            if ($keepThisVersion)
+                                            else
                                             {
-                                                if ($versions[$i].Created.ToLocalTime().AddMonths($keepMonths) -lt (Get-Date))
+                                                Write-Host "              nothing to purge"
+                                            }
+                                        }
+                                        break
+                                    }
+                                    "ByBackupPolicy"
+                                    {
+                                        $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.FieldValues.FileRef | Sort-Object -Property "Created"
+                                        Write-Host "          $($versions.Count) major/minor versions"
+                                        $revs = $versions.VersionLabel | Where-Object { $_ -like "*.0" }
+                                        Write-Host "          $($revs.Count) revisions"
+                                        for ($i = 0; $i -lt $versions.Count; $i++)
+                                        {
+                                            Write-Host "          Version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
+                                            $keepThisVersion = $true
+                                            if ($versions[$i].Created.ToLocalTime().AddDays($keepDays) -lt (Get-Date))
+                                            {
+                                                $DT = $versions[$i].Created.ToLocalTime()
+                                                $WeekRuleDay = [int]($DT.DayOfWeek.Value__ -ge $FirstDayOfWeek ) * ( (6 - $WeekRule) - $DT.DayOfWeek.Value__ )
+                                                $weekNumber = $Cult.Calendar.GetWeekOfYear(($DT).AddDays($WeekRuleDay), $WeekRule, $FirstDayOfWeek)
+                                                if (($i+1) -lt $versions.Count)
                                                 {
-                                                    if (($i+1) -lt $versions.Count)
+                                                    $DT = $versions[$i+1].Created.ToLocalTime()
+                                                    $WeekRuleDay = [int]($DT.DayOfWeek.Value__ -ge $FirstDayOfWeek ) * ( (6 - $WeekRule) - $DT.DayOfWeek.Value__ )
+                                                    $nextWeekNumber = $Cult.Calendar.GetWeekOfYear(($versions[$i+1].Created.ToLocalTime()).AddDays($WeekRuleDay), $WeekRule, $FirstDayOfWeek)
+                                                    if ($weekNumber -eq $nextWeekNumber)
                                                     {
-                                                        $DT = $versions[$i+1].Created.ToLocalTime()
-                                                        if ($DT.Year -eq $versions[$i].Created.ToLocalTime().Year)
+                                                        Write-Debug "            same week number as next version, not keeping this version"
+                                                        $keepThisVersion = $false
+                                                    }
+                                                }
+                                                if ($keepThisVersion)
+                                                {
+                                                    if ($versions[$i].Created.ToLocalTime().AddDays($keepWeeks*7) -lt (Get-Date))
+                                                    {
+                                                        if (($i+1) -lt $versions.Count)
                                                         {
-                                                            $keepThisVersion = $false
+                                                            $DT = $versions[$i+1].Created.ToLocalTime()
+                                                            if ($DT.Month -eq $versions[$i].Created.ToLocalTime().Month -and $DT.Year -eq $versions[$i].Created.ToLocalTime().Year)
+                                                            {
+                                                                Write-Debug "            same month and year as next version, not keeping this version"
+                                                                $keepThisVersion = $false
+                                                            }
+                                                        }
+                                                        if ($keepThisVersion)
+                                                        {
+                                                            if ($versions[$i].Created.ToLocalTime().AddMonths($keepMonths) -lt (Get-Date))
+                                                            {
+                                                                if (($i+1) -lt $versions.Count)
+                                                                {
+                                                                    $DT = $versions[$i+1].Created.ToLocalTime()
+                                                                    if ($DT.Year -eq $versions[$i].Created.ToLocalTime().Year)
+                                                                    {
+                                                                        Write-Debug "            same year as next version, not keeping this version"
+                                                                        $keepThisVersion = $false
+                                                                    }
+                                                                }
+                                                                if ($keepThisVersion)
+                                                                {
+                                                                    if ($versions[$i].Created.ToLocalTime().AddYears($keepYears) -lt (Get-Date))
+                                                                    {
+                                                                        Write-Debug "            older than year range, not keeping this version"
+                                                                        $keepThisVersion = $false
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        Write-Debug "            keeping yearly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within year range)"
+                                                                    }
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                Write-Debug "            keeping monthly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within month range)"
+                                                            }
                                                         }
                                                     }
-                                                    if ($keepThisVersion)
+                                                    else
                                                     {
-                                                        if ($versions[$i].Created.ToLocalTime().AddYears($keepYears) -lt (Get-Date))
-                                                        {
-                                                            $keepThisVersion = $false
-                                                        }
-                                                        else
-                                                        {
-                                                            Write-Host "          keeping yearly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within year range)"
-                                                        }
+                                                        Write-Debug "            keeping weekly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within week range)"
                                                     }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                Write-Debug "            keeping daily version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within day range)"
+                                            }
+                                            if (-Not $keepThisVersion)
+                                            {
+                                                if ($versions[$i].VersionLabel -like "*.0" )
+                                                {
+                                                    Write-Debug "            keeping revision version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
                                                 }
                                                 else
                                                 {
-                                                    Write-Host "          keeping monthly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within month range)"
+                                                    Write-Host "          deleting version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
+                                                    $null = $purgedVersions.Add([PSCustomObject]@{
+                                                        VersionLabel = $versions[$i].VersionLabel
+                                                        Created      = $versions[$i].Created
+                                                        ContentType  = $item.FieldValues.ContentTypeId
+                                                        ServerRelativeUrl = $item.FieldValues.FileRef
+                                                        FileSize = [math]::Round(($versions[$i].Length / 1MB), 2)
+                                                    })
+                                                    if (-Not $dryRun)
+                                                    {
+                                                        $retries = 5
+                                                        do
+                                                        {
+                                                            try
+                                                            {
+                                                                Remove-PnPFileVersion -Connection $siteCon -Url $item.FieldValues.FileRef -Identity $versions[$i].ID -Force
+                                                                break
+                                                            }
+                                                            catch
+                                                            {
+                                                                Write-Error $_.Exception -ErrorAction Continue
+                                                                Write-Warning "Retrying $retries times"
+                                                                Start-Sleep -Seconds 10
+                                                                $retries--
+                                                                if ($retries -lt 0) { throw }
+                                                            }
+                                                        } while ($true)
+                                                    }
                                                 }
                                             }
                                         }
-                                        else
-                                        {
-                                            Write-Host "          keeping weekly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within week range)"
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    Write-Host "          keeping daily version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within day range)"
-                                }
-                                if (-Not $keepThisVersion)
-                                {
-                                    Write-Host "          deleting version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
-                                    if (-Not $dryRun)
-                                    {
-                                        Remove-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl -Identity $versions[$i].ID -Force
+                                        break
                                     }
                                 }
                             }
-                            break
+
                         }
+                        catch
+                        {
+                            Write-Error $_.Exception -ErrorAction Continue
+                            Write-Warning "*** Error on file with item ID $($item.Id)"
+                            $null = $purgeErrors.Add([PSCustomObject]@{
+                                SiteUrl = $site.Url
+                                DocLib  = $docLib.RootFolder.ServerRelativeUrl
+                                ItemId  = $item.Id
+                                Error   = $_.Exception.Message
+                            })
+                        }
+
                     }
                 }
                 else
                 {
-                    switch ($PSCmdlet.ParameterSetName)
-                    {
-                        "KeepNumberOfVersions"
-                        {
-                            $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl | Sort-Object -Property "Created" -Descending
-                            Write-Host "          $($versions.Count) major/minor versions"
-                            $revs = $versions.VersionLabel | Where-Object { $_ -like "*.0" }
-                            Write-Host "          $($revs.Count) revisions"
-                            $revCnt = 0
-                            foreach ($rev in $revs)
-                            {
-                                Write-Host "            revision $($rev.VersionLabel)"
-                                $revCnt++
-                                if ($revCnt -eq $keepMajorVersions)
-                                {
-                                    Write-Host "          keepMajorVersions reaged. Deleting now all minor versions"
-                                }
-                                $revStr = $rev.VersionLabel.Split(".")[0]+"."
-                                $minors = $versions | Where-Object { $_.VersionLabel -like "$revStr*" } | Sort-Object -Property "Created" -Descending
-                                Write-Host "              $($minors.Count) minor versions"
-                                $check = $keepMinorVersions
-                                if ($revCnt -ge $keepMajorVersions)
-                                {
-                                    $check = 1
-                                }
-                                if ($minors.Count -gt $check)
-                                {
-                                    $cnt = $minors.Count - $check
-                                    Write-Host "              purging $($cnt) minor versions"
-                                    for ($i = $check; $i -lt $minors.Count; $i++)
-                                    {
-                                        Write-Host "              deleting minor version $($minors[$i].VersionLabel) from $($minors[$i].Created)"
-                                        if (-Not $dryRun)
-                                        {
-                                            Remove-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl -Identity $minors[$i].ID -Force
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    Write-Host "              nothing to purge"
-                                }
-                            }
-                            break
-                        }
-                        "ByBackupPolicy"
-                        {
-                            $versions = Get-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl | Sort-Object -Property "Created" -Ascending
-                            Write-Host "          $($versions.Count) major/minor versions"
-                            $revs = $versions.VersionLabel | Where-Object { $_ -like "*.0" }
-                            Write-Host "          $($revs.Count) revisions"
-                            for ($i = 0; $i -lt $versions.Count; $i++)
-                            {
-                                $keepThisVersion = $true
-                                if ($versions[$i].Created.ToLocalTime().AddDays($keepDays) -lt (Get-Date))
-                                {
-                                    $DT = $versions[$i].Created.ToLocalTime()
-                                    $WeekRuleDay = [int]($DT.DayOfWeek.Value__ -ge $FirstDayOfWeek ) * ( (6 - $WeekRule) - $DT.DayOfWeek.Value__ )
-                                    $weekNumber = $Cult.Calendar.GetWeekOfYear(($DT).AddDays($WeekRuleDay), $WeekRule, $FirstDayOfWeek)
-                                    if (($i+1) -lt $versions.Count)
-                                    {
-                                        $DT = $versions[$i+1].Created.ToLocalTime()
-                                        $WeekRuleDay = [int]($DT.DayOfWeek.Value__ -ge $FirstDayOfWeek ) * ( (6 - $WeekRule) - $DT.DayOfWeek.Value__ )
-                                        $nextWeekNumber = $Cult.Calendar.GetWeekOfYear(($versions[$i+1].Created.ToLocalTime()).AddDays($WeekRuleDay), $WeekRule, $FirstDayOfWeek)
-                                        if ($weekNumber -eq $nextWeekNumber)
-                                        {
-                                            $keepThisVersion = $false
-                                        }
-                                    }
-                                    if ($keepThisVersion)
-                                    {
-                                        if ($versions[$i].Created.ToLocalTime().AddWeeks($keepWeeks) -lt (Get-Date))
-                                        {
-                                            if (($i+1) -lt $versions.Count)
-                                            {
-                                                $DT = $versions[$i+1].Created.ToLocalTime()
-                                                if ($DT.Month -eq $versions[$i].Created.ToLocalTime().Month -and $DT.Year -eq $versions[$i].Created.ToLocalTime().Year)
-                                                {
-                                                    $keepThisVersion = $false
-                                                }
-                                            }
-                                            if ($keepThisVersion)
-                                            {
-                                                if ($versions[$i].Created.ToLocalTime().AddMonths($keepMonths) -lt (Get-Date))
-                                                {
-                                                    if (($i+1) -lt $versions.Count)
-                                                    {
-                                                        $DT = $versions[$i+1].Created.ToLocalTime()
-                                                        if ($DT.Year -eq $versions[$i].Created.ToLocalTime().Year)
-                                                        {
-                                                            $keepThisVersion = $false
-                                                        }
-                                                    }
-                                                    if ($keepThisVersion)
-                                                    {
-                                                        if ($versions[$i].Created.ToLocalTime().AddYears($keepYears) -lt (Get-Date))
-                                                        {
-                                                            $keepThisVersion = $false
-                                                        }
-                                                        else
-                                                        {
-                                                            Write-Host "          keeping yearly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within year range)"
-                                                        }
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    Write-Host "          keeping monthly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within month range)"
-                                                }
-                                            }
-                                        }
-                                        else
-                                        {
-                                            Write-Host "          keeping weekly version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within week range)"
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    Write-Host "          keeping daily version $($versions[$i].VersionLabel) from $($versions[$i].Created) (within day range)"
-                                }
-                                if (-Not $keepThisVersion)
-                                {
-                                    if ($versions[$i].VersionLabel -like "*.0" )
-                                    {
-                                        Write-Host "          keeping revision version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
-                                    }
-                                    else
-                                    {
-                                        Write-Host "          deleting version $($versions[$i].VersionLabel) from $($versions[$i].Created)"
-                                        if (-Not $dryRun)
-                                        {
-                                            Remove-PnPFileVersion -Connection $siteCon -Url $item.File.ServerRelativeUrl -Identity $versions[$i].ID -Force
-                                        }
-                                    }
-                                }
-                            }
-                            break
-                        }
-                    }
+                    Write-Host "      Versioning not enabled"
+                    $null = $purgeWarnings.Add([PSCustomObject]@{
+                        SiteUrl = $site.Url
+                        DocLib  = $docLib.RootFolder.ServerRelativeUrl
+                        ItemId  = $null
+                        Warning = "Versioning not enabled"
+                    })
                 }
+
             }
-        }
-        else
-        {
-            Write-Host "      Versioning not enabled"
+            catch
+            {
+                Write-Error $_.Exception -ErrorAction Continue
+                Write-Warning "*** Error in document library $($docLib.Title)"
+                $null = $purgeErrors.Add([PSCustomObject]@{
+                    SiteUrl = $site.Url
+                    DocLib  = $docLib.RootFolder.ServerRelativeUrl
+                    ItemId  = $null
+                    Error   = $_.Exception.Message
+                })
+            }
+
         }
 
+    }
+    catch
+    {
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Warning "*** Error on site $($site.Url)"
+        $null = $purgeErrors.Add([PSCustomObject]@{
+            SiteUrl = $site.Url
+            DocLib  = $null
+            ItemId  = $null
+            Error   = $_.Exception.Message
+        })
     }
 
 }
 
-# Stopping Transscript
+$purgedVersionCount = $purgedVersions.Count
+$TotalFileSize = 0
+foreach ($pv in $purgedVersions)
+{
+    $TotalFileSize += $pv.FileSize
+}
+$endDate = Get-Date
+
+$totMin = [math]::Round(($endDate - $startDate).TotalMinutes, 2)
+$totSiz = [math]::Round($TotalFileSize, 2)
+Write-Host ""
+Write-Host "Purged versions summary:" -ForegroundColor $CommandInfo
+Write-Host ""
+Write-Host "  Purge started at: $startDate"
+Write-Host "  Purge ended at: $endDate"
+Write-Host "  Elapsed time: $totMin minutes"
+Write-Host ""
+Write-Host "  Total purged versions: $purgedVersionCount"
+Write-Host "  Total purged file size (MB): $totSiz"
+Write-Host ""
+Write-Host ""
+
+if ($purgeWarnings.Count -gt 0)
+{
+    Write-Host "Purge warnings:" -ForegroundColor $CommandInfo
+    Write-Host ""
+    foreach ($warn in $purgeWarnings)
+    {
+        Write-Host "  Site: $($warn.SiteUrl) DocLib: $($warn.DocLib) ItemId: $($warn.ItemId) Warning: $($warn.Warning)" -ForegroundColor Yellow
+    }
+    Write-Host ""
+    Write-Host ""
+}
+if ($purgeErrors.Count -gt 0)
+{
+    Write-Host "Purge errors:" -ForegroundColor $CommandInfo
+    Write-Host ""
+    foreach ($err in $purgeErrors)
+    {
+        Write-Host "  Site: $($err.SiteUrl) DocLib: $($err.DocLib) ItemId: $($err.ItemId) Error: $($err.Error)" -ForegroundColor Red
+    }
+    Write-Host ""
+    Write-Host ""
+}
+
+if (-Not (Test-Path "$AlyaData\sharepoint\purgeReports"))
+{
+    New-Item -Path "$AlyaData\sharepoint\purgeReports" -ItemType Directory -Force | Out-Null
+}
+$outputFile = "$AlyaData\sharepoint\purgeReports\Purge-VersionsOnAllSites-$($AlyaTimeString).xlsx"
+do
+{
+    try
+    {
+        $excel = $purgedVersions | Export-Excel -Path $outputFile -WorksheetName "purgedVersions" -TableName "purgedVersions" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru -NoNumberConversion *
+        Close-ExcelPackage $excel
+        $excel = $purgeErrors | Export-Excel -Path $outputFile -WorksheetName "purgeErrors" -TableName "purgeErrors" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru -NoNumberConversion *
+        Close-ExcelPackage $excel
+        $excel = $purgeWarnings | Export-Excel -Path $outputFile -WorksheetName "purgeWarnings" -TableName "purgeWarnings" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru -NoNumberConversion *
+        Close-ExcelPackage $excel -Show
+        break
+    }
+    catch
+    {
+        if ($_.Exception.Message.Contains("Could not open Excel Package"))
+        {
+            Write-Host "Please close excel sheet $outputFile"
+            pause
+        }
+        else
+        {
+            throw
+        }
+    }
+} while ($true)
+
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDmFdqKxjBHDJlv
-# tDXYSkP+dpzh9kehzYqv1M8+qsbcSaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAe6ILccDSxPALY
+# XLKmByXXzPqlT2KM5LieKQHvGimFLaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -534,10 +791,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -545,17 +802,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -565,39 +822,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJCtji4SA3RYRWCf
-# uuXtZnUdO4n4lEvdhdNR3aybvh2LMA0GCSqGSIb3DQEBAQUABIICAFWLoCIWJp8s
-# /pLZ5YfFNu/ohIaQPB/5NmJFrf7oZjUquOD9YfD1E+qPIFBYW0G8dL6kp7t6BfS2
-# +Qm7I/gQFrPGC2fCYmB7eKN0VGV2S4yVf0ree4WNi5B+0JmBRWgbk85MCZuCHWJA
-# hzFVnbaIUzVvEnOErvb6qG2nX1zzm+XvsDOvvHXmAXO90ltXs00iYwqGIWXAKoK8
-# ekoDGvoStO8WnDcKJi8dBbp2VVM5UhZ1oucqU5+KqBdw40haVoo9s1q+beSHXfxG
-# ERP/w69Dcbxh/6BLoJHwll5X1u77A9REAZS1+DOPRet34Si9YnUAquCLdPvopvIR
-# WFwPuL5ZWgeC3ksq2njnicpUQKJXS6ARyclup4k7TDb4EaybPvRS4kLYOMmmux95
-# m8Z3wdkbxoOtTJ1HodpQoK5HgyYDxLFWc/zC7hIzdOkk34eSMXu3WcsbxXJDlLzb
-# PDMTaUgWcwF9ilN/X9fCbRbZ3VQywiFOx/8fVfIdm70JwENCbdk0HYtWYzdNlE2k
-# wV/jzHGXINshCwavoXQvBJSnLSSWUqCeuskYOwwmdwsU+8z+RV4OsRfol6BMqDHP
-# VYhDQWCiAOiKe4VWR/FBLEKQ14Qfr6T8dYQ+YOb/v5LoexEFdXgKcW9kn7I7OdSq
-# boyurDac0pmik26vequEzXL+GNFlnmBsoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEbW7VR7GGjhvOOd
+# WOD/rY1zbohqYn5XeXqEu9wrm4lwMA0GCSqGSIb3DQEBAQUABIICADNi+NHihEqc
+# Iartu4NUgZRal1cTGwzzSarwuHjRctaZq9tL5DwSfvUMknP08N73htH3+IRtQPrH
+# fMCA8F7A4VSNgPhkctY8lj0bbqONSAdIppEzhn/j80py6TAMCZ9JdE9CicFWo44n
+# eqU6uakKaSC+Ac3xNB2Dem60Vwrub8EcnOv5YfQI6SgBkkTltrg7Cb6fMCcEI4oN
+# A5NbKofWABU/j0Vv+DLETdEM7uXuHbUX0hh2lU//zN6i/XUKvNo5yAuD7DYcf1PQ
+# pkaui4U7+ZxgRR9KtHBD2/FrCWEDhroczKUNhzrT0PtML8SZibPS21qZRN8WWTLg
+# wy9Xed/G2uT0oXmCTRqBYEmgUujpSithJOyRJ8f16zDo4VUtOr3vHMuwmJki8OPb
+# vTHNGi2N/OoGfAeAQVSW2QNVwrZ8W58azfuVaarGnLPvqSxQfSnh300sb/XdzufD
+# y/bM6/B02Nm6HsftmGHvyPL5Cw5QPP3gT/ixBe++Bpc2RkH4JrPoF2FlF7gD1iXi
+# Uedgyh+umxVCA3rcp4KXOKc0qVEHabZ9JHz7MLDj7nkamOBXoam9PG4cECd0WMeI
+# P1TTYPVS8tE+3EDR1uNTqRf2Husk9tYNl3/8yhDqSbnxU0fpib3mw31G3Bek8IKK
+# EAxjqiLWHWZxUc1ipiMNkykjcz8gHqNsoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCo5KTzRBDvCogmywIAnC845kAkqT2GOd2JMOlPgSOuywIUMLpFxRKGiz2x
-# Q4dqzqKI02STMtsYDzIwMjYwMTIwMTAwNTQzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAlGa0yqgrGUQx5ujowK6CXsPznBZsQm4987TR6SmLi0AIUG+Bvo8FIEwJT
+# BMUrRHu49p/2HSoYDzIwMjYwMTIzMDc1NDQxWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -702,17 +959,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# INDh/GmP98xAqa/UP+TcnPSWf8meuBkh10ZNbvAu5FCuMIGwBgsqhkiG9w0BCRAC
+# IHVj+kdQ/WPBD0MIXUCPvTBiojvXPbApjTMBz16zyQVYMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAFDQT4KpKk96M
-# AhDHWU7nUOCu0aeihBsHEj+h4jYerXfkl7VnaXRpGGK+TZjZJzkUPiS/1lG24MyR
-# aFi/wwekG1O51c9EVRHwX/bScr5xBcc5IDWy02Gi31+7fiBynpwUeZomLAO3xnE8
-# oE0Bb8IMg/6+SK9PjZYdbTRy7Xac9cGQBcgOsbezMzebrPTOrlNdIM2AqOB7lsv/
-# 5W81Liuu7h95IFC+nk/fEwrOHkP5cUzmEzN6EekO8EmbRYOc6bWzs8M6Nj01jomf
-# PsEKTUxOQGe38/dKOkr40L8EMKkQF4GPE4l7zspyJhD92+aq2nVzrCBOYV1WyvIo
-# F0ZXLOObSqvY+7Grn8DtTwf0dcLPl3gV64Y0UKhUK7Y8sSnB9i+Migzw/Bi64wZa
-# rzJPe9Ao77PSDUoWSd6dmir1lanq7z9llLqNN1ckG/08oW9wneMlGoEkwaJN2n1E
-# NUYmUZRDruxS/34k4fzq+ZkCQVWuTrso5ZT+s0hg4pnK6FASkpD6
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAAyCAEhQMv19z
+# E6x1t24eRCZhmSzaWzZ/vsMVq/8P23XhNNESUkNC5WMBB377alRis47lAAqkVP75
+# p9TYxHyiG0fp1iZ7SDQQDw6vhWEB+3bArcm1XiUnBP5VjesljVxmhUA4pXq7P3TM
+# 6laczrBC8GjMgYveRGd3TLaRa9AKi9JEFrpDxo/Yhy+sRubvMPJdD8g3n5UBfew9
+# 1ozGDslFPNOmKQXpEsikGc6IBKvByFB1czsHDZtu7mNLmz+akjCDa/ybAWClcMpJ
+# uZMuPrVLTp8JaGsqld+b6S9zFixNjoEL/7/j82Xvh1bmCNFcpIfM6Si6kLT4kh0I
+# 46MfFHJQVKaENsQy4x8dLmb7e1eRJDYutTaTXKs4TjAKKVaIHQvEHvZqPsW9WvLu
+# V6TqHvNe/x4MUGOkqBtqtBCgTwKpHl5sXOolNAIHGDVuIftxEss3HjKYxY3ZY4/b
+# xykOZmAGWrUwuUBAHOsRQunpLqzRqKZkfJHm2uVfrmmxsH5AGIVv
 # SIG # End signature block

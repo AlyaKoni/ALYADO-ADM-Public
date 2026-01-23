@@ -1,7 +1,7 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 7.0
 
 <#
-    Copyright (c) Alya Consulting, 2019-2026
+    Copyright (c) Alya Consulting, 2019-2025
 
     This file is part of the Alya Base Configuration.
     https://alyaconsulting.ch/Loesungen/BasisKonfiguration
@@ -30,7 +30,7 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    08.10.2024 Konrad Brunner       Initial Version
+    05.11.2025 Konrad Brunner       Initial Version
 
 #>
 
@@ -42,105 +42,25 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Register-PnPApp.ps1-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-PnPTemplate-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
-# Logins
-LoginTo-MgGraph -Scopes @("Directory.Read.All","AppRoleAssignment.ReadWrite.All","Application.ReadWrite.All","DelegatedPermissionGrant.ReadWrite.All")
+# Logging in
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
-# =============================================================
-# Azure stuff
-# =============================================================
+# Exporting configuration
+Write-Host "Exporting configuration" -ForegroundColor $CommandInfo
+$outfile = "$AlyaData\sharepoint\TenantConfiguration.json"
 
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Register-PnPApp.ps1 | AZURE" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+# Getting configuration
+Write-Output "Getting configuration"
+$tenant = Get-PnPTenant -Connection $adminCon
+$tenant | ConvertTo-Json -Depth 10 | Set-Content -Path $outfile -Force
+$adminCon = $null
 
-# Checking appId in configureEnv
-Write-Host "Checking appId in configureEnv" -ForegroundColor $CommandInfo
-if ($AlyaPnPAppId -and $AlyaPnPAppId -ne "PleaseSpecify") {
-    Write-Warning "AlyaPnPAppId is already set in data\ConfigureEnv.ps1. If you want to re-create the app, please set the value to PleaseSpecify and re-run this script."
-    Stop-Transcript
-    return
-}
-
-# Defining permissions
-Write-Host "Defining permissions" -ForegroundColor $CommandInfo
-$GraphApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Microsoft Graph'" -Property "*"
-$GraphPerms = @(
-    @{Id="e4aa47b9-9a69-4109-82ed-36ec70d85ff1";Type="Scope"},
-    @{Id="7b8a2d34-6b3f-4542-a343-54651608ad81";Type="Scope"},
-    @{Id="bdfbf15f-ee85-4955-8675-146e8e5296b5";Type="Scope"},
-    @{Id="0e263e50-5827-48a4-b97c-d940288653c7";Type="Scope"},
-    @{Id="c5366453-9fb0-48a5-a156-24f0c49a4b84";Type="Scope"},
-    @{Id="64a6cdd6-aab1-4aaf-94b8-3cc8405e90d0";Type="Scope"},
-    @{Id="5447fe39-cb82-4c1a-b977-520e67e724eb";Type="Scope"},
-    @{Id="863451e7-0667-486c-a5d6-d135439485f0";Type="Scope"},
-    @{Id="8019c312-3263-48e6-825e-2b833497195b";Type="Scope"},
-    @{Id="17dde5bd-8c17-420f-a486-969730c1b827";Type="Scope"},
-    @{Id="ef2779dc-ef1b-4211-8310-8a0ac2450081";Type="Scope"},
-    @{Id="4e46008b-f24c-477d-8fff-7bb4ec7aafe0";Type="Scope"},
-    @{Id="f81125ac-d3b7-4573-a3b2-7099cc39df9e";Type="Scope"},
-    @{Id="7427e0e9-2fba-42fe-b0c0-848c9e6a8182";Type="Scope"},
-    @{Id="37f7f235-527c-4136-accd-4a02d197296e";Type="Scope"},
-    @{Id="14dad69e-099b-42c9-810b-d002981feec1";Type="Scope"},
-    @{Id="5a54b8b3-347c-476d-8f8e-42d5c7424d29";Type="Scope"},
-    @{Id="f89c84ef-20d0-4b54-87e9-02e856d66d53";Type="Scope"},
-    @{Id="4bb440cd-2cf2-4f90-8004-aa2acd2537c5";Type="Scope"},
-    @{Id="405a51b5-8d8d-430b-9842-8be4b0e9f324";Type="Scope"},
-    @{Id="63dd7cd9-b489-4adf-a28c-ac38b9a0f962";Type="Scope"},
-    @{Id="637d7bec-b31e-4deb-acc9-24275642a2c9";Type="Scope"},
-    @{Id="204e0828-b5ca-4ad8-b9f3-f32a958e7cc4";Type="Scope"},
-    @{Id="fc30e98b-8810-4501-81f5-c20a3196387b";Type="Scope"},
-    @{Id="c5ddf11b-c114-4886-8558-8a4e557cd52b";Type="Scope"},
-    @{Id="5f8c59db-677d-491f-a6b8-5f174b11ec1d";Type="Scope"},
-    @{Id="88d21fd4-8e5a-4c32-b5e2-4a1c95f34f72";Type="Scope"},
-    @{Id="2219042f-cab5-40cc-b0d2-16b1540b4c5f";Type="Scope"}
-)
-$SpApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Office 365 SharePoint Online'" -Property "*"
-$SpPerms = @(
-    @{Id="a4c14cd7-8bd6-4337-8e87-78623dfc023b";Type="Scope"},
-    @{Id="c4258712-0efb-41f1-b6bc-be58e4e32f3f";Type="Scope"},
-    @{Id="2511a087-5795-4cae-9123-d5b7d6ec4844";Type="Scope"},
-    @{Id="b8341dab-4143-49da-8eb9-3d8c073f9e77";Type="Scope"},
-    @{Id="d75a7b17-f04e-40d9-8e35-79b949bdb891";Type="Scope"},
-    @{Id="2beb830c-70d1-4f5b-a983-79cbdb0c6c6a";Type="Scope"},
-    @{Id="e7e732bd-932b-45c4-8ce5-40d60a7daad9";Type="Scope"},
-    @{Id="59a198b5-0420-45a8-ae59-6da1cb640505";Type="Scope"},
-    @{Id="1002502a-9a71-4426-8551-69ab83452fab";Type="Scope"},
-    @{Id="56680e0d-d2a3-4ae1-80d8-3c4f2100e3d0";Type="Scope"},
-    @{Id="dd2c8d78-58e1-46d7-82dd-34d411282686";Type="Scope"},
-    @{Id="2cfdc887-d7b4-4798-9b33-3d98d6b95dd2";Type="Scope"},
-    @{Id="82866913-39a9-4be7-8091-f4fa781088ae";Type="Scope"}
-)
-
-# Launching creation script
-Write-Host "Launching creation script" -ForegroundColor $CommandInfo
-$ApplicationName = "$($AlyaCompanyNameShortM365)PnPManagementShell"
-$RequiredResourceAccess = @( @{ ResourceAppId=$GraphApp.AppId; ResourceAccess=$GraphPerms }, @{ ResourceAppId=$SpApp.AppId; ResourceAccess=$SpPerms } )
-& "$AlyaScripts\aad\Create-RegisteredApplication.ps1" -ApplicationName $ApplicationName -RequiredResourceAccess $RequiredResourceAccess -PublicClientRedirectUri "http://localhost"
-
-# Checking env script
-Write-Host "Checking env script" -ForegroundColor $CommandInfo
-$MgApplication = Get-MgBetaApplication -Filter "DisplayName eq '$ApplicationName'" -Property "*"
-$pnpAppId = $MgApplication.AppId
-$cont = Get-Content -Path "$AlyaData\ConfigureEnv.ps1" -Raw -Encoding $AlyaUtf8Encoding
-if ($cont.IndexOf("`$AlyaPnPAppId") -lt 0)
-{
-    Write-Warning "`$AlyaPnPAppId not found in ConfigureEnv.ps1. Please add the following line by hand:"
-    Write-Warning "`$AlyaPnPAppId = `"$pnpAppId`""
-}
-else
-{
-    $cont = $cont.Replace("`$AlyaPnPAppId = `"PleaseSpecify`"", "`$AlyaPnPAppId = `"$pnpAppId`"")
-    $cont | Set-Content -Path "$AlyaData\ConfigureEnv.ps1" -Encoding $AlyaUtf8Encoding
-}
-Write-Warning "PnP AppId $pnpAppId has been set in variable AlyaPnPAppId in data\ConfigureEnv.ps1"
+Write-Host "Configuration exported to $outfile" -ForegroundColor $CommandSuccess
 
 #Stopping Transscript
 Stop-Transcript
@@ -148,8 +68,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC3CmwzQ03bJyCP
-# MHUB2VFnv47jsKIqO+nJaQ8ZoG6+k6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBeDodnWQZ+HhGT
+# eElsPEBOlx2muhAQJ7jInO3nxh+LEqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -233,23 +153,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG0UwlKFAM0oAdRO
-# 1kS+2suUev6mqnfdCIR6VHB25zfMMA0GCSqGSIb3DQEBAQUABIICAA9n/f0siTFR
-# 4hQxtY+dj4bJkf4ZVOsgSaW/rNd6pm4TaEpqPS9cLLW7NAsWi+z0BINdlT1Vkhvd
-# jUABGVGeCqy+bt7/VQ9vh9hxCxeKsb6QzbOV99mDKovNnzs8gek87wsQ5Tq/zd2m
-# 27ai4PHNH/53ygQi0ln1jL0hZzc7SHPxN76rBhCqV/IGCogHGhA5AOY/K47DmaO7
-# v3xPoQxm4/cYSlQb6YM+KZxYjfNXeg9k+ayurTxTtFJSYzpVYG4kKDVVRFq2rPSu
-# DJ29ihXwA2ToRt+PDTQSJMJ4YRtrzRwdu/pjrsizojKK/14exGVJ+E+KaxJrJZXk
-# 9ULrWTMYgV3XMfbJgNO1PJ3PW6Oq9vm090rxv/23Ny+DwUwmnRCuqZXZOzMR0HEu
-# qlxwJxe+fWeZLqhlyXYk1KAE82yE+jLxqERM95SC/BRCmIp++K+xPpNIN6gcL5df
-# CN7Jat0exGDxbgO17bINovtefgL1w4oBVGs3KmCKLPEw6hrGt14N3m9lAvebB4PX
-# gBJq5vXOD/BGNAAgrfwiV0xn17HvX+A0QAqegiCasWFXK70IT9V2kOAM6dJcN5y8
-# 8uruEcWTltWTMEB/qZHylOGPpR8q9gdsiPKj9bXAGrkTshSg/B4i+LNYcQ5YarHG
-# PAl7L98GOfUFdhxzSSJcP4PQ/GhTebtgoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMABWZpbIsiytnzF
+# kyKnW0Cv2uqs1JA9o99Z4MMdpC8RMA0GCSqGSIb3DQEBAQUABIICAJ4djXrYh0BQ
+# fv8BbIAr2fEhWhVPMTHCobmRwVB9K6fs9ua9LrgAiWqnzPQxLFtccHPTD18DQJqj
+# CUhal/nDbwp6XuhVGpC/NI+HoSe7I8FpQu1WOismfYK4VjBPHtlvQFj7+yumsZRf
+# 4OoZbg8Yri2vbU+y4kiqXiNkuAtxYIuKRnFukbPLu8p0RAqIqYRb/4ZJwC89mwpH
+# sMFSF87upr/AHUokcHvGjRneiPuExCMGs4vSl9q6QtxSEtLDpJ+CAnxeC6RbGPUR
+# 5NZYWV1g9Hvl3iX/1p6oW4i3duuF/nL2K3SwArDzWe+yo6CoBOSje2rorM3a+TSf
+# brHnEMiCwu5iYmLYCnUxolVRoWY5v8/NgIk6EQq7V7a9IgNkzXorXcsjEnllNyoG
+# cEaZTUlsKoTOx+V4T4q8uaKdpgQuEEFVj6EG5d7/p0IArT2ZFyLNtpzP/XZjrkyM
+# hob1taapczUX1TBKCZYh1J59b70MrnDaAx+UAWYKIq70Z11c8CGtVeJsdOu39kfe
+# CL27b239/Hx2+noGywpTmjK59AeiNA86OyZv4YPTP40nh0Mb1jjQsy6QBc4s7w0P
+# KDLhas5RFqrXT5fsX/LcY1JzdJ2YPK4YLfMa6kQwytyLcwr6eYPG5I5ur95l16Mm
+# Kze89+nIZbVuwOCkMSfsp4YtR36aqxH/oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCHvuh2heVBYh/wzxtldAK9RtUN+4jMBpMTuAGK2b2b/wIUPlJ5JqIdswx0
-# WcnhZ+uxkImcYlAYDzIwMjYwMTIzMDk0MzAxWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCA+a/dlkgAMhWIXdSFnGwhu5DJopDNx2qbsX0YKLNUMvQIUES6kVEKrC/R1
+# pVOdnrbZ9k0GSXkYDzIwMjYwMTIzMDk0MjU2WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -354,17 +274,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ILaIBzFkQZUn9rUTHMTmVZQv/uAxniItZbyrTjD5qxa9MIGwBgsqhkiG9w0BCRAC
+# IMZxWxm0uWBqBLp3UJ+BMEzFhFu9GGxS/vxMgtle7xSvMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGANhCyt85REpq1
-# D0iIxI/qupQ03e3oJpVDjnuf27FPZU+nzbODwh7whQfzGqMPEFYPJnce8W6gnt3r
-# VnoJp12GBioJPM74bOgWsTainbKrx/fFP8F0Nq+Xnlr5syXQ/T9+UJnhGy3suZYG
-# EXpUg474aE8EnPGvpmu9Ax/pW9Hp3GQ3FGJwdTXFjMxaooyYv6VYarM/PDa4wdhc
-# s8jT8x/Z+zLR69HMD6MWNIpGAApYXYi9n2FJDpuGnRCht3lwvKC7S6GZgkpqDUVS
-# 1m+0g468mCNRqM5otwwI86bzAIs60HI/uYirofUfKuBYvo4DIpTd+FM9wlkH+nQS
-# ZEYipa2NoMdcHORPchdzYLaqd2eWfjpbvta16eVqTHlUBpryXm+w/tMCyZJMGNp7
-# LDr8b/zIPBhvQFnR/AncgBrB3KwkoW0sbmWTw5QFKcD6DFDmh/8sP8ZET5BSm9NS
-# ED3d8kb0En8uWb5lV4plLF2WIwtUPFOOw4gYKiOv2xC7RxlwTVyz
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAK+/UE6cntO0h
+# QqhSxwYtXf+uicsnGOrNRFdGkB3lzBjkMLao96LaVKdo/RxAFwYrG8/82HWFITJJ
+# 0TPKfp8jvXQ1OCiqw/jv7X6nAwABbN7a6JkXc2iANWU6mB8SY7qdI+ss20yUeSis
+# vIsRX5idx6LZ1dIsCdR7z6S4PIT/Nb9yR9kyS13dlUABgtT+qofy+imbLoYRgHG1
+# 55I5wyJ0c1MNbacOfxcNO6aQUXwqEvUtWYzTleI4dp3ejm5LYUPrGXzJxSiFVBt8
+# bf5VPx9cWe6m012IrkIse5SoWM2MaA5wi1oPNZBjJMrQX+wkC2eHPXLCF7nVfoHf
+# 5/5pzKh3bNQyYuDJpTuOfZ3fgNWHumALOkIkwTmkyiBiZiBFWFFtyYAs3MUIFHaR
+# nMgvq84q56FPnx0zzrJkPSLrsm3Yq16pTO/K1FKLG2kPPO1oePVZWpU5fGqAa8JG
+# mZ5fjHcwpnx5RqfVutW1Bze0B1QiZZkPShbqCEwRUrXsFFUf2FeZ
 # SIG # End signature block
