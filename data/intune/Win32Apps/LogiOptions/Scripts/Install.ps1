@@ -88,10 +88,11 @@ else
         {
             Write-Host "Installing $($toInst.FullName)"
             Write-Host "EXE Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-            $installString = "`"$($toInst.FullName)`" /quiet /analytics No /log `"C:\ProgramData\AlyaConsulting\Logs\LogiOptions-InstallExe-$($AlyaTimeString).log`""
+            $installString = "`"$($toInst.FullName)`" /quiet /analytics No /update yes /install-msoffice-plugins /log `"C:\ProgramData\AlyaConsulting\Logs\LogiOptions-InstallExe-$($AlyaTimeString).log`""
             Write-Host "command: $installString"
             cmd /c "$installString"
-			Write-Host "CMD returned: $LASTEXITCODE at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+			$exitCode = $LASTEXITCODE
+			Write-Host "CMD returned: $exitCode at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
             do
             {
                 Start-Sleep -Seconds 5
@@ -102,10 +103,6 @@ else
                 }
             } while ($process)
             Write-Host "EXE End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-            $installString = "`"$env:ProgramFiles\LogiOptionsPlus\PluginInstallerUtility.exe`" /i 15dda906dfdffc11"
-            Write-Host "command: $installString"
-            cmd /c "$installString"
-			Write-Host "CMD returned: $LASTEXITCODE at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
         }
 
     }
@@ -124,8 +121,8 @@ exit $exitCode
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBSZaLr/JtQrBVn
-# xtIA1BxfcFaypSwOhk53A3g6DNkXVKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC3InxjZH4XPUS2
+# nwaSV3gVG9wyrTshw1gAFAvToS32O6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -209,23 +206,23 @@ exit $exitCode
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEOanMEyJZGNJIE7
-# 1qZ+K9DjpqhBLK30Bfcv3RSbvB+aMA0GCSqGSIb3DQEBAQUABIICAFAFhXnUbc8B
-# 54eIR7L+evNH2ifNnhGEw3x0CfSFlomvwNlf93uBdvc2068G2uD++Vo0EaXXAJ4/
-# T4ql1YZ/8s15OXcwDPbe9s/0ckIs3bZm75CT5b06rVn5T75utJpIJTNAXEV55t4H
-# NV/496WKHs1CVTW237XWXGGG4HU2QD26WP4MUvhGDdIMH3gOKzCsvQ1LTewrK8EL
-# IRuGbk+WEKogj+hfdTPYqDkbtHOoiXK3pKk4BDc4oPbPlsyivVe5fmUlbVTrqMMA
-# MFtI5YBoj6yEBMcJim/FzO/JVSaVoydlLUsCkVyetSDmRl/WXoEP381gWMLgMmsz
-# 472tLdrLy9YMX81I0hzR0DXZMvTppr9OCC5fHZEmx6QrS5iQc90Qpt383FeOdsSJ
-# t+cz3ck48tfRj8jnVKHO5Y0+iBXe9ZmW4y4fFG8XnAfoDmKL5c41cMEro9e3BRZr
-# bb8kT+2M7zoyV42k1unaGlDbq4q5RTPrL4JbRam4QNmzyfJZ+V9k0Rhx/9nDTobg
-# QH3YNjnub346U6PCTc9NiXtxQCZ6azyBSaWID77/anTGqK5HWPuyhcuXawCdsHJE
-# Wol0ReJkAOpbqnbkENx/TDUFeOHSmBVZtT0w3AndbMfAnPu9/Xh5XiFxoJIvVmjF
-# M9q3mvdLNpNLGvOsjlAqeAzdVrWcdxVVoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGzTC3wwDDWOYSTh
+# awKVD6mQCTOWAQn/dtzhW51Uro+fMA0GCSqGSIb3DQEBAQUABIICADGhLpR3o6l+
+# QeQhKX6gLcptxoJVH/lmQrx39V3PmM+suKnU1qxRrKbwovVNG/jNCyVWqlfns9qd
+# Or4Q8H3Qcz3jCo1Sp2Of62qQkrkmw92TC8JPawUiRKxX/ecNSdzhOi4VXp6sT4YT
+# hKd76yD4ONVcN4nC+o6q1VmExriqQNJ0uPiV6wCFsMVAvrq7Ejy1s/z18URJeYV4
+# 6Jhp+R8uu6DrT9i55Azbm+JuDJuRI5X2J7AIuXA+QmZN384yKQWiVs2hyF5YV+7E
+# cJZYf6Fr3vEQbVOn7ttYYGbVQw2V4TNhwSVFgUy0rrQ1hl6/lfC8JkbVs6qskyMC
+# aeyeivnw2uspz4BDbgfEJ+D58W70qlfpSCQv9aTaSiKL+XrzioxXTey0nhN1/0O8
+# 2iFHKRK1ejwpQZZi/WQGamKq5XfrqVrR9aXZQC/UFE6XGiG9TM72ImGkrLYeMBQy
+# Fy3xLhj5WnQ41vkbLC2cFjyuZeRYNn6UWHiEFVkI2NGwEJg6z3Hc1ycJHbZXS5En
+# CgEebliSeA6jr5Wt18MWQABKfxypssyAXWa1UhikNBopJ5YPCp+bLlF1kyJb3r+X
+# NX3RAKCIHzMTEzv0SoKU+FSXRkF7PSNpptJ6eCkpLTqefoMROV7enDgfgeS34xX3
+# RlPXJjxdLFQqjSPoezQA4qMrh6Xk8x3FoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBqfWf3rCMuxjK2fv5DJEZm0cc51kZ40XijADU91jWxXgIUPBiKtdZ7M0/y
-# Y9I5fXsKU8ckrEUYDzIwMjYwMTIwMDkyOTI4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCB2qoyvOeVvaH0Omk91QUHHs3zjOxf+BkLAabEKygaLRAIUMR7q5CawklyW
+# gkIb2i5eQtsqCD8YDzIwMjYwMTI3MTExOTU1WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -330,17 +327,17 @@ exit $exitCode
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IBdd02AYYdS07JakPQW1QsJMXiQ16qzqTHpZVVc9jToiMIGwBgsqhkiG9w0BCRAC
+# IDjBt8QSceP6CkyfcB4L8Di5Wb0Nm2BvfcgmZ1eGOccxMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAbUoDt0vwrVP+
-# u19Qv86k+KOrW8O2VE+IUEUWD3K5yCIf+fqdxARr8jHWGQcWX2kQKeoPJIDdkLmg
-# DecAve884sUTJeuJBn1R+SHWVVLR+vwBg8IrFmpNzCpao4Rueu8eYCIQOFuAVMCb
-# LwkICrFFw1iSztSJvgRu2t7eKC0XGNFMXkSEUfbCsemxG1aAFqS6IvwMkioCCP6W
-# DrRA/l9I55LIaI95HYbJfXos8A7vSxcQXFHVO8Zqa0lKlYDzGpxihQcJ0UCKAm9Z
-# mQh/l+/8AZ2/cfDK97MsiKNDkXBxTglf3nZcxgwD8/z9NGwmt7wp1Tg60KcA+mic
-# KifSuGX3P0kIYLjERIsoUdpWMzfttEDTIjj+CNkIMgX0xYDLtT1znMor++CBLOWt
-# bosIAu5T2NXxjTny+6FlStYMYoQKxxwyU8stJqWEBBUDY73u/HSe24lynE624SDa
-# XWPdPrC4po7FbvQB1R9lI+MBbnABLFzmrfVfIJFM9sheWZALY/gI
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZc25E2EVz/1v
+# OS9A6FlyZMbWkO4bAKD7w5PHdB9qHGzNaSFIpjePw2nq0A8AVZq34Vu3TlCnYB6W
+# WZfV37WZMUvtJVtfI5VTpz9u8qKB+SqSVhtXEewU93hEL9sw2vX5fvM4Y3pcEWrR
+# m+rP1YL9N0H21pzzM5Hja8MlVQqoW+R5yK0DOZWgAGdaU2xS/aYzb0IW2J7vaa6r
+# RdiQ26ZfhCGN0b2Yw7HSysOs0g2PwWyDqVGXQZlbFAv7+x5sQzKxcLcU4J4tNFRj
+# /jYFYnYYnfcAbOWtylrlC5ebTb1ADvwyGTjKnyXHm/RhwYZiQEGW/WSY0SvBTohv
+# 9P6zdtwN60z7fD0BUXI+uNrZKZQuDVwcALrOvCFmxD4SlRdidCJDsOZC9RReF30n
+# cQqgMaN3G84kQLPiKo8StuQTtfbJfEMexK8Ip2Y2k0wSMDk7QqKSyaUg5/fDCQY+
+# xlYKGZ0Ogg1PCk6eTAMpiIg748tHjHUbyliVHFFV9FdpaNNQ/vZ7
 # SIG # End signature block

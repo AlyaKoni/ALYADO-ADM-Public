@@ -61,6 +61,23 @@ Write-Host "=====================================================`n" -Foreground
 
 # Enabling public cdn
 Write-Host "Enabling public cdn" -ForegroundColor $CommandInfo
+$cdnEnabled = (Get-PnPTenantCdnEnabled -Connection $adminCon -CdnType "Public").Value
+if (-Not $cdnEnabled)
+{
+    Write-Warning "Public cdn was not enabled. Enabling now the public cdn"
+    Set-PnPTenantCdnEnabled -Connection $adminCon -CdnType "Public" -Enable $true
+    $cdnEnabled = (Get-PnPTenantCdnEnabled -Connection $adminCon -CdnType "Public").Value
+    if (-Not $cdnEnabled)
+    {
+        throw "Enabling public cdn failed."
+    }   
+}
+else
+{
+    Write-Host "Public cdn was already enabled." -ForegroundColor $CommandSuccess
+}
+
+Write-Host "Checking public cdn tenant config" -ForegroundColor $CommandInfo
 $TenantConfig = Get-PnPTenant -Connection $adminCon
 if (-Not $TenantConfig.PublicCdnEnabled)
 {
@@ -70,7 +87,7 @@ if (-Not $TenantConfig.PublicCdnEnabled)
 }
 else
 {
-    Write-Host "Public cdn was already enabled." -ForegroundColor $CommandSuccess
+    Write-Host "Public cdn tenant config was already set." -ForegroundColor $CommandSuccess
 }
 
 #Stopping Transscript
@@ -79,8 +96,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC+p/YTudvTsTJG
-# 2GDa8EdbrgdyiZdoZOJ7Pdw1awjpeaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD3WAxU9jpVaJSI
+# mbQPCbDjBa8EfzQn3jaaTSZMN4rqtqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -164,23 +181,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG8/w0Qlm6r4bFoG
-# MuJ+0qX4/yABTQdeuWAZLgE2PMKyMA0GCSqGSIb3DQEBAQUABIICAAp3rJ2EihsC
-# 3ddeHZgIZAsCAmcLm3b65XxcmlLQ1FkX/VcEknBQwFwaH5JTI+l4TZpdUwUcJVnI
-# EUN5MpxBKWDvUlXSMSdVPMtb89cSJilyiJ7/CvYYaUrrX6M5LMLMfOGYqSo2Alm+
-# w63pxWR4Z0eq37TLp1lz5PvYfssaG1zLYLO/83Z0EAqsURl6+APuNLnXtP+EMAqM
-# xzETspGxG/26ndy1nMZktSlmk/f7LWa+t5ie/4+NpRWm041upNv7lBYORZZ3wz1P
-# acS379lhgbOnqC7EldRCvT2jaXqn+Fo/s1fPnchEN8F0AH4gVu8uEWH20+TJ/AJm
-# uMU5xkyto6vKE3fcD8DJFcFu6kS3Q40XDuMijCVMLvrDfQXZqzGUmMxiXD1npDSh
-# 0+6w6YAIxxbkzihWw/wdLDq1B5tgXAac6S/pHuGU7psVaT1MObolz0hTKb20SHb/
-# aLLyIAwmnkE5NhUOUt8iWol7wROTL9olXWI7iqoYWLxXggvhHC4C3V/0CJHOkIUR
-# M49oSmBjmRCXqJkDANben5uQwsYIvqboF83e75dogRYevVSprgixSN00PcpzXZe7
-# ut8h0pfX5T5+3JlPivpOOmmiFM9KE5BYILpvAPWb8M+nfkox8fV4uXuU0iKwIsUS
-# RosALmxe0FahQqOJyt7BYX4CcMOevqYuoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMbtua0I+gwfflhU
+# mqsAKofhOnYU07+1c25lA4UIJhwKMA0GCSqGSIb3DQEBAQUABIICAHsUldEp5/J9
+# /7/Ok2M4ReN5pKdk50H8LfVl1tFKtBwOZqgtPqGo5rb8JSYbkFRKGI172tzouIqw
+# zhNyn0mhgAvHXVCJhUP+/4fI9S3caXTL4R1TjXvPoD1443VtbSYn3dtux31zODSj
+# WoRtnIcBWFuAUqNiXagQ+BwButSECuhpzniGEClbTdwzlosJTqB5BwGDpq0EkwL7
+# Tj308iPlOsfIqQuO7ggC1dO9UatIfvisySvp+9uYiC+aWttl+JRbnc6qhc1WOt8u
+# GMiXHW5ZGkxPiay+j3m26i9dJd7ssyoQV9Z6wSdRIcYqcXPEZ2gmiLqFxBtenzl1
+# K0bB5uvIguNXnGHTewfmfznI4p4KLf65k7ndgVp+Jeyq6QLrFcBZOo6dxuDsSFAo
+# KJyBWiEUwt0+cGMaQiTmDJFWirLvgNklehF0XxUMHS6zieP54lwVd1edo6boZ0x/
+# Jq+5r7yfYpOfYqdOgD1ICx2obXNHB+hSUEkBvno+8r2gYzVl2fMNlQRaTwg4XbuX
+# RiR77lk9czL2bjJDhH8Vwylv/FMVx2XTlZQN/Lm6zBiWoxb05ogqJbHLU5+Wx5Mv
+# CJfsz/KO/Xb3uQQPVjNtcuR1Las3YkbnxI2J17rVOOoL0vJY5ZHI9p05NxPm/N3U
+# MqwhrA/dUV0LtkZqZda9ya2UOg4FBsIsoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCD8a/3qSzcfKf3H7p9enkNvOl7H6ftFxTnFPN2+dj8WiQIUDx3ruJG+fiuY
-# RXVB8GUB71GzkJAYDzIwMjYwMTIwMTAwNDU4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAofdxmmxu2WmQ2w0Kq0xipJKUfIofsV9EL5qyjqv0ShAIUS5wshz6/MGTy
+# yiQUbtTnmqOETlQYDzIwMjYwMTI2MjE1OTUwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -285,17 +302,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ILDSSC2E1xSi8HtGlZ7abr8dmQOqadlwmiDkqXR1HebhMIGwBgsqhkiG9w0BCRAC
+# INMf5q2K+kdWCnb+H6E+ER176dcZRxZbJM2kBmNtXZEqMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAFAg6PBCg+99U
-# jW+UILDBDgIZxtD7m5M62YMdXCGqOiK8u2MOoJqBJG91nNnogyoL0a95r47DfF+a
-# Ms9M/DX4fk4SMMR3VY2FLW5TSi5Cva1+VKtyobGuj0uln+WjckDLuGlfF03KZSRA
-# XNxikxdFH4xnez2VhpQVvRQMXNfAOKYBuDxY78zn5jZRSaIECLy7VZ2Iv6WDuUKX
-# GioYtoapVdzsl3+tUGECeeo0LEdJbhK0iyfCAvGoQHUKaR0dcL1obELoQONAb2K6
-# WJRvJA1ndGv1SV+sf85mheawH2yIT9m9yUGN96AkHgnbL+1VZPVs/ExsX7JhDJY/
-# qhYqlqOdNyC1N+vouiT+lUagaTvDr6Ue2CqFGVFi6XsUod83C4QlDA4BShvlNhgp
-# NmZ2NYw87eRCoVZy0XvLQD/Yg2fC/eMpGFifHIpoCi74cJkaSrHl9uDGLj06yIW9
-# fhlLMpcpoXFLHkddIA7qnYAL9dD04m1OKDXzQCQrdiegz6G5kXIC
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAY/t86rxXGAVn
+# 91H0zaDU78MSxiQm3KMOx3rt0KBFWKoJdKz1gZb2iH2cpl5Fdgkf3WlnnJY3gBza
+# OKI8SRzjASLrWPeqATse5eADV/RUzeENKubYyLtGqZfViq4RMqBdXnyQOIkbBZWs
+# 5LS2Bc00mqo7sgmlAD485J2sxnlUjeT/WVwVQ1PQKM1DiwWQvZJoT8vh2i6OFyb+
+# 6OrifBeBTLIuwlg5ekDwE1qXga5X0mcnl++tgoRtCPdKrAioA1fbJYnQBPCBWxCM
+# 0mXfxr0MrqzU6nw7fil6+YpmTHVTS3MQPFXkEvyEGcXzwIIWDL1u8l9izReVUJB1
+# umzofFG7ka13GjGeZtZoj4Z4dtOIBlH8GrDW7cofYQ/Kcpg1t93maCovqUPsoDpu
+# NjWJ0hcpt9TqQTdEi3g2Hsdvdea6jGVNmP8r3itOuV8oLMm8dcMlDBmC+saySd3L
+# gdGeqZBo0zUWe6rTKvrtIMlAqfAjAdwQ3h076DfjvpCDAbg0iHqc
 # SIG # End signature block

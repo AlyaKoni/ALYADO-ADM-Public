@@ -1,7 +1,16 @@
+#Requires -Version 2.0
+#Requires -RunAsAdministrator
+
 $isSecureBootEnabled = Confirm-SecureBootUEFI
 if (-Not $isSecureBootEnabled)
 {
 	throw "SecureBootUEFI is not enabled on this device!"
+}
+
+$taskPresent = Get-ScheduledTask -TaskName Secure-Boot-Update
+if (-Not $taskPresent)
+{
+	throw "Looks like KB5036210 or later is not installed!"
 }
 
 
@@ -28,6 +37,8 @@ $BaseBoardManufacturer = (Get-CimInstance Win32_BaseBoard).Manufacturer
 $BaseBoardSerialNumber = (Get-CimInstance Win32_BaseBoard).SerialNumber
 $BaseBoardProduct = (Get-CIMInstance Win32_BaseBoard).Product 
 	
+Write-Host "System information"
+Write-Host "==============================================="
 Write-Host "UEFISecureBootEnabled: $UEFISecureBootEnabled"
 Write-Host "HighConfidenceOptOut: $HighConfidenceOptOut"
 Write-Host "AvailableUpdates: $AvailableUpdates"
@@ -50,38 +61,85 @@ Write-Host "BiosVersion: $BiosVersion"
 Write-Host "BaseBoardManufacturer: $BaseBoardManufacturer"
 Write-Host "BaseBoardSerialNumber: $BaseBoardSerialNumber"
 Write-Host "BaseBoardProduct: $BaseBoardProduct"
+Write-Host ""
+Write-Host "System events"
+Write-Host "==============================================="
+$allEventIds = @(1801,1808)
+$events = @(Get-WinEvent -FilterHashtable @{LogName='System'; ID=$allEventIds} -MaxEvents 20 -ErrorAction SilentlyContinue)
 
-$allEventIds = @(1801,1808) 
-$events = @(Get-WinEvent -FilterHashtable @{LogName='System'; ID=$allEventIds} -MaxEvents 20 -ErrorAction SilentlyContinue) 
+$latest_1801_Event = $events | Where-Object {$_. ID -eq 1801} | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1808_Event = $events | Where-Object {$_. ID -eq 1808} | Sort-Object TimeCreated -Descending | Select-Object -First 1
 
-$latest_1801_Event = $events | Where-Object {$_. ID -eq 1801} | Sort-Object TimeCreated -Descending | Select-Object –First 1 
-$latest_1808_Event = $events | Where-Object {$_. ID -eq 1808} | Sort-Object TimeCreated -Descending | Select-Object –First 1 
-
-if ($latest_1808_Event) { 
-   Write-Host "Ereignis 1808 gefunden – Zertifikate der Zertifizierungsstelle für den sicheren Start wurden aktualisiert" 
-   Write-Host "Ereigniszeit: $($latest_1808_Event.TimeCreated)" 
-} else { 
+if ($latest_1808_Event) {
+   Write-Host "Ereignis 1808 gefunden - Zertifikate der Zertifizierungsstelle für den sicheren Start wurden aktualisiert"
+   Write-Host "Ereigniszeit: $($latest_1808_Event.TimeCreated)"
+} else {
    Write-Host "Kein Ereignis 1808 gefunden - Secure Boot CA Zertifikate sind noch nicht aktualisiert"
    
-	if ($latest_1801_Event) { 
+	if ($latest_1801_Event) {
 	   if ($latest_1801_Event.Message -match '(Hohe Zuverlässigkeit|Benötigt mehr Daten|Unbekannt|Angehalten|High Confidence|Needs More Data|Unknown|Paused)') { 
-		   $confidence = $matches[1] 
-		   Write-Host "Vertrauen: $confidence" 
-	   } else { 
-		   Write-Host "Ereignis 1801 gefunden, aber Konfidenzwert nicht im erwarteten Format" 
-	   } 
-	} else { 
-	   Write-Host "Kein Ereignis 1801 gefunden" 
+		   $confidence = $matches[1]
+		   Write-Host "Vertrauen: $confidence"
+	   } else {
+		   Write-Host "Ereignis 1801 gefunden, aber Konfidenzwert nicht im erwarteten Format"
+	   }
+	} else {
+	   Write-Host "Kein Ereignis 1801 gefunden"
 	}
    
 }
+
+https://hitco.at/blog/uefi-secureboot-db-update-installieren/
+
+dir C:\Windows\system32\SecureBootUpdates
+
+$RegSecureBoot = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot"
+Write-Host "AvailableUpdates hat derzeit den Wert: 0x$($RegSecureBoot.AvailableUpdates.ToString("X"))"
+
+$RegValue = 0x0
+$RegValue += 0x0040 # add the Windows UEFI CA 2023 certificate to the Secure Boot DB.
+$RegValue += 0x0800 # apply the Microsoft Option ROM UEFI CA 2023 to the DB
+$RegValue += 0x1000 # apply the Microsoft UEFI CA 2023 to the DB
+$RegValue += 0x0004 # look for a Key Exchange Key signed by the device’s Platform Key (PK)
+Write-Host "Setze AvailableUpdates auf: 0x$($RegValue.ToString("X"))"
+
+Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot" -Name "AvailableUpdates" -Value $RegValue
+
+$StartTimeStamp = (Get-Date).AddSeconds(-1)
+Start-ScheduledTask -TaskName "\Microsoft\Windows\PI\Secure-Boot-Update"
+do {
+	$task = Get-ScheduledTask -TaskName "Secure-Boot-Update"
+} while ( $task.State -eq "Running" )
+Get-WinEvent -FilterHashtable @{ProviderName='microsoft-windows-tpm-wmi'; StartTime=$StartTimeStamp } -ErrorAction SilentlyContinue | Format-Table -Wrap -AutoSize
+Get-WinEvent -FilterHashtable @{LogName='System'; StartTime=$StartTimeStamp } -ErrorAction SilentlyContinue | Format-Table -Wrap -AutoSize
+
+
+
+WinCsFlags.exe /query
+WinCsFlags.exe /apply --key "F33E0C8E002"
+Start-ScheduledTask -TaskName "\Microsoft\Windows\PI\Secure-Boot-Update"
+$task = Get-ScheduledTask -TaskName "Secure-Boot-Update"
+$task.State -eq "Running"
+
+[System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI DB).Bytes) -match 'Windows UEFI CA 2023'
+[System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI DB).Bytes) -match 'Microsoft UEFI CA 2023'
+[System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI KEK).Bytes) -match 'Microsoft Corporation KEK 2K CA 2023'
+
+(Get-AuthenticodeSignature "$env:SystemRoot\System32\winload.efi").SignerCertificate | Format-List Subject, Issuer, NotBefore, NotAfter
+(Get-AuthenticodeSignature "$env:SystemRoot\Boot\EFI\bootmgfw.efi").SignerCertificate | Format-List Subject, Issuer, NotBefore, NotAfter
+Microsoft Windows UEFI CA 2023
+bei mir 
+Microsoft Windows Production PCA 2011
+Microsoft Corporation UEFI CA 2011
+
+Backup Bitlocker Keys
 
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAH2FyN2w5MIF5Z
-# S5jI74Lozny2MhxcvQoaqd85u1O+kKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD6wrhS7Imst4nZ
+# EgL9DZbICPQYBINR+81Ud0gIp9bJCKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -118,10 +176,10 @@ if ($latest_1808_Event) {
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
-# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
+# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -129,17 +187,17 @@ if ($latest_1808_Event) {
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
-# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
-# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
-# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
-# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
-# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
-# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
-# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
-# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
-# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
-# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
+# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
+# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
+# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
+# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
+# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
+# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
+# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
+# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
+# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
+# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
+# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -149,39 +207,39 @@ if ($latest_1808_Event) {
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
-# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
-# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
-# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
-# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
-# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
-# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
-# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
-# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
-# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
-# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
-# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
+# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
+# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
+# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
+# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
+# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
+# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
+# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
+# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
+# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
+# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
+# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILcSqBO3UXveHI1l
-# t5jxC1WBywho4ebUhZ7GXsIoY61KMA0GCSqGSIb3DQEBAQUABIICALdhwe7FVSVZ
-# OUH48tM8eQC83hXvzgpEjLuEdLU2AZ9dkFAk/e66RAKzGGKKhbwATssNm0a8zFWI
-# BAaszCyuSn8qhCEzlKXPxXnr4iSTZfBiGi+J03q8FeOTyjTFy3XcU8TSLrVYdhkZ
-# vdKgA9P8gKHQOOh4pFUzO6v/J08OhSO8IzjYBPzU37Lp16spb5fIww9e4Tac2XAp
-# Qd8bPa/f3fOhKdmXGX3JCUQuKD88jm4bTOtnhzgk3bEQOt7oGWNzaG6wvBHh9029
-# 1hIlplWIJ9H7dGzIecW2gsOICdVQTCrHXw14ecmlq7DfdUjgeL6WzogZcV62E2k9
-# pr85OHPQTyAqF2k57MujaXbXkmIvfi3oRDJvbZdiCIgFcfeuhxPlIW5EZBGlWFWZ
-# AmXCVX4PJEs0yRqaxF3ishFhc7JthE5bTKMuVd3MDiBTpv+FDLi4FhoyV2UWaKFl
-# crv3rqP9C7+hH4f1j6/gMmwA1HTo0uqB4Sh1yTiq0QL8jxq85KcP1Oo9tboP24HY
-# +qoLwJZQ2wD+pxIohhU+Wsgiss3IPM/4X6TOOveF1PzJqgbzVAwQGcx5CwcZNhFP
-# eb1ntOTyPJubYZvVUVoIdXdQs+U6iWETihbCbXLZQEljp8cjFgs4DGEWVIG2ziDt
-# t4oG0+C5ybQMWYPZbeaiaSIlqkrURVHToYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFxvvEEXWL4AnqK8
+# 6q+WRoFOd82BHBS5v9k1zOKzRWJ2MA0GCSqGSIb3DQEBAQUABIICACsr5ZMY2pCY
+# N7GKtFmSB8MeLD6xGoxAjOUre73/SHKl1nniN/90RqRX+tLKRXg3lQ87YHaADP8h
+# WiB4Zd4y/Q41ibHKOgkxDYPn6lT5eVytEjxdx76cgjuBMkVwTT4+9j/yMKcdKF+t
+# rbIpSN3WI/Z/1iIn1/Zi9iWVJXtJeqhrBLxQcfznTCio4jXBUS+ezO0TS7xrtZWq
+# 5EkPspCFHJfMxXUzCZle8dyo4ZsccemdErFCVumbdH5XIA2YbaC/HSlL0gMmYPb3
+# +chH4sr++ZYq4ZMLHJm8mYWPbecTW18GUvD6/tNVQQ7gs4VOFJ2Gnf6z0ImDt29R
+# bWDvj4aI7AJdA04l5M5Q33+hHEEswdHzz/y1VI9JAD5sN0HZGUQqy9AVje8lm8dR
+# pK1h/4w2Anjy9uIRQZtGoaBb4wPVHhLx+9I5Dc4eokx0xLAmwzJttwrPnT9r7pfG
+# RlE9f4g7rb/1zV29fPb4ZSyrunsa0gnvJpaXuN0NADbX5sk+uJAVg8Jdd3ocwzi0
+# SvRdUilfxft/RI4evAbx5SVpTDh/h3uoLSUV3lEZnm4QwQnpRGIZ6uytYaWDtrVn
+# 6HjVSEBDrxk+ag7YUYAwYhTENfWnKn1/hGhLIBzpiSnK4mxOWSqFmJCnbMRBMS+E
+# Fhia61LBAHXLXQnrmUki1K5++ClYAIM8oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAYYtBagu+uFIraGhtuj3tdduPVM1TIJaYj7KUbLo/5gAIUVoNG6AJUfOrx
-# eC9i1cMxgxfINkcYDzIwMjUxMjE5MDkwNzUzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCi22ZSAToVbz67vls/qgg9pb8YhMjB2oulfz8dyVYHIwIUX35YQFMv+tK8
+# PXHFWzYNAiojkuQYDzIwMjYwMTI3MDAzMTA0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -286,17 +344,17 @@ if ($latest_1808_Event) {
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IPPrE9IGzTRuCMELCQvLWXigGNXVTLTNAEX6AFva0RO7MIGwBgsqhkiG9w0BCRAC
+# II8EJIBIbrEZoKsihGPj9QovdYEciYzGUfCCPb11h6FZMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAaXasYs3fW1lr
-# VsrbTTbFSS4oE+TqZqKYwnBLkz7DOmHBVX1OF0DM/YdhSxkWlwk+EFHcW1l9vS5X
-# AcJR96B58U+NCzrleGC2YOKwSYlyqRDqDKcK4hC+mb1xHKkWdooii/KofiGH/DT+
-# KDuj7gcVn/+wQmLws1wAhmeefp9iI6FT/Sf8zIz91iZpNKh5LCYpH1XxpLiA8LvV
-# dl6ZXGsEMoDmZe8tn1boIWOeqh2rA07vwG3vZ/Eg5voUHf16PA2OIWU9IUpuqMBz
-# 8npjThEnDCr3/6awVmySUMlbmqSORaE8WdZ7SjM43CwCTcTrYtmhTMigDz1NeNNA
-# hyLV8wZe5z7yjhTXRTzANtBFtcGxtmocp82OnxTSlU8ONpBQXCQ4kBUSTCJU5Tgd
-# R1X6ezNQbVesjnaPVooTrMtc5quX5fYSom2PBC9pWzeKEuzoUQLDePpvmFqE2vUZ
-# Vd8zUIif53+kocLOBpqh6hw/XeTrcScPgmr5TqNc+IVSDvEGEXY1
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGABzUCKObpQkDh
+# 5s17GEMsE+Qtl8MOVYFJ6GhQrD44Rg1G3pgqgPcecoUaQVu5YfQLh5K7zAzXoReg
+# mrl6AAnVhUHbFNGidC/ggmfebnXiuds+c4oRPxARVFHUVjddDSpE//2RkPRAxi6P
+# UOLDL9zDBMZSuSD/BYBGkvU+8QOSBe9iNUFV6ODs48xvZfhnbEG2kTfToetwU2Df
+# QKbdRm7OTILYzLgyFBsYZcZ1I8R1mzIIm+xPolOCEOkN/HHkjDfcDEWhLRbwCqMv
+# T9F1MbNB33r4YxuF2N4FtrslXe0pZYLn+h1Alf2Ara1hSEGO4a6RcCdhANgVL/7K
+# TWYF5bjc4lb+opOxvtvuIatC8XxZJmeMLnZKJ+kMTzn1YxnZlHEVBt2AVfacGaWQ
+# 5FMkx97aQNhSY7vSEmH0dwvtS5BqAlRUIVFR5k2eWpgUL611BwF2f0LFdiPhkOEk
+# 4x4ejEPlj6auJPDDbPioPDRxNh0PF6wBiBFtpWu95YTY4mFI5u0O
 # SIG # End signature block

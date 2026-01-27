@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 2
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,137 +27,47 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
-    History:
-    Date       Author               Description
-    ---------- -------------------- ----------------------------
-    29.09.2020 Konrad Brunner       Initial Version
-
 #>
 
-[CmdletBinding()]
-Param(
-)
-
-$exitCode = 0
-$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
-$AlyaScriptName = Split-Path $PSCommandPath -Leaf
-$AlyaScriptDir = Split-Path $PSCommandPath -Parent
-
-if (![System.Environment]::Is64BitProcess)
+Write-Host "    Preparing version"
+$packageRoot = "$PSScriptRoot"
+$versionFile = Join-Path $packageRoot "version.json"
+if ((Test-Path $versionFile))
 {
-    Write-Host "Launching 64bit PowerShell"
-    $arguments = ""
-    foreach($key in $MyInvocation.BoundParameters.keys)
-    {
-        switch($MyInvocation.BoundParameters[$key].GetType().Name)
-        {
-            "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $arguments += "-$key " } }
-            "String"          { $arguments += "-$key `"$($MyInvocation.BoundParameters[$key])`" " }
-            "Int32"           { $arguments += "-$key $($MyInvocation.BoundParameters[$key]) " }
-            "Boolean"         { $arguments += "-$key `$$($MyInvocation.BoundParameters[$key]) " }
-        }
-    }
-    $sysNativePowerShell = "$($PSHOME.ToLower().Replace("syswow64", "sysnative"))\powershell.exe"
-    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
-    $pinfo.FileName = $sysNativePowerShell
-    $pinfo.Arguments = "-ex bypass -file `"$PSCommandPath`" $arguments"
-    $pinfo.RedirectStandardError = $true
-    $pinfo.RedirectStandardOutput = $true
-    $pinfo.CreateNoWindow = $true
-    $pinfo.UseShellExecute = $false
-    $p = New-Object System.Diagnostics.Process
-    $p.StartInfo = $pinfo
-    $p.Start() | Out-Null
-    $stdout = $p.StandardOutput.ReadToEnd()
-    if (-Not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout }
-    $stderr = $p.StandardError.ReadToEnd()
-    if (-Not [string]::IsNullOrEmpty($stderr)) { Write-Error $stderr }
-    $exitCode = $p.ExitCode
+    $versionObj = Get-Content -Path $versionFile -Raw -Encoding UTF8 | ConvertFrom-Json
+    $version = [Version]$versionObj.version
 }
 else
 {
-    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
+    $versionObj = @{}
+    $versionObj.version = "1.0"
+    $version = [Version]$versionObj.version
+}
+Write-Host "      actual: $version"
 
-    try
-    {
-        $ErrorActionPreference = "Stop"
-
-        $regPlats = @("","\WOW6432Node")
-        foreach($regPlat in $regPlats)
-        {
-            foreach($reg in (Get-ChildItem -Path "HKLM:\SOFTWARE$regPlat\Microsoft\Windows\CurrentVersion\Uninstall"))
-            {
-                $displayName = $null
-                $publisher = $null
-                $uninstallString = $null
-                try {
-                    $displayName = Get-ItemPropertyValue -Path $reg.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
-                } catch {}
-                try {
-                    $publisher = Get-ItemPropertyValue -Path $reg.PSPath -Name "Publisher" -ErrorAction SilentlyContinue
-                } catch {}
-                if ($displayName -like "Git version*" -and $publisher -eq "The Git Development Community")
-                {
-                    Write-Host "Uninstalling $displayName"
-                    Write-Host "with infos from $($reg.Name)"
-					try {
-						$uninstallString = Get-ItemPropertyValue -Path $reg.PSPath -Name "QuietUninstallString" -ErrorAction SilentlyContinue
-					} catch {}
-                    if (-Not $uninstallString)
-                    {
-                        $uninstallString = (Get-ItemPropertyValue -Path $reg.PSPath -Name "UninstallString") + " /SILENT"
-                    }
-                    if (-Not $uninstallString.Contains("msiexec"))
-                    {
-                        $uninstallStringNew = ""
-                        $uninstallParts = $uninstallString.Split()
-                        foreach($uninstallPart in $uninstallParts)
-                        {
-                            if (($uninstallStringNew -eq "") -and (-Not $uninstallPart.StartsWith("`"")))
-                            {
-                                $uninstallStringNew += "`""
-                            }
-                            if ($uninstallPart.Contains(".exe") -and -not $uninstallPart.Contains("`""))
-                            {
-                                $uninstallPart = $uninstallPart + "`""
-                            }
-                            $uninstallStringNew += $uninstallPart + " "
-                        }
-                        $uninstallString = $uninstallStringNew
-                    }
-                    $uninstallString += " /L* `"C:\ProgramData\AlyaConsulting\Logs\Git-Uninstall-$AlyaTimeString.log`""
-                    Write-Host "command: $uninstallString"
-                    Write-Host "EXE Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-                    cmd /c "$uninstallString"
-					$exitCode = $LASTEXITCODE
-					Write-Host "CMD returned: $exitCode at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-                    do
-                    {
-                        Start-Sleep -Seconds 5
-                        $process = Get-Process -Name "unins000.exe" -ErrorAction SilentlyContinue
-                    } while ($process)
-                    Write-Host "EXE End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-                }
-            }
-        }
-    }
-    catch
-    {   
-        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-        Write-Error ($_.Exception) -ErrorAction Continue
-        $exitCode = -1
-    }
-
-    Stop-Transcript
+$pageUrl = "https://support.logi.com/hc/da/articles/1500005516462-Logi-Options-Release-Notes"
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
+[regex]$regex = "<hr>[\s\S]*?<h4 id=.+?<strong>Version[\s]+([\d\.]+)[^\d\.]"
+$versionStr = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant, Multiline').Groups[1].Value
+try {
+    $version = [Version]$versionStr
+}
+catch {
+    throw "Cannot parse version string '$versionStr' to Version object."
+}
+if ($version.ToString() -ne $versionStr) {
+    throw "Cannot parse version string '$versionStr' to Version object."
 }
 
-exit $exitCode
+Write-Host "      new: $version"
+$versionObj.version = $version.ToString()
+$versionObj | ConvertTo-Json | Set-Content -Path $versionFile -Encoding UTF8 -Force
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCa5pbklPoqUu1h
-# I3eNAO2MOXYBJ1oGMJViP/T+TDpGiKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDIvdoBiE9JjHk9
+# SlAym5BhBfWwc7xoRnfzSJ7x3prmJ6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -241,23 +151,23 @@ exit $exitCode
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIC5zg4aT/YuDnD9M
-# sn+j4zWl4WpJXLTTWEsLPK4zSfonMA0GCSqGSIb3DQEBAQUABIICAKcNNPz1D4uD
-# mm1s2kQ9xANCyED00RkWTt4qjSVzri2vk4CezrxLy4hfIU95PTusesrW4e/PN2nW
-# tGeZyAvojzjclI4GqQv0HX+xSGQkcLJ0AhnRBlxjc39kZh1fcD5n/StXZ2N+mafU
-# 4MgVOKxMpB7RvL06bGhF6mpTpzTaY8QdufSjRG+t7LvOaOtu86A/HTXcyZElF5wS
-# 5Ycbu+jv5MygUQlSjnwUictXBKH/z0XpT7I0+8LMjrH09cWG/9KBb3+lCVk8eofy
-# 0MPPOzPQskKF4wUJt+HYRydQcxPwi/Sy70gQZT4IPoOCvbtiEsHgxpBtpiJLdaki
-# l/ML8yyLI4UOMeSNjhUEJGYU71kx1HGgK/YE1420tHbohmePlJJzHn+cmRO0tgQU
-# BvkQ39iDg0uKoy2jvMaaudyLb3V+VVjjHHN3sYNV0uLmlEiBUDT+57MCWpBI801P
-# wc1elapgHRA9ORKnpSIUefw3r2beUit6p50ECG6NqZcrtUp7T4rUSvK5kEW5rTtI
-# FXosowJNVsO1IZw0SQPaBp5t3GrHzrD8ESci+8HZDCowPtWpZgcqGrVW1f7AV98q
-# vOcxyMHZq4oWW7qz0xE42eIchXlxnLFHA6EIE2YSrnMg3qPRVuANeHd6hcMHVFxh
-# rojVlSnCbrWipidYmRdS68/ydD12O0S9oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJn7EYsL+inuJ8za
+# MBy65nXk0ccEB9CseDF4zdh4oz56MA0GCSqGSIb3DQEBAQUABIICAGzEErBss4CP
+# PgshmWwRWXIXP33Qsa7epBr3+NZtLSO1sOlywRsOrcp8MsppDz7iTUW3dJ0gczaM
+# rrezwZrtSQQqDNAqpxAh3A+qIwVuJAM5jMGRxx6zR6IeaFxJXpALSB5opHr0n8Ox
+# GFr65v05/leeNkrEi2tPc0toDKoWZ7+yRXQr/9NUSTEHPXnePnS2VMFOpvZ41Mvj
+# L4StPGox4IuLP5fXQkEYeevC5NeB8z662KtTNMIFPiKCyaI/nHC0VtEjLqzBvAil
+# UruHegEq1BQDxhwEPFKgseuxc+C55+EBnRKVJ9ARBvE8NNItKzYNekTy3kQgRL2c
+# hBssQ4fQ8xZn3jtMxAhN58LrgoN39N8FI9EFHtLsezxC/Sl+urArepRkkx8tyIEe
+# dOQ6C2iEjPB9T5mUyxXKLTfcapz4deoGa3AJaMo1qXu3HxcCcIpLQlPy4VXEsy8y
+# 1vmvsZwPL8KhOY+eL6Vd2Mt3eyD9OplJuRldWdJIKI0Xaf/y49RYrvwwhsiOkF4e
+# I1U09wzPxi4r1JHwUE0+XY2nFBOw/vtbeL9VIPnXTnk1j8Ku/SzVW17F/UcOh6Z4
+# SaNEme5O2IWpex+8ezkvjaRFmAQQUMz5nLASaTfmFqSYUEP+00I+UoUx98TQAzDB
+# QhRDBlesN1Eq4xcnhIwa4wb+QPD7OnvYoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBkWYxA+4jmcDQXtE+XwC6G6Sdm30QI2kp5UIOCXw5GpgIUEGtws3hqTWUm
-# Ya11JE9jYvFuI9IYDzIwMjYwMTI3MTAzMDI3WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBmK2F1ClHu1x1jp3ezhOM0vbILijXNBcue5FgoBmcMWQIUV2mQloup8w3+
+# ZC7VJm4OsLJid9EYDzIwMjYwMTI3MTIxMTQ3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -362,17 +272,17 @@ exit $exitCode
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IB3126wNXtgTDlvsF+SniJwwGojNE7B9oNcIzj+Z39fsMIGwBgsqhkiG9w0BCRAC
+# IFrqZ3/prbmlqZmTzcIcR5d7tmIHpnOkHJTzUSs7cLJDMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAmvx6fz4seUBE
-# LIL2/drBbPM+nrd9Xv6c28u9thJvEODijY7v74dvq1I0zbHdQqOiTaS6iCNBcPdL
-# 6Yhh64ZkHb6hO0/i3Qd1lW8CYSi1cGWg/PVr8HpSDTtJAFgiIroKIR3VT2f37iqT
-# a0EG5SdAiXig48yIeRrTtma5KUtoZZSbi6RyFQ+rK1ib2XsVCpn8CDu+1xfVboHs
-# M0Pz4RNcSGQP4Ihhso8dyCo3SS8BDfhnQu+Op0zugEF8WeDhDVea5TF6xtPCGAfT
-# KkuDIb1Czib+QxEOWnPVjHqdUWP/4U4TGsWWseJbRDA0pJNiNWcdY3QuJzNzEYpg
-# 9eIYXe0I1RNtXW0MTxevmzEvdlC7eN/HKhhE8kTynx3HeIrF3VFrfCYMJN9Gff7X
-# pob6TiWjFILIyqMooRSDUc9w6g+qsn0doxb3yTUabPw49dZSRtu4kGhJxfuRwxz1
-# yCmzuMivq3bdxHz/wAScUSAwUWYODExyV+8c0tpWlmtgqRPXpaWw
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAHDU+Ibn/CjG3
+# Xb1ZZxj3XM3nNQh7pqKsU0iSgMkhwDP264zyPy2uju1Vk30IxmMzDWiXfylwUTr+
+# ZKo/O436nun4ng2gqPP6vXKuxaUAUOGTweRBzVp5lnUB+OPFma5SHnlYIHYhLv8S
+# Q89rSmGXW2DHXP1hls1QvWLTVAM4ystP5UibRvkz/IYEkySirSyTrwQAkuelAenD
+# ZnuVlhVCEHOn/w7CpvPN5DUB8swDMGwkN0XD1LjpBXUk76iPK1DWtMpXw0MW3/Ii
+# bGSskC+YgXIjUpgn+nXFBN5SeIgDys6BS6x9sKs+iIc8UIzfwATeEJfg4hCloJKR
+# bRKAU/W9AvlxhcAJeTC9HNeNYyAS600zxwF0YzU4Jnuqqs3cRIUruvoeccjA5m+u
+# /yFUcVh/fVqEIpY2y9eNen8i2Kd4ZWo1wRc+ivKw73iVfnjNF2mQpUxJ2WiYTL+X
+# g/O2gzg4tYdP1FSoOl/MVRzA4kFSj1XoTL6UiSk1Cuabo2Z5nINr
 # SIG # End signature block

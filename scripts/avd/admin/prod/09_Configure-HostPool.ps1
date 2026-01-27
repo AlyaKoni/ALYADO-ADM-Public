@@ -59,8 +59,15 @@ $IsTestHostPool = $false #needs to be $true to use AllowNonAadJoinedDevices so f
 #special na handling
 $na = "{[(N/A)]}"
 #use $null if you dont want to take into account a value
+#more settings: https://learn.microsoft.com/en-us/azure/virtual-desktop/rdp-properties
 
-$AllowNonAadJoinedDevices = $null
+$EnableRdsAadAuth = $null
+#enablerdsaadauth:i:value
+#Determines whether the client will use Microsoft Entra ID to authenticate to the remote PC. When used with Azure Virtual Desktop, this provides a single sign-on experience. This property replaces the property targetisaadjoined.
+#- 0*: Connections won't use Microsoft Entra authentication, even if the remote PC supports it.
+#- 1: Connections will use Microsoft Entra authentication if the remote PC supports it.
+#
+# Replaces this setting: $AllowNonAadJoinedDevices = $null
 #targetisaadjoined:i:value
 #Indicates whether not AAD joined devices are allowed
 #- 0*: Do not allow not AAD joined devices
@@ -158,7 +165,29 @@ $UsbRedirect = "*"
 #- {Device Setup Class GUID}: Redirect all devices that are members of the specified device setup class
 #- USBInstanceID: Redirect a specific USB device identified by the instance ID
 
+$DynamicResolution = 1
+#dynamic resolution:i:value
+#Determines whether the resolution of the remote session is automatically updated when the local window is resized
+#- 0: Session resolution remains static during the session
+#- 1*: Session resolution updates as the local window resizes
 
+$SingleMonInWindowedMode = 1
+#singlemoninwindowedmode:i:value
+#Determines whether a multi display remote session automatically switches to single display when exiting full screen. Requires use multimon to be set to 1
+#- 0*: Session retains all displays when exiting full screen
+#- 1: Session switches to single display when exiting full screen
+
+$SmartSizing = 1
+#smart sizing:i:value
+#Determines whether or not the local computer scales the content of the remote session to fit the window size
+#- 0*: The local window content won't scale when resized
+#- 1: The remote session will appear full screen
+
+$UseMultimon = 1
+#use multimon:i:value
+#Determines whether the remote session will use one or multiple displays from the local computer
+#- 0: Don't enable multiple display support
+#- 1*: Enable multiple display support
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -295,74 +324,99 @@ else
     $Global:properties = $properties.TrimEnd(";")+";"
 }
 
-if ($AllowNonAadJoinedDevices -ne $null)
+if ($null -ne $EnableRdsAadAuth)
 {
-    $Changed = Fill-Integer -skey "targetisaadjoined" -svalue $AllowNonAadJoinedDevices
+    $Changed = Fill-Integer -skey "enablerdsaadauth" -svalue $EnableRdsAadAuth
     $Dirty = $Dirty -or $Changed
 }
-if ($AudioCapturingMode -ne $null)
+#if ($null -ne $AllowNonAadJoinedDevices)
+#{
+#    $Changed = Fill-Integer -skey "targetisaadjoined" -svalue $AllowNonAadJoinedDevices
+#    $Dirty = $Dirty -or $Changed
+#}
+if ($null -ne $AudioCapturingMode)
 {
     $Changed = Fill-Integer -skey "audiocapturemode" -svalue $AudioCapturingMode
     $Dirty = $Dirty -or $Changed
 }
-if ($EncodeRedirectedVideoCapture -ne $null)
+if ($null -ne $EncodeRedirectedVideoCapture)
 {
     $Changed = Fill-Integer -skey "encode redirected video capture" -svalue $EncodeRedirectedVideoCapture
     $Dirty = $Dirty -or $Changed
 }
-if ($EncodeQualityRedirectedVideoCapture -ne $null)
+if ($null -ne $EncodeQualityRedirectedVideoCapture)
 {
     $Changed = Fill-Integer -skey "redirected video capture encoding quality" -svalue $EncodeQualityRedirectedVideoCapture
     $Dirty = $Dirty -or $Changed
 }
-if ($AudioMode -ne $null)
+if ($null -ne $AudioMode)
 {
     $Changed = Fill-Integer -skey "audiomode" -svalue $AudioMode
     $Dirty = $Dirty -or $Changed
 }
-if ($KeyboardHook -ne $null)
+if ($null -ne $KeyboardHook)
 {
     $Changed = Fill-Integer -skey "keyboardhook" -svalue $KeyboardHook
     $Dirty = $Dirty -or $Changed
 }
-if ($ClipboardRedirect -ne $null)
+if ($null -ne $ClipboardRedirect)
 {
     $Changed = Fill-Integer -skey "redirectclipboard" -svalue $ClipboardRedirect
     $Dirty = $Dirty -or $Changed
 }
-if ($ComPortsRedirect -ne $null)
+if ($null -ne $ComPortsRedirect)
 {
     $Changed = Fill-Integer -skey "redirectcomports" -svalue $ComPortsRedirect
     $Dirty = $Dirty -or $Changed
 }
-if ($PrintersRedirect -ne $null)
+if ($null -ne $PrintersRedirect)
 {
     $Changed = Fill-Integer -skey "redirectprinters" -svalue $PrintersRedirect
     $Dirty = $Dirty -or $Changed
 }
-if ($SmartCardsRedirect -ne $null)
+if ($null -ne $SmartCardsRedirect)
 {
     $Changed = Fill-Integer -skey "redirectsmartcards" -svalue $SmartCardsRedirect
     $Dirty = $Dirty -or $Changed
 }
-if ($CameraRedirect -ne $null)
+if ($null -ne $CameraRedirect)
 {
     $Changed = Fill-String -skey "camerastoredirect" -svalue $CameraRedirect
     $Dirty = $Dirty -or $Changed
 }
-if ($PlugNPlayRedirect -ne $null)
+if ($null -ne $PlugNPlayRedirect)
 {
     $Changed = Fill-String -skey "devicestoredirect" -svalue $PlugNPlayRedirect
     $Dirty = $Dirty -or $Changed
 }
-if ($DriveRedirect -ne $null)
+if ($null -ne $DriveRedirect)
 {
     $Changed = Fill-String -skey "drivestoredirect" -svalue $DriveRedirect
     $Dirty = $Dirty -or $Changed
 }
-if ($UsbRedirect -ne $null)
+if ($null -ne $UsbRedirect)
 {
     $Changed = Fill-String -skey "usbdevicestoredirect" -svalue $UsbRedirect
+    $Dirty = $Dirty -or $Changed
+}
+if ($null -ne $DynamicResolution)
+{
+    $Changed = Fill-Integer -skey "dynamic resolution" -svalue $DynamicResolution
+    $Dirty = $Dirty -or $Changed
+}
+if ($null -ne $SingleMonInWindowedMode)
+{
+    $Changed = Fill-Integer -skey "singlemoninwindowedmode" -svalue $SingleMonInWindowedMode
+    $Dirty = $Dirty -or $Changed
+}
+if ($null -ne $UseMultimon)
+{
+    $Changed = Fill-Integer -skey "use multimon" -svalue $SingleMonInWindowedMode
+    $Dirty = $Dirty -or $Changed
+}
+if ($null -ne $SmartSizing)
+{
+    $Changed = Fill-Integer -skey "smart sizing" -svalue $SmartSizing
     $Dirty = $Dirty -or $Changed
 }
 
@@ -396,8 +450,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDHDWFRaByPQmVb
-# UtsIKmWAyFk3LD7kraqugM4zKAKxeqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDGxy3Kxs5FfwRh
+# s/BNb7oXsmOvDewB2PE4m3NUrHnkY6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -481,23 +535,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPRNlFgOMkjR3lCG
-# GOSZ0mkhaqNunG9QHg2uXugVoo3EMA0GCSqGSIb3DQEBAQUABIICAJ/ilAd3W84m
-# OpxL/nMZ/+uGUxryfIxhW69wqltpsMoo4JpUf2m0riDhYp7zuJ58+uIbi/B4URem
-# lrcwxjJd4nrM/owiFfKlbic4tgBCcP6MuM/5YGFx0to97JhggYWoZ0F5QNQeUC5U
-# nQYF7smH1HWlKwOkgjBG4Ct7fUZHdlBCaguewctFfa/PizanlXlbd7BV+623gyCO
-# AB4r5tvezVZVKULYeAo/qCWjGl6pl4GuScDlHuOB7q/lJ+WJE3pj9QVcKPJyx2cD
-# 6TMXdeULCGkNAX71ugx4EEuS6qLy7RdG9WEKUppvNxaMHnSL19DuAvEwvZfwY7U0
-# rYD07WImbVqYQ5/2OQ5IOmusvDCe2rLvuz2bcYCXHQym2/+yTKRKvL4Yc95hx7jS
-# ITSlq8A/+HrQqqAwyXjt68ICxd9OXI1Hl5wh4yHpsxjR8LtJAork33wmrf19mgHb
-# +w1jSmBW9XMh7AmQc6RImFCKJdTALd8otYiZbq6dplW9PzlmtLdHAwEqAllliB/1
-# N5uSrmG1nG9RvLCrp+S59z1uiraUyFyJCRa/TxqsA8DFE1HWsfur5IG3V5GYHVxl
-# nZrwdRuiLB9PiFaDdMHgfNkSslCQtXeNEgeuOkMeGdx2GqrCUaNTk3AGUtEtFniS
-# Ag5xNG5Sj/YqUwxT9aJka0U6+vBto9QfoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMpU3FvT8PWJ8D3u
+# OVUvXYWN1/72tT4WpzczTq+TvLUdMA0GCSqGSIb3DQEBAQUABIICAAA6ZbOKiHUs
+# 5VV75xStiPqxfZeBnKniMf61XmuK3nYHhivIGy8HBU0KaNdinKUpLjAJV7JK5st/
+# jyXnWX7rWKawHs3u+0swT0xeIzLBx82VxgB3SS1bh8X3bEm8eyy1A9Q4wFeM/hvv
+# BcFT8y/ZaHwIZrFLw7Tc+EfmB/tlyEL7H/qToV7UMkDjrBobghb6Xw+eFoT5821z
+# EnC7fhCTpxlxlMydajErgEebfk9tySZYEGuSmD+hP6PVsLADHlaFCIsXeBGvl8Cd
+# 9OYOZuotyEbsnH5cNt0eF/E+b0Cdm3TdzvLH8oGTs6P7ab+ebUJiq8xfZW1AsVEI
+# UNQ0GqUuiStIOC9FcTqVkyd26zi5+oOER0Z5RWd7QDIX3IL6h99DdugTr8sdriJN
+# 6FJ9CDmNeH880YNmSUu2eE2UFCSwu+OcS5iNkGdLhqUWCqeT2DAHKprATGm53Dn5
+# Q/wcm64zfIDGXisPkQDze+kxtpHT9KZz2uYSygn10Fv7xHE1pp8YO0aRu8pAwruv
+# x4Pd5y9BK29IsWbGArmht7iiUyULp94gwlPzDBpGfcUvYxwJv/6XtL3PoFtrfIjJ
+# zN7rTVm+t75P/hN6Sc6Z+B+TiMzMHAoL403bQbHaslMQ+jMe8qMku9PueqruKJdw
+# h3++DudrOKiSiKsFM1AtJLUo2gb7AUKuoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBkY134kokUfKeJR+fws5VKpqs59gxbuoOKmciO+0+PwgIURMKRaZSJEC2N
-# vp2SPQtZuydntRUYDzIwMjYwMTIwMDk0NTQ5WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAd2F9XdkJcy+tI5IZCFJjWvDzE/c9yLbl4w0AnSwkkywIUb6udVMIcWt48
+# ZXvcWJNEkBxlXjgYDzIwMjYwMTI3MTAxMzAzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -602,17 +656,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# INje3xpqRfVryVAmNvABebsObyTDwHGaVJyZhlPiM/8MMIGwBgsqhkiG9w0BCRAC
+# ILdjyLRiWIokLRM2/U5qLjXSzOVXp5xU1F2bctJPhfETMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAEPK3xktmKQZl
-# YJhvAMAQ62KNUGBmEWw6aTKhL1qtEFY0Di0ygauil4RJBfUlt6L52MdBtJaphrAg
-# v8kXLHB+wifT2T70H6UG7ncLfZm5KqPQzTmxrVrDtNoFep+CEGHC4PChWrX/Nwtq
-# +v1C9B491c5LLL97M+cazsRcV0zC9xXsaIkMj3/sHr1OZWUXkcNVVtd+FfE+6huc
-# WQ/wtleL1ggPldaStch4jUYLmZwBcSFYDOUg6mnLgotZN1zAUyQ9mX1emyqHUArp
-# 8c4MsmLhJEirUeqyAU8O/rv6tH2PZkX1fH1w5DPGhR5AFk42Cwh6uI9dcOhbXTlB
-# yShHuoxPiYk+UZiD4zAALtgAxlzB6kge0gjALXJka66sgc3kdt+ylrKmDFB2GEhk
-# a1Ew1VhsvMik86rmKbyXNWF91VxH1W9HW4j8aEkSF9QfpA6Jd6s+qnvoyGi3whg9
-# b69SHpCrsL7jeP0PkxYHRX7rZe0i+s82fbWY74ccRP7B6P0f741E
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAmo99PTm1jU+q
+# r/IueAG6hcEdFJQy45lsk3oYMhQrFpuJ+Y9akjfO8Wsl4+v1rWHa5GGGuy8Etavf
+# wh66YB6pBNKQhVHpaYOqeGbNeF15JYnFlFOHeCBs7pL0Q/bt/2scM489qYM1iZvc
+# in48IWVSpUJ/AAmr+QHJFaekJmo1ugFmPP7U3jOfDFmt3Y9TFGtUsNvU+jiuyxf1
+# /CFeCGGb+nU9HpoZe92ToiiwsVkGakgAWBW7qiIqn0HlnlYOqaFojlqTCxOLdUo8
+# 3ai44LiA2f5VeRZS5VKdQpMVIRmQnV+H6WsCb6z302NThQXBna8NR96en1m5RZ51
+# Yc8g3BSz6G/fK9r2271ipH5CLUCHCnUkpZ4Sv96I8owIeCWEkvv+QBNqmPs8nW51
+# Xu8hILgUBVC5UcZirRZ5NIu40CFbJtyw+KjIMCPQZYRYNBPaw3UbzgaPTTsWZWlC
+# Eud3RG0PR6o23Hg6iJ3KLWn39XXfQvX4ftqG3PjKaihet2zPr/YP
 # SIG # End signature block

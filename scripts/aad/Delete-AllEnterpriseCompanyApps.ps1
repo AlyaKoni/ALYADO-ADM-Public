@@ -30,134 +30,88 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    29.09.2020 Konrad Brunner       Initial Version
+    26.01.2026 Konrad Brunner       Initial Version
 
 #>
 
 [CmdletBinding()]
 Param(
+    [Parameter(Mandatory = $false)]
+    [string[]]$appsToDelete = @(
+
+
+    )
 )
 
-$exitCode = 0
-$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
-$AlyaScriptName = Split-Path $PSCommandPath -Leaf
-$AlyaScriptDir = Split-Path $PSCommandPath -Parent
+#Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-if (![System.Environment]::Is64BitProcess)
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Delete-AllEnterpriseCompanyApps-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
+
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","Application.ReadWrite.All")
+
+# =============================================================
+# Azure stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "ENTAPPS | Delete-AllEnterpriseCompanyApps | AZURE" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+Write-Host "Getting ServicePrincipals" -ForegroundColor $CommandInfo
+$Apps = Get-MgBetaServicePrincipal -All -Filter "tags/any(t:t eq 'WindowsAzureActiveDirectoryIntegratedApp')"
+if (-Not $Apps)
 {
-    Write-Host "Launching 64bit PowerShell"
-    $arguments = ""
-    foreach($key in $MyInvocation.BoundParameters.keys)
-    {
-        switch($MyInvocation.BoundParameters[$key].GetType().Name)
-        {
-            "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $arguments += "-$key " } }
-            "String"          { $arguments += "-$key `"$($MyInvocation.BoundParameters[$key])`" " }
-            "Int32"           { $arguments += "-$key $($MyInvocation.BoundParameters[$key]) " }
-            "Boolean"         { $arguments += "-$key `$$($MyInvocation.BoundParameters[$key]) " }
-        }
-    }
-    $sysNativePowerShell = "$($PSHOME.ToLower().Replace("syswow64", "sysnative"))\powershell.exe"
-    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
-    $pinfo.FileName = $sysNativePowerShell
-    $pinfo.Arguments = "-ex bypass -file `"$PSCommandPath`" $arguments"
-    $pinfo.RedirectStandardError = $true
-    $pinfo.RedirectStandardOutput = $true
-    $pinfo.CreateNoWindow = $true
-    $pinfo.UseShellExecute = $false
-    $p = New-Object System.Diagnostics.Process
-    $p.StartInfo = $pinfo
-    $p.Start() | Out-Null
-    $stdout = $p.StandardOutput.ReadToEnd()
-    if (-Not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout }
-    $stderr = $p.StandardError.ReadToEnd()
-    if (-Not [string]::IsNullOrEmpty($stderr)) { Write-Error $stderr }
-    $exitCode = $p.ExitCode
-}
-else
-{
-    Start-Transcript -Path "C:\ProgramData\AlyaConsulting\Logs\$($AlyaScriptName)-$($AlyaTimeString).log" -Force
-
-    try
-    {
-        $ErrorActionPreference = "Stop"
-
-        $regPlats = @("","\WOW6432Node")
-        foreach($regPlat in $regPlats)
-        {
-            foreach($reg in (Get-ChildItem -Path "HKLM:\SOFTWARE$regPlat\Microsoft\Windows\CurrentVersion\Uninstall"))
-            {
-                $displayName = $null
-                $publisher = $null
-                $uninstallString = $null
-                try {
-                    $displayName = Get-ItemPropertyValue -Path $reg.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
-                } catch {}
-                try {
-                    $publisher = Get-ItemPropertyValue -Path $reg.PSPath -Name "Publisher" -ErrorAction SilentlyContinue
-                } catch {}
-                if ($displayName -like "Git version*" -and $publisher -eq "The Git Development Community")
-                {
-                    Write-Host "Uninstalling $displayName"
-                    Write-Host "with infos from $($reg.Name)"
-					try {
-						$uninstallString = Get-ItemPropertyValue -Path $reg.PSPath -Name "QuietUninstallString" -ErrorAction SilentlyContinue
-					} catch {}
-                    if (-Not $uninstallString)
-                    {
-                        $uninstallString = (Get-ItemPropertyValue -Path $reg.PSPath -Name "UninstallString") + " /SILENT"
-                    }
-                    if (-Not $uninstallString.Contains("msiexec"))
-                    {
-                        $uninstallStringNew = ""
-                        $uninstallParts = $uninstallString.Split()
-                        foreach($uninstallPart in $uninstallParts)
-                        {
-                            if (($uninstallStringNew -eq "") -and (-Not $uninstallPart.StartsWith("`"")))
-                            {
-                                $uninstallStringNew += "`""
-                            }
-                            if ($uninstallPart.Contains(".exe") -and -not $uninstallPart.Contains("`""))
-                            {
-                                $uninstallPart = $uninstallPart + "`""
-                            }
-                            $uninstallStringNew += $uninstallPart + " "
-                        }
-                        $uninstallString = $uninstallStringNew
-                    }
-                    $uninstallString += " /L* `"C:\ProgramData\AlyaConsulting\Logs\Git-Uninstall-$AlyaTimeString.log`""
-                    Write-Host "command: $uninstallString"
-                    Write-Host "EXE Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-                    cmd /c "$uninstallString"
-					$exitCode = $LASTEXITCODE
-					Write-Host "CMD returned: $exitCode at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-                    do
-                    {
-                        Start-Sleep -Seconds 5
-                        $process = Get-Process -Name "unins000.exe" -ErrorAction SilentlyContinue
-                    } while ($process)
-                    Write-Host "EXE End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
-                }
-            }
-        }
-    }
-    catch
-    {   
-        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
-        Write-Error ($_.Exception) -ErrorAction Continue
-        $exitCode = -1
-    }
-
-    Stop-Transcript
+    throw "Not able to get ServicePrincipals"
 }
 
-exit $exitCode
+if ($Apps.Count -eq 0)
+{
+    Write-Host "No Enterprise Applications found"
+}
+
+Write-Host "Deleting $($Apps.Count) apps" -ForegroundColor $CommandInfo
+foreach($App in $Apps)
+{
+    Write-Host " - $($App.DisplayName)"
+}
+Write-Host ""
+
+Read-Host "Are you sure"
+$answer = Read-Host -Prompt "Are you sure (y/n)"
+if(-not ($answer -eq "y" -Or $answer -eq "Y" -Or $answer -eq "j" -Or $answer -eq "J"))
+{
+   Exit
+}
+
+foreach($App in $Apps)
+{
+    Write-Host "Deleting $($App.DisplayName)"
+    try {
+        Remove-MgServicePrincipal -ServicePrincipalId $App.Id
+        Write-Host "  Done"
+    }
+    catch {
+        Write-Warning $_.Exception.Message
+    }
+}
+
+#Stopping Transscript
+Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCa5pbklPoqUu1h
-# I3eNAO2MOXYBJ1oGMJViP/T+TDpGiKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBKhb9085qK6quy
+# jJTE4ltNweSpLmvWt3XhBQMcaDU4FKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -241,23 +195,23 @@ exit $exitCode
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIC5zg4aT/YuDnD9M
-# sn+j4zWl4WpJXLTTWEsLPK4zSfonMA0GCSqGSIb3DQEBAQUABIICAKcNNPz1D4uD
-# mm1s2kQ9xANCyED00RkWTt4qjSVzri2vk4CezrxLy4hfIU95PTusesrW4e/PN2nW
-# tGeZyAvojzjclI4GqQv0HX+xSGQkcLJ0AhnRBlxjc39kZh1fcD5n/StXZ2N+mafU
-# 4MgVOKxMpB7RvL06bGhF6mpTpzTaY8QdufSjRG+t7LvOaOtu86A/HTXcyZElF5wS
-# 5Ycbu+jv5MygUQlSjnwUictXBKH/z0XpT7I0+8LMjrH09cWG/9KBb3+lCVk8eofy
-# 0MPPOzPQskKF4wUJt+HYRydQcxPwi/Sy70gQZT4IPoOCvbtiEsHgxpBtpiJLdaki
-# l/ML8yyLI4UOMeSNjhUEJGYU71kx1HGgK/YE1420tHbohmePlJJzHn+cmRO0tgQU
-# BvkQ39iDg0uKoy2jvMaaudyLb3V+VVjjHHN3sYNV0uLmlEiBUDT+57MCWpBI801P
-# wc1elapgHRA9ORKnpSIUefw3r2beUit6p50ECG6NqZcrtUp7T4rUSvK5kEW5rTtI
-# FXosowJNVsO1IZw0SQPaBp5t3GrHzrD8ESci+8HZDCowPtWpZgcqGrVW1f7AV98q
-# vOcxyMHZq4oWW7qz0xE42eIchXlxnLFHA6EIE2YSrnMg3qPRVuANeHd6hcMHVFxh
-# rojVlSnCbrWipidYmRdS68/ydD12O0S9oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIL27J+gkTtYUcBRN
+# hVJKkFz9mjV2Oo72lMwuNuP3ChwMMA0GCSqGSIb3DQEBAQUABIICAEFCwh3/zesa
+# XE9VykN+zBkU98DWRYIaUyLAlS8ZhxWV1i1XZpoJVuP8Dy1vvERAeuWQTnWxb9El
+# RmOaL1FLZv6dZQLJcJCJ+WPj368I9spyTl6mhAlBZflpYbS4H7BNyqTlX90amEVz
+# kLgamSZGZx3yiyg3WNkDAcKPl4y8OmTtWiJ74JS2N9SOrQxx7ozsgYEHazFJvG8f
+# p/m1P639ApeYeeHfOCWHHsGSQAbViILY3RQg9PxqQdRGY+k9Iyn+8dtV4g9AEISJ
+# 8lS54EdXW/0lnTRc4yHzgm0ZOrLuwBbjOYU1ruQPX3fSbNfxHs/Y7ATJ8uPn3PpW
+# MWriNYdZsCIIY0mNZZryEfjguu/OqrVRiEInskE1+/eLADirsu5ZsbMuuUUleQiN
+# 3g1REl7DFvgTIbKbFJu2zjKAB+MvehhT3pnnHww3Ti7xk51v+a2z5iR8eGVXL91e
+# APsRztzCENzGOhax8x1MUE9h1DNr1uvhbcBfncB6zshpzJUB0G4Ft4gH28oSAOWJ
+# 7+KxQ6rwhGCqcG++gqxoO8qLpWDXza8ZEvtkWDnxAhSXGKghXWcJgUsML1LgwNUx
+# X5BipZW+nqpMsw0PyWQQC7c6WjATEsCuyx9RxPhirbN7DjJqEMQraNXE4dlzTRyK
+# GbBbIyfjF2W87zX9SX46xCCMIfYAdeFEoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBkWYxA+4jmcDQXtE+XwC6G6Sdm30QI2kp5UIOCXw5GpgIUEGtws3hqTWUm
-# Ya11JE9jYvFuI9IYDzIwMjYwMTI3MTAzMDI3WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAa0P0jOe7nEcHHVuMsAgbeg4PdoJFVLguEH9wvZe42IgIURl8BQBQwI02b
+# +XuWn3pJpr62aE0YDzIwMjYwMTI2MTY0NjEzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -362,17 +316,17 @@ exit $exitCode
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IB3126wNXtgTDlvsF+SniJwwGojNE7B9oNcIzj+Z39fsMIGwBgsqhkiG9w0BCRAC
+# IDsLbdQIqMGH3pzK42Px9tkXIBAqKiY5sLaw+He1ITwwMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAmvx6fz4seUBE
-# LIL2/drBbPM+nrd9Xv6c28u9thJvEODijY7v74dvq1I0zbHdQqOiTaS6iCNBcPdL
-# 6Yhh64ZkHb6hO0/i3Qd1lW8CYSi1cGWg/PVr8HpSDTtJAFgiIroKIR3VT2f37iqT
-# a0EG5SdAiXig48yIeRrTtma5KUtoZZSbi6RyFQ+rK1ib2XsVCpn8CDu+1xfVboHs
-# M0Pz4RNcSGQP4Ihhso8dyCo3SS8BDfhnQu+Op0zugEF8WeDhDVea5TF6xtPCGAfT
-# KkuDIb1Czib+QxEOWnPVjHqdUWP/4U4TGsWWseJbRDA0pJNiNWcdY3QuJzNzEYpg
-# 9eIYXe0I1RNtXW0MTxevmzEvdlC7eN/HKhhE8kTynx3HeIrF3VFrfCYMJN9Gff7X
-# pob6TiWjFILIyqMooRSDUc9w6g+qsn0doxb3yTUabPw49dZSRtu4kGhJxfuRwxz1
-# yCmzuMivq3bdxHz/wAScUSAwUWYODExyV+8c0tpWlmtgqRPXpaWw
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAFSov+Xq5y1m8
+# SvJu+PRbIoFAu0SyIRgSABkJU4eLEY1tFfq6jZ6G7fH7mepOpxmMGd1teqqnpBMY
+# D7XAZluNXQvY5kF1atUovYy2vxv8MkcoN445ZFlyi7WOu3lblhyRF9R6/PdfZKHI
+# HBQKHlsdCeM6UD7TtYzOgTqWc0q9OIUTPO6vMJ8Egcu2566lkUuTow9aKnZmAMnk
+# qI+mfEv8VHh5EZ2KZ48GLcf1Ua/Og7Yep3sPr2OEZEypeCKnBJFe1b0sF8zXb5pV
+# m7wolxoj+zUbBWGGcs9ba+Je0yEHNig1aZepJmB4HylAkgKOQyQ7ViIdAyykRNU3
+# 3chkEGWxlFjPOKrwB8OrW9JT4iBknmSgY2Qju65NbOsSol6p1altIvfnU8O9EWLp
+# ob+uTHGMp+Zzh3TcPN4k7v2nUSgF6hsbSjBXq+jAhA/8HrDqs4ZWS8M83+iOhHZu
+# IgiF2bNiZXK5lIMreZ3U7RCiYdI74QSbP4jrrrr76ni7js4DdUc7
 # SIG # End signature block

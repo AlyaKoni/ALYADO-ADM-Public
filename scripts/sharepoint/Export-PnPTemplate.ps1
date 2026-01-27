@@ -60,7 +60,7 @@ Write-Host "Exporting site template" -ForegroundColor $CommandInfo
 $outfile = "$AlyaData\sharepoint\PnPTemplate_" + $SiteUrl.Replace("https://", "").Replace("/", "_") + ".xml"
 try
 {
-    Get-PnPSiteTemplate -Connection $adminCon -Out $outfile -IncludeAllTermGroups -IncludeSiteCollectionTermGroup -IncludeSiteGroups `
+    Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeAllTermGroups -IncludeSiteCollectionTermGroup -IncludeSiteGroups `
         -IncludeTermGroupsSecurity -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
         -PersistBrandingFiles -PersistPublishingFiles -PersistMultiLanguageResources -Encoding ([System.Text.Encoding]::UTF8) -Force
 }
@@ -68,22 +68,13 @@ catch
 {
     try
     {
-        Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeAllTermGroups -IncludeSiteCollectionTermGroup -IncludeSiteGroups `
-            -IncludeTermGroupsSecurity -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
+        Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeSiteGroups `
+            -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
             -PersistBrandingFiles -PersistPublishingFiles -PersistMultiLanguageResources -Encoding ([System.Text.Encoding]::UTF8) -Force
     }
     catch
     {
-        try
-        {
-            Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeSiteGroups `
-                -IncludeSearchConfiguration -IncludeNativePublishingFiles -IncludeHiddenLists -IncludeAllPages `
-                -PersistBrandingFiles -PersistPublishingFiles -PersistMultiLanguageResources -Encoding ([System.Text.Encoding]::UTF8) -Force
-        }
-        catch
-        {
-            Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeAllPages -Encoding ([System.Text.Encoding]::UTF8) -Force
-        }
+        Get-PnPSiteTemplate -Connection $siteCon -Out $outfile -IncludeAllPages -Encoding ([System.Text.Encoding]::UTF8) -Force
     }
 }
 
@@ -95,8 +86,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB+6UFMNByb1YDT
-# VUlb2WXssrC+6nFWKCXU+UjH+ljRVaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCDRXH2+ON2wkMc
+# FtpL32e1V8+MfxQBdzgbkDzMGQ78eqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -180,23 +171,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPkLoGB/tYckjbYx
-# bL7C+i8c9vzvwXFaFCnkcgtjSxEnMA0GCSqGSIb3DQEBAQUABIICAHTZhaFQvD7q
-# BFp2dikmB+DM9Mb4S30ilIz1K9MNw1CzzKCrRcVSSbqXiZaQgiPcHxOazu0B6oQT
-# +oZnZyDP6S8AkAA9pkqq1Mz1scRhi629EbjqHvotFckOfS8wTIaAPhXDLomBfFbg
-# JRfkudZ3WG271ZhvHdcPPpZFl1tXIP56t9f2U9AiDCHnLO3QvBt+P5DX9SN+dj2R
-# me4/HjfzbCwNSlzU0luyROWDPHoPzqLNlLJ04Zixsi4kXBQ9zkS5fjOAx6deURZx
-# kh4gIIJhO6ICSpCWz2rmUZoY/w49z+kWGGJiGm78qp90KUiabi7UqZ0ibpd2l4Aq
-# xWwonfPDnR49In/egjhhhXX6YdAaWwLa5c77tM1eI3OSJg3p7aJiVkFCy9MsfsA7
-# 1N5wTTM3CfA1zG7bPQClRMTy1IGmRMc0Ln1vj04DFvdLtnfn0PTzIMJftX9aGG52
-# ryb0xJbSGxI+hAzLQLYYw8l4NvP50YdwKDsskT9Pqg0Ou/YBW+6g5DmiLLBooVq/
-# DY2IyNJVpLEAMFM71C9oGpOAvnXfCJP8AEpW7g6WFjSvepPr13Sde0lg5/73USbn
-# aUVihBRXhc50H3dK78nJpzsrPwTbh2bC85qSt8rcbvMfqSb59u/E6nxC9jz49sj6
-# DBnuZ0vZNQwtzi0Zvlt+Hrjf3io+ac/voYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHYHPwquimOK+RSF
+# jH+mfZUHvrhMv4Kvwfu1uJy1VykhMA0GCSqGSIb3DQEBAQUABIICAGizJRh+j/2X
+# CMpJBnsiC+bZS1t9teOF6YZiJGM0QR9+JLjDXnDSqsACmNARTwApzpeZPNNr5/FB
+# V1xJRFmHrKzsaLg7eNCCArkbj60IJ7MVQkLG7ptp1ybpC2dLbq/JPmK2zTVAz7JD
+# mikACmhBIzJ/aQB5zplTIUrJRha0fxvnevZxNLNpDUHsgpCqyhBUUj8lyoSy3rEb
+# PMfnK65UVDegPw6dRYZjcL0pZrJJUQZqC9W76hQPL3wotiIfBi+ItT1Wwitf83Mh
+# ej2PKFBmItKqn3AJeyfQWwaK4ewQgXk26SVyt2JietAyr/GTx8sTh5v8GvkfzXXS
+# JBZUqb9UaHvfx3xUvibdm6INpGvI/UFvCLvsIxTMyDU7VTmmL/lMIfJ9ZVhb3KZy
+# 9NiJdppap8V6+gpxwR6SI6ZvPZOeDGAe3qKrX3ErVeqNGRpdzyqmsBiuYqvdCeYg
+# uMRtNJecE0DYPhWysd+Q9umPO7KWXfF7F4VOIkw4MK9RHrIlPfHg6wpCxizNl7Nk
+# eRiRRWtaszf2N/al3PMP4KC3oEekNLpIyT10nTZL1nevRlO8VmYC37xslRl1DNC2
+# DKgzKmPLpJ+Y4JpGYEEiJc6AI7iWn4xxvliS+lSFWURXEmrmHGB6lu21AGEKJ82/
+# k6CbdmLMhpdYi+hguwC/FVbYbscxutkfoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAo+Hd2VTx0MaxZjnP+Fxg4GPd8PbksBbJfyzLd4HPIEQIUJSfisLewqaJB
-# J8zcJluQ2kBJfZwYDzIwMjYwMTIwMTAwNTA5WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCA/ti9Z43ulbOiPC4ofvd8ng8qyyuaDUHyDlJoNJWcmKwIUB+/V51nz4L7p
+# ltw3qlOPxlbUkJMYDzIwMjYwMTI2MjIyOTM3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -301,17 +292,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IA6gB2SQvx++J4LekzD5dcsN51tgqb19WF7oxoXPf+aKMIGwBgsqhkiG9w0BCRAC
+# ICvAUt/eRdHDhHxn9mkWfsNM/31qnx1AgZKD4WYxkVlHMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAg1b/NqBnIGnj
-# I81ivNKtf9W4p9X9sKeJy+DA5hefs1frH7WX9gfRQP4v45KgoDQi7Vz+cuMhc6xz
-# Xhs9TDLPJXbeVU0AjABpiXhcJkOwYjSr9r7OjQurhmZfT+1e8Ite2PzWH6dyVfbD
-# 93C3nNPvreu1UiOmLrGRH24iUPjtrlGZyqGI8mEs009ALjwFv52dWjwMElsVDI6L
-# wEbM0OBmp10wkG1Lz9K6jAHZNyT9FvdquW6lQQrUOkeY8NVo1hA9sBzbUH9uq18f
-# fsziawyWEbm/sTHWjVpyV0AeD6WzihujgWPMZ8O8nlypkrFPB4e2ERbbLLFscOZM
-# Ae+9if9AF21LIp+ZD/cubLKA+FGLYao1SS8a8Q/eqSMRkFuf95ya9xp4Gvm4ivfZ
-# rW/7k4HzshUhCI6DDj3siYh9WGUWKUcWwLbQPtIrlsSYQylZBCCAilOrFNUdQMCJ
-# pgtwL3XifHO6OgxtRRxfB1oaM1I+Rxa/rK0Qxos7Q0GC8Tmx0KOQ
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAQceo46d+FQaC
+# EkCgSa+Dkf7Ao7Kq0p/zj5q2ExLWy2f7wZ1E1pPdha00ZNqVjLRCLqNKe/VaeTK+
+# 54eZ8LWEGkU0o8/C0mwO/HO6WNstr6p8whSwCDNgf+BllHEmHDbSUbtGLnynFbEG
+# XMOIljCRdJrToZoENavH1xQfa2fzeVjg3ImtFYwdORreEN9x6o3b/oWvFi+C0MrM
+# UQaDD2SIk/SevDZKbPOW9fYwZO2UZRx8lHyJIGxoK3imdeo1IV+Town4J0dnk4rg
+# uEinm2ztLBb1K21DkbObpNq00EmGzAJw6o2sCipGexHaQpfbgG2fal3khHO/6uSQ
+# 2/aLZv6vU8qDwJRZbj+Tay5AerHE/LSV2Rn9Cfr2QD1B1JZ0V2v762W8ZVtJ5Xoc
+# tHYWnKo/ipAAhfu0CPOR173AXqYkD7eY0MjOWoDObR+TWSlCyGM03tSX7Xj9GnEp
+# hXBvF0qfark6YixIqeTWTa60j1CjkZcwLGWjERL8UCeXpedtMA64
 # SIG # End signature block
