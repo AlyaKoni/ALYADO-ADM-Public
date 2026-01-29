@@ -72,7 +72,8 @@ try
     }
 
     Write-Host "  Checking mailbox" -ForegroundColor $CommandInfo
-    $mailbox = Get-Mailbox -Identity "Intune" -ErrorAction SilentlyContinue
+    $IntuneEmail = "Intune@$AlyaDomainName"
+    $mailbox = Get-Mailbox -Identity "Intune@$AlyaDomainName" -ErrorAction SilentlyContinue
     if (-Not $mailbox)
     {
         Write-Warning "Creating the shared mailbox Intune"
@@ -86,20 +87,16 @@ try
         try {
             Start-Sleep -Seconds 5
             $retries--
-            if ($retries -lt 0) { throw "Error creating mailbox" }
-            $mailbox = Get-Mailbox -Identity "Intune"
-
-            $IntuneUserId = $mailbox.ExternalDirectoryObjectId
-            $IntuneEmail = $mailbox.EmailAddresses[0].Replace("SMTP:","")
-        
+            if ($retries -lt 0) { throw "Error configuring mailbox" }        
             Set-MailboxRegionalConfiguration -Identity $IntuneEmail -TimeZone $AlyaTimeZone
             Set-MailboxCalendarConfiguration -Identity $IntuneEmail -WorkingHoursTimeZone $AlyaTimeZone
+            break
         }
         catch {
             Write-Warning $_.Exception
             <#Do this if a terminating exception happens#>
         }
-    } while (-Not $mailbox)
+    } while ($retries -ge 0)
 }
 catch
 {

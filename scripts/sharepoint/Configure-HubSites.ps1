@@ -39,6 +39,7 @@
     05.08.2023 Konrad Brunner       Added role admins
     04.09.2024 Konrad Brunner       Added overwritePagesOnlyOnHubs param
     08.07.2025 Konrad Brunner       Added CompanyName param
+    27.01.2026 Konrad Brunner       Separated root site parts into separate script
 
 #>
 
@@ -49,7 +50,6 @@ Param(
     [string[]]$overwritePagesOnlyOnHubs = @(),
     [string]$hubSitesConfigurationFile = $null,
     [bool]$createHubSitesOnly = $false,
-    [bool]$doNotProcessRootSite = $false,
     [string]$CompanyName = $null
 )
 
@@ -401,7 +401,7 @@ if (-Not $createHubSitesOnly)
 {
 
     Write-Host "Processing navigation" -ForegroundColor $TitleColor
-    foreach($hubSite in $hubSites)
+    foreach($hubSite in ($hubSites | Sort-Object -Property title))
     {
         if ($hubSite.short -ne "COL")
         {
@@ -416,7 +416,7 @@ if (-Not $createHubSitesOnly)
                     $nav = $topNavs | Where-Object {$_.Title -eq $hubSiteI.title}
                     if (-Not $nav)
                     {
-                        Write-Host ("Adding nav node title={0} url={1}" -f $hubSiteI.title, $hubSiteI.url)
+                        Write-Host ("Adding nav node title={0} url={1}" -f $hubSiteI.title, "$($AlyaSharePointUrl)/sites/$($hubSiteI.url)")
                         $null = Add-PnPNavigationNode -Connection $siteCon -Location TopNavigationBar -Title $hubSiteI.title -Url "$($AlyaSharePointUrl)/sites/$($hubSiteI.url)"
                     }
                 }
@@ -514,53 +514,7 @@ if (-Not $createHubSitesOnly)
 
 }
 
-# Configuring root site design
-if (-Not $createHubSitesOnly -and -not $doNotProcessRootSite)
-{
-
-    Write-Host "Configuring root site title" -ForegroundColor $TitleColor
-    $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
-    Set-PnpTenantSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)" -Title "$($CompanyName.ToUpper())SP"
-    $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
-    $web = Get-PnPWeb -Connection $siteCon -Includes HeaderEmphasis,HeaderLayout,SiteLogoUrl,QuickLaunchEnabled
-    $web.HeaderLayout = $rootSiteHeaderLayout
-    $web.HeaderEmphasis = $rootSiteHeaderEmphasis
-    $web.QuickLaunchEnabled = $rootSiteQuickLaunchEnabled
-    $web.Update()
-    Invoke-PnPQuery -Connection $siteCon
-    if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
-    {
-        if ($web.WebTemplate -eq "SITEPAGEPUBLISHING")
-        {
-            $web.SiteLogoUrl = $rootSiteSiteLogoUrl
-            $web.Update()
-            Invoke-PnPQuery -Connection $siteCon
-        }
-        else
-        {
-            $fname = Split-Path -Path $rootSiteSiteLogoUrl -Leaf
-            $tempFile = [System.IO.Path]::GetTempFileName()+$fname
-            Invoke-RestMethod -Method GET -UseBasicParsing -Uri $rootSiteSiteLogoUrl -OutFile $tempFile
-            Set-PnPSite -Connection $siteCon -LogoFilePath $tempFile
-            Remove-Item -Path $tempFile
-        }
-    }
-    $SiteDesignNameTeam = "$($CompanyName.ToUpper())SP Default Team Site"
-    $SiteDesignNameComm = "$($CompanyName.ToUpper())SP Default Communication Site"
-    $SiteDesignTeam = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameTeam"}
-    $SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameComm"}
-    if ($web.WebTemplate -eq "SITEPAGEPUBLISHING")
-    {
-        Invoke-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignComm.Id -WebUrl "$($AlyaSharePointUrl)"
-    }
-    else
-    {
-        Invoke-PnPSiteDesign -Connection $adminCon -Identity $SiteDesignTeam.Id -WebUrl "$($AlyaSharePointUrl)"
-    }
-
-}
-
-# Configuring access to hub and root sites
+# Configuring access to hub
 Write-Host "Configuring access to hub sites" -ForegroundColor $TitleColor
 foreach($hubSite in $hubSites)
 {
@@ -573,25 +527,6 @@ foreach($hubSite in $hubSites)
     {
         $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $AlyaAllExternals
         Add-PnPGroupMember -Connection $siteCon -Group $group -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
-    }
-}
-if (-Not $createHubSitesOnly -and -not $doNotProcessRootSite)
-{
-    Write-Host "Configuring access to root site" -ForegroundColor $TitleColor
-    $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
-    $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
-    $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $AlyaAllInternals
-    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
-    $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $AlyaAllExternals
-    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
-    $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
-    $members = Get-PnPGroupMember -Connection $siteCon -Group $mgroup
-    foreach($member in $members)
-    {
-        if ($member.LoginName.Contains("spo-grid-all-users"))
-        {
-            Remove-PnPGroupMember -Connection $siteCon -Group $mgroup -LoginName $member.LoginName
-        }
     }
 }
 
@@ -620,20 +555,6 @@ if (-Not $createHubSitesOnly)
             Remove-Item -Path $tempFile
         }
         #Set-PnPTraceLog -Off
-
-        if ($overwritePages -and -not $doNotProcessRootSite)
-        {
-            ###Processing Root Site Start Page
-            $siteCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
-            if ($homePageTemplateRootTeamSite) # defined in hub def script
-            {
-                Write-Host "Processing Root Site Start Page" -ForegroundColor $TitleColor
-                $tempFile = [System.IO.Path]::GetTempFileName()
-                $homePageTemplateRootTeamSite | Set-Content -Path $tempFile -Encoding UTF8
-                $null = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
-                Remove-Item -Path $tempFile
-            }
-        }
     }
 
 }
@@ -644,8 +565,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBNZh8su23h+cmi
-# oDdyJiYhCXqMjELLv8Ma0H7yi1LHb6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB8K3Zfn/1EtSaW
+# U3Jqq2WtYrXDLoqtbgvp3njp5dXDh6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -682,10 +603,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -693,17 +614,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -713,39 +634,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIITTD4Qh8SkTiyir
-# rsdu5fh1P57PJlFN7tQdBaMdpz03MA0GCSqGSIb3DQEBAQUABIICABa4F51vXoiM
-# +9/WhwhhOwAeE45uWmIuzUe08uSZPe2JuhOKOfuiLZ3phXalkkC5AQ91XyLmQb1T
-# lBhi0v1gmKmIDTTyjxAl4MByl3f8K8PcpAYHqFH3GTH9/xhcDDY7R81ughn75ArF
-# 2uh/XYp9c25fKAYGpSxYiGBzmBP824WTBV11tzzh8KnjLXY6ztjarZArTBHlHIj6
-# q0GOwTDGCJ0DRKlJrDelCgRGuFRhI0VhLr26u+O/1JfVgg9Ma5EqKAW1YmKtszGi
-# fKB2xH77B0BbHTAWHZ+feysVQsZHfcJ9Zf7yyFYZxZQDGRer+tG2cXItZSUMjCJN
-# PC/YbybjYfrF1pyznwYlFxAwzWNfEAcFUXVhrsCM0fA5WIdTwvTemHXWouqnigBa
-# HpOUlJGAqzfGpN/d6yo4w0a3f6wyuJWHp3EIfOz8VdLeLRrGz4Vbtu1P+wDjjFc2
-# 0ehzWzqjWN3yVmMrwU7RiBIzVdif5pVi7GI9CPogFstGB1i30zsqCXtUbONp9TIJ
-# keN9X0nvWA6VauhwYscao/H5vElyI0C4RGitCu3bwzN1fWCwnQ0/dw3AeFZmpbec
-# RgWnR9o+XUeEj8lYqDhKmKfGJDlaAP4S7bLOlz6IZb/O9zLO1cEMcvkGwOoaBFM7
-# zKCZwvnD4jP7ETBZvkNcadaFWspLCHZzoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKCYz+uRf8JkjD+C
+# p0BNf0vX03ripqx1fjeoOI6RoLw0MA0GCSqGSIb3DQEBAQUABIICAJFLskZtA2k8
+# IzGSNMLarRUwkqagpwpwnYuxH3WqF30bFag96loMBsNTkBCMYWdyvNdx3dc4bvvA
+# we4spjBFj81o/GGliOmRfJcCFO3MaOnMYdO3y5nb/02EQ+Q9nxaGk/LXJrnv94Ck
+# 1QVArrdmvUj0bC1N8LZL6D/ZxLOa3dD2iO1UhJtSMNwiKmTHeYCO3JVG1Kwe6j88
+# HPCVsdgbiiML7j8OSo1YGU/BZjc1UkZTM61Uihn0q9ox+pEiNNKaPPk7EMX8tv2+
+# WWmiv7O/Onip2XGjeM+f83JqCu/IQaunmrlLH2e6sSkC6BAlbsim4JF+ECljxJHp
+# y2gXOBRW+MetH78C0uV2qja5dLfMioJdof46ODQXnXiG+vxFh7jUs19Zq5hZm8n9
+# kPYm0R8YkNt5G2uIGFNEWohEFMAakTGqA3nAJpBSrTwUUzurYa60VfrJMsQFmUKu
+# qTisNSW9tJdZ3xMtlTjav0UhxQGPM1VwqdZ1Tk//5gGEfj2PuFN6p66FzsUakRIw
+# 0rHClK8ARoMplfoxQDJwgYB5FndeS31UOIPpooKnoVRQrGy6c02YyL+Ge41oXeLO
+# 6jZlotyqbQZPC3YMeaWeQOAKn+b76hjvglYkri5yMip+p1WHGS1GoYQsaIXrll7F
+# 1SvyBjrgsYnnEZFrgFkpP6Y/mcEyyE3+oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAiYeOZOq/p204u0m2UigIaexgURHLP+dllOlT9MD4Z7AIUbYnssfMAcIRN
-# Mr09pH9KGEkytNkYDzIwMjYwMTIwMTAwNDAxWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDEXpbgqNoPATYMF43SiWX3EghpOERZm9UjPKHi2bg/pAIUCCzb6omaPri5
+# 3p1i2fS6MroV2vkYDzIwMjYwMTI4MTM1MTAxWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -850,17 +771,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IErDWX8qXYKW3C4Fh4KenwtDHpCOLXd6BTyCCn3CpuECMIGwBgsqhkiG9w0BCRAC
+# II+B7wbUfCpIt34qr4qFY1WUaTDN1Bjos8CWLlpAzkQBMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAOUfFCOeb6YhW
-# h8unVb9AV2CedOz3gkH8Q6uL3FJl+mtpcRCscLkd0z3RqJr30P1Rhf8DPTEAHUDn
-# 2Jjp3zgqLMqq3NdNKD0XNa/cVXyRworybAfc+OYOrRgLwVG5Dlr7NUBZKfaEwxEv
-# a1A0a1Kyg4Ip9CuT1o2fkKceq08g//2y3EEOFoUToeWhALDT8xNA9+BuydsPb+jd
-# e7fPbithD+5L0pS4t2soISP+YFJXRdwHwWb1B6DmsprASnI9g1yCjnedX7xkej6P
-# G6AHF2XCZqD+xhmEMSb25GkQ7AbiYVsDQou2IQqzMdE7KsPeyKjOKB8zbyrclcan
-# nzhaShENEPRNbnyi46Kq6DsohdBfnddrlPBNZtrs7h2lQfg/LV82QSQUIEgnuPrQ
-# dBNb7NGfiMEmotsoqwFgF/ryr2tbdVkl9ATyOc3zHQLDFk2Vx8FQhoPzFQTfPWy7
-# G4RWsK9qDbqdqWC+Vy0thH7px9slsCxjRIC32AySgI7TgnAVDM5V
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAjd3Cgf5otSfo
+# /EortgX7ikmUitNmxoLF4gkhU0o34Uj7mI6Mxfd8rbEyKi91SB+JmlwbjULtOHAH
+# gUUnKxqcV6wholTAYSO98PZcjRrXPjCX45x6XMo3kVITAPB+qRcdCCd2pz10iEkg
+# idKtg7LVwgGUpOwj/C+XSUXMDjnN2OIzoKGoXqgJ4E7wGC99m4XEFPEy6aEg1t+A
+# bE4JiMdij//DkB5qslmIHPtF9ibuolL1fqvEopJtESNRYfXlTy1LUY/7N2jwSVpZ
+# 5X0IXuJ+gklDWAbLaN4X9ejj2PePtGpea/mrvb2r0l8ztwLJAlfrfYuiiFbJg3FX
+# rXIx72kE6hUnGIn4JzCNCkssSO4+0J5P/2b/Tw38CvSKt0WD6897Ery8u9PMabOz
+# KeSmQj0r9KDBwetdnglYfu5YTbCmQjZ6nqjXCEGjezN73Icuhn3k5mwfxjS3d686
+# F55it6QpkjnI+ainTxYlCfUCK7dZVLagAAlkAQobvHTNvOl83XSC
 # SIG # End signature block

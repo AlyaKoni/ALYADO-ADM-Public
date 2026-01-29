@@ -39,12 +39,14 @@
     08.11.2023 Konrad Brunner       Key Authentication
     05.03.2024 Konrad Brunner       Excluding Intune Apps
     26.08.2025 Konrad Brunner       Get-MgBetaIdentityConditionalAccessPolicy fix
+    28.01.2026 Konrad Brunner       Added new policies and other stuff
 
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$ReportOnly = $true
+    [bool]$ReportOnly = $true,
+    [bool]$UpdateExistingPolicies = $false
 )
 
 #Reading configuration
@@ -240,6 +242,23 @@ if ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne
     $IncludeKeyGroupIds += $GrpRslt.Id
 }
 
+# Checking groups to exclude
+Write-Host "Checking groups to exclude" -ForegroundColor $CommandInfo
+$ExcludeLegAuthGroupId = @()
+if ($null -ne $AlyaLegacyAuthEnabledGroupName -and $AlyaLegacyAuthEnabledGroupName -ne "PleaseSpecify")
+{
+    $GrpRslt = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaLegacyAuthEnabledGroupName)'"
+    if (-Not $GrpRslt)
+    {
+        throw "Group $AlyaLegacyAuthEnabledGroupName not found!"
+    }
+    $ExcludeLegAuthGroupId += $GrpRslt.Id
+}
+else
+{
+    throw "`$AlyaLegacyAuthEnabledGroupName`is not set in ConfigureEnv.ps1. Please set it and rerun this script!"
+}
+
 # Getting AuthenticationStrengthPolicy
 Write-Host "Getting AuthenticationStrengthPolicy" -ForegroundColor $CommandInfo
 $authenticationStrengthPolicy = Get-MgBetaPolicyAuthenticationStrengthPolicy | Where-Object { $_.DisplayName -eq "Phishing-resistant MFA or TAP" }
@@ -288,11 +307,14 @@ if ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne
     }
     else
     {
-        Write-Host "Updating policy $PolicyName"
-        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
-            -DisplayName "KEY: Required for specific users" `
-            -Conditions $conditions `
-            -GrantControls $grantcontrols
+        if ($UpdateExistingPolicies)
+        {
+            Write-Host "Updating policy $PolicyName"
+            $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+                -DisplayName "KEY: Required for specific users" `
+                -Conditions $conditions `
+                -GrantControls $grantcontrols
+        }
     }
 }
 else
@@ -328,14 +350,17 @@ if (-Not $policyObj)
 }
 else
 {
-    Write-Host "Updating policy $PolicyName"
-    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
-        -DisplayName "MFA: Required for all admins" `
-        -Conditions $conditions `
-        -GrantControls $grantcontrols
+    if ($UpdateExistingPolicies)
+    {
+        Write-Host "Updating policy $PolicyName"
+        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+            -DisplayName "MFA: Required for all admins" `
+            -Conditions $conditions `
+            -GrantControls $grantcontrols
+    }
 }
 
-# Checking all users access policy
+# Checking all users MFA access policy
 Write-Host "Checking all users MFA access policy" -ForegroundColor $CommandInfo
 if ($null -eq $GroupIdMfa)
 {
@@ -384,11 +409,14 @@ if (-Not $policyObj)
 }
 else
 {
-    Write-Host "Updating policy $PolicyName"
-    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
-        -DisplayName "MFA: Required for all users" `
-        -Conditions $conditions `
-        -GrantControls $grantcontrols
+    if ($UpdateExistingPolicies)
+    {
+        Write-Host "Updating policy $PolicyName"
+        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+            -DisplayName "MFA: Required for all users" `
+            -Conditions $conditions `
+            -GrantControls $grantcontrols
+    }
 }
 
 # Checking all admins session policy
@@ -427,11 +455,14 @@ if (-Not $policyObj)
 }
 else
 {
-    Write-Host "Updating policy $PolicyName"
-    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
-        -DisplayName "SESSION: For all admins" `
-        -Conditions $conditions `
-        -SessionControls $sessioncontrols
+    if ($UpdateExistingPolicies)
+    {
+        Write-Host "Updating policy $PolicyName"
+        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+            -DisplayName "SESSION: For all admins" `
+            -Conditions $conditions `
+            -SessionControls $sessioncontrols
+    }
 }
 
 # Checking all users session policy
@@ -469,16 +500,96 @@ if (-Not $policyObj)
 }
 else
 {
-    Write-Host "Updating policy $PolicyName"
-    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
-        -DisplayName "SESSION: For all users" `
+    if ($UpdateExistingPolicies)
+    {
+        Write-Host "Updating policy $PolicyName"
+        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+            -DisplayName "SESSION: For all users" `
+            -Conditions $conditions `
+            -SessionControls $sessioncontrols
+    }
+}
+
+# Checking block legacy authentication policy
+Write-Host "Checking block legacy authentication policy" -ForegroundColor $CommandInfo
+$conditions = @{ 
+    Applications = @{
+        includeApplications = "All"
+    }
+    Users = @{
+        includeUsers = "All"
+        excludeGroups = $ExcludeLegAuthGroupId
+    }
+    ClientAppTypes = @(
+        "other",
+        "exchangeActiveSync"
+    )
+}
+$grantcontrols  = @{
+    BuiltInControls = @("block")
+    Operator = "OR"
+}
+$policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "AUTH: Block legacy authentication" }
+if (-Not $policyObj)
+{
+    Write-Warning "Conditional access policy not found. Creating the policy 'AUTH: Block legacy authentication'"
+    $policyObj = & $NewMgCAP `
+        -DisplayName "AUTH: Block legacy authentication" `
+        -State $procState `
         -Conditions $conditions `
         -SessionControls $sessioncontrols
 }
+else
+{
+    if ($UpdateExistingPolicies)
+    {
+        Write-Host "Updating policy $PolicyName"
+        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+            -DisplayName "AUTH: Block legacy authentication" `
+            -Conditions $conditions `
+            -SessionControls $sessioncontrols
+    }
+}
 
-# Checking risky sign-in session policy
-<#
-Write-Host "Checking risky sign-in session policy" -ForegroundColor $CommandInfo
+# Checking all users device compliance policy
+Write-Host "Checking all users device compliance policy" -ForegroundColor $CommandInfo
+$conditions = @{ 
+    Applications = @{
+        includeApplications = "All"
+        excludeApplications = $ExcludeApps
+    }
+    Users = @{
+        includeUsers = "All"
+    }
+}
+$grantcontrols  = @{
+    BuiltInControls = @("compliantDevice")
+    Operator = "OR"
+}
+$policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "DEV: Requires Compliance" }
+if (-Not $policyObj)
+{
+    Write-Warning "Conditional access policy not found. Creating the policy 'DEV: Requires Compliance'"
+    $policyObj = & $NewMgCAP `
+        -DisplayName "DEV: Requires Compliance" `
+        -State $procState `
+        -Conditions $conditions `
+        -GrantControls $grantcontrols
+}
+else
+{
+    if ($UpdateExistingPolicies)
+    {
+        Write-Host "Updating policy $PolicyName"
+        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+            -DisplayName "DEV: Requires Compliance" `
+            -Conditions $conditions `
+            -GrantControls $grantcontrols
+    }
+}
+
+# Checking all users session timeout policy
+Write-Host "Checking all users session timeoutpolicy" -ForegroundColor $CommandInfo
 $conditions = @{ 
     Applications = @{
         includeApplications = "All"
@@ -486,33 +597,91 @@ $conditions = @{
     Users = @{
         includeUsers = "All"
     }
-    SignInRiskLevels = @("high")
 }
 $sessioncontrols  = @{
-    SignInFrequency = @{
+    ApplicationEnforcedRestrictions = @{
         isEnabled = $true
-        frequencyInterval = "everyTime"
     }
 }
-$policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: Reauthenticate risky sign-in" }
+$policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "SESSION: Timeout" }
 if (-Not $policyObj)
 {
-    Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: Reauthenticate risky sign-in'"
+    Write-Warning "Conditional access policy not found. Creating the policy 'SESSION: Timeout'"
     $policyObj = & $NewMgCAP `
-        -DisplayName "SESSION: Reauthenticate risky sign-in" `
+        -DisplayName "SESSION: Timeout" `
         -State $procState `
         -Conditions $conditions `
         -SessionControls $sessioncontrols
 }
 else
 {
-    Write-Host "Updating policy $PolicyName"
-    $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
-        -DisplayName "SESSION: Reauthenticate risky sign-in" `
-        -Conditions $conditions `
-        -SessionControls $sessioncontrols
+    if ($UpdateExistingPolicies)
+    {
+        Write-Host "Updating policy $PolicyName"
+        $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+            -DisplayName "SESSION: Timeout" `
+            -Conditions $conditions `
+            -SessionControls $sessioncontrols
+    }
 }
-#>
+
+# Checking risky sign-in session policy
+if ($HasEntraIdP2Enabled -eq $true)
+{
+    Write-Host "Checking risky sign-in session policy" -ForegroundColor $CommandInfo
+    $conditions = @{ 
+        Applications = @{
+            includeApplications = "All"
+        }
+        Users = @{
+            includeUsers = "All"
+        }
+        SignInRiskLevels = @("high")
+    }
+    $sessioncontrols  = @{
+        SignInFrequency = @{
+            isEnabled = $true
+            frequencyInterval = "everyTime"
+        }
+    }
+    $policyObj = $ActPolicies | Where-Object { $_.DisplayName -eq "RISK: SSPR on isky sign-ins" }
+    if (-Not $policyObj)
+    {
+        Write-Warning "Conditional access policy not found. Creating the policy 'RISK: SSPR on isky sign-ins'"
+        $policyObj = & $NewMgCAP `
+            -DisplayName "RISK: SSPR on isky sign-ins" `
+            -State $procState `
+            -Conditions $conditions `
+            -SessionControls $sessioncontrols
+    }
+    else
+    {
+        if ($UpdateExistingPolicies)
+        {
+            Write-Host "Updating policy $PolicyName"
+            $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policyObj.Id `
+                -DisplayName "RISK: SSPR on isky sign-ins" `
+                -Conditions $conditions `
+                -SessionControls $sessioncontrols
+        }
+    }
+}
+
+# Disabling microsoft managed policies
+Write-Host "Disabling microsoft managed policies" -ForegroundColor $CommandInfo
+$msftPolicies = $ActPolicies | Where-Object { $_.DisplayName -like "Microsoft-managed:*" }
+foreach($policy in $msftPolicies)
+{
+    if ($policy.State -ne "disabled")
+    {
+        Write-Host "Disabling policy $($policy.DisplayName)" -ForegroundColor $CommandInfo
+        if ($UpdateExistingPolicies)
+        {
+            $policyObj = & $UpdMgCAP -ConditionalAccessPolicyId $policy.Id `
+                -State "disabled"
+        }
+    }
+}
 
 # Disabling security defaults
 Write-Host "Disabling security defaults" -ForegroundColor $CommandInfo
@@ -524,8 +693,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB0o70mDtiyT2sN
-# AUKneNc04pmL2vN6BJHBZMTfJ3O116CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDTDnjs+v9+WaBS
+# aQ7uZUFdn3x0B6mGwGbbiIs8P0GOgqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -562,10 +731,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -573,17 +742,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -593,39 +762,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIA8y6600FFnxa0PI
-# NcMu2O/2cWCFFAaNd/qQodDh8veyMA0GCSqGSIb3DQEBAQUABIICAGGywjEa8ZMO
-# 0Algs+m1i+1IYIDNQZQohWX3mg1hsksdLXjjln4mXjBN6Ci+Mi+H8WSZeFa0RmtE
-# wGgxso34/OyU1WiKwB3Vh7VNtmC/F5bQ5lxOxaHe48hTIB1+6iQf/XsPdrxSk8A7
-# HDMB0ZL541mZueSxwVlTzUV8I1Kl8aSrcnZWRGa4HYaSEZKsNKXFK99R5rawK7Gc
-# imuIHYi+Du7abcDe7Vn0I4nkYjKnPCk25FHP7el6l7vFMa25X2/DvcbfTVtfckzE
-# qyR+gZ4pHaR+rNczfVhHoCu3rHPDFL+RR4Oc0Pf4vI6w+YMnNqGE3y5LYz3CM89K
-# 0z4MNPDzCP49OYsrjk0yaKRs1TeLvwtKW0hOVA2SuaKiwJ2Gy+6wkpMeA+ZGymSH
-# s21zKAWqbn+AqEfGtxFfrgZ07ewExFw35hydSB30twhaySkmLENkFFAsgHUE6Ra4
-# EVQJISumSvmMArJYZujD5BAe0bbwY6ILAHMzxeyc9iXW0TQ3WBjB2GlStkN2PeSQ
-# GF8jZwly/9FQsTE+wghJLT706AoYm6ib9ShqoS/ChVcQkXmaWhKSJWvX/hAMhJM1
-# R6WV+45OhfRdSpqNiF5urpo6ylWXBWyiPXrCb0Me1VDVEptbelTrVxX1X0SwccGf
-# M2/bgLswWb6CzayjlF7xyz+yuB+VbtcVoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMRZXA9vGii6Kcv6
+# eUDqWLcsB+DSrG/+W6WIoUYzZLBpMA0GCSqGSIb3DQEBAQUABIICALfLSKBBKZY7
+# hn8pzdh2jWrTvSGpMLAC9vdjbTUz29ZvcYOVfCUiZgr5DLIHwY/lO/EkiUzLrfgz
+# E1NhyeHNIQdnCrB8zR8y8iijwXgVJ7NFN6aU7EEBc/B8SS9p5duU0p8+lIbuYJIo
+# wCGPCz/KBUvi1S5HTUYQ7v1HMB1b0+4vRrq2yWB+YEWeL3jDB3j5wfFEeFZT4poF
+# MQVn1DCTlOb/oX1onR+So9tLy47hd29EAC6gHXnSEXwOeFL7T+xSy7A+2RXVl11+
+# WMTxB+dFq5poiVftX2IrYe2tba0Jykri5djVrKxKs/YRxFTy7ToAe46hWA0GRud/
+# I71B1Tl7a3VAGvsh9zdSrJC08rzChHXZhecQbk7YT/slMbV7OaF34EoswgwiPbxx
+# R8A1w/XzdNOx+FN4lMI3ZOHwya/hBTeYAE8Gmj/8lshiNjbkRvc6Lpmv8nWu51CW
+# 8qMabivLanTs1x0O5IMHaPyujsX3w6gSHBQYxQNIadWZreBO4ILEwIUrY6Z7Lnvt
+# RfsPUP3CMJmiVAL6p6ssAef8f+wzQvwVyugUaoGmMsiSLrSVKNHYGp/55cBiehND
+# 3P+YJcSfAMlkEi4B/emhsd0XYQYw6tVKBN/IXEMd0zVUePxyKERsgw2XRrqWFTDf
+# P0lrP4rq8+t/NhMt+o76YQcXilSipB40oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCHA3rpFJ6ozreccS0uoiByBrZBMdwEE32zb6bPFWG5vQIUZyUlCWXDuYcM
-# aMWbvveSUaUnCwIYDzIwMjYwMTIwMTAwMTI1WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDtHbN0x8689o5JWeMaKmkpMb2e92UUxjOJwThbRdtZzQIUOuXYG1hq7yYR
+# /R2mrPO0ACsYZ00YDzIwMjYwMTI4MjMzNDI5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -730,17 +899,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IIzMvUzgLopVUL6kB/AslE5Zl0MvoiDD0jxSQ87jTkutMIGwBgsqhkiG9w0BCRAC
+# IGrBC0Zk9lcIIA91fjtVCZKCJMsww+zLHUNA/rMvOAy0MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGABc2iywMZ0smf
-# 2v8ofCtmovJYaJgPuHvHoXFokhfQTC/FV2JDVESrtJlaUh5tfzrGwnhzR15UpBpI
-# iSgXzurqHJuPUufus2P5jdbgg7HSm60HgdYQVjNn1OcsNMW69fV2hUEJ3yK8qiHB
-# mEfUhziHq7D5IE1sG+InoB9V552mr7YTozeWEqsmQ8jzo/bXR1m1J65IBgj+GA7V
-# Med9eGVemCNzbsUXI0W/ogYKqJwJgsbGjXjiocMJkoNFi/98G48k1fRJaNtlO5YI
-# 3g82Nw2Pasm1l7YSsR3PTAB/Z/lvkQJYGk6OFND/l/IKCjtHzdjx8gN2snPPZejE
-# 4bqfYwZBALRSK4xEjHcE5Oj4/WttYqidTKi7krs9gqfToqtEYLyP9MaFYrnmy0S+
-# QWRJ7UzEkG4lp6spZZ//ZLRmHD/xOdgomG0czrAoWGk7AUmgJmwq9nl20C0x8FnJ
-# IYuOFeSqEFByU5GTEDUbWxPzuuN19+rw44Drvqpohe6UwJE8ku97
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAAEDHur0RJWN2
+# iQbsPpMjK0uvfUdZIBQuGOumNY6kc1CBk6UffgQnpjL+z+a7xgaGJ7BiWnLZnUB2
+# SO1vg9n60NlkS1tpqUUT7TAzu/BTfZ4+ZKiBGHBnCH0l5aIUnLt4UPps/ZENHB1t
+# rZBcUnArLJ+/Sdepcpu/MVOra5mqhCZximqikU53teZjhcP2eVL7r7POGdlq2YM8
+# IDcpKxZbzzOOZH1AFfbg1vLtr4kuUQ1afbeN0i500MFv7QmdS+bR8zKonPipzPCt
+# UNyyEXKgtLDXm6TpmUzDfHGYnwhukj8H+lx+PIc6MtxEHdnAlsgm2zkHyKOQ7ruT
+# g01MVnJMbYIFXqnQOwLUGKGvBNrFKKAWQ6BCKBsvVeUSNtTnSbD4QQ9smNn4E1jU
+# czCEyP8mW6h2YqFm0ukRjpahBYXtBHwnmjeM8WsWs1msYaElJqWa5BVrGI0KB6yH
+# i2BWkMgw2Dle4tlXqbyx9A2w98wwLu+P7dG4MhoP/e0nCJrlSyqF
 # SIG # End signature block
