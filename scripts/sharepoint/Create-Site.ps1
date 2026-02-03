@@ -246,10 +246,7 @@ if (-Not $site)
 
 # Updating site
 Write-Host "Updating site" -ForegroundColor $CommandInfo
-if (-Not $siteCon)
-{
-    $siteCon = LoginTo-PnP -Url $absSiteUrl
-}
+$siteCon = LoginTo-PnP -Url $absSiteUrl
 $web = Get-PnPWeb -Connection $siteCon -Includes TitleResource,DescriptionResource
 foreach($locale in $localesToHandle)
 {

@@ -141,7 +141,7 @@ foreach($user in $mgUsers)
         switch ($methodToRemove) {
             "emailAuthenticationMethod" {  
                 try {
-                    Remove-MgUserAuthenticationEmailMethod -EmailAuthenticationMethodId $method.Id -UserId $user.Id
+                    Remove-MgBetaUserAuthenticationEmailMethod -EmailAuthenticationMethodId $method.Id -UserId $user.Id
                 }
                 catch {
                     Write-Host $_.Exception.Message -ForegroundColor $CommandError
@@ -149,7 +149,7 @@ foreach($user in $mgUsers)
             }
             {$_ -in @("smsAuthenticationMethod","phoneAuthenticationMethodMobile","phoneAuthenticationMethodOffice","voiceAuthenticationMethod")} {  
                 try {
-                    Remove-MgUserAuthenticationPhoneMethod -PhoneAuthenticationMethodId $method.Id -UserId $user.Id
+                    Remove-MgBetaUserAuthenticationPhoneMethod -PhoneAuthenticationMethodId $method.Id -UserId $user.Id
                 }
                 catch {
                     Write-Host $_.Exception.Message -ForegroundColor $CommandError
@@ -157,7 +157,7 @@ foreach($user in $mgUsers)
             }
             "microsoftAuthenticatorAuthenticationMethod" {  
                 try {
-                    Remove-MgUserAuthenticationMicrosoftAuthenticatorMethod -MicrosoftAuthenticatorAuthenticationMethodId $method.Id -UserId $user.Id
+                    Remove-MgBetaUserAuthenticationMicrosoftAuthenticatorMethod -MicrosoftAuthenticatorAuthenticationMethodId $method.Id -UserId $user.Id
                 }
                 catch {
                     Write-Host $_.Exception.Message -ForegroundColor $CommandError
@@ -165,7 +165,7 @@ foreach($user in $mgUsers)
             }
             "temporaryAccessPassAuthenticationMethod" {  
                 try {
-                    Remove-MgUserAuthenticationTemporaryAccessPassMethod -TemporaryAccessPassAuthenticationMethodId $method.Id -UserId $user.Id
+                    Remove-MgBetaUserAuthenticationTemporaryAccessPassMethod -TemporaryAccessPassAuthenticationMethodId $method.Id -UserId $user.Id
                 }
                 catch {
                     Write-Host $_.Exception.Message -ForegroundColor $CommandError
@@ -173,7 +173,7 @@ foreach($user in $mgUsers)
             }
             "fido2AuthenticationMethod" {  
                 try {
-                    Remove-MgUserAuthenticationFido2Method -Fido2AuthenticationMethodId $method.Id -UserId $user.Id
+                    Remove-MgBetaUserAuthenticationFido2Method -Fido2AuthenticationMethodId $method.Id -UserId $user.Id
                 }
                 catch {
                     Write-Host $_.Exception.Message -ForegroundColor $CommandError
@@ -181,7 +181,7 @@ foreach($user in $mgUsers)
             }
             "softwareOathMethod" {  
                 try {
-                    Remove-MgUserAuthenticationSoftwareOathMethod -SoftwareOathAuthenticationMethodId $method.Id -UserId $user.Id
+                    Remove-MgBetaUserAuthenticationSoftwareOathMethod -SoftwareOathAuthenticationMethodId $method.Id -UserId $user.Id
                 }
                 catch {
                     Write-Host $_.Exception.Message -ForegroundColor $CommandError
@@ -189,7 +189,7 @@ foreach($user in $mgUsers)
             }
             "windowsHelloForBusinessMethod" {  
                 try {
-                    Remove-MgUserAuthenticationWindowsHelloForBusinessMethod -WindowsHelloForBusinessAuthenticationMethodId $method.Id -UserId $user.Id
+                    Remove-MgBetaUserAuthenticationWindowsHelloForBusinessMethod -WindowsHelloForBusinessAuthenticationMethodId $method.Id -UserId $user.Id
                 }
                 catch {
                     Write-Host $_.Exception.Message -ForegroundColor $CommandError
@@ -208,8 +208,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAQc38AWmpgM+Op
-# Vjr2TnKnSDizexlJ4eJdmNMgJbn23qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBoljoQPc/tawFz
+# 5WMUFjrO56XM2NNx8FKeBpmTeG5lZqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -293,23 +293,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBXbTdNL+NZmoZVn
-# kghHy56npocoAixDYFQmY2HDWk5ZMA0GCSqGSIb3DQEBAQUABIICABu6F3oASBcE
-# vl3JrQqPi1a8YDWj7K6wrAirEwujYXHRWPNs1G31mG5d1dMYjAzZSbfT/xGei/z4
-# cpR6tghgf3St4uFhBZpguLi7jY+xCqDn2RB1WV25tL7lBYkyRzxKK4i5Su59W4DY
-# vUyTqkouJ4/xS+izoKKvb8uEHozsFXaxRDZodif1p7jdMIwNPczWxEn5afblpb3b
-# X0/vRsu13DrhaP3MGTS/fiu42T7786HtE7uW0rthkVb8JZ31c39MN7XCf5UFVU3J
-# K/zDvcbELOYbZm4JUCO+7thDeoBCe70v4YLi33kEk6CABFCbGSE1+vOJi0aOofxb
-# lmRvfD49nwD2tbXK4ij/9VSReZDNmvruZQDbKPp6MiEkn32tQYY2nmWj4y786OzZ
-# UoV7C1Rv+ILnXIeKI3F3eUlsf9NgwsRxHby4fHHxjKL3/inZsDhIS43cVZyZYakl
-# CR0uhrag/xJTrL40zS6IcjPo3QTgCnpT8lrUdoYPewRCOcY4WkxkbKjF8SCsv+Nh
-# gvR7P+y9NID4NaWhpMe51AFLY6gNdMdA6PTPyP3sLJk0+T25FxnmGrjdGqU8poMN
-# C3PzR8bFMo4E3q6GuvPJYM1XCBy7Ywp7xjPqphX6ThdBVOiYEoWoZmyAR3m1sjLU
-# 24NC2NQazCzap9bD66HA1ZnSeqz+IBS1oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIC7T8DKPJHd3+G8I
+# qfd2mS9J5OJKHbtfKH0mmc2UZlnFMA0GCSqGSIb3DQEBAQUABIICAJoTkWhvVDdm
+# KW2/T9ETc+gRmziP8Uex8/w7X3O/kFHT1+qu/gXg7pU2R4ZLxSX5b25ieawkQvgD
+# H3CCA5bNtO+yJNGtxVjreOWCRHhVUZZd0kneWi3ugZDBLhJIgZULRLj8szCGQ+rm
+# uylaXysKPN/dE87JFveUKYuzE6vKtOd7yFUbpFpJoZ4UTL0O7kPmGRKXTFVG0ylH
+# L8izpx1hX528wFgpuZS6VcEEt4UqiwUVpKOyIoEkVZnLeyNiQDFprZzMsGcKVOEF
+# Et1GQsB4280D6FO3nTvgObbEOsY7VjNPRIc8ozjdgRhSeu1kiuj9ef46ARztUd+a
+# /zaP88AF/6dN0iNSYBpjTp+d8jtuVdNjL3R6emHsmpYIRUN0liE6Ntp1LlNHjOOq
+# rh9Qm7VciiEZ+kj50w7yCVouj6hU4/KhbEboIC6oymYc5e0iUXXwKIS2UXwT2wsX
+# k8HWNnfhV6UB3R/4i4AnG38T/V3xmyDl6/AYX2FFf9iUzPlukTKk6QRf/1DWsMnJ
+# XomG2SZG5TnfepJ3LOhPkWvFNe67X+TI8p4wQS5hT7KnqojS0nlJ8Os2dQ/E6dQ1
+# xyj/VdtRpRRTJkJgJI7nK6FpZNWiABgn9sfMuwC98tF5yaUpoKjpStop8zbEOCba
+# OGvXY5KhODZ4+hORfB0owv7XGEJLinXDoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAUk3fQcGOGiAObTcpbeZtgnF8G1KlDzT2zGbJB8+t9RQIUM/ABImEf13s8
-# wCm4eV2b9VTBSREYDzIwMjYwMTIwMDk0MzEzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDkZEFKV9vcxiVC0VaRjZxONdjwtHdd1lEi7apQG5lNzwIUO279IV8OrtYb
+# mYTgbhKfVO7QhRIYDzIwMjYwMjAyMTM1MDExWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -414,17 +414,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IOtqoGr78py2YXr23CjwFJDEZ06AnmheAS3kdlzSgctdMIGwBgsqhkiG9w0BCRAC
+# IDbAdHaPutMuWnc3JbzzK+KCTtdOjDaBW7RE8lerg/duMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAIvugmWNAWJmQ
-# 53HU0afzd69tLXpz9tGFsgIxppoSDur8UmSiEyFFFZqyQJrWDiKTXRwuIkT6twTG
-# dbzc13lHc6m1LJcCjjoEZ+8iBDye2G7Qe0X3uDoymZcBT/xUzXdPAH8WBYNBOziD
-# y3vXyiW6pTn2J2VGmt3qCfNhjf7WhUvAFnTPbpLt62aJrTQ6Tp4lPJw/uui/mIKo
-# 1oOuRkrpzW5KQEtLmFqfr9UUpR1Er6rrETa+2liMRJsBrwpa1zNFftv4wtoazBJZ
-# vwqoZKCYOaOQj/ChKbOS8KL8Isxtp7XRX0mn2QLlOGUiYfwrMIj5cCXfRZIduYFw
-# 6CWOnAvCES15/dg2YeJKDJ4gJVuFVbg8kW72vGlTZVy7Xh55brz3OrEeCOHPkzAi
-# e6Ce8HpzZgBp36rwwUqMF6xuMMjAicgx4z3Aogt69uXhttuFzMP50CT3FQx7NDxZ
-# nwDKAbNQmhZS3o6aG7GlnQdyWZ0iJE87t/5aBLDsCJ3uo/ermYvk
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAe4+JqVQvPDcJ
+# oJJbHlv8eKwrICj+1tXSEop+ZxdvuKPatR0wMPQ0nrqReC63oHT06hmpiRoGbeiw
+# HG00c+i29+RDvvM2+0uL5i1BetGPRB/HwiaypKnepQDYfp7clIat2Jo6yuUMnGdU
+# 8LQssjvvIGuImY3DyCsqvqPkXZlSlGoUv62/9xJ11LoZ7n7uM59pqw9/adyuj6HJ
+# IV03OUOy36oGbr+DpiLgQqxS1TmCVncerlOJxPMflFoUDTfSmi3daR1k6EsajYa7
+# mse6A0LXYUmmgMkgScD1XNTk44RIQck7vY1g+ULtedIEF9/HeCpMyTyc5QbtEITb
+# gkzyIp77/qLfnpBLotPRB8xYAoB2YrrRn6zyAXuNUh3JsGXQLt5PUcE+tAY068eX
+# io6eOKzGtM/1HnxqGEpcTYcFMVuzSeyuCI0VxodI23i8dJnS5qedYC60TtsV3STy
+# e5fv/vcJRXxVYM82FgBI0mS4qrGU1SMGYkqfLGOEnj1mfVhYpEu1
 # SIG # End signature block
