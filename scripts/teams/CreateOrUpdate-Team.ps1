@@ -170,7 +170,7 @@ Write-Host "=====================================================`n" -Foreground
 
 # Checking team
 Write-Host "Checking team" -ForegroundColor $CommandInfo
-$Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue
+$Team = Get-Team -DisplayName $TitleAndGroupName -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq $TitleAndGroupName }
 $TeamCreated = $false
 if (-Not $Team)
 {
@@ -211,7 +211,21 @@ else
 
 # Checking channels
 Write-Host "Checking channels" -ForegroundColor $CommandInfo
-$TeamChannels = Get-TeamChannel -GroupId $Team.GroupId
+$retry = 10
+do {
+    try {
+        $TeamChannels = Get-TeamChannel -GroupId $Team.GroupId
+        break
+    }
+    catch {
+        $retry--
+        if ($retry -lt 0)
+        {
+            throw "Can't get channels for team $($Team.DisplayName) with id $($Team.GroupId)!"
+        }
+        Start-Sleep -Seconds 6
+    }
+} while ($true)
 foreach($AddChannel in $AddChannels)
 {
     Write-Host "Channel $($AddChannel.DisplayName)"
@@ -312,7 +326,21 @@ foreach($memb in $Owners)
         }
     }
 }
-$TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Owner
+$retry = 10
+do {
+    try {
+        $TMembers = Get-TeamUser -GroupId $Team.GroupId -Role Owner
+        break
+    }
+    catch {
+        $retry--
+        if ($retry -lt 0)
+        {
+            throw "Can't get owners from team $($Team.DisplayName) with id $($Team.GroupId)!"
+        }
+        Start-Sleep -Seconds 6
+    }
+} while ($true)
 foreach($memb in $NewOwners)
 {
     $fnd = $false
@@ -344,9 +372,24 @@ if ($OwerwriteMembersOwnersGuests)
 
 # Checking team guests setting
 Write-Host "Checking team guest settings" -ForegroundColor $CommandInfo
+$SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
+$retry = 10
+do {
+    try {
+        $null = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
+        break
+    }
+    catch {
+        $retry--
+        if ($retry -lt 0)
+        {
+            throw "Can't get group settings from team $($Team.DisplayName) with id $($Team.GroupId)!"
+        }
+        Start-Sleep -Seconds 6
+    }
+} while ($true)
 if ($AllowToAddGuests)
 {
-    $SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
     $Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     if (-Not $Setting)
     {
@@ -370,7 +413,6 @@ if ($AllowToAddGuests)
 }
 else
 {
-    $SettingTemplate = Get-MgBetaDirectorySettingTemplate | Where-Object { $_.DisplayName -eq "Group.Unified.Guest" }
     $Setting = Get-MgBetaGroupSetting -GroupId $Team.GroupId | Where-Object { $_.TemplateId -eq $SettingTemplate.Id }
     if (-Not $Setting)
     {
@@ -656,8 +698,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAhZfb70n0uPpPa
-# 8+54xTRbgIkmmS5RXyMeZXCFu2ucwqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCByXBE1Xfornbdr
+# tJzwOfLXVGthYGztOFZYLekS8Ew0JqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -741,23 +783,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIclVmL+A8/m71A+
-# xWl8kAt8pFCWwC4FM2Og6e2mCW2JMA0GCSqGSIb3DQEBAQUABIICAGZRKY66ASi/
-# g0zpyeN9pR5ERLe/l7noTgBUo4zpe1MHFoJfhsieKCBuv4djL6WN7uRjkBDSzoVN
-# FRmUtCTfEbAe3yQW1+f+nInu+1p9YHEV0evZIKBIC2HTr7Ig9g4yeVKEV6vRtoCI
-# Y5mpnAD7FLaOKGwLxiHpprq5NQy7S7H/nMBLHaUxycLFKSeIzPeAMl0XOvGw0P5K
-# fxPSfNX8jgp/9vOgVatdo+4UpT2IL+fPF3rLLTx7qEq6r8SM82lcLvyenPJmN7SR
-# O/f2NARrqW6cjMW2OMOh+dVZOiwCYiexfg7YJDw+CPr7iIiMrPYr132hVaUPPtMb
-# n+UdNcd+LpMP977Grl69AYsDwU91zu0fWsALfdEnJ7ZA0800okY4vfnHNjTtfOUg
-# slH3ywu/tdHlzFrtLRgDV2YBJTpjWJqN5VsPoV5aordlWElYcHOz7l34/JfmqvuJ
-# xy0sWrDgH10+nVZoWpFwp+1eHKC6+EYrivdbYxB6kNTlzTHcxHwmE4munzNQsOh1
-# /dZOun2Fj0GWetFQsQRBdb8JL7v4C4y8NBD0xYHVnbURBdDXTRB8T/cdaTTVpAC8
-# 3gygKgEXhRdgnXW2MD8XVWVfmnvWFhuqX5ZlJKAq4+PLLett0JgLkE1LdaRIXLMC
-# bxOpq4j7Qvk/eP6iyHRnHQpBfjdqLMpSoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIH8UX7HmDCQo32+X
+# g2siP4xVrQ3eTJuc3QM3bO0kjlfHMA0GCSqGSIb3DQEBAQUABIICABCIWJjMhp+i
+# URo227WexQ/Gp7Wgg/HprDISIMrsL9nS5NU1sGqgZ64ONoiY6M+vSM1N72i6uIxp
+# FN0cffyMveDeEM1sOhnSYpH6PGNF2G+xldDbGcEcMrPlxHh/D0p9Tjtvu/LMmhiR
+# 87sZumD8o9m5C3BVpZsv6cKKfDVxw+n5X4ykvdvNirmCTMLS8pdF+sjvHwejnUMX
+# Y6Sg/jVgjmjRg8C9+oqNVIysi8YwZETl4T1/b9GYF9JkJvjU//qlVUVJNX60LNPU
+# oFScxtj+rEG79sbzxGzE5HFWyq2tZZI10iWiz0ZiZdMdpWFrkA84+RcVepPTvAlJ
+# JRX7X9AQUbpReHF+X7ndVtpaF9OQ90EllmcwtcevmWCzBNyrEY8PCrbDKpFyDyts
+# gnJAObWt0heQ7TCh6KI+a1/A6B/lEbc2w9Ce3AZlblZBqalskl4CJb/iBE9aPdlF
+# LoPRFNQfbqSJsm6INBmipz64ShFgZThD6FJ3lA7bd2h1UoFgsZfGoBuOonYdAGhs
+# msVfU7OWlj7EkcYStUl2umqG0cA9wYwrl+5kcD3hEeXtCIKDgNxObekB94fQeZtB
+# /iEbEaHbYchPCZBHGmwwUgEbK5iDeKkawxQYopWVC506xel0LWVM6g9C4oIsb9pJ
+# TEmcq7BQgDpabRygO0wfQWY7ffGLBCTsoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCH68duH43nqSOZvS2glvi7t2P16LrEK93cyMZcSG3vXAIUPb0Tb3ZEiCoG
-# qozARjx2+WJx/PQYDzIwMjYwMjA2MTIxOTQzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDUf3FpAHbY9Om30eQvhzQjX0AE0DyMYDZupXOOleHsYQIUUPsSm11o0rho
+# PMS2SDB4wXSiNusYDzIwMjYwMjA2MTMyNzQzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -862,17 +904,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# INUeYg60/9WK0lXNo/Jbk83nu4SN4MuTYrTDusbek/tqMIGwBgsqhkiG9w0BCRAC
+# IAbRmTLkwAyrh/m6b3mznzHowyZo6XROz3xR7IkLPFYxMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAK2gL4jTXQPr1
-# BYoXDBxqrVl1HJisW9Kyyb5Acq1DhKSxTWvQuEZ6amQHvuqHkMFu64d/i+T+RcAm
-# WtzQtd0YTDGLCa0CpSgB4mL6bIKomUm98VP99Um3xdWlsWpbHb56h0nlMOlrKxnC
-# 0wFyBUBpgXBHMH/yK5KnKU7N/XhFFM1NEvBSmJwqeohuTOf8f85lovacNarwTMWR
-# xa/AENSHvO24mX0o1eRBaOicCywWJME5T3kZ17nRb4Xe7hCdNoLkKXq7iP7A29rS
-# U4mdVeAFVV7pkKLMaqcKxTYuf0MVV15KAbtvUsIY+A1hl9MXJrpAVJ9Z05ad7+VM
-# jZn/JuKlT7oz5PYxGt5lG2wxYGw1k5mjshL9RBch48Yyx7nAvsRmvKKBRvj8ei6V
-# 5V0Jyxi+ZsNSpM91M53ZzuWGsk5+ROX47x34FSNNVK2sgI19z7bUznJnIwlgBpBx
-# KroiW0oMxkdQTOjvgJCYGfd0Wi4aBKoFwzGQsuZCdvfcnklrIwht
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAcBBkxTvu+CSC
+# WK1X1ej/UGAsAuP+zyZ9yyxB2DqsU/qG/cCpnyXC0zLUatfkPewZdemtb6wWBJdm
+# lu7c92Ux7ics17B+tRZtKqXW90xgYyK870hMqEPX5JMHZvAJbr3XiSr6zLZfiwWu
+# AWZpBCzxUXhAXacHy9lFJHzkURaotvMSzFvpoMkg4+WHKlcPaM3jE6kZLQozT2tO
+# Eqgqg+1WbjNBzhsQSRP3EYe9mfka+7flgNJqVJ+p1WHr03lua5jLXh7ESp51ql4p
+# m/IbX+iCc+NJfG5d+iVKX8V2jAAIE5qlg6Kj42vJ0OMr3zKbS5CqdgyxREFwmqgR
+# 53+EzmMmwySWjtVXidQRzQS0EMCP0t9xbPXi3E9Mny8u72OwMH+/Y1DMdtadJ8nP
+# R4mx/ebYkqKkBpfOFxT6ZELbeuMLoCHS4ddmHRDsIOgq0ABaGmVqsCKpxCSBM0k4
+# Of5PxWwcepzuyD7TlCM2WCm7php4wiU30CRIVd53AiYQfpjdAFUZ
 # SIG # End signature block
