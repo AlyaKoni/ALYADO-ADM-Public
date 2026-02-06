@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,37 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     13.03.2019 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Calculates the Azure gateway subnet address prefix based on a provided virtual network address range and prefix length.
+
+.DESCRIPTION
+The Calculate-GatewaySubnet.ps1 script computes the address prefix for the gateway subnet in an Azure virtual network. It accepts the VNet address range and the prefix length for the gateway subnet. If one or both parameters are not provided, the script will prompt the user for input interactively. It reads environment configurations, starts a transcript log for auditing, performs subnet calculations, and displays the resulting gateway address prefix.
+
+.PARAMETER vnetAdressRange
+Specifies the address range of the virtual network in CIDR notation (e.g. 10.0.0.0/16). If not provided, the script prompts for input.
+
+.PARAMETER gatewayPrefixLength
+Specifies the prefix length of the desired gateway subnet (e.g. 27). If not provided, the script prompts for input.
+
+.INPUTS
+String values representing the virtual network address range and gateway subnet prefix length.
+
+.OUTPUTS
+Displays the calculated gateway subnet address prefix in CIDR notation.
+
+.EXAMPLE
+PS> .\Calculate-GatewaySubnet.ps1 -vnetAdressRange "10.0.0.0/16" -gatewayPrefixLength 27
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()] 
@@ -97,8 +127,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC3q1SZJkXdXIgc
-# cUxEYeD4VPUgEx2o3wlrmRPXtnRWq6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDpqqIpRF2EwUfM
+# pHCZAfaOwac23NoWqBs6B0jEbkeXF6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -135,10 +165,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -146,17 +176,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -166,39 +196,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJTpx+uUZym1TLfs
-# jrjaETXjaDHWy+9dPX4Bae9NWz5xMA0GCSqGSIb3DQEBAQUABIICAFgbz/f3OjYW
-# zbDKWZA6BI+Kcz5n1czD+qQdhcr6Hc9bjhv78vAmwB8VXwkp6jiT7CXTTTqhV6kI
-# u1CjtYsy17biiRhy7cpnoiZQ8saYd1N30gzf06j1/JM/bInzecZJNWwDVUv4SXjX
-# XSyprRAQ+OqotZlssxf8wcgkOf6jksvfILFgGAJAmXPVtr8zYPerSoR5xcA7vcHs
-# 0inWWxa1pAE1hp6tT9owDxsbC2Z1mUDkSZuthHaWCuU+2+5aog2+EdVeR9ybuwy6
-# v04DpJQSzjA6Cfv/Es4fZk8Wp5SF6AjCz7T2j87GHYT7rDDxXubnfazPDAOS6m8Q
-# 62eXrSoMM9IahWAqAvsmXgfnc/n63xOtDbx8l30zKAYOiGgPpF+fO5XhA95nEx4T
-# hCrSc29146q0Gu3NQnfVZ3mNRyXxmg0SDiOs/PqY+xSsvzNCGF81yakJ+Hq+5DD6
-# lh9AldzisdxMe7/PHCTczZ9dTuoS0SKH7TpiiKqgmVwits2dQBKIpAY5Drpi6btX
-# Cai3DA9NqupKia9JWUHHBAIOdo65Bhs4TNJ4hZv7qqkasldC9PxmgOUKAJIRSO8Y
-# YY0Ytd5lshI6xqmV4pPiGa1/4VentXVOvfrub2zQ4o4dZdbtPYae79rNdgZ5k1X/
-# mbvig64N4Sr7xbUva2XKILAM+DPackOioYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOvMXepODy19USLF
+# KmmjNQ9Bd5eUjmRdpl8lLHK1w3oWMA0GCSqGSIb3DQEBAQUABIICACO+7mxDAAiR
+# A9gBtaxHIvzUL41nijoeaaoidmmoOSw37T77sZz7vQK8mg6l9QaOicJa0lwN5oQm
+# P1UlJMFyhsFpVgzY2rM7mt/RKQtSdezNrUsISRAErSF9HgoiCum4le8Fv+Lf74xv
+# TFxQIK2AAAb0JgEhA/5DnkgSaycSbZK94pwInf5xwEIZ9P4xZG54YjISCrQRrizG
+# suYez7OGhJPNZA12sj9knoPwgXnFRu3Axen0AvP5Z+B73r+xwlC5y1jn+axXNAr4
+# PIbCOs9e1zZrE/I0PwtAVxp/MjyEaI1FsST3drXXpQXZyZPoG2C5XbxLoi5IWXJ8
+# 3sWfCUDAie+gZ1X8sbYlX5lkId6TzHs+Sx1KD0mxakLQwnYEmYEwO0ZVHyAvKL8Z
+# QVQ2mwa6f9S9NfJPVLBzQLoxcP8XaphWyoUuBZxa7P2SiO25r94L+kG/Gt8nhWsU
+# +XCznBGgLpJu/ve4EMXrPwARE/Um3dW52gxH6Gbw4nAoR2UkoB04t/LW+K7jNQzD
+# Jv9B7biDiBexAJFludbpBuG9v0Y21xJT8HuIxUUZHNtl2kKCg3TuPYjxQti+rxqy
+# Bjopq/+1BA8VkYi6dXkIqPM++4UeorFSu+36MZ2wShQr8xENhP2/W8VoDPuIOJhe
+# Q0NOhfk6Bcwr3h5BU62p+xGCN/iS869ooYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCXHKHSPtDs6j6HoYh6Y3hXi4y5qsx3qy2ddtBVC89WjAIUOpg4VMb7Vc3x
-# W3ZN5Ad5WYQAef4YDzIwMjYwMTIwMDk1NzMyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDRPAIu2TfOWiafCXBE6lwuLC5xWzCJTa849lhdBvR1uwIUaZsk9WLRy6Yh
+# iQjlauzahCYuNZUYDzIwMjYwMjA2MTIwNDIwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -303,17 +333,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IPaGA/Yuxo5HsnhLvH+fBZeDAUCsVBdJwUJtzq4mDY9iMIGwBgsqhkiG9w0BCRAC
+# IMihOpkCCKZBRn58+8qAO1ExVuJABtqa9wHMuZk2dKW1MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAEqGilwkU8/V/
-# CoVdA8Ejvm98SsF9Lz/IGtg8YZPf0ychHIcQzvD2uv7AY/wptHXq+eqxQBAihAq3
-# a78K0M+F1xe8nAW+i5CO3xFuOACnCDYi3y1UFQ8kODoDIhHomW5lWAgFJgpypoa1
-# Lrjxy1GLfrW87rKQZqa9jaoOsJMthCT/zzJGp4nCrkc17TFrbdeEDNE1z0vyajAu
-# 2MZW0x58yu9h4d2Uw0oclU4byTGcoM/IDxML3SwhORjj+dF8B0Lc9hbVqKbhwkqq
-# WZ8RShGEaxpPQ9lRpTIL8JJue9ak8ktP8NyY/Z4630PDRzfcUTdb/XPUAubBNKnm
-# F2X7X7KlNIDc1Gu3aeiawIaUFgMnU9zZB7fM3jy2Fk1e7FPNW+hCZKfMc2Ub9YBx
-# yTPL4Ji1AuOO+4wUUHmmCxjpbfCfk49q0rk8Xiew5BnZwAgq/igFHgr7KJyG0kKo
-# IqSMRJl1RTiXmliXa8S2XA7yZa4WHR7IxwuqLZk1fZv/cISP5tc8
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAFh/D0NKd6l9n
+# X8+QqoATjoZCTTWlwa5ZSdaUXclqfcX028u7ErklKoYP1QaF7nT5OFJqx3MJncxb
+# CdxeCFcaXQq5D+Djvm7hJBQ2af/5DLQU+eD3fU1rjxAUrwl32IPvA8+bYiIEdVMf
+# FYUM72DHWFfC0nWDlwXbJyaPH0Wo84hX88FtSbf6c2VHOBCpvPH2URxn+9J64S53
+# Y1IC6r4CBsrYqigNzfJoPO27F62G/uC8C4modNahDXd4AnAHy9KaQ+00WHoe50rW
+# vlooHLxGo6NC7v5nkTfxkkacn8vycaUHFtmMb4r6vq8YRtvr8lF5OUXc0lh5yd/Z
+# q3El1OraElB/JUhBgfk2EAz7dHZAgvDLPBGiU28bit0+ArSJmWvYEZBiRucrQLLv
+# yCj8fTHRLEp3dS6CbaFR5LZDmLrYuAgAn73tT1r5cXX/3vQzrSBQ398NIkRRXGk+
+# eIla4YcGolcWSvOssWLxkPzC6CHdSrDTuKmhOdOxwKQErHmzCp28
 # SIG # End signature block

@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,31 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     02.03.2020 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Retrieves and displays details of a VPN gateway and its connection in an Azure environment.
+
+.DESCRIPTION
+The Get-VpnGatewayDetails.ps1 script connects to a specified Azure environment, verifies necessary modules, and retrieves configuration details about a Virtual Network Gateway and its associated connection. It includes logging functionality and provides formatted output with gateway and connection properties. The script requires environment configuration through the Alya Base Configuration framework.
+
+.INPUTS
+None. The script does not take input from the pipeline.
+
+.OUTPUTS
+Displays VPN gateway and connection details in the PowerShell console and logs results to a transcript file.
+
+.EXAMPLE
+PS> .\Get-VpnGatewayDetails.ps1
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -95,8 +119,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAw5D8KGPghGMQT
-# RCeDgJxbaaJmX4aml2tsfplvfR6bbKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCS4YAPkKAm3Qjz
+# OLcCZx6GUvfoDmtgInLcN5h4H2/c2qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -133,10 +157,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -144,17 +168,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -164,39 +188,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJBzVu8N8uTSYTgs
-# JMV/ndnt4BkoJJN/KYoeW1pitZpgMA0GCSqGSIb3DQEBAQUABIICACZXA2jlql5H
-# Vqg6XEL9jE3WydD6LDPKYcfgl8A6SqnQ0sNDfkZvuZMSEe3BmI8ywHZVXoxVXy6T
-# d1MpGCb7I6l/Php/IuhyQfrhgjcLvLdYHIJapTgKCPr5Cahw5aoDTTbH5gkCzZx6
-# jzZ0Bz6JjscyEIlXNzpLtThE3W+++eT1CL2W5H3UM+aYmMnveEZ1ktn0UwB4S9JM
-# PT9Z+7KXFNbFUcdF9s29RROX4UW4rJbFhX8Oo+XqxegzZbtMKViiafoB7AotScsd
-# 1kFS+QGNH2tovZuZDSyx4auvrRchRsAt/gncjPHrJsS6F+TD58zn6P90vX3hMBmQ
-# QplAnJcFBYEQYj7TXeU7IxFPFCzTSjn7H1bwQpzzOUqdu9KChkF1I8HnZs4Gfx7E
-# GAKR0/yJSh+y7lOMKe9I39kSMaHV/n2h/X7KZlnR+biQq9bB7mMbUJO3HQKeK+5x
-# xt2cYdunpIIg73Q4ulrzoBZa+nwGnBV8YYcvCqaolExzfYiCbdVPHSAwkppk003q
-# 3eXS/DtUI1siHSqDypR2TZh336sU8jYDJgWOb8MXnUUtfq/wCbJaQcsokm55WwdF
-# YRvpLwLcHFvtEI6jODPMs016sweUzu5wLTBBg4+3NQvhcyb4wYIH2CoSTOM462+i
-# stqiwL1iVGci+arcWYXVHU6ngWmBXr4XoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMs6r30yA+lZl7hd
+# /YPyLkZBnnsPbpIwl7gLjRWd2xjgMA0GCSqGSIb3DQEBAQUABIICAHxwgEH6uotq
+# s6aXJd9kW9xBAdXT8Ugpzfhk9fbegDT9dqOOwZj4Xc/hrxPFa24FB1F822yNlBrE
+# CwV3ehnbDjsPJUajQiiljpJYity3qTiPi9J+KfrsZQGV8V6ylanAAvH4zrVpge1w
+# etIWelkOLpKBrg8LJzk+aIkOCX59fSNyHoI64AvzcJrHuEU5FtlaotePRGD9Gw7Q
+# zYMCb7227ruf/8S7+hcKsTAZVqgKlR/7k3Q96UXCwW6hVE/7JIrAbgaK55kT5cQ7
+# J3iUvM7ENDDvW4J34WOUokbcyrkchc3LAv56KoteSZTHczIQp1ujEK/7nnK7Cqzh
+# 63POiBs5rSX/SWvkh+ZvQnXmFU25WZ5+DRyFU5WrKzSCWLQKQ7rnRbaKeXtkP5xW
+# a7M2t6A3pNcF6x6+drdhpJkeh3nmvTSlGVpHagTs0Gz6P6RA/FlWByw5uHrsk3RL
+# aHYv+/inxQDEB/8RYQekhpMo/qIF8SjfxnBlYL4omz3vHOSqcfNuIej0/9SiCkKp
+# rv+cuXM2rOFy+nbaTWn0aVsvS2odQg++x+Id2wPruUrzbqW5PBEpQjWN9LEXC/x8
+# TCxG6WAU0XjHLmfuM/yDdmZVMsd69a/V6kmaoToGslfVh2ELTPzCNs+o6ft6s1Ii
+# qz4cONEJdFrxaNp53vwVZqSCxap6x3KhoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAFTpW50rIIM31Lx3jYtd/5EkkBl6QKe2A7wbEnYPZIKgIULrX5iEGjVRUK
-# 0tLn8IA95DG4OvoYDzIwMjYwMTIwMDk1NzU3WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDdZ1TAfDpw9oL6k8T/Q2Mh40mXRI3yX8XoXU9BRAJRfAIUPiWivPd3hA3d
+# 8irhWjZXLYjOiZsYDzIwMjYwMjA2MTIwNDU5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -301,17 +325,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ICT8bbPHHkMJXjQuShZfmnUgcujUYJypq5JNeX23/sKWMIGwBgsqhkiG9w0BCRAC
+# IAs5lflN/NryIG0xJl+9ouWDTU3KOSLOiT44NAEzhn8XMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGASmCxy+5ZLXZu
-# TRQIDk1Xd7NckGuw//WQsvvInjkK3r6cPsI/YtrorGYTtsFKI2xAEEbn6jBhVQHa
-# 9ZKGtCMfTcQWqjm+F752+Ag8CmDMeKwF9cl9QEGRYWxf0l6YyrapBXFaCYLgwuaA
-# tyEQW7NH6buPgx1Pak2QuPhT8c8M7ql90HM0mZNxZnBC0a/m0d86Yt5X57WW+Xln
-# 055t+C3uleLpUkSsuzxmpm9em7OBFBQlCtwiYhiuX3Z4OcwUTF2YWyjSN9KsZifG
-# b243uZj9Rna0esVpk2Mg9kq64ZQke81ARBTWU9+Yp3y/GxVlenirOUmwbKyHBjSr
-# V4p+BYQdNCBwfD7or/QFo2jTnBTPWbi4mLmS/blQLMNuTmrdxZJvDJPXAAcS68h4
-# PF59ShG2kAMt1520h3uj9wvBWj4VY/+aGOc5dX3nCr/IqQv0vGTZMDJxAAl3eO3X
-# 8Koj5v1aVra/rAg4H8RyA3TPnyRmDi9iRiHCBBDyBak3lGRYC8qE
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAA0BLjcQO0tLI
+# 64Wgrd7OIq3m89SM2UofI0S1Pm71fCll8u54ZB5ftmX1xlC1f/GqBE+ENUh/v0An
+# mAP7JyAzGk7Jw4Xb5kFz/YqExwaFUkYiWz/X/5PUp7NGeTNf5CZQ6lDOCYLfmwZB
+# XaNwZA9NtD5VUFcSM4kfAzSVF+8LbQfc+6tprzL1eBy0Ur6/ooKAu3zQyPf+rFLN
+# XylRakDSeedNfkYS+NxTna5WrLkGn1/oi/DHFNZLiVSd2srMm8iKqfCHAoqvNrZe
+# Kq6oEhWAuj1l6/ETsP0oI/EZO++HhzGGGSsXVHdM1VQfO03d4NomkZh849WZAcn4
+# X2qPb+6lwGe63HOoTI7MWs+DIs5/LS4jFKgvzvpnuWHn96eBtgeOOcjS6aOPmRR3
+# sQv6igvSOsTNP6TGxa2/IFv3212cAQ9MsQAgbDTbiUIy2BG5CFJTeEsPYpt+8YkU
+# 5bWGYnLpagmw0gfKN3ytvh8mK2T+wLGns4AOfhUhw9hbCX5kl2pS
 # SIG # End signature block

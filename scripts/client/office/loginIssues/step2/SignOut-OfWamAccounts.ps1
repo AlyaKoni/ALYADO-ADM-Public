@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,6 +27,30 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Signs out all cached Windows Account Manager (WAM) accounts associated with Microsoft and organizational logins.
+
+.DESCRIPTION
+The SignOut-OfWamAccounts.ps1 script uses Windows Runtime APIs to identify and sign out all stored Web Accounts for the given account provider related to Microsoft or organizational login. The script requires Windows 10 or later, as it relies on the Windows.Security.Authentication.Web.Core.WebAuthenticationCoreManager API. It converts asynchronous Windows Runtime operations into synchronous .NET tasks to perform the required sign-out actions for each account found.
+
+.INPUTS
+None. The script does not accept piped input.
+
+.OUTPUTS
+None. The script performs sign-out operations without producing any output.
+
+.EXAMPLE
+PS> .\SignOut-OfWamAccounts.ps1
+Executes the script to find and sign out all stored Microsoft organizational WAM accounts from the local system.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 if(-not [Windows.Foundation.Metadata.ApiInformation,Windows,ContentType=WindowsRuntime]::IsMethodPresent("Windows.Security.Authentication.Web.Core.WebAuthenticationCoreManager", "FindAllAccountsAsync"))
@@ -59,8 +83,8 @@ $accounts.Accounts | % { AwaitAction ($_.SignOutAsync(“d3590ed6-52b3-4102-aeff
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBTUKytwPkkxV1i
-# HcfHqFhUMxjEsOj18Y8920vcpaE4FKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAqFbE/tocx3Dv1
+# Aso29LyjLDFd4d6KFwrbIaGCqInZ7aCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -97,10 +121,10 @@ $accounts.Accounts | % { AwaitAction ($_.SignOutAsync(“d3590ed6-52b3-4102-aeff
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -108,17 +132,17 @@ $accounts.Accounts | % { AwaitAction ($_.SignOutAsync(“d3590ed6-52b3-4102-aeff
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -128,39 +152,39 @@ $accounts.Accounts | % { AwaitAction ($_.SignOutAsync(“d3590ed6-52b3-4102-aeff
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIO+yt+8iSvYzTHlf
-# SHpjmBXx7pYqzZBtRpb2UFtFadHpMA0GCSqGSIb3DQEBAQUABIICAEBvfSjJFfxD
-# eiQ43GQYdKOL9T9aYcVTA9aybJp55G1uyWs3/BDy+nW1tk8sb5stodpPJ4p/0XRa
-# G3OiOc/aIpcWsIxuraI8Ge1Yl6eUYoPxsON+f4IeUyktC0X83lEGqY3usBGfTWt0
-# Q/OSHLCXvYb/kiA/6BLVowvSWQGn9krMcwNr42N6sAygS07Qcz599F8ZoLnLD2t+
-# Bxd+KPIqigQ5uz81OGYswL2qnpmRciC4CFLEw+JSlWCwFoTau/Skqzt3T/vg5pKc
-# t4+qfRCPavGQbi6pNq7Nzr+s1VSAN7HjszvjKWEyyU9TRb52QYXyqsaZxY19JGGj
-# ZMGDYUrj3Xcmaozt/1eSwfZ+K/Du5IrjxcABZLOGYeVRB6HGKQhnUp2MnxYzbR+A
-# sRwNDfnNFBhz8e9QTsErL1NgFQyoKuISq3eJnUG+W/IdmLcQ3SCeAGDknbfVTutL
-# Fxuh6Uqj6KkTeGp84x1TnL5tXpEDmsBGMRyEhNDGeWkf1sA892PJHXlxd5cvQtfK
-# muDz8jlVmfS5k1ZZyaOd5weIp07/je3fByJWIUGoZ5KNNPRxXEaU40oCq5TDT0VE
-# QLEqBbLtfOUA+WmNpFBufOzjWJRbgMyDsRjVXN+h59HZ5zANVz6bIq/UiAKoTeSr
-# NJi18dBGcVbl3dmuMi7tPOCI6wsB9PTXoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHo6WUdEf3GdsU/O
+# cra/P2Wa17Cz3hUA/ZKwan3ufLH4MA0GCSqGSIb3DQEBAQUABIICALpjpL205e9a
+# KwQTKRNdD4XBloNoCpROyRJ3LRZDMG5W6/lSlfQO2ce+SbFJfdCZrO26YpwusUe0
+# 5QuowqhYQB2VwJpbHmSL38T3gKbdrrTFfmz6LJsLYMF1mh4iF7ra77bZL9B9x4gA
+# j6Jr82CHcllPoUsakxoDtpf9USe5U5PsX7ov33q8laYfpMix+kudZ8lnU83P2GIE
+# ptlia+3wWQO2RXHUcQ1TK3Axm1NMcEH9/2gjMYL/ERCwOo9L/j1AHKe3UuNbke5k
+# uUwtmBAvaD4doSGBYRPznfne1Uc2Px7tZCJUsam3TE/AGtPqrw7bhHPCl7fSFUeu
+# LOdtstqw9rhbDT3XdukfVZOf3hFKdHbTSgxR+WX2UnPhzjhCzwIL5n+YyMG+1nEr
+# Ir2hQj79zz9YnzfDie3GjJJAISXqqZw9qDCYvKRdTJiCi+apGCJ87lT0tjsA7DoA
+# yE9EF4+SszokR6vZXdgx6f30EBNAw8tOoGgJmkU9Uz7B65TbL0DdB7hIyn1wa0Sc
+# DzI/eWaShPzQKo2g8fGIEAIifabptvT8xK06aOnujb0pi1Z9LSbLgatr+2eTNO2E
+# xjxQtjztIwpHiksFs9VTJ+An+lFYdrqetCs1VZ14HbYPeF6sRAm63UT3+PlGgGsE
+# WU0ElcmbXqrZx2uGj7156aEszUq+4O3JoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCA/UAJDth/ID6CYKCSlN8bqZRuMkpIhrrSuDP84XswbUgIUY/n57Buzdn+O
-# BObvPKJAZ2QsT3IYDzIwMjYwMTIwMDk0ODUwWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDHfSq1QWh4ZAaGxQwJhnWtN8abxh0rRdoXo2Qz6YsTUAIUd9thtYzvSqsZ
+# X/h+C2lHgQ1GMpcYDzIwMjYwMjA2MTE1MDIwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -265,17 +289,17 @@ $accounts.Accounts | % { AwaitAction ($_.SignOutAsync(“d3590ed6-52b3-4102-aeff
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IP2Zzm9GU8ak65hEBAoTGs0KjWDuNoN40oSVe/0PUsnBMIGwBgsqhkiG9w0BCRAC
+# IE3eKP2VKHiyAp1zGunC5LBMPA4dfz5MVn2J+YA6YhE3MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAJNtcT8UuK+Vg
-# S5ippRSbOPkEaTLX/M1EtjCPQq6Gsx6Meq06fgovea2bkLh5PYof7/1zcNa2mSXy
-# GE05zOiqjhcZ9D2eGqmG3lMvyK4CzcLV0Ae33cXY+gnFCEuCjpc0ln73pYgEievj
-# edLoTRlXcy2HZ5oCyLowCgVP96P9d92rMEEDiQeabaYDMyumhe8SP99CpXgnOwNc
-# anMKbdEIMNrabA1KxUrNSWThVbmQ8iupHrlxqhwGF+hLxhO4TZmtn8pfaJ4mBIyL
-# Sw9e820r8lkDcXyqDCDSvm4Xa97hEV2sOqwVd+3DJBIYbKvIlyLFMZ92YRd8rToS
-# G3tcaAoZ23PsK7aI3f56MXtGutTrg1Ci4W6fhHWd1MI9mp4hDf3wrGwLHQ3F3UCQ
-# /SeT9hMleJvCtf0LorQbbomsXO6uTW09Q04jdtW6+p61lNsxJI/GXbdmE7s5xypt
-# TxCZ15gM2p12mYpklvbj254V4mrBIFxUGETpqWbLvoKMNI3eZwmL
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZu0+LrRmmn8P
+# t6ou1eLZ0V4sL/fdQ3HSa1NnMpKc6xh2fxBplREjkznoKv9YbPayWSPY01diZ0yo
+# 3w7TuOM0v5Xsor4gx+vuAfEPUWV28z13mncapSsdjuF+UaY5joaQY3tYEw4zCjS2
+# IVi9wUsRLYnaq9rNlHf4Y43abq8tvtxmSLJgfrFRqvfABkAjGQ3h4TG4rYZ45KZx
+# /79iRBEQ3CZyTikWbVwI1ojFKmiaTohZFWBXwbHg+e5ld0XcFHT/5cPMrXVQSwzB
+# Y6KVkYrYdkh71YRN84iLEy++cMZ7LJKv8vhxaYQ1uovM9fM2QLkPfQ1aTuGL31wG
+# Y/d7/azXRd8D8E+e5WGoWwattXE9g7bYfP28mW51QoEhY5q6WWFmjM8BSIim3Jk+
+# fu4IgA9hfnVALopjAdW5UfNKbJnrOjZYuvLJ944dcxi+65qXSiAXuBkXIUfEkJzT
+# 9aloLHu+ODrvHn1+SIhmJuWkWy2lWhnmWnZVC7VM0fQQU2uPyaMd
 # SIG # End signature block

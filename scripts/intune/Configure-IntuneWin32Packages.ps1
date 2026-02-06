@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -34,7 +34,40 @@
     23.10.2021 Konrad Brunner       Added apps path
     24.04.2023 Konrad Brunner       Switched to Graph
     12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Configures Intune Win32 applications, including dependencies, categories, and assignments using Microsoft Graph API.
+
+.DESCRIPTION
+The Configure-IntuneWin32Packages.ps1 script automates the configuration of Win32 applications in Microsoft Intune. It reads app definitions from a structured directory, initializes the necessary configuration, establishes dependencies between applications, and applies categories and assignments defined in JSON configuration files. The script uses Microsoft Graph APIs to interact with Intune and is designed to operate within the Alya Base Configuration framework.
+
+.PARAMETER ConfigureOnlyAppWithName
+Specifies the name of a single application to configure. When set, only the application matching this name will be processed.
+
+.PARAMETER ContinueAtAppWithName
+Specifies the name of an application to resume processing from. Applications before this name will be skipped.
+
+.PARAMETER AppsPath
+Defines the relative path to the Win32 application configuration directory within the Intune data structure. Defaults to "Win32Apps".
+
+.INPUTS
+None. The script reads configuration data from JSON files located in the specified Intune Win32 app data directory.
+
+.OUTPUTS
+Logs written to the transcript file located in the Alya logs path under scripts\intune. The script outputs status messages to the console.
+
+.EXAMPLE
+PS> .\Configure-IntuneWin32Packages.ps1 -AppsPath "CustomApps" -ConfigureOnlyAppWithName "MyApp"
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -402,8 +435,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBzvtqxAYVd+McY
-# C5fysGYAzbUUJuUGk1mgtlEca0DBcaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCwQPorzm5MH90/
+# pgL5SljxO6xsdArx2l1peSvqaPnokKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -440,10 +473,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -451,17 +484,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -471,39 +504,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBVeV6rpyVKCu2o3
-# 8z6qvPX02OhquRtX3OvuIqiBH/GZMA0GCSqGSIb3DQEBAQUABIICAFePn7yYTBWA
-# LIPvdla/Ypj6+qLaQaUnmKp9WkvfeErqRbtiZ5TaeFBgkTS9AEO22zRj/nfMqgpB
-# 5boi2Nd5SRzKd7wHmeiONhmGyNC1SMSqMSjVnU0S2KfZvXtN8zhpIBSmLemZZS6y
-# uT/7e0m05mXWkgA+ihg+tQ0Y71u0RuHGX4OzoC05Clruclz6XoopebbsVuuV9bzB
-# f9d8MDY4+8wptXrToOygbDP+HhM1BG3KRhRdxkjPjONR+BHczLMwaGYrIYRxgAiz
-# mlHIWgAfXd91EHzrc+t4ffkeS+TOcU2CP1PGgBdANPToTVvbYAQ1oAhWCCerk+36
-# sF7RWqd1wZB0NRACoySwoEDAI7s69Nqw1RATCnoZ/yp/7tFpQIo5PHLI3uPi+oFV
-# Mc/HXyon3SPQOHes254SxqcXwD1XiwBxdlC5Z0Myq7BCdaVTJHN2Qe4jsKd6Y/uU
-# uP9dBL4aifTQhOX8amjxOEM3Cl1lk2WoXt5UYngp4dc8pDcCEaifbc6OiE7lj2iZ
-# gxTAPdXynFXJnb5jM+L9tQ6G8skRrnCnNVPxUQMNENhXv/mRLv5LFfEBdWtVbuEr
-# Ix87174+hJz2tkE5elzIX2OVWrF3GgoPwmNTwT7xbSIkflVh8wClog7l8CiO8Zwt
-# pc6tEfFPkCUVzMS1j+z2GqhYO8n3KZe8oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIH9PEoAEO3DgSajT
+# BuGCYHSLTF7ZMrq4gZ5vK9ozlUx0MA0GCSqGSIb3DQEBAQUABIICAA1sUfadiLsu
+# kdiHnoVIgh4QukWDErh88Dgl1iTmknS8ZqE2V5cSkH2jcPXk36mTow7lRz+Aj/W8
+# OFupzz5wlkGKwV6Ctpwy7I704mqJBs7KAwbwldlkqcHGqtbipUbt5QMotOeCTl5L
+# BFJPrAB16lUghAOqQHsYOGQSnI4/gJ355cDtF9C/kSOLUYLbDHGX8NvTCFrhxvs/
+# tZj5riuLOHqGnDeFsoWzeK6URbKwToIfLPj9+J2QIDc5ijnnM4TsnnfhodSrEJuL
+# s6h5Q68k2bWvr58e/dejvsNkwxwlJMwmbRzO5LyugOj8uPoX167jqtHkCaLXikhx
+# kX+NDt8jYUqOkyQrjlsDgyoBERVhXbE/9n81aXeg59y9FdXAw/IK4md9h5GIl3ea
+# 1Q/Io+ZPpcZ4n84S3TjGKLz8corfqFBXs4npStbX/H4TNdKxGYa5o7eJJ9TPDJeO
+# cNlUvr5lNVWGKjKdGLjaHaQMD0cPDH3AxeYg+n5vNqq3CFcftHKXHbRKt3xz1w07
+# 5wRPn/xHwze4AfwVPbEITGtk4tocz1xjKh4UDnEZL3BOaqalsMvVpzRptJVv8BCs
+# ZqKaVVrLs9QgujrGHjXxxWuI+3QRKXPmeVHUip70XwSW+ZyVygAIjDgmztfd0/CO
+# QcQ0T1T17agBMfo+hBg2SLO+T0ArUPsCoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCADfPnmHZOVsQVa/bKw4wlq5BpssnctKHQhds48vi88nQIUejWRgoZON1aQ
-# V51x6FmoOelo24AYDzIwMjYwMTIwMDk1NDUyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCD+ljb2QGNwbFrBDLm2l7tJNz0POomRzsSJyIkHnmokEAIUfiAEZ3Zve4VJ
+# +xi/LRBa7V/jQ/QYDzIwMjYwMjA2MTIwMDAwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -608,17 +641,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IP3fSbUqdqH5LZ7vs4e5dP4b5lFPXHM8g9Q2uLzJOwO4MIGwBgsqhkiG9w0BCRAC
+# IF36vg/avmvIQqswCSieyLsiI2pKbxTSsewv4QnPC0L1MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAeVJcRaknt7eH
-# CEUSj06yPRtnDRKUNwbGI2s9BliiX++eZJzkyArcX4ZK9eQMaa74+SWR38/H3YuN
-# aFSvibLmOcjrxcFu+sGmr0JWHybM1tYEZcA1N5QLj51LEiz3ccqbsOHtaaF56lp9
-# OeoKlbhZjiZL6iFpdXigPsUGMrEXRSyLRdCEoOC4JVLfkX5CoBH5EGb6oibVa/4N
-# eaj+Ohxq3zMot7Jc+fo0818ZDmDWExNC09tNtQJcOKBdQzgl/69v/k3drjdbbNXx
-# 6b85QXbRz5DfXkVjnGe3vehTEZbjkFgwIXo6+Lqd2KNcE65AweNS66Z7ZR+lAXQp
-# hMUag3MiirIlFx9Rc5kH9nSQ0r+ep4POhm9n0baG92uudyDbQQA1B5B0XS9S7BT8
-# WxzqCa5JhJGQKnJhv39AEFNHA5SeHgBPpkB49+FQBfxa3Yz1R9cKqqijuZEJH0Oz
-# pFnMhV+uNzu7rplCs9ADeNdF+vH3XMN1dtlUYF+jFdAOyl/RXEMT
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAgTd4GnwPuG9I
+# SAusm2t5cLy4TeEEFB0RDxNriddHmoFdcsOd8lOqQuIakVM79JEDG7lYY3PtWnBE
+# ZJjxKqXBuMrvu9xoAN72rNs9jTU3NbPyX3W1yvHq9FDNErB4T+ypZXwJkD9/VWem
+# 9M6YlaMmFq2XqXLjnDeqNql7wpM2TV6D9kXjiO2icbiEdv/2/H1QajbwfgfItJLa
+# ls1J+hGzAZwBdESOHKAAZATf2025WYBnh6FbxBkwnoIz+F8Bblu/Io7icz+w5rWB
+# loVhYc2nJ/leAn3JilvjO2U8wV5LEVJXT40+BvHwR114pFr4l+w/gdPvJHObkXoB
+# 6sUBTYdOlvgiz9tRqFR1esRMcZkV9GTFRtzY6dROjDH54/jNYc4looTcxoe0Ry0Y
+# nek/KPqa75tJRCNPTbcFrchTg8hKj2XZxP0qRFpu81OmkyDnJ5p9brFWx4hvzI2H
+# snRX2Se0hPIkQ7IEdSLvQ2VgEtR3XcO46JsDF2NXXSaSKfs44/Ag
 # SIG # End signature block

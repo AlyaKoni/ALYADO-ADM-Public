@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -33,7 +33,70 @@
     11.02.2025 Konrad Brunner       Initial Version
     15.10.2025 Konrad Brunner       Added ByBackupPolicy
     21.01.2026 Konrad Brunner       Bug fixes and ExcelExport
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Purges old SharePoint document versions across all site collections based on configured retention parameters.
+
+.DESCRIPTION
+Purge-VersionsOnAllSites.ps1 connects to a SharePoint tenant and iterates through all site collections to enforce version retention policies for document libraries. It supports two primary modes: maintaining a set number of major/minor versions or purging based on a backup retention policy using day, week, month, and year thresholds. The script optionally performs a dry run, outputs logs, and generates an Excel report summarizing purged versions, warnings, and errors.
+
+.PARAMETER maxMajorVersionLimit
+Specifies the maximum allowed number of major versions for a document library. Default is 500.
+
+.PARAMETER maxMinorVersionLimit
+Specifies the maximum allowed number of minor versions for a document library. Default is 500.
+
+.PARAMETER keepMajorVersions
+Specifies how many major versions of each file to keep when using the KeepNumberOfVersions parameter set. Default is 50.
+
+.PARAMETER keepMinorVersions
+Specifies how many minor versions of each file to keep when using the KeepNumberOfVersions parameter set. Default is 5.
+
+.PARAMETER keepDays
+Defines how many days of versions to retain when purging by backup policy. Default is 14.
+
+.PARAMETER keepWeeks
+Defines how many weeks of versions to retain when purging by backup policy. Default is 9.
+
+.PARAMETER keepMonths
+Defines how many months of versions to retain when purging by backup policy. Default is 13.
+
+.PARAMETER keepYears
+Defines how many years of versions to retain when purging by backup policy. Default is 10.
+
+.PARAMETER dryRun
+If set to true, the script simulates the purge without deleting any versions. Default is true.
+
+.PARAMETER ClientId
+Specifies the client ID for certificate-based authentication to SharePoint Online.
+
+.PARAMETER Thumbprint
+Specifies the certificate thumbprint for authentication to SharePoint Online.
+
+.PARAMETER CertFile
+Path to the client certificate file for authentication.
+
+.PARAMETER CertPassword
+Password for the client certificate if applicable.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+Generates an Excel report with details about purged versions, warnings, and errors. Logs the execution to a transcript file and the console.
+
+.EXAMPLE
+PS> .\Purge-VersionsOnAllSites.ps1 -ParameterSetName "ByBackupPolicy" -dryRun $false -ClientId "xxxx-xxxx" -Thumbprint "ABC123456789DEF" -keepDays 14 -keepWeeks 9 -keepMonths 13 -keepYears 10
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding(DefaultParameterSetName = "ByBackupPolicy")]
@@ -45,7 +108,7 @@ Param(
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
     [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
     [ValidateScript({$_ -is [int] -and $_ -gt 0 -and $_ -lt 510})]
-    [int]$maxMinorVersionLimit = 50,
+    [int]$maxMinorVersionLimit = 500,
 
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
     [ValidateScript({$_ -is [int] -and $_ -gt 0})]
@@ -145,7 +208,7 @@ if (-Not $ClientId)
     foreach ($site in $sitesToProcess)
     {
         if ($site.Template -like "Redirect*") { continue }
-        if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
+        if (-Not $site.Url.Contains("/sites/") -or $site.Url.TrimEnd("/") -eq $AlyaSharePointUrl.TrimEnd("/")) { continue }
 
         # Setting site owner
         Write-Host "  Site: $($site.Url)"
@@ -168,7 +231,7 @@ foreach ($site in $sitesToProcess)
     {
 
         if ($site.Template -like "Redirect*") { continue }
-        if (-Not $site.Url.Contains("/sites/") -And $site.Url.TrimEnd("/") -ne $AlyaSharePointUrl.TrimEnd("/")) { continue }
+        if (-Not $site.Url.Contains("/sites/") -or $site.Url.TrimEnd("/") -eq $AlyaSharePointUrl.TrimEnd("/")) { continue }
         if ($site.Url -in $alreadyDone) { continue }
         $alreadyDone += $site.Url
 
@@ -786,8 +849,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCWBV+Mh5b6qsDx
-# HLehHgZg+1BQl2lXTnrrDd6aUAxoj6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB3cYeakS3WnESA
+# IpcBzTHF+sAObTDZZEX8LA5kQcI/06CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -824,10 +887,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -835,17 +898,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -855,39 +918,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAURnFKs0N4n998K
-# NhA3Lvo9rLpxCgC8NYu0BAWJYKveMA0GCSqGSIb3DQEBAQUABIICAGUaxDTgqiop
-# 01shjaT9jBqWaRVO78KcEHi11ojaALoN319aoDdiYg+mv/ZerkOT1i1+pn2CePCw
-# mopWQPKf2yGBLMpZ0XtiqOfQFK6sV34MHDdP1XYkKGDqSBJVDNOvNgzWB87XqPQT
-# VZ56lHqcNj8VuhRdyTy2kh0nmiyC12ja6j7HB2zChHlFxSMF/CHJwMv+BTM1anM9
-# KhlitE9TBqAMLNSn3hasqywoZsrOxoi1g5wx5hPEbJkriPVEHyx44XWgulaADZ9Q
-# UnhU4tbqHvm+iS8dtiL8tBPMfwxcHw7DVWVuXaA7g4mmqktR+rh5jwH42QLxKCWp
-# qoUWsDNStJuEPHCyKhW0Rs4ywcSNOJPbsZu6LjpiI7Pq06bEKra9UvwmTGzN/I/5
-# ky8l5i1LlMpQyhhTTOKnG9paHlpgt6Um+AHTE74qtgJHv02eS8kTaLp3VmBrecEK
-# yTGQnhUaoky5Kuhb986OtYVjBioxBb7TBJ6TmKyzg8cMoysmbgUgw6eI5UEpM5oV
-# eCrF8sgvWVnxgKbnVCODVoWilAoikIikKB5/a2MatNsXA+dDym/MDIRT55YvQ0o7
-# buHuJ2i0ygoboijUGWklr75RuVwEA+E6Az34Ny0QyGSz1CoN6lYVUIvNRtzllWys
-# XWBw4jp0Eljvl9Zv2ci8H3rEfb12IjjBoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDqZLxOgGHl8UKyU
+# Y03tUhz1w4eDqW1SUbaPVpB9frr4MA0GCSqGSIb3DQEBAQUABIICADmifgFH2F2e
+# lPpDd4JpPc6gI00SzGJyv7nLbeXqVfbPThohoRYAGjiB6vSv6B662rKICgXCmC2Y
+# 4P0Y4hG66awUz62tTXqbSycjXup6SUFWyPl5GPErRiCiYIzB+vaYGwWaaJ1Z2q0C
+# 5+9RB4TVOw3eHHnvS2gogTv7nMy3wT7hHPGln7qIuxeKbA1JL63CaucDec5QTaVt
+# Fv+Tbf140nV1pEdD40lx84KSfBaZeWTeLa8mFktnS3HGFrfNIn9lBz4OmdWn4t/W
+# TGeo7OV+MriipKHsoOBFY1KUMNmhBUqds9L4O5rCa6GEkOAcIu0sDbpVneSiril2
+# FEnbjvL62/7DQBmCPXvbvEmpjetlrMj15eOlCQcKkqsa9Y66Nky41esiiwwKnhGE
+# Z2oetZZ0V73UZcwdot88c0sS3Hyv5Wh7RB3jl5zzv+krDHxR8cAzj7qKiToCT2Yx
+# yw36AZF4Nhl26l5290ruCI7NQPLRQO4UTyjKp8My3fQhCKVqAxTsaVNH5qUHUhB8
+# jJkvC9IfdNdGB6ZrWRlxgGnoqtSuyUE58RuB6Igc4b9Ia3csZpWa6W33v1XEZ8o7
+# nmaDokCqdej3MerKRJkECH7A1WUjfQy33yfDv0I4VtGnxeW9lY9GXe3fmqVpzKjj
+# YIJFYI7VVAzYqeEw2vZYXAvNmYyj49HXoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDYTSLfmyH+yo5qBxLMLwiv2+f0IEzs5Z5pkWjr3msCPAIUHSFrRtJD1Y43
-# JPuioS9b3W1sZxkYDzIwMjYwMjAzMDc1MzA5WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCooTVB44HbFaXRSq8w4C/xvgH2e3AHlW1eE0JLMAHvRgIUG7AZkF0UN/V+
+# EZtfuA7QxkFB3tcYDzIwMjYwMjA2MTIxNjUxWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -992,17 +1055,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDiz/stxDvsfoxkrdzniEy6mGcZQv8IfN4mN506SMKJCMIGwBgsqhkiG9w0BCRAC
+# IIzv3mUSiUG92Hyv24T2qF3N2qrxn+/KgnzKVeJA/9c1MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGACxaxM5V7y6I3
-# PaAhOpoh1T84zgnl5v2mjD/HOVt9t5dnETkpiCIdnMyiJIiApPjsmWgWgvtkltMN
-# QbCcn3X4+1fpHaOcc+bFA84MZIjr4lmrs7ofrOmneHCYcxismlWT/NxQOXkGCqEG
-# ZNx46porFyXpwSPLkJnBgnImobrVPOSlNp/+Vfq5ZxDntIWPPhxAdfTNCLSqFkCW
-# sTfhincUim6s+npNd8XKJld/b5PN0BbwW9Ihusz12DpmDAFyjyI0LGqTxYkEECDd
-# IkjfHwRtgGqqqvTFJL6sYSj25q67fBAA6QNAlrDpTg1hRo+rTRrdl7PBQ5k/iGPR
-# lZf/jkSS6o9i8Gf9ndV8Z5rS9w8gGUx+DEo+PjvbL8zshV2X0BwyVf4U0TSWBcJ4
-# 67Lup7M1DtDVtEZKaoy7AmX0iZXGqVsbpeb2bC2UH0evgIm4uoSYwYmMXZL1bs1V
-# T5Cgzy3mdvpPud6Hou7aGOG+pgBPXAgn09Mx0qBMPK9PLllprCdy
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAT2asEu/U0XJ1
+# 7c/piGiG7AH2neR1sIsFV5/QYNASt7e+j6yFq1QXDD8iSsrIVIkhvQKpORvPw9E3
+# UNIM1Txx46iqVgK+fOKv8Q9Dfj2mpg+Xk+k2oGXAqcrTr9K6HxbNaNGU12ftjSGM
+# vqsKmeqWiC1Xuwo/sJ4ecysfk4eYPABdVPG+VhbVbirMfe3hGRKRubjhIPjzySKd
+# 9EPJzmJ6gmTJmVc21Za43ym//IUhqZxIRmfStt6iTmtd3Z4CNYf7rF5DaFtw4tqQ
+# vjxGZ8URQppTZrMyJHeCSb0T1d7ZGsi+TR8y9GUTlT2C3PwwktiV5aefYifb6ENq
+# IfNsSrKd9xLloi3Dfs27nsBOg1mOeNUm6uMX6FEvszWDE6qhjnj9kkKUEtZuzLMa
+# ypC5xoCp0nPe8anVxcVQtqe7CN8ceJ/zBJ5/25GhW4Ot0xz31+KoBnGdnu8VDCre
+# Okko8Pv5G1gljL5vNgNywTKfSQ2QT5QqjecVgFUTltNdGtD7QDdc
 # SIG # End signature block

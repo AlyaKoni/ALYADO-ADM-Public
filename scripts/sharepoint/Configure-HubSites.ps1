@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -40,7 +40,49 @@
     04.09.2024 Konrad Brunner       Added overwritePagesOnlyOnHubs param
     08.07.2025 Konrad Brunner       Added CompanyName param
     27.01.2026 Konrad Brunner       Separated root site parts into separate script
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Configures, creates, and manages SharePoint Online hub sites, their associated designs, navigation, permissions, and other tenant-level settings within the Alya Base Configuration environment.
+
+.DESCRIPTION
+The Configure-HubSites.ps1 script automates the full setup and configuration process for SharePoint Online hub sites. It connects to Microsoft 365 using PnP PowerShell, creates or validates hub sites, associates them with parent hubs, applies site designs and scripts, configures themes and logos, manages external sharing, and establishes navigation and permissions across sites. The script also updates the SharePoint Home featured links and optionally overwrites site pages based on provided parameters.
+
+.PARAMETER siteLocale
+Specifies the locale for the site configuration, such as "de-CH". Defaults to "de-CH".
+
+.PARAMETER overwritePages
+Indicates whether existing pages should be overwritten when applying the configuration. Defaults to $false.
+
+.PARAMETER overwritePagesOnlyOnHubs
+Specifies an array of hub site short names for which only pages should be overwritten.
+
+.PARAMETER hubSitesConfigurationFile
+Provides a custom hub site configuration file path. If not specified, a default configuration based on locale is used.
+
+.PARAMETER createHubSitesOnly
+If set to $true, the script creates and configures hub sites only, skipping navigation and other post-creation configurations.
+
+.PARAMETER CompanyName
+Defines an optional company name used in naming of site scripts and designs. If not set, the Alya company name is used.
+
+.INPUTS
+None. All input is provided through parameters or configuration files.
+
+.OUTPUTS
+None. The script performs configuration actions and writes progress and results to the console and log file.
+
+.EXAMPLE
+PS> .\Configure-HubSites.ps1 -siteLocale "en-US" -overwritePages $true
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -374,6 +416,10 @@ foreach($hubSite in $hubSites)
         }
     }
 
+    # Denying site scripts
+    Write-Host "Denying site scripts" -ForegroundColor $CommandInfo
+    Set-PnPSite -Connection $siteCon -NoScriptSite $true
+
     # Processing external sharing
     Write-Host "Processing external sharing" -ForegroundColor $CommandInfo
     # None(Disabled), AdminOnly(ExistingExternalUserSharingOnly), KnownAccountsOnly(ExternalUserSharingOnly), ByLink(ExternalUserAndGuestSharing)
@@ -565,8 +611,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB8K3Zfn/1EtSaW
-# U3Jqq2WtYrXDLoqtbgvp3njp5dXDh6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBNMKlytFlZlt/G
+# 219TYdohwO0uxKxUkspQWazRnEGkfaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -650,23 +696,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKCYz+uRf8JkjD+C
-# p0BNf0vX03ripqx1fjeoOI6RoLw0MA0GCSqGSIb3DQEBAQUABIICAJFLskZtA2k8
-# IzGSNMLarRUwkqagpwpwnYuxH3WqF30bFag96loMBsNTkBCMYWdyvNdx3dc4bvvA
-# we4spjBFj81o/GGliOmRfJcCFO3MaOnMYdO3y5nb/02EQ+Q9nxaGk/LXJrnv94Ck
-# 1QVArrdmvUj0bC1N8LZL6D/ZxLOa3dD2iO1UhJtSMNwiKmTHeYCO3JVG1Kwe6j88
-# HPCVsdgbiiML7j8OSo1YGU/BZjc1UkZTM61Uihn0q9ox+pEiNNKaPPk7EMX8tv2+
-# WWmiv7O/Onip2XGjeM+f83JqCu/IQaunmrlLH2e6sSkC6BAlbsim4JF+ECljxJHp
-# y2gXOBRW+MetH78C0uV2qja5dLfMioJdof46ODQXnXiG+vxFh7jUs19Zq5hZm8n9
-# kPYm0R8YkNt5G2uIGFNEWohEFMAakTGqA3nAJpBSrTwUUzurYa60VfrJMsQFmUKu
-# qTisNSW9tJdZ3xMtlTjav0UhxQGPM1VwqdZ1Tk//5gGEfj2PuFN6p66FzsUakRIw
-# 0rHClK8ARoMplfoxQDJwgYB5FndeS31UOIPpooKnoVRQrGy6c02YyL+Ge41oXeLO
-# 6jZlotyqbQZPC3YMeaWeQOAKn+b76hjvglYkri5yMip+p1WHGS1GoYQsaIXrll7F
-# 1SvyBjrgsYnnEZFrgFkpP6Y/mcEyyE3+oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDwhkHHbxX7l04Ek
+# uEkAE4zi38NEV3ppmC1SMuhhBHqqMA0GCSqGSIb3DQEBAQUABIICAGFyrzyhywF8
+# ejRSsBF1e3jAUfaTMNSF5U8hb8ubJpNMMkPPEVPX5bN15BapZQYuJ0IiHSXY6ObV
+# 0cuO1NeCU7ZuPy1M4HDPJysi0z1InDxM0PwyUcDP8L77pPUGQ4mkQvmDizm0hGbK
+# YxL1KKBQiYOAuNHIEULMSe/NGzcpbmmUSv0th7bHwB0yIVcjS2nuxw311drgXjNK
+# qKRgmzDmm8sdXN/mwcXevNFm84flgbxrF3l6252glxm3IvKfT8b9lSZ+IzpjUq2e
+# dSx/jQOYL6dbdAalgh1uv40E9X1MOGRHsdd3SMzZz02FerjjrmrhEHI7EU0yYIAP
+# 47r0P12UMz7e1USclIV2oCu5bGMMVDCC/ZlHdazypWrv6cngnTQb4zfUyeAyKzVz
+# Q5pXor8+yANbFlCTv6cZT8OBVIUerHPfEUT85JF6cQrwitfPNtx9aZqRDwhvMvCE
+# COnD5FHiarB/tCtsNthw1xMrpgGa6Dwvnks2bDBrUCJijnoUp43QKoOa0ey/Q+qX
+# cJUi5f1WZXS8T6Ms2pytBopiCXtMiHSy5oC7V1NeNi6HXNBxyb9Wpx8yLzkiCdNB
+# SWoBNLASeihyhKsPzW+qCl7zbhNmRLnQF6Xbw/Z6X6UCpzCjEU/bQw+8lbw9YicI
+# TniHKn+ekASXafM5qqbS9F4wnOJCF1n+oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDEXpbgqNoPATYMF43SiWX3EghpOERZm9UjPKHi2bg/pAIUCCzb6omaPri5
-# 3p1i2fS6MroV2vkYDzIwMjYwMTI4MTM1MTAxWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBY9RJYNFGi1tlWFiAerPvfslypcFnOGjZXOplBv0nKAgIUDRvHmEwEk1RU
+# VG2E8mE8SRKL2zoYDzIwMjYwMjA2MTIxMzU3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -771,17 +817,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# II+B7wbUfCpIt34qr4qFY1WUaTDN1Bjos8CWLlpAzkQBMIGwBgsqhkiG9w0BCRAC
+# IDeaXtJ2gZf9gBYKcrRKmh85qVDKxKky81Ggk+D1mJgxMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAjd3Cgf5otSfo
-# /EortgX7ikmUitNmxoLF4gkhU0o34Uj7mI6Mxfd8rbEyKi91SB+JmlwbjULtOHAH
-# gUUnKxqcV6wholTAYSO98PZcjRrXPjCX45x6XMo3kVITAPB+qRcdCCd2pz10iEkg
-# idKtg7LVwgGUpOwj/C+XSUXMDjnN2OIzoKGoXqgJ4E7wGC99m4XEFPEy6aEg1t+A
-# bE4JiMdij//DkB5qslmIHPtF9ibuolL1fqvEopJtESNRYfXlTy1LUY/7N2jwSVpZ
-# 5X0IXuJ+gklDWAbLaN4X9ejj2PePtGpea/mrvb2r0l8ztwLJAlfrfYuiiFbJg3FX
-# rXIx72kE6hUnGIn4JzCNCkssSO4+0J5P/2b/Tw38CvSKt0WD6897Ery8u9PMabOz
-# KeSmQj0r9KDBwetdnglYfu5YTbCmQjZ6nqjXCEGjezN73Icuhn3k5mwfxjS3d686
-# F55it6QpkjnI+ainTxYlCfUCK7dZVLagAAlkAQobvHTNvOl83XSC
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAKx78VkVL7C5P
+# fiHAID/ufEL6PJNp+MPN6X/vKl45wm0MppX5tNCspYpIjOiisoAIB8hQ6KncId/s
+# fHDtZanTK+GD22/uE7OiOQX0N+p8DeAxsuX9cpyr9s8E42dmKL0Dw6TcSEFnIoWG
+# /fkPQAayfgiwPluKRAOPme4pKfiBhG12ZvBqTF69bJ7Qg/IDaqhJj4uk3AnXxgJw
+# V5EIpLIfiBjt51YV2Nv5/ii89jZKnkgzqhbMf2vdF7FvAsO8uUvHsmfZEJntONZx
+# JLjhIFbW4+0cb3WmZBS4YhlKtYkd8XqMbHgvz06h3Zb4HiEWpENZg+1mCnOryqjA
+# EhZvuVgyjI7LIi99XUZVeF7Iqe09/hoPbwb5BNgHXrMyh9Du6GCkC1yt9mt6SMsW
+# vn8MKYTLfW/KWZsAC50vnsgweLXf3awhPC7bf98VCJtsjYfuRLcAlfHew0CYxi6H
+# aOKqiNEthu9L+7ThP6JHtpO7yN9XRTUBGBljHtKKd1lCRk4n2J/S
 # SIG # End signature block

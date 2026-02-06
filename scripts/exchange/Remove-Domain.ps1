@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,37 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     10.03.2025 Konrad Brunner       Initial Creation
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Removes a specified domain from Microsoft 365 tenant by reassigning user, group, mailbox, and contact objects to a different domain.
+
+.DESCRIPTION
+The Remove-Domain.ps1 script automates the process of removing a domain from a Microsoft 365 environment. It establishes connections to Microsoft Graph, Exchange Online, and Azure AD, gathers all affected objects (users, groups, mailboxes, contacts, and applications), and updates associated attributes such as UPNs, proxy addresses, SMTP addresses, and email addresses to move them from the target domain to the default onmicrosoft.com domain or another designated replacement. It logs all steps, writes results and intermediate states into JSON files, and offers a dry-run mode for simulation.
+
+.PARAMETER domainToRemove
+The domain name to be removed from the tenant. This parameter is mandatory.
+
+.PARAMETER dryRun
+Indicates whether to simulate the domain removal without applying changes. Default is True.
+
+.INPUTS
+None. You cannot pipe input to this script.
+
+.OUTPUTS
+Generates log files and JSON output files containing details about domains, users, groups, contacts, mailboxes, and all changes performed during or simulated by the removal process.
+
+.EXAMPLE
+PS> .\Remove-Domain.ps1 -domainToRemove "example.com" -dryRun $false
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -466,8 +496,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBdqZTKkwtGcq7G
-# V4jYNGUiaJW2oAjxMdOaSZUrusVfFaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCFMt+WZ6ALyeN9
+# 5d4jqnyQKNMVKBPQ4HGJVnPqeg6N1KCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -551,23 +581,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOQBRo0zMP8A7kkV
-# mEcP9DwyzWZjyG+q3UguiQV0ItdMMA0GCSqGSIb3DQEBAQUABIICABu5kFqr0ikf
-# 0Jbq/0tFzS6PCmcKLWVb/2jq08Q/CsO9Oav/LRQUXt0nsSCYXG5IPM/qIHH19/2Q
-# nBtH6s4t+D98/rPART2zV55/eKeTn/lyJSj0E6JQmn4hza+p8ULcvgiVgfQwBTCG
-# 3XGBjSuSwlI7jcxLZAOHvGBsDzRn1eOlDDx92+V5uWrN3iZ1+/otMm7Kwj87ruof
-# NJf9SPI8O74zItsdbLURmCkm+6M016sibAttz3Ho37XcRr+oIjyBmmmOnhb0zERN
-# nHHEepaFXDCOtBwBsHklnvGVCiuisGp0H3GpJvIPurBr1TLfGYiEkfx6bVQHsRng
-# 10Nk7vAWUT05Moypf3Ddmjlpe5FqUcnM2pLsPD5PG+l0YQiy+mDleb0FN3IydPoG
-# sN6/HDsQQ2XrskEwTahzRmrohiKOWI34vtre6A0a0gmAftbfzaV3KiyuwMCgozqR
-# Dku7T3xL9nLlCw3TJKoHWR10UWzjb7guMiKSTtF0bg2L/unzqTYdJjFsFO1lHZ6V
-# dut1jdd0cG00zq06HVgVRAghNdLd5RTufmguCBFqqHthPg1rkz14FxoXIGnhTOOb
-# 4J58XGp8HWZ+4ApQ6GMh5k18X4tJLxLlILLWFFlBRN9Qb8Z2izWyBgQ6Yx+lHGin
-# 3gsH/19NAruxAigd3qv0CLG5Uilr45kpoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKxEpCJjyU+jwRRr
+# x4fc7zFpUgF5Nh2YJ274Cna4aAl9MA0GCSqGSIb3DQEBAQUABIICAKLfyb2SZKhs
+# 8NED86A4orUxHRQDvRP8zN6pG6RvkXcTZRp863BpzavmDRYyQdUANRcLWYBisiSA
+# LltMN+24QPpCXKCYgCZK21CFezmQ9Xoq6GsLBvfg3N+ZQcaYSDDdakUf8MroZSLs
+# rdyPySbGHLKSAsyGpB9CZE4YS/Y4BS+8bGsg3bycFCSEdNuDU+6m/I0CmVaRJ0VN
+# kEw+WcPxChT4VjDPAcNbfevw8NSwiMyRW6M5i1EpCSWJDqN52hZ9nO/RWlK6zmTX
+# p1VsOqZ7nuOWIzNZH1jz0eZLuNz3EQllrMx9nOb7SLdvj9jix/l/uFTq22/su21b
+# M7/IAIahJl0IAoGso1sWjx3C1ov2RRont9ojKXoWEhYXjd64fel2NB6o043c9MXr
+# wtsPOpqqKEsxhKD0nnbwedyCb/yzccUl55NO+kYnmiTtZwzybXTe++uKpI2KpiZk
+# 2Pxr7qQMzX+ZNYbMOSNSR1hDtvu7NQFPZucP1uVgsIrdIuxvDvGYx27N+LSWKL+6
+# CX056a1/a5L/fghq06KXBL9ojQ9Zs0Ig+GJl7+Q+F/hOZJHIiUUe24TlWgDhKszT
+# NvenMjq8qUd8wOdr4t3a+CDddXdHKf8PW3/tFAVpCTOZwxNFeciq2suGJ2Pkswq5
+# HRU+O3kjytc9BUJumcydjfaSZLNtS7ptoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBHH13qkU65EqfyFiF0osHQNunJUvPXFEUMvgEcspxMAgIUBaKDLfl0/CZC
-# sv853+bSNpuoAA4YDzIwMjYwMTI0MTIyNzUxWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCD9ohW+l+cSvCdwcYrlO/C2zU1bv7VoD3a0pgfNNy41/wIUfL1OEu7dB5BE
+# 52YYAmuhA2HpK7gYDzIwMjYwMjA2MTE1NzE1WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -672,17 +702,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IFvphTXpEAe1NQPrGgu5CvFafUp9sr50+OezTUSfHWG4MIGwBgsqhkiG9w0BCRAC
+# IF28TLmLgqG3Ay8XEX88leWxD2uPmCxZKx6Oj71/i/2rMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAdn4BLjuVuOtq
-# 7kuvRudyGTSnKwoo4vLkm35DinJe+1jmScKqP/kZXg5R8wEW69v+dLgIvl/vwPHE
-# 9PjUcMRcb0NuyNh8Sk0qqRIBNBXoZQZRnUR9UkHyu4Y2aBg5u56t78y4cHXupVWC
-# B8ExgPwHkgJycoNws4imS0ouz8+OuFevmYsIRSrxFkvBK5O08VluTjdL1DnsX+wJ
-# JhGWHw5ey9AKoSZ1gAEjB1Oc7ywwX3W7HtWI8Xsi0mrpMaY5K12q+6HkqTWey+/f
-# 3ux8sUvAyYiRFmEznp7ZQ3ihwwVQ4PkhJR9a5Lwjmrczj0GzA7CDoCRxhcz1JD73
-# 41ZMRqMJrbr0SlBNQ/+sJCcELg/+HmkmsNgIpVBuMSo5yAow+f9IjM3LzR+PY/NN
-# qugLqztRLutU70z6bQDqCxNVEuuDTYVHR6zs6QbuQkebpfyBrMK9+PSSpTp3mtZK
-# 9e5TF4Of8CPooGWnCx6C3JBR4+1cWmvZyNbxxXiuqNoYICL1kjZY
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAVyl3PrSo5yvp
+# JyKx9m1gTNUEJ6YzaQE5VIZggG40gycyeLNgJcWW4jj5KrnPMmgIlNrxxth0mAQm
+# o9fDQbwfgspGmzgsvUxS1onoOdLdRlPt7bVkcLP433vXtIoyZF2L2E8vrV3J0XC6
+# fUMK57wm8Dpufxel5SwRO99Vzo7aRqUvsfpeojRWGfot9tLo11xKpZ5EtRuuoGEe
+# Q0Fqz0QMY7Pun3J+vodRJSsspohtjG+XN2dIGRpjjNZntcxdxMfWXiBkhxyXqRai
+# BoefGQZbE2nMLO51UZIJzP+uw8Jve2zx+z0OcwoLINfwFfu6fyp9oRPVk1i8aQyp
+# CTPaujFApzpPyqjuzbckiNwMybn1oHiY1fayV/i24Emo1HdccTRRWpHsCDwb4jKN
+# DzJDFi13ycee9w0LM+tpd5DDJmaPldOVHFD+074a6grtgqGVqjKKkHjqP3dC0KwN
+# PXAXaVUdMlQ78pv08vstSEkUZ8MGcMEb6kt4kidwicHw1U/0fLPT
 # SIG # End signature block

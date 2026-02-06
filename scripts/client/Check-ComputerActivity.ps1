@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,6 +27,33 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Checks the current activity level of a computer based on CPU, disk, and network usage, as well as active user sessions and processes, and logs the results to CSV files.  
+
+.DESCRIPTION
+The Check-ComputerActivity.ps1 script monitors several system parameters to determine if a computer is active or idle. It evaluates the average CPU load, disk usage, and network bandwidth to compare against predefined thresholds. It also checks for active user sessions and specific processes to help decide whether the computer should remain on or be shut down. The script maintains a history of recent activity samples in a state file and uses this information to determine inactivity over time. If inactivity persists for a specified number of samples, a shutdown action can be triggered.
+
+.INPUTS
+None. The script uses system data gathered locally through CIM and other PowerShell commands.
+
+.OUTPUTS
+The script creates and updates two CSV files:
+1. CheckComputerActivityLog.csv – contains logs of system activity and decisions.
+2. CheckComputerActivityAct.csv – maintains recent activity samples for state evaluation.
+Outputs status messages to the console indicating whether the computer is active or inactive.
+
+.EXAMPLE
+PS> .\Check-ComputerActivity.ps1
+Runs the script to evaluate current system activity and log the results. If the computer has been inactive beyond the defined sample threshold, it logs the inactivity and can trigger a shutdown procedure.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 $thresholdCpuUsage = 10 # %, 0 to disable
@@ -129,8 +156,8 @@ else
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCZlhGaMHilUv1t
-# CV/B33qTFe7b9F/7vMOwZ1ziqcbU2KCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBHE1NGE8gRDSKF
+# Esl+nu8PIlt18L8/KIDN98MtPftayaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -167,10 +194,10 @@ else
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -178,17 +205,17 @@ else
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -198,39 +225,39 @@ else
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILN4nKo+URYCjYKJ
-# K+xUz7lehn0LkEEDAknds9NLwe2HMA0GCSqGSIb3DQEBAQUABIICAJkcGOnRh9xF
-# zqbzP7/rC71ks6TWODJWyN+ttzvmkggtHE9a69YxS7NEexqFISinztvqFrX5GZik
-# 0G2aF/oLOoS3Y1cQfKcbfsZFpulLXsBaL/9Gh5q/SECfNt0ATCh9MQ8X1UwB9kdi
-# k6Ikv+5mYpYATfrwHiBPaqI9t3NphaLvzVKZrmpWg7seOkODiE4GzZ6UR5wcnH6Y
-# 0v12dtGIW3YDgBumUW8MvckhQ+b5eFvNUTon56olZOL1kDYPUMFdypUXcRd5ASHI
-# FhjNbrv0MAqARb0ZJDNPInQ8cx0uvjLBjfGK1TdivHMkNOceWO5PNnV74pnKpjkz
-# F9zZrUKGX333LaqLzj2C/igADOdIPg1TPycBBex2hT9aYzEBqeNXnDfPZJqNjGEP
-# yzim7hjWUb2Ppx7R2EiJkR/UBI669YoZIpOwNMbWC9qgzB8/fptG0n400aBrq//H
-# omMNOwGKDdW6j8VNj6YUhKeeEgD0/xnRxxdqsUZFe200iuKzocsWQrl3k0xLFJge
-# lUpQbDYn3q3AiO/pU+u8QW19Nli2JpPdR4YI93xz9rdjbA44D982sCVDrm5H94zl
-# fQAn/+IQj2OogEGpWDLzBt3f+HW81nW6ffRkQKY+1sHM1twzTL9wnFAtOlyLqS+J
-# VqFlXtgSh2dlDZV7EVEK/BcHMsYCS3OjoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEUAHdp+YbUZgbOX
+# udXSm0hlUJKJB+B9bXozS4jVO0sVMA0GCSqGSIb3DQEBAQUABIICALPMiyw0jPIO
+# rDjxqtlHjJh2fvzkQ6y/9eX32PP+0QAU1aaZFlGWWuEw9D3HtjjGrpp1mo/8QqUt
+# 5vy+jFomQnAZqhiMDPbXw5JIcTikMWT0NGx080+a48oRT108SSkLgMZNmNmbxZnp
+# 95Q5jeyH89GLgWR7yVfGgSWhmksczKKOmOmf2Sc6cN+IlhIaBz+I5IPdUBo01oA+
+# +B01QoG+ty0VEHj3boPQk8RJ8OYUW4Bw5rf3A7kIvgh0Vuip4z6LuRyx89PtKAtp
+# kE2MNDOaE5MhBb5OuMA7uDLsCEiZZlF6UAXuA9uUadbnIfN+UDJbKmnOiFK2tIZ3
+# djGzFH/Mw6D4r/sLt8SAQC74Pz/lhBCOSzFxDPa49wjrvjta2j1qTq+yrS4jH4hB
+# DgKzP+41EAXwJmEJC/Y2MhglP/VZxDt1Oa5Q8smFO2CMDbIjihqIvcm2ZB9y/iPO
+# EtbyYoVdsoEr5a5RgYqy7kgIW6vZSJX3s5Pnme9teO/d8fgnv06Tsy4INGBNvoMF
+# qhTGl1c/pF5vBjtGhG6EnDO8jozWYa1r246Me7SvH5WS5TUAyW1NO/hoIwmqSy2d
+# 69YqivvleWZcA+Q2wlAEguJuLV6XJvMve2NH8MI7xzvxmQsZW54zHy18pds6HvIP
+# pwdHzTXNXOFg8NBZ8ERccAoRNhO1hdKPoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAwk+RnokGbVE8A7YDUoS4zr+SVomBrq4f5qPEQsRITMAIUPtVoJVlMrFvU
-# YU8uAmyzl9XZNOMYDzIwMjYwMTIwMDk1MDI3WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBQBi5Fac0nhjSzymT4GfNawLfWfA75LCk9yYfkurzv6wIUfj7oloFxT8lr
+# dVuSQjjyIqZIFS4YDzIwMjYwMjA2MTE1MjU3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -335,17 +362,17 @@ else
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDBrWgSIPCdNZHbnh4DMGmylekbBjp6Fcn6qTHrCGiAYMIGwBgsqhkiG9w0BCRAC
+# IJZyoc9MhP46TK1Y5b/X3gH3sk3T8S46DrSlTqGP9lD3MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGADTFuPlDU6gWC
-# /7yxO6NZvnkjLJJx4Cb+pV+ZNIXc8xuc3GMmB2CsRULONjvepeIkZZGZFGS1FYG8
-# mGjc5l+MRQePFtUD1/uHH+hESpHs97LEizgM6tKn9r51KErwE1PcFb4ajJ4vJUhG
-# Tw+LO1ibbwDs/HcO/sMNo0WZigYBQQZbsFSlv6AlAnD/IehXlQrp09BG8qbtq/0W
-# YHPq21mV4ONmlm2QGdIG5Se5+pwo4WMm+Z3ST11oBd7fWHe/ioi8lalTmFQIb3bU
-# WJ5pEvhiq0crE9JK+yK1iBNKlyVZf/WHkVbVxkxGteBgynAXw/ENdMT4pWgTF+H1
-# DM0njLv3qzGhJRfQ2CcyQOZG5pqW6HzhPZj+FCVu+5QJPztsYmz3J02e8rV3unMJ
-# 0zLrX3nHzmCokd6RfXBW/AEI5erHX+Rkv4X3ENGaL1lBdxnwgnx7pa6XeGXbTGZV
-# nyyyEZP+Y0f+GA21DQHY1XgGgOApiobDTWo0VtHjAoE37KB6MASA
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZ5sHhS0XGhwn
+# vxAQQWXCbQmu4p4kam58sfgQBOXG/17AHzyv1kn7APVyHQUOoXM9BDDvsIaT1BXj
+# +ytBVgucDIAzn/OnWWaHYdFUm+Mw50F8qewaB/fqhwrJbKZ2ToTQshF48zYq3kHx
+# BVjgIiaeS38j9YXRzXFu6hZ7wwPrtmBsOROjblsggyDkvSqReLivDD24a2GDmDYz
+# OkpO9L4rC//B7wbpAY81m4qAQpa29cTuDimAxQohWLivxOFISjyzYlPoRJvTL0kI
+# 6Y+3faoDnU0y5pN3rpD8CNfeJaNe7NfHFo7JOEQWdmkfXTos0cOc4zqceVv+SLZd
+# 3dpuas1zZigOS1QZxCMqXAP7X42w+PuGI1vXsrJVrrfmy2Ze2Qgy5g7Gdzo0LMjR
+# DuOtTnwRAs52ymyP1eu0V+7F4cp4hkSP1cxu9UD+hd0p3RedZ38tdtSvxvIgsLUe
+# JrGHioeon48TVtQ5KKxJGqeYJoWE8h9qU4RwqMGs81is1SKdUKg7
 # SIG # End signature block

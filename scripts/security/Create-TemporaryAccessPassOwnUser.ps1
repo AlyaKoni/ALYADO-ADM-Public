@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,34 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     24.04.2024 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Creates a temporary access pass for the specified user in Microsoft Entra ID using Microsoft Graph.
+
+.DESCRIPTION
+The Create-TemporaryAccessPassOwnUser.ps1 script connects to Microsoft Graph, verifies that the specified user exists, and generates a one-time usable temporary access pass (TAP) for that user. The script logs all operations, ensures required modules are available, and uses an application credential for authentication. The TAP can be used by the user for passwordless authentication or account recovery purposes.
+
+.PARAMETER upn
+Specifies the user principal name (UPN) of the user for whom the temporary access pass will be created. This parameter is mandatory.
+
+.INPUTS
+String. The script accepts a single input string representing the user principal name (UPN).
+
+.OUTPUTS
+String. Displays the created temporary access pass for the specified user.
+
+.EXAMPLE
+PS> .\Create-TemporaryAccessPassOwnUser.ps1 -upn "user@domain.com"
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -81,8 +108,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB7CKHrvYhX1/2y
-# KBpVvomHkU1oe1WjWTwMyYtmofdKs6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBB0DsX2k3oIN4C
+# IYuzPYEjytSsL2XcYf/FFcV1eM+zSaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -166,23 +193,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBn6z2BnAUV6Z2SG
-# MSlRFojgblonSZGUxAbR9j/116DdMA0GCSqGSIb3DQEBAQUABIICAEEJDnmojbjW
-# CgAqtbD7kvLWExJBUreJC4YnOnhKWP5UF9S9fRvGCrgbbPEg7y2LdKKvXoMMiqtO
-# hSy06cri2U9W+d2nnG/5gppFE9DbNuj8j50RssSLZMGB8a5QM+L0xzTs4pGWzrSl
-# euAbYG2XJjwWuG2rGne9EMtMKFDtLHNCvvdOt34eCCAUURFD0RIYyimnLM0A90d7
-# P7wODqgmqa9A87iMSjqmi69fYVW6QkwkAx4r6TNDJcQKJZwj4Y+M9rOrt/2jL650
-# eCRT+Dqalazaprdt31mSvRWJFfyC60mrYkTrwWchbt4Tqp2IkNzWNNtqKUbJc+7L
-# Oxr6qxJkpqCRw0c/oUFA7Hpr5PotATj14VToCXXm3rpir7SBrsuJ/YA7DNxkWlW9
-# 4LFr6/5czfdCBn72LNGeO6ZldBXJrxX9ufLoRZZ/Tid8C+WBi4du/cW92bdnzr2k
-# gMXH1kup0LdYHBChuxp1yQTbH5AZ8AJStCNHOf6He4XNjrPNGpEuxMH/K/qWRy1d
-# CQ/hRWVKA9Z+HbJL///ktxPRUTZcIoG7tv8JQxr3Ibn+EzIKvuREipVlKJtSovqJ
-# GIy/bUqt1PRXXaXpg8GRKtfNG6JZn0Td8XLAaeRfuUsTax30A24eyWuhdWOQNw7r
-# TO4nuzVoBZ29CqgywsS4GTtyBkiBzOZQoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILUPGU31OBVA6Ndr
+# geBF1ZtqFLl8KqRg2MRRYIiSgh2rMA0GCSqGSIb3DQEBAQUABIICAE2BPr2jwjs/
+# VWX0zDhRExp7SJMFl51cGv1legmiU34zTImFEeB6iYTZF7AY9X6b1zaSjbjujvus
+# /rPyIHOEUbGcIBrX6WhrJz3c/Uj9fUJaE6pvN0I+2Ie37GJogiMG+m3AJGeg/Cmm
+# EuvRHeSqGfD23zneumKY43N1s071O49h9tTVH4GC2jHbZnKiViv118xi9oB7pFuX
+# iPv7Mt/lwU7caVMkGb19RwZdi20Gq73twXq4xy3If9iqIAw7fzyccWiq5oRHrb7S
+# V2JM9RwAaXKcA3Gq3+fu0VMtPjMmCRwKkHRCj9q4ePJ53NEb7GWhZ1gknd6eyXhH
+# rFHHRa6bUcqE6GiRXZ+qTzZOmg6mFxCy/PWiLZc1i/BYCC2/9xBUwpnToUWeGJjA
+# NDzNQCHxohAvVxT2N4rW4tcHg7MJTTNAMA30NUN05WnhtnvXPQVqhnIY9REnxjL1
+# PvKhEObwl58CBbMJe5zSyMVW1vZPpYu//uzVx1SpM1lr/qoi4l3pU5z1JJV2Quk8
+# xiUFseX/XRZDYqF8/3Kn4M7nJ91dWMIdPtNcuNxrE+pAAFYysPYBMItSkrsOwz8i
+# w/HKLGEiNq8xx9q5AY34znzLFpvPsPZTRemVdp+bJO/Log68DYqP5zQ14EaaQROi
+# hbnA3g460MbODZ1S2BsfDU/2ytZvb/1RoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCI8Z0hXIoaZ4NOOO1Kqfaco7nyOO9KOFE62Ih0ZVnuegIUWUOW0UWKhU8S
-# bkHo3hMt3rTTE8AYDzIwMjYwMTI0MTIwNzA1WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBb9LNb9VewKzQEUUjqMDYFd4eytvfxRWgDAYg/MONCXAIUaxkzW5UEEVki
+# vAjDovDTQLFBKOcYDzIwMjYwMjA2MTIwOTA5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -287,17 +314,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IPYZDv4AfEMzaqcndcru9b/xE4tgUG5g1KV6L8OUhCQtMIGwBgsqhkiG9w0BCRAC
+# IIvP1iHs4f2htwaMkN0tqZN34yMvKGQqoIikSNe6TgdSMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAXx55OHWuK4sN
-# OheHtaC3DCu54sFqvArm0VHPmV8VsEKLR2tPO8rQxfHwvkwLgVOXNxMUb5D0X1fZ
-# AvvbGauGKXaV1WFmRdFNLhPeXbUC8TkSV1KR3vfIlrErrNS/gvvJrTMTZ1rf8oqE
-# ceJrlda++6N2/VeSQZ2/6D89yyqnSE/NJekaI4gN+FW2eFF7187XH9dybXTKlQsm
-# g8q/TaDA0v8YkB/c0ZnxXA/B11hwv/ZdLusdqYAvqqU9rtB6+TlOs3AY8mrlTmF/
-# ekP8yYr6P5iFIGCpapWkxp4GPyHc74JIRS4z4ZuHQlcerUsmEnE/qSLRQ4q/Uinx
-# 61pGzl+rxZBaMisf/idjpkE/wAGHuXTTwFDSgvt7PEnBydnlks2mKd1wfrdy6/PA
-# azFAx4kxuFW6/eZ74teQpnsPQVzr/4nAjeOaco06QEYegJ02TJBuxQHteGicVq+W
-# GCBWRJuyMuRQ/UlTVRlh46mux5zDusSMMRySgWqshbiTr31nEfk+
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAkeapDRt2u8Ba
+# l4ZUkEU3vRxzP6kMA3p54qulvUNViEohh9AtFvDgwshT8weoCBRKMd1jJrd50VYM
+# e4CWwGjk25I5y+jGhns0eIT4w5EJXOwmmAU31xroOuVyQ/YJGroyrp1iPq54Afwt
+# HF5iZiX4vtAXlOMvYpXg++68xq3OCk4Hf9dkXtWcyppdGajEwcuXW0DFn6nc4NuS
+# OtVs453hj0IflNdKhLkmIHqj6qLtgGShYyiOA36sKkJwGMkdq8Ezuk0zzMjEJT/l
+# RrdpBVWHnTMRbxZ8Ti9Y9gudVAik4TU2reI+T39qOU8djOq6EI7sNFUo0UDsPelV
+# XbbtSUPxig1m2v2eWbpjF3H0MLuIvDy+VaoCmbLvJBBHASytKCb/9DxoYuxi5n0v
+# nLTc4YohfBZqYk6pzfs+d+qRDuY2r1x4DKlVCCNeBH+kc7KIs/bt2UfmHAKBBP8Z
+# ND9BYIiGsnxJP+t190XvDzuycWrKkbxFl07KXp3wSwtkrfltJ5tq
 # SIG # End signature block

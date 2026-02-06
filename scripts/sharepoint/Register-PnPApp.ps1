@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,31 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     08.10.2024 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Registers a new PnP Management Shell application in Azure AD for use with SharePoint and Microsoft Graph.
+
+.DESCRIPTION
+The Register-PnPApp.ps1 script automates the process of registering a PnP Management Shell application in Azure Active Directory with all necessary Microsoft Graph and SharePoint API permissions. It verifies required modules, performs Azure login, defines application permissions, and updates the configured environment with the newly created App ID. The script ensures configuration consistency across Alya environments and logs its actions for auditing.
+
+.INPUTS
+None. The script relies on values defined in the environment configuration file (ConfigureEnv.ps1).
+
+.OUTPUTS
+The script updates the Alya configuration environment file with the new PnP application ID and generates a transcript log file.
+
+.EXAMPLE
+PS> .\Register-PnPApp.ps1
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -148,8 +172,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC3CmwzQ03bJyCP
-# MHUB2VFnv47jsKIqO+nJaQ8ZoG6+k6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBPD//kKnj9dAg5
+# z3p217S4KhdglEPF7Jlqg5JxxcqfrqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -233,23 +257,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG0UwlKFAM0oAdRO
-# 1kS+2suUev6mqnfdCIR6VHB25zfMMA0GCSqGSIb3DQEBAQUABIICAA9n/f0siTFR
-# 4hQxtY+dj4bJkf4ZVOsgSaW/rNd6pm4TaEpqPS9cLLW7NAsWi+z0BINdlT1Vkhvd
-# jUABGVGeCqy+bt7/VQ9vh9hxCxeKsb6QzbOV99mDKovNnzs8gek87wsQ5Tq/zd2m
-# 27ai4PHNH/53ygQi0ln1jL0hZzc7SHPxN76rBhCqV/IGCogHGhA5AOY/K47DmaO7
-# v3xPoQxm4/cYSlQb6YM+KZxYjfNXeg9k+ayurTxTtFJSYzpVYG4kKDVVRFq2rPSu
-# DJ29ihXwA2ToRt+PDTQSJMJ4YRtrzRwdu/pjrsizojKK/14exGVJ+E+KaxJrJZXk
-# 9ULrWTMYgV3XMfbJgNO1PJ3PW6Oq9vm090rxv/23Ny+DwUwmnRCuqZXZOzMR0HEu
-# qlxwJxe+fWeZLqhlyXYk1KAE82yE+jLxqERM95SC/BRCmIp++K+xPpNIN6gcL5df
-# CN7Jat0exGDxbgO17bINovtefgL1w4oBVGs3KmCKLPEw6hrGt14N3m9lAvebB4PX
-# gBJq5vXOD/BGNAAgrfwiV0xn17HvX+A0QAqegiCasWFXK70IT9V2kOAM6dJcN5y8
-# 8uruEcWTltWTMEB/qZHylOGPpR8q9gdsiPKj9bXAGrkTshSg/B4i+LNYcQ5YarHG
-# PAl7L98GOfUFdhxzSSJcP4PQ/GhTebtgoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGXTIPJdftanveCt
+# 0fn9D9bg5mISy40VH0j0BRc+syw6MA0GCSqGSIb3DQEBAQUABIICAI8P/kB107C0
+# sO4bxGmdledmxog8NCYyZYjuLIUHpcmS1K7F7xXl50d4q/BusYXUvZ7EGJFAmL8b
+# 3io0/VetBI/XzOjTHhB7qZWYHxBRh5a9OPnlLbUchoBGIyW5bZNSpBDl4z6veRyk
+# 8tZakT1YnFYWTfdrNtlOclh1jkVRXEehNhs6BHWl4CMCyUzgRAZlfqBNn5gz1758
+# 1YObXAnM9FJBItQ+kt46qXiIHBZ1g6QpFPK7yY4UhKwhsmRsOJDnmAPc3aPe8pU4
+# /QfCF6fbt7/4oGF0kBf8ViBzYQJSx1dhSnHFn6cHE90ob9Z0BTLfIf4Wrc+fq8d9
+# ykqy2dEg5qulYGpS2TVPAyjZK4RlSquNmoSYvth/D4F7yQ9rYxP4xkoM9kqrAHgs
+# RZAGBsFQlk8H2KFgnw8bNvwKvjVu1x9fV99QPr+8t6ioOydmREn+baod2J4BbOyR
+# jKXYte3Rbi4qLGMgyMXNmDR2vtPpidEUonANssChhFcI8SrW8leSkI6QRhO0Tzsq
+# cE3xMBpsAViUJ2/Eq9Qhsvi7Z8fBJUxJbYd6ai9w2o0d/s7555WoAam1rP6Dfx5G
+# ea+9uHm9GDBIVOmbS2bEzJAUdBGFs/aQnpZTnzstZFkEApIB3AY/l3QzWi/7lUKA
+# KXElKTA5KKTAjhGSB/m4wtYC4VmV83shoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCHvuh2heVBYh/wzxtldAK9RtUN+4jMBpMTuAGK2b2b/wIUPlJ5JqIdswx0
-# WcnhZ+uxkImcYlAYDzIwMjYwMTIzMDk0MzAxWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCC2LxmavQ/oF5QYCwX+cm1d3ItWkh1MkK5heYZf/mel2wIUHBYVd5RepYPT
+# Y7ZE+Gcp61Aih9YYDzIwMjYwMjA2MTIxNzAwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -354,17 +378,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ILaIBzFkQZUn9rUTHMTmVZQv/uAxniItZbyrTjD5qxa9MIGwBgsqhkiG9w0BCRAC
+# IFEgrUoPLsBMnYvri0fywVw1UZAkWQdSn04t5wCwLbn6MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGANhCyt85REpq1
-# D0iIxI/qupQ03e3oJpVDjnuf27FPZU+nzbODwh7whQfzGqMPEFYPJnce8W6gnt3r
-# VnoJp12GBioJPM74bOgWsTainbKrx/fFP8F0Nq+Xnlr5syXQ/T9+UJnhGy3suZYG
-# EXpUg474aE8EnPGvpmu9Ax/pW9Hp3GQ3FGJwdTXFjMxaooyYv6VYarM/PDa4wdhc
-# s8jT8x/Z+zLR69HMD6MWNIpGAApYXYi9n2FJDpuGnRCht3lwvKC7S6GZgkpqDUVS
-# 1m+0g468mCNRqM5otwwI86bzAIs60HI/uYirofUfKuBYvo4DIpTd+FM9wlkH+nQS
-# ZEYipa2NoMdcHORPchdzYLaqd2eWfjpbvta16eVqTHlUBpryXm+w/tMCyZJMGNp7
-# LDr8b/zIPBhvQFnR/AncgBrB3KwkoW0sbmWTw5QFKcD6DFDmh/8sP8ZET5BSm9NS
-# ED3d8kb0En8uWb5lV4plLF2WIwtUPFOOw4gYKiOv2xC7RxlwTVyz
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAR0zBXy181nuD
+# 9f0u3qj+y8WsemMO35VK+3OkqSeAIhf5PRpuF5UKSJ2dDWEBfVX2CHrKSq7eXZNP
+# Xjs6Iqmh3LliVqPMKkhy/f6aqFx82/3a+z1iNeI/8vfsPWPSCvFD4T/lFqMz9V1S
+# CmQDeFEUX7Jf/eZykZV5rf6HAZb8ErJVo8sXG8xRA36ncslBUkN0+fAH6gGzDbLy
+# h50icksz4a55VaEvk7wHuZWptfrxV+QqEb0g1C1das2WxqLpZsDmnKu361XZLRWx
+# LUFSq8SH3G5LFjddlsUMyuRVbnQGePdj2p/bb9OoH6T4N3tEu2hKoZf+PtfASNIJ
+# ysCQ02HQDa4eel9ZaLwwhZ3D3bpln/Kz0dXhhzca/q5AkrXOUs4q/5Ba3DMTNYjf
+# dN5E4KE8ra6/q3+Kvfzd4Vol7BO8R40blmqY2l7swR2gtES6hNw4tJ4TJOD1TCSK
+# 7Wu+tXzLStVCS1ML+BY5OoEEOKD8Yyfxfyhc3mQyDikVWuVgFrEg
 # SIG # End signature block

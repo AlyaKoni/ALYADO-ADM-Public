@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -39,7 +39,37 @@ Picture sizes:
     SP-S 48*48
     SP-M 72*72
     SP-L 200*200
+    06.02.2026 Konrad Brunner       Added powershell documentation
     EXO  240*240
+#>
+
+<#
+.SYNOPSIS
+Sets the Microsoft 365 user profile picture across Exchange Online and SharePoint Online.
+
+.DESCRIPTION
+The Set-M365ProfilePic.ps1 script updates the profile picture of a specified Microsoft 365 user. It ensures that the required environment configuration and modules are loaded, establishes connections to Exchange Online and SharePoint Online, sets the user photo in both services, and logs the operation. The script also generates a configuration file if one does not exist.
+
+.PARAMETER upn
+Specifies the User Principal Name (email address) of the user whose profile picture is being updated.
+
+.PARAMETER image
+Specifies the file path to the image that will be used as the user's profile picture.
+
+.INPUTS
+String values for user principal name (UPN) and image path can be provided via the pipeline.
+
+.OUTPUTS
+None. The script produces updates in Microsoft 365 and logs actions to a transcript file.
+
+.EXAMPLE
+PS> .\Set-M365ProfilePic.ps1 -upn "user@contoso.com" -image "C:\Images\profile.jpg"
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 # Parameters
@@ -130,8 +160,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB2SCp1NC85WKwG
-# ni67d+AHiczca0pPw2wTroqdWAFOI6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDzNsOJdFvhOhfQ
+# SKDgqDODCL9zjYBXBuwVe3dSW7z1AKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -215,23 +245,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHWN2EXjG3kwy91i
-# 1ta81zC5kLafkfLUwvh45Ta+x5TbMA0GCSqGSIb3DQEBAQUABIICAJ6Z0cncWk8l
-# Rj8Bz9UyTQNLgnbFWbOTj0wTxH6zKjJ7lsCvaYhA0cbyuQwQG56HZYCfonov/CMV
-# rQPshsMAczvHOqhUAgBgbyR5Ec9MMfP1aLk4GB04EGFj+NkvI3LhZW3PNUPCAMsC
-# QnssdxjUJWQG9x0xOibRNkwyOa9KS5FDb7+eB0cOV/3UmEZ3gm/nCRFJfozm3Ukd
-# +jEbzWXqzqV+pzYYOdzLBeKuPE9GeiQqlu8NC7s2+1mRVQOnqVvAuqCicG0J5d5K
-# 8yi8rODRJZE737tkL1a220sjQLy6yQWxbQzff0Pai9AEyzEvmTROkfLa/dnVsTle
-# 5TCFyIP3lQ3WjqDyGqfCvdPuMjcxij5L2esmWDcI6ykTmYcQdZL+TIuLPQ+vMJlA
-# kMoUDILnRbuseP12AqZCu00KCPhowrz0Pswil3TTH00OCZy2jSK9Md1ckYQ+J4jc
-# aHw257l4v2srdUv8oviwcRnAtmERt1VGhzicb8ZBQksAkunGz4AvrhKQf8SZUfKk
-# ZCdnbNJNFi9xpPXNtPg6K6zE5hQjSE8DViodhT/sx/HNsMKKPditokCTKriZOvNB
-# JDYekQbYIJPGahwuF7IOUIvCYjq3TRe4EYpSu4rwhTIFKtEIbEcXu2CkVj3ecITu
-# X9R3zn1tseuFTr9ye08MgjnjC12jj9IVoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJ618/JHWLThhk+7
+# 6gCOsuO8uX6fz6UFuQHZ7/J/O1mHMA0GCSqGSIb3DQEBAQUABIICAKlVIyt/+m/u
+# hpD+jKiwP8VjPOlIzTapwHpDWMTqz8ZtsqQeyPOz0GIuPtJ8dDC2hW1jpKXTOOZf
+# qSHq3teToAvAXNGaYmGVj+2rVA/QtmFPwg+haU7/LJ1P2MasNUgUVWqmBI4BPgl6
+# VW4T2fZ5TQ+BdQlFem7NmetNuw2fziz30YQY18QLqxukhrnGTGwk467EeBV+2Vv2
+# C7rGOa+9mzwnIgwIiTp1ifyZ/PJEPfXVXqoRSI7K/LFLV+CuJwGppi/kOrWKrH80
+# OnOfiJdz+aGptz4qqTt5O3qEymOChLx9QtHUcIL6BDv55pNXHGellGrOv84+cSIU
+# wEx9NdHbjXLF6PADU//Be8a9KbueOao2uJVt8KcV8Jjlkj9d0uWH97D8wOL2upmX
+# g2k4TsLWMKtDStrbBpfFseaBUMp9Mxk3RmIzhxxZsqD49reljR1UU1Z7NQ+XY9SA
+# m999RvK8gtfY7HhACK/RYARRrHAJL6o+8L7nwwYN90tAxV5EaaW7hREtA8hq1DwQ
+# o5r4HBJxs/q8QCfjsbMjhcA0bkKqcU1qrfaJVpzSUAKztRld1TZ0l7KJxMlFD9DR
+# xZurCqzZsVyD6K+dDFzhob+3ci/zp63LDtisrTwdUmtpKJ+NUOWIOZP8PpYCvtgc
+# +DogtKqRntOJcmSY4o+rRlZqxItop5wOoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCD3uW0Y/NCqfLuJ7vVV0Jf+jjrXUBcQadMUpOSjBpvyCgIUNZuvLGVZkBWH
-# mTkmiH1BMiMmfWEYDzIwMjYwMTI0MTIyMjEyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCMAtIvZsMXIDiw/E+RWP3HHsUC9zlOXf6HGciLoHT9QgIUEpQRSyBLVX6T
+# FjL3u74yZo5Y7WcYDzIwMjYwMjA2MTIwNDAyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -336,17 +366,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IJ/yv9jfChKLK3RmbMgiU5ORL1FH+sq8kO3BDCw8LGO1MIGwBgsqhkiG9w0BCRAC
+# IFh8ZkM1ZqGqR/lI2uMyryg/2qltZID0y60q/LeWcIsuMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGACCzYHstDlFDB
-# ES/nAGnZ2KmJY3Mn8ywePrEZmCVmk8cD5FNRiWEDMUA2p2ug72M1S+iHlyDfbJHs
-# /FLiW/bBAm1yzokF7ePB87b7RU89dC5N0NgFDnnT41fHfw9KVvpWHQ1uPgX4svSX
-# jqXDzHvTkfFNDDXxEfO3P+FM+yWXOuNioqp8QGMWdK8AURoiufKbb8orFzwYY8D+
-# tE1lm1pb0kjB7UDRFZoA3WB7C6R3tteiERVAazy7BPuVm3+d84eDFrTTvLHGj7v4
-# pM4Z3HJ4mPhJfgdK2qzu+CLWcMIr0pF9BcT9zQjJoOk8uIaeb4AI13MSO9/Id0FO
-# lAnGffE4Y8pTzqBqVOpukfhEickfn7fTniqrvwhkyfdJkXYKDO0F4+jKClGX5WZ6
-# QQSg6UF0WD0LmjT0PO/qDaU6e18F+RGE46h382t8GDbbbZYJukRxFKXAMXZAUFAh
-# TZEaXzcrkI7WZvk8eSpWNPvVRR2Mvb2dH405TLzX88+oqu3iORrZ
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAhow8RIq2sGKl
+# lfaGxI3EQXm5Os20FrMK0Cjp3XDTUcKkF4HjGLGJrjgKz5mSnooDQ6pffm9iwgp0
+# HAGzDJYgNYu1U39qVZyKOUg/0OJQd+Jyl68eRRnXEumDkwr4f6Q+PLvu0+i3rNyg
+# NbqQEOAregusWnVGG7i9zDccALu2z+rdNtYHyCdu8r1eFMpcc7h1IG7LBf++jF2Q
+# lwe6r3Mf+dzJJtz4reoHwr0HXk8fCJzZ1fnwHTu2XZqesAdT5geAviAeN66gV/vG
+# kzW5s0WeZVFPmtQ95whG7cQTfo/fWK5iox1e3xj7JIAlQBW9dXAtCvDWT9yP9ElR
+# UeWx3AUPeRy+afN56aOSiOVf/YL0vVLTRA2J4oxSlOLI16WXy5oFRoTKs5W/8bcz
+# Zch0tBhJUmf5ELCG3AICegPHeqol+21/F4ZdvuaT4xZ8tjfml/kFMNgfYuHlxNPg
+# XkrGCDNjCqh5h9XnB8y7v11oZEelx1/dV8TSFoIjFL0JScTZNwZQ
 # SIG # End signature block

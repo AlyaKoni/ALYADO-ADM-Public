@@ -5,7 +5,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -16,7 +16,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -32,7 +32,32 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     29.08.2025 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Repairs and restores taskbar icons and system components on Windows systems.
+
+.DESCRIPTION
+The Fix-TaskbarIconsAdmin.ps1 script performs system maintenance tasks that help restore missing or corrupted taskbar icons and ensure system file integrity. It runs essential system repair commands such as System File Checker (sfc /scannow) and Deployment Image Servicing and Management (DISM) cleanup and restore operations. The script also refreshes application registrations and clears the Windows icon cache. It executes the user-level script Fix-TaskbarIconsUser.ps1 after completing administrative-level repairs.
+
+.INPUTS
+None. The script does not accept input from the pipeline or parameters.
+
+.OUTPUTS
+None. The script performs maintenance operations without returning an output object.
+
+.EXAMPLE
+PS> .\Fix-TaskbarIconsAdmin.ps1
+Runs the script with administrative privileges to restore taskbar icons and perform system file and component repairs.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 sfc /scannow
@@ -53,8 +78,8 @@ Get-AppxPackage -AllUsers | Foreach-Object { Add-AppxPackage -DisableDevelopment
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAbaA67RusAPqUO
-# PY1HBCY7MBP0YlAvmlFbUcNwMFiYy6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAXH7STHOV46Dbj
+# B6vVqsq+TZ7rjTIjdkZVqKKrtF5YpqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -91,10 +116,10 @@ Get-AppxPackage -AllUsers | Foreach-Object { Add-AppxPackage -DisableDevelopment
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -102,17 +127,17 @@ Get-AppxPackage -AllUsers | Foreach-Object { Add-AppxPackage -DisableDevelopment
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -122,39 +147,39 @@ Get-AppxPackage -AllUsers | Foreach-Object { Add-AppxPackage -DisableDevelopment
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIINWe6W0j8ctzIiN
-# XQ33+UIHUVR/MkXvwQSaHv6ujW7GMA0GCSqGSIb3DQEBAQUABIICAJ69COUDw1Ri
-# 9mpck6zKgG3GPDArKhx4tGqgtxmHmVOeAvz6hPLwbjVvnnFqrFr49hZ7nZMRgsBC
-# wcmDCh9nBV76NUzAW+0cfqoWbnJg8/8fn/aJn9AmtPJw1dr6dBwSJCXm+Ctl2zW9
-# LpBqnNo9nO9oGAdmYAt7FSLw2B41O0b87qTKDQD//Rwx5jN4ms/AKVQF5OkvM8ts
-# gPVoHbAzRBHV1Fla5NTKi8k1mJIaD2nTjai/bDlWOhnzJ9IGYcNNOJZ5bTUk4BEO
-# RnYIrVkm3ATJPBFNthiQ5v1pHlQw+dwqKTDW3vRnEAAY5dUYQ1n8u3e6RpMDRZW3
-# jejVfdkBlLQGVa5cS4xKoVIZT4id4wKFN7rTF9YB7WCx0YGukS0j9muPPe5TC3O6
-# 96UDPpImopUUnHNYvyAE0uD9NZRCcPfIZrZycTFlUiHHO1G6GiqUDwErs6XXY/Bm
-# X4u2r0bzFDe+DrQMy4/JYiHu6qKgBosK7LD30kvM56SeJXsFT4oY9NxIvdapBzEn
-# RRkrExC+wiMzc5i7/A9yT01AQsWWWmPNc520HRJRUXCsXSuRLhoTeNp5uXEtjF6y
-# ajEKOvTKGu0YYi7j4s/U0hUQmA7zx+3DBbUq9nwyLiPrf8WhW38AdAng4tw8yEwN
-# J68ntGAGdePQHyRsnoDEUpkaRp+HNaGGoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAJk07+a+1DvrIgQ
+# 6Sbk51exwLeWDWh8LLgpinNw/KPvMA0GCSqGSIb3DQEBAQUABIICAIwO4x5BvH1h
+# OB0TmvXQ7YFehmoYHr08bq+fRszO3QCKD8kelX5UtgED+lHLchnwqF+P9Og0gDrG
+# poicsmSyGviIFWPMTsgenSMtNMgMyT92VR77ytJcjSY18KN3Z8TNOYdKVwjBEvAe
+# wKuYXSoZs0BjQn3BxXfro3qk9orC08RDsU5fczhqw5O9UpgrZJ2+sfjV0RWt0W04
+# 1RiauPL+GnyHUeRB3e5dreEoRwzsv4XGe5Mobs/QqT3ywlFv44EVrr/6eTj/wTFQ
+# j1HS/RFBvjfP1HkGz1Wfw2DWw9g2SD57wLZZ6Ll0HQ5L9SZ78QCpF0+r54EOpbMI
+# bBapqVh9kMfoZDdllQPqWG/FzVjLpzkvhWhOM73Xew+d+w3X7B0HPNmqMPu08LcN
+# MM5w7kOqc9BWpVxAqREH91Bu8pGJPnvMJAOmywc3hnw6ZaO8vwnZK0L61Y1B+ghB
+# rBjuZKbOVtuX08r2IdGlLyCE+1rxeXRaWNc5mZGfzNxUEOT2KxGxt8Di8zsleGum
+# wOM/o9emR+dflKtVT7MN/jdSwUniMBX2oSrE5bt46Tt/Z2KlG8M9ZSlp/UZXFGbP
+# /igXQX81eeh/CpSboaeXEmaSV0m0+N7GjFGgPE1ia7Hs6V0SRPBT4fp/j0MB+/jo
+# Zfcmz49PCGuPfJcqX+h2qppZYPtSNpvhoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBKWFV5sCqCKZ1jTjgFomZYdyOz1hYY5puEckteOlIDugIUCaWLBD1BYj1+
-# 6BNGwDfFC/2SUeEYDzIwMjYwMTIwMDk0OTM0WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCB03KcpwaPwj17N36r4VgJXCiqcnNM1yqKVMmyHGeGmnAIUTxFCi0f2C3/m
+# IWPS+7Bn1YM9QM4YDzIwMjYwMjA2MTE1MTMzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -259,17 +284,17 @@ Get-AppxPackage -AllUsers | Foreach-Object { Add-AppxPackage -DisableDevelopment
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IK5s/Wyv/V3Fk/YKd+OJzHFeIXqkk6Q9biJfFeJZW5wOMIGwBgsqhkiG9w0BCRAC
+# IH/YLtkaC+KyzOjxalIHpB/LIyz460oCW4chcXTOm6UZMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAfC7J1VIQ83Qr
-# 94H9VkYYmuaY06QkjwI+vxiK8wSsgfd/Vt+mMeT6fAIWCpYYeRHwkcf7pbcFmAIs
-# i35zSXCE18dTstQiBYS49Jv70MHItn9NGSo7Cj8prWNRNs0I2PGpv6jlmOXoftwE
-# Akl/ax7svKUAg8u+mJeq7mShNc/DBjhHIVmE2yPczmBbewtq//7/bDoVDnKO0haz
-# wSbYaqY5ODWtiDR7Mlq9pryarH5munx4S/ZtxAX8PwEpN4nmZ6OA4Qd8i0YWARyp
-# ZOZ7g0i/M90Es5ip2UbpbWSz9lGNcBSeUdY4nIn+JuBHgZ2c1a5g/HHSrkdgeVxn
-# IsAS+/V8bs9qbYlLgoB8rc3u7Ec6SVGJxw2S1VfyU/xVODIZFPfvgimRIPZv2JQX
-# tnmf4yyr8GJnvR3tS9+/64bCFsYuMnISJZJYbN/o80fi7/pLBGBGRoL4g+wgmqrU
-# MNMJKkkl25f7Yt1GZs9pSV7Vy43wkZmdEPivo3ciAcpdYOEoPLCI
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAdXGt98eW+jud
+# OvCn4EypHxmGnmasx5Dr10RaLf9YC6d2TNq8RqrX9kgRooZ1NKB6zV5Wxu0XB0Xp
+# PYBBaF1Pk2heBJktXWcEg7Ix+nmQY7QBaRmqVGvS9FZrJZw8tnxDOxYkAiC7+6ab
+# H8bDDXNwiMEn+qvj0h8A/0KjIpoaVo9IP3T/helmvQI41tbULXixPSTMFNm5dabq
+# jMKCeHgp71Py+QdPPoiPpThNR1Alq47vrdHnU94TqxUKMcFlavIyym64UJeqJo3s
+# aR6iVt4EdcBFgjsTkmasApEgQvLFFvWGleOkYFohz0H///G3sa/VUMHVjr/r8U9U
+# q6yUKBLfmXwNhdt3Cuy0Tn7mAdq9Bs3CNZLoz+5zSLUWndystPl0Gm85SYhBNnjs
+# 3Bhyjp95DA2yLTrhnHX13gMnXxUaIKJMZ+3aEGmFZxz1S6BjdySwcXAXkHyUwj+Z
+# k/Mh8SijL4C19rotAb/uj+FEwDeZHymeEw9rXmtMv8pOEkauzYzd
 # SIG # End signature block

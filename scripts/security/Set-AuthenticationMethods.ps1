@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -32,12 +32,49 @@
     ---------- -------------------- ----------------------------
     07.11.2023 Konrad Brunner       Initial Version
     19.03.2025 Konrad Brunner       New param configureAllowedKeys
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Configures authentication method policies in Azure AD using Microsoft Graph.
+
+.DESCRIPTION
+The Set-AuthenticationMethods.ps1 script automates the configuration and enforcement of authentication method policies in Azure Active Directory. It verifies and ensures the correct setup of policies for authentication methods such as FIDO2, Microsoft Authenticator, Email, Temporary Access Pass, OATH, SMS, and Voice. It also checks and updates system credential preferences and authentication strength policies as required. The script uses Microsoft Graph Beta modules and requires appropriate permissions to make the necessary modifications.
+
+.PARAMETER minimalConfig
+Determines whether to apply only a minimal configuration. When set to true, only essential authentication methods are configured.
+
+.PARAMETER unsecureConfig
+When set to true, enables less secure methods (SMS and voice) in addition to standard authentication methods.
+
+.PARAMETER conditionalAccessEnabled
+Specifies whether conditional access is enabled. When true, system credential preferences are configured to exclude groups lacking MFA.
+
+.PARAMETER configureAllowedKeys
+Indicates if allowed key restrictions for FIDO2 devices should be configured. When true, key restrictions are enforced with allowed keys; otherwise, restrictions are disabled.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+None. The script writes informational and warning messages to the console and the log file.
+
+.EXAMPLE
+PS> .\Set-AuthenticationMethods.ps1 -minimalConfig $false -unsecureConfig $true -conditionalAccessEnabled $true -configureAllowedKeys $true
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
 Param(
     [bool]$minimalConfig = $true,
+    [bool]$unsecureConfig = $false,
     [bool]$conditionalAccessEnabled = $true,
     [bool]$configureAllowedKeys = $false
 )
@@ -83,35 +120,56 @@ $VoiceAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Whe
 $EmailAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "Email" }
 $HardwareOathAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "HardwareOath" }
 $SoftwareOathAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "SoftwareOath" }
+# $X509CertificateAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "X509Certificate" }
+# $VerifiableCredentialsAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "VerifiableCredentials" }
+# $QRCodePinAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "QRCodePin" }
+# $FederatedIdentityCredentialAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "FederatedIdentityCredential" }
+
+# Checking temp acc pass policy
+Write-Host "Checking temp acc pass policy" -ForegroundColor $CommandInfo
+$params = @{
+    "@odata.type" = "#microsoft.graph.temporaryAccessPassAuthenticationMethodConfiguration"
+    State = "enabled"
+}
+$dirty = $false
+if ($TemporaryAccessPassAMC.State -ne "enabled") {
+    Write-Warning "  temp acc pass policy wasn't enabled. Enabling it now."
+    $dirty = $true
+} else {
+    Write-Host "  temp acc pass policy was already enabled."
+}
+if ($dirty) {
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+        -AuthenticationMethodConfigurationId $TemporaryAccessPassAMC.Id `
+        -BodyParameter $params
+}
 
 # Checking mail policy
-if (-Not $minimalConfig)
-{
-    Write-Host "Checking mail policy" -ForegroundColor $CommandInfo
-    $params = @{
-        "@odata.type" = "#microsoft.graph.emailAuthenticationMethodConfiguration"
-        State = "enabled"
-        AllowExternalIdToUseEmailOtp = "enabled"
-    }
-    $dirty = $false
-    if ($EmailAMC.State -ne "enabled") {
-        Write-Warning "  mail policy wasn't enabled. Enabling it now."
-        $dirty = $true
-    } else {
-        Write-Host "  mail policy was already enabled."
-    }
-    if ($EmailAMC.AdditionalProperties.allowExternalIdToUseEmailOtp -ne "enabled") {
-        Write-Warning "  mail policy setting allowExternalIdToUseEmailOtp wasn't enabled. Enabling it now."
-        $dirty = $true
-    } else {
-        Write-Host "  mail policy setting allowExternalIdToUseEmailOtp was already enabled."
-    }
-    if ($dirty) {
-        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-            -AuthenticationMethodConfigurationId $EmailAMC.Id `
-            -BodyParameter $params
-    }
+Write-Host "Checking mail policy" -ForegroundColor $CommandInfo
+$params = @{
+    "@odata.type" = "#microsoft.graph.emailAuthenticationMethodConfiguration"
+    State = "enabled"
+    AllowExternalIdToUseEmailOtp = "enabled"
 }
+$dirty = $false
+if ($EmailAMC.State -ne "enabled") {
+    Write-Warning "  mail policy wasn't enabled. Enabling it now."
+    $dirty = $true
+} else {
+    Write-Host "  mail policy was already enabled."
+}
+if ($EmailAMC.AdditionalProperties.allowExternalIdToUseEmailOtp -ne "enabled") {
+    Write-Warning "  mail policy setting allowExternalIdToUseEmailOtp wasn't enabled. Enabling it now."
+    $dirty = $true
+} else {
+    Write-Host "  mail policy setting allowExternalIdToUseEmailOtp was already enabled."
+}
+if ($dirty) {
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+        -AuthenticationMethodConfigurationId $EmailAMC.Id `
+        -BodyParameter $params
+}
+
 # Checking fido2 policy
 Write-Host "Checking fido2 policy" -ForegroundColor $CommandInfo
 $params = @{
@@ -246,45 +304,51 @@ if ($dirty) {
 }
 
 # Checking SoftwareOath policy
-Write-Host "Checking SoftwareOath policy" -ForegroundColor $CommandInfo
-$params = @{
-    "@odata.type" = "#microsoft.graph.softwareOathAuthenticationMethodConfiguration"
-    State = "enabled"
-}
-$dirty = $false
-if ($SoftwareOathAMC.State -ne "enabled") {
-    Write-Warning "  SoftwareOath policy wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  SoftwareOath policy was already enabled."
-}
-if ($dirty) {
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-        -AuthenticationMethodConfigurationId $SoftwareOathAMC.Id `
-        -BodyParameter $params
+if (-Not $minimalConfig)
+{
+    Write-Host "Checking SoftwareOath policy" -ForegroundColor $CommandInfo
+    $params = @{
+        "@odata.type" = "#microsoft.graph.softwareOathAuthenticationMethodConfiguration"
+        State = "enabled"
+    }
+    $dirty = $false
+    if ($SoftwareOathAMC.State -ne "enabled") {
+        Write-Warning "  SoftwareOath policy wasn't enabled. Enabling it now."
+        $dirty = $true
+    } else {
+        Write-Host "  SoftwareOath policy was already enabled."
+    }
+    if ($dirty) {
+        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+            -AuthenticationMethodConfigurationId $SoftwareOathAMC.Id `
+            -BodyParameter $params
+    }
 }
 
 # Checking HardwareOath policy
-Write-Host "Checking HardwareOath policy" -ForegroundColor $CommandInfo
-$params = @{
-    "@odata.type" = "#microsoft.graph.hardwareOathAuthenticationMethodConfiguration"
-    State = "enabled"
-}
-$dirty = $false
-if ($SoftwareOathAMC.State -ne "enabled") {
-    Write-Warning "  HardwareOath policy wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  HardwareOath policy was already enabled."
-}
-if ($dirty) {
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-        -AuthenticationMethodConfigurationId $HardwareOathAMC.Id `
-        -BodyParameter $params
+if (-Not $minimalConfig)
+{
+    Write-Host "Checking HardwareOath policy" -ForegroundColor $CommandInfo
+    $params = @{
+        "@odata.type" = "#microsoft.graph.hardwareOathAuthenticationMethodConfiguration"
+        State = "enabled"
+    }
+    $dirty = $false
+    if ($SoftwareOathAMC.State -ne "enabled") {
+        Write-Warning "  HardwareOath policy wasn't enabled. Enabling it now."
+        $dirty = $true
+    } else {
+        Write-Host "  HardwareOath policy was already enabled."
+    }
+    if ($dirty) {
+        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+            -AuthenticationMethodConfigurationId $HardwareOathAMC.Id `
+            -BodyParameter $params
+    }
 }
 
 # Checking sms policy
-if (-Not $minimalConfig)
+if (-Not $minimalConfig -and $unsecureConfig)
 {
     Write-Host "Checking sms policy" -ForegroundColor $CommandInfo
     $params = @{
@@ -307,7 +371,7 @@ if (-Not $minimalConfig)
 
 # Checking voice policy
 Write-Host "Checking voice policy" -ForegroundColor $CommandInfo
-if (-Not $minimalConfig)
+if (-Not $minimalConfig -and $unsecureConfig)
 {
     $params = @{
         "@odata.type" = "#microsoft.graph.voiceAuthenticationMethodConfiguration"
@@ -332,25 +396,6 @@ if (-Not $minimalConfig)
             -AuthenticationMethodConfigurationId $VoiceAMC.Id `
             -BodyParameter $params
     }
-}
-
-# Checking temp acc pass policy
-Write-Host "Checking temp acc pass policy" -ForegroundColor $CommandInfo
-$params = @{
-    "@odata.type" = "#microsoft.graph.temporaryAccessPassAuthenticationMethodConfiguration"
-    State = "enabled"
-}
-$dirty = $false
-if ($TemporaryAccessPassAMC.State -ne "enabled") {
-    Write-Warning "  temp acc pass policy wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  temp acc pass policy was already enabled."
-}
-if ($dirty) {
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-        -AuthenticationMethodConfigurationId $TemporaryAccessPassAMC.Id `
-        -BodyParameter $params
 }
 
 # Checking SystemCredentialPreferences exludes non mfa groups
@@ -437,8 +482,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAwvmW1HJDF24Ff
-# WCSBhlO7Lp1BXv0w+iqBzLRopKthFaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBU5yCl6Cq5VpZS
+# /QNrfHYNpt3e+CE3oivuKSd6m+F526CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -475,10 +520,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -486,17 +531,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -506,39 +551,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPjFV/Kau2wQ/G8X
-# 9q1paNUjZ0Km6IEvcLdf33rX01DXMA0GCSqGSIb3DQEBAQUABIICABKQAZhUaJld
-# +37H0tRH/6QXHhiVol3dxgHU5gFWlFmjMk+Igtcc4xALC0ZM1Pmcpmjh4iHWk76L
-# YqsbMj8rrfzZJeozM0ovQTCeJX5oRKPSqrkRk6gxqP8k3LOfmW6//RTZaqgRMtmo
-# 6Piz6hX7mXv8tDe/8ru+1mi6HNTr5fgFlLDY9GT4vjaStYNHUK1vUkGc4uyMGvUV
-# LknKG1F0tXQ5IS7qpg0zLP0sV5HRVo9b8AQSfwB3uvq/qiUqXf5LzyRfk1AHm819
-# PAKzGBIvpog2g+OqWwe/PsarBeGBK65cGVK724ZkO5MTdwMHwnVa4gPH4kHdZ1wp
-# mjPbEplpQWIHBV7YoHjNjjQ4CNRklD9eIZwuDxWqRX8WSfqMw9R5HEg3gx+Tvg0D
-# eEp3fcpBfHSQxsH8R+j3/WnBxAgWju4A/ftRODPMFn6fJiTFAbDt6b6ctdGogjUG
-# oudh1MJGEfMOunj92hkb0CwBTP0Mkd7IJr+wAwcWpSb9zM8e6sMs1TXXHc3zk3vB
-# jupgJuH8wzln+BY6bVwnC+3tkFTdFVF9IG7U6GvcPG4cE4CkiDzYWXfp4MYeZemc
-# MT2hpfxpW7bZ5BED+c7HMpJCtG9yp7PpoEDHfB5iZlvYzudMUS6iCpA+Zhj6+9TX
-# Zrc4hEIOfKhK55P+/QGB+ASTWDV4W8dloYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGMH6Jwl3aXZuaKS
+# zSMdzUHOVEMyGRHe8hE9JkULTxJcMA0GCSqGSIb3DQEBAQUABIICAFwxU+2IRkl4
+# CfCxy+LSRbGf/E3iXQSxYE7g/L8jqiWCTNSDNsLXCgO2O9G3SqXHJUCFTdwlCLEa
+# suWxyBquKJLNNYigkNi6vLKTZjrfTW9p/h55HVxzazfde7y3O++LqXV1KPrRdx3q
+# RUKvpY/FZMygujTP9RaVuG7EQMkYQYooPfp3t1uz4i7GiWRGVu1WrGyCJG/pu9yZ
+# s4jeP512ndbCVk4Ii1aQDfRofZawCUwquFsdnReS21uQxZA2rEZwYleSE8SV3XhH
+# GMLtIJw05sw9+TuiVu6YTU8Tf/gKC5tp9mLGueru03IBnLgax2Sgzk+r4Ki9zjo8
+# VGZvBkW5RRu4Syai4VtpviIC0b1iwY33NlVEzkO8QlyKuah7RGODuKtsn/NYeDCV
+# OsM3tqTf0NKBX4xe8TFCVNAyu78wIXYz+bG/V7/usfLQNswqTHP+PVO9VdOcwrK3
+# QivUyvvdoOrQeGJHoSTaK3jAqh3iYrCzEmUbF6f4BlBRFdEoUk25N4AlJXqMz6Bt
+# CUPG6HR8Th2lUN684zJhOyIVPNAHbZH9tLqVh33CZQwkLkV/ZVhp8eiqxa0KGQ8/
+# /WpyZ+Ddmc2JsxDdCZcdHtAwwEkv/lgvWEXYsYZUan7h28QYlQjECP4EuA/yXI34
+# hiO+KucxEW016RgutLPL8ct3yciSTR1ioYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCA3fuXbEL5FHXw1YEnZQkCCg5XTnaAP64tui1ecKlSL7gIUTR9WZY5SKyyN
-# fvNQw/QPIJX/E3IYDzIwMjYwMTIwMTAwMTIwWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCD5c20T/ghzHTEXW6B40YgFHVdwPXq6QYM3JGZzpQfWEQIUCwRYZGpKDCce
+# JfLjb9KrWicqqIIYDzIwMjYwMjA2MTIxMDEyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -643,17 +688,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IAOlaq1gq4ixALevQPkTo2nJUEdWimn86FhUIsD7GoRPMIGwBgsqhkiG9w0BCRAC
+# IC4aQas/fALQ/QDU1DBrultYaVOoeGnLe0KUofPTsNp3MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAXqGZX6kuon0Z
-# mpi9PVtt40PSPFdWcfLfOFnbGary1tEztRBS8SXwLnxEvz4AeO1v3EnPg2cxJWhg
-# KSIYbXQokvkYf19gD/HOlOvo/OqCeK503/PtGVZWIx4aP+SUE2Mp4m6HlyB6QhET
-# aUfZraxHkB/XInneMdv0fSvmroA7jAKXyr+oCVXm/Mm4Yl+T+DWnH8JUQqm6KlZK
-# lYsf+vDyaMROrj22/pnzoI8+8jk8lU8MB5e7E6p44BPQUnUalL/3leT4UQYgV1qm
-# wuSE8+sZd1GcD9vfchxC0Qm6LXn4ZS1XGJv1b/V/012Zlv4hpxjV3yFsyyq5svHE
-# pjZiwAP2XWRCfcnXZjrtcQUc5xML7w71pdQk3Pl24oaD7C3MP4o95GTuwHIOEk1x
-# 5N9iZ2pN6It14TYxJkMUHCkiredDQWBshecQIYFyE83hIDpfzdhWDBVQ2mnRYWZg
-# L647n10A9FTbLyKhCttwzk5ubrJeW0iK9RH0VaP66MvwbrrTDb/B
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAl76FR/LQO/fd
+# TC6qD7IHM+wNbBDqHLIjtHP7LvqC3Aw0qp/jSDr9CEJ+6N064PmAucNKdEQiD9Ps
+# qGxILqosDwxyuhSYK1yoetZggRvbZYBKfL0BhdkjwFo1dJBXCYnYrdVzSRU7FozQ
+# Ytd82gZk3FadnOSKidx5RgKnt0mFowhRZ/ftN6sT2Ely7RbXYWCOusE3R93zYFw9
+# UANgstcXxb2LSyb9mhRAG81saPTSqqZUXsEFEgDNWjUu554ymFPM+biwMG4WnjBr
+# ugMrCMKyBkG8V6HZvN674qyak4ohef4G4MYEEaH1j9vslZwB3HoN+Okte+M/Pzsm
+# GX977Y/VZ0nEUimgOYb6TH1fheO540/T4W4E236eJ0MwTU+jwxNM03khTKBsovqq
+# yTFVeiKKJ+odDahtZzjoP0OkJg33QHXFcr+2vwSKUQiNPKhlu07B788K/aiL9sPF
+# 5gSYQiB7LYIZiGrFbbz+fM0FctVN6w6O8Q0B0uqb19TZH+0YMKV1
 # SIG # End signature block

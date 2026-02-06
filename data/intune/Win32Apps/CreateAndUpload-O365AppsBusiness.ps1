@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,6 +27,38 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Creates, uploads, and configures the Microsoft 365 Apps for Business Intune Win32 package.
+
+.DESCRIPTION
+The CreateAndUpload-O365AppsBusiness.ps1 script automates the process of building, uploading, and configuring a Microsoft 365 Apps for Business deployment package in Microsoft Intune. It checks for existing packages and can reuse them if available, or create new ones if not. The script supports handling of same-version packages by prompting the user or overwriting them automatically based on the provided parameters.
+
+.PARAMETER reuseExistingPackages
+Specifies whether to reuse existing Intune Win32 packages if found. Defaults to $false.
+
+.PARAMETER askForSameVersionPackages
+Determines if the script should prompt the user before re-uploading a package with the same version. Defaults to $true.
+
+.PARAMETER overwriteSameVersionPackages
+Indicates whether packages with the same version should be automatically overwritten. Defaults to $true.
+
+.INPUTS
+None. You cannot pipe input to this script.
+
+.OUTPUTS
+None. The script does not generate output objects but triggers Intune package creation, upload, and configuration processes.
+
+.EXAMPLE
+PS> .\CreateAndUpload-O365AppsBusiness.ps1 -reuseExistingPackages $true -askForSameVersionPackages $false -overwriteSameVersionPackages $true
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -48,8 +80,8 @@ if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBllfC0f76Rqlh1
-# FrZNOZPuMzBBB94Fw6+oemQTUa6RXKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCANGNKwOQT0pyvn
+# QamUhYaBwHmXCYV+uKNLXg/ICsWsN6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -86,10 +118,10 @@ if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -97,17 +129,17 @@ if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -117,39 +149,39 @@ if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILjGDrX0xd5mn+3K
-# /qIWopMizF7vN80gOR/on84jiOr9MA0GCSqGSIb3DQEBAQUABIICAIaQqvB92NEM
-# FIm69lTSXArelPJTH/YMLbMayaR0sziAkBV1H4HQYNr7pxIQ/vjSGjFMNY6Cdmdh
-# 7Wbc4WhahABazCHXEeKh1shEaU6o/110hZJ1Mp3dnRBjq7HJ0o8eNRbecAwbXmAR
-# L4cZAvhEg5zYG4X5UgP4NFJ3OBqofsWpFmhRr/f+8VR/pA7K7uxVZcVy96lGoCog
-# HiXyL97Q2cd3YhyYbqrG9aCQHjm4139+jX3jDC6OfINgAN727ngoZt0Bv1E7yJ/u
-# kK64DHLAUgkccyMIlRWuw/M8yL3VCaktmmqyaqFM9IcKaf/sEcdwDBzKyPt3EKe7
-# LKepb/VMRgIR+c5JLFCnLMLKiQngM3x6sxMLoYGvZKIrP5y9/92LhnJcWOAztg1Y
-# pTEqA6SYVpDFRz+oy30C0nXXOqGSNNkfuxwj2tl64OtTNnnNdJgyk0RzdArE699r
-# 58o+szQjkIWXzsYPHG8q/2FougJnRqcWXSEga0okuW0RtdZZgtqkwtbL/Y/umvRd
-# l8DXxfj+OiJ9SU+kpofD2xw2zwBsCBmCZE1oUgbZAFVDoQv+v5HCpUYDT7Z0hs6G
-# 9AX3HPPNAa6B0l0PAL21ED7qn6Hy5AAEBLwv6tZY5P2MwImpHLiBlYih6yWt6tr7
-# e3eTEu8ZkLjSy6wTeCJ8kuFQzp7ZCthOoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMLnfHzsZLrvK1js
+# n8HrgLyX8WToSvEsvJByIVI6v6a9MA0GCSqGSIb3DQEBAQUABIICAGuE+bb948BW
+# OrCjiQ8HN4tXxpvbL+0DdA5xHwBZlXCvCKCqV9cd/XGIFasl8qxosjjzPLV0U0/I
+# tXmlqEwsGHimpEDvBzSfRT1S8+3w1G6OEeaQ/MeQNUq11egYBhvKYIpdT1XH2JC2
+# 8Q6ZeVqun08v4TudW+/CVb62RJ8mA9zMHtpLiQHfWEyTCN4Ufq0EnlzUbCLuudXx
+# mJwsNszBSvmTh8USfQsMFxPrdZh5DO5tn6/LjQN5yC+lZdDrEXrEAH+Do2I0Urc/
+# W+Y2YCJAFSK6kU5A1qxDate297ecDFxHpiAhoHn/Ut/48+uuYkoixa6ES8eiS9sK
+# SJbdu6eDnX5o317GH7Yxbnwisxesr7IWHDYaw3PCXCS+P0Dhu4I8PW1is/suvDSF
+# NDlolrZzdACFchYN+hvbV4aXZkKLn5+IPyj53TYE+NROdGPgPKGMYVYGMLP9iRTV
+# yRr4LU9XKK/uJHyJPmmHNmwFoai7/45mGrmM10+F5pcGTffLMhjOvBOZPRTmJBlk
+# t5T7YtlUKj1cddPrlZDleygujgaKQTQRDgu83jZnKO8qIE6j/q9o6fx9aGiDivWO
+# zhI3z++6pTnOSEn+ER/bxq8xbb9e5cYM/lQm+xxT6S9XgjsCS5SIxgEw/i2tNM7w
+# oc5J4yKPrxjxDQsoPV/GqsJp1HeBFquooYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCm74oIrPvhj0lZe6+7NaU/U/ye7dTQf5I09rCV8O0+wAIULynsg7xyuvH7
-# 77tEsI4eE0AyPfMYDzIwMjYwMTIwMDkzNjE0WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCK5UTYxqi8WqeiieDeko2GCtuaExUcIa/z557hfPdn0AIUJcVF5i7btUBJ
+# W+NM0bJHhTSNKl0YDzIwMjYwMjA2MDk1OTA2WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -254,17 +286,17 @@ if (-Not ($reuseExistingPackages -and (Test-Path "$($AlyaData)\intune\Win32Apps\
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ICoWoPQRQD+lX2lkD1zDxzNTeblhx0YSUuR5gLzXUq7jMIGwBgsqhkiG9w0BCRAC
+# IAYcdCoSG8UOaLEHnc/Cr/k72hmcKXTQEaX/gs6svd9uMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAhnoTp1wi6Pub
-# O+2FhjEyxGGIA1MoxaS5flyNL1OhUruAVpwoCt57YRSalvDm/2cKXWqFN2uT8w//
-# ACYhvHF143Z4CB54A6Lg6voJ00L4Lv5T93A+FZf4m92YkdYxH0o2nLkOpRBcCsxB
-# WnfJbghXy9qWVX1uqEwz+y//NcOy+LAjpwgOtoiE28zf/vu3d29Z0RnA9nOrBX76
-# wWYM++/lyHeCmp6nEXjulTmfwIMHu6AS3D3H2C0CBukV9+JKwONfJEXqoYDcffS7
-# 00b2SB3CRorktSyne7B1ZcBOjoy/kRSk+Wn83JDkVAoBYykn38m/GgbAVURUSUWw
-# N+SrhN3rzbJF4+mmzdcv4kA5Rj7hrfrZpcK+5Pa9cSL32eEBV+sgkfz1pF9uaZ35
-# NuQd1nvR4v74zNqugCGkzg/DJmEKVwPXb2CvVyVD/O5AJzfBWHCPMtgSiT3A4/qo
-# oOuuLDFg5/tJGAlp5oNMbiH3TZwHObq0xlwmddkPga3tfh510Far
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAXntxn3q4oZmZ
+# ImeuQgM9H5IYotMU/LdlJIQG1u6pimbB2/l1Y3agoAeFf4cY6PJbMcf49iqe0rLg
+# hADm76NRCpVxVWv6lcNZM8EmDcIV22RhF+WVNaq2SvXrxscUfJ/po3PqQCL4MFj+
+# TqEPByMr2LnT5ZGCE8iDQhHDWxvSkY+DP9khe+BzDNFZ9KZWGlA6weolKUnqj2Pi
+# dq56ZFHejHzZKFVOKPiTZGwI/5v187y6UDJzUidRiIbCKGwGwVx9aY87PrzK0e1P
+# G0AQMgDTiH2zHQt7Om/ZTme3WJtzI+C5DdPjRoKKNDVOPzAf0J2XTWIm0DZlpMpN
+# jrHp+CsoJYOWcQQ1UUfMO1EiE+QIjSP3Fey/YK2+NGzvPnmqpb4kmawxwsHwsTZn
+# ibAshibwjh64FbGJbXgYqaVrcgpVK+RYieB4/s81++frHFmbEAV1HLo9Ms2x+Mur
+# n8fBErV+5D7YNX1v/aTyNj1qV2DYR3/FDf4L5ZO3XGzCiIOxLmaB
 # SIG # End signature block

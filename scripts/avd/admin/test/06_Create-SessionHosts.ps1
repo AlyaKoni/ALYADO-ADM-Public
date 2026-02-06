@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,37 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.11.2022 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Creates and configures Azure Virtual Desktop (AVD) session hosts in a test environment based on the Alya Base Configuration.
+
+.DESCRIPTION
+This script provisions, validates, and configures AVD session hosts within a specified Azure environment. It sets up required Azure resources including resource groups, availability sets, virtual networks, subnets, key vaults, log analytics workspaces, and virtual machines. The script supports domain joining either through Active Directory (AD) or Azure Active Directory (AAD), installs required VM extensions such as diagnostics, monitoring, dependency agents, and antimalware, and configures FSLogix for profile and container redirection. Custom scripts are used to install and configure AVD agents and bootloaders. The script logs the execution details and ensures that all required modules and contexts are correctly set.
+
+.PARAMETER JoinOption
+Defines the type of domain join for session hosts. Valid values are "AD" for Active Directory or "AAD" for Azure Active Directory. Default is "AD".
+
+.PARAMETER ImageOption
+Specifies the image source for the virtual machines. Valid values are "Image" to use a specific Azure image resource or "Gallery" to use an Azure Shared Image Gallery. Default is "Gallery".
+
+.INPUTS
+None. The script reads configuration values from a preloaded environment configuration script.
+
+.OUTPUTS
+Creates and configures AVD session host virtual machines and related Azure resources. Outputs are written to the transcript log.
+
+.EXAMPLE
+PS> .\06_Create-SessionHosts.ps1 -JoinOption AAD -ImageOption Gallery
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -934,8 +964,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD1xUk0ey5Cwmk6
-# gDkcn+AIEYkIZuMGTGSc/4CJBeX+DqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDkM6Imylx6iwPV
+# 1dXREkyahrcam2SOPkhd9b75ionQqaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -1019,23 +1049,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEErlK+xsRE85w6/
-# Q7qbFCNdVPLKBkHq6I0nWq9QflnvMA0GCSqGSIb3DQEBAQUABIICAD4cVpfb2Zrt
-# vRy++pPOG1EUmzcwrPSh7Lcfdx8bPg5wZ+r0om1SXYmkHgiTjm5bP5htQUT6yEVJ
-# Tk3HWzfVIe9+KwtkNz2opVJLnz/btVuMWL4Ymg+nHfTVg3zMi2PL5J9TPqkpYV1j
-# ETUt1U4PbZWf4fwnwT2iMdq6vV7YAboy6uWFgszHh74r8C32qQOTTJFNR/9OK+h1
-# HApyGbryB8ep3tQM4oC6KK7B6DN08yrA6alEQemz6fwRuFXy/fLPpxuFkv+Axrte
-# u5+l0OcrY2cVW+Sq4bjWn5c1E5RsDy3pHDr/B0+dJZl7waGGTbPNxcUG6Ceo9Yjx
-# U0SEIrLWXCMOBFHtKmPhe5K3Wxo9anEwPWqvXxFHBlPChJaS4cl+o2JrgA5VNKjp
-# tc6DXdHDjb0XDCOFEBF/0l1j4jQ7DaLyvKkKdFAvnDoavzhV978kG4g162NsRkOb
-# jm3+rfqU9oaHVx7WyvoH9k4gvufNy7JzO3XbKwo8gEHix0cvSTAGOy29Epow+EDa
-# +ZKUVWSoTo961UC95k+fyAYfd/NYkAN0WLPI11UKZun+BiQXZqAM6t+rD+KNO7V1
-# MKYj7H4Pj6u+xyX9qhnQ4Gc67xDOI0y0SsebYKbxdWMI8ECGH9TTGouRPDAjyUI7
-# KeHmnMFxeaIQ2ZO56aQc3YXr8oTK4VMaoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGr5oWY9+fQ3fr+C
+# lbs8NcEsOsMC31nGYx5enNW3w5R2MA0GCSqGSIb3DQEBAQUABIICAA9JZe3SwxyH
+# Re3k06mIH3VTKAwKNci5jpeOgGQQJqrS0EgMzGxCQDUyt7GwaFEbcqLfYAi2icC0
+# PxwDddu2KSTTrzLbm1VIuYlSIlg0NIs2+Dzu6Tp/xAo0kWyC1JfbmR5+MV5JqQOX
+# BYVJw24389wdIT9k/czXh97Pc0/mWrObKv4qJqOL3DlkL66RHTgSKmedz3WdIvCe
+# ZIpNPm+lVe9c0HYqFvK5KxKQv4pNqlJnnTAYqZUF8MH7rnNlgcAjzQ8A51O2XKRf
+# q2FeixHvy40Mfl75WNoXfvI97SVgSFAT5cZ0lbSfecA+ZrOT7/EwiXi/DENdHen/
+# S++e4TDyyko80Lb2fPiid6uUzg5Y9Z5uUJIoIRD5nJLMFjumiylueTJAAnt08OlX
+# fNbIm8HOeNilsOM3nsLD0u7+MKKetqENN2hQikJ0RljT370IuhoXzDGKMd/+MWXp
+# nnLoYj6QBlXNi+tIt261C3cIO+BWFE8QffuPdJ1c60v0UZuMQeFspMXwikiDtcIp
+# r2hIVaNrQ7t4kbtx1qY/70RhGCwEW1Xe5VG81Ku8Z+nyeuEtVWM02rrT0E/gwt43
+# rdDMUpKQLr07iXuICqsBVlqrCNAVFHODX1Ht81wAY7aDdwwqdGt4gLhGhS+RLVNc
+# SLvFBYBE7SCi2cHrUhFY9kn5awjgXKyvoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDbEGzvxiI/a7CQutjVoFGhx+gRVdZ3B0+K5Fj3+Ff1FgIUKPdsyhGYHtQB
-# PNIA+DvW6w2JslUYDzIwMjYwMTI0MTIzODUwWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDczc02Sq01B4PFYXM7UIuzi9s9V6jbG7PGhcVesSnTwQIUO15c0YSH/vcg
+# ttUMpvbElTgkCTgYDzIwMjYwMjA2MTE0NjE5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -1140,17 +1170,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IBK8Ng4tOQKCSKFGrJKNxRiCJazdy2By/MHyC5UXVE+eMIGwBgsqhkiG9w0BCRAC
+# IE8VITaYjJbiL9CKklZNnFcKq7qraESmnpW9XxWQT7QMMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAO1OByreF94UI
-# Y9aLhSkzd2nvTiBvbiOWofACRv7sIRU44vl4MjyiwzxCGpLC4AU/cjWB7UlA0jY7
-# St9RA1Lg2r4WEMLVr2qoUKX4Qtoef0R8Gi3GXmgzDF65PcqO+eu9280hUGnm6HD3
-# 93ZV6xF1qgfiOqpsjHg/oNfHTRVHjkDx8ot+VrS+xY0jnILJcUZeWzWCw6NiKlNE
-# JwE08rQI4Z5OPPcNCs+4pCjCD+HkjSBWFQimdRiVg8Q9NNeONk/EG0ci0hIsadhv
-# WB32vuljIWdFgTvKJNSWCX/V/y5JbvjpiQ+UJKYPvCJwfX5vY1nKPTwCRvUiwiiW
-# 2oQ9r7FCYyXiXWrNl6iLFnF9ItMEshqdw7auZjUUp+C/GuO/YLMJB3gMaymrh8To
-# spT3Q6x3qae/zQ8f+N+uyS2WEtzjAoCo8oS/NaoBQBpM+NZ6unCBRHXExJhXYeIm
-# YNIHi86YsAykp76DED/2wBueLBiJf2xDW+hFcY/8VtAevDtZcx1O
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAA1XHu+UyVhPg
+# e0fDOjUU7Z4yFwi3+173rhzqeJpZHJ8eyTdeD4BglY/1Fd6AaBwmrPYnfCPkMXvG
+# 3d/RrINqjiL+yQfWAk5XWaqnOk0vhcKOI97XZVnioT7HY0cZfnbjmfleDU55DUDd
+# FEwTlrJb0+/zo8h9Y0mPWfx1CUiOtS3SvpKZ2prJR69WxQMguyE6aypiFoHT8H6R
+# lKNimbWh5hFnUOT9ls5+oPcBuG7iVBwRTOOIcKoCYShciD1W3doxYtWhJyOKTw2G
+# fyWqT7thXGLM0k3PzuPyrmVM2SHSwpeSlPc/3uVGMg+cyUkQk8TWbvG0xjrsCUkB
+# 14xTi6kCuOynQ85Sp4swc9Ht355YoNEX/OBmWCFaPLhACXiNF5+myfBezy4EzNkM
+# 1gzXplCJbK3zOQmcdlhPlWVoCjLKQbY3EANO/cAf7uLJOm4eltiTAyOFncXRtWGN
+# A29yzDmojgIeXUE/gPDPY/jxq15xhbdcgj7SWKbBuMdimPmOA6Vu
 # SIG # End signature block

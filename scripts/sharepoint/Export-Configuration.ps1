@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2025
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,32 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     05.11.2025 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Exports the current SharePoint Online tenant configuration to a JSON file.
+
+.DESCRIPTION
+The Export-Configuration.ps1 script connects to the SharePoint Online Admin site using PnP.PowerShell, retrieves the tenant configuration, and exports it to a structured JSON file. It ensures necessary modules are installed, starts a transcript for logging, and outputs the configuration data to a specified directory within the Alya Base Configuration structure.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+JSON file containing the exported SharePoint Online tenant configuration.
+
+.EXAMPLE
+PS> .\Export-Configuration.ps1
+Exports the SharePoint Online tenant configuration and saves it to the configured Alya data folder as TenantConfiguration.json.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -49,6 +74,14 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+
+# =============================================================
+# O365 stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Export-Configuration | O365" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Exporting configuration
 Write-Host "Exporting configuration" -ForegroundColor $CommandInfo
@@ -68,8 +101,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBeDodnWQZ+HhGT
-# eElsPEBOlx2muhAQJ7jInO3nxh+LEqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAgFqobwHh+QtBq
+# ORYq1J6p4HMkdFVoKVFBx2uNJqh7aKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -153,23 +186,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMABWZpbIsiytnzF
-# kyKnW0Cv2uqs1JA9o99Z4MMdpC8RMA0GCSqGSIb3DQEBAQUABIICAJ4djXrYh0BQ
-# fv8BbIAr2fEhWhVPMTHCobmRwVB9K6fs9ua9LrgAiWqnzPQxLFtccHPTD18DQJqj
-# CUhal/nDbwp6XuhVGpC/NI+HoSe7I8FpQu1WOismfYK4VjBPHtlvQFj7+yumsZRf
-# 4OoZbg8Yri2vbU+y4kiqXiNkuAtxYIuKRnFukbPLu8p0RAqIqYRb/4ZJwC89mwpH
-# sMFSF87upr/AHUokcHvGjRneiPuExCMGs4vSl9q6QtxSEtLDpJ+CAnxeC6RbGPUR
-# 5NZYWV1g9Hvl3iX/1p6oW4i3duuF/nL2K3SwArDzWe+yo6CoBOSje2rorM3a+TSf
-# brHnEMiCwu5iYmLYCnUxolVRoWY5v8/NgIk6EQq7V7a9IgNkzXorXcsjEnllNyoG
-# cEaZTUlsKoTOx+V4T4q8uaKdpgQuEEFVj6EG5d7/p0IArT2ZFyLNtpzP/XZjrkyM
-# hob1taapczUX1TBKCZYh1J59b70MrnDaAx+UAWYKIq70Z11c8CGtVeJsdOu39kfe
-# CL27b239/Hx2+noGywpTmjK59AeiNA86OyZv4YPTP40nh0Mb1jjQsy6QBc4s7w0P
-# KDLhas5RFqrXT5fsX/LcY1JzdJ2YPK4YLfMa6kQwytyLcwr6eYPG5I5ur95l16Mm
-# Kze89+nIZbVuwOCkMSfsp4YtR36aqxH/oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJShmfSV3egeokbg
+# atViC+JxhuVvP0nOUKZruL3vcVGbMA0GCSqGSIb3DQEBAQUABIICAEOeXLDGlK/E
+# aQ3e/TdMkPSvBS/NYGhsi2PwH7Ajd/HHpD9lv0d5AVC3tt1MKZDpOWSUncPp5/LJ
+# 39tmmMZsKLkrE8t4VeDpxO8RDTXMkuTSf5ri+VyrLX5aNUadMP1y8cR/Mt747+G0
+# PBuw44670QP/utubci8AvnppCRRq+IuT603hGWCCj93Ig6nngF3ywSEM6gsUdEC8
+# K8rLXlAMPJMilIP6MD5JSsnQKYcTLq2j6CanT9ATbZBZmtoqnsqg7GhaFhlsfSvT
+# kzne9mHp/WxhpH0n1zfEVXDz7Ao4tRV2Lvu0AvYwlG2MEtH8f7aGTp9fxsrwFFU5
+# bCMgSCK0LLqU5F29MHcEuLeoDIMT73E2wjrymqiJImNmuqU7i6x2rx6D+8O9qJMx
+# wSye1c4smrkzbbdCR1NVZ+5ccGVpcJnMFbSlOwUCG7CwsNspT59SGracRl7oY0Dg
+# rcpHAHD9RqWJicndNP4ypIVkl+3S3bqzpC+EsCL6yEKjEvnHbVXREGTKcIAuSM3X
+# I0RNI/nOoSfx4h1l0XjvOaV5Z3sBXju5wwj8ytrtrxEbUnvDXMhWSkxSJXm0/RUE
+# v4k3O91+8F6K1/MNvblInik/rJX7bd6DedrTJ/IAa12pDwAipfxYNZTaRjfyOHJS
+# 5+U7RPzHo7dOIDi8vp3goIlDw9l4rvA8oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCA+a/dlkgAMhWIXdSFnGwhu5DJopDNx2qbsX0YKLNUMvQIUES6kVEKrC/R1
-# pVOdnrbZ9k0GSXkYDzIwMjYwMTIzMDk0MjU2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAls2ZAy92Dy4tSicaRhUiUnRhcPKRXYYaoGqmvb020OAIUIyUmQiJ3Q/LS
+# GH+CIonCS9cDzfAYDzIwMjYwMjA2MTIxNTUzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -274,17 +307,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IMZxWxm0uWBqBLp3UJ+BMEzFhFu9GGxS/vxMgtle7xSvMIGwBgsqhkiG9w0BCRAC
+# INkMyZJoyfNg4PjdVmiRegf1QU9ihnF7c7+CmFLYEjT4MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAK+/UE6cntO0h
-# QqhSxwYtXf+uicsnGOrNRFdGkB3lzBjkMLao96LaVKdo/RxAFwYrG8/82HWFITJJ
-# 0TPKfp8jvXQ1OCiqw/jv7X6nAwABbN7a6JkXc2iANWU6mB8SY7qdI+ss20yUeSis
-# vIsRX5idx6LZ1dIsCdR7z6S4PIT/Nb9yR9kyS13dlUABgtT+qofy+imbLoYRgHG1
-# 55I5wyJ0c1MNbacOfxcNO6aQUXwqEvUtWYzTleI4dp3ejm5LYUPrGXzJxSiFVBt8
-# bf5VPx9cWe6m012IrkIse5SoWM2MaA5wi1oPNZBjJMrQX+wkC2eHPXLCF7nVfoHf
-# 5/5pzKh3bNQyYuDJpTuOfZ3fgNWHumALOkIkwTmkyiBiZiBFWFFtyYAs3MUIFHaR
-# nMgvq84q56FPnx0zzrJkPSLrsm3Yq16pTO/K1FKLG2kPPO1oePVZWpU5fGqAa8JG
-# mZ5fjHcwpnx5RqfVutW1Bze0B1QiZZkPShbqCEwRUrXsFFUf2FeZ
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMlDFEZx65oag
+# N6LBN8/8JoyDuuRdylA/KOi6xMWO63UWruxV6Yfau5MtBSTmVFcyR557HqRzfb9X
+# k4lxUYa0BCMEVLiMorAGN2wh0vm0wzzCb6mRboQ9PxbAKPaY+koGbgN/xJ7kIx6m
+# vgLQP3wIU+lKdrWV1TuhqikiX0pOIfSFtYyx4UZHModBPIkN+v/Wal+9oGxh2Kas
+# g2xT6flNZnBfmyClwJMCYEVHm3HMaF9vz+fviQcuxJNqRdKSTAK2edmvzBipZ+as
+# y5I5V+pEcRkhR77Y59quuPNqo9W5ZgHQamzBvc0uIAmyQS4r6INUYcEN841drUSA
+# PmHN/TPMxSDHxLHFsTaKhJ9OpzLeaEX54xttucVtox2tGj0AHG5YRgjTBW2zuih3
+# MoL5//aCucr1WDaD6qDemfa41YD6XU25IcLu1m+k88kn4ARvkBuRgLFt+skOxe/Z
+# f4IlLe0M3ypG+CUj2YWnQMnW+GQ7Eyy7wuXireyOZkQFGldLB55l
 # SIG # End signature block

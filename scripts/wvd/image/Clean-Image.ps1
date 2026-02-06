@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -29,6 +29,30 @@
 
 #>
 
+<#
+.SYNOPSIS
+Removes specific preinstalled or unwanted application packages from a Windows image.
+
+.DESCRIPTION
+The Clean-Image.ps1 script removes unnecessary or undesired Appx packages from a Windows environment. It targets and removes packages related to language experience packs, Adobe software, and certain Microsoft components such as InputApp and PPIProjection. This helps streamline the system image by eliminating unwanted software and reducing system bloat.
+
+.INPUTS
+None. The script does not take any input.
+
+.OUTPUTS
+None. The script produces no output but removes specified Appx packages from the system.
+
+.EXAMPLE
+PS> .\Clean-Image.ps1
+Removes predefined unwanted Appx packages such as language packs and Adobe applications from the system image.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
+#>
+
 (Get-AppxPackage | Where-Object {$_.PackageFullName -like "Microsoft.LanguageExperiencePack*"}) | Remove-AppxPackage
 Get-AppxPackage | Where-Object {$_.PackageFullName -like "AdobeNotificationClient_*"} | Remove-AppxPackage
 Get-AppxPackage | Where-Object {$_.PackageFullName -like "Adobe.CC.XD_*"} | Remove-AppxPackage
@@ -39,8 +63,8 @@ Get-AppxPackage | Where-Object {$_.PackageFullName -like "Microsoft.PPIProjectio
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD+NFFNBGRF3rs0
-# /ahaWsVwV+2+8plNNp/LUQilGWEYmaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDOLqWoGjkDdAis
+# hbb1zDH0Lqy/ykV5/+kNpcd4gyYDn6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -77,10 +101,10 @@ Get-AppxPackage | Where-Object {$_.PackageFullName -like "Microsoft.PPIProjectio
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -88,17 +112,17 @@ Get-AppxPackage | Where-Object {$_.PackageFullName -like "Microsoft.PPIProjectio
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -108,39 +132,39 @@ Get-AppxPackage | Where-Object {$_.PackageFullName -like "Microsoft.PPIProjectio
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPIXgJfTlAruz56v
-# VPrYaCRUHa2zrtsZRM3WSapCOcR4MA0GCSqGSIb3DQEBAQUABIICAInB0s3AJqgY
-# XI23xhOllZTF55vlBhxDqc7Z+khcS4dDaDvOo0wkkRRALOnEwxwu71XlsJJ5nMLy
-# Senrm1O8RDQu/Eem7lWYtuhIcwMpmk0pYPHTePU1JUj+XASK0MYwMzCvFy8FImWM
-# DZyiQk50dG5u90K3YypcAuVEdllPBLSVSpW9JY6wFyAcm8f/oFSHTvko/U2yixMv
-# SCVqM23ER4C0XCte1I2lzLw3pQU8J0PlASYvDhuVof97ggR/qOWalH4o3rVEFmfw
-# 6QQzj5t819/xErOxyN3btym6leBF3U4UxuasoahkagLf/G2uGTDhGa1Y9Qy40xYd
-# GJ1gz9qTd/ZwX6jbbiiYUR9HNOKveCL0v5+6zRDKlWibeadEVfEFIU4Cux/5sGJ0
-# FVPtRNsb5WKwyj/r0NujgSesJ17s2d0ZVL5EGaFicHU2ugqblskIf80OaWwJVQKn
-# qqK5d58uCAVksnJGRstHOjm/R5HeHkcVrct43QtrKUCvLyvsuAoItijpsRHYQSKE
-# rEpSH01A1chHdITSAGYnkadGo5FHcx4ATi4jKJdXMhA0aRa8pAx3Jw3wnZ/F7U6x
-# T1H1L2QFhH4+epVQqAShr3UHwpb99LUo8C0M2++jF7cgUOZGFECc7RN+rpzFzWR7
-# WFTUVDtcjHGzE1RxHAic3+BJPwbLT8rjoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJJd2jNeGckPxK29
+# xHSm99H5bGW9h5p+vc+jCDI/BWhSMA0GCSqGSIb3DQEBAQUABIICAB1jvJKZGCBU
+# HMWdDbrsaY2cjkCXkgHSW8MPKJfgIgePEpsyow3i54mbU61H965UncGGIHH6AMj6
+# jnVmlgIg2j+NRdaswbSsbfLTaeNXQU39w+BZRGomf9ufDnbwlLrp16qWB+1Q842j
+# IeCCoMAR3VgN3yb2lRFC2/IORn0FzsIUlr+Yu4V3Rai0aHlkwtcOiKhtasUY2+26
+# aeVGYkEVN+SEeE0kW/mhoYCsFJ0udh4V3pSzgG+9thujDiukMH3ppc9BLwqLbiau
+# It6ofjHu/hUEfHXnkqV2zoXxMipYwupPrblQXHUIY7CPa4+9xmKRoct9X8Cmr16e
+# OwWW5TOIm4exBeQJvbrcOhL6Ilq1VcR6BI36txvYzRQFzznXBVZWsCjnYd7V4yJ2
+# ShpIVu2bkIKl523cW5fJmKRHKe2tPEP9NFNsy0QrolxRqqbwThiU6G3bq2kEr3hZ
+# 6rMIulhDSRo4shsuMLk8EUq0gdgaDp1IYBiyAKw7kLYI9C+6jHR0/6oVZUINFm1m
+# 6ktDtdYhuur9KyVlrMXDtGmqIoNYARgrD08QBXAG/azXCv8AHiysltZ8eiAjgCdd
+# 1pCa7zX8xgjY6Aer4okIaIxtk/SNFxckeHZ7vR0Gby/OrdKMSgZ4n1hHcoc3HBKI
+# IiQGKs42Tv4jF1jhwd7IYGAJohgTJFvSoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAiHxLoIF6tXRW0fB4rhYsf4cG2j/dW/PvoOnMejRquWAIUF6exfJDlD5oy
-# LnXC7+kT8yNDm+oYDzIwMjYwMTIwMTAxMzE0WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCC0BwJFvu0uhqn2F8KEjOar8DXSXRn0P70skyWyK5aC1QIUeSwW4SmOx+B3
+# LTfKNr0nROzTEXUYDzIwMjYwMjA2MTIyODQ4WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -245,17 +269,17 @@ Get-AppxPackage | Where-Object {$_.PackageFullName -like "Microsoft.PPIProjectio
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDTe68JCD5sG/DEs3l43dkjZFF/s7HICrSTAN+ABFaf3MIGwBgsqhkiG9w0BCRAC
+# IMjXvn3+HTmEWa1oxWCdK3lu/Jq9ToZca9fGos6LKzaPMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAXW0haitnpTWv
-# oEaeUrVPrEcYrhatXmbT7PHTth+Z7cQ1JL1t/HNDkQuw1JpZZEVMuJgzxgim1tIF
-# uY42nMUJaBhB7HiCi1QJBxjvXRIc4+hzinOdMyMj5I8WxHHOX9bYp1iClnUyAcVk
-# xOAcaeps5JUR/HSRScGbkG3De/I2SjWBvmmZFZ6mRjLKL+ljMSDHMzsEyDG3UeSl
-# cPvriDmMzoOQhJOdNWvPBWXpsGQZN7PRU4yZLd9DwksijN5XIWBHLWZeiQ5n0Ssy
-# Dj6yxkM7YcK7qzrhuagcIwZ+kUNButqs1RfiPYvtT/LGDOTHMS0NRO71xPUgL80P
-# X4bAyUi1oGhE3d1nB/9CGbwWz0ozBPeCS9NF4xy4FrI7CRh7aNn87a5kSbFgGlFT
-# bKqnW9Ww1+DSk8WEcLDlzCO8O9e6FMUju/AWB/G5+QJi9GoLlWITpPyX+/D8lV6n
-# K+cECTRXHPC5CNQQL0S/FYKD+eqrFnA3ssNJNES8b90W94TZDBrK
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGASOzto7BSOJf3
+# cY2a9ivkRFdrTih5kcYAJj4blsVofSpnDdVHWNReZmvMZ/q72yG9iPA8KtLd9nP0
+# N0njBt6faufbagn+Lt6Zz9IbAbYUQDLy423AczSlnemOyfSR1nkhOP39bqLDIlBW
+# EfXglCRVJ85gRA5e0Ky3YrYAKphKL4xsoMV9UjSIYIIilGgdpMrVl1G05qTmmLdu
+# lPD7B4X1HUdTIR4zoXS/Qa7pFKZY0BsXoLEt11hycYFyTm8riBBPqE4axqPj6iek
+# A7JbdUqXkhUZ04vxZslHF/8X+xs9iKe5RSvNkI/2zuYuSWjwWLLIbGV/Ju2Gwx6f
+# XqMo4B1S8ygvKrfswmewE6TGy3ofWMfILZNa1lHfk5UL45m0FrkrZS9aUdDxe2wv
+# Fpp029OZj+yugTGZaSkMgvbbfeNRREb6UqrZuQ422XEe949IXviWBAPQZ3f1ywJw
+# lQDIhhNNVDQ/ZM5aeEWk//WHPxXHk/b6jR/+YftzC5w2c+s0+hWx
 # SIG # End signature block

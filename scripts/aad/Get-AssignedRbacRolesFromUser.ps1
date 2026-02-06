@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,34 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     22.10.2022 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Retrieves the RBAC roles assigned to a specific Azure Active Directory user.
+
+.DESCRIPTION
+The Get-AssignedRbacRolesFromUser.ps1 script retrieves all role-based access control (RBAC) roles assigned to a specified Azure Active Directory user. It ensures necessary Azure PowerShell modules are installed, authenticates to the Azure subscription, and queries the assigned roles using the user's principal name. The script logs its operations and outputs the assigned roles for the provided user.
+
+.PARAMETER userPrincipalName
+Specifies the User Principal Name (UPN) of the Azure Active Directory user for whom the assigned RBAC roles should be retrieved. This parameter is mandatory.
+
+.INPUTS
+System.String. The user principal name of an Azure AD user.
+
+.OUTPUTS
+Microsoft.Azure.Commands.Resources.Models.Authorization.PSRoleAssignment. The list of role assignments associated with the specified user.
+
+.EXAMPLE
+PS> .\Get-AssignedRbacRolesFromUser.ps1 -userPrincipalName "user@domain.com"
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -81,8 +108,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCpjHaoTEhAOVF+
-# EUdagxuExYvbcRXspC9sgZu6idr42qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBCyeVMnfH2+8Jb
+# Qc/bLs34PLwuBSbQm0lwXrQw9wsnvKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -119,10 +146,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -130,17 +157,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -150,39 +177,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINGoKqRG32HKOYKc
-# b0gC3/2u9L4a4zRZoUiOeUtfetW/MA0GCSqGSIb3DQEBAQUABIICAISM36j8bFlI
-# ijCbxuRiXSolzaVn63d6r6Fo90KmTd4IornrkhR0qAYXEHxZHRbugtZaBNIX8cCq
-# 1mjGyd5UjfZOtjJIo9X2DzoidV2kDgon5nE1f2IeVLpUwgupEgxyXqamZIdHhyVh
-# Sw8MpomkhtO6Vqo8rR3cWow2rz9RcuVABwAcFheuGx46Yrqo7o8KM3EqqNbOmNkn
-# f2AKTUny+jFWuoaciJ6/voC90jdoihXYLmgEd3Gs9ttwwQd2iemojFxag53ckdMI
-# GRuoyyagJ5rGAbnphkH03/dQIErr6JSDvRfbfmPfpKJd8XXsTpzujgF/67DTCkMp
-# 7gVo5TNr3o1qHzfShyoVbeFQwfQy1QsxnlwYnwARrhx+YNz7REBjF/pjyadgGbda
-# E5/3JSB80YaYXpvrQKitYx0wrXzUxqFSVP+fOhXthRN6FG62hucBsLgA+Ou4hTiQ
-# yxWWrY3lQcDObfcCcrdNmOMPYL9bHs3eOLd/bqHiY4NIn6VfWAZQurcyhqYVsaR2
-# Y+/Xzs9ZIHVrIHZUqoywbTzGXo67oGTJNErmGZHXPFidTQwJTM75g581TzpwUgo7
-# UP2AEBdlea9ehLJaJmlFFtxJ3jgQfEiI2reciNCuIDI5ZBLai+Tsf4bqHE7BegSu
-# X6wmZyjLC5WqBIDnynV4uQfLB44rNyaRoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILmUmuLfXiMn8lwm
+# 63fqltYp+mgEFxhZ3tKlQpIwa66+MA0GCSqGSIb3DQEBAQUABIICAGU0Eoo4tkb7
+# Ys3TUANqS1eQhyuvRsTT2LylR55RwL0BST+HGCqaORmuw+/d58I3PkDTv23WMMs1
+# wt3gvCoAohiJ+qC6sglKFsdmNouPEvqK1lwx2qtE9kJVUX7x5pJTTBZ8Dxcl3ChD
+# DV6bK4NsTnZ0B612jpDBZf5HS3ieSG+ZdhG02te3ojbm6G9HtNqXDj4pVWHLm4Qn
+# G4I8aC3QJhKr+0rKqtYrf1tyTjZ9O3fxbrVQFbGs3v36lmuy/9Syw4+7GVS37Guq
+# zcBP5hbCHpRNfFRgmfJXdIb27/ylr4kU6YPhWuTIZ/Mchoic1s0E1uLQiBEmKzA7
+# FcY+f9VUWWX0M0od1vlDaN2ZIhAdwkrRxbudlhb00PeR1Bw+S4N8+mK0fFUKREMI
+# 0PVxCT2ut7MzwkSrW6Nf+fh/ZGLCxf0vIOQ0iUsfp74UKO6wlg1d5MVlZkkdQJqG
+# fJiRdFXjdtOda42KCKLWs6OFIBgaESG4OIKhGDZT9BARJWQDDHa59krXggIyDOxZ
+# lmOFoTIFht+PAhcPAPPcKQKOxOZLvJQleZtsELuAZhwZ6nZ2vOBEXDsdFK0awG9/
+# seiA+27zrm0YvBZCq1J5JQRC+xWVFVNPihYqb01dkip0nZx/fTkA0gRmv6tOMH82
+# S5yhmXbngXKnU8dvJblAN82qRauT+MgkoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAEsuGp/kXAN72djFnqSJ7dM48sR0lVjIzgNbPRUe05+AIUNglg3PTGYsrI
-# F7LT6UCjByBPD0IYDzIwMjYwMTIwMDk0MjM5WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCwp5bkc26n2Jc1QEcywQOHHAZZqsW3lB9Rjrjrq6aSogIUEwandfHhq157
+# iOGrVo9+kwlUKYQYDzIwMjYwMjA2MTE0MDA3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -287,17 +314,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IFFV/l1i7dfXb/o4aSOEb078jTuVgowIxcfu1HzWMy86MIGwBgsqhkiG9w0BCRAC
+# IO42eSym6hv3Y9y2jwa/IAXBv5nyP9F9MrOQ09VLUTwdMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAM4L38mAvQm5a
-# qmZqZWlwQNFf3GI2IYUSvtEwAT86mD/8+yWZiq0F+LwCpRThsMUMubldAHUMmQnh
-# Hj2pEc5IDNy48rUO0zFuzwfKmaGcAlYnb++PIer60+hG1yYo463nWBotrL+vwP2/
-# WP8ewj8EnfpxpApbWTiHlu1NVyozyByMS/Mfxmq8RPNq89DTvnoiFz/qZoxUAu9q
-# vC+iyIOXXGnqL1M0J04OZ4tdblANntUDHjr06DxgFP9mPby9CFx3Omn749DJu5vS
-# L5DxEGf8H2CC4CZPcRnk62ldxb2Wl1XHfbOHyd7mbcRtjvYYvQvGsJcFf6Bt8WG5
-# Tw4o8SjODj/eEw7MYr85w56czA/eq2Ymy7gWQOGdXU4+8ychOhlFv6OCC77xuwrl
-# +LVeGUYJ/lvTNDkKTQ6ttLwLpuGKY3HCw0OmaUWa4E4Qr9br1mdox2VkB5G3XbV3
-# NFBTX5x7zPCvpOkMqyEfGlvQIlhVOqU48kgYICM4ojj7Nmd0QfL3
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAH5KOQ4HYpwNV
+# s34/woD4f/hpG0G4+mFONqC4mmWPfNWjY29weqLLm0OiyuQY61EfvvrqM54KcgVW
+# yza/mCy7ELnIZJT9FWithSfyOOOBCsHN7LJHwnXZ6UHEkC/BbJDfnF3vlDBDnL0c
+# 9mIbhpMzB/59VEDw6JyvX2zpMvlwAUfmAiODeKzM3PmTsXgXsgquzHmTAVaEdLqY
+# /z0BJpIuWZeNTPkTPibbfpQjr75vDtSeqxZ2BYMd/I/jWZE39qDR0v/KRAp/qrFA
+# FrZLScp3omnVMRCclp12ZNQKItXgzLIoOjlMX+nI4+EQ028XdTk7ZJjZ0hPaDpQ6
+# c38eZMjxlIQeOOFed1IhUdermItiEERiyoVwKmx11qnk8P7OWUJCx4g8EBLd5G3E
+# igudjq4O5flrm7vzSByUfS3Y1YvLUsl2UDT4NrvCxGfaRCCugKhLnw119d7tmQms
+# 6WaiZb3dg/yC4HUm32CUq5OcWLdyD3tWyzolO8jUbcpJ8XLu/Wkx
 # SIG # End signature block

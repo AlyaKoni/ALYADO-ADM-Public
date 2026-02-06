@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -45,7 +45,37 @@
             scriptArguments:
               -AccessToken $(System.AccessToken)
               -OidcRequestUri $(System.OidcRequestUri)
+    06.02.2026 Konrad Brunner       Added powershell documentation
             addSpnToEnvironment: true
+#>
+
+<#
+.SYNOPSIS
+Renews the OpenID Connect (OIDC) token for Azure DevOps pipelines to ensure authentication continuity during pipeline execution.
+
+.DESCRIPTION
+The 29_RenewDevOpsOidcToken.ps1 script validates the expiration time of both the Azure DevOps access token and the existing OIDC token. If the OIDC token is near expiration, it requests a new token from Azure DevOps using the provided or environment-defined tokens and endpoints. The script then updates the relevant environment variables in the pipeline context to reflect the refreshed token information.
+
+.PARAMETER AccessToken
+Specifies the Azure DevOps access token used to authenticate when requesting a new OIDC token. If not provided, the script uses the AlyaDevOpsAccessToken environment variable.
+
+.PARAMETER OidcRequestUri
+Defines the URI endpoint for obtaining a new OIDC token. If not provided, the script constructs the URI from pipeline environment variables.
+
+.INPUTS
+None. The script accepts parameters or reads values from environment variables.
+
+.OUTPUTS
+The script outputs updated environment variables for the renewed OIDC token and related Azure DevOps authentication details.
+
+.EXAMPLE
+PS> .\29_RenewDevOpsOidcToken.ps1 -AccessToken $(System.AccessToken) -OidcRequestUri $(System.OidcRequestUri)
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -180,8 +210,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB9R48FYHbixRh+
-# +rs89+pGi28pXH73GuRgxg0X3MZYb6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAWWdpkXy2dQ/2b
+# +hecoX5dEbeFYpYyhgH1zO37bwgkx6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -265,23 +295,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKmjcuvV1Xczp0l7
-# 1hzd5rQVaNNCOsskF7RGZtv108knMA0GCSqGSIb3DQEBAQUABIICAB2hcczrjPXJ
-# uN0nNUPoyc67fxzqQNTUSb4ePByAJ83cKwJEAif2Vxx21xyNr9Hzhibx652+7yqm
-# CkwllX73UoA6mQkFEiBmCqQV2+nQN2zu8jw4N0n3QhCqu9yMBB6hxHmg1P23yvjB
-# AFPitcbjU7BApXtJANSeDpb7CsgcXRr8ZD2bsgIFQ6QuZsBVFXROLEQmXNevk13u
-# xqrmFMjHSxOHg9VRTSdxFDYFT0EQ66Gwuf3//fgAqumzgpHiWgeAoNCU+reogjgl
-# +rRppTHMYazyKDnNwEvz5EMYakL6srEaVnnuv9n2Tkb4yBIK3YP5/+KEsPkBRZ8c
-# Q2dOoSo28X4F/GJY9h7q8gA3dHeHIuzXaclok4E/PoUYUNuI959jkBDF/1eVnCVi
-# yX7ASxK6AeCzV3WA/4AD7xRhEAQV8Z/tf7RXkH7VMSL32H9S1LYdYhj+VzfQKnB4
-# UF+Vs7u0otPao/1xRG5J7bQXBZFOVO0h7oxh8JoLHaN6JFDGPWBzhtRwwXxWFtF8
-# EXDngMP8nPwKwoJl1YyTKtDMNMaPSwC2F2SLTV6bFDyTc8ram/FHaI09rfY+aT07
-# 2GI6XOf/mOBLiddqmHBYt5ykYiUdTUDfVx1gkfreB27fy+IeDTrlo3ADSfR0PhC+
-# PZcQUWrm2Om6lw/EnudyVZ7HH6xyAdzwoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMt2Cy3Pf66qrQcN
+# Y3kXcSx5WAYN0C11k2B+1t9EOI0uMA0GCSqGSIb3DQEBAQUABIICABQhJVSX31eV
+# vRSNtpzAL0Q80hl1u3VItvU3coefE/PD+ls3yDbPtzmaMDHEGMJ7lrptkVft9a0s
+# OKtU2PM2BhtEXC9ZO5GKyRCh3ZlzIS8Pn7RNvD8KX6Yq9e4qa9gYg7xBaPlKeeoV
+# rDNcCX5pbdNuOOqBvh5sSGLnCJrOEdoX83ABrFsFzVZ1X1sOdHdDaaLeH210geCM
+# zCSx8d7l5Bq+XhQ3mSBKraQa5h9kAzXrxeIaNGpJ94Su9VrvlT4KzNJ4PCfx7w42
+# goBYuSZAzvF7Nu4j4iXSqK932z9mc0sV27tjutwN2e4b35sxE8qvmQ7l6J6MZhuR
+# zndo5MzceLLACwKZXeYfoDerNqgkObd0oqEbQxSzNebBDfgbb+IBRv2S6400O/2x
+# Eps9no6Uol78oE/0dt0fsW/6f87c1yYSgDcdqm2KyOlupEQQ+Fx4sG5HzK+8YHg7
+# mA1MZXAV+MUpBvyUi3G+hKKagUAtMRfSjxIFl3c6W0YOLQiyA6qy12nGG9gPgWc0
+# OWRlC0aWfnxo0q1eRuLYEbcJ1mbuN54SL7pffH4Bm/9yZoDdxPANG7WMXSaZ9hFE
+# rP4q7hIfTy+WlGxv/usiiRJjbsSLDs42R0VU+jPY3LJoaaIMQZw0b9vzBiDL3r2i
+# A1+HZj17o7Idm2RXlgRDfTEbdpJESnDuoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCn3oVirFU3zYpipAMy+gVl360cpRisWhV0mKAcY4N/rQIUDJpeSi8MW/dD
-# R08/IjgKB0GaCGIYDzIwMjYwMTI0MTIxMDEzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDnPbEB0adM64/c+c4itYtll6Z6E4ZsSa8/j3jfxfiJMgIUH+MeSEsS1zyP
+# pLAMGRwY++xKrVkYDzIwMjYwMjA2MDk1MDA4WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -386,17 +416,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDntEsq5ZxdVU0IULq7j85Iu8V2nmrx1cQqpq5jXbN0bMIGwBgsqhkiG9w0BCRAC
+# IGLlExibw2bFPVgd36aQLl6b+18pDA9/dtfE6HpYCZUaMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAP6NCF/Ve4AaO
-# rWBiKxNsYQNUaif39dZFJQJ7/dEwT3geLckziWpthSPi//XHFqSq2LtgG5vB8E4z
-# eijnRP8Pb1Dabx7DIaES2KxhnWCeWFSFVrTNeID60RWhfRtws/am+WYGfzIxJHOn
-# ggGG+yyn9yuTouCDsf9Lt3hNLoVYrM0cBHfhHzR0rgQ1dwbjHbWFyzOcPE4dks45
-# aD0hzmC4ZNWMVasFzITpycDshCMHoTLM5japTM2aBDYXZouWiDzG57GUedW5CNxJ
-# iRPqZ4ITleCx8lr+XbT9D5fYpnJsK1dSlhyyqPfLZXD72iPDwC7UhYzI10RWgOHv
-# QEmCwVAtJkaaats6yYh0yBLsLibJ3PaECwV1i487wRe3MGDLi6eZvsnDw14WTH3A
-# EeWOvniYdpgUF6bdGujo3H+EmBiWUErRqmTX2Qtvbyn3EXf/YlQfPHRcGHsNlaK7
-# 4AEpHHDD5zLI5f7o36M/typnbCgmq6UBocUTjuEYqXn9CsHUV0yC
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAmqzIZzkudfpH
+# L/MHsPF/diSMkFZn8jpIT+6CaHC4ZJeqsqG6/RbpI2uw7a6iDLxEXWMwEXaAMOYD
+# ech/3yxYBkZaWlaEUwHK3D1Os07Lat3vmSWiKW2PCMvvEy2GwW83uNnTd8mAiXwF
+# mmP7UcCRHkBpr2oC068Cv5Jyob7KkW2j/HRRtBCu7bgKt6SNkUlT35ZZgoiPptdt
+# MX2icyzg602mEPMrS6qB1KzcCXshH303dz3A2H9blB1D4gti7KhjGZHIqMcfvy2l
+# 9hgm+o0qBB8W4jJoBFqLbhGvGMQODyXVflW6DOLaWydK9pDxG4ZfhM+Se/Ktn97f
+# 49dIQgCfPqzy0gN8m+5ZL/VGPjV5nbvQjq/Wr6V2PCnmyQHZ9Idu0xy2J8onIxYL
+# ge2vkjgMTpvkfjNbUORRs90Yc/QtBj/+MHjpdhMSOtwh2GfhJARmCWXnYjTklzlO
+# VEoZBdibw9YecVFGccKYpNBWYBhdOymFaMg0Jpe1V6xPbz2pYN0r
 # SIG # End signature block

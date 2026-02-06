@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,43 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     04.02.2025 Konrad Brunner       Initial Creation
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Disables the MaximumDurationInMinutes setting for Exchange Online resource mailboxes such as room and equipment mailboxes.
+
+.DESCRIPTION
+The Disable-MaximumDurationInRessourceAccounts.ps1 script connects to Exchange Online and sets the MaximumDurationInMinutes property to 0 for selected resource mailboxes. The script allows administrators to apply this configuration to all room mailboxes, all equipment mailboxes, or to specific room or equipment mailboxes. Logging, error handling, and environment initialization are included to ensure a controlled and auditable execution process.
+
+.PARAMETER onAllRoomMailboxs
+Specifies whether to disable the maximum duration on all room mailboxes. The default is $true.
+
+.PARAMETER onAllEquipmentMailboxs
+Specifies whether to disable the maximum duration on all equipment mailboxes. The default is $true.
+
+.PARAMETER onSpecificRoomMailbox
+Specifies the identity of a specific room mailbox (Name, Alias, Primary SMTP, GUID, or Distinguished Name) for which to disable the maximum duration. Default is $null.
+
+.PARAMETER onSpecificEquipmentMailbox
+Specifies the identity of a specific equipment mailbox (Name, Alias, Primary SMTP, GUID, or Distinguished Name) for which to disable the maximum duration. Default is $null.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+None. The script writes informational messages to the host and logs actions to a log file.
+
+.EXAMPLE
+PS> .\Disable-MaximumDurationInRessourceAccounts.ps1 -onAllRoomMailboxs $true -onAllEquipmentMailboxs $false
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -131,8 +167,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAr9n0iDVvNaZZ7
-# N5jwwyYdb9VTEob4qpd/c8NY8CWGwKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCNC2bhw06N4p1+
+# MaGDRJ2fUbWyrG8L6KE0gKZ5UHpTEqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -169,10 +205,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -180,17 +216,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -200,39 +236,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEII2Xc/1HZUtjrtms
-# e/nx8Ug/VObDLBP+OmjIo97XttrSMA0GCSqGSIb3DQEBAQUABIICAG08DmObJdep
-# H8DpLtQesqoYuO5z3GtblLdUENf4LVGvTRUPbN8mOnFQMypKAG3kw3U7h4lyZXP2
-# lUCGnnTmToupvoOaD87GjkiDTeZ10DzCqk7eWWw1RPxJOn4e1TF3IP2wxWwZ6dVG
-# 7N5C4S3FrsN6MdxiCQNMZ3UdHm2EU3u0IAtKanI0RmEQJhu7MsYksCUn1wZvIfWj
-# Od5Ot5UH8eGTVPZwNJnhPs0zlTWqIwXuyWsYT5xPzy/up7dMl5j8DrGJkMiSD9Uq
-# d/vWf1gDB38Gro4zUPXBho6KqAA4ND5aq53C1n9QrXpCJoBlZiPbIPqlS/2UlClF
-# fZR/eHNe/7a41kZHAsu2uHCtti+ybrYlLrzLSPuCidCBvhHI+ZkemQPQxGVrV5qj
-# 2xEEwitk2tD0UjRf+fg4hwMXbSLMi/qM1cNl+jKgUuhku7+eh29T7GYlZIhGOQzN
-# loFbViSMf+W2UTPh72pLBk5JiUFS2NMLLpXsfAqo4BWkWuIgkFaDEcmUfp6h5vEq
-# FiAhQwozKAEggLovvRer/vBQLd0tTdfqY2W3blSryHZjKC3ClbCV0QIfDG6ngn0O
-# oaWUMnBuQ5uKvxdqAsvJ/Asz4CQQIWlKj1JE3TMQfEZeKMtihZWr+Fz6bHz6mWL0
-# Ert0Qv3ivIuz62pvDqZ5OqStIB6+B0ksoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKphgYJuuYPisnxQ
+# D1cRRB42To3uAiuoKndg0uckGaa5MA0GCSqGSIb3DQEBAQUABIICAJRwGmAcE9l7
+# h+tHRl57kSTeLapjQcZHxwFagS1JpmKkvNIZzhxoGDezU+BwlK4DeIuOGCXrEjF7
+# SS2eGOh4Q83CVxk8eugp7+rh8M199Y3tHOppBUYIvsyPIBLlQqDNA+ZpaP2j/JOC
+# R+N4Q/8bgMVQqsR0nJ9qEdAupnni3wVrvio6zlTFqxok/6Ehj7baUd4c6WjainjH
+# cPyKn76YPfD2BCtEwpCoQDe1dBxexBojirhWXYtCbcXg3dKrzJhDCuBU+UG+O5yB
+# jyBRQ/4fQCF7j904Ijw4QSNNGB8A0JHCPiaCgwXZcThY6epXUYurnCRo9OkrZxPK
+# 0boxzs5ag6yKw02RvCMYiD+Ep4qEkYn5RWE+C8uIKN2HmyZcjY/Yxhk6TXCjaSZz
+# wRC0pAY8VoY+4QPdVqPZVdM79abVIk/MyWMwr1C56iuatYFdkJlDl5cx7hjIJYZ+
+# PXu8ooJpfG/nJ+GBxDqwgkpSiOGzvxSaxbSQ8TbdB26Av4GdNsAcCH5LcFZ9DHdX
+# K3U1uG91tDxYAt+9L6Yl+AIk9BI5GLCdEV/S1ySFgmk+VMy9h7SLi6nXuCnC0CcZ
+# QMw6jPIXYLOjJw+suGD47Xd84G0du9d0ggw7A6ufbYVw8s3H3qq4cDso5E5zGrMO
+# exnQ1SUTC2yDSEVi5VZi7fg3CemcqCoIoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCKxNHs2q/gzb2g7Wr4ETQiwWRA4DdQxICbfElxrY7h+gIUEcng2+/4d5Rn
-# swgbvmgmUNMSk6IYDzIwMjYwMTIwMDk1MjI2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBSUY87uUz6U+GHaZU23XInpSKacECtmFZI4J70EuH0+AIUaErqix16AG3j
+# 8RFLXYZmi1vNSUwYDzIwMjYwMjA2MTE1NjE2WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -337,17 +373,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IOgWT4tv1Twg2F+pOXt4Uxp2c7zrhh5nDVXLr/AwLJRKMIGwBgsqhkiG9w0BCRAC
+# IKrMqWaDmmu7ubXjQgRaSbnI9Z9niTzED8/sTHMcz9NqMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAC9FTLftVwFHW
-# bdfcmygrSk3pbjbwH7OzWVHF0jW1uP661DKBh91jQ9LmkYxmgIH2sGwW3/EIvt7d
-# ZBCv/rx2+WrxI61BOpBxEQ9Somp9ffy87d9yf5QghQltO+sR2OHZ1rkSmVUBoHAD
-# 8kBFZ+6vJjRlxQXqwVYndHUEToka41lICbpsCSNIXotvsqtLvM4daQRKAolf355O
-# BSZ6AKoFCIoC2ykilU+GfQkuksd8KRtZSIpfw7qJ5mUBqGryNfxTJ/Fl7OP8Vu+F
-# eGgq2exw/9SwpCJyI7TlUaQkFTLZQ1dJX/BeOLLSZQspm6ufy7IEXqCmu0g8B6JZ
-# 8l7Z9WF2TBswJn0FiQNC+bTuoDKe+cICdpy5ngpKLZ7f0epaL39sBlmzx80LyhpV
-# XEbvmaHQx1HjsCjVqYjRVi/bc+V4QwAP8XkhNstVqIc/mAXHML9vLzvEAc9YSJoP
-# wdpUfZA6rMCd5xcngcW/8J5IMiGhtrYsnp+3yvNUPsot87c0NrNF
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAJGxpTgaLxxAN
+# EFx0mxgza1JcJrbHBCuiqlXgPUNKgjvtcvB+qtfCuzF1IYVkX/09QdT1kENPQwPL
+# gNnahCx/nE6sQLMC1K4sMam+2/FuulicF4tDzBSJt0PHb3//i+js6u/mgczB0uW2
+# jbcx3Lk0j9WbtU6VRoxOCbOjRnNl6z7ZmwoULUONvTms7SulOTihQFV2uEde2ElC
+# ARr1yAkWCBE/Id+g2D19v9HTm3VOoBqJrE+MMyLExsoBFzjVhSbsCnaMWtpgqDuk
+# mnP9o5en3p6Z1lplj24oDOqgKfvs13NZgX4AhpH79i9tGj0vTiufZpv2RwfJ/Flo
+# hY8CS8kbUOC/hXVbGDQHhs14Mv1i5qBO8wdhCVjiZtJj6/ociyMPntFEBdAIM7FY
+# viOEoKwY7GyY/Qzm4MvLo8IgMqhyr97eK86GmlAmGXlF5KTvEUUPOVcqTrxxevLN
+# qqLD+GZCxrx6pRtRiCM/5IgizxnTe8D0GTg7ds9mQ5Zp39AAfLuR
 # SIG # End signature block

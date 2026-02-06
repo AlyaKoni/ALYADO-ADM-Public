@@ -3,7 +3,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -14,7 +14,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -26,6 +26,30 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Adds a specified user as a Site Collection Administrator to all site collections within all SharePoint web applications.
+
+.DESCRIPTION
+This script loads the Microsoft SharePoint PowerShell snap-in and iterates through all SharePoint web applications. For each web application, it retrieves all site collections and assigns a designated user as a Site Collection Administrator using three different user alias formats to ensure compatibility across identity providers and authentication methods.
+
+.INPUTS
+None. The script retrieves all web applications and site collections directly from the SharePoint environment.
+
+.OUTPUTS
+None. The script performs administrative actions but does not produce output objects.
+
+.EXAMPLE
+PS> .\Add-SiteCollectionAdmin.ps1
+Executes the script to assign the specified user as a Site Collection Administrator across all SharePoint site collections.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 Add-PSSnapin Microsoft.SharePoint.PowerShell -ErrorAction Stop
@@ -44,8 +68,8 @@ Get-SPWebApplication | Foreach-Object {
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDcQUdaSEiiaE9R
-# JTbtLq9P9smg02FYGa5/AGbFsrlmk6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDxQGF3OYILqzK0
+# 3P4RNiWWgoAbKW7jbV5NI0tIKHxQc6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -82,10 +106,10 @@ Get-SPWebApplication | Foreach-Object {
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -93,17 +117,17 @@ Get-SPWebApplication | Foreach-Object {
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -113,39 +137,39 @@ Get-SPWebApplication | Foreach-Object {
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIN/hXFeirtrdkxtk
-# nLMyMb6IJQAHDbVskorIGOSsA5AxMA0GCSqGSIb3DQEBAQUABIICAH/22pMV2NpC
-# cI314BCb3M78IjbKn8OiD6xYwBqASSlZDPW1uvveuwnNUckr8GZU+IFMABxUvZrl
-# kQx9u49pPs6ysHfyGVj4+sVD9YZHwpAQHhTHsKMICkMRx5Lzh5CcQG5DQbkeFAD0
-# e4kdK0JQ0Wyuas0mpQhpltKouB8lckU9V12A+rtuu9Mu7e/xIQuztCLAOEQQIowb
-# xPrUZ+gokP1R9G+iHOQclBH6rGui+WZABTzOV/BxjW8A1eBxu3szh3BUUWkpOrc5
-# R0TRr0htErbrJTMKBKHZe+tmwW31o3MbfM1iEvgpVXiD2O1R5M69imUeejT9WIUX
-# XJA7zDPxsBpyNM08olNCh52PomxMQdeNz867/gLUeoC0dGgdHWEzk1NysZdjcYvb
-# yBfuV273x3YHi7kFzlYorpoZXu3+YPhtm1rvBxUt6+OXARqUPAlkvUwUpvyMC4Hj
-# 8JLYhxpS0Lh1QnP0UEDj8J0RBRDeX15JN7yo0IgwuXVWy9LM9H6KsqcVqkeq5Qy6
-# r/3A9AJBKjQrLOqMZZ2mmij2zmGiMVWQuKD2Clr+S5O1oLxa3GogN839KHErZIaT
-# zgE/5G7bm/e1N447KtshbTbtPvtBhFaOvDrsqjrYT0bBHp7wbIb+KdvOUVs1pbAs
-# in399weLXy91XnWIPiM2fuyPCrE4YRBBoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDOuhSqmxjahzdMV
+# iGt65FWuvPNePtZnWzb1lE5Mj9r8MA0GCSqGSIb3DQEBAQUABIICAIbrguvUwYF/
+# TMXh+yTMrWkU/9xkxV1MiCERRf6PRxxHxWJbA2mjfwRVW/GaCtECrJ+AspM5W0CR
+# 7E+ZOsTTevzVSyVYi79noK4ZaNdsVuyzJcgRBTZwMblKnYvLqIQq+EWsuDIDHNaL
+# IdcpTCUUiY5C3F9tu+rqs4YtdBYRMvp2swgo8noyL8CB4m9LNeYNz3r21FD3xBNM
+# njP3dbAqd3fZww2K2pYXqZeMRc15nvnPF1xQzO70A2bszbiGm1f79XL0w0n90aql
+# g57MNsLykzQxaWrwXGTJH6AxeX4h10h74B2bkP0pMZp6JLMmjK5zEPvfx+4X/YHY
+# kLyRxNWmw5Fllfi52sl++zDvvAKhoyq54Hq7Hqy/7hUUWUfXOG2kymMGakewR4E7
+# iWjqA3a/aUTbv0Ola+XoR3Ta8rMVwkOHhAF1cXRcmo7dK1QEBEb6FClIvWEerY76
+# yfOip6OIcCX0yduvBwFF7HlVC+G/hko4KhrgVnyPFdG2HEm3ryrGkgLHKSB9oJ4V
+# KOvXQAu5KhAa/v8Oxl/W5s1RYb5Nh/hjxXe0/0PVgB9AG1AGVhxjeFDkWJtyi5U9
+# BAinh6PQKNJMqZAej2QSwO8Jpu594JNzTJ9+K5/Do9eo/2TePTny2cAz8AJMKPhN
+# RfUxCL28OF58w0gJZHRIY78oeh2WePEioYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAY6DNZusTTQ0NoDENMoxFvLN58WIn9eQU4jEbgWHbIVAIUWR6WGmOqgNc+
-# GT65sqS4k7X87SgYDzIwMjYwMTIwMTAwMjA1WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDDiGB8gpr6limQrBGbiKMgdpmExwR5S7P7i9DSW0+o0gIUOWyIYQj6j4cV
+# zlCtJx5xh1gPGtkYDzIwMjYwMjA2MTIxMTExWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -250,17 +274,17 @@ Get-SPWebApplication | Foreach-Object {
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IMzAbDQhKfPUFhQU4M/KzL4whGCV+zTQ4EvKw7gsypo7MIGwBgsqhkiG9w0BCRAC
+# IDQZAinb1PEWTp8yBcePpb64do50a+vDmRhWBzF6NrwRMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAVY/Hc0ZkzpcT
-# 9UdJnhCrBWf4AMy5MlMEB/v0L6IAFTHwZZ5AoKA6fnoi3Wyb0+K4roPiERXmshuf
-# 1CF5AVOLCTA648TP8HZVe/QpOE0psqjhB3KybXvKBLUlWOBGB0F8UNQKkuXH+SK6
-# 5r3n7X5AxP+oGPJac0GwAvhARwroowSmBwqGxhFWqckJfjL32xizVc4nD2po0Zkd
-# zrAsr9j69a+wC4sLXCJ/5ZaYZHEhEpGQ/AqRfowVs9OTvVBVI3ti1/Ezb4R4QDhh
-# GpqMdl8u2vvFQjk8jLiBv3AVhsZ5mGVBuNrh6jFHEMOrYn5R0oUEf84OthHVx8GP
-# JhGK4YH7AOIrBF59s3EnASjdi418X2PQNhizEw9Qa//pUlb4EZbVgtgL5gJ7wc8E
-# 7lwPaeCKCMf71z/SuVryuw+7GOiURZCJi+Klcib9C3riw1nFQ6QRHD2Cp5/L4zwP
-# sZrH/uTQyUvqxrQyiSUBIO7P84Boikp1qZhKvtEJo6LJ52snODko
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGARjUTLgRrOqtq
+# lZQgLT+xorDJagX3ukOq0dj/KjRnPkwBbETuPIdwmDGziTUCAASagH+arBjxH3C5
+# rSzzq/sKvLs+DlEp2XQtwfHGhCqVYnZc7hgD1mHYfjCxik0SlUaurMMyDP70VXog
+# OX58y1AwWAdT1/R9y1Claz3xqG52CN6VW9WInCu9Y8JqxT6aIyXZU1KoLbRJmvwp
+# kKzSqGMsiHoNHo+xNZ2NT9IpZ3/xPqxkSXIzmrqc4xsZPVAQPIDmhUsrUePMULAV
+# EAysmNWpS4XLExBj+yLy9cd6A3NMLM+N6a4ItAP3VBqAj+PCpY03d486a8sY3vQS
+# Qdw+cRH/r8VMbbZev3i1R0qOn/w/iMuslE7O2IckzshiEtIepa/uIcUfhYZUUEc9
+# qwTyLyYLuvOMp8FYBZy5qimv9KgGGaPcPjU++oA5ECEKNr1v7t/yHp2///MDJKr9
+# sRTC5LL8aDU+S2bD0zF41YW5VSvjpQwhE37bpDilSAz0lPWVbPS7
 # SIG # End signature block

@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,6 +27,30 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Performs various Active Directory operations such as retrieving domain and user information, setting user passwords and user properties, and initiating synchronization cycles.
+
+.DESCRIPTION
+The _WorkScript.ps1 script interacts with Active Directory to perform administrative tasks including retrieving domain information, resetting user passwords, searching for users and groups, updating user properties, and triggering Azure AD Connect synchronization. The script uses standard AD cmdlets to manage objects within the domain.
+
+.INPUTS
+None. The script does not accept input through the pipeline.
+
+.OUTPUTS
+The script outputs various Active Directory objects including domain information, user objects, and group objects depending on the command executed.
+
+.EXAMPLE
+PS> .\_WorkScript.ps1
+Executes a series of Active Directory commands to manage domain users and synchronization.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 Get-ADDomain
@@ -44,8 +68,8 @@ Start-ADSyncSyncCycle -PolicyType Delta
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDn/W/8LgnrCJgM
-# H+2A8VQuCcmFwRA2ugY726nzzXBNSqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDqYlzy68LonJa3
+# Z41LAK1IsR/rgMDV9YfGnaOb1KFBtqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -82,10 +106,10 @@ Start-ADSyncSyncCycle -PolicyType Delta
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -93,17 +117,17 @@ Start-ADSyncSyncCycle -PolicyType Delta
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -113,39 +137,39 @@ Start-ADSyncSyncCycle -PolicyType Delta
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAhJN4SFjcPRhWJY
-# prtJ8HzAf8GKjtW07WStv41A7F4WMA0GCSqGSIb3DQEBAQUABIICAE+/v+w/iUE2
-# ggg88NuMhVf8c8VzJ23X+gRdEjI2pMWEXtqQh6O7GkcqGpKTMF1JpBnOAge9YjHK
-# 1pWqT2RyuynIOXtXzgkvxzR9FqrfCE4vwV5UrEvE5CBdU9eB5ZgFJ8PlAQl6w0Bn
-# Hn4XcmiftJBYEdfkD2ez7QgttH/o5poo8JcJ7NcUIkRheYanhvMxYVLwxIU0CdKe
-# /Y13rvyZixshqabQ+NqKtRV0pTZ9TmMizEJqrK+PX6CY0mFsAGERb5x61LG57WcA
-# R+Aik0FPd2WwgNkfLN6jX/x5Ra7WU5fj0lJON48XxnIse1Y8n+zhrWsX/tJLRwk2
-# 1Ju47AuFkQRwztUlcwyZAoLZc9pOzPx/ksqT4TTiDOFa5K7lIu/Goc/n+dGcFlZr
-# db+3v2dxlFcBgZFT3VDJu07UAGRnfEq5y6e1VLntNB5g046BewiCYgOWBvVKc4ZV
-# 1OxQPkvmVzp5jndogO3FLU4s62aqPaUy0vxY649eW4rHM4dmQpHGjwzxfJs1x9G8
-# /90H1AzgWGQjeQ/s9GS07ir26pv9TBP/YuCptRvC3S7RWibx4fD1BcaenFNLt7Pb
-# nVh2r0mPfZd/vTtfC1o+uPa7zTDRC/Y1PWdiuqowR6nEWTeVQbZi05AGG7q2YoJi
-# F9j26MCVOuLpJ9OR5SFppy8uFZDT2pyjoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFGhKanYOcL7uI1K
+# QbfojxNYwQv9hkN2v+O/H0Qlq2izMA0GCSqGSIb3DQEBAQUABIICAH6xqjNhdrGJ
+# wdvB2AgJLw62A0dER36yYtoO/h8TacMO+bPneqUEXK73b6hr+WuwpCn6HTSyX0SO
+# s5DV7eK8ALig9UGboGHY/s2mGDSTzcYfFRowbYPRRlh5tVWUCLfmuccoBiGyBlm0
+# VxmpB8+IdsqbczX7Qap4uDaVl7ah/rZAGuS5+fqS4gBgCJuR1kYgkBC6T+X3AYrs
+# nAv7q7P3/FKoimw3NK3ftEjgkAZeqljuU6cZeA7rr7TtGPVeQvEj6TwvjoSqgaDh
+# E2JPQMgQ8FQ9qGPaZfBBGYE7n8+5Tp8aVOu71uMaKHigX/pR3gQKqVof0UE8P3kg
+# lUMjJHIe+FN1hqiFuuJiZhwjjfC8GW65eOeQd8kypQkifEBVCPWbiy0l0rbNSa73
+# oVIgO4em8OPtsy38RVzq+gbSEcR9iZEeZ1s5tRZsY6kw0cI+cgifhQoF8QG0e2N0
+# 0SDkj8clHouzKMenHDBFaFP8EssjWAhtM5IWjZ53bA4yaQrgVSzcK7eONvmJKBK1
+# 466LFx02Bb/VssxcCjks2YSyu2EjGGxKV33LsBOJy50ox2UNaQn8fy87N8wZi3b0
+# mkVmEcDwI73BW0WXEWAfI4lG/GvJFyesyTZnU2vxhwxsIsJgvKXZuMhVGuohZeeI
+# sE81xK8ke0AjmfwN/TRN0l3qMeL66obroYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAtPELgOES+mP4bA7lsDx8vCe/LYGibl7Lqv+f4/XsYVwIUR6lB0z685Spo
-# Ml5nn1WpWhK92bcYDzIwMjYwMTIwMDk0MDM2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCC6fM60WMNc/o7sBP69AW1El21gbd/YKqvYzgSiDrTRjgIUa19ekAFnHlBn
+# unNT0bI3uOb/h4MYDzIwMjYwMjA2MTEzNjQwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -250,17 +274,17 @@ Start-ADSyncSyncCycle -PolicyType Delta
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IKj1q33WNjXUYD0yDs5MaO58r7oTLdcf2qsoaB05M1GsMIGwBgsqhkiG9w0BCRAC
+# IPAwbr4bbvJrj4HTTuaJPaUiZf8bWVhcH9JwiSoSKqA2MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAlJLd9sNagzLt
-# qNqPTZvVxCAi4IOnVC6e95kHZUoAixQQ6q7CHttQQr24kCe+2yKviFz1O4iPh9SN
-# 5BaPNOZj5aI3PoUK77FSkik6cnRe2gEIX4DBqCOOfxmdGgBurVBllTnYp+ZnWE/u
-# ppO5Tm6sXi6yR2TwPoS5R5gVnd3FbLdSy1PIbnHmnMzT7WUaD+EBv4FbcJvDBilk
-# nvFSEw6zDNd45Vvp73URFVjhCNYNIf4X/ewVBO4Wy7h0RG5KT1BuWTSX0pB2kIIy
-# koEi5lVBnWvHTHTvNs886zG70RiluuwzJFZqWZ3xrLJvzW8fzGPU0QKzXn4oFMBe
-# aUsq2hKDIXpaV38vYFxXKY1ARP8FuzrhJjJweXFuVY2GFZUKYSKoJyiSwCGNfbKn
-# s2Kekz9MF49nfwZf5+iZHHqtR+yyWMjX3REcnA6vlswU3KWLOUugSxPisGncOO3O
-# HJl/rPo/qUd6YF+nicB20h+q3OC0VheCQTZ0pVbZQr0tfrZ98ncM
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAeQc53Z5gGBFI
+# xLm8RCOquGHSzkfu6eMKggDYH5lOq61e8taHZ3nj20E3MiGIDTMXBwoG3Izl5MUo
+# UrnC4eAUCrmU3W02Kq7N+UKkhobcV5LtNPKI3dl39w7cbu2ecwgH2QlC5KojmiqS
+# eVM2wZHkHIm7SRIiedt8btG/gvokWwLIIVdjG96WDaNhdu8DspEribDldhWQkWwy
+# /lC2XL2NMfTGH5R72byuZx+6Lo389IZ5ZclleeHx48Nmlde8VhpB569nTdOzk21f
+# t9L51eP67rV8Dr7O9V4deTo5ePYGDkWIRMaJPKxlBOBmoJO1aTSYvSB8/i8SRnnS
+# +ytsKdoPcVX8Q831ye+hA7FO3B/xIe5Vk56SN/V94C2uGUqB1vYpUhjmcuJWTRli
+# zSZzHGBqFuRqnblmXA7SIhMZySOMCaEc2BTWRDKumbFvqqtpoeQdFZoa0ppDLebO
+# d98+4yviFuKpFaqlPwz2M4smNW5udPGZLJxwwDXEEDpSzvf+Mc3d
 # SIG # End signature block

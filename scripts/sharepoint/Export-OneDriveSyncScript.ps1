@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -32,7 +32,31 @@
     ---------- -------------------- ----------------------------
     10.04.2023 Konrad Brunner       Initial Version
     19.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules, TODO test with UseAppAuthentication = true
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Generates a PowerShell script that automates the synchronization of SharePoint sites with OneDrive for Business across a tenant.
+
+.DESCRIPTION
+The Export-OneDriveSyncScript.ps1 script connects to the SharePoint Online tenant using PnP PowerShell, retrieves a list of site collections, and creates a new PowerShell script (Sync-SharePointSites.ps1) containing synchronization links for OneDrive. These links allow users to automatically sync SharePoint document libraries with OneDrive. The script manages module installation, authentication, and error handling while logging its activities to a transcript file. It helps efficiently prepare an automated synchronization script for all relevant site collections in an organization.
+
+.INPUTS
+None. This script does not accept input from the pipeline or parameters.
+
+.OUTPUTS
+Creates a PowerShell synchronization script file named Sync-SharePointSites.ps1 in the specified SharePoint data directory.
+
+.EXAMPLE
+PS> .\Export-OneDriveSyncScript.ps1
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -50,6 +74,14 @@ Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Login
 $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+
+# =============================================================
+# O365 stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Export-OneDriveSyncScript | O365" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting site collections
 Write-Host "Getting site collections" -ForegroundColor $CommandInfo
@@ -206,8 +238,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBu/jwo/hhUAZNP
-# iCloI2Q/5WyFwuQhmWDY7ZJEZlqkLqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBVYm5+6GtENAY4
+# Tu0yp/2CajepYspzhFSGDkOfvu4XUqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -291,23 +323,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIK6m7RbJ7O4W/AfJ
-# m0Ifoq4A+qL4jbWSL+jvO0y9h4dmMA0GCSqGSIb3DQEBAQUABIICAMMTMv9mKC9I
-# j2Fais7FAFY6Ci2QzXypH+n5H0zd9xoWaH3GZA8xZzZ7LsjJE+lPvLP9Kxe6XSeB
-# /LnnMpBGN0pELU7KtbVwQAwPOb+iwgblc7tAMcLU5i05x+c9QOK1xIJHoVMGKr8g
-# IIEyUkuIUFpLDJ7OYkp0zYzWoHS3cVwRpDAUz4gubDyolcIlPlpBELhf1zuw+bqY
-# bIRv8c7grv9JQavlc7pIgLtSiEDrqxWN8wt2Iz08RRTwGcid907OkPoYB0Ta4AtB
-# XBgUw5qehKAfDMmbTS6/Fwc5OnQWRPZIN/acn4WoKOqeCtgIUfOAQBgg4HHYiGlD
-# wL0P0gJKzXwRkiKKUAVi3yg9VT7D3MWtcXUkaIxSjUWw7BVEDLUoSmGYMsqPmaLT
-# mJdHoouT+g3aG1eXwuaE4jD85m1TzYA8TFXD2XrokAqN72mBxoC5dToTU15/lSL/
-# fKZFIPzkzG6sLiLxoxGgta61M/jndyW44LD4OSD+l2vYcd3qdDP2PJLbLKI0onCa
-# XVggWBBvMthamEPNOmi9YK8gEEdaDKN0nrQn7//pg+Efxm/J8NsV126cieZbTl8O
-# YHHlII+kj++c+cvGVR/KyY7FDpU+ZmgiAHlmbV0b6hP6w2vGNsUI45YZRtt+ZOeE
-# C1FlCI1hhCeJTe/51axk5bTqKYV/foyBoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMryvaROluXz2uQ+
+# TQt06SAgho6kCYljwjZxJpwJdfQ5MA0GCSqGSIb3DQEBAQUABIICAIXCm0U8Xqmu
+# 6veIARy5RpmidaUZAz/cSWV4DI266YriVIanlWO55DQvKxi7iDSXSPnz2ewwaG3y
+# PAQzouowtIB+Y5YPy3JabNEbbSs+qi62X3sUoePK8k3/BuPwf4osDJI39v6x2eo6
+# c17tw6Qh+/Budlm7Jw/tw4VEDT/AM8EslGdPa5IGUU8gYhpo+htqtFLSkZZ4NSsK
+# tLTebhdqwFC1sqDjasAGqrmwcDqGLsKMIgjukC8ywOtL9SnQ1fPVF9nf6iQpv/Vd
+# E49ED2bRlHPKT3494DzM7BawkCgEX0iKi079XYznCxOfvMTcKWnOn540p0y4uXs7
+# qm3b8Dg9T29Lf+6puEV8CzfgdDE59ibGXPZ+L7isQyEYUSjIuwMoW5oqGhhorEEu
+# cE5zdJjJ7VqCrBxF8bdWUSs3OBwWhT2+leJCaFfQzXoap9YsCc8Ids7yp9pdG5pQ
+# 949r3jRUVGUw+BDAeKzP0vmNXRNYaZfEP5/hHCY1FsCiFcTzhl/CcRzAHYTDIp/H
+# HPhbWInxs9VhILcKQ/0M+E06O7UwZ2hVUXzPwXdeue9vL1n8Q8Gj3ei5EOdhhW0x
+# gA1P/h4VyAkTEhUSiFO83GCJZHXqIK0BAGBj6eZ3OwukKEa75wzeNGWjuXHAeVrJ
+# YseiiUa4/auijr/83mVN9OnfB8wHf4sboYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCnywnnDzNEh6qwWtsKHFzP394gBeuTdcgsZqcIxGo1cAIUcvcspuEYCF/x
-# 5BkpJWI9N0MAnG0YDzIwMjYwMTI0MTIxNjA3WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDfHtPWKnVPERRm3xJ/I0Yoz/DOiWR3m5V2UGxjscWmGwIUV3JD42slpDgP
+# 8DFOi6U7cRTH0BAYDzIwMjYwMjA2MTIxNTU3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -412,17 +444,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ICtqFsOEIPzO9n+sMFqph0NS0YREMXEH5Hogi9cpBAy6MIGwBgsqhkiG9w0BCRAC
+# IE6eW1zzcsTBoUpK/uCrc4wM2Z5rtxq2Y1X0KNd/1/uDMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAWg8rgDJSfcva
-# FD88aMAofW13Y1xEGf1iLxB4N/65UXdUIOfsp3W9Z6xukuW05c/8mD+Fp79stED0
-# BLQfA0gR8Utj4zvlcP553VFZcdA2FZ5o7Y+xJZsNUOhO2swmGywgkRUH8Y2o3DR/
-# 5L8pdMSoIeqFcywL+uM3VclT5AfebLQgQfD9ocDassz0DH2ql0yAMd6VgpwjHnkC
-# vhT/61n0ECIM6rn4dMW37hyaM+LzMdr87frqxgbmO9t7U15Z56ANMfw6If3xdkix
-# g4yQKOyPZNk3HsLdLRM1fShkKxAMPZwIX8xpFlf7lRb8I4Y5+Hgl6m2cfjw97UBe
-# WEMV31kAYIateiAOEVARRpuRKbQ/lPyiAOuBPf6sq0qC4WvL7xRen47XJuG96OHO
-# nfN154qYXiV7Hg29zjUFnrJHhNx0jAycsU5lGgyE+Uv74g4zDjZ+obombb27tcke
-# 4ns7xg3KHy7Qg7mQU747IWR1AZ0krQ2Yf7tUDZmAEjuXtLL4DID7
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAYHUuu6u2FtKE
+# VC0lQ0Y5ErnpC3JfEAV1f91h2IrezCaC6iUp3hjAttKXyvGMxzoFJZIVsUv5i3Pj
+# PSQ5u8Xp68TdD+SbtHwAQKQl1qKKhN6sVpZv4strT00UP7uL5IduCNCqxxbmuRjg
+# LkBI9jPYtUye1kdcEl6FZO7epg2DF8sJ5XfhIdcJYDDwQ/csSNWOXdQ3ItmOkAMU
+# CiqqBuiHEczIBpy1U3k40tsliodubyvG1uSNTCoPCKtdYukOcWp1ZenSiXGzvWRo
+# 7hUn8vpOsD3ilBWSKxAzDZsLDudZ4tpOw8XCkb9VKW/Ak7/qZID1LJTEaFhXUDJ/
+# CGiJIhnkyPZaC4GAFYEy1WqGaK23isePG0JgTkoVcRIgzPt6SzTJkvNjiuSb0J+K
+# qq6AnK3WH35FcKqBPsaim1Vsifo0rZfzzG+00udz8bQVK51rf11UJfUM3uiisMMF
+# OmfzmE22KD7q+yTnmYwlJ0Vy72W0HJXUVzujdvqW9K2swBrWabPj
 # SIG # End signature block

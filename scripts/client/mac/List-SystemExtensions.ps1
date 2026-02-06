@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -28,13 +28,37 @@
 
 #>
 
+<#
+.SYNOPSIS
+Lists all installed system extensions on the current macOS system.
+
+.DESCRIPTION
+The List-SystemExtensions.ps1 script executes the macOS command 'systemextensionsctl list' to retrieve and display a list of all system extensions currently installed and registered on the system. This includes information about the extension identifiers, developers, and their statuses.
+
+.INPUTS
+None. The script does not take any pipeline input.
+
+.OUTPUTS
+Displays the list of system extensions as returned by the 'systemextensionsctl list' command.
+
+.EXAMPLE
+PS> .\List-SystemExtensions.ps1
+Lists all system extensions installed on the macOS system and displays them in the console output.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
+#>
+
 systemextensionsctl list
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDnnzKctwiZcPDR
-# /MNwZNKFUpKSfXpeKh1m0r3+uwpOOqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB+nPXf7MMQ9JCg
+# dZ/vEkJP7nmThvPcD1uEYbel+Vp5S6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -71,10 +95,10 @@ systemextensionsctl list
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -82,17 +106,17 @@ systemextensionsctl list
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -102,39 +126,39 @@ systemextensionsctl list
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINDxiMClXyxxXxiE
-# PAxnvoISZbbkWAthsjdH/5FnZid0MA0GCSqGSIb3DQEBAQUABIICAF03pDhhVRyb
-# dtaC1c8ZFfbHk8XespLtWzXGPuJ7A+HUgEseSXWKQiyTZQrJxNcqcmFpRCU86GMl
-# 3UZSoz1I0r15qHhk19Vq+5q4PrMf45+NS7AWC3rAgjTh0O2tSyZVLrrkdyNMx3Bi
-# hXlyqHBxM5axkcfhckxdU3lACp8vFrQt7cvzdLAvrWyNdVnhTK+rK9LVJYcGac93
-# /xKa3/SAykaWgsl71Kwdzer3FCpIK1+Kk3kyZj3vrE13xVmlSIHz6j09LGrsoftH
-# dISmZNBqWictOOnJekrojI8WAZCx+0lyQ2FQljpaPJ2xqruLw5nFzcVTdicEPup2
-# LlBbwNsy2TX4QgPKkdXxQuPBHxt1EqAfChdfXd6tRqdNoVCFVxihLDKaX85rrkly
-# ixUSkYfmxwDCgKcHTGHWCgSyy04EmxsAjw6CNzlvcc4wijLExPFK/UXysHUyhuty
-# xp1+aKYx6bMH4Nhxz9AWb2pxtl8H1VNn0q1TYpxtTFU79BnHmIzszK4yi1Q52Df2
-# UNBY+zXiHTgbaEFA4g4UkneLRML5DQXmXFVzP0ZTFu9WizE5+DO7EETPALJ5VJv4
-# HVqLfxMJvCMqXlS/a8goD7TbuW+lv9eSWW8rmDCoH0tke9ecVI7QDhGtrey/Kp4M
-# YMt0PBdd3dk+JyNHNNI+h5I3rEhfQXdIoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIH4ZVYO069xcsYon
+# oC0Yq4bVM2/FZyMt/atJqRj/VHbIMA0GCSqGSIb3DQEBAQUABIICAHQjCwlGYO1H
+# J4xBgyk2hCGFPweo2DeO8ItdM0fjUPxx15BywhWUGoc88SX4iALlnffkvtWnH/5S
+# SXzsbQbkeu4zJMbYfuahcjR/Lp0TYqqVevVBRrKL2qsp9j9tnWkVyBzEyqXuD1pO
+# 3Ng/HgiYh77IdX+Z7HwIRkd1fY92VWXoMa9UHVmy7ONeKznqGC12Qch9bFL9/fAi
+# IOe349RYBWo6vlJuZrMiXhkTEWSJRGVUJzh0XhRQAuMMLPsfxDRcmHlXJz4I/w+h
+# RYaZ/8oH8toIvHDQXaVMXhny6k95ZiB08l6LueWoYGYN3jgQh2n/eqSKpSxpG8Fq
+# 6Au1+kiOSCkkp1409jTRgw32RRmmEt48X4j44njN9XMEy3DWVJ6hJUopMo2kzTh1
+# bMBWS3B7Xd4WpnusPNwCelB+72B+6lMihSLSxehC/Bd3djyU62MVhnpg76resKy6
+# i2d+3P5mGKP6jRUIxvbwQ+PSwdLqdvPjBjWq9/MZo+CLYTyqB/z7J6yGKtEIhFhj
+# UIFIrwKk8/hxDmj4U3+SnDhv36UqTZV2Rdr5+lsnFscv/Jc3NoKJZT/hE+P7rnBv
+# eBDzGzSp2lg7pxIPS3yFBDCqOOVXTRWpbtW7RKjSktlUUs0oBqjmzyT6IMuZlTjW
+# FffkfxQZIQ8E771ESgor3lKLgj7yw90QoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCNJ2+UiRDtQVfqXD4TGCJPzN1TlN/4yJFfUCoqP1xkdQIUFyj5Gzry5edl
-# aerjq4Fd7THJk6MYDzIwMjYwMTIwMDk0ODQ4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCA4RP8Wx4ae9Ih8ROxGKXRjEPJnnDOdnOUjf2aGKMkQqwIUbMcXZ0TjN6qf
+# ooRM2KfQdKdZzCMYDzIwMjYwMjA2MTE1MDE2WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -239,17 +263,17 @@ systemextensionsctl list
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IFQRyRFSMmZf9RPTTJyLxW6N6iim7qxoGSPPTw9N4+B1MIGwBgsqhkiG9w0BCRAC
+# IGV86v674tw6yoR86T5warZqH9pkMO9ghw+Qm6Pn/asnMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAUJwiiHKbnOL1
-# 0XV+Nk5egPIoSAipuagu6yRzypZCJin4J2KXTwNPcpimbYJJRbc/UhL45bs2dvHS
-# xCrryZxxPbToQeCyyl+iHDgdeOTmXRCRDuFqD83dLAnVCBVJtxQWwzCEyV4FFeXX
-# muA6kU7bnPP3idpZGO8oZ3nkv3EdGtAgSzR/Cm1TkJgetXvZhLnHB5GMZDpazh2c
-# Fgn0LP/xpqU7xDdBfxLa8YWhJzLKn1KHfQxuAft+JB37Li84VW4a9scAvO2pPMHJ
-# zB7JQjDe/rydPEbpSGuYgZPFKCvKS9xvZeJrEk/QJ0HCb9tRg8fVxwnnyDTkHM7B
-# TLJYfhXKpLjKSWm8zvVYht74Zm57b3Ps6dqPAqwwX7bP2ETTX75qKv38w+w8xoIZ
-# TDDMDiZdmJGH4DiHsE4MRpzicnxE+dZJyBm6+mGxjua6rPwk1IwXZcXjtkSka74b
-# 0gI17U9yZtiw5R1b7ioDRymKqI+hI9HaxK+X1+erIqa2ZQkwRz1b
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAHOJzqoCvFksH
+# fw1HmxMcocfE40cSCHdPO/LtJ7Te69DvKxrAlveYqZnYTiZmETF9O/JLrDd1SMaS
+# PUtcqv6tXdyIDXPqxmVdIcVQ6L/4rYF6XwPS6/pR2zJvJ21eEC+BVuZ3ASNqxhLj
+# 8b5a6dgwub76vmDQiAzE9bUuv6KVxAwoNHh9NwlC+uUcdf6Es0Fgg+Q7yVnN0uvv
+# +iFkUzSJSmuBiRKszFnYY4Jya8EJgdeInxXiX0WFjsXk9kLr/1hT/43WpRmxLLw9
+# KMorxO7RkDCZlhxVTBgP+M3LIgg4C1PKZdKP3LDzZOLktHxSybAfk3KIAvUs622y
+# mcG+wYZdlfb7JNw9KBvElZDOdSmNqSJ7ti0WRSiP4yGLJSZ+ztHgoPG6KYFL8nYB
+# e7qI+Jr3h5iCxSLD2gBH8u1wWLBwDWnSnK64QrulYgKKrcZncELapQKxC0omPrtw
+# gTSRMS3VX30VxAOtTkAbapXS24HFkWH4OJam7dfUlXR2k8LBzunP
 # SIG # End signature block

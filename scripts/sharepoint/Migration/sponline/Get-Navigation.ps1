@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,6 +27,33 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Extracts SharePoint site navigation structures from specified environments and exports them to a CSV file.
+
+.DESCRIPTION
+The Get-Navigation.ps1 script connects to SharePoint Online or on-premises environments, reads site configuration data from a CSV file, and extracts navigation nodes (Quick Launch and Top Navigation Bar) for each defined site. It can automatically download and prepare the appropriate CSOM libraries if they are not present locally, and then recursively enumerates all navigation elements within each web. The navigation data, including site, web, ID, parent ID, title, URL, and visibility, is exported to an output CSV file for further analysis or documentation.
+
+.PARAMETER onprem
+Specifies whether the script should connect to an on-premises SharePoint environment. If set to $true, the script uses on-premises CSOM libraries and credentials. If omitted or set to $false, it connects to SharePoint Online.
+
+.INPUTS
+System.Boolean
+
+.OUTPUTS
+CSV file containing navigation information for all processed SharePoint web sites.
+
+.EXAMPLE
+PS> .\Get-Navigation.ps1 -onprem $true
+Executes the script to extract navigation structures from an on-premises SharePoint environment and exports them to a CSV file.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 param(
@@ -185,8 +212,8 @@ $global:foundItems | Export-Csv -NoTypeInformation -Path $outfile -Encoding UTF8
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCR3Rn6hC8k8YsT
-# whsgKkCWU6m3u7mg9+8b/kWJ+vzhZKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDCijqVelTvbjUJ
+# S9UsVid9ZyoWNYkzWkih2qk1xUDbKqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -223,10 +250,10 @@ $global:foundItems | Export-Csv -NoTypeInformation -Path $outfile -Encoding UTF8
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -234,17 +261,17 @@ $global:foundItems | Export-Csv -NoTypeInformation -Path $outfile -Encoding UTF8
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -254,39 +281,39 @@ $global:foundItems | Export-Csv -NoTypeInformation -Path $outfile -Encoding UTF8
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIK4oGDu5hxKV6XZu
-# Z9by7ddAYqb58BWTzIRQbRwQh/dlMA0GCSqGSIb3DQEBAQUABIICAAFxfhUIYgSq
-# W3m4AeaIAXVAXUvRHBmZKqmH7G7KiQrwjvs4XbowOvlb2HhB1Ag89S68LkVusNfb
-# AgMdjnHUEdT/Pp7xMRgkjk2EcMA9+77E3q02Wyd67d+LgHZ2vN5ai9YTew2RrgQY
-# Sg9gDJqXfhalwi8DXNeehIiOetlWttfdeAQLFGie2cxXEWLjnDDifJ4uPohZ/EB+
-# tqVKEH3tXBDVDnEncKZ3BA5ULEHhqfwtUE0j0muHZ8kTtR8M4teZLY6SeAwsIdHT
-# bjD4myYNHUqQBqxQbAf0jZLg1QZkg4EjXY24TbDjCYQHMN3jw8c1LzpheIthUt2N
-# mCXdCCwCoqYcdXEfgkX5fmFULgvWfH+dndQSkef7N4Zw5+XQSxfIrtVQLaWZrfNp
-# TZ3CmdeO19Qm/B8xpoDREZeblvvT2HK8xe7UzS6PqQVOvCbWZTUU9CgntzyMHvxX
-# AnGJUFS2UChd5jOBe0u8c5itCVzBg5eAm6KqQFBHBis8IWy4RaROD+HFfH1jay7Z
-# HSYodKl9C+iB3+plH5gxhmXhRPxpQRv+4847JIR7uFQPPyNsRHlMIVzhBuYt9MlI
-# eN83CZU32iubygOkwwkF++sR331FbccFpgZqwvBTk3fJJNfFJ1UWrjOkTWiiZqRx
-# JTqFgevUIJZCmmzG6IjO+EqVVovFcRhcoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEVl16zvMvQ9roeA
+# wkL914FXZ5A+AYknFdxzr7xD1fFpMA0GCSqGSIb3DQEBAQUABIICAFS7NlXO0Sew
+# qbftiNH9Zc6NYHQXC323Nk11VBV7h0QkZ7hybq/1yeK7BODVJFlDA/ttAty2nPJ3
+# 8YwjPbh/LT2/AGRRhlR72dpZJD+Bv74SUDOsI5T0O4mC5oROgt36BaZ4tK14t9S3
+# ybnDds6MT50jTi2rLTUFxuzBOWRoY1fKwSOOKX4N1Mp3zm9pGI1LPY7SpBr0Eak0
+# H8uL0v4TMO3KXLzRyVvgpub7r3g6XlU276AnhtfZUIyqq14ZO/mQIx+id0xsfUdM
+# GeGR266k0yOQdPwBxTI1uCmNar0xo+OtyFp8Jvo32XDMRpxuPkFQgrnVOi0hnSRA
+# UY0YrMJ8fbSMHW2kyF+eXDYGR7lu4dZNyspPMe0tveOhflSgS/mmkWnesdMlU2QU
+# BHhoShRFOX4Syxiwhymab56M7s0eb/gbZr0R2XnI5U2hAZUryGC63Ivi9bi+aov4
+# wNsDD+djnliKFlQIRbqlssWLqcsq+PYIECPMRpFSXHtpUYn4SMrfjx8UFqTUH60m
+# 4Yr7tYemxmWNsdFBM8LaqYgl12Cjb+xRqpnWFvAomhrJDmKl6HzFKDPlmx/xhjBC
+# sK54WPNKe66/oIyD37Ya1pxGxJpo0Mwcaj4rMH6xY3OhhYTD6SvYCSfNOX1Gi/xo
+# 9a/2EK4HYcbOH+1LJ1EpDIoiAWCK5K2eoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCA++YkwwCf+adNdKYO778U7t3oiTXlMHvSN7j8w4G52kgIUcf4ldMEwIlA9
-# KObNhOWZAhGOeC0YDzIwMjYwMTIwMTAwMjU5WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBwAZalaUME3Zrxx0iv5C4pbD3sFkbzrdFf2KmNKckZcAIUPLL8u3MDFW2k
+# iDAENHh2MU+BKDAYDzIwMjYwMjA2MTIxMjI4WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -391,17 +418,17 @@ $global:foundItems | Export-Csv -NoTypeInformation -Path $outfile -Encoding UTF8
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IFLtJNy11EFmwXoojjLK8603wAO/HfFUCCHaTTJMYQ7wMIGwBgsqhkiG9w0BCRAC
+# IJq+UguvAWJVTHQBy/uXPMr8f0vfA2zZN0Pd8rf1p+JTMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAiQSNx2gRaJKF
-# jtIa75KrbXXQxgZ7YsDNAp0+Cc1uNj5x45MIgvzTXsn6kYKbXiS2rx2rXU+4Sroh
-# SXH4181c75Prt9M9oCGW0ilSlUL9nFYap0Z0ZJ4KtmKB2Pv6YLZja1sNxiphrwig
-# AytloddaJyvKAxnyW0EVtzCCNO2AwVlUnq4ws/C28RadTRjKgYOlVbTWi46L9Jno
-# CXHHzJRp3C1TGZXVKDHBnBkKLl7wBx0ChvTFIyyY/RkAF3LVIx0D91l0aAN8m53Y
-# 09zVbPIDutiMRnfo1EXJunLBHH/Mk2qYTZJ2G0zDs4ZFWpyAe8a/6/YqkkODDHeq
-# 5KMBBEL4LtPrrgN07BYkcPGLTgOo2eubRpgBNHjmfFzknkOfVVGkYUuw3hIvpD3o
-# B1NdPeJw56fvVrjBpYEuXOuOz4ZzDEToC9MU4hoJN9ZN5qYPup4rKo5CXzQj4WwG
-# 0bGD+OEIn0BhlFyBRiODas60ZmNgCsLnC1qKGPKTRwxwUsS9735c
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAGD3Uhy6uXd7B
+# YL6n2IYx5aqfsSsKwgSCFqVpo2SKaW2ixvKckBz/nV1vnLfmOasIGRPaVwumaZ5L
+# 8NSxShK2o01Sw6NdEdJ3/WKBmRXRjvrYT9jCDCIo0g3ZnmgPl3oAExg5R/Xmbxrv
+# 4FNFe7w9S4cS08iRb84BinFz2MX2nqz9wnnOUTiibF7wVFIswnxE2EdxUsEeTZwU
+# 6x5D3Unmu4MwFwPxhS2vy7E1bQzs26wGZT3k+qn44KN2NbYYTiuDAelPdtsFCWTd
+# xpDGXIv2cEEnSh1iI+b1pJllt/mj9wonajhOYFcHEdysPOgN9HadBj06Iqudj4XJ
+# 0FVueHYPxPQcoUJEIC0zVXS/GnVXL2lczqa5a8tEtYV81c87Sj7JAAWDDSXnHLjb
+# oQxkHXPObFH7osNbMFBfFCaaMW0gSaGzHw0rJ8T1D6d1j5gypVBRCqqDoXywAMj+
+# 2uzLYphDgVEnS1BFlUrw2hXJGbNjTMhX7EC9491kuE4yEA6VP86R
 # SIG # End signature block

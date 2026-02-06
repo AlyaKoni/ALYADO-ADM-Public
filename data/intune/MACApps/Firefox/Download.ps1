@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,6 +27,30 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Downloads the latest Firefox installer for macOS and renames it with the current version number.
+
+.DESCRIPTION
+This script automates the process of downloading the latest version of Firefox for macOS. It retrieves the installation file, creates a local content directory if it does not exist, and renames the downloaded file using the detected Firefox version number from Mozilla’s official release notes page.
+
+.INPUTS
+None
+
+.OUTPUTS
+A Firefox DMG installer file saved in the Content directory named with the corresponding version number.
+
+.EXAMPLE
+PS> .\Download.ps1
+Downloads the latest Firefox for macOS and saves it as “Firefox Setup <version>.dmg” in the Content directory.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
@@ -50,8 +74,8 @@ Rename-Item -Path "$contentRoot\$fileName" -NewName "Firefox Setup $Version.dmg"
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAAE2phPJb5NW1l
-# 9ghmx1tCG8GwmkuNlfIFJ5dfMGloN6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCXtOu3iqYU/J9g
+# pveaJ/fqOTnE68A3Nc47UWDo4sdF+6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -88,10 +112,10 @@ Rename-Item -Path "$contentRoot\$fileName" -NewName "Firefox Setup $Version.dmg"
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -99,17 +123,17 @@ Rename-Item -Path "$contentRoot\$fileName" -NewName "Firefox Setup $Version.dmg"
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -119,39 +143,39 @@ Rename-Item -Path "$contentRoot\$fileName" -NewName "Firefox Setup $Version.dmg"
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFkek4sUB0g2bzE5
-# iqsiHEozxfG+ruKk+a2jZRzp+U1OMA0GCSqGSIb3DQEBAQUABIICAC/RnUG7MfB7
-# 1ltaP1rPEfUs2HtloEduRD3Rp0vFvWe8M/O+OlQ0c20PyD009TVT+1khqtAAMwll
-# IuwNXVSsxDD58Xdw4v4acQllU73DTtTXKSMmeKEn+yoQUWtViVrOYLkzDovSEFQa
-# GKwhukTVGsfusALMww42G1HAAxb/UdDL7lCIe61OwsDJW9nlWPMoCtzTZ1vvKYg5
-# +Epsr1jgZn2hMBj/4ZGt7kL9XR2Zv6pPnjXgpsw4j+X0Iga3lDRGMxr6UmGWHCBm
-# OMa2fKXu3/fygP8QwYIhFnZo6nk94+9XwEU9KBzTcqMwYxxAFb4FJNXmugqd02rV
-# zC7BnNGk5Rppy5wY2gaBXthKrAQqjoITabZPhyxfgYunLjU/ZMJJOyxJgQ7lTg3M
-# d/BwfxZcwuc50dkPaEtcS2ca/4qbWU/pHCn4s0LLd5xtOMzOeXEZNlCp2wL8K/sM
-# FErJI/d6lNlQZvtCDegPsorBuKNnJOZZu2FqkVCG/zmWGUyI7FlfpP4GyDzLpPCt
-# ZjdFEM3gxhmzoaE73RaoUYnVKTyf9SJYx4LlYWcb2YSjXNOVLM/gxAN9t2HFMb4R
-# ar1Yh/ZVvNJLkqKbeJt3bvWi/ETqBnckIKg/pucfTzEy0xpU/gS2Ney0ReJRkZcM
-# 43xOrYGzekLrurgreXzFETVo8GEyFnIboYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKFiZCmgNYTc/e4E
+# DsXhqjgHtsYCAq35IbymzQOfyC42MA0GCSqGSIb3DQEBAQUABIICAMLcnjg4visD
+# xUOQW5zBl7Pgo7kDVicROAn2nf4O6UZyG4kKlFVOY9VF2cESMe0juJYlYXP4PgOx
+# I+mFu4dTm0ryg+MRLk1g4qiBzfSWGd64+GxXBkKizoRTdP1FHLtakPafyojn7LEG
+# Swt/9wdpHQJbm8FzbP0diZyiLcLGDp7YPRUzrXlkxX6C11lpKEgWlRx8S2ozMbiV
+# pKnEolK6eWnZsPgoWm8ygaR8GpzeJT0IoQNZxB8ic1D2rSMNzI/UmzKQRIvn72f+
+# hibCr9YbV9hPzh68dhW+nL/jetOr4AI4qfWonThjuZJWdnXd9GzSZF6auvU/siap
+# RyJ2OKg9glkCnCUQXDV2yzglrG1+7gP7+ff/oRUSLNFytrCVY4jpbxtJzZ9AAYDS
+# fPlmtHJPFUvcB+8+HXnPHmOCLe0LMojdgg6UT7pq6NedHtasLOgqK5P9rffR1xEx
+# 6ShteAYYFLJukrjQyMA+tIwv7uGH2RGeuiWAWFnv3BBxU7+gfHe2upqRVQuDHK/v
+# fd92cN/4fd42ZMFZToRNPc6sJAjz4CI6EwN5kYs06vVia5ZhudTokJXq1GzUdJf6
+# EICHfWZhzxa72KySYwrVgSbUGcT2qZweSWH9UQZ6zlW/g1VU9OkeadTZp614X9Is
+# IqLU/ev2C9J+xz25s7Adk4pNbGPKMlmBoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCwwJ/uTvDI9WDH0t9TkNvgn54UlOgTrr70sqaFPuqR6wIURzxBH4K9ayZv
-# Z9WQMPQfiRn+P+oYDzIwMjYwMTIwMDkyNDI0WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAw3vfyQP27dlmBKX+oULglJdwkVsb7OL7GT3XGr/1koQIUBytQgswe+4wi
+# +Ki6GChOtGd/nY8YDzIwMjYwMjA2MDk1MzA5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -256,17 +280,17 @@ Rename-Item -Path "$contentRoot\$fileName" -NewName "Firefox Setup $Version.dmg"
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IOfgze7I+aiHTX1sS0hvrwhssfsIgreFCo3v732lT1mMMIGwBgsqhkiG9w0BCRAC
+# IH2KxfkPzQKNqpHRg4pEYeOLg4uS1DuUDf7/NyUb10XTMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAYxZ7ks9UwYcU
-# aOkBPyAO74zTPv6iZzzq9nYub1T7htEpdDarpIbDdIwnR6cAZhhmac4lonLGbQGf
-# ITHZA21uBLREISbVs3lefYvU3CKxg5wP20iQqSXWX/7Sg50FYppIx5mPLwPavpH+
-# bKMBBejuhCkdj8aAV7Vm32F3MTGA+NDJDgcF3JUZOchT9vYLUUU++vjLbKR3VgE3
-# xSlEpj0hUErZaU+BUKxmJQMISr6S/li/MhaIT4KqdEWm8xAYuYodSS6JlaOzws8Z
-# tlI2BL6I2PEiuWSsd74uqhovK/kKObq4SjzRHQchZl4bBhek46kYEvXt4K3bl3s3
-# xN3JV6JkkTzUyLfivLmcpl9ooPhaFvFWUalM0KHqMb4S7o6a+rSiFumbIkE4RrNP
-# sIeOYAcPAB9RHw5ouonMXlW+GE1h4KtzUmHDNifgVaH+R3qO11m9AC59kQ/e248E
-# 1TN++ZM2ImrwwUkSyTE7z5kYQzmh61Qm6uaDHP7EHB8xPLT1n5uS
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAHklP6Rlv6L73
+# dQHW2eqRN82WIUo4OOhFOEOPj5gyeYBUkFp/4wiwrySdhKTZZV1Fln/+tOeboAng
+# fywea9FNpOmZKCFo0k9iDqnMZ40j9TiRYY57RGt16Avw7XCRwQUoMb9t6iRcupHs
+# Xtei1r/ypaOWKVn2XoXNldYIwXszWxllmeTv1gMlbxrY0NX1C3zmGcO+rwSYLwDD
+# UCK0vsaRu6Pdl6/5nU0h2l554FFZfWeWDy+q8/e7pkY3sQKoOEHH/532xfd0UqUM
+# RlWPeSZb3ZEZofgy0AoNGHMs7ZhblYgvhlIFPp11h//34FnbH3Zyyd1XIgsy3Fd/
+# 788oN+avGiF0rYXxPUH2ofhRwkddXXAqwdFER4yBuT/VX03116N7XbCsiPCNypxi
+# RRGprto3nupnnpyplqPCZwl+q0yzvdI9n9SBiId/CIG1j0C8s1Jo59MPFE4yOl4F
+# zZSnB0ARQ/w5NWsGxMtPZSph815YpMSU4O79ExpuAd5cX66hazeX
 # SIG # End signature block

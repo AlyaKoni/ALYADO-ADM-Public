@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -28,6 +28,31 @@
 
 #>
 
+<#
+.SYNOPSIS
+Retrieves the Local Administrator Password Solution (LAPS) password for the current device from Azure Active Directory using Microsoft Graph.
+
+.DESCRIPTION
+The Get-LapsPassword.ps1 script installs the required PowerShell modules (Microsoft.Graph.Authentication and LAPS), connects to Microsoft Graph with the appropriate permissions, and retrieves the LAPS password for the computer on which the script is executed. The password is returned in plain text for administrative use.
+
+.INPUTS
+None
+
+.OUTPUTS
+System.String
+Returns the LAPS password of the current device in plain text.
+
+.EXAMPLE
+PS> .\Get-LapsPassword.ps1
+Installs the required modules, connects to Microsoft Graph, and retrieves the plain text LAPS password for the local computer.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
+#>
+
 Install-Module "Microsoft.Graph.Authentication" -Scope CurrentUser
 Install-Module "LAPS" -Scope CurrentUser
 Connect-MgGraph -Scopes "Device.Read.All","DeviceLocalCredential.Read.All","DeviceManagementManagedDevices.Read.All"
@@ -36,8 +61,8 @@ Get-LapsAADPassword -DeviceIds $env:COMPUTERNAME -IncludePasswords -AsPlainText
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAftlL7dTkGZU9D
-# 5/K7twQiT4S6iWLpWCbnYLnpppSpsKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBRROW3UUqxZ+JA
+# 8PjMgq+HfTIzKiUQ4OFhJPktoYPy2qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -74,10 +99,10 @@ Get-LapsAADPassword -DeviceIds $env:COMPUTERNAME -IncludePasswords -AsPlainText
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -85,17 +110,17 @@ Get-LapsAADPassword -DeviceIds $env:COMPUTERNAME -IncludePasswords -AsPlainText
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -105,39 +130,39 @@ Get-LapsAADPassword -DeviceIds $env:COMPUTERNAME -IncludePasswords -AsPlainText
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIP0qSkklz7CEZ4M5
-# hC8rOXYaBNlcJWZHW+FDRoiX4SeBMA0GCSqGSIb3DQEBAQUABIICAHqirMPauhJa
-# x6X9YEaV2biJ+QN6pVC0jPTR7GSUKgSyjHLUsaxHA2yUQ6xzrEZFzpr++CsIIK6R
-# XJ94rmhGpp6j3wdrM71uXBQ380Oowt8HoebuUXXR+4/xiRv8rqk21CHiP0JOUYJI
-# KGUd0ET7EK5cEu8Qb5/UReWXHREt83thvkZpZMJ1yBnL2JVUPbiXTgqOGAEGjqmV
-# p+7YTcosKbFfT1R/fHAkBpniZwgg1dINGs7jsTHbSoNmbyLGxtjNziIfRT1cJkUm
-# HB93G8ez4hjZQlfPt2tVqvMwBlFe7gXb7Eq8+Oq4l+HE6uj1UPSUhkIU8xCFeuWv
-# Ks2o/x5imjF9nDaZBtbc7TfxAMEUHGITbviSfYGbO3qvaafbCUqgpEhFO6Zw4uIa
-# 64i9/lCjx73MY5TRzZit1BDRbK7rX+t8AV2dZTzHrBRap/0GU3/sBvtXWBPXFh15
-# K1Xad1UgFD7NOC+eqCOPf7Q9f2KzW1mlJk3J2M80C0jnuJWG2mZUzqGKgrb7VfOQ
-# i5rYxpIqapBnsk5defUd124ubjkB5yG7h8JGlgQ5NN/SUqX5KduAx7/jUrpjWY0K
-# palAVEgHQVMXWQLHgLT0U2TP9vE+UJBmNS3Rfbyp53NNCzlF27P5Iz2W6jRg8BOB
-# k2GXA7+uMofSUiOP8JxcyFMhwcFO425noYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOyeEYmbQymkmOBh
+# YtnQG6rN3diH1bnr7qh0GE+EmIHrMA0GCSqGSIb3DQEBAQUABIICAEGCW/s9rLM+
+# HSILrx8S3O8q4fAP3JPZgMeL4vdQp7mYSi2yO3z8ljYSENW3xRqhxmKgcGDZzEeI
+# WTQNpGP5uEACnSd7yTbuv2ydB+HDKaul4ptfXm+UcWREX3mIG2j4fRfq6+8vR+3O
+# JzBv+iifFHRdVlaInapFtwcl4X5vcsL5WU7lCzUuQWIS2J7RUwOIZifdvvhs1pGJ
+# v/5jVwpmKesmXQfQukv5vyzcUPWBL8Cg1JcJV87HgPAWzjyi11/jhg5VBIi9A+bu
+# L64NnjXXVAcvBBNsPHYZFxHr04yvgit7ImBIhZWPu2colgbtEhNksZJp1nj0yP/V
+# KNyZmttvzDu3ZbCsUoOiuIrwRT5UEoLhU/WsQeZq1/eJTaBkke8MgGt1SE9fsarx
+# kjGc59hFseNOBKjW0vviepmUrj9lZP16ymC3e2cnwpgyNR/41BOlkGCZLmItcy5Y
+# GqoxneOkK5GOuohsBfdjQkifATsNsylQMORzw0kPJNEFAl4I7ZDoPWum2lpxhpNW
+# jh7vTFKI32n/c4/KJfKdyE19Pl9LHHLcGTt6cR+HawYNb23UaRvR6CqzTeUeBDK6
+# Gy5J4SjRJXodVWCNxG/puePvb39tqVrRtVoj8JHxCPTXCWsf8KaM1YsWY4jiDeEA
+# QgX+Rs/SKhj+7NfcGSZ/onJPA5eVj9R9oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBM0cct5R13066rdgXI7pI3NvQwxU6k+dhzPqEuqzeSiAIUCZsarptUueMt
-# eZTi3bzFDHCcOzEYDzIwMjYwMTIwMDk1MDQyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAwmObVot+lfhRQB5uTlPbBkC4yBibjFFgZul0D4BlWGAIUZlukfbQlk1Cz
+# Yxs4+5Fk9VaKCSUYDzIwMjYwMjA2MTE1MzIzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -242,17 +267,17 @@ Get-LapsAADPassword -DeviceIds $env:COMPUTERNAME -IncludePasswords -AsPlainText
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IHr1KpywgTQHOtkggxMI9OjzHj3KCarEsFwZOgMMUF85MIGwBgsqhkiG9w0BCRAC
+# ILArpdoaTdNahqICNOxuUkPJmqJ8lx62uxjn3FdxLEDwMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGACAUSLNWkQ6N1
-# 3QBIi7UMeylhCc7ZBJ2RFYxR+bmrQXGip6dOqYB7Qdbf4IeWZWqhFUcEU0ipILOy
-# SB252l8acd+bLZfSOQ1m2r1gwIKxtf1L+2dlO9Whcl12aROOjnT8HyBiTtG3Kmcm
-# PEtcSQGeuU8hfFAaHtBhKbPM1j83dG9ATsGYsdRXRo+RdvG4aX+0zifn1NhKZYuA
-# MKbdZ413ekpepfNbcO0t3Jh8IWad1oPQmklL0y65tHSUujMkTjn078f/3smw0kCr
-# /11O/Q70UsMUha9OfpLt/EOzXE/2B2tC9VQXp/NzD3VJFa7wgKTXyvkXxGdgOxhC
-# aaB28iV//qvLIpRm2+u4f+he/XfwdoW4RObVKu/FTGlMDG2Q8pbvaYCebnbt6zls
-# bAtEoTnbTtS5qODob4SnfU5h902RVC3TGHVy2KzosjdVIVwIOgoIIiRQBjDkQ+yT
-# uFlZ04ZnflNUDQ2TON4VC6yC9i1aXlp//ZeC67wO+GspC7aeLMYV
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAfeWdEVjSwFwU
+# ToXwyQ+9FQSwRv4vqis0wlOmSgV1M3tBkZkBA3DientWZFmE6DLoHwl4be2ik3ZE
+# CiI5Jb1LbSSKAk7R03Gj+HEksi2v0ljneJ8yVS4FKb7JF+iwYCidBkkZ6C92H4J1
+# o3x1GvTpWvD2dGjvJc9pLFkpHVLkfhYSZt09QrZaf58NtGVXpxajCniW46BzjfGz
+# sFTQacv1cTJ+O0QRKaFmfB771RzkrXVYbOuKw1jDh3ArthyfZLuvxekyn259Af2j
+# cscl1bsHgzL5D49rSwA7qv+qt6uJ/XWujSQFiwvlLbWAJ6cVXsEC15wzNj3xSzSX
+# C9Sg59QIkKotpisySudNNsb/wIo61WEfS8eKFHq3T9Kc5dvgiszfZ1PveiIVhr/J
+# ceh6JjtDoBIhcYLxDZFpiypZ1yRr3eqLg5r3koPKUfqSvHnH3CLkyKfKRMCifyKo
+# 2HWuql5Q2BOf2FLLLIEDI3ANPDrhdaYks8gbD8tSFxfWLLCQLwDv
 # SIG # End signature block

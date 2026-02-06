@@ -5,7 +5,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -16,7 +16,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -32,7 +32,31 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     10.08.2023 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Saves the current system hardening settings using the HardeningKitty module and stores them in a timestamped directory.
+
+.DESCRIPTION
+The Save-Settings.ps1 script loads the Alya environment configuration, starts a transcript for logging, verifies and imports the HardeningKitty module, and then generates a configuration report of system hardening settings. The report is saved as a CSV file in a timestamped subfolder located under the Alya data security directory.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+CSV report file containing the system’s hardening configuration settings.
+
+.EXAMPLE
+PS> .\Save-Settings.ps1
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 [CmdletBinding()]
 Param(
@@ -70,8 +94,8 @@ Write-Host "Settings stored in $repDir"
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBn9+58qOJ3w2cM
-# ooLf2+DGrb71xa0BBAltCLYXBE1osaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAtj3PHqkEwksqj
+# w59uQwzFrTE1IYLA9fl7EXkLvxEI26CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -108,10 +132,10 @@ Write-Host "Settings stored in $repDir"
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -119,17 +143,17 @@ Write-Host "Settings stored in $repDir"
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -139,39 +163,39 @@ Write-Host "Settings stored in $repDir"
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJn50AfdJUlZwjZi
-# OYq9xjKgGlgkQ4h4mV3eblK6XGjyMA0GCSqGSIb3DQEBAQUABIICAJp7P6oI8K2E
-# InnnWig9BpUhzehMHXaVDb1L84f/5huP+K8KG2vkcmMXMFzxu09aTr1qwo664UNz
-# QPvVrMO/8t6C5JCOERwMFlUVzyZkA9QY27Xoy+xov00NyS8HiBHQWFBC1OUak6xl
-# 3dN+c0nCZN4RHhRMKt2HssOjyAofNZYlNLhFraj1mBDn4QhRLDmrPA3nClbryVY2
-# PIQ2D1Bh0DiUVEM6jwM8FYbDD+PfcaKmvvNxoKqmwTROIrUE2ek0zj02Furuhp8c
-# iOUc2D+PsdlBj3+2YHEz4EOUXHBZaX7tN/jR7Yb0C9iYuTpfTb/9+vqEVt1sRY9i
-# cYOirUtvdqgpup3EHxi8vefP/oh9X85pIXmb040MfFy1i1i4rcbgm3gYFL+d2cb1
-# MFt3gzFySfUspf+fEOJo/Dqd0auXUTzKc5gmBZnqfy8AMPGCDpiUGzgkR34V47Ya
-# AvHP7GHz6XGKV4+7WNek5bepn7q4U5CA+2nYHYxrLrNoQrtb/20lad3zMzoCXOkR
-# ngSOoe0ohCtmUMnl1Yvazb4nbjHz5gyZw7g3PRlU0ghC3ivwS1J+Sz628pXS+dEY
-# 3BhkrEuRpxhBmr35s5G91rfUUSVkWT2djG+nCzB5U7ipRxuCT+U/riSZOizHbi80
-# 521eZ/6BeRbx0oKhn1WqeQ8y4KCHbRXioYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMehaurHM6e6l08Q
+# 4zNTBwF+iTAGnHamCT/D3xd95dJOMA0GCSqGSIb3DQEBAQUABIICAKzWgvZTSWtD
+# bck7KCoYs26YMRRg+6IXMzs+HhLMGKd+5HP6rFb+9G1qDJ3v+0XEOrcifAADf1Mq
+# qzmG7PhQoIhN9bC2eTlNd3E8zBYh7amQTReb1oEkMDyl0l+XXEy84oi25aB90+TU
+# /ziwR8AXAsebi/7Mtv27EOgiBaDbyVWUONr8HAOdCb6JnYvaMppAyIDDXiN2PZoP
+# uCoy/UTR7M9NjcSmhyC+TwEV6Vc6Uj0l+8oyJPcZfZx/WYnVv613qDWPkYi2NPA6
+# pBOSJx/6AG64iPOAEor72epJwRWCNjMeT4hMCTLlAn4m41eEMxPPxHEXyWBO/SoI
+# 729vcHUC/51yCBvldYqLh87PBp/7bAs2VgTUZhUJq4/rConP8ceyQ2EDaMVKKLPj
+# AQG8kyY8urCk5gStQFValhp17Gk5y2PoP/F91PL6ONPByWuoLFCpskDgin65VMle
+# cSWi7Y2GwvrJ/qlCjC+pL7lD6R1bmUwlWssgq+3re+DUg3Tzk1iXq91f3X8jJNJR
+# j6mbi7wP9qDPtvtb0Xdrf7MaXbqcmyHniGHf4E3DDWiwioShRfjN8cgI30zNXxsU
+# RV2Un+439DE41UOLVqAIS73CRASwjgTvSmU/0lqFsZQ5TNBspcq3eGBGbsQJygS+
+# LhkRmoNFzGvG9nDvDGK5eHaWJgoc2zQFoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCFhYbx8DuyM9KpV3Q/sBYroCmBJR/e5kcT+HTcUgDMhQIUPZCRsqZWaTAm
-# RnZk2OtdpmZcqQoYDzIwMjYwMTIwMTAwMDIzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDNapfhpzBr2GtnC3aDHBfAxqBK3Ml4RSFUtWrSgDaEMAIUSfF5zryja421
+# GXTmr1dV/mKvkQQYDzIwMjYwMjA2MTIwODM2WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -276,17 +300,17 @@ Write-Host "Settings stored in $repDir"
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IN9Ggw2Bhv1qfoY6+kUc9/YULut20azMjueyPi5VS1eBMIGwBgsqhkiG9w0BCRAC
+# IG3XxyPnwr1MXDWa5ecxF+ayXINnH0RmWdTxxcGS1LT1MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGARa5tLaV3V12Q
-# NUj8PkNwdMh7Ht6q+5E1VoRsvddDhf9xQcrzMhbmccehSkPmF5lxp9Q09Lwu0w0v
-# BrtNFRUze7q8Plu/ajXsFiiFqE+oWT1kIp9PVV9/+RmglyectOVFidAig/yVTlT4
-# r1GzLfrpSCPbcj7poo5/9zqEW2CIjrkB1rmp5P6u+ssvRhRw9dq3hHVmQTLOM731
-# 9uyaQVVWt+7gaexTtOsnsMtv2O0IMi+aS+cb+YLke1+qR3F+Gm5sbYJpWmxlNh1C
-# xDJlysgQwb9SjhwojLLFCCjvVduRznZYG8Cl8HdeOc4YMipjMP94TUnR/Cxs+JI/
-# SU2th2sATKivw5dBpoX2+JevGPG8pAvlL4VMklWQTgx9opc+q3aJK7mwWGOIhlbW
-# LFL9kCwZfwmwhQgc0mD95FvCkARAHMItuhY5FVa6r3CgfSimk8h2iTr8Bn59peim
-# W83R3e5osfwm4wJSk2gxvIslyQocujQ+HgSBNBWyb7DMGc/k/Hbs
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAaOqxt5mMSRRE
+# n4NT0VD4ndRrVeGLIX6iFgVi14xGFs8M1J7SL1idcXNbmjiHRWOt6MKD+Wjh+jLb
+# Jibm6iz4cqV9E2qyh9kecwnefhXnQ9DmR7iNkOX3NbbkaIePR3G3gawSo0qOeE37
+# fY0kohhdZQm2Ze+qHRqojh/2GW/rE2jrvvV2rCRwMPxpd3B8DLnvDoSTSEJZGPw0
+# iZtdue5Nl9r0kgvjTMeVoiQxk6cxc2uquPAwLlTH3Xe1HoFTg2cul6Sfxygmgz6n
+# tqhOpO9h+ZjPvLd12+dlUTQFnuyxPQN2qhmTSHmC7o+oLUj0XE38ujMU8Jk86j+D
+# 5PlydJw+U35LVtNHTMUavh7WDq23rNJUBdrZrItuxSGPnEZ60OV8Dq07+4/UMHOp
+# h5F9Zq9+PfwuXObxkJe4IRN+GXKA8roiRJhe+MUIJQJ49XM+oVEtSn8wqeBDeAkj
+# 5+/K5zIQDSsKr/uv6p+1519Z290ky2+HXu0p5VWT9tSCCTzIO3GN
 # SIG # End signature block

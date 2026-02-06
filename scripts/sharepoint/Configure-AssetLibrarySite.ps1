@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,13 +31,47 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     26.01.2026 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Configures the SharePoint Online Asset Library site within the Alya Base Configuration environment.
+
+.DESCRIPTION
+The Configure-AssetLibrarySite.ps1 script automates the creation and configuration of the Asset Library site in SharePoint Online. It verifies required modules, logs into necessary SharePoint admin and hub sites, ensures the existence of required site collections, applies site designs, assigns permissions, registers organizational asset libraries for images and templates, uploads default assets, and configures the site homepage layout. The script ensures compliance with Alya Consulting’s environment standards and SharePoint Online best practices.
+
+.PARAMETER siteLocale
+Specifies the locale of the site to configure. Defaults to "de-CH".
+
+.PARAMETER hubSitesConfigurationFile
+Optional path to a custom hub sites configuration file. If not provided, the script attempts to locate a locale-specific configuration file or uses a template.
+
+.PARAMETER localesToHandle
+Specifies one or more locales to process when configuring the asset library. Defaults to @("en-us","de-de").
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+None. The script writes progress and informational messages to the host and log file.
+
+.EXAMPLE
+PS> .\Configure-AssetLibrarySite.ps1 -siteLocale "en-us" -hubSitesConfigurationFile "C:\Data\hubSitesConfig.ps1" -localesToHandle @("en-us","fr-fr")
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
 Param(
     [string]$siteLocale = "de-CH",
-    [string]$hubSitesConfigurationFile = $null
+    [string]$hubSitesConfigurationFile = $null,
+    [string[]]$localesToHandle = @("en-us","de-de")
 )
 
 #Reading configuration
@@ -160,7 +194,20 @@ $actUser = $ctx.Web.CurrentUser.LoginName
 
 # Checking assets site collection
 Write-Host "Checking assets site collection" -ForegroundColor $CommandInfo
-$assetsSiteName = "$prefix-ADM-Assets"
+if ($siteLocale -eq "de-CH")
+{
+    $assetsSiteName = "$prefix-ADM-Assets"
+}
+else
+{
+    $assetsSiteName = "$prefix-ADM-Assets"
+}
+$assetsSiteNameByLocale = @{}
+foreach($locale in $localesToHandle)
+{
+    $assetsSiteNameByLocale[$locale] = if ($locale -like "de-*") { "$prefix-ADM-Assets" } else { "$prefix-ADM-Assets"  }
+}
+
 $site = $null
 $site = Get-PnPTenantSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$assetsSiteName" -Detailed -ErrorAction SilentlyContinue
 if (-Not $site)
@@ -258,6 +305,10 @@ if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
     Remove-Item -Path $tempFile
 }
 
+# Denying site scripts
+Write-Host "Denying site scripts" -ForegroundColor $CommandInfo
+Set-PnPSite -Connection $siteCon -NoScriptSite $true
+
 Write-Host "Configuring site title" -ForegroundColor $CommandInfo
 Set-PnPWeb -Connection $siteCon -Title "$assetsSiteName"
 Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Title "$assetsSiteName"
@@ -352,8 +403,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBk2AttWI02lzzV
-# Zd8RCmfelb0OYy6nCPxuNupPPM85oKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCByeCE+deE9jNW
+# 2lfKf5lkQqoZJf4eh+1ll2oKMIOt6KCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -390,10 +441,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -401,17 +452,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -421,39 +472,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJJaE77Ob1u1OyGy
-# piWhavRB2g84fFIfoShiLJjFD+10MA0GCSqGSIb3DQEBAQUABIICAFryl8tWrViO
-# ll2hrnt9NwLy6PYAKNr/nl6G/eqv6kkY5RKsWJUoMiv2AY+xuKi3DrzspdCORtk9
-# eVuZChre1SagUQoO0lZb8L9HQkvUgCr2ItljJCfmNKM3+AMuSljRatflnNRIbTL8
-# YZNDq1JA9Tq1o9dhhw6UMO/bYc9t7Fl56hpcoaZm51cxloi/W2o5GVIW9xd1yElN
-# WDw8ClPMfRCFZtC2/M4rC67rK/uMuFSOqE1Xngwc0xvT33BSK/Xk2kPJmqNnZwxr
-# M5sukkE/W5uk9lkl2hnWbZc+nLMVnDANjahV2PfG2ePcpKUXEjhkH8iO3MlQ+LUD
-# GYn4v0XVRw6gjtPm3j/U0m9NpPKzYFqb9ESJI9u3b7ejmxSuG0H1I5iqqbvl8pGJ
-# /eXpjywpbfj9UPI9X1flCgqu3nwTCubvfecRaYaENJl57tlwfydKRBdSt828JPzk
-# V8H9Xj/Y2AhM4+HmjaRwNaVQx2/YJVGmqsLuhWNXMVC7GKiAb4E2RpQ92CcJWHvt
-# +e1qw+5ax41Fic7ric6ORV2fgnWEiWR76oDAnchwjsy3qIhkuq/yTe4SwT1R7MuL
-# 0wspWYXsXkX73toA66U4KiDw9g5a8pvAA8OAZswyUZUP6WHguB5eDGtuxqPlC4qX
-# Y/nPW+92IFjaRsCAfIB4hUezWjMkyhr/oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILSTDu3W4FvCrOz2
+# 7VSqBIe4XpddC1/sZfQSt7YQWKD4MA0GCSqGSIb3DQEBAQUABIICAA7s7C9pyNV1
+# 0F7pl5Lw069XkTKG9QE12I6CFkVIJ5ZM8DXKHLvNPQeFrIDYkVwR89UnQrJxire4
+# dbwFBO7xqq60Sa760B2h2WsfNGYhTkwl0HmqslxpdlKeuXD/LZ7QBaCIyBaiIA3q
+# Xgbm4RDxrkSss1BRAmkAUu1i3UdwqETSqFJNPVktCjSTUEC6YfdJsLL6sfIU/m+q
+# 6KqVQy+QYrPYBp9/vEGZZWFeEILF3Eyf1TYwBSpIlJZsgeE043Ee/CPldhLqaPj3
+# DOYpktUmQ+14zVeoi9eR48GISUGuNiBw9aSiNqkmykaGLJ+dUpI4p8i+MPo2sk4J
+# XVZFwT01C6NSaJ4suIkSMt1Fm2KZEMdvJXMPPYLaW5KyxKgA+X0su5BA7HgGdidg
+# asRKYH+uD3rjybLU6LX/cIjxUSIE6dhEQjg7AKWODKo/VIM9ZzQiuu0ZYLiQ33Kc
+# 7l7KGjS3kHxvtKhkgWwp+lSEWaVYiOT/ZGtUhgQ5gVM+mnyLK5aost/1NPuc+tvn
+# +AP3YA1o7LMfWF2eSUHLUPejyAUxio4g57C/VyVRnjYOSGtjR6ADzMzIHzEpz+kF
+# lT/JTwSHav2mVerBrLORdtP/dsn4NAmF/JGj4ekK6qAgyQxZy+DvCHRctT8YRSQg
+# sfl6D+Yt60vK4WBxvipYMkvybxg31SNnoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCxz8y6ubwcjUtQADrzAu6PYKF9QJrPJ7wjIMfMYRgvQgIUJKvpDt6qtXfJ
-# 3ln8A43XpHmaO0AYDzIwMjYwMTI2MjIzODU1WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCC2dRLJFnq0Wn0I2cpOdd3UvUXB7MksRIVskFgkJDStqAIUEdOd55XVYAF7
+# 3MnqKttsqUc7b30YDzIwMjYwMjA2MTIxMzQ1WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -558,17 +609,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ICHkS82tc00izdEPR7sZAIIk4OnpIaIEaiTG1Q15KNeUMIGwBgsqhkiG9w0BCRAC
+# IEcA2SMUB/OgpPCJ7dKvGfZ46eNkX3gZRP+KwZTQBNSXMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMYeHLFmw7/hw
-# bRJiQjadlXQ+OPVFKMjQK9Kd+AowOA87BuQ6pioVeP1toHWCUrsLsIec7XPVAcq7
-# KcLLLs96TZg94I7ALx/WqHG2NeCBGt92yC7Fy2ge9zUVYqgWiaFAHD9uWt0JoMDB
-# N2fNG5R8c7mmbTcwnC38O9je6ZJfXcD66rwcdd/8vhsgFQyxmdchTjr81IUFin82
-# 5plkGLsd6MTiw8qYZxXTVB6N7UHRpK43mCEyC6RzhSR8ky6N5IxZLQCU/FU/4i+s
-# L624nbl1fxcbAPP1L8Nfew1xcADdBmwwhiea8pAfYeNciaMnK73TG7Zje4j6TyvH
-# vqukHMM2VvQS+qUXM8KEjpxhKumxzk3Nb20I3j8VXpJ87/OWngdJ3kX3HMttsj5x
-# iYqPjlYDFSrZoLwm94vsoTrwLxjOukwF4AvKy0IDLkhMGIGbCZDeT7UY9cW9dpf2
-# JYI8UYwW/541+BOMdRq+ZmpZ5pL2E27eyWaPeoErTZWuJMJEdKW5
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMKoTqHAR2PLN
+# JuVYnsfBy9cQ9tFtHDBVRKfsNQlW2uQyTgyibJimia3NfZuFFMrPeLNEZPt/BVXe
+# GAnEun5DKye5hChZqB6bBb4UN3QyJeCyA6RNCWMKrl4xYa/0rOcuMEOycOyZIRWo
+# St17SSxvL4Yd7avK7BDDZUNErGXh9MZjDEQxA18L+9bxs4qV2idPKgMru0cLOz9y
+# CXEWlMWQy4mvmR1uKfTTNhdCkjXYH4Wp1z/GYckXMDTJFeJR3qloDevPENefOpm2
+# Axe+mrm2TH9A7Cm4L34BWKB1DtMXkMldYLARvhda6QELhKCUUFwvez6O46Q7u8Nj
+# c7xU8DBZ6xmDs2VTfL0G8yGVaM8jKTJF5DvCxPERw4KWIaO9DKk1ug3AVWyt1/X9
+# fmMuO6q1lP6Y0nNVKwaWXwh1brdK/X0NJey+3UQmdk2wR2Z7wCM9FFBhBmcagqdM
+# UfCIscy2ezdQ3LEY/IuZpC1tSH8w8O+ywTK20EpYqjV/W6IwiOKC
 # SIG # End signature block

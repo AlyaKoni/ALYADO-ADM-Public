@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,6 +27,30 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Removes temporary and download files for the current user to free up disk space.
+
+.DESCRIPTION
+The Clean-DiskUser.ps1 script deletes all files and subdirectories located in the user's TEMP and Downloads directories. It checks whether these directories exist before attempting to remove their content. If a directory does not exist, a warning message is displayed. The script helps maintain a clean environment by removing unnecessary temporary and downloaded files.
+
+.INPUTS
+None. The script does not take pipeline input.
+
+.OUTPUTS
+None. The script outputs informational and warning messages to the console.
+
+.EXAMPLE
+PS> .\Clean-DiskUser.ps1
+Executes the cleanup process for the current user's temporary and download directories, removing all files and subdirectories contained within them.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 $temp = $env:TEMP
@@ -50,8 +74,8 @@ if ($downloads -and (Test-Path $downloads)) {
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBZqMCP86G3o+YJ
-# BpEIuiNwWSfUd+SBO5QD8x0N53leK6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAxXPvOoFtLryr+
+# vBwqnaZqLTFe4SzcXvVlM6Zzqko/8qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -88,10 +112,10 @@ if ($downloads -and (Test-Path $downloads)) {
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -99,17 +123,17 @@ if ($downloads -and (Test-Path $downloads)) {
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -119,39 +143,39 @@ if ($downloads -and (Test-Path $downloads)) {
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILcjIcu9+tKcMhD7
-# 1p7CmnBodY6aRo3acQEv5WXk1hiOMA0GCSqGSIb3DQEBAQUABIICAFfIRCQf+StB
-# ypuSBQ199/nlfjTd47dCjTgDiHdCoSJEQEKw/y8+6/efJkQDqJ8LRqq6GgDghPen
-# n+OAPM1upwtHwRvhsMeManXk757p2mNi1wK7WYgvrSd6OZ65i494nkvL6umE0e8o
-# zh7cuawcGyZhFqXhemzvBHquMwv2mZ1A3XulMu4LxhEhAGkHidcNyDF6p8UIyp1X
-# qi3Tdrtm1+2O88/Btbi+tiiHcPSzGW8MDVqviVsO1ga52IC+BJULJMFAqLibS6S0
-# Ga+QIerKTmDDDsOvsnikoSNoL/Av+cZi0XeMNixFnxOvRs2LFHHQQ8TuiznmNCVT
-# vO+mUOZ38llinL25jl6wntGpKKQSmCNlvuFAgk9bfFi+z67i52fCz04rnPU3utvw
-# zMrevht/t3jQftAq8IbQL5ZwORU4aRyKuJVwaBtifvVE5InggruMZz4YELwz4ujh
-# renzWtEaQFRnXyjw4sYTgV345+JQu19K2EEe4xnejji3/YrVVZffiT0ML4dWIr3g
-# 7lHoZoTT4lKx8QNvy5dwMFgbeDpxUiTxGV6WErkjS2OtI3HOXTRykkQNWO3Ji6B8
-# 0Pvnkh461BiNcEbwgCziqaJ4vWqT3sprACYIgg7Pe0r9ZuA9QfIa3I3Gix9WUPFp
-# 3qs5IGwDfBCgy5FDnnU54osYPIRKL6WWoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG2lavk8uViWzqoz
+# BfvVhmDLr2sn8OTrZx95NcoM8sySMA0GCSqGSIb3DQEBAQUABIICAIJAdCzJSKl7
+# ToviTk8IVYxekQQnQLdp0EjSsWiuMErV8wZGgBLw4sXICXVFGBTf/9RZZhZJ1/6q
+# wM1P5siME13PuqWePytZDRV2XFDT1V3UOE90TwE8vdNgr65/r3O+vfJP7gQStOEk
+# rtt2oV54Cq4VEDpbuZXXNajtLvF/wAE0lNVX3NLZHnoico+UcIAKNnx1VMUMiOJP
+# 4HC34R1TQMLnQXHLqlLF/TtHrl6OapKi3IB85zGvOtPSjYLTPJZMcB5CsePJKSO7
+# 2/JC7F8liQTnWgvUzFNKOqXzmEi6wVBFJv4CF6dQsJ8R2nNl4UEbZoVZIfsV/1+s
+# Gf7mF2X1eaWkELXgT1bWfhCFbrFZ7W8Ti07YXRpPL15ozIEYDA5NkAovNKhQOu38
+# uHYoB903qBhgVnxh6elVB7UxwXVBiF1bZcexTTY9KXsqa//xrXFwWH0eD1gPS7Ki
+# U/s6qBr2/Ix71G3h98WuBU1uglU3596MCVXhShgCU1LVxzEp+xL0dYuwOH1yGaoD
+# zWerWIqIEQxEBoCuXlJUQFHR+5/i0Cx1Djkihuv55tgLpjzCU7biiSRBS2qWEnb4
+# S1+/G1WuYgQ+msvtxM2EHS+bHDBMfdzk9qZ4gWvBXqF9Y9XF82KcPwWs7/Ertkmr
+# 7ZcA4KhuoSbUu4VmyMxAc56exUSEGJ97oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAL+5qfFDzWJdL7KCPoIjLb5FTn4VwOERSb+qU1u2Q3ewIUfMhwWYuZ6Drq
-# M4zGTRhaNqranxIYDzIwMjYwMTIwMDk0OTI2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCC33VXjcjik1Ohl/OmBuj9eOUsdU5KDScAetSvINWQW6AIUE2E4MHTuEERM
+# 272azi57zngn/MgYDzIwMjYwMjA2MTE1MTE5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -256,17 +280,17 @@ if ($downloads -and (Test-Path $downloads)) {
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IJIuHBq6PVNjo28BN+4UC6fYJSMeSAfAUjQEwrzw8Hl5MIGwBgsqhkiG9w0BCRAC
+# IDTa9PyZSP+Wjg28Hn+CP7FIE/VyDGuh4e+8HblmBDE9MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAhytaNOavnix+
-# P6VgTHFFV2X8kGSTS6OrPr1T3aB+rijtkngKktGJ624c4r4SaBBvXPAiPgBog7ej
-# 3XC+7od7cXak/Nsna0qFeEj4un2PhyNRpnFw7iK0KmUvmUZcrU792g1XuS9jl4zy
-# qhBDD4PIx1JPaND4xO+AmNVUDgjODI/Psg51/csv0e60RqeHn35tZN48uhfViM7U
-# QFKbn1K3sm0PjRoTAMu8cTeuHidVKTjY2xS5azZK8uRA3R3yuFJxYH+/h8jqdpD+
-# WF2dfvMMHP8aCMLPEwuVePbQvmZEQSDiwC5KA8NyvN9WwMsPW41eLEgHrXzD8fY5
-# 4+INfDHE6LK6w2cTDo1TcgymIMCKnIqIcUowZxQ+kxY9cpO/ew/TvYrGow+X5yXV
-# wj4UmcjyliswpSoISjjOBJwU+otSsy/OdnzdIrFcKDbZBDl5gq+wcOP2abM797Ho
-# uFOIPq1l20X1lXIRrwvsxWInxMd9jqHoSL3LPecIVc/A415qflH/
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAkmobORiVLSGt
+# 900v8gG1NBt9Iqz3xoqnwULtZgFUl+NFMWQ8Exn4PMx5IDUV9gT6G/ykxlprg5Q2
+# q3jBDrl0m+xp6bOvyq6ZmoMjM7w5TXNoCXoH6cYcx9CgVo27AQaPwNSDkvZzft8D
+# cQwktaunVV5j6BbVM5o8mjjvC/U+M6E/X6OE9QBL82TC2orDEl3Np9yv3ujxQ0WV
+# LYPqaVw8UvZT9Hkp2JFWCovuShVuG3zkaLPxTq/ClVSVIIUUvPXH62iVaB223f3W
+# FIF/0Cf9L495jxupBQ2ZSVC+NkQCN2eSMDOQm5lTV+VSN80nns+4qftgkf8TKBOu
+# K8qtg+lsygrtAcHAav2VdfIF0xDkPgbry0xri5SRlPV2jg+522sT/mCuTQ5U3pKQ
+# lPXPegqTzyqVWerDzEVXlU9heCaN7kWVctKG72pnvoQToilUj/alWkL8q/Uf8Hmw
+# GFTzNr5Pg4toXOfWxWsKUwQvyzhA++cotxnOt7o1KwvcwrofXTgI
 # SIG # End signature block

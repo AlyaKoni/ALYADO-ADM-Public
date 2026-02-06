@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,6 +27,29 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+#>
+
+<#
+.SYNOPSIS
+Generates a JSON file defining the language packs to be installed for a system configuration.
+
+.DESCRIPTION
+The PrepareScripts.ps1 script sets up configuration data for multiple language packs, including locale, language tags, product information, and input language settings. It compiles this data into a JSON file named localesToInstall.json within the Scripts directory of the package root. This file can then be used by other deployment or configuration processes to automate language installation.
+
+.INPUTS
+None. All variables and language configurations are defined within the script.
+
+.OUTPUTS
+A JSON file named localesToInstall.json containing language package configuration details.
+
+.EXAMPLE
+PS> .\PrepareScripts.ps1
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
@@ -96,8 +119,8 @@ $languagesToInstall | ConvertTo-Json -Depth 50 | Set-Content -Path "$packageRoot
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBDaBsp6h7i1fmT
-# sh2YS3wdlFXk7FQiupVsDzGHQGOMN6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBHIOQkOnHD/6UO
+# t6aCcMaXhr9khikF8VLUpLLBfyl3wqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -134,10 +157,10 @@ $languagesToInstall | ConvertTo-Json -Depth 50 | Set-Content -Path "$packageRoot
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -145,17 +168,17 @@ $languagesToInstall | ConvertTo-Json -Depth 50 | Set-Content -Path "$packageRoot
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -165,39 +188,39 @@ $languagesToInstall | ConvertTo-Json -Depth 50 | Set-Content -Path "$packageRoot
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIB2KaD9PYAFLmwrY
-# lt/Vx2EWIkXTgovvEuEkl7HTppEgMA0GCSqGSIb3DQEBAQUABIICAIeSAgfSBahK
-# g2eUxzBfRgTcngAlnFWR34+NeegDozWFsEylGFrS8y25odVPDwtevoEm7xt+MaKT
-# Icce8B4nDzNYhrlIufdgcX8v2+P4m+AeuJu501o9M/penR4JkjBECxocSvvVoD1a
-# m/P+G4WUXnmk/MuGTzSaUvSaX5Ts31xlqSqXVu6vkm2x3v0Y+TCmWEOZbAs/4yvi
-# E2hX25dlQhcx5nGVBXJtj2qeQt/GNiwJCcOhIgemaysZL4ocw02hEyF71VXscK7e
-# E7yCmGv33ossGcMmQv4Enw+LSx/VCidzhPhFBezpTFwHi8jxg6wbbzfUraIVRihv
-# XgYPvEk4UK3twoQqbt/E7iDVxUqSoZreFyM/MZZ5Kmu66MWZofw0CHTNVOe62S1y
-# fgQ0UrRWJnskHPrL6T2UMWo+0gcveIwWUUizqc70lklmMN+h7fJbBU+hK9KhVSt2
-# sOOmvITQaIgUuVnLmlg4FUU4m0Rr12W+MEbRdT6krtL8+FRugI/IVu3fXitMoV9x
-# yyoZRAtJ0nedRlTyDfo96U9rXOFw12cFhdYz30cjl4Pcq/BmkE4sE0/GE8r8jbJM
-# vm21dwZevREmDx8fXGqRmTwQZPfFX4WZFAAf8SnkvTm8u9jq2tGnFQANaVYuiWnJ
-# dioXXuMOmmXqSpTmcCe5JUb8zac+jlfaoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOJNMveDAMlkpAjg
+# AD7WV1t0PAA7NloggVLjjtrgcgyxMA0GCSqGSIb3DQEBAQUABIICAKej68HAwgsx
+# cfY/2q+PChNGkKeDfP5cFkh0u/Zi8l3NprMLX2qY6hEJydrPVLdkNdbN73u64Jvh
+# G0zf0y5+a9vS36ksw7oeC2TMI92WO8FbKkE9RxIiYsFsyMwM5mma+NuvZq1rrsln
+# oRYEQU73B1JjrokQDJfTbetukuB/wfRy+3aNHp0qQ89N7U/WTkTpH1qZu1uf+zlE
+# zPYA0lAmI5+D9YAZopXwxpizC8gb2r66M9OG5A+KF/z5wI5UtoLokmDyeepy9lWA
+# 856KaRJV51GMp0QSgCSjglJbh5GsBRvAYgnOCyom6pEjzYbbY1E4iRmQcHCVi7Zo
+# nGvmefMHDMNdD1Cm98lMxfI0YevOnmpMybGiz8fk7ZGZV7wt3vCLfQuQd/1uISLo
+# bYIW4LShndWpeqWR8n/lWxek+5PcVMKAPyRJosyTb83nX7QiZBIXojNSukAKMcei
+# otHbMtLfMfhfIQMXb0vofhrPVKEdWAf+WAotMn0zk1KDudntx4JPkQPrtWgprLsf
+# jDK0PzJWw4SAo8RzgV7y9SXqzUv+l2JACEXJxCMKngde5yDEHo5WO1tAMfZUaLvF
+# nsEFGLjjhb5+j76PgrUrVv3NJ75T0Ef0nzfvKS2qONBsJYQqA1LDPKxdW0m5YKhY
+# il1wnFrPqtskojdOSyUnuPwyL08ie2FSoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCGyvlPQIUq//nENGEyDQWi5bLM2v8Dno1mnj9jJd7zxgIUTDXeywkAX65o
-# MLmOp+B3GTRNf4gYDzIwMjYwMTIwMDkzNDMzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAHltEylRMgkR14/MxDpdHVBC+KgoUM+o8UjdAf34FiuAIUSWAWJ3F0bRu4
+# oPc71cpAzb85CJUYDzIwMjYwMjA2MTAyMzU1WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -302,17 +325,17 @@ $languagesToInstall | ConvertTo-Json -Depth 50 | Set-Content -Path "$packageRoot
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IOA7RgEF5MBhSnSF+V4hC3/1aUroEgQo/oyXX4DurP0lMIGwBgsqhkiG9w0BCRAC
+# IJfu8cj+i7bP5TtYniUVHK/iUUGJgAoTQP+ncC+8I7LfMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAYmzgdF95/nIz
-# awy2UqcIKCEd1hlGF4nj+nyrVzK8oSce0tsDCbGZHIWvQWGYe3d209shJqheipbV
-# lnRKP4neaR90Wue0uu4qCZip0tuncc+5u0xPNjZd9MhheYZuRVTuehxEzXHpV6PD
-# 81AowdtYb7azFXxux9MZUXq2Ap0CAOdobxZke0wCqXkhCMhg+IWbac6Wu7FCiyFO
-# //2+K66SOBqC3EcwjDkf34g3B6FWxMAE2TKr/VSrHOTqUI7GmnhYiI/iNgA52bBv
-# o5Zu4h0TYRVvDBE4s8CaMkyenM5s+fDEkP2NHdsZHqzJyZh3JHbcXdwcjlMVbNru
-# dnmDmSlil/XBc0yRghZ0PDUNf4HFnOCT8Yd0TfIsLLqcVAhzDh6YMkHseqbKyO3N
-# PN18j62zoXWv4HEivgFtn1RSjT1LvuOc+9JWYHNnjcII7ImZ08zXDXZU6+6x2nkN
-# Gko7KefnvE0CKFPcxDStxrW4NcQ6eQjTdoWMe/spNX4rkW7463Mx
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAVm3ComMZ7XuX
+# 0jc3Yq9fkFKWLd+YYKsow4VY/mY5YzpeMr7AUt6xsK4WTjP1Lfc9WAwjS+Bcsxbb
+# ExSxu8KhtS9/NW5bDYlywTJoqBebXV+96dnS1EUEGXVZlpF0EoSkrW5WKsVBdV1s
+# h60/SOweTprbKeDF3i+6cke/RBcmdoGKRNV9AGahLliFNjBxYIf2VZm0iExNhzfi
+# g+660TWBr2GOdDC6aSncqSplLF2nDs/jzZe03Q0/NB5H0jR6fM/RRI1SEMwsaP2M
+# r7qXu6Olj3S/gCOGjOXbjPVi6Q4JHCJAHQwEIH8y0H8DeaD1gQrwR0tolrbkjifS
+# mxcuAQqmn66NwdNm85NSztlmOLxoDN5hyfXEzYLjjNTC34IW82NCAnPxUkYGOboI
+# amXWUEllX1AUso4a3PrO6rN/5LuiXwqMEY2PXE4tBy1XlWjR0M8PZCEHPwq9WLAW
+# 1S1OriARRbbShNMesJfyXZYWnr0Gl+o3g0vJqScZQw0OmGfLDZpW
 # SIG # End signature block

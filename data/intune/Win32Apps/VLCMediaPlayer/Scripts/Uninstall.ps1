@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,32 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     06.02.2021 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Uninstalls the VLC media player from the system in both 32-bit and 64-bit environments.
+
+.DESCRIPTION
+The Uninstall.ps1 script identifies and removes all VLC installations on a Windows system by scanning the registry for installed applications published by VideoLAN. It ensures execution under a 64-bit PowerShell process, and if executed in a 32-bit environment, relaunches itself in 64-bit mode. The script creates a transcript log of all actions and attempts to silently uninstall any detected VLC instances. It ensures that all associated uninstallation processes have completed before exiting.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+None. The script writes log output to the host and creates a transcript log file under C:\ProgramData\AlyaConsulting\Logs\.
+
+.EXAMPLE
+PS> .\Uninstall.ps1
+Executes the script to search for and silently uninstall any VLC media player installations from the system.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -156,8 +181,8 @@ exit $exitCode
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBVLVmbXyaMd2PB
-# debuYi8BMEoKjGah1CQca0pXTDzvj6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD5IsO1gnYaJsTa
+# yeOOjj9upAGwCGFM58N4uzocGMeKnaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -194,10 +219,10 @@ exit $exitCode
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -205,17 +230,17 @@ exit $exitCode
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -225,39 +250,39 @@ exit $exitCode
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMZCrlN6qBehZRlG
-# RvWodTSLARfU6iusJCUDYNRAy7l9MA0GCSqGSIb3DQEBAQUABIICABXnoD5e/mJ5
-# uTR6JAQEkUUgRmtXGxWJ+wyxJ5oO0hjb7O7udyZz1AGG5X0URVwRM4AbqLNtrevx
-# JviZdg5wBuk5YLCplFqQtPFX5lKOLE6mLVKlaDBRsHXadgqm7bIhkqeumCicbLBB
-# NT7BgucYbFfGKWpH8db8tHxJr6KeAPZUHdn0gZh9ZuIjESfgOoCIOe+2b7diffrl
-# gZPgKtTcbU1M/bHM6PQIWKmQez4UJoIQBBM1vFJoMQnlnjGTX8uvQ8YBS29BQ6EB
-# kVHRGTnyeuE5Ht0pcm+1JYyTe+9heai+uXjQHu4H5IL98FJFVTi1/3jdxAD5e/B0
-# n3stFo7r0LQjzawTmkbwKQo9U/DK8ubHw0TzZhWf9uGPYiDWTsNbjyBUecSB5Xoc
-# YPAcqeHgde//HQHGJRvgCGehpNvqWCdV3i+mqZF3o8j62BVl4VsfGoIj2BXL2VvP
-# snVd7EJTh3lflVYaBu2yOsLZwUjgZIiiKPMRGy193Iy/sap5UzUtApo+nRVqav/o
-# cv/4c3WSlRabAhST2v3YokJ1EMSOvO0JtR2X9zaOj5nx3Xl8dls4hRfGOCKRDsPc
-# x+PbDQ3fltpB+UK2A9Q3PQkRiYhoJiU40MizHMCnPqLJpO14TjNEn+for7nsudZv
-# 1pU5Hgw5YzVGnBm4vx1PlB+nd8951cKUoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGTZMpTWqKgcJA4K
+# p+xgh6tG8+3e2hUmJBgaiSEpcTKdMA0GCSqGSIb3DQEBAQUABIICAAU3Q4QbkXro
+# a2c96L69gCPouBTpC+StaL9pRb7JSbaW7XyWYblKDVX9a0Al28cCaY2LtffJxQv6
+# ddEJGdAwkZq5EXXs2h0VZjTCV2J2Vh3zPMUZH3a6wH8Sbr8BS299y0X4HAT56vRj
+# 4rOB8PkFs51/Zf2bP6PBovR02WHNBTVw98P9vFh4HPZ6nVnkWizIVPedXhT7uMql
+# YfRl/q3lqEl36zgmh0nHLgov37dcVug5hV55T5nFOycGdbuyXQfAZmxNBRb3+33v
+# 3eBFWCbAcOW1k+5zrjqFijqamYxeRqTTNJxZOi9v9fXZu5fxLWeV/lNLYLsOBEXQ
+# JivtggtWEY7hp6qs6KkyMNPuWZkHxqnxmKvC9QN2xZMM0i1EYu1z+KmLTvVQYwqC
+# +Ih1IwRbBMadphykdym5pfKksXCsnDCGktsAAoIGuX3JAY8R4is/3FFqBCrriQ5t
+# rWGpKGlQrRGqTWVzUp85azD9g2JJKrcSPijEyuzBppdHEuzFvO2KyPbRWLrVX5im
+# WpKOP2ljBV+stDFcgW7qndCV7143cVgmlO1FW2LV2e5KUqs0O/3Oj2lzFEUbjSRd
+# VO0N7Z+Arp997ay4NpPqxz4c6vzOm9WaYC6nh8sGTGsvWoamlDq0ciMrjAemINmi
+# 4V5W7fJNu2YCBCxjC2VmfKJaIHRyUfWPoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCC+BEPef/HBFEOY+apxp9971dQ+3QtOqWRY9qJKdvT1RQIUW03+JZ2QfAur
-# Ut0OwCxCA2fs+iMYDzIwMjYwMTI3MTAzMDA0WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCALpV9nn1sRCAyQxUugCwKA/aAJlZmvVOyNcXBN+kEdhQIUbp0DbCTDxNIw
+# MiPHvI8oayHk7hYYDzIwMjYwMjA2MTAyMjA0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -362,17 +387,17 @@ exit $exitCode
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IGbk9YbHigqVIidVwCvE6Rgyt0YeRM1slrfJgvA3YVUyMIGwBgsqhkiG9w0BCRAC
+# IDPzAfsu3DTLp6BJWRlWj+NBuQBUjbcW/twOAN62hp5wMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAR3/Ba45HtTd/
-# 1Vw4cONwLfwRZz9DQwlFiNIu3nFz2GI2jSBu2wc/83dkH4ibdakfxgn07rYERrN3
-# AedUWgi2hdWWGtKc7pec3haGjgPB0KAU3FdomwKNvyOj7n7q41RC5nTRq2QQXHAH
-# ox5+lJ6TxjC44tF+1rnfOyA3wEqvRRWKk+1j9mzgmWtDExcIJkncJBDnHSOcYA4i
-# 7SJ07QAO1ARtBKAnIA/uPEpbrwOTG6myf2Rvx1/vHYgYl01bJ1/BbBnmjPOIashy
-# RThEZ7GJCsw6JglgGh2IlZF4StV477KHb8YCWBA8OL/rQrNKPvAPCNDMFbKVrUS0
-# LnW65U0RJN0WSX0Y/tmgUJF37+s6KLiyXY7jwB9OfapvMY7HncQyhBfMVHUugy4M
-# Q4DgRpEmpvJrVxYTSz/vHK55+g4ykvUtQeq6FTRVphdW8S4G9vSSYJ/Z5AB2TRQu
-# BrTaONK2DgVgAqODFdOK+C0vGBZL5sbjaHGSiXTEjVPo716BqeoM
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAfIrNLoDusjUV
+# wvIqufxLV7HKnYtzPixQP95PnkA7d4AzDczosCZ1Bz1tJwWrveTuOW/V4HISv+yV
+# UG37MMSVg8mEMSNvES3UMMBCJ1CgUUWtY5JOx6iDXcIyGtD9necZaiR5mombnp8k
+# ZxPF9SpRoc2nFMVvRPDJRnIDLLLq3wSjgu8s7+K+ABWEkYcFKy4hGZ0/+w84Gj6W
+# SZqtUNhuT0KGxyIUuQ13CyUyDxdTy2zUBL53M/2TsbOraVXbTSCj6BJoKbGINEgh
+# fKmAeRaA0YGslKjxFGQwZ1EYSIhb4cwinXMvzHhFkSXhmeURyBcFSgsyOvzFSsgq
+# 2Tq9euigod2E8gbHcclK2yatGIDYXVqYZ7QkR3gjLMwNTheo7fcjBlBt7nxKz4pX
+# 9zNh3IySQWPt9zgwaD5tYB73XVx1FKfWTplwJW3X4aUccQ57G8KQqDMWp+cmf5ra
+# Rt1hjv2thNjvHj+MsILxy+8TuE4FDCvx1FVFDxljmkANHdbGqdWa
 # SIG # End signature block

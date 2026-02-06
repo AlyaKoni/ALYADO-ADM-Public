@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,33 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     24.10.2021 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Retrieves and displays details of a specified Exchange Online migration batch.
+
+.DESCRIPTION
+This script connects to an Exchange Online environment, retrieves information about a specific migration batch defined in the configuration file, and displays its details in a formatted list before disconnecting from the session. It ensures a clean connection lifecycle and uses configuration parameters imported from a separate configuration script.
+
+.INPUTS
+None. All required information is sourced from the configuration script.
+
+.OUTPUTS
+Microsoft.Exchange.Data.Migration.MigrationBatch
+Displays information about the specified migration batch.
+
+.EXAMPLE
+PS> .\25_Get-MigrationBatch.ps1
+Connects to Exchange Online, retrieves and displays the details of the configured migration batch, and then disconnects.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -51,8 +77,8 @@ Disconnect-ExchangeOnline -Confirm:$false
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAA8+8HJnP/bETT
-# OJCmt2G/PDjXphdfx94iu2aKcuXfNKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDf3TBgCrk6ls9z
+# qWfOI8H7eNBpdQIlKgUDv8hlub8kAaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -89,10 +115,10 @@ Disconnect-ExchangeOnline -Confirm:$false
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -100,17 +126,17 @@ Disconnect-ExchangeOnline -Confirm:$false
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -120,39 +146,39 @@ Disconnect-ExchangeOnline -Confirm:$false
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAsH7atT71U8livp
-# coBrid7i+ln2OjniiJ37SA6Np/h3MA0GCSqGSIb3DQEBAQUABIICAIWpArpLKxR/
-# 9+HMFOqxHfmpt9OTQVsMU65YJh5OcNoBiaG0umJSiv1jZeLx0SmE4/9RroWiBODm
-# F+or/NUbJtxr49QJEH3AeIJL2nkI3wm473Xyu33fUIUAvHTNn+K9DiAJ9Y/96J3P
-# a5n2V8Kl0a4Aie48e63g6SDyxGHQ5+2jkFd2vZpWjPPxuhoD1JffjlYmQSw9ChkX
-# XAQ+JDC6qELUIThZoI0B9YtmpFpu8jqCcAoZt6ftmf3gj0V86A2p6MNMsyi+/dyR
-# Lc8n2rg7bKQsMJvU8HqkJ3P+QrH6xRVvdBzAzsZNzCAYLu5tAkcKBoQ7PtXbj9yV
-# LbpLk/CANvnDsYw+rSpq6egPEutWkDiQYQAQzwUBwMKiD2rnBn0KY8jtCRu9MDag
-# nv1GqLY0cGOXZ+MHaPxgdXrWIbITMZAuEoFkaQl8FP689ff7ls97Fl2xQpqy9m4K
-# 1lQhk2jMnYLytkVBqkGDTTqMS/5ATWi1ErJLkx/MEbp2KLwxdW2u4TJePKA+m0Dp
-# Lhkfv4dD3s+77vEgLTXspyZ1wcs8TVDSfuaaoMdOFQfGGM/EZ99GU2FKn+42UCz2
-# srFU4sdNYC931mg8tco0wzp1qcX8Yyn9V7E9fJpPKzr+FHk6t2xrowCd/oWXA4IB
-# kqQU+zsEusFj6S26xYMuR9/5u6bb1W3AoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIZTtPgGvptX7dEl
+# 7yCx3PakmXp8YcI0jRz8xMYrfuB7MA0GCSqGSIb3DQEBAQUABIICAB8NGszelcxS
+# rRNibP6UUk57/LMLGOq+f0CUUqR5/5JGpJ1nfev9QBXjvfbf0PH+kD5DLxWuYIr3
+# XEd/67ZaRJU1zGNDGhNDv6xfU/LafNMmoA329q74SyR1rKvlVMLLFFXTpHcppfN+
+# l5jUqptDbfcpdLdbLFxwiOdf2YMR/RXmvGBxVWJ+2ec44qk0PCzM/8X0Elaobfpw
+# 9gZq1WEbMZiYZMl7Q8UxNnSpUgN48+nRnrGPJNAWEYbzvS7mY2qDgTff3Q6zYpDJ
+# syCl2Bxi/2wFkTapjMfLwcRrO60BJygh9aQmZMQTFLmftTKSAczgGIs8yZGO1r9K
+# d1zx/DsMXcCoPKZHruOpQMz51Ge1nAEd6+/gp0yvZVB96uggxCI019dgWz5rhtGI
+# 8Mb+qviOXpnvu87LjxzKp/0hDARfIE8pwiOJ58E1XN2c0GpuybFzsroMs9Fx08Hi
+# ixs+kCjK5U7hWmeuxspX7i2WxqTo4OX/Un308pL5ZwtGbxhJH8Cb+YrCQqji1YT2
+# D6kHuNizi+e8MJ3BVXk5nb5Avu298NR2I6XPjYCt8OVphtOREpavQY0RE6VNaBVV
+# JDK6ZBn7r/FervVEWAaKm/SET1vmyp6tIjBdLyvwV0RCFX6Q32dOdhDBxPsDjuAB
+# fmO50SpcUDN19co3vLHCanWwJFbn9WgboYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCPnPXiaAaY7bqZ3La33xO6e04BBuctbQn1aRllp8L/LQIUdbyf4p03vkaH
-# KycRjK/KO9kRjwwYDzIwMjYwMTIwMDk1MTQ4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCAjvUpa2eyd9tS9hA88M3MNcwdPU/IMDce7ktoxnIcrwIUeGkWVIKMeHKR
+# EJ40/palIu51gwEYDzIwMjYwMjA2MTE1NTEyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -257,17 +283,17 @@ Disconnect-ExchangeOnline -Confirm:$false
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IE09yWkrpDel5XyQFBkJZLcBOpF3PlPNXCkZqYFrscx2MIGwBgsqhkiG9w0BCRAC
+# IDypeYOoFTXV1nVfB3ehw5MnyalOWtQEkJvpmGGN8gwMMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAbI+68DpegP8+
-# GIIkmseQUJp0R/Zb9uFUJttxLpwLYfUgotRJDOfADrxXd1trEofzTCOMnb5PQqgz
-# Ga8MkrOJCqoIgiSKofV+9anNEPpA0W4RXXL1rIUoUDsr9IfSNa85Q3tzAWAxj3XL
-# 58LcXGTHNrVN5LvNwXkQ3zKrH7R8MyE3mWoSvGwoC/IevEPTneC02vS+lI5Zo3AZ
-# 4KnD8EBcX5xdub+mKHa67zyAPaB32ttOBldumIVbbvpS1C6aVHtzCnan43W39Es9
-# lChF4nzxfmclk2MPMEwupkF97+GgazuT3Jl/PFFykqMv08nA/RY2nYxj+Tz65oPc
-# e/uBr7Ax4ME59zXEibIcyMq2Xh48n5+KMa2+V6DNpmZuhxSLv9av6vgkEGjXIBnq
-# 2ipXswL4oV3rQ8nZG+v7c52agVyZrwYIVAI7tM95REq2VHmEUU94xlFe3xr/5OQC
-# FcGO7+wpFFu/4DEpi4AslTzzqv9EymuHybpWHUBIkhXjSXnM29Au
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGATkbVyEpbGfxL
+# zbaoHql+yGRT2l4K+7IOnRyFSMWNThhP2s4GTlaY+v8GuVwmlyuiimQKpXpoi9zZ
+# PHihgzOtkNQ7EGgN9ZZssPW1OWbTW8j+Ga2pgA2DTBY43Q8u7Q1hARlRvIFgMwSa
+# 4J+EOcklUo/9mk8EBi/k3Qmbt35lMBXfM7nchEr1+ywSkCOAwMMnG4yUS2IRe3Qq
+# v4jXCu97UCjhb6V0lsY4Qu5cJooVOJHh9FTKqunuaRJWvHjYKTO0tNgB26bh2k1C
+# t6HrwAA5ROxuKT5IzjyJ+PBmV/zwQZmHEt267FiQ1UeNd4oCVbKayDglK0DJj9dP
+# bOC1pZqxE3TyrqLVTvMSSmGD9zM6Q5yAuxUBCYu4LLB1bl3Jpc/PvN8L/drAFfEf
+# 3AaaZJc2iR/I6yEmoDYK2nVH2mVu5LgbUFL59rqbVRvMC3YvAtQFq0tflaCdAd5z
+# m5dJk+3xPCSdJM+QGcNIYjwC9kZu2jCwwpSn3LrE8Y7Dbh/mgLB3
 # SIG # End signature block

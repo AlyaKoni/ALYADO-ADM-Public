@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,37 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     24.11.2022 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Checks Azure AD users against the Have I Been Pwned database and generates a report of compromised accounts.  
+
+.DESCRIPTION
+The Check-PwnedUsers.ps1 script connects to Microsoft Azure Active Directory using Microsoft Graph and queries Have I Been Pwned for known breaches involving organization users. It retrieves user email addresses, checks each against the Have I Been Pwned API using the provided API key, compiles results of any detected breaches, and exports them to an Excel report. The script also logs its execution in a transcript file for auditing purposes.  
+
+.PARAMETER haveibeenpwnedApiKey
+Specifies the API key required to authenticate with the Have I Been Pwned API. This parameter is mandatory.  
+
+.PARAMETER outputFile
+Specifies the destination path of the generated Excel report. If not specified, the default path is "$AlyaData\security\PwnedUsersReport.xlsx".  
+
+.INPUTS
+None. The script does not accept input from the pipeline.  
+
+.OUTPUTS
+Excel file containing two worksheets: Accounts and Hacks. The Accounts sheet lists users detected in breaches, and the Hacks sheet lists breach details for those users.  
+
+.EXAMPLE
+PS> .\Check-PwnedUsers.ps1 -haveibeenpwnedApiKey "your-api-key" -outputFile "C:\Reports\PwnedUsers.xlsx"  
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -192,8 +222,8 @@ Copy-Item "$($AlyaLogs)\scripts\security\Check-PwnedUsers-$($AlyaTimeString).log
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDB72LXRkb784hD
-# a1536luwDSG6WdpimVpVHQ0KtxXUEqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC3t+Ouc1EofJAh
+# kIqkrw9GISrEjxKYIdx38dfZVr544KCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -230,10 +260,10 @@ Copy-Item "$($AlyaLogs)\scripts\security\Check-PwnedUsers-$($AlyaTimeString).log
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -241,17 +271,17 @@ Copy-Item "$($AlyaLogs)\scripts\security\Check-PwnedUsers-$($AlyaTimeString).log
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -261,39 +291,39 @@ Copy-Item "$($AlyaLogs)\scripts\security\Check-PwnedUsers-$($AlyaTimeString).log
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKkHPEha2oUkt4m8
-# 6NBoVBFAtn7dv5c9eeZbdpV1d8BUMA0GCSqGSIb3DQEBAQUABIICAERPEQ9CXPDD
-# 2puAFja18sIpkiSU7BR1VCGmkbbqH3m4WkgMvsSbBLYA2RpeZZ+LbLvJoaba2cHJ
-# +EzTK0m9LF5+zDwPEQV5oXS+hvaNN8t5B9e2e/2ht1nlUuLacN1QJhX5vpe34j51
-# o7jtPY/JBKlLNE/OEFfYTOILq7N25SDTNdwEt6AsFlYDbehM3zZZ66nY724bi/hz
-# x3JeS0DvLhDnNyGy2fE/AFazNFUJCT1ROLLnWzBLjvACVbXRMIUYhBIHg14R3B1D
-# xysaHqk1gqpkK/7CWxYTwra2LwTUbdjDwJ4C4dNg4bIa/5S+i72Y6diQK0JZXg8c
-# RFhyCVKMTjkqqe/Q+udvsJoARDcvN7Bq6C87GovgQq4T2irp2bTMSNKpMdjf5FSd
-# yOBVtS8ANdEeavSE7MnVxzD1x7o5RCGUROI9gEJLZM8k6YrAZgfv7O3V2XtD1G9B
-# vvgVG/VQhLa/fvJguXaFx4e+nsLAoxwjYIs2sXLJT7M7WnRhTb9DA3NRB5+Z5Yz0
-# nGh7vMwnUc3F8yiY5HlEmUy5i5ggGx2DdhkHz2S+r/tx0PTNMgGHh9HLPJEFEoCx
-# LPPIU0p9U2gzBt+g8NgQJ+8FedeCoW6ipcJeQubZrap0Z/ElghSORbreuJFYBcWa
-# 2/6veGsAM5c2ggmW5b+5KELoe/NrKRVNoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOuWh4JH2Sap9Ca4
+# Je3xU0hyK3JK0rHIWVTsma8ISC/eMA0GCSqGSIb3DQEBAQUABIICAGwTx1cTHkIF
+# UiVj+kz3o9d5nJi6cZKphUy9NPSIen/4B7WP1h0sdwxbYBig7/uM9UT6YhRSN/OT
+# 60NShlFrULGq+VMO72Ho055iM+jxkNhCh447H2rvM+gsagA/y/frxsb/tEZsiqZ5
+# dGGAK+A2hVRREpwcxOghVzFFaqE8tA2gbEiOIJa6zPpKpdLjRy5tCjFjtZlv57/l
+# Ta/WL2heCj1SFifON5f4YkkIli4pPUs6PYoTSY5efLKuzNPHav+oqPNtDyVYXh+2
+# eNoXA2bpVPWT3vhTyGEqE8eU7XfRT1+v7xfTNPZ3v0jobiOANh+8G19khzcUKK8u
+# W+BM1YhwrvsMabWFWr4raussRXkW5Vw1nb22BYq9+44yb+d8vt34MDXDi7Dw/khQ
+# oImNehhjtYphpl9YAcfPaNiTD/osFxaVd4A0oGGoo5Ujy9oNkCMdkeZGvImYau3r
+# gvqsKVqwwHmLomY/1TQKAYYhmwrwn2cWNPUbiCtMwPW6YG7nPkLCZzBDYSzMm4QB
+# jWvOSbvTOBaB+ssM4jiVG2pdrxrjlcAKOjCr95mHAFWrUzJjB3ZdGxPmWyvRUp5a
+# CqB5Mjw4gLiBSlRBkzbXQuk/e+TYWoSgkZFsCg7vLHBq2+2N6PzHeCLQfX3jskpn
+# TFsP7afi2U7Omv0m9UV/fwDKmGEL19HMoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDebH04yMO8egWRnqpNkKfoLLo30SXRazsymO1C72YjPQIUb/FjMzW/8bPv
-# 0P5kTTmFO52Qts4YDzIwMjYwMTIwMTAwMDMwWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBNplJb9H3YT+o0jJIVMj3IeLDF2K1JFTgLWNUej0R6TQIUOZRWLQI15TvX
+# Lx64LLJO7p5GSOgYDzIwMjYwMjA2MTIwODQ0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -398,17 +428,17 @@ Copy-Item "$($AlyaLogs)\scripts\security\Check-PwnedUsers-$($AlyaTimeString).log
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IJ6hK8SMFUe7Yf8qJIzvZLo5hFHaN5rIYtXDVfDvnpdsMIGwBgsqhkiG9w0BCRAC
+# IOAfU0OFfQ07Ff+S/5iuU8UXVBz0ALXJcIeW0jlnZd/vMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAN/PaEVrTZE6z
-# m3JTfI74vQuDUBJaMscay7wOX6DbDxw7W+Dn6Oto/56DA1xuYw7IXXIJkiLk9a2Z
-# FSp+h274TVE7jwfFkkQswfNGrX7ODj3MceWxOwtwtpxY9IU134QvbUboMqleOOdF
-# EqVepwQIP+raD6ULr+8sOAuwskk7o7RLkrNKslzhCiZuNqpLv5/mHGBC0elg7m9s
-# MEgxugNM3YJ4Q8qKlgeKzdoLbCbyNGwShtHfXwDdp9BWnU63UBZLjGCRMzvXtBEj
-# qV8hMLHzHJp5j16idUSYcdTrZA3bo9A8EngOSDxkHbzP8im3/Mz58BjvbFgLY0+W
-# OLwu2Sx5kI/rz0KlPU3XpnJ7El/74dRYjMeuhxKZfEFnKOsM9hLLcOkrVIPFLJIM
-# 04D1FWe92ZxckkA05bQ5R5paOMRthQulbKaDvCF5iUpkzGip4C/vDZT+5JSOkk2Z
-# /IhAH6AeJPsf8hw2LB7BFHdq9WxJEMFTJANuK1AbKzPMNwydRjiF
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAA3eo6XQFGYQ6
+# ilVnCIH6/DrTuhPthEiPNWX4IHK/61R3ASOXktj6YZbXm+d78JEYT9EoisqnfUek
+# 876Jmt7JzBLsa3Nlpwo58bzSr69hYwLfLYJdNuviDWw40nr99coM3fHA2DIw1JM4
+# P7l2PBz1ZO1/TCxDIqsVFO2Llcl4AzTWPLopE7y1D8pCnrFIhurRruJkjoRs7zFO
+# 7jEpTb7vcaOzuF2YSRxFS4dlIPENzoVDtHluCN2nKwxqFgYcOY8HRHhclCtjUCZs
+# zkJH9enuAec40eorZ1gC64vcCw/0F2WmAG8fTFt8IIei4PKNtQL7oYFHpw0nSH9x
+# oNo+5qCMz2o1ajdjczy/beZiwEuu26yIMkH5Wal2SXG73OGuxO4s2q6g2LGAVjXH
+# BbP8xwe10AuHJh5L8/wKMNzrkMyphj4N0ag2G9FNrFBkFS/BW4msWqIM9f3aWhpb
+# 84/RoYf5z7nFdSBqlw6BZcvqhz5FizrWe4k7is5+/alJz9FjidG4
 # SIG # End signature block

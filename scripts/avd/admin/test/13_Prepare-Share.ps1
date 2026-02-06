@@ -5,7 +5,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -16,7 +16,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -32,7 +32,37 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.11.2022 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Creates and configures a network share for a specified host pool directory with appropriate permissions and subdirectories.
+
+.DESCRIPTION
+The script prepares a Windows file share for a hostpool by creating the share directory, setting NTFS access control lists (ACLs) for different user groups and system accounts, and establishing the SMB share with full access permissions for administrators and users. It ensures that the necessary subfolders (Profiles and Containers) are created and configured with correct access rights for domain users. The script should be executed as an administrator.
+
+.PARAMETER hostpoolShareDir
+Specifies the path where the hostpool share should be created. Defaults to "E:\Shares\alyatinfavdh002".
+
+.PARAMETER hostpoolShareName
+Defines the name of the SMB share to be created. Defaults to "alyatinfavdh002$".
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+None. The script writes informational output to the console.
+
+.EXAMPLE
+PS> .\13_Prepare-Share.ps1 -hostpoolShareDir "D:\HostpoolShares\pool001" -hostpoolShareName "pool001$"
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 #    ╔═════════════╦═════════════╦═══════════════════════════════╦════════════════════════╦══════════════════╦═══════════════════════╦═════════════╦═════════════╗
@@ -132,8 +162,8 @@ if (-Not (Test-Path $hostpoolSharePath))
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDk2WyHQmHPoXN0
-# UA50YErzU5pbcgSJKGUl/eeyjeUcTKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCMggSSZYjsyU9W
+# GdLXDQP5IkDNuNOpL401eHVbQadKp6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -170,10 +200,10 @@ if (-Not (Test-Path $hostpoolSharePath))
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -181,17 +211,17 @@ if (-Not (Test-Path $hostpoolSharePath))
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -201,39 +231,39 @@ if (-Not (Test-Path $hostpoolSharePath))
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIokP0843pqVHrGf
-# JRf430xa3V/+WmNtyHDYOKWiHIPZMA0GCSqGSIb3DQEBAQUABIICAHBm5H2gJPA0
-# dmMeylUHNPmgqynSxbftj2Dsly8bpMEdjl5nUx4eo/0GYoC/BK0DtQE0DUkeLpSO
-# 4JoNZ+TvZXd+TsaeE9sel08ez1r6daRCrN4k6lv9P9D4Hocq4BJ5f54IgwkQeQ8J
-# Jn1chHOsIb3HZOXatZ9aXCBBxH5V63TzTRFfYhpGvsPyaACWYK+msquzqbqJ6a2X
-# dgRp2IcJXVw1HAlR14TeM4vRYHqUtt1XkySj0MWGFj4rombPFmr7qzBoL0AHQRKb
-# 55g1PrPb3F7TD45pJfY/eZuljGhDMFVP1x0iyX0+dSqfGZoM/MfliQSB+h+XfmxG
-# 3M++bOV8o9Knh4/nen0upVUn/c4e7FZvLwAbKLJkSyqPEO1qqXYckTcKdMfNMRmI
-# Ht+igIiiJ/A2s2KjYV3ND3zsR+nO4UbpnUgc6pQB5ZnqrB3y6v3q1kRXJTC/KNzr
-# FA2UmAYQK1CUsoxEnhFXNhR8LU2tsXD4oBq0I+/1h8Cv9oH4SMEp7HFMVVkC/7C2
-# Edq8ZNGNOrIG/wWDDMwmTCklMn1Vvo4E5k++Xfj/h+0F976pF8B3j3VBufNmhEC/
-# 2Fwq9ALch2EhvBMxdOv1MbCxkbrA+shByS9JNMSzpq5klA5Jtg57HJj1yR93oVmP
-# fMHTkdr1Ho9iIsPvz29iiRuM+6BRfFNYoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHD9ifA1DBYWZwuO
+# sogFlCI1/tzx0kHwAUVOKt/cGCCSMA0GCSqGSIb3DQEBAQUABIICAIlotWXFIFHF
+# uKXqYEVoYZ0fapWxd7XByCP3Uyrw4LuJXnTzPYanGsu2fsBIh0SB44S4ErFWlqkg
+# pHJiQfSbYzd7k8Bqr2/7hp5NK2D9LLbFe7cvYWwA62Cu7j10Prype59nGRJr7aTv
+# bBqDDdMSKilSectVGlX9EUkk7mLnopHLg+0ywcl7grJXAN1lNnKzAL+vntl5bjmP
+# XkM54qQes4rLsSIcf/9Uy7kbX0Z91m2JMuCn7bkDGNDgtRNWfPjV37V5ryWkvAlh
+# 2oVRr6o4wrIBiA5vT3XTMI9DdSdJVHjVicYjN8CIUIydYQUPSlfBKrm2V9UEllVC
+# 9+xtYY2LyFOcNSEqo3bV/5qmZCCu2hLTDkauk/X8TabvuGVztH8NroplUpMbvymu
+# YA4E75CF59PmEJUUTMSDVgrDZWmKqfxXku6RkMmAP6a5koJOlMgGY6xmRUgweFnP
+# khZhWRgv3uIWuEpBl5NuhQs4Zi3x3LS350GUpTXoQZz8lteh6R0zqt8epvFILsfn
+# w2ZjDCGLhW2ACRitgh2/+IcPFVJwdfMCnJeIuAir70geuVZSS4yNzUYf6pqnFtFd
+# eyrBDxT5WrADtdqKlc45UOICV4CySqwF9fWGtiy/DeBfGfxg9OqR9VW6X43ExGU8
+# j2XZLpKJ5yfUmtjEFnvUpNzhhhRKRrV7oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCB3HRcWI5hhlo0HfGzRTA3VOogZjR/oTIjVZzLgNzMYbgIUDTq+vq34rzSX
-# 5Qc+5J/bN6X8MuIYDzIwMjYwMTIwMDk0NjQ0WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCD2s5G3iNj3Q9CfFaxb+KtmP6HzGP8pSfMMY+7JykPHLQIURMjyXOZWv/8W
+# vrsATqPb7eV0syoYDzIwMjYwMjA2MTE0NjU5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -338,17 +368,17 @@ if (-Not (Test-Path $hostpoolSharePath))
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IP+Rgu06ARJ4DU+lIGs/kmSD0/Z49baeea3AIQeAEmCEMIGwBgsqhkiG9w0BCRAC
+# IOn3r5Ef0S4YZbf56UUzvUuRl7MInW+41UzY0SFLrmR4MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAkFGscK0KUAPR
-# 9XXQ3x9CB3AmEMLDxeADAsNac0sSr1sl1vIBnuuHq7KwgL2fJqvNnDVsLRqI7L0c
-# 40ubHwOo67db/wvWhmzs20mxx9DR2sHcHbm7KD9+UOOjoTSk5w6rclrDF/o0yZwn
-# 7O6w84xieu+pqlTcLndluCWUPDULUKj6Jw1Mo5JM1y1n7BeIsUYyRX/ms6pDy/DW
-# vXSpFtSWsjVmXHnx8rsj78emYuKe2zCapM3psjGNbg7Uij4sn9VSVFov4qAxySHU
-# PJwiM4TNu1yDlIj3VSq8Kd3mNamf8oGAOZBYVpY8RAMSYmVUw6SJ//jNpqgUaFUO
-# b2OOLG0329PtIo5dUu5Q5EzKh10XHGngdOOiXsdqsxNT3WxGQlVbl7qZ0Qx1UIUF
-# R2lBZDMYZ37wyaMdo0HRPPshNQ5gf/v4wVx8pLI931NKZPyt8x//U3kEBiHEdhVT
-# VAYDcbQ3rFy/GuLlQEfsbwzIZhlI2vwwtvl1bLK8c1fcCPBZhwUm
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZi2FwdxnO99O
+# 6EKeYnfWWlt8qamM5XbFCPt7ivqOdNG+CoRkGAbUaPdgD+pw1zKw6A25/TepQQcx
+# Kjvj2Sjc8guCAVGX633vj8BHT3+kwXvIPJt3GC+Yd06qwGF0RCdKZasuIlPD/bZA
+# 6IbkHEJUT9ZKnVlei70b8SKY9eyR2AaKnDScxQxlZ35pWDt4EX6sg/ApC/QA/M17
+# FXfCvuSPqAI49F91q8bng2L53BQFrCf3bJfh2EUdZpKq+bLZrQD3FZNqO50L11Zk
+# En4XkP/AvOyPWC/h15qUbswZxHCsqrm4vAmoQ3TRc9LJdUMH6XcLsgl4n1iOJU7C
+# 24WSbcQiuV4HqS2Rm5VWUgeKRqbym6l8FPMf03lhbxRylt7ta+cLieXuV5zO1NLb
+# 4uaWgYwdNiH9hm0dyn1Ox8GGhPGqgqfLQc42U8r6X4vYhHT7tSJmEdN023nuGp8I
+# jws8dMXM6UnCPqNWwgEwEYUTyR+OEnpdsCXt5U3uyDpjy+m/uEXm
 # SIG # End signature block

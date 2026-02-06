@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,31 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     15.01.2026 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Enables loop functionality in Outlook on public computers by updating relevant OWA mailbox policy settings in Exchange Online.
+
+.DESCRIPTION
+The Set-LoopEnabledInOutlookOnPublicComputers.ps1 script connects to Exchange Online and ensures that the OWA mailbox policy allows direct file access and web viewing on public computers. It checks for the presence of the required Exchange Online Management module, establishes an authenticated session, retrieves the existing OWA mailbox policy, and modifies its settings if necessary. The script logs all operations to a transcript file for auditing.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+This script produces logging output to the console and writes a transcript file to the specified log directory.
+
+.EXAMPLE
+PS> .\Set-LoopEnabledInOutlookOnPublicComputers.ps1
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -100,8 +124,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA59jkVbl3/3zAp
-# iWysJxEd7UyhIRkSPQpgN7qdeN6C/6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA81O2rsoqv+mbW
+# RO1OtI1Ue9AsGZ+oKUhIXt/4rbWo6KCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -185,23 +209,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPcpxRniOvx6t0S8
-# fOpL78soV8wfM9AXSxJUfnMq52jtMA0GCSqGSIb3DQEBAQUABIICAIyLVZLYiz2N
-# iTGBsnKSv0F2iy4PTeCnvyNbLqTtkHYzIgawO3VDuuBKp1zo/dADMHY0YuedawFk
-# RoVGWAHkky0+jzTgopQRuvH4Ribdq9K2RYkkL0B2y936dZxkFzu2ecXYDQ15rbLx
-# fy/bTxNPRYa50kbQBiXk86S7vh7KRYryEsgMA2OotPnc+xbiovbwCchbE/jGk7T7
-# Ufe9IMbaDRCt4OKixa/GA/HdNPPo6eLTSgCHRnSvYytCwpRDbEN4FTOTuEB62HUC
-# PFVbekVPzCrNMyLATvrBJiBVsFF2JBVeV4HqrBA32LboGdZOPs+HUNfBdqMIabDv
-# ksMf3rdihOS7Cukip57WWo1pDhCxCSWQWFpKqhfrhm5hxgJ9F9sz1cMIwNR3CSnv
-# IMjBvPLMIxKqUVrky+8oubghW3jGbSvAGnzhevNDpXjKopijkOjc0ms2K7MO0/wP
-# 9rcQQlZg38da5utntVuQuWcsXGmX7mLlU8C8ylFz35FOiIeDq3Wd7oEixdBH8BVu
-# E2ElNLHidMmE4I6dFNNSmNabQ9ZDupLO+1tXFYWj8Dixx8zhnHCX9wfjCkIICBTN
-# WnQJBs31EZi5N41MbC/hvWJZ15jpuoi/b/Ha92wcC7MqILvCa+VJ3dB+B1oq86oV
-# IHjkxJWXVKVCQduWigBdxh/fejZPqGESoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGS8nYiNpOLXUPkR
+# 8WGVox0qMGzowuKA+iCGX57gP3lgMA0GCSqGSIb3DQEBAQUABIICAC416OO+VCbL
+# hvqUwkv7JbJCo0Ch/p4SxZHF23fSCXPiDYEnxz5nB2Rmb6gOnYZXdOjpKGZOQe15
+# yrF615wAYubWVJNglt9mXuBkjJC3Tlw2JwikBMux80CzgGjpZDBqjsR6KL+xOVi7
+# kN3wpvepn+MITF/8cPxE6yNr5irpM2pWwKeeA+tN2tVfDJsG0m+kgvaEt0I3JUwt
+# 6y7dwnxrMWMKUjPXaes43+z380s/NhY/qQ38Pag3mj5UZ7gcdFJhr1G0k69APZYF
+# V4P9g9T9x22FPvm5MakGiIxsJ0qYc8diyhX/u61x6DyOG1GF2vQSpF75iXy6fzdY
+# YytzSL9fXRvdNdA5dFWKGqiSY53LFsG1LwtGZRRC01rvTyeMpYw+ozc3iZGyWmbP
+# vLr2Uf4uL8aHi37G3SwBEB/vaBA0llUOMGSIQNG6ilMQWRxKPqA0fNASDTNnmDKU
+# DAvi6KBavUdB8UzUcW8iMxDC7LLyabCb/eTS6YrEBy4mKgIZLuiD5Gbr3PWNCVHx
+# HgPlJbxxiwEhUb9Mrgv4am+ERjVFPxywgflt+bJLQduDkg8qTDfG5a+vqufZH4Z1
+# jfxjhqkdqlZYWMgu7AiUDxS/fGNWJCr0X/iPUsgbuU5ypekDajiinn/CL5355V7s
+# Yt7h1NuNURYNOemJPyUEQ07bV/Yj3HjmoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCFuxrBfsrZ6dqgG4aVtNdpUi50U+woAkCxMWuTj2zWiAIUUJElkQC1vhm3
-# ErM9brvI167kfk0YDzIwMjYwMTI0MTIyMTQ4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCDTEoeOCqFRRSZOuAUn8dNGiNDJIIrfvCcOnMTCiPvMwIUbFpL1KuSYrDc
+# agUJV6OSBW9sBTMYDzIwMjYwMjA2MTIwMzIwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -306,17 +330,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IOaF5yKs90gs2Zbv7yiIzASxFaNwOm0ZGC4tsoQWxar0MIGwBgsqhkiG9w0BCRAC
+# INZWYwhv0jh2D4+PvsXa0PnG/nlxX6Wm2vt/7ylyZCYsMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAB3g3I2XHbPCF
-# M9kJcItQOGJVaMb+FMCWviNUEnc7YiDYiuxK0VJ6NHej7H9sLjWT6aeJOhx+2Ao5
-# vu98bV1P4PLg91epiKsDpB3wusQn3qFm5i1mEMHBtqKwRM2K2dgIrQ//mgWCXaEi
-# fTwUHeEVfOoF47lKU1ZUVBtP1PuxvC2WbTA4cP8dvmSWEBwaDQLJoa9xppJUktKU
-# pvvu7MMckwX/bsc6JDy5a7/0Z9FOCLBdpUHPPn5VaGfDcJsObOrPYaSrscODrVvO
-# ya4omK/0sUjn3XpT9h69mCIWq/MBSQhABCMS7CRSOO14sljmgvLX0iw0nSI6XTNJ
-# vwvi6mHcj4yhubGgXSSxZhDliDJFa6eUe7SM9K5q0wOPefaGZxswjRdoT8ROKdys
-# hxz0OLW5GaGgdtp3PjITqQK/Jb388UdWjgrJzrvixfHD5UGhq2V6JjoHXwSfG4Bn
-# JG7+4eJqSklLqw/f4v5b7mzNV4HagtBvRy4HzJFmdP3v3BVLBd08
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAhC71v/s0AdK/
+# blkMxujeZJoL3uutDL0HW8tcRPhmUiwMmX6dl2CwZkTXARwC1ED+zZYTBeAH9AI8
+# VHiIqcfVcJHSl68EdBbdP4OUaczgaGsP0BfxV7csrDkOk/JErGX+4rIoNmdKNbCD
+# VDmknR9/YxBtU24vLZM90rhcjhY9RbjKOj5yTzij9q2HlQ/CObpXVRX9fiFXvf6K
+# PfLPT9qjxSBTcwXbhF8C5gZtHZ9Y0F6ngwYH+t1kspOXO6NCW8I2JSwI+avXXaCR
+# sJ0v36PA8zRP1uVrLoe4kkbHhVD79Y5Biz1os7XYOqR0Bc2wD2ilK6yMG7kOmwjm
+# xIGmMZB/UZiC1dwPjxImhmi8N4j5p6Az706WAqQn5NBKnUY/cSKUKkjDPWoz4eLm
+# DNSxFyOc8hfFB2DK/iK5B9zMUDNNhWLuKOqOPRFbXue1Ht/Voozu4PkoU3sIZyu5
+# gr1MixxKxGFAUIqSDsoE5DhpLh3xvppFsiE+nedjnYM/8MlS8ARy
 # SIG # End signature block

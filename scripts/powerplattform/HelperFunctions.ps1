@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,83 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     14.11.2019 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Provides helper functions for interacting with Microsoft PowerApps and Flow environments to automate importing, exporting, and managing app packages and related resources.
+
+.DESCRIPTION
+The HelperFunctions.ps1 script defines a set of PowerShell functions that facilitate automation and management of PowerApps and Flow resources using REST API endpoints of Microsoft Business Application Platform. It includes functionality for API authentication, invoking authenticated requests, managing import packages, exporting application packages, and interacting with Azure blob storage for package upload and retrieval. These helper functions are used to streamline deployment and migration tasks within PowerApps environments during administrative or setup operations.
+
+.PARAMETER Uri
+Specifies the target URI for API or web requests used by functions like Invoke-Request or Get-AudienceForHostName.
+
+.PARAMETER Method
+Defines the HTTP method for API calls (e.g., GET, POST, PUT) when invoking requests through Invoke-Request.
+
+.PARAMETER Body
+Provides the request body content, typically structured as a hashtable or JSON object, for API requests requiring payload data.
+
+.PARAMETER Headers
+Defines custom HTTP headers to include in API requests.
+
+.PARAMETER ParseContent
+Indicates whether to parse the content of an API response as JSON.
+
+.PARAMETER ThrowOnFailure
+Specifies whether to throw an exception when an API call fails.
+
+.PARAMETER Resources
+Specifies the collection of resources from an import package that need to be configured during import operations.
+
+.PARAMETER EnvironmentName
+Defines the environment name identifier for PowerApps and Flow operations.
+
+.PARAMETER DefaultToExportSuggestions
+Determines whether to use suggested export/import settings when configuring or processing a package.
+
+.PARAMETER NewApp
+Specifies whether the import or export operation involves a newly created app instance.
+
+.PARAMETER ResourceName
+Defines the display name for newly created resources during import.
+
+.PARAMETER FilePath
+Specifies the path to the file being uploaded to or downloaded from blob storage.
+
+.PARAMETER ApiVersion
+Specifies the version of the Microsoft BusinessAppPlatform API to use for requests.
+
+.PARAMETER ImportPackageBlobUri
+Defines the blob URI reference to an uploaded import package.
+
+.PARAMETER ImportPackageFilePath
+Specifies the local file path of a PowerApps or Flow package to be imported.
+
+.PARAMETER ExportPackageFilePath
+Specifies the local destination path for exported PowerApps or Flow packages.
+
+.PARAMETER App
+Defines the PowerApps application object being exported, including metadata and identifiers.
+
+.INPUTS
+Various inputs such as URIs, file paths, hashtables, and JSON objects representing resources or payload data for API requests.
+
+.OUTPUTS
+Produces JSON objects, API responses, or file outputs such as exported application packages, depending on the function called.
+
+.EXAMPLE
+PS> .\HelperFunctions.ps1
+Imports the HelperFunctions script to enable use of PowerApps and Flow automation cmdlets for importing and exporting app packages.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 # Source from https://github.com/microsoft/powerapps-tools/tree/master/Administration/AdminInADay/SetupScripts/GenerateAppsAndFlows
@@ -426,8 +502,8 @@ function Export-Package(
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBNAYTeNHjzUxOH
-# lVcMZyxKU+Z51pqPXlKuOmTJsWdtJKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBGEJJfnV6ik7pF
+# MOhPL7syNAZuFzilDtaMun4IVvV0N6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -464,10 +540,10 @@ function Export-Package(
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -475,17 +551,17 @@ function Export-Package(
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -495,39 +571,39 @@ function Export-Package(
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINeZs0+6TLRgo2S2
-# qOkT3aH7LZ2bAGk+ukfkxxH4o7pNMA0GCSqGSIb3DQEBAQUABIICADdwQ2WM2ba4
-# S3Z2JVxC8z6TJwzMV6dkQ1ObA7xnbygf6gDgYkeV9YlP2jF4+3O2v0R96A3K9z+y
-# ouY7orBOXyzlOP1/Lu6zKnRTIuXdz4WmattAoPWm4jT7ddiZZWvyLvz+7ipQG/gJ
-# tE50F3vQw9Ho1NA+irXnkOw7iaRdMs6orDVBidPQUOf1t8qzixcmGQ3Ev5HZF5TT
-# lS9A9LFY5I6Jj8u9pRHKSQDNnm+sKS/UXwBtA2W14zB3nU8buAT+TAuQqmxQU3bD
-# 2oTkVo1ANEe2NnHR90NEjHI/OXeW5KmgGSSQL7Y7ogNmIcbc2DBkbL15fgN7xR1c
-# 4d2cOQPyu74aBxDRXaPPNKDDCDie2uXqDaj0BQny8KoKLHBHu8LjdEChO3a+nLk5
-# DWLAmvfLMB838Q5HyPvn7z704QMZrlw1JMEEPv7toHZ43XK9l/BSjpRfPoCJnMbJ
-# uIh+ESdaW8R8218SrjjRYe92vQ2fdZ8MjhC5vWmeSc7AVN0EObgKXI2aOjOvlxKY
-# Qu39A2Mk1B82DpezaW88uhxXbXVUy1PR2Abj6j06JvcpGcQrf5El3gTYjQ4KJhPO
-# Lq7FuuHyzKQFtMnZxZrnIDroMN0zJjbdBn8NqlwvP+6aW0tl8a2E6y2jlmQ52sDs
-# PWp4ZcLbRLe+NcSOll1g0T54McwO94WMoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPJTDrZX2gTp86am
+# 3jCsXS1LmxwNnC4Im6DIoHVmarj3MA0GCSqGSIb3DQEBAQUABIICAHKQT8q0zCz+
+# OBAUrKdDukZWeCec/zbUsHP0iDT7TpFs0kehhS+ASf8IZXm73NCpyNYVB5XGw+Ct
+# yf9E+opUtkjhOtLMm1DFV4UIBfIhgtyGeHs/mdIUriKWBWDfhoro4UbanjdrYdCY
+# xwEIM2kxb+QuO8DafD/8sfobENwDY5U1LnSEquWXW9IyZpm72OziJghbm4rWYCHS
+# J00cJXxrKdljPcutij3OEI0yS3eSpvi9kLuWVTZ5yVqRN5pA4B85eFeC3uB3Gr9X
+# 31aRVV8xVPplYTO+boWnQC9kVXIvR784TQCqmTP0TiLKvXfnpBGlB6aziSdl+nc+
+# BVUiHFsfUMEoMuarqDZt5JmFKQLU83dshy+dUyVwtUdsS7TCgW87CKWXyeDrW9hO
+# TAASdIDsxYXSJEcNOpuws/0LE9VUyCt3dtsygFcF5mCPaDexWapGF/R3H1mZ3vcW
+# TbaUbUPoHD/hvscEQlPY1nobZXBnaa645YFsbe9nGVlHRdOL7eDwI4c3fGnlO+cc
+# X3wotfgXLZ9BXXD/cEINiUQBtoRmdhbkaB3QiW/3WbfyG+VVAj3KZknFWx3M+KJ7
+# TZDmNffEeuvZkRYciB4h/kHr1189wSwW/ZcP/iaAw1VxtyO0Yudmfcy2y0XaKYoo
+# ViTdd9it8l9Z4fJCebP7ahw5hxDBOkemoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBvjPa4JzFI6Lqyxn31ZeNLfVSGc7EKi1gls/5Xq94b4gIUOWOSYn0ahTwv
-# C6kkJFdPpcCH0D4YDzIwMjYwMTIwMDk1OTE1WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAW+W63hxqSSL6Ua3VX7Zj9xxtIY9znUwTfyMZNosIxfQIUA7a5m49rxJCk
+# U03HOvvK8bobMEMYDzIwMjYwMjA2MTIwNjU4WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -632,17 +708,17 @@ function Export-Package(
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ILiDqvotoNj+tbfdutIxEMODzCpySEgCKUCoJomSzrVUMIGwBgsqhkiG9w0BCRAC
+# INpSG/gyqZmcT0ADn0MX0JJ98ofzMsaUT1LCllWEd79qMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAIqueNmyIy2LF
-# NdLM0heWGoQfPpIPbo7FhJUTks27W3MBk5DCSpzqIzE8OpKhBqm/oFru1twL4OMb
-# rqs64ES+n3W1EnY15riNbdiL3aqQNgFc9kqVrOsl07EefK6poj8yToGTh22cwizL
-# xf+XPF7B65XU7KkocvhZuiJ0B/rWpV2gfgBCorsX4R12O4kKxPuUhRK6RwYHEx11
-# dh6DbK4PZPTQmsLKGsBiqm51+4TzG8kIYqpYOdOQm9W3n5wotovekZy/cX0lZPqy
-# h8wr6PAF1JJpWE9zubczngBB+MiksfdRrIqiF1noZnhDcXbtUpKgKaW7q3fQCm6X
-# Zku8XKTN19CtE/uZqGmUb6gKgkhyFzBq9VPFFv2IctbjZOygRyzBb1FQQIx26r86
-# +wYfKxKL0qxihf8ULb9K8kK+O//jh4T0yzmxlT4JMkBgdmfA/NM3WZBF6O+GhHE0
-# UyrhMs/Hmr+nuAf9lj1RoIbvGrp8wEb+/GQjWMi7gZIi9u/GiiwM
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAQ2bHpCwTxNie
+# KSV83Q8gJOlsl8D/rA/6XVSaO/0Gp/oqUjK0wtpBqKjrzd3+ntHoOnVr/rdOt9oj
+# gEY+lFJ+qcb6BtNrzRtwQ83wfKbqNcg5p4dTd5wRBicV/OgY81U3NajPEa47vpww
+# LQIpsI3TsEL+CPKLtJf0H0Id42rV7bXERhCs++//ZdzLB93Vd60MxzIfr+b9PLgi
+# rfNitSr/u3BNf0+zmb0+gkrSynlg42dQ5hzFdrm7JyE4h3qZPSXMxtXjYELhdXlv
+# MbnhqAt9ytCa78AiimE0GCguGbuIuQyi1XW3GwWQGCMn5vz3kpY0uHM9H5cCaewv
+# Ity/JqmPzzlHl/66jjiOoL9kIRDlpBBqE3BkOFide2hh9pD3T8Y/GFROpaB9FnSt
+# ZkKtWGwJ6aqFkMi/g5boJ666iDIgDcFZwzgP2TlDF4msuYhiOSag3drsiYeap1iS
+# uGWEGgOXoBMhPx5cIcEakOV1up/WeH8wB5VMUd9zG8nfL3u+UUyG
 # SIG # End signature block

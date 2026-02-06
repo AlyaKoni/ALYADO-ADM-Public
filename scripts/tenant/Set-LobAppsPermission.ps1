@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -32,7 +32,32 @@
     ---------- -------------------- ----------------------------
     04.03.2020 Konrad Brunner       Initial Version
     26.04.2023 Konrad Brunner       Switched to Graph
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Disables the permission for standard users to create line-of-business (LOB) applications in Microsoft 365 using Microsoft Graph.
+
+.DESCRIPTION
+The Set-LobAppsPermission.ps1 script connects to Microsoft Graph and updates the tenant authorization policy to prevent users from creating line-of-business applications. It verifies required modules, initiates a session with appropriate Graph scopes, and logs all activities to the designated log file.
+
+.INPUTS
+None. The script does not take any input from the pipeline or parameters.
+
+.OUTPUTS
+None. The script writes informational messages and logs its operations, but does not return an object.
+
+.EXAMPLE
+PS> .\Set-LobAppsPermission.ps1
+Executes the script to disable LOB app creation for standard users in the tenant.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -79,8 +104,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAlkfrm82netLqD
-# A5BjDUCnpRnbw2NFzt4Qmz5zv/aq4aCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD7rGj547XdhgGT
+# JLqdDX03ok+7w6/CK1xTnWpj4Xwy06CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -164,23 +189,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILvtgJ+KjLbleClZ
-# fEiiE2FtmyK/d0HXtxx9ynNZ+4YkMA0GCSqGSIb3DQEBAQUABIICAMbmQsD60nPb
-# vGQyICgtc8JE0ilRLj6oC31eHQhMNT1fGTKl3GctgB8hFaLagMwDYEj+u9VNM1kS
-# b2sdPc+D+ZU0/8p8DDSiToqq3cpv/c+l4MGoxmEO1wQPN25HARWeJViieh6uwi5l
-# z63NXveGMLItEnJWmefdeaUa8NCN9HJI0REJelksfQcXGTv+MVmei+bMcDQ6BfPG
-# yHoYACIgXaIYVIVTI0T6CWTsX9lDMMfskX0HHfo3r1gQuNyEXJ/UJSC2q7OUPYJH
-# kueQ0yOVc/Tv/EtBqX4BX8tRNq7WkiGYDxfKu8BlvDc0AXiYURnJ10udpmjGri5V
-# I0FjqWs8oG0hzITWJbphRCBpkMrK1r6bQCsyycquuMljznfHQwynmLIqAUuXWHFm
-# SEPiRCPRF1oWldwi76yLN5a0zSbjKVlrxihRGYMwDEoyq6JDsbmzyS3yOGqruflN
-# aw40Pm2+EJobUU+SvyX08F0d/wBKJ0uofQNHu5BT4ElulE9KBRU7LEZpLDi4+jsZ
-# CZZg899wgYKFpO24vlCFsi/SMScDj4l7SVf4EK3MmqvWYgfcuCuZdcBRrKTj69Un
-# iCxVvXqhf9aclBmV8e/+9t6D7GoOrTKnHKOHpWwMRAJdrzNpcNJlXprOAMqPA+b1
-# M2KnNmfUkRAR9IoYe0oaKtCAgbYIBiCboYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOiHgvLWKyUYE6I9
+# Xm9C/YiR779eVYeHsQyqbM3M8vHQMA0GCSqGSIb3DQEBAQUABIICAEYDbwLFyKd6
+# ng+m+G2pHq+RSggas6e54TNQHjLICg3YIGNJ1jrLLKqY1U+CNTJ/q7d2d5uCFHUK
+# +28NX3+ZacoKQbvzPTRD8x9zowDH5H6hMI1P8hFNktvGDuAed5O7FSZAMDSsnOw1
+# 1Yq7P4wet8x0Plp5mNwJ54oCmVcC1YSEndHQfwiycjjnvKpD2ft55Ui/imQo6ZZQ
+# GUtfhy1cZDontWzJck0LBJO1BqhoGQWVCI4N3r1OW5+VuSa+WZz0Xdbe8/PyoFqj
+# 2Ak2zoIXeyTIW8cqf4uOUuYRx1605WXk/IbcE5GBH4+1WP53Lk9GFatSJtJmvOGR
+# Vp5PdbqbcCFstQdNKHqbXDRReYCPNRez5WL3kAI+k7pbqH+t1gpMIOJWDjQSiAFn
+# JjESrjdk4qBg5xIZhhB9vxLVWzI9hs4/ADpac1FQ1dT+0VhumRot6v+nztGC4Qxp
+# LpZQ37MPlrfiR2SYxZtE5Gz0CbNLk5TNG4V5PmVRNUsSTZQRsTOJj73rZhGYRvB4
+# jrVQDwp8GgPDFgVwEir2bTr4uF1iI387hCpuxsGi89WYp85E9lTEbNXRY6XIB2fk
+# zvQ5UdDtVtjfV/mNznsT/rj5fr4TfyNigL2XwrlHT3e7RGWc7WSPn/n0VUZRuJN1
+# anIIrjkOp5ivns8b7kS93M1sJ5CjTsNloYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCjgGvfRK+cD2qYAox3W4ItQKpIriOmw6SwPl3mQLxomgIUR1XBdEexh5fO
-# Dm0KW36FZdezTYIYDzIwMjYwMTI0MTIxMjM5WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCm38D1/+L9k30pVlOskojfU7Q3eN2YJGFdVFa4O4IETwIUcmEYJcSw0OsL
+# 2oWVQ2ApYIlYX24YDzIwMjYwMjA2MTIyMTQ5WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -285,17 +310,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDcYvue4F6qYKcAWYcGLZV3Q5E1m6fh5rhHpDcEnnVgtMIGwBgsqhkiG9w0BCRAC
+# IMDMO+XYfgNeGQnDI1+yLb3BkTDfZFjxfktfkFAHs0ZdMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAOmOa+eXZ9r8K
-# 0BVf9mo+eK3YoyZMSzrdPEFDhKp/M4ThSVMMDpHgScK1kIFnQNkvUH5G7+lWqpzJ
-# tGRhKUzOZEuF5MR4uFOgyIxShqlDtgBw2du8q+m4m9Tq2i/Z/7+SqR9fwaJsFxwu
-# JncDLCBg8c5goRshcNsqTB+uiFHAAURF33EAYqBjx+SBp56DqBdekgJ27KgQ5aeT
-# AucZf2ZE8KRxmh7yd9lHZ5MwJUDasm5UHugx2Zs3OapwCi2Ji21hCsT9vNKcpoHH
-# JT2P4IHcz2E6a7HJlzaRLs+Gd7XIG7u7Ol6T5NpyXFc/uWsoAGPgiKEML9z5S3FM
-# fFHJfynzHQiWuMkMSVS/0OcbhDl87WzE5J9E3m91pH1gBeJmkeQIo4A7EbYKmogo
-# EiX7cIoaHh8r8ybJGcxvux0zD1vL2CwHk5TcPQSZj4F060L8hx65dAR4w9UcFj0D
-# Qg9A7LZCDwm/Ex6zYSLThBAI9O8258aBSvR7itmgWby8rYAwFSTw
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAT8SvSNK2TfWR
+# tV4OMNYBqzzI3P2E+5hXipm1uEkxa+H8d1AzmYqt7LYVp5jMGYLPBet7ca+BH68S
+# L8UyXQwk2yis6c9y/vNCQsQO6xADkXGzpsDg9o3aCgMB3ov8CLE/SBbVk5WNBl8s
+# IkiJRDOhWGhccQeRjRnxiI9SOPe979DH0Wb/xcnvkrFpYts2OwdpHSqoBOReKOvb
+# +jsx69oO3EROoUzPuunh520dRmfQVr0gLez4pGv+hYchN53NXnwesim3d+vpqh1O
+# QpCE3sZPztUKl9g/sU1Mq4De4HM9Mk36bBnX32iqJRNM/nw7abZA0X731gj7SUeR
+# AqBTYjgrKMs9jjkPq0/4VSzpLq5f0jvgEb0W5RKHPWpRQV2Sp8txXcrn1SR1vWiB
+# 20bHobZTwoFnt7toYQ1a8W7dqx7STUOXqFa3GjUpPWmClMN5yl9ae0flp6/qWhiJ
+# MEcL3sDAlJlVgPL7ing63AmDbIWU9G+N1IV5xLogPq0DVPmwio/h
 # SIG # End signature block

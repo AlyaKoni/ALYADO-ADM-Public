@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -32,7 +32,124 @@
     ---------- -------------------- ----------------------------
     03.04.2022 Konrad Brunner       Initial Version
     16.08.2022 Konrad Brunner       External redirect and options
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Creates and configures an auto responder in Microsoft Teams, including associated application instances, call queues, distribution groups, and call handling rules.
+
+.DESCRIPTION
+The Create-AutoResponder.ps1 script automates the setup of a Teams Auto Attendant and related components in a Microsoft 365 environment. It creates or updates application instances, distribution groups, and call queues, assigns phone numbers and licenses, configures call routing, shared voicemail, menus, and audio prompts, and defines call handling rules for working and after-hours. The script supports optional redirection to external numbers and flexible prompt and schedule customizations.
+
+.PARAMETER attendantName
+Specifies the display name for the auto attendant, queue, and group.
+
+.PARAMETER attendantUpn
+Defines the User Principal Name for the auto attendant resource account.
+
+.PARAMETER attendantNumber
+Specifies the phone number to assign to the auto attendant resource account.
+
+.PARAMETER callGroupUserUpns
+Provides an array of user UPNs to be members of the associated distribution group.
+
+.PARAMETER redirectToExternalNumber
+Indicates an external phone number to which calls are redirected during busy or timeout conditions.
+
+.PARAMETER redirectToExternalNumberByMenu
+Defines an external number to which calls can be redirected via menu options after hours.
+
+.PARAMETER setCallerIdToAutoResponder
+If set to true, modifies the global calling line identity to display the auto responder’s name.
+
+.PARAMETER noCallHandlingAtAll
+If set to true, disables all call routing and handling logic.
+
+.PARAMETER officeHourMorningStart
+Specifies the morning start time for standard office hours.
+
+.PARAMETER officeHourMorningEnd
+Specifies the morning end time for standard office hours.
+
+.PARAMETER officeHourAfternoonStart
+Specifies the afternoon start time for standard office hours.
+
+.PARAMETER officeHourAfternoonEnd
+Specifies the afternoon end time for standard office hours.
+
+.PARAMETER redirectToNextAgentAfterSeconds
+Defines the number of seconds before redirecting a call to the next available agent.
+
+.PARAMETER keepCallInQueueForSeconds
+Determines how long a call can remain in the queue before timing out.
+
+.PARAMETER presenceBasedRouting
+If true, uses agent presence status for routing calls.
+
+.PARAMETER allLinesBusyTextToSpeechPrompt
+Sets the text-to-speech message used when all lines are busy.
+
+.PARAMETER pleaseWaitTextToSpeechPrompt
+Defines the welcome text prompt played to callers before answering.
+
+.PARAMETER outOfOfficeTimeTextToSpeechPrompt
+Provides the message played during after-hours periods.
+
+.PARAMETER afterHoursMenuTextToSpeechPrompt
+Defines the text-to-speech message prompting users during after-hours menu navigation.
+
+.PARAMETER allLinesBusyTextToSpeechPromptAudioFile
+Path to an audio file used instead of the text prompt when all lines are busy.
+
+.PARAMETER pleaseWaitTextToSpeechPromptAudioFile
+Path to an audio file used for the welcome message prompt.
+
+.PARAMETER outOfOfficeTimeTextToSpeechPromptAudioFile
+Path to an audio file used for the out-of-office greeting.
+
+.PARAMETER afterHoursMenuTextToSpeechPromptAudioFile
+Path to an audio file used for the after-hours menu prompt.
+
+.PARAMETER musicOnHoldAudioFile
+Specifies a custom audio file for music on hold.
+
+.PARAMETER allowSharedVoicemail
+Enables the use of shared voicemail for overflow and timeout actions.
+
+.PARAMETER languageId
+Specifies the language code (e.g., "de-DE") used for prompts and voice.
+
+.PARAMETER timeZoneId
+Specifies the Microsoft timezone identifier for scheduling.
+
+.PARAMETER voiceId
+Sets the voice gender for text-to-speech prompts.
+
+.PARAMETER allowOptOut
+If true, allows agents to opt out of call queues.
+
+.PARAMETER redirectAlways
+If true, all calls are always redirected rather than processed by a menu.
+
+.PARAMETER phoneNumberType
+Specifies the phone number assignment type, e.g., "DirectRouting".
+
+.INPUTS
+None. All configuration parameters are provided through the Param() block.
+
+.OUTPUTS
+Creates or updates Teams Auto Attendant, Call Queue, and related configuration objects.
+
+.EXAMPLE
+PS> .\Create-AutoResponder.ps1 -attendantName "Alya Zentrale" -attendantUpn "Alya.Zentrale@alyaconsulting.ch" -attendantNumber "+41625620462" -callGroupUserUpns @("konrad.brunner@alyaconsulting.ch")
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -521,8 +638,8 @@ if ($setCallerIdToAutoResponder -eq $true)
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAb+50C5c500SwQ
-# XFQ+Bm+Fqz9V0WjzP9DIvCbTs3A7/6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAD7RZNNCIVRyCr
+# 1NvYZkpjRxQGtmA/bF9X3Cl3ZOLWeKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -559,10 +676,10 @@ if ($setCallerIdToAutoResponder -eq $true)
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -570,17 +687,17 @@ if ($setCallerIdToAutoResponder -eq $true)
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -590,39 +707,39 @@ if ($setCallerIdToAutoResponder -eq $true)
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOSwP0XA60/HVI1E
-# AS0Oq5LOZQAe39RC1+vgp0lr3SgXMA0GCSqGSIb3DQEBAQUABIICAI8gNN59Ndrs
-# TXicmqI0JdPAJ0sYOv5UC0HwP8oKi6+6PnDkZsIk4onv5YBqqmRdJWhKV4q2XVWv
-# qTIZgQJ376MX8P/HnxOXHGZ9wnIn0JTCXjT9dKrg8xDVk4uO5JdDUfI0gIGlWJK7
-# Nn71J+sN1cR3CgFrnplBHWxOK1A4hxINBtVwvP6AGpXUEGgE7xqVLtGm5PVMnZ5C
-# FFc5ockD5fmhr/mOaHTVajb2TgO1zEnSa5NUnCNuNvPqsqv0/ozviC76Wq5HORUz
-# owSqfsykF1YwRcsBQuqkHBYsdcUYUhpdAgcsZ7of8OuKEMPnfA/7jaVL7DSnycf8
-# 0UWcTqBMr4v3B/0F6m6EMyScynsuvjln4ScVtJqNkWvskJEuTsUQ6u5DsyZhRHCP
-# tdtphkp1SdskFuxDByTnK14mf2re05jbYHstqyGgn6nP/IjvPoUo9uJqzTstzkWf
-# rrSHoix4HrtuiRvC9hlPf+4fblN4H3DVvXiGfN0TSEzWA7+B5RGjvz5HAtVlabKw
-# Mh4O7ImA6jG1OUkHXds1rokWvl3aIQ3vwMERcihPMDuOs4qQPW+Xj5dhyRuidoyp
-# 8C5TjNjZX+807WQ81Sk8/umJYTyEAEdgvosL6nOiviYWmupWkRry45yF5Fs4IdYo
-# Ud8youVovunZ7tTjw7HO6VCwqlvZSB6uoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFjuVR8A4V1mbDMg
+# uPZclgiFS9QsC34q3U/IJHqXJD0PMA0GCSqGSIb3DQEBAQUABIICAHlGxva3ikLg
+# CfjYJV/2wro0VYGZOChwZ54xXBEW5FT9MTlFILIm28YSUdPFubRnn3ItS+VaUbwj
+# iur6Dt+Tmg+ijre25eFJ9Zo4AhEfZK0khkftQocyMWB0feJwkQb8IWXvsfh9U3Ir
+# /BqT40PgKmW/fWOZ3E5nidF9Z39BLTSNStEqTTPxSc0E1FhjnbIcDz9yItbSvnw+
+# 1OOBmT058FgBBLKgo6zNnH39ycDXhTtV0NaDBAJiCfoNLYOuxcRwIvF6GNyy2gLB
+# hiBlLcVoV9OSWfP9Pz9DcIQUa1n5ZTUYa2mWcXxeykXjHHEXQWfpdk92PzaBmbSq
+# ptcqrKoxHVVkGqZBWTQvP6q/ZfHHFm4YeqbRbfeAoW3mcEZl9gk8Zr9vhvPYZcMw
+# 65ilz5KhlGP95V0a1J6Lt0iDCDrNiFW+GhTQTELtMakNWjkE98GMO2icmVAmO01q
+# hGhZ7ivR9HociDfZd+9JhwmwBctzBXccobnm4/YzRSvThwxKXcs6mRLvQ1JvXwbq
+# hQlSuxZyubCRRGULLNPbXU8SAB7nR2IOSUO/bxCXc4/Te1cQetaK9dEKhWyoxIZ8
+# KVy7WZDv4cF6G12dIsgMSpn7F+MeN7HqLdDfIimYmTP4wslat6rKRs2X7tuf8kOE
+# +TtVeGQH8fyacOhGhddQGrpBoOhs60vPoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCAF0iZcu8GzfaAnnpvHh6+p+B+JP0Tb+X0AFoVCJJz2+QIULROsz62QPjfl
-# 0votoATj49A4U8oYDzIwMjYwMTIwMDk1OTQwWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBal+4JJgrUj5sAAFdOpRL0gTyMnecJvWNuv5ejDyTIJwIUVrTGKlYZCnOR
+# rR1C+GUjAnPHUrcYDzIwMjYwMjA2MTIwNzMyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -727,17 +844,17 @@ if ($setCallerIdToAutoResponder -eq $true)
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# INPdO28anX1MZuVf3lBSfjDAtNWqLW2K+8lYS16XSEXpMIGwBgsqhkiG9w0BCRAC
+# IAWzLnpXd1K97ZK6Mw2WypNhCd1YeQMnNsPOpX/wGGRhMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAbcKinpm9xLTF
-# WFlYPfIuijgrvNUj6maOUJ1oDfW0cVD6YhCCER9XCSX1lyK6fQqeRqw+zwT6OxuX
-# XIAj65EeQVNL2c4ijh7e8lPpSSLWe/cY5kRkgMxxYXvWbGY8E4S7LqnGM358LWFX
-# HULba99uXCdHhj1VeVz0oaYwBHQ8ytrNhK92eU8H8BwzLBZpfQO6pBX1JYUIt7pn
-# ddaNkDf3vqMxTgm4PLZMevW3Nxsy/mvro+wJTSAqN/Y33iotF21tTIONJ9ofLZ83
-# 7O6UonLDsvQ8O9OIDWi3AGHSBfvpncYvFwgB5W06RoRy/hD75zhncRurBR3Ol3Pe
-# NZ4zzeKVWau+Lu/99mOisjgKmtwuQnT7eP/KlayoPRAg4bpAFdUmodcWRRsfuNNP
-# iosirkt0j4074hCdrf2ckbTcguFSejZN2VeFrTZzSoHMAtw8AAubmwnqCy5bcKDU
-# 1/xoSJfFMKvJA3dxxYze9+rwjEiKhbGAWUxZLL1kS/H6j4XPmj2l
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAX6qoGrfvlFeX
+# +Sq+45XZJCC3Td37C3ay/2mH19zBKeLim2Nz0N87V0AdesAeihdA38kalCjpkjgJ
+# ugN7I4GP64fHHb//GzKSKsm0j/Ov6YR+CF5JUqSRpoobpLlEbvD7FD8NNmZxOOT/
+# MXc0hWxE/uc5lm7o+30jEYKgt0tRdrdvTcFfDvF5IJp7iJDI4eFxxtvkpG3Wa6u5
+# BnMELrQJy4Nv/3DRTd/Dyy64lLLs63WIUjwGT0JnOPBR59S81dzagoUdWCB03l+/
+# 56iSL3HWVM+YaHhnp8/rnN3h8EhuacIYePF0ekbGdkLhTAWHuP7TNyo8mJWiW7gy
+# w40FK0lElfzYVamkkPa1ZkKqjPbLZp+l80nLVOV5+80ZTSXvkJSlKbAVk1JtmIQB
+# 1sSLCa6DBErs4gB5JqmF+kfTyUpvz023JftMh4E8jHgd+vcxy5ApEQedzRONmJlX
+# WohjTPQuyPWOXr1rD1nToD2QBsmwbs6LYVrJqE2QI3EFFmOrDxOQ
 # SIG # End signature block

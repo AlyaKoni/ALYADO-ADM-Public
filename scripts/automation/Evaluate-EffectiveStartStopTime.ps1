@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -40,7 +40,32 @@
 	07:30(1)[1,l] [Week in month]: 1,2,3,4,5,L=last week,l=last 7 days in month
 	07:30[1]
 	07:30(1,2,3,4,5);06:30[1] (separate multiple times with ;)
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Evaluates and simulates effective start and stop times for virtual machines based on defined time tags, weekdays, and weeks in a month.
+
+.DESCRIPTION
+The Evaluate-EffectiveStartStopTime.ps1 script analyzes start and stop time definitions and determines at which times virtual machines should be started, stopped, or users informed of upcoming shutdowns. It supports time tags with additional conditions for specific weekdays and weeks of the month, including the last week or last seven days. The script generates console output showing the evaluation results across a defined date range.
+
+.INPUTS
+None. All configuration values are defined within the script.
+
+.OUTPUTS
+Console output indicating evaluated start, stop, and user notification times based on provided schedule definitions.
+
+.EXAMPLE
+PS> .\Evaluate-EffectiveStartStopTime.ps1
+Executes the script and displays calculated start, stop, and inform times for the configured period.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 cls
@@ -330,8 +355,8 @@ for ($runtime = $midTime; $runtime -lt $midTime.AddDays($runForDays); $runtime =
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBQaWnTSbMtYeqL
-# UUxgehW12SQnnctTOBzZcKQTQ3IwR6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBnFjPZo0U/9ICT
+# 0X/8uF+fjAmMKqokYD5frCdq96WaqaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -368,10 +393,10 @@ for ($runtime = $midTime; $runtime -lt $midTime.AddDays($runForDays); $runtime =
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -379,17 +404,17 @@ for ($runtime = $midTime; $runtime -lt $midTime.AddDays($runForDays); $runtime =
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -399,39 +424,39 @@ for ($runtime = $midTime; $runtime -lt $midTime.AddDays($runForDays); $runtime =
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMBl3RGIp6Mfv/pm
-# ngH9E8ppeUqGflx867DgzST0uHHuMA0GCSqGSIb3DQEBAQUABIICAJXqJXUkowQU
-# gJUrPXYBZX5jYDw5lKJ2g4zVw+gQRZmAVXeR4afOECsVW/BJqZChh/6YRhoLxWYm
-# QgbSGdMDrc8dnwZcnexQEJLuqsgMYcFXglfU8yzTLZKQksiaPR+daBg1iymKpZR7
-# 7QuoZs0mm/nS1QCWRsc+JvJLV6MQi0O93pl8wNOaLakjnujsTfpGSG2L/IrYN7Vc
-# C03VX4scuQZYemoE2RhTHMpdL6L7UxXLpfgXPgMpsjGm9+ObQ/lnNJc1LVbaCZXX
-# kOfOUFCkPMAFUO4V+hBpJ1K7HdsaI7dQ3SSCgunzBst1XkgjX2Sjg8ee7fm4lW8Y
-# 9TMQYG8/vsqCR+fZvyUJVk17bDVJ3k6nbjoSOv8Mp8cyHsGz0FsBB1kPqzgWHWJc
-# kdun7ELKGQvkKZYNILemJCqq/eLVkLhj8L1dwgBgYMZZ6kAJekgSpMZ3imGmiSO7
-# SNwuhyi1bASfCmxUZDJvndTVwfj+9N5/oYj36rCtwuroZGDTT1ocZ9q3qp8G2mHs
-# AS9wAEb236WXds8AS3GoGH0UcmdtCGM/Z3Ipz5CagRYUGevgcUoMU5kWlilcevHo
-# Gdc9/YbUbR4mPw5K9nCMR4FJHc0DoMly4YMXHgNN+Hrz7UuggD+OGezWbGxBHx1S
-# fbFo4dCtiI7uECR9DOIoNH9BJ46QC+bJoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOnSwDWNEPcDISGP
+# 6Rrh37HdlqXghfqetP78Cs54IikgMA0GCSqGSIb3DQEBAQUABIICADIy1DT8xOID
+# zNKTkpuzkHfCKVQC+ewCfyxDfxuiVBehEpihxr+4SJ+j8Sdzqnhf9pY0CJHWreqk
+# FFX3ZuisIWux7PZhiS4zWOzvC2XEeihu5KeNMJptBPbTDbz/IZ2rOTo+Riiwu4Nr
+# E61CRtB/POvAAAXpGjts3HdWn/btkTx+qXMQ1OB+XXQdF6/KScrPFRrlOm1Vmzrs
+# SwBlwZkSrOpMif5CX7TQT3KE5V2kaKsYw/AvmO88Q9WcEvHLNl0rOtCvNxHNH20B
+# HKg9pb2TDo1MRJyFtLF+wD5ibxngqkM7YMvEyBvc0fIKc9r8u2EUd1Q+2fEWgOB+
+# /Q20S3S6z8tM/jFj5SUQ6Us+WN1Tnc+LnXLoehD6Ock82TTCj63GqtgWb4HWi2sQ
+# dTHxrnyKS3ESwpwBampN1+cIMEC0vsfyfGQy4v27FVKQ8Hnu3Z4039bkB7PnmMlM
+# ilIDYQKxXeoKg0KHV4u6lHEGRYx+ZL7lTzMHC5qlIeZy7Do5YtQRM4QLhEjz0uDt
+# mGfGk0dbfi6roAI2rEI/sFhRNn/xUrftw/Wyv8Q1nZNPc5eJcMBCA7mqbGX83k6G
+# LzlyNqzde8qy4eCyQPxABZQ2uotw2e4JpdwYPo3NlF1c+VEjdsCFPENr7KUughBc
+# HnmdPZ79vQ6C1eYMyK9WsymfW87mHyAYoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCDwZ33ZhDoRUoj64V9OTbB4lNjPcxiGjd8LtKrtL/+9GgIUQJUQJ6AmFMc1
-# 5ZYk7Mmzr2xDkGAYDzIwMjYwMTIwMDk0NDQ2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCD9V7YxyWjZ7Sp2TbSABECZNZOEosroHHKGfnHNyc2ACQIUbD7OWLuADXMo
+# jtdu25XMVrIenaAYDzIwMjYwMjA2MTE0MzM3WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -536,17 +561,17 @@ for ($runtime = $midTime; $runtime -lt $midTime.AddDays($runForDays); $runtime =
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IN/SxGwKjdxDkYjdhHoRE+GKWIn5R5/GlUyUmhaOGhNdMIGwBgsqhkiG9w0BCRAC
+# IIVJgz4ydKtu6vigKPlClD9FrfNkHF3VI9GWX3FYs2fYMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAG5A2OB2rzU4U
-# RRl95oGK9j6Gumq+l3AZkOQ8HJQvIZ+gmrHQIqI4tbfjtEfTquDkmqyDUaa7fxYB
-# K9jQiCu7twn6SPp58HTKE5f17b8bHXn/uTidJBMhx+DBKt4rcZsthMF3I298AVfT
-# fmgWnMUSDZS0sKvgvPYoh3lGffKbGfj8f6N3abirIMvEMfw35qe86k31BProy0pU
-# r6tl8WMrkj3e5qxaYINU4JRXcGH/oC62Df9CYVzr1sJdO5GKomBQ1ZEzEzH3nQh1
-# dYtQ1JuiINNf/fxA2yT25SLFi8k5sj7Mo2FVxY+QciFbYa6xxkV8OMGzeoR4/erx
-# shqMRauALGex7lJWfK3KxfVHW27NAuxhJAEq/dJOeqffJ2b5LUUMRStZ8zohn68k
-# VDElCU8mc/XtWFQpDHKumvFzstFyeQkufp8HIFUEXb+RA9vIhBfrrHsfsRri0xcA
-# SVYyRghRUNZCnbuOk8iy1nv1k4btPnrLehidjjwWYTLQXjVajt5z
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZVckOL5XowC7
+# ma9z5NeBCaefsuY8vOW4Yhyjwtc8VsN3v4AhESJRyGn68wF9HdFwExunoVGoonBe
+# ciEc/4yUVjKgBcOd2sJT3NLfkTNMQSObQ2YG8n+PoTeloy3mnfmo24x6OEdREJ+D
+# KRH61jhSth899nUJCyzO7rkgGR7vEAKsC7quYVxTZ6P1sIZojVIAZDhf7wnW/Hl7
+# fQlOquQJcX8/Jtag3+MipW1fIKBZRrSVOopVUcdY3o2QzJO5hjZ1PYWW2CHCY3iw
+# 7oL3DW/MJvVNE8+/1fp9FmP0l7b3tJWhUi4OfWSm0rla3acELXio4Bwf+CvSPBVe
+# kpVKDNRA+gsrncn5h9Hjr+Zvu2BMRTtiR+reZ52q+aWJMmxTH5ITY4JyUKQl6NVG
+# UH27oj9eW6fCbNS/ac5OvRVMaVnyKd+JcSr/tRkQrg8GBbwHAdOmea4gBmms/I9k
+# sYEkzB7j7RSWJRr2ycxQEFI/fTCFrXyRoFIRGMC7yg1an/8/s0h4
 # SIG # End signature block

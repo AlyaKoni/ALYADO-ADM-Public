@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,7 +31,32 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     25.03.2019 Konrad Brunner       Initial Version
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Configures log4net for PowerShell scripts and initializes a logger for script logging.
+
+.DESCRIPTION
+The Configure-Log4Net.ps1 script installs and loads the log4net library if not already present, resets any existing log4net configurations, and sets up new appenders for console and file logging. It then initializes a logger instance that can be used throughout scripts to produce structured and color-coded log output. The console output is color-coded based on the log level, and a transcript of the configuration process is saved in the configured logs directory.
+
+.INPUTS
+None. This script does not accept pipeline input.
+
+.OUTPUTS
+None. The script outputs to log files and to the console through the configured log4net appenders.
+
+.EXAMPLE
+PS> .\Configure-Log4Net.ps1
+This command runs the script to configure log4net, initializing console logging and returning a logger object for use in subsequent scripts or commands.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -159,8 +184,8 @@ $Log.Info("Logger is configured, use it with `$Log = Get-Logger")
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB7eBY3whCVb4ez
-# H0RdguNPjzUydiONCCpzhoBq7t+pjaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB0jDivMEeOm533
+# sdoTSyqfo7EGf4eWIdsMY7dSHttm36CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -197,10 +222,10 @@ $Log.Info("Logger is configured, use it with `$Log = Get-Logger")
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -208,17 +233,17 @@ $Log.Info("Logger is configured, use it with `$Log = Get-Logger")
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -228,39 +253,39 @@ $Log.Info("Logger is configured, use it with `$Log = Get-Logger")
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINSUQpoNMgSAUHSX
-# A7hhD+yle8MASyICw8gCsEptEikNMA0GCSqGSIb3DQEBAQUABIICAGEwNhZY7Nbo
-# XCxhSJqg3P6Am9cqHQzfzaJt8Izqe4SgfJgkBZc7HTk9QwYEnRoZLNCsIhojdJgF
-# YKZ0054lVAVZcJUqLwPqPaAbeJgMPhZJe2/kxY2jvTEPxmRRW0AWBURS1LFK4Czs
-# jbwBl/QAST0k8NApMHjy9q/vBwRph8+2u/JraOmcWNJd7+3q8hG9yEWwOE3YrpYk
-# yjNEFN/aVkdOxZD661SPxEUX6oBMAyYk9q0x4KPfZ9iMI/49dwgTETEUnKl/CwEQ
-# wj6w+QgXswRtchxXgTDOtOcNt/LOfLu24QDdcLv/SC9Gr+YvBYVwzubTd19HUMuS
-# 7adqk8PctyZTooJz6Up4fkDKYXal2Pb8h9lnVyccCRQLY3MT4DvH7WNLj+Psz5JR
-# vlYZtzRdR1Ou5KA3p+fxRx7zWSt8dbsypfeiCAYKrWbPLmFlr7Nt76mvsIpXSuyt
-# +RKFYOZ/nBT5SJ9Hg84kGehJG9IEMCFaqkAD/XgKep7NXyL1Yp6dj81rXDc8Mu1R
-# 6nS8lE+NbaeK0ZgVC4IUjauG6+zpI5ZmJ8YV3HywgTgbzytD9vnoU+bCqMeXx8SR
-# 2QAD7kcsjYFhWy164UTj5bEaD/BR7YMw6jLCjeDnhW8Ynl+FMp+d14/ByuV8HypG
-# GqhYTpTXIjhfBMpCUJDzL/z1KrQBpxl9oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOnqYQ5gI7pkEP+P
+# rQcNsapTq0x/jSYXf0lVrHGkLdeEMA0GCSqGSIb3DQEBAQUABIICAJfiTtLMICFo
+# rED1BmJCbky/dlaYsvlx+KXk7ZklE0VAc1bQ5q2RdHIq1DRtEACyPVE+BMmsJKa8
+# Ih0LMf8PnR407vDaL9S9Xbs55jxrhF7WV/RHOerOZy7Kxuk8032qQau9obULioDg
+# gJBvhEsG+moguomHdHNnRifCm0li81NSXiE7cCwt7TyNM9Ec57lAU8XsWJ76Gn+t
+# rQ/5B+JI+Bd6NInBSlaIvbjL1SHiEqvLmrKlZNSBtPEzxbLu7G6GEOBOBY6Owl0r
+# DvzN3bPDvMpb+YTjonIS737xNEOaJT6310LRzRQiy6B2Npir6QR5DaiPq7A/wL9a
+# aj+FXu3SioAhUk+3kPjEgnA8LQ8jkyY8ewfcSBZ+GSAksALC7kX9o3e1Dq6MsN9d
+# iZU4mF6dqmMN/DwRCAmoVECZc67r00Yy1kSEc0BBD2+mCV+uXayO5opLE78uL250
+# c2La06b03qEcnyThg5nJdoi6phVOHhWRj9h+vgS3b0ux5Dqx4l5khTudVT3VDqvV
+# sB8mWR4wmP7CmjKhL/aYW2wH38ccdgetc+G4Rnhy2d/iRX9MEZjV8tDNLnxSqxsg
+# jNUNptl3QE/xJKRUqCUX+XLNzqbUrPLtdXBeHOV1OVa/8nx2TpnR6H7h9gIIfGjT
+# MyXNmjfsJ8c4U6c4enJMtwcwE8+fu+tSoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCTHiYXFLkNHRc/Rp7W1NDszN1Xc+2O0NLlGGvKbFO4ygIUMEyLdz/uc+xm
-# rfhhKwHbkD+oH14YDzIwMjYwMTIwMTAxMzM1WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBrWb46cjUT5iXTEzvQ8G4pSi9vwPFafx3edNYmFQmTowIUXt1l/0g/7fnE
+# rDNY1jTWnfI3pDwYDzIwMjYwMjA2MTIyOTIyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -365,17 +390,17 @@ $Log.Info("Logger is configured, use it with `$Log = Get-Logger")
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IBj3vNKPehCnQx0zRmh5kcoRikGaEomw8hi1rDAyZRFxMIGwBgsqhkiG9w0BCRAC
+# IMlpGC5eh6JaVsksf+SZDYD83+W25Lq+PdYYknj8h6MWMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAD+o/W7bnGTKg
-# 1OZNzaxrdKHPewQNRhJX+0XzVB6rVpxcoVHq8n5sroEyqNuLmml+bzOs1oHWYDnL
-# sPczxldEUNRU/QhpxxV80kpqxIPs2jTddbHrYxhBghVXScQ/ZKg0irHaXhLFB/wP
-# NgtvLR+S7n2S5YTWKrEP+cs45So6um499zEo+oY66e/m30TSuK0WO6sS81PB/Wz+
-# jEMupp2dV/3Xsz7/GLUW7uJewE3zlQLKnGM/PyYQGkDYn0xYbEDOFliCv+a90yYx
-# NlfTp7EaGKBziryJtS3nXyCywbZhA0X+7k8F7w3Mb+KIHTvGTR2Q1Xz+bQC+Qzqp
-# 2OxN4asKOdAhNNBgijX/zRq8MJMxS9NrOQOzZ2stTSX5uuDN+qoZNIqIsNTdr3kt
-# DrKHQYoMt0oWu9cBMwcuLn4jtnYG9AP9znGhogTnzTiU4XDg0CVvnA80zUn4EEBt
-# r/dS7wdILXn5qgW28ZJKZo1tVbPjt5n6IKWNJFbdEnGd2OqdHKBu
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGARO7vRa/pd2EK
+# TleZbDWEt7pHO0tnaEJx3rx4RZD52xIHmvTM3IZXVVrPieaFSXAwzDNn6fRLhD0B
+# dGf+ICzhYfLTlOUCapDbmhLfG6WqoBMJ13f1bXJldhynA/G1CiiX1Q/Pn3Q3PEP/
+# 6wC+vaK2TUfY94nRDHrJ0LEYl+bSK0Qd8pqTLzNxPNg7r9ysadJfWJU8z6s8dBqE
+# 8wiw6Od2Pv88TsfEAJwBhNyqwg+9yl2Hn60+p0S9/dNXTPxu0veG4dKC/+dbSNtq
+# kp5e7LDAubJWps5muTZcKApDJYLqHmKN8jWkWHRtnVZmyyDf7vehZJAznIMg9D5t
+# j7tmMz/0kiRwaWZSwikzXz2D9x5LFS8MB7A5Pbupd9jYRCji5OrpY8EeFuMVXrBQ
+# +1qc7AuEwGxZz7pSlOP5IscwC8Dbq3kVO7ijNV8eOukp6uhyzQVhsQYgXX1eUrN1
+# HdAVSQyNN9gPBGXEDV9XT0PBV9fUTbGLTW3fT2omQr/1AhaU/1yv
 # SIG # End signature block

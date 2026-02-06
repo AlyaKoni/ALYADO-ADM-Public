@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -29,6 +29,33 @@
 
 #>
 
+<#
+.SYNOPSIS
+Sets the customized synchronization cycle interval for Azure AD Connect.
+
+.DESCRIPTION
+The Set-AdConnectScheduler.ps1 script modifies the Azure AD Connect synchronization schedule by setting a custom synchronization cycle interval. The interval is defined in minutes and determines how frequently synchronization between on-premises Active Directory and Azure Active Directory occurs.
+
+.PARAMETER minutes
+Specifies the synchronization interval in minutes. The default value is 30 minutes.
+
+.INPUTS
+System.Int32. You can input the number of minutes as an integer to set the custom sync interval.
+
+.OUTPUTS
+None. This script does not produce any output.
+
+.EXAMPLE
+PS> .\Set-AdConnectScheduler.ps1 -minutes 45
+Sets the Azure AD Connect customized synchronization interval to 45 minutes.
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
+#>
+
 [CmdletBinding()]
 Param(
     [int]$minutes = 30
@@ -39,8 +66,8 @@ Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($minutes):00"
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAhrRmxq2wbjmzb
-# FfAX6SGSnOosqQIGGekxbn7u+iTGWqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBoQ26tPFv3sLz2
+# Fkf+4I1c7/74U4yEUVnTeYBOdNiC96CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -77,10 +104,10 @@ Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($minutes):00"
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
+# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -88,17 +115,17 @@ Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($minutes):00"
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
+# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
+# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
+# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
+# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
+# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
+# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
+# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
+# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
+# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
+# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
+# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -108,39 +135,39 @@ Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($minutes):00"
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
+# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
+# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
+# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
+# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
+# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
+# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
+# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
+# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
+# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
+# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
+# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJwUcqf8oWwzrkmt
-# onS+vKnz1xC1YlDDI9bTygFVWdnnMA0GCSqGSIb3DQEBAQUABIICAAMYf7SiV6Zh
-# UPd58NNlxpb+hAOz8GzOsV+GKrUxzr1g33fhPMKpSGgYh9fq0Un6ZTtOys/Z/e7N
-# X0QJAJYBN6TQjxhxkimaACHWiWA+oY9Aekr7HvLgdLoYvqzjff19fyfbmX0w9DNG
-# /jdCy8yX+jxS4Wd59X+EBrq/hpFnwpCrVWxf+u8ODHMzF54J1nPKKZMq2MEGaIpY
-# Lm6lw9DZ8m+bAr/TQl4Gp+tu7p6rSHe0jpISOSgx4oXUSbSCkPwtddLclLILNVoH
-# QrnGX3GJhIfWGWt1pULb/bL9ebhJ4uC3mpFVG4nLBdSk15rsfnhmNBiKOVBXfVBV
-# 4jwX7ajcQ1tdMhyEhgxCdGYye6kQhanE5WItDihPq12WFpv8jM/+zxX7/t+/6ytz
-# 7o03DtSpG8FwCPtw2ACl6Msufl5ly3bhydpqwNPZM5m99lhj2CF9Ebp/v2C84BNP
-# 6oHJIWhA5QSa0NmToUfvarsyUxuFH2g9EcpNYPvG9xMmPd+Wt8Ul6bLLOub35Y+K
-# 7+uydRSQ8DcNwX+nIwQOVWtSVm6D2yAPMhDdW3MBWiBOgMsxxzYjAkRiOIWKTwlx
-# 0UUkGJjP66iCKtrZaU8OcIDG7bGQIHzwk0JqEaiJPLdPMG9KuHQT8QpFtiBWtIT+
-# NjSWdVhMPmBXpJHbskoYOlCXA5aDjH9qoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICuC9j/LuGBJhnui
+# GI5PoqgznTPkRb5hKioBM7Z2ZsWiMA0GCSqGSIb3DQEBAQUABIICAAPvzyEDwVTQ
+# pzH/rOmQpB+mMnzADxRvqU7mONFlyPvElTfVGrirSi+5i3gUGPxPZ8bsANPYpQoR
+# JkBJidtqBFUvrAIcVAsb8cbAD/Z42r0YKHXAz59UiB0d20KonD5FPwB1MOP9jr2S
+# 98p5BqLMY6pZZOjYnh7FfAXf7o/5xm9jg101CQtdavIu3McfL7f6uGH73IyDVHoY
+# /aPs2IAARwHwYAIawuHbYklRkcnZInBDbxKLfetqL6hgvYB9KWArXIpVVtSEAaKZ
+# LZpnk9T/hXcr1ZXAM93txeOQDmrKK5fyWXJ9UD2k7swD5S7uoQ+mXUy7AhmBgcgh
+# 0qiCIY5sEPdgWtQtWEOcPWbexs20qqrKeBuAmhpoY810iLMMEMUj/HHKzhT9hIqN
+# vtkWxnNrzLQRuxwGSH+PL/SaCjFajMimlej+NH580mdRZXkUYaVug6HGUFoLKahK
+# jIFRixX5XEDqDCQ14cjxeeV3y3xZnt88u7MYcIJECvDLiUXow00hsXNaMxXxCVDR
+# EdaIKIhD+OdDcsQY6sxbbY8YE7MLccps9rM1rn7M2AFHPseKsAC9ZvO8M2dZAkgV
+# O5EaGUa68sqF2h8tOwY8O4JibcGGvLDUrxFMmfroolYUZ0wrlI9yzqltQsEpaxPt
+# 3QXYtZ4xv5UQN6rnWrny3N21GnxRhxaHoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBd+Y0uy2oUtKJmmmXU2+8mMAM+8gI+p3AoBfSqFjCh3wIUashVyQO+L3CR
-# CO9I3SbFWM7zOPcYDzIwMjYwMTIwMDk0MzIzWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDKoym3bnKyVOjmjg7+GdX+GNXfs1k7br5EgXFOkVQ6CgIUEToJ36EBUvpl
+# yICq05mH0sPylrkYDzIwMjYwMjA2MTE0MTIwWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -245,17 +272,17 @@ Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($minutes):00"
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IM31A5q8Ny1mZDiR+jcL9FqMzwacfnEkGH9xXnAodGkaMIGwBgsqhkiG9w0BCRAC
+# IBi1hx6WRGyhyuf/Q1PLp4YaDdZFNL3uvDXS37b+xUP2MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAS6dJb/Hh640f
-# sQoTKNFIvHgrzR8Rtk89eF3FtmrpCWNHH0U0VREHYfNhzNaKxMgqqGm33yhDQkQv
-# eFGtEOq5uGw9k4uZhdAXZkcm1mxs20IDGajt7LNAMUTTcYm45yJBjbIocUW7t3QJ
-# ADnkuDSxnUVNZQNCKUSZEIJW3szrz97JtBT1VZfS/+1p1n1maJ/MELVW+Shr4Sra
-# nlwBhkk7zqZXFHdlIf4arc4SkJDAhpx9hFS4wCTTLEnwMD9feZcNA0Uw7tW8Zje+
-# wTn1bIhOXwCSn8O5MCXAV/iYt7ewJbs2Ech5DFnOuAxEHMQlJGSW7B31DovGg3Ch
-# mqFTi52OWhWkhef0+jEdMMcfTEubdvO8GFOBsSEyCZ7EFMUg0klyy8/gwMWqfnsM
-# NaUJhZ/qVhvg9HcOumdREUGyXsye/ldK4ez3R7ziTps/+aB3yNXO+czvHO21Tb66
-# 0C3vGxC52W2S2J/NZfrsh/K1f4Vzx/S/FYT8fWRJy2rXXjEixDUX
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAVSbqJxqAAs4Q
+# fWCVvd5M3owPIJDDhh++RMbh4SfkPhoS01dXC/xYcE6lKp2Au/vLFVCVhBEuBcJS
+# MGiz7p3XIK6xgE37KnzOuw/Ml1oFc/Y+OEGUBBWDRTOL10HoLnMWc9ci5K1a3/nL
+# zjWgNCce7ieIC1KB7N8ncqrxKt3lM0K89+WkKdQm5d0bU5Z6DC590wj2GlilfmV5
+# FUB0o3VDRMBTPfqx+O3Nt22fR8LuD1JQRYx+6SPFzI1UYkMtZ7pjnfN28FpTIKC1
+# KcqToXXjxf8TlcIKApXH7Woqq3lg+9ePBKrWE+RZgGYK/RtGDiHsrmK/F56mCiqx
+# zfkMWeh5ziYFCB4vKkrpndEtCxUSplz0IVig1w5hu5REIX+y5Hs5Pq0JX/swrAsX
+# HUuolEhlkmzpYsCWT/akwS8VT65eEkArAt3TsbsCje/Q/8445taD+jKi6Cv0oCj9
+# YYaXP/QqFI3AjpSxWEslfG3Z6+7Ye5bGKHURSK/+8XcqC7Roc8rD
 # SIG # End signature block

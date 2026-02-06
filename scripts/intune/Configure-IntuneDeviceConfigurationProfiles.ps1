@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -34,7 +34,37 @@
     24.04.2023 Konrad Brunner       Switched to Graph
     05.09.2023 Konrad Brunner       Added assignment
     11.06.2025 Konrad Brunner       Added onlyProfile parameter
+    06.02.2026 Konrad Brunner       Added powershell documentation
 
+#>
+
+<#
+.SYNOPSIS
+Configures and assigns Microsoft Intune device configuration profiles through Microsoft Graph based on a JSON definition file.
+
+.DESCRIPTION
+The Configure-IntuneDeviceConfigurationProfiles.ps1 script automates the creation, updating, and assignment of Microsoft Intune device configuration profiles. It reads profile definitions from a JSON file, validates platform prerequisites such as iOS and Android configuration tokens, and applies profiles to devices using Microsoft Graph API calls. Optionally, it can target a specific profile for configuration using the onlyProfile parameter. The script also ensures that the required PowerShell modules are installed and logs all actions for auditing purposes.
+
+.PARAMETER ProfileFile
+Specifies the path of the JSON file containing Intune device configuration profile definitions. Defaults to $($AlyaData)\intune\deviceConfigurationProfiles.json if not provided.
+
+.PARAMETER onlyProfile
+Specifies the display name of a single profile to configure. When provided, only that profile will be processed instead of all profiles in the JSON file.
+
+.INPUTS
+None. The script reads input from a JSON configuration file defined by the ProfileFile parameter.
+
+.OUTPUTS
+None. The script writes log output and informational messages to the console and transcript log file but does not return objects.
+
+.EXAMPLE
+PS> .\Configure-IntuneDeviceConfigurationProfiles.ps1 -ProfileFile "C:\Configs\deviceConfigurationProfiles.json"
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -449,8 +479,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCACcRvHGldiwKRe
-# Sv9JGqYApObQX44CsOe9aA3e3L6bfqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB2Lj1u+QIuVnRA
+# W9kpQotCvPRiWUjqplP4003yveUQoaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -534,23 +564,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGtlKSBxxX/yF4LG
-# 0zdhB+2ebb3jTCPidPBNZ4gaCPaMMA0GCSqGSIb3DQEBAQUABIICAFBYbtG3cS72
-# eCzhXbWN2xjBvLE9qlpPmGPkD6jYS6Z9Hnj5xdtM96VFuY2OaQ2M44hbPTQYTQTV
-# oJIHEYsE5Xu97zCWRxmy5LUPqI/RuKg5sPsIByDBhmmSCEpkIVLe59yCE02gnOQO
-# XcYnOT0r+8qY0UH6qNJ+9fCR4YwIifBs5Zl/LDN9MUONIjPVVMU11yGpo6O2s5Sp
-# TlI6fdCi02aFLC5G1yuraDvM5381z3nW2MBbn8xH5EujwYM6ng0/ZnUxuKlHJugk
-# 4vr7tlAX8vCIrDojP5J9X19qqK6B/EJWGz+47CxLfKbggn7/hpII3dwerWhyZO9c
-# jH4ja299bVITlstn6e+S2yxthSHrb8A8w6B8btpz1WLCTXSKBxV8Okyq8g8P5Dc/
-# 4+RvWUzQdF2il8osx6JtdQh5/WG9wTmDNpf4RZbjjn7WA7cZj7z1Ts6TnTdMLkG/
-# EWg0tSxkD9VpI89dDOqzOF95RAKUnKsDJL8GhbxjTz03V2NMEYwJP/0zA1B71V19
-# Kk6J56L8vJSTnKaPwJyR0d+n+t7X4BWEk8ApBX7AIt1N9yNUvjmKosrJRJPK8xaf
-# uvTk0sL5XALkLqvEBwHjDQVt/TKHPt+pwkfJVPaKYvYCyU9vCl4kiym4yLKUJvxG
-# 7EN/nFjI7bPpWK7sUkMZOD17Mo4e3G1FoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDhp5hwbM9kXr/dE
+# 0Mxe43RzjqsEM6/FCIbMIiwih+gvMA0GCSqGSIb3DQEBAQUABIICAK0yMh+Yuuih
+# MEJUNW0DemrcfKagswZnPEuHcLw4Rt5ZxriMA3ONdfzsAhsFfUDbpxLZH3+PTH3b
+# qoyaSHPa8sIb2Dm9zWie+DS8jFcszKmSRUaVfWkbolyIovWAjNDp6AaVUBETEOI3
+# JQLbl1znLJX02sRZATDgxd0STqwONfVb9wqIFGmQgT1VNEkQJCYxoE1WWrFuQ63M
+# iZn7t8LYSFgQURwxbBkpPztYHDCVmWoTALzOjxn8JbcqHM+YKkNaNbEw4rUxGdyS
+# 4TK9K0bXWUJcxoFjONfblokUEt3qM/pwLM0AIwZjA4px+wBlezliJ6J+F1E1jeQr
+# jPDb6q4OgP42HlJqSEQOkpnWz15JnLSzmGstYEsGkVYc0klGIiE4W/u+PZAg10wT
+# t42f9aiKdtYJILqX3w15ysIR684LhYpRIdbMaMiCj4ysraN2Hv2977DyPSF1+PKb
+# fkSgLEpc9/Nn2jvqbscqL6OUOVULb9WHdLsy1ogeEqsFTGhHmBsQ1nK33G3/+Ajy
+# NW5G+FnOhP8TDWKsjEgOlbzjDr5JXPeKzUZ2DX3KEpGJmfSFdo6xvu25DpxwV+ha
+# VKlLdQ1K0tsoe0gW/a77pkvBopH1EsPj9TrBcgYRQ3WZEgzmk15bCnR0qfuGUdQ1
+# YFYoWhFwOJU/tPSMvA9jzSc59esw9XhToYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBjSPhpPiEwUbBNzB7KAhBHdX/QucrCwig2f+8HybWDfwIUS6GKyj/97nqb
-# KnRqWv61u+yirF8YDzIwMjYwMTI0MTIyNDM3WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBiRkTRMuH1Ue5XscuxHlQsOjik3rfPmhZlZwIN7xwVDQIUXJ3hLgaT2e8i
+# kHcOunmMHsDG2LQYDzIwMjYwMjA2MTE1OTIyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -655,17 +685,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IAgNRb560n2lGIOXArs9p/Yw+Q89A5lumQfFHKJXYxkZMIGwBgsqhkiG9w0BCRAC
+# ID+bxNUeWRC2buVp8EYX+hebW6DqecTm3AjjOz0YAxzmMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGADRP5xHT9KaJa
-# MCMjjH78PABkBK4AFDULjPMHoPsGtQeIIPdGKsTjdkKm1R4Oq/tfFHJ6tw9XCoSD
-# Xcl/WkBH4YovcxCfVraJj3/B1vE/SXjpOOwEKUp7IzLSHOBSqHKx8HA5g5GC5fIA
-# w4BHnN6bFsmFG2ZLT5fjJtWZWumt6XAT1og4FEHcipJvEmr+zZAdfF1GJOZZBWj1
-# G5ow8q7qXKKUBvZsCXsHF7qUgdSnMRo9wc4h77K42X3XnqWFwt0BWiBXc15yqHxy
-# 9LFWRXF6gcsx2UBA00ESFCr9C8zydvNUW186erUKaeSPBnwI7zPNxcTegYw4TrjD
-# XUwGWPdHs0xXCyXbMCjSXwC9st0Yhn7trxxVYbk5y6hfEOI/NLCyZnxXyqdIaYbs
-# cZrN/efpV6ohkMdksd12gDofy27ebKb0vC66PSgXMjTeBxqIkLig9cPZ1e0hsN5M
-# GlSOxGjeXIp76Fuh9L6UoM0DgZV1lyTxKgXpMoMluXuNTPx6ZGnk
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAnZvHegVI4NGY
+# lhyiL9I1H7xn0/B1YTAFZAGvXqBC4CZEsDbqVPxAMUJG+5HcBUz89oxorXlz9HpX
+# 0237oj0r3tmYKaWgjtZKuyR8Pz2Zy5Mb6Ggp3Vab848YDNfC+/fxpBuyLiVDYTHG
+# jYLaOlzvfDD4IQkdjysHOjYeI/5wH0ec56bzlV/+UBhENcyVjJengpSOclWo68sQ
+# S5SOkCPPX9QKToY55by5B0qPf8gU55QAiMukOC2yyMcn4VmrwfFAxf9Q+aSWn/9G
+# tpJtTTIccNxnoSHGT+XrPESDtf/KM2hzNFAgffirrynrmDSM9DaxL6Hy1xIR8F70
+# hnNSoAipIDEZLrGykhyUOKSeOT9FGL0MAobojWVIYHcBEKkNLKbx9qoGKwFHDBTi
+# LSgtKie+QcNEFutN3x8bNU0i5D2bRtCNSNayVUrONWwcFRnSr1pfcAMA6y3fImCO
+# D/TGvLGCCOmTPQ7uQPDCImeoy3LjLHyB8xebdkbb2azaGSzw5R7r
 # SIG # End signature block
