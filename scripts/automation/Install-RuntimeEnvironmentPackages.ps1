@@ -71,7 +71,11 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
     [string]$Language = "PowerShell",
     [string]$ProcessOnlyRunTimeEnvironment = $null,
-    [object]$PackagesToInstall = @( @{Name="PackageManagement"; Version=$null}, @{Name="PowerShellGet"; Version=$null}, @{Name="MSAL.PS"; Version=$null}, @{Name="Az.Accounts"; Version=$null}, @{Name="Az.Automation"; Version=$null}, @{Name="Az.KeyVault"; Version=$null}, @{Name="Az.Resources"; Version=$null}, @{Name="Az.Storage"; Version=$null}, @{Name="ExchangeOnlineManagement"; Version=$null}, @{Name="MicrosoftTeams"; Version=$null}, @{Name="Microsoft.Online.SharePoint.PowerShell"; Version=$null}, @{Name="PnP.PowerShell"; Version=$null} , @{Name="AzTable"; Version=$null} ) #Version $null means latest
+    [bool]$AllowPrereleases = $false,
+    [object]$PackagesToInstall = @( @{Name="PackageManagement"; Version=$null}, @{Name="PowerShellGet"; Version=$null}, @{Name="MSAL.PS"; Version=$null}, @{Name="Az.Accounts"; Version=$null}, @{Name="Az.Automation"; Version=$null}, @{Name="Az.KeyVault"; Version=$null}, @{Name="Az.Resources"; Version=$null}, @{Name="Az.Storage"; Version=$null}, @{Name="ExchangeOnlineManagement"; Version=$null}, @{Name="MicrosoftTeams"; Version=$null}, @{Name="Microsoft.Online.SharePoint.PowerShell"; Version=$null}, @{Name="PnP.PowerShell"; Version=$null} , @{Name="AzTable"; Version=$null} ), #Version $null means latest,
+    [string]$ResourceGroupName = $null,
+    [string]$AutomationAccountName = $null,
+    [string]$SubscriptionName = $null
 )
 
 # Loading configuration
@@ -81,8 +85,14 @@ Param(
 Start-Transcript -Path "$($AlyaLogs)\scripts\automation\Install-RuntimeEnvironmentPackages-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
-$ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAutomation)"
-$AutomationAccountName = "$($AlyaNamingPrefix)aacc$($AlyaResIdAutomationAccount)"
+if ([string]::IsNullOrEmpty($ResourceGroupName))
+{
+    $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAutomation)"
+}
+if ([string]::IsNullOrEmpty($AutomationAccountName))
+{
+    $AutomationAccountName = "$($AlyaNamingPrefix)aacc$($AlyaResIdAutomationAccount)"
+}
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -91,7 +101,11 @@ Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Az.Automation"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+if ([string]::IsNullOrEmpty($SubscriptionName))
+{
+    $SubscriptionName = $AlyaSubscriptionName
+}
+LoginTo-Az -SubscriptionName $SubscriptionName
 
 # =============================================================
 # Azure stuff
@@ -143,6 +157,7 @@ if (-Not $runEnvs)
 
 foreach($runEnv in $runEnvs)
 {
+    #$runEnv = $runEnvs | Where-Object { $_.name -eq "PowerShell-7_4" }
     Write-Host "Runtime environment: $($runEnv.name)" -ForegroundColor $MenuColor
     if (-Not [string]::IsNullOrEmpty($ProcessOnlyRunTimeEnvironment) -and $runEnv.name -ne $ProcessOnlyRunTimeEnvironment)
     {
@@ -182,17 +197,37 @@ foreach($runEnv in $runEnvs)
     }
     $packages = $resp.Content | ConvertFrom-Json
     $packages = $packages.value
-    foreach($package in $packages)
+    foreach($pkg in $packages)
     {
-        $packageName = $package.Name
-        foreach ($packageToInstall in $PackagesToInstall)
+        if ($pkg.properties.provisioningState -eq "ContentValidated" -or $pkg.properties.provisioningState -eq "Updating" -or $pkg.properties.provisioningState -eq "Creating")
         {
-            $packageToInstallName = $packageToInstall.Name
-            if ($package -eq $packageToInstallName)
+            Write-Host "Removing package $($pkg.name) from list because provisioningState is $($pkg.properties.provisioningState)"
+            $allPackages = $allPackages | Where-Object { $_.Name -ne $packageToInstallName }
+        }
+        if ($pkg.properties.provisioningState -eq "Failed")
+        {
+            Write-Host "Package $($pkg.name) has provisioningState Failed. Deleting from runtime environment and reinstalling."
+            
+            $reqUrl = "$($AutomationAccountId)/runtimeEnvironments/$runEnvName/packages/$($packageName)?api-version=2024-10-23"
+            $resp = Invoke-AzRestMethod -Method Delete -Path $reqUrl
+            if ($resp.StatusCode -ge 400)
             {
-                Write-Warning "Package $packageToInstallName is already installed in this runtime environment"
-                $allPackages = $allPackages | Where-Object { $_.Name -ne $packageToInstallName }
+                Write-Warning "Error deleting package: $($resp.Content)"
             }
+            do {
+                try {
+                    $resp = Invoke-AzRestMethod -Method Get -Path $reqUrl
+                    if ($resp.StatusCode -eq 404)
+                    {
+                        break
+                    }
+                } catch {
+                    break
+                }
+                $pkg = $resp.Content | ConvertFrom-Json
+                Write-Host "provisioningState $($pkg.properties.provisioningState)"
+                Start-Sleep -Seconds 10
+            } while ( $pkg.properties.provisioningState -eq "Updating" -or $pkg.properties.provisioningState -eq "Deleting" )
         }
     }
 
@@ -200,11 +235,12 @@ foreach($runEnv in $runEnvs)
     Write-Host "Installing packages" -ForegroundColor $CommandInfo
     foreach ($packageToInstall in $allPackages)
     {
+        #$packageToInstall = $allPackages[0]
         $packageName = $packageToInstall.Name
         $packageVersion = $packageToInstall.Version
         if (-Not $packageVersion)
         {
-            Write-Host "Installing package $packageName" -ForegroundColor $CommandInfo
+            Write-Host "Installing package $packageName with latest version" -ForegroundColor $CommandInfo
         }
         else
         {
@@ -217,29 +253,79 @@ foreach($runEnv in $runEnvs)
         do
         {
             Start-Sleep -Seconds ((10-$retries)*4)
-            $Url = "https://www.powershellgallery.com/api/v2/Search()?`$filter={1}&searchTerm=%27$packageName%27&targetFramework=%27%27&includePrerelease=false&`$skip=0&`$top=40"
-            $Url =
-                if ($packageVersion) {
-                    $Url -f $packageName, "Version%20eq%20'$packageVersion'"
-                } else {
-                    $Url -f $packageName, 'IsLatestVersion'
-                }
-            $SearchResult = Invoke-RestMethod -Method Get -Uri $Url -UseBasicParsing -ConnectionTimeoutSeconds 60 -OperationTimeoutSeconds 600
-
-            if($SearchResult.Length -and $SearchResult.Length -gt 1) {
-                $SearchResult = $SearchResult | Where-Object -FilterScript {
-                    return $_.properties.title -eq $packageName
-                }
+            try {
+                $cnt = 0
+                $SearchResult = @()
+                do {
+                    $Url = "https://www.powershellgallery.com/api/v2/Packages()?`$filter=Id eq '$packageName'&`$top=100&`$skip=$($cnt*100)"
+                    $SearchResultCnt = Invoke-RestMethod -Method Get -Uri $Url -UseBasicParsing -ConnectionTimeoutSeconds 60 -OperationTimeoutSeconds 600
+                    $SearchResult += $SearchResultCnt
+                    $cnt++
+                } while ($SearchResultCnt.Length -eq 100)
                 if($SearchResult.Length -and $SearchResult.Length -gt 1) {
-                    $SearchResult = $SearchResult[0]
+                    if ($packageVersion)
+                    {
+                        $SearchResult = $SearchResult | Where-Object { $_.properties.Version -eq $packageVersion }
+                    }
+                    else
+                    {
+                        if ($AllowPrereleases)
+                        {
+                            $SearchResult = ($SearchResult | Sort-Object { if ($_.properties.Version.Contains("-")) { [Version]$_.properties.Version.Substring(0, $_.properties.Version.IndexOf("-")) } else { [Version]$_.properties.Version } } -Descending)[0]
+                        } else {
+                            $SearchResult = $SearchResult | Where-Object { $_.properties.IsLatestVersion."#text" -eq "true" }
+                        }
+                    }
                 }
+                if ($SearchResult.id)
+                {
+                    $moduleUrl = $SearchResult.id
+                }
+            } catch {
+                Write-Warning $_.Exception.Message
             }
-            $moduleUrl = $SearchResult.id
+            try {
+                if (-Not $moduleUrl)
+                {
+                    if ($AllowPrereleases)
+                    {
+                        $Url = "https://www.powershellgallery.com/api/v2/Search()?`$filter={1}&searchTerm=%27{0}%27&targetFramework=%27%27&includePrerelease=true&`$skip=0&`$top=100"
+                    } else {
+                        $Url = "https://www.powershellgallery.com/api/v2/Search()?`$filter={1}&searchTerm=%27{0}%27&targetFramework=%27%27&includePrerelease=false&`$skip=0&`$top=100"
+                    }
+                    $Url = if ($packageVersion) {
+                        $Url -f $packageName, "Version%20eq%20'$packageVersion'"
+                    } else {
+                        $Url -f $packageName, 'IsLatestVersion'
+                    }
+                    $SearchResult = Invoke-RestMethod -Method Get -Uri $Url -UseBasicParsing -ConnectionTimeoutSeconds 60 -OperationTimeoutSeconds 600
+
+                    if($SearchResult.Length -and $SearchResult.Length -gt 1) {
+                        $SearchResult = $SearchResult | Where-Object -FilterScript {
+                            return $_.properties.title -eq $packageName
+                        }
+                        if($SearchResult.Length -and $SearchResult.Length -gt 1) {
+                            if ($AllowPrereleases)
+                            {
+                                $SearchResult = ($SearchResult | Sort-Object { if ($_.properties.Version.Contains("-")) { [Version]$_.properties.Version.Substring(0, $_.properties.Version.IndexOf("-")) } else { [Version]$_.properties.Version } } -Descending)[0]
+                            } else {
+                                $SearchResult = $SearchResult | Where-Object { $_.properties.IsLatestVersion."#text" -eq "true" }
+                            }
+                        }
+                    }
+                    if ($SearchResult.id)
+                    {
+                        $moduleUrl = $SearchResult.id
+                    }
+                }
+            } catch {
+                Write-Warning $_.Exception.Message
+            }
             $retries--
         } while ($null -eq $moduleUrl -and $retries -ge 0)
         if ($null -eq $moduleUrl)
         {
-            throw "Could not find module $packageName on PowerShell Gallery. This may be a module you imported from a different location."
+            throw "Could not find module $packageName on PowerShell Gallery. Possibly PowerShell Gallery is down or this may be a module you imported from a different location."
         }
 
         $packageDetails = Invoke-RestMethod -Method Get -UseBasicParsing -Uri $moduleUrl -ConnectionTimeoutSeconds 60 -OperationTimeoutSeconds 600
@@ -258,56 +344,72 @@ foreach($runEnv in $runEnvs)
         }
         Write-Host "Package $($packageName): Required version is $packageReqVersion"
 
-        $packageContentUrl = "https://www.powershellgallery.com/api/v2/package/$packageName/$packageReqVersion"
-        do {
-            try {
-                $req = Invoke-WebRequest -Uri $packageContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore -ConnectionTimeoutSeconds 60 -OperationTimeoutSeconds 600
-            }
-            catch {
-                $req = $_.Exception.Response
-            }
-            $packageContentUrl = $req.Headers.Location.AbsoluteUri
-        } while (!$packageContentUrl.Contains(".nupkg"))
-        if ($null -eq $packageContentUrl -or $packageContentUrl -eq "")
+        if (-Not $packageVersion)
         {
-            throw "Could not determine content URL of module $packageName version $packageReqVersion on PowerShell Gallery"
+            $existPackage = $packages | Where-Object { $_.name -eq $packageName -and [Version]$_.properties.Version.Replace("-preview", "") -ge [Version]$packageReqVersion.Replace("-preview", "") }
+        }
+        else
+        {
+            $existPackage = $packages | Where-Object { $_.name -eq $packageName -and [Version]$_.properties.Version.Replace("-preview", "") -eq [Version]$packageReqVersion.Replace("-preview", "") }
         }
 
-        $reqUrl = "$($AutomationAccountId)/runtimeEnvironments/$runEnvName/packages/$($packageName)?api-version=2024-10-23"
-        $body = @{
-            properties = @{
-                contentLink = @{
-                    uri = $packageContentUrl
-                    version = $packageReqVersion
-                    contentHash = @{
-                        algorithm = $packageDetails.entry.properties.PackageHashAlgorithm
-                        value = $packageDetails.entry.properties.PackageHash
-                        #TODO value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($packageDetails.entry.properties.PackageHash))
+        if ($existPackage)
+        {
+            Write-Host "  Already installed with version $($existPackage.properties.Version)"
+        }
+        else
+        {
+            $packageContentUrl = "https://www.powershellgallery.com/api/v2/package/$packageName/$packageReqVersion"
+            do {
+                try {
+                    $req = Invoke-WebRequest -Uri $packageContentUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore -ConnectionTimeoutSeconds 60 -OperationTimeoutSeconds 600
+                }
+                catch {
+                    $req = $_.Exception.Response
+                }
+                $packageContentUrl = $req.Headers.Location.AbsoluteUri
+            } while (!$packageContentUrl.Contains(".nupkg"))
+            if ($null -eq $packageContentUrl -or $packageContentUrl -eq "")
+            {
+                throw "Could not determine content URL of module $packageName version $packageReqVersion on PowerShell Gallery"
+            }
+
+            $reqUrl = "$($AutomationAccountId)/runtimeEnvironments/$runEnvName/packages/$($packageName)?api-version=2024-10-23"
+            $body = @{
+                properties = @{
+                    contentLink = @{
+                        uri = $packageContentUrl
+                        version = $packageReqVersion
+                        contentHash = @{
+                            algorithm = $packageDetails.entry.properties.PackageHashAlgorithm
+                            value = $packageDetails.entry.properties.PackageHash
+                            #TODO value = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($packageDetails.entry.properties.PackageHash))
+                        }
                     }
                 }
             }
-        }
-        try {
-            $resp = Invoke-AzRestMethod -Method Put -Path $reqUrl -Payload ($body | ConvertTo-Json -Depth 10)
-            if ($resp.StatusCode -ge 400)
-            {
-                throw "Error installing package: $($resp.Content)"
+            try {
+                $resp = Invoke-AzRestMethod -Method Put -Path $reqUrl -Payload ($body | ConvertTo-Json -Depth 10)
+                if ($resp.StatusCode -ge 400)
+                {
+                    throw "Error installing package: $($resp.Content)"
+                }
+                else
+                {
+                    Write-Host $resp.Content
+                }
+                do {
+                    Start-Sleep -Seconds 10
+                    $resp = Invoke-AzRestMethod -Method Get -Path $reqUrl
+                    $pkg = $resp.Content | ConvertFrom-Json
+                    Write-Host "provisioningState $($pkg.properties.provisioningState)"
+                } while ( $pkg.properties.provisioningState -eq "Updating" -or $pkg.properties.provisioningState -eq "Creating" )
+                Write-Host "ProvisioningState is now $($pkg.properties.provisioningState)"
             }
-            else
-            {
-                Write-Host $resp.Content
+            catch {
+                Write-Error "Error updating default package: $($_.Exception.Message)" -ErrorAction Continue
+                Write-Error $_.Exception -ErrorAction Continue
             }
-            do {
-                Start-Sleep -Seconds 10
-                $resp = Invoke-AzRestMethod -Method Get -Path $reqUrl
-                $pkg = $resp.Content | ConvertFrom-Json
-                Write-Host "provisioningState $($pkg.properties.provisioningState)"
-            } while ( $pkg.properties.provisioningState -eq "Updating" -or $pkg.properties.provisioningState -eq "Creating" )
-            Write-Host "ProvisioningState is now $($pkg.properties.provisioningState)"
-        }
-        catch {
-            Write-Error "Error updating default package: $($_.Exception.Message)" -ErrorAction Continue
-            Write-Error $_.Exception -ErrorAction Continue
         }
     }
 
@@ -319,8 +421,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCApWSZW9NSg89Fx
-# 9g1QeWkK+V03Si3n5as2EoQ7DUJmWaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBsDbRYJd5J5RG+
+# 2ye3wQO9EvdC/A4DgHkfmRNcy6QFSaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -357,10 +459,10 @@ Stop-Transcript
 # A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
 # qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
 # +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g604YfM/tV
-# 5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
+# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
+# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
 # U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgyNzE5WjCC
+# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
 # ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
 # MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
 # AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
@@ -368,17 +470,17 @@ Stop-Transcript
 # QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
 # eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
 # FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD4ED6gVYD
-# U/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S/gJXhZrh
-# 0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp8nKmrVa4
-# 6Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqtf2phU7+y
-# R2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJQWTEE/bP
-# 0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKXvYkPbEdx
-# +QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4yMYgcMKb
-# 9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmYF8T4xO2k
-# 6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2mMIVpqWC
-# Z1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7spNY6rQb
-# 3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMCAwEAAaOC
+# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
+# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
+# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
+# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
+# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
+# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
+# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
+# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
+# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
+# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
+# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
 # AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
 # BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
 # cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
@@ -388,39 +490,39 @@ Stop-Transcript
 # HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
 # dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
 # aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd2jANBgkq
-# hkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy/fAHsVv1
-# RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW2H3Bh6zN
-# XULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0MP6pBPKO
-# L6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/pFL9zlcc
-# tWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcexU0bcV0hL
-# Q4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf6AMOGaM5
-# 6A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzECp9LnR+34
-# c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9mUF5qE6Yw
-# QqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+KuaJRsz+cn
-# ZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/JlN6m6GM1j
-# EhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutofdgNBzMUx
+# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
+# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
+# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
+# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
+# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
+# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
+# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
+# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
+# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
+# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
+# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
+# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
 # ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
+# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGZmEURXmZR4vLhp
-# 4Ke7tB7sQN8dH7z+GR0DlJNPON4yMA0GCSqGSIb3DQEBAQUABIICACWhn2LBpTm1
-# Bo+QrlSBTCg7Bcn7MJOtEiM8mlwW7+d45a3LSRChGRjSL/carsWBvtiCYfm/0hyA
-# H1Lf2fK5Y8Xl6Xzm0MhViwtaGBLeKJxK6o3+uufTROBpjEAzyUWM2sL+oFwzEU0E
-# GXbgSw1nvorLN8kFKUmvDENhGCdL3DXHppqasDY+ziXry0z7iCaILudnDCnMjACE
-# N5FjXgd/1OiNBmKgmWloQ93m09KkleJ6p2ZZOokMJD9YFIN2DSKmqs8S69QQJo+K
-# XBfv/ptM3+V+thlvxMdI68Wraq8M0M1NY8orvqFH0GIr2NclwL+X/j0YAapmQeID
-# A1pcj608zbNRypdM4B5MnDeB5T+5KbtQDzGbsP/pi0QEgtBj8E+UM02qUjC2c3z/
-# cC+1jsNx9jDQWcvPI0mXqQNow8J9hCiI7vd7kQugQkc0jy2RgFow0YDgnO2ignWP
-# 3LO+v6bEwErRTNVFBAYg3jys+2UgsLpcJC2UX7aadmqbk677JPfp98ssz3WFcg/9
-# WCnutA6wC1gEDTZQNY7wRUBGuUd2cJg6z3nU9bShq4le09dRA5pWJDWOrVheNu8I
-# J5U2PnivAWsTb3b/G8w7v4S/z98bmq8M3lITRlfyicFmb6ZfGYtiCIkns/0I5Seo
-# QR6aPPiu6w9u/xFrUC9Xhgj87XLZPot/oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICgVOHQJNnzYyNOI
+# pIQtg0KImX0v3Wl1qSawGLF0aAnVMA0GCSqGSIb3DQEBAQUABIICAB8leuGsLE/H
+# FFB5xePdlAphw91Qrxne5cVd5EoRavdLIPKLsVOoSUaIrpT6xvGguSeymktKP2HZ
+# PReNEFTX0IPUtosf8PzaLQDftK/8PIdl7Qv8uKT0/i8g47VALvJIf4uxgh8GJAk4
+# /maAFV7n10Jwp6u4eIxxjuv3tLfor0hQDSS1qLnghU9oLLmi6pP36/W8LPzNirzW
+# gNiDBaROJx3m7KPwUZDhSI1MpNxIsyEKvnu//nuz4KRbNaQuoxKmJgJ6WJhzLAiw
+# xGo0RRWa5zMPPvA6fdZnbuTe9nqbMC25+MRPgZrPGH965x4R4v8V2ZFc66FNveYT
+# VAyXrqQcuzvx2vGko20smA1ZByb4yDh18X9pQL5LtDyeERx+KdEXTlZbrMOcC76S
+# YP+WTOWp10ZhtTeqI4c6eT+B2GeoKgjFWyIETIo8mrfnCCoA9u7JNoC8vMPmugJ9
+# MVoP0Gr23Cc8m92J6XyYV649VWlcnZBV5dE7WBJdDgK6P/uPTtMNXjfApXtI3M7a
+# QqToBMDFeVB3Q3ogkHiZkt1qmHrINf1wWm9znTyLDjBKIyNpv9IjCMv+Dgl9usWg
+# 4I4vEAWA23pVn4DfA2zsXQvRGMWhmvbNUXgdfJqc8L8LLK2cEJZ7suKqwF48Wny7
+# mtj8vqRcT8LycsVvPXZDmayxre7yoIAPoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCApPRHAJU0dAjXJdXj7kqgzEFm8n/Nfkj7IYB3RMbJgEgIUTjrGS7eQtriJ
-# l4RNQsbtQIGIHpgYDzIwMjYwMjA2MTE0MzU4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCD2qCz63uYtFfFuNYDEFOgl3Ev6vW2uBiOp4UK0BdsdtwIUH8/Z+gEZ5DHT
+# B+WJqX7MSJ1tEHsYDzIwMjYwMjA5MjIyMDQyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -525,17 +627,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IHZT7wJKxKbM+bqlU9ho5BQxPVynl/my44cLyM4A2M2vMIGwBgsqhkiG9w0BCRAC
+# IAsXLeu2b5aZBWYeYsNxwvsqskQyn67VusBr/uefVNUyMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAlRvdpyi8ZYDV
-# Z2ORphw4MyNyYZAjZL7uhlZIBxox9laHdVqkyEoe0zRjuV68VboBOllunFErW3QM
-# r69Eg7E+WkfK3bqGnbAnnLTuUKUqyG63JjGUS0gnwjWFNXeDNdsyU69dwBac5tf/
-# avuuNU7joVSKhJ3a0bbCdOSSGy/k1pK+chHt+p4YC+s4R1IBae+ryszivCBSynGr
-# j52B+Sl/v949IEb18Nst6fjW+sO1qQuwvEbKGokbeLFEwWcIDL9SUe7ueM7vZUnd
-# 9ZpsfHX3bIrULJXwZgmtFk9pqTR9F92qL5X3bDIRM3dg2Kf1vmKohnHH8/bUKmKw
-# xd0exW1e+056uBMCDr3+aWnMCe8KrzxZrOBPf4eT2U3HXC06+doP+FeaZYxb3XDI
-# a1kbT/OI5LXhDXRiAEKP+fV8VOA/xrp7t/0tefNKb8smcb6gLc7RAijeUm2Y5LAo
-# qv3+inn/6ssL+gn/YU2YP5uJVaGQ/8Tbmx7YCWJgorL8TPZ1WNcL
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAX+i4FoBi3HZN
+# L1ylpNI1fv7kZvr/jAgFMzD7eZtLu/qyWydVmF+o3h+Au8Rud2npmelKkTqt8OHz
+# smAn3yCglZVwCLqMaeGsrZRb1GnJYIXzquH6RUaLn+3SEt3axE2rVyrbrNyLRd2h
+# TZE/T4CS42Rm+NAu+NPLbbV2/AlFsoXYZMmRvnuEjANi3BReu1L38FtxMdFq8ioC
+# cZut8CeFO/yQJBQp04L786uySGUG/yXGwlVtfWuyB1P555U7Bfn6ZbccLA+lROHi
+# pnb9CtK9e3Pf//9YF0T4ByxQXUQXjmulno/f8Hw/ZtP/rhQ8ecDtuQHGqLmWcB39
+# FIyjwxzHaqXj/seujmjtQT5XSwWoD+RFXlXxlLq2851FLsTmH8bm/loiqBwEEOgn
+# XsY8npx7D8dpI4ZJMYxXkj72ffdzRcU0mx+WVFTLbTYDcXa7mHnZKZREE+qWZSsR
+# 2YWF/LdnqhlIvHOM2WYTgX9xhXCNPfFCx/Dl79sAnGvbzHz+mHGU
 # SIG # End signature block
