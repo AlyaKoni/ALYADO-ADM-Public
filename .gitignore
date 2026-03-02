@@ -341,3 +341,6 @@ ASALocalRun/
 **/serviceDependencies.* - ZIP Deploy.json
 
 desktop.ini
+
+# ctags index file
+tags
