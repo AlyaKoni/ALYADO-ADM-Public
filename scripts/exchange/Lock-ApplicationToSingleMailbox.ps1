@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,24 +27,34 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    20.02.2026 Konrad Brunner       Initial Creation
+
 #>
 
 <#
 .SYNOPSIS
-Downloads the FileZilla setup executable by prompting the user to manually initiate the download and automatically moves the downloaded setup file to a designated content folder.
+Enables DNSSEC and DANE for specified or configured Exchange Online domains.
 
 .DESCRIPTION
-The Download.ps1 script launches the FileZilla setup download page in the default web browser and guides the user to manually download the FileZilla setup executable for Windows 64-bit systems. It monitors the user's Downloads folder for new files, waits for the download to complete, and automatically moves the downloaded setup file to the script's Content directory. The script ensures the required directory structure exists and provides informative messages throughout the process.
+The Lock-ApplicationToSingleMailbox.ps1 script connects to Exchange Online, checks the DNSSEC configuration for specified or default domains, and enables DNSSEC and DANE if not already active. It supports specifying a single domain to process or excluding specific domains from the configuration list. The script assists with the required DNS record updates during DNSSEC activation and provides user interaction to confirm completion of manual DNS tasks.
+
+.PARAMETER ignoreDomains
+Specifies a list of domain names to exclude from DNSSEC and DANE configuration.
+
+.PARAMETER onlyOnDomain
+Specifies a single domain name on which DNSSEC and DANE will be enabled, ignoring other configured domains.
 
 .INPUTS
-None. The script does not accept any pipeline input.
+None. Domains are retrieved from configuration or specified via parameters.
 
 .OUTPUTS
-None. The script does not produce any output objects but writes informational messages to the console.
+Console messages, log file entries, and DNSSEC/DANE status updates in Exchange Online.
 
 .EXAMPLE
-PS> .\Download.ps1
-Launches the FileZilla setup download page, monitors the Downloads folder, and moves the downloaded setup file to the Content directory.
+PS> .\Lock-ApplicationToSingleMailbox.ps1 -ignoreDomains "example1.com","example2.com"
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -53,107 +63,58 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
-. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+[CmdletBinding()]
+Param(
+    [string]$AppId = $null,
+    [string]$SharedMailbox = $null
+)
 
-# $pageUrl = "https://filezilla-project.org/download.php?show_all=1"
-# $headers = @{
-#     "accept" = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
-#     "accept-encoding" = "gzip, deflate, br"
-#     "accept-language" = "de,de-DE;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"
-#     "cache-control" = "max-age=0"
-#     "upgrade-insecure-requests" = "1"
-#     "user-agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/"
-# }
-# $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget" -Headers $headers -SkipHeaderValidation
-# [regex]$regex = "[^`"]*FileZilla[^`"]*win64[^`"]*\.exe[^`"]*"
-# $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-# $fileName = Split-Path -Path $newUrl -Leaf
-# if ($fileName.Contains("?"))
-# {
-#     $fileName = $fileName.Substring(0, $fileName.IndexOf("?"))
-# }
-# $packageRoot = "$PSScriptRoot"
-# $contentRoot = Join-Path $packageRoot "Content"
-# if (-Not (Test-Path $contentRoot))
-# {
-#     $null = New-Item -Path $contentRoot -ItemType Directory -Force
-# }
-# Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
+#Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#
-# Downloading Setup Exe
-#
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Lock-ApplicationToSingleMailbox-$($AlyaTimeString).log" | Out-Null
 
-$setupDownloadUrl = "https://filezilla-project.org/download.php?show_all=1"
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 
-Write-Host "`n`n"
-Write-Host "FileZilla download"
-Write-Host "====================="
-Write-Host "We launch now a browser with the FileZilla setup download page."
-Write-Host "Please download FileZilla_x.x.x_win64-setup.exe"
-Write-Host "`n"
-pause
-Write-Host "`n"
+# =============================================================
+# Exchange stuff
+# =============================================================
 
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "EXCHANGE | Lock-ApplicationToSingleMailbox | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+try
 {
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
-}
-$profile = [Environment]::GetFolderPath("UserProfile")
-$downloads = $profile+"\downloads"
-$lastfilename = $null
-$file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-if ($file)
-{
-    $lastfilename = $file.Name
-}
-$filename = $null
-$attempts = 10
-while ($attempts -ge 0)
-{
-    Write-Host "Downloading setup file from $setupDownloadUrl"
-    Write-Warning "Please don't start any other download!"
     try {
-        Start-Process "$setupDownloadUrl"
-        do
-        {
-            Start-Sleep -Seconds 10
-            $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-            if ($file)
-            {
-                $filename = $file.Name
-                if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
-                if ($filename.Contains(".partial")) { $filename = $lastfilename }
-                if ($filename.Contains(".tmp")) { $filename = $lastfilename }
-            }
-        } while ($lastfilename -eq $filename)
-        $attempts = -1
-    } catch {
-        Write-Host "Catched exception $($_.Exception.Message)"
-        Write-Host "Retrying $attempts times"
-        $attempts--
-        if ($attempts -lt 0) { throw }
-        Start-Sleep -Seconds 10
+        LoginTo-EXO
     }
+    catch {
+        Write-Error $_.Exception -ErrorAction Continue
+        LogoutFrom-EXOandIPPS
+        LoginTo-EXO
+    }
+
+    New-ApplicationAccessPolicy -AppId $AppId -PolicyScopeGroupId $SharedMailbox -AccessRight RestrictAccess -Description "Restrict app to shared mailbox"
+    
 }
-Start-Sleep -Seconds 3
-if ($filename)
+catch
 {
-    $sourcePath = $downloads+"\"+$filename
-    Move-Item -Path $sourcePath -Destination $contentRoot -Force
+    try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+	Write-Error ($_.Exception) -ErrorAction Continue
 }
-else
-{
-    throw "We were not able to download the setup"
-}
+
+#Stopping Transscript
+Stop-Transcript
 
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDRw+NDKiMYcK8d
-# PfI3XgBGYfkWJ4igoOYVY17YDJHYEaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAmzO+rM8WOFSAN
+# /e+aF3nkafCj9i+SPPH8OI3o/tUGCaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -267,23 +228,23 @@ else
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGcQml+e
-# sAZG+FFq+EgJAXCYOiKMddLsU0raDpkEpHtAMA0GCSqGSIb3DQEBAQUABIICAEht
-# Rgo5JxpmGwXqAYDHiMJfOTiV30p6JKhcLfP+gg3bXi+T0rMOpRD3BbM2HA+Sugeg
-# 1SrkkzpjMEwweDoBXrsL1/5b5ntzFMz706zd1XWMu0RR7siIlNE/hEfYzRMGbpE3
-# EkZqKVLmZz3aSAK40OxZeJnqvKHE7mmZLp+By0cqqnKfjQL0FRM88AYHrJsm0e7R
-# xsbP0wPXbL8lSmAn30A8DKnL/39pSRCnEgwY84uPn67NFhIJCykjCdI2emJV5I/5
-# TIZ4Oxpefgv18zr5wyomD5cUZSZst4M/50FZzYprn2MQoaNCRHQ1bTBHGUFKBecA
-# BWIaTgGkI6zu2O6XBvmuCgmMp0MJvJNIOIM/X2BF8ljhdYjKSFNEaXUopnBDx6wL
-# 8TX7ATB7yJoexCaWmWynd8m3nYbbxv3wSH+vgyOgd6ofuxENwtCfczYjR3HzC+dN
-# i+P7unoD9A3EHhJMhqmqx4/735aRCVIvLlmXDHrvN++7vZTAEQ6/HyaU/dOGXJkY
-# h1seifDR8dd3yz8pN6wWe1oWsKw4c2xlatarwzjIVlIdTtbP27U2BioOLzGyTA70
-# ScggmmRULt+3moofj0LheCS5SEJwzwkAgKX47IcTMj7QiMFVoxY7OKcl/Bs5v89V
-# PMPN/G+jAReEjNT3RA4y+iunHX2S3H5ouKdL3z21oYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG4XJh5i
+# 5gbpGPl4mM5c/ZAp3F1HJtS+1p1OshoZcaSjMA0GCSqGSIb3DQEBAQUABIICAJIl
+# eNgjw8sYCJRDGg/znvWYhJfxEoQPSie6mcNtOyYXemz2mftZ3Zr5nM4smxVy+Zqy
+# 4M7pUPgWgIuhzrVgQn1hbSCkEvABkzVjt4r59bN9fnbzKcblW7HBtfjRLVtlmTDl
+# KrWVA2wLb0mDsOeFQti3ctpPrWgTnPwhqiw6NSzrVlIOH3ba2NKt8cI7FlEgZMTd
+# E+ThSTpKXwwUl610hG2q9Ebrz1mA4ZpbdDmc+ianXlHiFTX/5y+6wgL62xAHQB9r
+# /TMBzlRDlLHoHs9vOzdueYLVvHcrCqPAizyePoqrxHd9bKLGQ49cm2sIH/jMCCQu
+# K2hp1a2bDNRj5GRtaVLlBHBW3qugW3khXNeYbn+KsSDKa5KDQiC4UxStZtyg8EbY
+# Q3EUuKYf7xT5powkLpossavVHgopZcgxezYp3aLL/TtNiy3Hqhp4qO4OCBHd/exP
+# K383ZNakkSbq8XgMYw79SrRI/dBg5/+YUIBgoEsSr0J660XPwsCpSz/YkwlXQpGy
+# Q1Kjdgvr/veVTgjPtv9Hrr1O+rvtsEZFGPThkygVL3+D0M1kSJymM/RbYBqnAIwN
+# ivGx3C2av2xAO9vT5O2oS56AsVDJoTSoijm2V8HT8lQTRaF3dLBoMQltmiK72Po4
+# FOqqkNo1ZdnWA9IuRaPdh80o9biaW1P5XgjnsQ0noYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCEeWAQdX2Jb99plCedN6bXlV0fZODD2X6sFbv81qiWNwIUK8uR
-# B9Tb9iZpfRpcx0B0Cu0j690YDzIwMjYwMjE5MjIyMzA3WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCCDVKqZLHKSnULX42QuqkZTNUvM/7TdILm2P38aVY0oOwIUK4pn
+# aME9LeQx+TcRFlB7llQk7/8YDzIwMjYwMjIwMjAwNjU2WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -388,17 +349,17 @@ else
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIIl4aebk30XheTbFBUBCVYP/2xsKfykCmpOoHPYBkPGgMIGwBgsqhkiG
+# AQkEMSIEINxFpVKrACXymYS3wiCT5EVYu7nEZEceO4c1dUoAa1gFMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAPNNs
-# EaL8PBU9TJyrb0CejUJehoCJX7AVv/RyUciQBxfAyES57fu+XJjciq8pYnXjqvBl
-# B8UTlWxUFRBan+SEEIVP/j0oF+dl9icacFYJ3aOWvyIpou8ykU+xvzlLaVziXv+e
-# v4oKQ7R1kGExhPbixCzlFtnAsQbJLqjLGZ+JZydoWjl3uUnInRcgvWB4HySP1VOv
-# NebMit0X7zcF0MisR2gfxl2P050T2+Rn/A0gprWiua0WVK1CBpcMlhJlYjOvcEXK
-# 77kBII2oITEXRBIaKokRMjqg9hEIXhjbCLdHDJXTRjq5CdFyCjxnZMXh9crH4YF+
-# LzG3j8lx1bz+F4PMpolbVBEMfm5quauaKiGuIeyynAtT6HSpL+J9vDFw47zTfIls
-# NgeaZz7xYyH8TLIpJrpsAWPsoMbbJErfLEhvRzLqwL5OOnnvqmAXz9e2VZwsjkXK
-# LRlInAO5jTFirRFZ0y2IALGC7zQz6bynCVZ/BJRpOcfwDQDvQuIIKFvXPomt
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAog2N
+# 3SjuaQzl9oyLcCkqY3sFzwsVJ1Rgw28HYYmLGyhM7LZm+Tx8ui69xBF9kjGCoF1V
+# NllJ5ZcbOucsRj1cNPDe4ioQVOZktZn+EMJuRGnt1AAwYMbi/Djfmxzk94EKotpk
+# QBYv/EWprwGPpp/V4ha9cktppIP4T2UPUwsliqH+cG8O0Vr2qmKbuRVCmGYAtTni
+# dAO67PhPQZ6QLrsWgwC7+0913+c3iE5lbMTd6bB4lGafckk1bN1NUZJJLOB7fyJv
+# BT9bFFPZpXjSJF1tEVgHTMtP0CSZJ2znlh93vdURauaQsT8aQg/sRNOxLdH2Ehuw
+# mIJj+IffHgYlFCnBhNDkFITrfPW0ochMp/Ji6npAUpCE2OXdf4d7bJOsDaGareS4
+# DGwX18RRN0Y9LLHH8NhPxUJ+ayclPd1LcVk0HOwR1uh6vevRtHXzrzXcS611wbX0
+# YnsGwLlWz4zcb2Ohry0Uq0auQQzvxp+AmhOATVPHTaPt5GPNQHAtFkfBuIlp
 # SIG # End signature block

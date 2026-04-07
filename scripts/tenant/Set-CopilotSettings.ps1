@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,31 +27,29 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    06.04.2025 Konrad Brunner       Initial Version
+
 #>
 
 <#
 .SYNOPSIS
-Sets the customized synchronization cycle interval and purge run history interval for Azure AD Connect.
+Configures Copilot settings for the tenant using Microsoft Graph.
 
 .DESCRIPTION
-The Set-AdConnectScheduler.ps1 script modifies the Azure AD Connect synchronization schedule by setting a custom synchronization cycle interval and purge run history interval. The synchronization interval is defined in minutes and determines how frequently synchronization between on-premises Active Directory and Azure Active Directory occurs. The purge run history interval is defined in days and determines how frequently the synchronization run history is purged.
-
-.PARAMETER SyncCycleIntervalMinutes
-Specifies the synchronization interval in minutes. The default value is 30 minutes.
-
-.PARAMETER PurgeRunHistoryIntervalDays
-Specifies the purge run history interval in days. The default value is 2 days.
+The Set-CopilotSettings.ps1 script connects to Microsoft Graph with the required permissions and ensures that Copilot settings are configured for the tenant. It logs its actions, verifies the current state of the Copilot settings, and updates them if necessary.
 
 .INPUTS
-You can input the number of minutes as an integer to set the custom sync interval and the number of days as an integer to set the purge run history interval.
+None. The script does not accept pipeline input.
 
 .OUTPUTS
-None. This script does not produce any output.
+JSON output of the current Copilot settings configuration.
 
 .EXAMPLE
-PS> .\Set-AdConnectScheduler.ps1 -SyncCycleIntervalMinutes 45 -PurgeRunHistoryIntervalDays 3
-Sets the Azure AD Connect customized synchronization interval to 45 minutes and the purge run history interval to 3 days.
-
+PS> .\Set-CopilotSettings.ps1
+Runs the script to check the current status of Copilot settings in the tenant and update them if necessary.
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
 Author             : Konrad Brunner
@@ -61,19 +59,57 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [int]$SyncCycleIntervalMinutes = 30,
-    [int]$PurgeRunHistoryIntervalDays = 2
 )
 
-Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($SyncCycleIntervalMinutes):00"
-Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00:00:00"
+#Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-CopilotSettings-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+
+# Logins
+LoginTo-MgGraph -Scopes @("PeopleSettings.ReadWrite.All")
+
+# =============================================================
+# Azure stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-CopilotSettings | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Checking enhanced personalization
+Write-Host "Checking enhanced personalization" -ForegroundColor $CommandInfo
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "/beta/copilot/settings/people/enhancedpersonalization"
+if (-Not $setting.isEnabledInOrganization)
+{
+    Write-Warning "Enhanced personalization is disabled. Enabling it now"
+    $setting = Invoke-MgGraphRequest -Method "Patch" -Uri "/beta/copilot/settings/people/enhancedpersonalization" -Body (@{"isEnabledInOrganization"="true"} | ConvertTo-Json)
+}
+else
+{
+    Write-Host "Enhanced personalization is already enabled"
+}
+$setting = Invoke-MgGraphRequest -Method "Get" -Uri "/beta/copilot/settings/people/enhancedpersonalization"
+$setting | ConvertTo-Json -Depth 5
+
+Write-Host "Actually we are not able to manage some settings like flex routing with powershell."
+Write-Host "Please set it by hand."
+Write-Host "https://admin.cloud.microsoft/?#/copilot/settings/ViewAll"
+pause
+
+#Stopping Transscript
+Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCButhpbnrICK9g0
-# o3FxJCxtqWpjSypFWG8MVCfITXPKLKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCeh3pHvGwmOy3V
+# YHDdENiQmSDHMuFXxM3k2D4gCWEboKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -157,23 +193,23 @@ Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDhXTnLdNL7XyarA
-# qglfQOd+c1D0PmVGggG8mVbO2P4cMA0GCSqGSIb3DQEBAQUABIICAHr8DZHGgJO0
-# FGrZpTTDgMuUfg7G/M2vgfCrWFwmMWVRJQBSzDUDq4Jg8GtzXtJop/YOsejeoQAN
-# Qw/Lp92tNeIwBoxhNQIoeUpnCcOaAA4YDwUNm1JOCJ8dqlIexlEOVU+y7Q23dftq
-# uk1Oa7DaCC7kpwup/O41CCi3fflb+uw2VquWWZ3a14hpJJvs3oYhlA9GVpgiuRjA
-# KoQQhOvR8t7h1RSnQ2Hr6rFigZosl+Idh9dR6pzi0lPfVGkXUERtWrCueZQHkxfe
-# S8UnaRHkLiobs/d/4SJOVcBBG8ROIz6g3h72VweyZfMiqlBRxwf9IS80wAQAguqM
-# zneQRCXnlWAxw1IXoiOQGLsz4sNOSQXH+6IjSpnhgiguz2vgm92qhjD4aKArwNG9
-# L38zzJ+0Z5/ShJEGEK1omTIuVt/JsweI0Yb4feX9bUdX+WtIG4ofde+vcumKQKt7
-# Dn1x+BW90YXrMdHMB8PfQyT5R2kjG6mEiZt4dNA+/vVKXGhXtJIDwSVLIg3okFjD
-# 7IPN6NF1a+vzkXN2vjfmts/ksSST5A+Jo8b+zt+5CzVKQ38FFIzpPn7ImfrAeWni
-# MjSWXsKXgrwVAWla0dNPbN2w561xZ2oQYPNue/F04Xt+CEzqXdd269DaA4cdETbf
-# 3I9+ubIdO/SZME41/4ee6xMfoh21w4vioYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIN1oz03SlXe+iL4w
+# d0WDGOvhPacBkLYCncmtErm88dfKMA0GCSqGSIb3DQEBAQUABIICAAbnb/kJz6jD
+# Aooi7MSpecuOAAOH9SpYUCil8jKQauoHmhpY0/5iMcHcONsa6WjuSKy2yPX5R3yn
+# btCUNviFJwiBUhvPPLriGeNTsQemcLi0pC/iTChBOjkNfb2gXnL+OYORmNTIbCJ/
+# 1/MDQvPijbig9LysMySP09I/SscE39b6WU07rTB+qtRCt0zkEhMHbzCI5xDLiNcn
+# /PLabquzYKDYCvUGN3ZnTsInNVjog1ogQlkWUY6Zk7lsXLA91aQSkOPzYRHT3mIU
+# Mlo/EEPKCmJ3NFP4QuOe8XfByOOpaXPO5+HOUBtTqGRjPEJULISlTh0z0rVeUt46
+# rKOlfII1kYW3LPmzOih3KJnsC8W/G48E1jcRWRJuuphASk8T3WokTg+IydSx3qB8
+# 4ACmzfGNxmwIBZaAZFbasuGROmK4Ml60PxWGl/xCm8ILiD8s//sYQuOxY972HST+
+# j9JvDN9BZ+acdJDmO/b4T260hMkgc6UCKYCF0DK8rsHvtPSjcPTkAUcUyENgJMpz
+# 1o+mReYvivfkHKx4u8Inq1avq7iQlxnEDf60Ly63AWTvz4QjkYahqpmH4LkO7Q1L
+# PFymYJjsVaHQGW7XrYbDNg93poruBwju5TT6Tu452Q4Be8u9Iz9BG08XxniLZCXB
+# HkKuEpwlR4IxRY4XiumWmAKZ5+fVNQfpoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBb1gmqdUpjP/vUwrDLzPhGMIbhIStKX7hts5fZrmsdFwIUVRDnyB9P+iwI
-# dvhEYwkNk7oU6P0YDzIwMjYwNDA2MjEyMDI2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCC1sxhGCQT+KhJd/gd6QyVHQNvlaYxDQ73cujsnsnCJogIULIp0ENcbzt5I
+# LsSeoluc/OCm0CgYDzIwMjYwNDA2MDc1OTQ1WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -278,17 +314,17 @@ Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IH+rvFpRucWgVCcallqv3Z9knp2p1JAvpX0sR4PGzHDPMIGwBgsqhkiG9w0BCRAC
+# IM044mUTLo/M+Kl23TvJeJk/cqhYeBZZppVgiQsZkOfyMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMMnCJ1giy70j
-# yb1FX+tkpLgEIGMyMjPfBJdewNb/xnsEBZMZOLzf49q2U5M3wtTt4i0DQ4YinJI5
-# 6Netoo031V7CdZ3jYwQiZibKIzMvIQCh3tOFrgGOnxg9aKPKBiFdSH3SjFTNq+17
-# qGZ8gnM0bVAfudkpWl770J4F45b3fFw72xhq4CXvo8UjcvPydMLdo7/N2IEJr+oA
-# 7bIt7KUXXaCjJcV+5PaNKRi9jUHVEmFnlQ7V7F0lULwa+TXudXwS3hpfcw1iP1EI
-# 5Eg+lQm7b2GpX83VVINBpQkqpByuIBP6uK6ZWCGWQxeXwIGXgiR7+cPSgA/Skedf
-# fdW7nQywRS9nNFOBlwuoIFoeyFo0nkDRhnnYq1Tpm+bOolPgoj4M86q2qrFc9wJ7
-# i0qeQfqec6/KRMGN4DwQ3ZZJSuWC+MwQoPZrW0fUZbq1x48LWig7WtC+bEjuqQdf
-# z7yP6jyEh8klZPfTUZgBvidjNugTcCeon8i/6KjIvA3A5nf+vkRb
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAe1sdXGuzHrSE
+# nTSbfg1rZJnHZ6hggwyzlP5m5loUnRowXO+yguKtLL+SYki7Ft705LOuITu+qrD4
+# 1AyWX0k028skaWCfZ2Ck1L707Ms551Nx4fx+g4wCGDDnsKS1mAhsfzf5rMQxUJgS
+# xiY/xfQycVgFPqnKFfRVRJpUXnMpmqKxikw7AZySTLm4P719O8vflX0PGVsubPt7
+# NPcGuGFqF1IhhaRv//80Suyo8Fl9ei/Jg1pDQhFebqJY1QykE0bNNnWQwW0E/n8p
+# K9xZOefcE2lFHsOeR3ZhblPUfPPpdpfFSZfkbsn7oCmjjxcZvm1XfbCrj9S2olnQ
+# tnMd8Cowol3bzBZM+efZqEeQPVsicrkg28bKmKKeuynvtpdiEuqh59UMwu1Kb7Q2
+# Z/kl6U49OuAQBLt+g6/BDLaklHiLS1QGzPNjC0nmIMTGZRsWA0x1p+7B+aOJSBig
+# Hb6KhwioM/tcIj2omYXWp/agbvmjb4ba3qJns3b327LvqZQMl2D7
 # SIG # End signature block

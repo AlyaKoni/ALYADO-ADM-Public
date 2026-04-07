@@ -1,159 +1,15 @@
-﻿#Requires -Version 2
-
-<#
-    Copyright (c) Alya Consulting, 2019-2026
-
-    This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
-    The Alya Base Configuration is free software: you can redistribute it
-    and/or modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-    Alya Base Configuration is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of 
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
-
-    Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
-    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
-    Bedingungen der GNU General Public License, wie von der Free Software
-    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
-    veröffentlichten Version, weiter verteilen und/oder modifizieren.
-    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
-    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
-    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
-    Siehe die GNU General Public License fuer weitere Details:
-    https://www.gnu.org/licenses/gpl-3.0.txt
-
-
-#>
-
-<#
-.SYNOPSIS
-Downloads the FileZilla setup executable by prompting the user to manually initiate the download and automatically moves the downloaded setup file to a designated content folder.
-
-.DESCRIPTION
-The Download.ps1 script launches the FileZilla setup download page in the default web browser and guides the user to manually download the FileZilla setup executable for Windows 64-bit systems. It monitors the user's Downloads folder for new files, waits for the download to complete, and automatically moves the downloaded setup file to the script's Content directory. The script ensures the required directory structure exists and provides informative messages throughout the process.
-
-.INPUTS
-None. The script does not accept any pipeline input.
-
-.OUTPUTS
-None. The script does not produce any output objects but writes informational messages to the console.
-
-.EXAMPLE
-PS> .\Download.ps1
-Launches the FileZilla setup download page, monitors the Downloads folder, and moves the downloaded setup file to the Content directory.
-
-.NOTES
-Copyright          : (c) Alya Consulting, 2019-2026
-Author             : Konrad Brunner
-License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
-Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
-#>
-
-. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
-
-# $pageUrl = "https://filezilla-project.org/download.php?show_all=1"
-# $headers = @{
-#     "accept" = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
-#     "accept-encoding" = "gzip, deflate, br"
-#     "accept-language" = "de,de-DE;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"
-#     "cache-control" = "max-age=0"
-#     "upgrade-insecure-requests" = "1"
-#     "user-agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/"
-# }
-# $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget" -Headers $headers -SkipHeaderValidation
-# [regex]$regex = "[^`"]*FileZilla[^`"]*win64[^`"]*\.exe[^`"]*"
-# $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
-# $fileName = Split-Path -Path $newUrl -Leaf
-# if ($fileName.Contains("?"))
-# {
-#     $fileName = $fileName.Substring(0, $fileName.IndexOf("?"))
-# }
-# $packageRoot = "$PSScriptRoot"
-# $contentRoot = Join-Path $packageRoot "Content"
-# if (-Not (Test-Path $contentRoot))
-# {
-#     $null = New-Item -Path $contentRoot -ItemType Directory -Force
-# }
-# Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
-
-#
-# Downloading Setup Exe
-#
-
-$setupDownloadUrl = "https://filezilla-project.org/download.php?show_all=1"
-
-Write-Host "`n`n"
-Write-Host "FileZilla download"
-Write-Host "====================="
-Write-Host "We launch now a browser with the FileZilla setup download page."
-Write-Host "Please download FileZilla_x.x.x_win64-setup.exe"
-Write-Host "`n"
-pause
-Write-Host "`n"
-
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
-{
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
-}
-$profile = [Environment]::GetFolderPath("UserProfile")
-$downloads = $profile+"\downloads"
-$lastfilename = $null
-$file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-if ($file)
-{
-    $lastfilename = $file.Name
-}
-$filename = $null
-$attempts = 10
-while ($attempts -ge 0)
-{
-    Write-Host "Downloading setup file from $setupDownloadUrl"
-    Write-Warning "Please don't start any other download!"
-    try {
-        Start-Process "$setupDownloadUrl"
-        do
-        {
-            Start-Sleep -Seconds 10
-            $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-            if ($file)
-            {
-                $filename = $file.Name
-                if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
-                if ($filename.Contains(".partial")) { $filename = $lastfilename }
-                if ($filename.Contains(".tmp")) { $filename = $lastfilename }
-            }
-        } while ($lastfilename -eq $filename)
-        $attempts = -1
-    } catch {
-        Write-Host "Catched exception $($_.Exception.Message)"
-        Write-Host "Retrying $attempts times"
-        $attempts--
-        if ($attempts -lt 0) { throw }
-        Start-Sleep -Seconds 10
-    }
-}
-Start-Sleep -Seconds 3
-if ($filename)
-{
-    $sourcePath = $downloads+"\"+$filename
-    Move-Item -Path $sourcePath -Destination $contentRoot -Force
-}
-else
-{
-    throw "We were not able to download the setup"
-}
+﻿$RegToken = "PleaseSepcifyYourRegistrationTokenHere"
+Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\RDInfraAgent
+Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\RDInfraAgent -Name RegistrationToken -Value $RegToken
+Set-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\RDInfraAgent -Name IsRegistered -Value 0
+Restart-Service -Name RDAgentBootLoader
+Get-ItemProperty -Path Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\RDInfraAgent
 
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDRw+NDKiMYcK8d
-# PfI3XgBGYfkWJ4igoOYVY17YDJHYEaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBjAnbRzJ1AJOvG
+# riuEIpntOzkSBhQouuJLd0nusU+HAaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -267,23 +123,23 @@ else
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGcQml+e
-# sAZG+FFq+EgJAXCYOiKMddLsU0raDpkEpHtAMA0GCSqGSIb3DQEBAQUABIICAEht
-# Rgo5JxpmGwXqAYDHiMJfOTiV30p6JKhcLfP+gg3bXi+T0rMOpRD3BbM2HA+Sugeg
-# 1SrkkzpjMEwweDoBXrsL1/5b5ntzFMz706zd1XWMu0RR7siIlNE/hEfYzRMGbpE3
-# EkZqKVLmZz3aSAK40OxZeJnqvKHE7mmZLp+By0cqqnKfjQL0FRM88AYHrJsm0e7R
-# xsbP0wPXbL8lSmAn30A8DKnL/39pSRCnEgwY84uPn67NFhIJCykjCdI2emJV5I/5
-# TIZ4Oxpefgv18zr5wyomD5cUZSZst4M/50FZzYprn2MQoaNCRHQ1bTBHGUFKBecA
-# BWIaTgGkI6zu2O6XBvmuCgmMp0MJvJNIOIM/X2BF8ljhdYjKSFNEaXUopnBDx6wL
-# 8TX7ATB7yJoexCaWmWynd8m3nYbbxv3wSH+vgyOgd6ofuxENwtCfczYjR3HzC+dN
-# i+P7unoD9A3EHhJMhqmqx4/735aRCVIvLlmXDHrvN++7vZTAEQ6/HyaU/dOGXJkY
-# h1seifDR8dd3yz8pN6wWe1oWsKw4c2xlatarwzjIVlIdTtbP27U2BioOLzGyTA70
-# ScggmmRULt+3moofj0LheCS5SEJwzwkAgKX47IcTMj7QiMFVoxY7OKcl/Bs5v89V
-# PMPN/G+jAReEjNT3RA4y+iunHX2S3H5ouKdL3z21oYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEGVNvmu
+# brMCs6erL1XVHYUdX/7d8JViGHBHTtjKDx38MA0GCSqGSIb3DQEBAQUABIICALRR
+# orxyKfVZ1FnJanjBi4Bmx+xGhOVPChILrgXDkZGabY2IXjSEsAco+ZbJ/VQlu1xE
+# nzLDbsMXtILJqJxp9Lj64CP2bSGpzYa4uJtktJ/QKBzLDx4k/HXwTQQYqm3kS3TA
+# jm0JMVTR1OTqkfwjcwRUQu6z3/v2CjPAIEplyFFn2aQprF252YyP6kx5wD7KOfdU
+# UKEa7mIhuWBdjKE2k9/C35KtDbfacQerdRhecwwZg0oVJnU0PqCAn32Y2ios5Wj0
+# H9r5GCPXcs7nbndUvHvqVQoARSTatQ6bvvl0MBbZVP/IdsWNklLe4hleXOTIJevf
+# s3InPIQTcpsy6hWa06EUQsrI28AuazXdBFqf+E8OAdn9PAMWj6e21hWk28S4v1Oc
+# JmzJOwTR3PXdkcRRMR/IxbDmTnwv/oMi5klPOPZHi0hKdTXAhZjIA3ECtCticVk/
+# MTc2AF9y1ICMwIxy/pE6N03iEFKYSW6toTPrREs0EIrKvclcg9p1nxnTjOYTm/Wk
+# dQq8NIvnfkmn92S/MfSQSyQhj1tnxp27pEr5xPugUSrwF+luDCydGmRxTrtprHaa
+# CIU16CM4J5gaPE3dT8XoBgLzccrVybuO8ZDdjBPYed6N6aMclye5vkq06hBIiETC
+# cqArWv/ndQ7oPrFnJlQdULwW0R6dDNIQiAsf2O0CoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCEeWAQdX2Jb99plCedN6bXlV0fZODD2X6sFbv81qiWNwIUK8uR
-# B9Tb9iZpfRpcx0B0Cu0j690YDzIwMjYwMjE5MjIyMzA3WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCBSLGF25pU1mtWwWuI+aJqf5isS1Aq0b+0p56hIIsZnPAIUOaRa
+# Q9H+B8TjZF2+IoIMmOTmvAwYDzIwMjYwMzA0MTQyMDA3WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -388,17 +244,17 @@ else
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIIl4aebk30XheTbFBUBCVYP/2xsKfykCmpOoHPYBkPGgMIGwBgsqhkiG
+# AQkEMSIEIEeJw1z0LaDYNyiUkCZ4G7r0ik5giESs12L6x1TZeLhJMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAPNNs
-# EaL8PBU9TJyrb0CejUJehoCJX7AVv/RyUciQBxfAyES57fu+XJjciq8pYnXjqvBl
-# B8UTlWxUFRBan+SEEIVP/j0oF+dl9icacFYJ3aOWvyIpou8ykU+xvzlLaVziXv+e
-# v4oKQ7R1kGExhPbixCzlFtnAsQbJLqjLGZ+JZydoWjl3uUnInRcgvWB4HySP1VOv
-# NebMit0X7zcF0MisR2gfxl2P050T2+Rn/A0gprWiua0WVK1CBpcMlhJlYjOvcEXK
-# 77kBII2oITEXRBIaKokRMjqg9hEIXhjbCLdHDJXTRjq5CdFyCjxnZMXh9crH4YF+
-# LzG3j8lx1bz+F4PMpolbVBEMfm5quauaKiGuIeyynAtT6HSpL+J9vDFw47zTfIls
-# NgeaZz7xYyH8TLIpJrpsAWPsoMbbJErfLEhvRzLqwL5OOnnvqmAXz9e2VZwsjkXK
-# LRlInAO5jTFirRFZ0y2IALGC7zQz6bynCVZ/BJRpOcfwDQDvQuIIKFvXPomt
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAS3cb
+# Hh/JLeB6nIofKpoUVCjCkWHdPMqWwaxOSsDkp/hw9QcAEsPOHhhx50moW+91Cn5P
+# WYRZX+RWdsVkfKN+yokCGTJluhWYwhy6fDJEjXP/7dpH5JL04N2yPRudVN9oodey
+# pAM5yC5TIbleyr7ykUko1Lqa3ZK+W8URSNM1/3/2iYqJjCTjRHdg/gBju3RwU8W6
+# PEvXVs2WOF7rtabVQjMZnzImX2hy7S6TOt6heknt5b8mSJ0XmrVWfKLIyYhXZMWG
+# rUtriuZK51YdAEf3Un/Fm937A3Q6gf8BmCcMR6QIA/LqO1YCv/fLA+jAm4nXEwtB
+# X08B+LWs5WXmPxaU7kR+zAUeDA2chOQzQLD9/LT7F8lRXuvFI+1NYr020UaMLVLc
+# sstiRojNfO3wSQbdXrzVL4P7oFZobhy+u7qNPHzjy+qCSUlvC7pHtTsW2eHhAFZD
+# TEYt2v5+ajhZ5ZjwtHY1Lcd2Jfc2Rxc2icbsXzkGQ+v6wmZYhv62/YbiyK1i
 # SIG # End signature block

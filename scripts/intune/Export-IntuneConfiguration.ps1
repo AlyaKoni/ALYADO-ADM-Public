@@ -75,7 +75,8 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
     [bool]$doUserDataExport = $false,
     [bool]$doReportExport = $false,
-    [bool]$doAppReportExport = $false
+    [bool]$doAppReportExport = $false,
+    [bool]$zipAllData = $false
 )
 
 # Loading configuration
@@ -86,7 +87,8 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-IntuneConfiguration-$
 
 # Constants
 $IsOneDriveDir = $true
-$DataRoot = Join-Path (Join-Path $AlyaData "intune") "Configuration"
+$IntuneRoot = Join-Path $AlyaData "intune"
+$DataRoot = Join-Path $IntuneRoot "Configuration"
 if (-Not (Test-Path $DataRoot))
 {
     $null = New-Item -Path $DataRoot -ItemType Directory -Force
@@ -1628,14 +1630,22 @@ if ((Test-Path "C:\AlyaExport"))
 }
 #>
 
+# Zipping export folder
+if ($zipAllData -eq $true)
+{
+    Write-Host "Zipping export folder"
+    Compress-Archive -Path $DataRoot\* -DestinationPath $IntuneRoot\Configuration.zip -CompressionLevel Optimal -Update
+    Remove-Item -Path $DataRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
 #Stopping Transscript
 Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCDS/MoF8OvxxhC
-# Edb2Le8C1woVwjzCGrzble9JfTseEaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD5+DzcSaoJ7A+7
+# MxMKf5Yz1YPZFj4Pa3b72w40tiEjN6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -1719,23 +1729,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILl0DZVd3NyRcx75
-# Tcj2m8l3Dt9cn0RE3jyEwqdw4ntnMA0GCSqGSIb3DQEBAQUABIICAD6wTqCcDtcZ
-# jBCaQpVhvHpmxFJ4NAH6+02byWiIlVg96dHz1ystRg2DBrEH5TQi9EPHJofrU0e5
-# xgCaxSxrU0nnF1sbAenV21Q3gLDnw1CHRUGMC6L1u4WZTRimewMYzzNKVX/DP1e0
-# VX46tZxwEmeNTjVwhe65dIvRrit5Fak1kUvfBneCwmsbUHoFKJV5t6qofSfjYxhh
-# aqCJs4jg1gKkwAhyVCcDYH2SrU/FON6ewiDjkeYHe/bPM17mXBjt4jCYa1/CmbJP
-# jLACJUf0mcMhw4HhYwS/4tYGM4xcVZg8TWOOZUvvw5hUiTbTXUglBkwM1GdpoAdO
-# SxFeDn5R0ag74r0eJSyw9Gu9/2O62cXEDUGtdYlehmMqcuUYy2T6RiAq3ffAfcLW
-# PSzd0rlCaAWsnG2QfqaeuFMq9XPKT2mLFwO0RHOlAtgjeXT2hbcetFp/MADQw8IP
-# dr87BJqa0QsbGKyL06BMcDTElG/QYrw2c859P9KSZ7a8WZ2h8e9tVhUDzFJtnHG9
-# fOA2Bvionp7QVu2WGD/FV+4f9C6sgNrpaBW22UPeVPt/zoq6SQN6rXiT59rNjWQE
-# 75aKRaGj+nRY03IFHajk/ihXE16iYAdiwo3JZffckaq5XHW9OFhTMpIz9geOmBTB
-# Hf+K1IOt1Xrq1fx9XE9zgg3Ms4v1gwdMoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILhh48qQQYh0/vLi
+# LRFSbrQzocH4hJvs3ltxm2B723roMA0GCSqGSIb3DQEBAQUABIICAIewPLV4ADQT
+# YBuCjFFezX5GCkrdl4n1geXOBuRrzEcoDYLatpOiaF+WhqzVTutUal94m/L10iHz
+# isx5GCBhvA9EmIiN8yAPjTt3Gji2e0JlGnXCfjqR3mePJQQCSfZ6yDaIOOQSKdw0
+# Z+LTddW8NrK/8joyEmVT0hmJiyKdes0TOkaTsnn1Dwaw4SHq+yCFPhJqfJpAcxuO
+# urmpN2q4GILgHlsoj6i30e0JcoAiB9VFTZgk5WQU8+cX+ULXZPj12MfihzL6+xnJ
+# k4VKjzd+sOTELti2fTIx1iLjcGky6fDLwY0IPqRyUc0qvaXpjW2tPWoD7EW+BZE8
+# M2+4LwhnartLGAO+n6KSrmyLYkIeDzoXb48WFsuTVIf7E8rieewULFvFdcOVNssm
+# rGUMyZtwDzLmQX5xBlbBFyvz9pvE4cIw09KRCmscm7f9axX1ioWHG2GJyQRCJLM1
+# jnj61pV6oVXMl/ZCrXAEIIFo75pmd91DjXXQyNdIe/XxoD+aSLwhjJq7of9mL/A2
+# z9+3arq9HqXDpqAvcmsGIRYqeNm1k9Z4gzqk5gk/LT7PcO2AOrzc4/ffdMrnw9WP
+# 5BUeNr1FpKTRoI660p4uQYu+BAl0BwzGs55CuHWhZf8HiW61aDOm9xqVwII7JN2l
+# 2QM0jkVvxqht5xABVGqg0+JRrVdIEqCMoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCvvBRJ9rlS8vhXXGBWn7JOL4Gqmghm0PjIOdlQhpADQQIUK76T1mmz5zLP
-# BJb04sLwAvO5pecYDzIwMjYwMjEwMTE0MzA2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBnVpVgTve5MkNXKQhJrLtyFYsbe/OEHZXLdA8h+rN2UgIUHgfh7CZoZK8P
+# HU5WSfPqEaEC1CYYDzIwMjYwMjE2MDkxNjA0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -1840,17 +1850,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IPo/P4h186fkpge9LhvbExNY/djQ5U02ZfRQnW9rFdKLMIGwBgsqhkiG9w0BCRAC
+# IHcwWPb+mnW90PiFTTPF2kfBcVO80oMTaMPQuIjE9FhcMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAQCoNC6YPc2xu
-# Ljj2gZWKqcfG06ZGvRIRg1WT27vjlt32UCPckB2z07icZOMFU27ltRgXWbLT4DcF
-# L+9qNNh2rfOqJmMFkqD0kctOuHo+X2k+7a5BFTwnVsNLkuElt25pDL4z/U5htOyM
-# AEobr+dEjkt/30nibT50V11b63XZYpkWzLDHUZQbxuGFQGvOlS+SYPG7MX23DYFZ
-# BXkpgKUtumlJ3EYcegh/hkUSt97jxzyYsZqujRdxQGQEFccM/QY+rvEr2kAz5P/U
-# 9n2Sa8TK6Ax96zRy0fxFId8yQpeHwXDvD0vmIXq3k/Em2yGoijAimfOJW1gTy9+3
-# d+kI13cX8ZPF3CJNQBb0gT191zxk6BPAWIhd+njvo71F98D7AHNApTtOObhQBXmN
-# MgseHBHdXhHX3rOQhfmnaPAgs7AMlIUbSpUR3t8AYKNJIxB9KYWzZrLhI38KB9yO
-# J8IwhaQ9UXphCk1uNoSo0X9W3e/YNnbpOPjkbNLQl2DrAbMR2fo0
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAX7S+UOrVCJfb
+# OQq7O7om4AWebF+86AkrIlSq8q8vZnmzXiv9pjpBsOIP1NLvSeg4Ej8I14quWnKT
+# rcMdYtBml81T6IR4BD+Ep3b7cfrXGgo1Sx+bCd/jwmurx/+We7WLtyPYV5vJ77kn
+# XIVExVoww3czPn1rKE5jhnD3ClNx9v6amEuh+MevelXzLpQAo9NZzFCwr1tg8Swh
+# elExsOGe6ZweWRIWXNDYXgkX3ILjYz9nBqKCsiC7JoR8yjaptcmHi9nPOrINfgqW
+# srx+4LoX/8DNxWf5DpKVZsdW+FoNBeluWccHqrzVFw/W9H6lHXTOXEym5Nsqe82a
+# JFjInvGg2E73ThsTeEHQrDktJWp4F23JVYIQk619UOGpvTc+IV9opp5oS4kGenwG
+# sfanR4PFYSqnmwJOrbfO4/oXmwIF+r8M4nwLKP03iu+5Gj17AYan8t+0wTMcuaJ9
+# 7A+TMuvMFWcx5P1o/mElLN0DnJEmF2F8q1XuEQNfoJ0XVvNqv/UU
 # SIG # End signature block

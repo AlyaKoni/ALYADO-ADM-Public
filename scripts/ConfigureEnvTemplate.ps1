@@ -141,6 +141,7 @@ $AlyaSupportTel = "+41625620463"
 $AlyaSupportMail = "support@alyaconsulting.ch"
 $AlyaSupportUrl = "https://alyaconsulting.ch/Home/Support"
 $AlyaSupportActive = $true
+$AlyaMaintenanceActive = $true
 
 <# BRANDING #>
 $AlyaAzureBrandingBackgroundColor = "#FFFFFF" # $AlyaSpThemeDef.white

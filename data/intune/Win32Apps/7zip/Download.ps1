@@ -58,7 +58,8 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 $pageUrl = "https://www.7-zip.org/download.html"
 $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
 [regex]$regex = "[^`"]*7z[^`"]*x64[^`"]*\.msi"
-$newUrl = "https://www.7-zip.org/"+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+$newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+if (-Not $newUrl.StartsWith("http")) { $newUrl = "https://www.7-zip.org/"+$newUrl }
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"

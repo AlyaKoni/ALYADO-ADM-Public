@@ -331,6 +331,8 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
         }
 
         Write-Host "Checking key vault $KeyVaultName" -ForegroundColor $CommandInfo
+        Write-Host "Checking key vault $KeyVaultName" -ForegroundColor $CommandInfo
+        $KeyVault = Get-AzKeyVault -VaultName $KeyVault.VaultName -ResourceGroupName $KeyVault.ResourceGroupName
         if ($KeyVault.EnableRbacAuthorization)
         {
             Write-Host "  Already using RBAC authorization, skipping."
@@ -349,11 +351,9 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
                 foreach($perm in $role.Actions) {
                     if ("Microsoft.Authorization/roleAssignments/write" -like $perm) {
                         $fndAss = $true
-                        break
                     }
                     if ("Microsoft.KeyVault/vaults/write" -like $perm) {
                         $fndKv = $true
-                        break
                     }
                 }
             }   
@@ -572,7 +572,7 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
 
             Write-Host "  Migration completed, enabling RBAC authorization on key vault."
             if (-Not $dryRun -and $fndAss -and $fndKv) {
-                Update-AzKeyVault -ResourceGroupName $KeyVault.ResourceGroupName -Name $KeyVaultName -EnableRbacAuthorization $true
+                Update-AzKeyVault -ResourceGroupName $KeyVault.ResourceGroupName -Name $KeyVaultName -DisableRbacAuthorization $false
             }
         }
     }
@@ -584,8 +584,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDfiRlIVvWStkdF
-# ST6tBLIymR9QlBFU5m/RyK7c+NReuaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDlwfeovF/VY6Tv
+# 6+ICrp6Lgu1pSDvzaT2eYZsUynUlWaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -699,23 +699,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAsgIo8C
-# tQFI608qlWX4i6QWGuUYtMVIWlmsh1QLa11oMA0GCSqGSIb3DQEBAQUABIICABDt
-# fSXOtm0ljiuIxhhuKqNTy3BF6eCu0qm/7Jt4W78k+wg46CqolMHdDnLtz41tF9ol
-# Ny/8lNEFZ2R6L+U3kuxMWUiZlMpErMt9NaSvJifvkUP4US44n0OGT2cHPtkVhGBZ
-# W/imFImR76d9IIiYn48YwCVpLS7xxAJO0V2415gKIkNaTisclRijjHma+aVX54DN
-# SlMBDlFWDslrvNb2/2GPwQmEGvI6muEp/KyJKT3JbEwtixXOjVJE+tAMVQEnpfow
-# OY6Bv4CaoFPBXBUyiNvN5bPAPbSBUyfCCqArcKO5OB7jzSolSZTOb5D4t3xU5lB3
-# Llq3wIenEXSmwGOiSznI961XCbkoNLlv8xlDhKR0aVMQLvc76H77W/Er5Bthi5KU
-# V12PbN9c21truxH8InOtYQKQjLhQt9APFTlzwEdoc4okSA38ME6U/y73SfT0qlOg
-# yBZVXKbFZZ2csWZVebEJw2l3/bCpZvfGzpjPiDGcpgfztx1hkBy+9Pq3W9jz2MEd
-# vo9GpVavkTQHYoFuJ/HGDbco5lcAaeR7u6HcnFirn1KU8dOhtNVjYE1E5tOU9JM9
-# stKITHauTMftw90WTvcOXqAE0YCBVplFPw5Vs3zE4XhSxTkEMefGP47DyJfQnTHK
-# G+4+cmqmMa45Ct0rebE+TLXkNxXV1izR/TzX/FKwoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIaKgGb9
+# B6V4OlLhtLTt6ViX7Khw1/L1JhXvgceucsCaMA0GCSqGSIb3DQEBAQUABIICALY7
+# GeQGVJxFndAk7r5fhURq10f2GOq9hW+kqfUrPudmP+XK7DXngClBJDLY+RRgdMvN
+# dSNVwE5NtpO08W7O8Og/kG3Oc8FrhDooHPwQwS22qdOYc6zn5ZaEacio9kGO+lWw
+# dRRaaVE0Grjb8QoKz84ff0Y0Tdbt2rkO0vbDZwkdlq9Of08/NuHDlC1BoaYayhYH
+# 7pLDSDvNRyrT8JwndmqI/A2vf5phYgdfIKh1qG8BK7jrx1QFm0RI50JSkQEI3c0n
+# dv9rI2XkaOrKkx2MtxtY9zy66skkybdR1hWU3WFwZdePHqY8aNHL3u5L+qr4V9l5
+# O0U6iXd5L86lhxB6E52YnhGSvIt+9OYMl1Jufj1+VljO4M3PaAtsWm3tIc/umn/R
+# qKN1hGLqyNRG7O8xVG2QrOreqtlpPAvYKkmJqsmRQDd+THoO0TzCzsHgWP6KkKPC
+# CBMHossa0XAxWvbVcMu2CctRg2OzoCQXFllLPf+RRRj/OCiXGqL/RyvZCl9Z02zX
+# ejxCPpeXZk7Itg1lscLdLrAym4HVoJyI+qxIEEPscx6xnnj/8cNhEXcwMwFhFlMZ
+# uG8SfYN4vrVvFKPNSNxSYM7GCIC9CBBHJ7rCYpv6S2f4ucltt7jDEUuYBtXHMBzS
+# xUspjwufXttaGDcKAZmyd7o0qbuuDOobzmFDL2YnoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCB9jsy2GxtU7nFZzjPDjZWPObAfokoxFw9tByxnBW0RtwIURYbv
-# N+PCAzkGrMRp4uiElNwvUlwYDzIwMjYwMjEyMjA1NjE2WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCAdFRU2+mt7hBbYBlu53yNeBnUcksmIXDuobTVhIx9+rgIUMcDI
+# TelbPnW1AKXaPIf4r6brPwYYDzIwMjYwMzA0MDkwODM5WjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -820,17 +820,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEILmNw7C2ao+6B6b//lqspGBI48UdTEIYmJiwg23hmfA9MIGwBgsqhkiG
+# AQkEMSIEIElQY7vWDz7bOg4MTDRa3I2XoypZ5/7OiVwmGCktv3uOMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAn51r
-# zJu2jwGgZkv1jTKrfhK15bK+vboD93n40owIfV5Racf5mFBSStZuMpeHg0v0z7/S
-# BhjW2fF90EBdAHLwsIk/H8GBFXbYHXDYi6QemHflC7ws+Wem6XR+4Wd6w0vqizUw
-# vJ0fy2Sx5qmnSbWvfbwHuWJU3NCMrfnQ0Bv6tVvc/EBnrVJoObD+zil8GAEWVrNq
-# lE4gaM9MhSH1rkS+V6My2tdM04nKk8B5FzU4QIL2uMsmrS6UnN72qrAL8SQLhx1K
-# /Nud/WmWRAuQH0/5VegCgH1wKsyXUY/trbXMo81Imu/oJpNonO9OawDPCPsGdmUZ
-# Dbr3zMcEHBSnjX83HUWqnkvlLmtc+H97w63dHCxzQ5cyXwZd3WnsKI85WwwULA4B
-# rQFF+vQ6MJniOv+o8Qig0cRlPzzdVdku2iX2dKY41xF/JjV7hEQMwmCDwfdR10wi
-# TyIlGwnhOwpgXz6DqJnFcV90aZUwYsJQ5YQWvhGtN4iAzlzGDk+MSBuvOARK
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAl5hI
+# A5ZWsqPG11qqMbi0GmWo66v1FJgxckDUw72pWqvqgpg30vCRQzYTgDEiaHhVdy/Q
+# S8yFaGobDqkxWI7GZ8j9YcRBYuhNNM1vAkTYiiPxTW+h1uIClXAAZNHq8nSQnSaR
+# K4W1AvdjIKib6Fao9Wt++f3nNYN4ExMCDG4lWNrQXVjNOAdMG1I9SblytNakHOnS
+# 2OFhmP8Z0c7JM4qiSTKMeRVjnIhUcC+Zdzm4kyOuxNNmOpjaDvYd+N1iTnfl/Tqt
+# +SjFuwCtwDXxeeiXsUy/CcRHhY2gL+GnJD1aNX4G9hX9EAdOW3c/ITbfbpbgZ6z8
+# jnKLM96nBZglpIoINsegsaDI5nVFp2zM6fhEM25F594bSJn8FROKTiqWiEpBqEsL
+# /PB1UZ03s0Gg0uUoy3sGZdhBUAOdlMQIPJ88EJHmsdtL7Ztv3dSWedZKeMiZomvV
+# ugHM/s5+dNkFrLeO34ohMSY7QbpMeemGKTR4FviAODPuWnYFakOWElENv98j
 # SIG # End signature block

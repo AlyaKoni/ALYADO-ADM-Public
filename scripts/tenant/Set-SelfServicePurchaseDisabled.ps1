@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,30 +27,29 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    04.04.2026 Konrad Brunner       Initial Version
+
 #>
 
 <#
 .SYNOPSIS
-Sets the customized synchronization cycle interval and purge run history interval for Azure AD Connect.
+Disables self-service purchase in an Azure AD tenant
 
 .DESCRIPTION
-The Set-AdConnectScheduler.ps1 script modifies the Azure AD Connect synchronization schedule by setting a custom synchronization cycle interval and purge run history interval. The synchronization interval is defined in minutes and determines how frequently synchronization between on-premises Active Directory and Azure Active Directory occurs. The purge run history interval is defined in days and determines how frequently the synchronization run history is purged.
-
-.PARAMETER SyncCycleIntervalMinutes
-Specifies the synchronization interval in minutes. The default value is 30 minutes.
-
-.PARAMETER PurgeRunHistoryIntervalDays
-Specifies the purge run history interval in days. The default value is 2 days.
+The Set-SelfServicePurchaseDisabled.ps1 script disables self-service purchase in an Azure AD tenant. It also checks for required PowerShell modules, authenticates to Microsoft, and logs execution details. The script is part of the Alya Base Configuration framework.
 
 .INPUTS
-You can input the number of minutes as an integer to set the custom sync interval and the number of days as an integer to set the purge run history interval.
+None. The script does not accept any input objects.
 
 .OUTPUTS
-None. This script does not produce any output.
+JSON formatted output of the updated self-service purchase settings.
 
 .EXAMPLE
-PS> .\Set-AdConnectScheduler.ps1 -SyncCycleIntervalMinutes 45 -PurgeRunHistoryIntervalDays 3
-Sets the Azure AD Connect customized synchronization interval to 45 minutes and the purge run history interval to 3 days.
+PS> .\Set-SelfServicePurchaseDisabled.ps1
+Disables self-service purchase in an Azure AD tenant.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -61,19 +60,55 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [int]$SyncCycleIntervalMinutes = 30,
-    [int]$PurgeRunHistoryIntervalDays = 2
 )
 
-Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($SyncCycleIntervalMinutes):00"
-Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00:00:00"
+#Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-SelfServicePurchaseDisabled-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "MSCommerce"
+
+# Logins
+Connect-MSCommerce
+
+# =============================================================
+# Azure stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Set-SelfServicePurchaseDisabled | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Checking if self-service purchase is disabled
+Write-Host "Checking if self-service purchase is disabled" -ForegroundColor $CommandInfo
+$policy = Get-MSCommercePolicies | Where-Object { $_.PolicyId -eq "AllowSelfServicePurchase" }
+if (-Not $policy) {
+    throw "No self-service purchase policy found"
+}
+
+$prodPolicies = Get-MSCommerceProductPolicies -PolicyId $policy.PolicyId
+foreach($prodPolicy in $prodPolicies) {
+    if ($prodPolicy.PolicyValue -ne "Disabled") {
+        Write-Host "Disabling self-service purchase for product $($prodPolicy.ProductName)" -ForegroundColor $CommandWarning
+        Update-MSCommerceProductPolicy -PolicyId $policy.PolicyId -ProductId $prodPolicy.ProductId -Enabled $false
+    }
+    else {
+        Write-Host "Self-service purchase already disabled for product $($prodPolicy.ProductName)"
+    }
+}
+
+#Stopping Transscript
+Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCButhpbnrICK9g0
-# o3FxJCxtqWpjSypFWG8MVCfITXPKLKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDnnyWNeyWIgelW
+# IHyhWZuGr9M/I/RZAJCX64WX4vjbfKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -157,23 +192,23 @@ Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDhXTnLdNL7XyarA
-# qglfQOd+c1D0PmVGggG8mVbO2P4cMA0GCSqGSIb3DQEBAQUABIICAHr8DZHGgJO0
-# FGrZpTTDgMuUfg7G/M2vgfCrWFwmMWVRJQBSzDUDq4Jg8GtzXtJop/YOsejeoQAN
-# Qw/Lp92tNeIwBoxhNQIoeUpnCcOaAA4YDwUNm1JOCJ8dqlIexlEOVU+y7Q23dftq
-# uk1Oa7DaCC7kpwup/O41CCi3fflb+uw2VquWWZ3a14hpJJvs3oYhlA9GVpgiuRjA
-# KoQQhOvR8t7h1RSnQ2Hr6rFigZosl+Idh9dR6pzi0lPfVGkXUERtWrCueZQHkxfe
-# S8UnaRHkLiobs/d/4SJOVcBBG8ROIz6g3h72VweyZfMiqlBRxwf9IS80wAQAguqM
-# zneQRCXnlWAxw1IXoiOQGLsz4sNOSQXH+6IjSpnhgiguz2vgm92qhjD4aKArwNG9
-# L38zzJ+0Z5/ShJEGEK1omTIuVt/JsweI0Yb4feX9bUdX+WtIG4ofde+vcumKQKt7
-# Dn1x+BW90YXrMdHMB8PfQyT5R2kjG6mEiZt4dNA+/vVKXGhXtJIDwSVLIg3okFjD
-# 7IPN6NF1a+vzkXN2vjfmts/ksSST5A+Jo8b+zt+5CzVKQ38FFIzpPn7ImfrAeWni
-# MjSWXsKXgrwVAWla0dNPbN2w561xZ2oQYPNue/F04Xt+CEzqXdd269DaA4cdETbf
-# 3I9+ubIdO/SZME41/4ee6xMfoh21w4vioYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDfUim5nkE8y2eta
+# In2ndnHNzvMw5g1u8pg1Idyr8wpOMA0GCSqGSIb3DQEBAQUABIICAFkMisXRLOIf
+# 5aXM/ehAwcjD57wXRa9y+ku9hSCkvAuvGVDsBGwrI2OzMvGzvyP18+b8RM+iYMsi
+# 51wJuE4forROzHPHw74/2aXBlb6+jrw6wwdqaVc0uVpQ4Kr04SW5jY2WosPF1wkz
+# CV+wXamZ5wanS02A1C6ACw51qAu7M3Mffkj6I2fHpSmNEfJ5wPcyr+9eQC6Mvr/+
+# jQ53QdJHllS2CRaEAGOTUJyX7gGNpX9oFkAfjJ4OBlrlOz3X8p2WEIaoRG+bmmpH
+# 7slV/cnCiVD0gPAG//E0HseYwxHiOPK1uclmB/zZbyymLLawEw83+Gwal/4abop3
+# TlKv12r8WLPmqrR7TV8o6RuhzBpgf7UJOz8ZWvXzpU0qkBSQ3XC3+juEV9ZKsCQi
+# iT3PFXqyp+3QvABHsTlPqLDpvsVXyq6F9E1ydm7T6EkHNz8JDRjuIlWyt6utws7l
+# qt5ue/byFVdJ/gfmWzGvArYzqmqNiJC60RCP6gd2QmE7l38tT+muW7+xhEIB6Hw5
+# Nu9igV3AHREEglOzgILspaIlIDoA7wuoDfVmFA2DeS89N66nWGZnn4c/6xvfhunA
+# hmBdQZSikXf/EYCbMAh1iYp2QO1vX1OIEEuWlJ41c018XGPdYDcqxOKCOb2hXhyD
+# E8zzlu4+QVvVFw5vWo4W2RSsJ6PZx1fCoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBb1gmqdUpjP/vUwrDLzPhGMIbhIStKX7hts5fZrmsdFwIUVRDnyB9P+iwI
-# dvhEYwkNk7oU6P0YDzIwMjYwNDA2MjEyMDI2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCDSsGfRs8WAFRsXHCJWPQ4BdwHbfz0USfWa/GCQDz8KoAIUXrp8JevPcU17
+# dioQjdv4VQw5y5YYDzIwMjYwNDA1MDczODIyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -278,17 +313,17 @@ Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IH+rvFpRucWgVCcallqv3Z9knp2p1JAvpX0sR4PGzHDPMIGwBgsqhkiG9w0BCRAC
+# IBethn//dJoCyO9Le1s4AcoPWzCapPpswp8tj1t+K8Z6MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMMnCJ1giy70j
-# yb1FX+tkpLgEIGMyMjPfBJdewNb/xnsEBZMZOLzf49q2U5M3wtTt4i0DQ4YinJI5
-# 6Netoo031V7CdZ3jYwQiZibKIzMvIQCh3tOFrgGOnxg9aKPKBiFdSH3SjFTNq+17
-# qGZ8gnM0bVAfudkpWl770J4F45b3fFw72xhq4CXvo8UjcvPydMLdo7/N2IEJr+oA
-# 7bIt7KUXXaCjJcV+5PaNKRi9jUHVEmFnlQ7V7F0lULwa+TXudXwS3hpfcw1iP1EI
-# 5Eg+lQm7b2GpX83VVINBpQkqpByuIBP6uK6ZWCGWQxeXwIGXgiR7+cPSgA/Skedf
-# fdW7nQywRS9nNFOBlwuoIFoeyFo0nkDRhnnYq1Tpm+bOolPgoj4M86q2qrFc9wJ7
-# i0qeQfqec6/KRMGN4DwQ3ZZJSuWC+MwQoPZrW0fUZbq1x48LWig7WtC+bEjuqQdf
-# z7yP6jyEh8klZPfTUZgBvidjNugTcCeon8i/6KjIvA3A5nf+vkRb
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAHxuMfRKFGvTV
+# zlktxSMDfASQ3ktvnGB5NEW2OVTP6RGrfLYLmMj+cx8onhqOIeSuK66fnn5xq8eG
+# IHCzG1hkWZ1/sE7w+lWnWUlc+8JdGUT9BzUcPdnLtYCkIvWnrrsvbLKLsKTzDGQA
+# Kyyn+mXwSlwejRwuBvuQHoagrK1UPfjqDuoS4d/OIg90dr3eIH4ergN9IQ8Gu9pi
+# MDrkflaY4omVKiA29RVpyo2mo+qDrT+Voaa6OVdmDWaosMlKmA9esh3uJfD2q4My
+# vggHnJcC8nqOBDNYw88/A/aF0wGO17UP1CHrc4jjuZJAALp/iY6qCkgK3jDhadHP
+# svnq6ga1sfkwzZpCX4FF3j3cnOolzfHM3Umt3jSaVruFfzhc5OFdUuACImpRvWQ6
+# 1kEptk/XQURtrur/uXrb04xUWSZ+ZOwIl0dnkBgr8JwRr/xoRllqbMGgaEk7ehL/
+# Ehunwojh5HP9d6u/8Yo8vEMSMqGOV4/qG8O4ye3SKywyj/8dVtgz
 # SIG # End signature block

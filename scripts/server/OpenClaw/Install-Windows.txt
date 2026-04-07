@@ -1,0 +1,89 @@
+###################################
+# Install PowerShell 7
+winget search --id Microsoft.PowerShell
+winget install --enable --id Microsoft.PowerShell --source winget
+
+###################################
+# Update PowerShell 7
+winget list --id Microsoft.PowerShell --upgrade-available
+winget upgrade --id Microsoft.PowerShell
+
+###################################
+# Install NodeJs
+winget list --id OpenJS.NodeJS
+winget install -e --id OpenJS.NodeJS
+
+###################################
+# Install Git
+https://git-scm.com/install/windows
+git config --global user.email "you@example.com"
+git config --global user.name "Your Name"
+
+###################################
+# Install Chocolatey
+pwsh
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+choco upgrade chocolatey
+choco upgrade all -y
+
+###################################
+# Install Build Tools
+choco install python -y
+choco install visualstudio2022-workload-vctools -y
+
+###################################
+# Install Node modules
+npm install xpm@latest --location=global
+xpm install @xpack-dev-tools/cmake --global
+npm install node-llama-cpp --location=global
+
+###################################
+# Install OpenClaw
+pwsh
+iwr -useb https://openclaw.ai/install.ps1 | iex
+openclaw onboard --install-daemon
+openclaw gateway status
+openclaw configure --section web
+
+openclaw doctor --repair
+
+openclaw devices list
+openclaw devices approve <requestId>
+
+###################################
+# Run OpenClaw
+openclaw gateway run
+openclaw dashboard
+
+###################################
+# Update OpenClaw
+npm i -g openclaw@latest
+openclaw doctor
+
+###################################
+# Add OpenClaw Agents
+openclaw agents add code --workspace ~/.openclaw/workspaceCode
+openclaw agents add docs --workspace ~/.openclaw/workspaceDocs
+openclaw agents add supp --workspace ~/.openclaw/workspaceSupp
+
+###################################
+# ACP Backend
+openclaw plugins enable acpx
+cd %APPDATA%\npm\node_modules\openclaw\extensions\acpx
+npm install --omit=dev --no-save acpx@0.1.13
+openclaw config set plugins.entries.acpx.enabled true
+openclaw config set acp.enabled true
+openclaw config set acp.dispatch.enabled true
+openclaw config set acp.backend acpx
+openclaw config set acp.allowedAgents "[\"code\",\"docs\",\"supp\"]"
+openclaw config set acp.defaultAgent main
+openclaw config set plugins.entries.acpx.config.permissionMode approve-all
+openclaw config set plugins.entries.acpx.config.nonInteractivePermissions fail
+(Alternativ nonInteractivePermissions=deny , wenn du lieber graceful degradation willst.)
+openclaw gateway run
+
+###################################
+# MS Teams
+openclaw plugins install @openclaw/msteams
+openclaw plugins list
+

@@ -1,4 +1,38 @@
 ﻿#Requires -Version 2.0
+#Requires -RunAsAdministrator
+
+<#
+    Copyright (c) Alya Consulting, 2019-2026
+
+    This file is part of the Alya Base Configuration.
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    The Alya Base Configuration is free software: you can redistribute it
+    and/or modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+    Alya Base Configuration is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+
+    Diese Datei ist Teil der Alya Basis Konfiguration.
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
+    Bedingungen der GNU General Public License, wie von der Free Software
+    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veröffentlichten Version, weiter verteilen und/oder modifizieren.
+    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
+    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    Siehe die GNU General Public License fuer weitere Details:
+    https://www.gnu.org/licenses/gpl-3.0.txt
+
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    05.04.2026 Konrad Brunner       Initial Version
+
+#>
 
 <#
 .SYNOPSIS
@@ -23,8 +57,14 @@ Author             : Konrad Brunner
 License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
-#Requires -RunAsAdministrator
 
+#Reading configuration
+. $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
+
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Check-CA2023Update-$($AlyaTimeString).log" | Out-Null
+
+#Checking system information and prerequisites
 $isSecureBootEnabled = Confirm-SecureBootUEFI
 if (-Not $isSecureBootEnabled)
 {
@@ -37,6 +77,14 @@ if (-Not $taskPresent)
 	throw "Looks like KB5036210 or later is not installed!"
 }
 
+$update = Get-Item -Path "C:\Windows\system32\SecureBootUpdates\DBUpdate3P2023.bin"
+if (-Not $update)
+{
+	throw "Looks like DBUpdate3P2023 is not installed!"
+}
+
+Write-Warning "Please ensure that you have backed up your BitLocker recovery keys before proceeding, as Secure Boot updates can sometimes lead to BitLocker recovery mode on next reboot."
+pause
 
 $UEFISecureBootEnabled = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\State -Name UEFISecureBootEnabled -ErrorAction SilentlyContinue).UEFISecureBootEnabled } catch {}
 $HighConfidenceOptOut = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot -Name HighConfidenceOptOut -ErrorAction SilentlyContinue).HighConfidenceOptOut } catch {}
@@ -95,75 +143,85 @@ $latest_1801_Event = $events | Where-Object {$_. ID -eq 1801} | Sort-Object Time
 $latest_1808_Event = $events | Where-Object {$_. ID -eq 1808} | Sort-Object TimeCreated -Descending | Select-Object -First 1
 
 if ($latest_1808_Event) {
-   Write-Host "Ereignis 1808 gefunden - Zertifikate der Zertifizierungsstelle für den sicheren Start wurden aktualisiert"
-   Write-Host "Ereigniszeit: $($latest_1808_Event.TimeCreated)"
-} else {
-   Write-Host "Kein Ereignis 1808 gefunden - Secure Boot CA Zertifikate sind noch nicht aktualisiert"
-   
-	if ($latest_1801_Event) {
-	   if ($latest_1801_Event.Message -match '(Hohe Zuverlässigkeit|Benötigt mehr Daten|Unbekannt|Angehalten|High Confidence|Needs More Data|Unknown|Paused)') { 
-		   $confidence = $matches[1]
-		   Write-Host "Vertrauen: $confidence"
-	   } else {
-		   Write-Host "Ereignis 1801 gefunden, aber Konfidenzwert nicht im erwarteten Format"
-	   }
-	} else {
-	   Write-Host "Kein Ereignis 1801 gefunden"
+	Write-Host "Ereignis 1808 gefunden - Zertifikate der Zertifizierungsstelle für den sicheren Start wurden aktualisiert"
+	Write-Host "Ereigniszeit: $($latest_1808_Event.TimeCreated)"
+
+	if ([System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI DB).Bytes) -notmatch 'Windows UEFI CA 2023')
+	{
+		throw "Windows UEFI CA 2023 certificate is not present in the UEFI Secure Boot DB. Update may not have been applied successfully."
 	}
-   
+
+	if ([System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI DB).Bytes) -notmatch 'Microsoft UEFI CA 2023')
+	{
+		throw "Microsoft UEFI CA 2023 certificate is not present in the UEFI Secure Boot DB. Update may not have been applied successfully."
+	}
+
+	if ([System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI KEK).Bytes) -notmatch 'Microsoft Corporation KEK 2K CA 2023')
+	{
+		throw "Microsoft Corporation KEK 2K CA 2023 certificate is not present in the UEFI Secure Boot KEK. Update may not have been applied successfully."
+	}
+
+	$configQuery = (WinCsFlags.exe /query) -join "`n"
+	if ($configQuery -notmatch 'Current Configuration: F33E0C8E002')
+	{
+		throw "Windows UEFI CA 2023 update does not appear to have been applied successfully. Expected key 'F33E0C8E002' not found in WinCsFlags.exe /query output."
+	}
+
+	#TODO (Get-AuthenticodeSignature "$env:SystemRoot\System32\winload.efi").SignerCertificate | Format-List Subject, Issuer, NotBefore, NotAfter
+	#TODO (Get-AuthenticodeSignature "$env:SystemRoot\Boot\EFI\bootmgfw.efi").SignerCertificate | Format-List Subject, Issuer, NotBefore, NotAfter
+
+	exit
 }
 
-https://hitco.at/blog/uefi-secureboot-db-update-installieren/
-
-dir C:\Windows\system32\SecureBootUpdates
+Write-Host "Kein Ereignis 1808 gefunden - Secure Boot CA Zertifikate sind noch nicht aktualisiert"
+if ($latest_1801_Event) {
+	if ($latest_1801_Event.Message -match '(Hohe Zuverlässigkeit|Benötigt mehr Daten|Unbekannt|Angehalten|High Confidence|Needs More Data|Unknown|Paused)') { 
+		$confidence = $matches[1]
+		Write-Host "Vertrauen: $confidence"
+	} else {
+		Write-Host "Ereignis 1801 gefunden, aber Konfidenzwert nicht im erwarteten Format"
+	}
+} else {
+	Write-Host "Kein Ereignis 1801 gefunden"
+}
 
 $RegSecureBoot = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot"
 Write-Host "AvailableUpdates hat derzeit den Wert: 0x$($RegSecureBoot.AvailableUpdates.ToString("X"))"
-
 $RegValue = 0x0
 $RegValue += 0x0040 # add the Windows UEFI CA 2023 certificate to the Secure Boot DB.
 $RegValue += 0x0800 # apply the Microsoft Option ROM UEFI CA 2023 to the DB
 $RegValue += 0x1000 # apply the Microsoft UEFI CA 2023 to the DB
 $RegValue += 0x0004 # look for a Key Exchange Key signed by the device’s Platform Key (PK)
 Write-Host "Setze AvailableUpdates auf: 0x$($RegValue.ToString("X"))"
-
 Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot" -Name "AvailableUpdates" -Value $RegValue
+
+<#
+WinCsFlags.exe /query
+WinCsFlags.exe /apply --key "F33E0C8E002"
+#>
 
 $StartTimeStamp = (Get-Date).AddSeconds(-1)
 Start-ScheduledTask -TaskName "\Microsoft\Windows\PI\Secure-Boot-Update"
 do {
 	$task = Get-ScheduledTask -TaskName "Secure-Boot-Update"
+	$task
+	Start-Sleep -Seconds 20
 } while ( $task.State -eq "Running" )
+
 Get-WinEvent -FilterHashtable @{ProviderName='microsoft-windows-tpm-wmi'; StartTime=$StartTimeStamp } -ErrorAction SilentlyContinue | Format-Table -Wrap -AutoSize
 Get-WinEvent -FilterHashtable @{LogName='System'; StartTime=$StartTimeStamp } -ErrorAction SilentlyContinue | Format-Table -Wrap -AutoSize
 
+Write-Warning "Please reboot now twice and rerun this script."
+pause
 
-
-WinCsFlags.exe /query
-WinCsFlags.exe /apply --key "F33E0C8E002"
-Start-ScheduledTask -TaskName "\Microsoft\Windows\PI\Secure-Boot-Update"
-$task = Get-ScheduledTask -TaskName "Secure-Boot-Update"
-$task.State -eq "Running"
-
-[System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI DB).Bytes) -match 'Windows UEFI CA 2023'
-[System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI DB).Bytes) -match 'Microsoft UEFI CA 2023'
-[System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI KEK).Bytes) -match 'Microsoft Corporation KEK 2K CA 2023'
-
-(Get-AuthenticodeSignature "$env:SystemRoot\System32\winload.efi").SignerCertificate | Format-List Subject, Issuer, NotBefore, NotAfter
-(Get-AuthenticodeSignature "$env:SystemRoot\Boot\EFI\bootmgfw.efi").SignerCertificate | Format-List Subject, Issuer, NotBefore, NotAfter
-Microsoft Windows UEFI CA 2023
-bei mir 
-Microsoft Windows Production PCA 2011
-Microsoft Corporation UEFI CA 2011
-
-Backup Bitlocker Keys
-
+#Stopping Transscript
+Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD4+v47LUKheYtc
-# /7DQ/2/sTXa0k7Cr1MuQrXXGZNMn8KCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAAhY6vWpEGYjWy
+# pW6gfi3erlVe29191xOtn+BA8bGxO6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -247,23 +305,23 @@ Backup Bitlocker Keys
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOl9Y/J3CQtKaCS5
-# G0N813TNDtCfu5ilT3dEKvpaooNLMA0GCSqGSIb3DQEBAQUABIICACWMlSteUcbP
-# C9inIJJTRygC7wS2jUfEmSHUZwnzo+HJqn8nbbS/3KfCYrJjCITPjxque2rcDCE8
-# zc2MTCdzbdwXZ+kjglq+T4FYIzC/U9BFEXAFeUNdp3/us4n/Y8XRioOhWUk6DThl
-# uffzhA5WiPOiVx2kkglDrLsfjRRKDdh2rmEYXBVYentOT+rCQ9tBdot/WSKbsT7o
-# 9gCkYBz8DTkVZYLt4UgKKBgY5g0qXUq5S3Tbn9eTgV2f7AFjxdZZtqJWTez+o9zI
-# JrKA7Zksq0Ut5KDyR93wJCW1J6OWWVhOpVacFK49v6HIEP4tSqU1Qyq2LKs9jWZ8
-# QK4T0avWec1nFSmGrqAh2nhaflD9l+fW614Fm0Mha+EJutY2IQngq0TFhUXPiLKi
-# hMzSPhY+KO6bE0dGb6UDfBIy4zR61ds1PtZilZNLDVd1Q+wPEkO0vauFuytNw8xI
-# IeFj4QiZJOPKsjPbgfbOTEBV6hXPUJTcrZ5Se1zdM3BDgEQVltx5yb6aJ4qmD5iT
-# /pLbK5gla27w6R9dwDaoI4UpbFfS7bLm1U2cBWDya2P+EeK32QfnBzRZwDxa4h3p
-# l936q+W4//FswU71bOedW47cj3rdk5YWtVBFZQ5onklJw0IKgoAxQdfJAR7sZ0ad
-# r+7uTi1Ds97olQJnNxP4zDyGhIVGIlzxoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIN2gxfomiHKlmhQr
+# LVqghy96iZErQC/0uzTfb9uwfhmlMA0GCSqGSIb3DQEBAQUABIICAB5u0CZuBwIF
+# 7JkwRuCh4SMzQPY8oVvd+yP8/Nzc+Z+1KG9n8oN8j5S7AAs1EcM3uFv4evRh4VJX
+# u8boJeMc1NIgp6ytpS6UZeqL5ClTzxTjIP8a9wY33H58/uCEDovEMIPRM0CrWGPw
+# /6VBmIdPPY5VC5dHcmobU4gumsCKeMAr6OYeS7U9VqsagMe2+R0TPVWM6WbPOgc3
+# QGFHUDYSke/Qr8OP6Lee6/oeUOaWQIJ52ER7mVRQeWF7C5hRVydvNPtDkKdOTo8x
+# Xn3h0+GyQ+tVaJ3ND+iUu9VPKP7BWE/LkVzAwGgfnLPbYOOUBW6GGRE0ma6UDMFr
+# cSrxS2ru/qBry0l3csV6bQ97dPlHK4H4QBZ/F/3tJQ4IYkrZ+m6IXI4e8UwcLz9R
+# GWVZddfa7OcfjepS39k9ugHCloyA408+nfZ9stjENCKHv5oOxjx8bIOXOWG856if
+# xsiwzaxtxOoP5BLU1Ch4/MAwCnbHt/PINkFdTHt9UsEPiyPvzWqM5g07i1ltztE5
+# InQqTm4dmm4BqqdtxVBNBeV6un2Kirc7shO9SEmNM+h4VHryNtaGUv3ixiQtvwk1
+# EgnWLMY3k6gnDJnPfkfQ0eeERoaydPdClktZmiv5G86/WK/VdIyhU62VO37A+j+M
+# YeC+9jb/Q8EQUVG4fO0SNbtyPfVRtvm9oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCB72iR3M/zZa2nCDh1PbJzk3tX8tJKwjFoaZye3baeF7wIUSuHeMOhqWfL1
-# D2as3QsRGb7S/WwYDzIwMjYwMjEwMTEzNjIxWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCt6Tu0osHuq4ogSNgoqs1t+xma5bGbvuosTy55lXqPsAIUUfbGa+Q0/UHW
+# CpPlQfmbqVB/k6kYDzIwMjYwNDA1MDgwMjQ0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -368,17 +426,17 @@ Backup Bitlocker Keys
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDf/jfMwQdwVtZVWWs0zIWu6zhKdT9nQFpCOlMfU6LM1MIGwBgsqhkiG9w0BCRAC
+# IISkVCh/P9rZNVYRww6FmcRLq8lGLUIiBOgM6Lu1+4m4MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAeSa/PACX8dUO
-# AqPuIRopXBRqfejZw3gfjFJitjAilrcQrosGOpcLWku+yVq48jDiooIGr+NPxHQH
-# FNi7rFSQBqcWEYsB7nNkBTOlxKXkOKKYtB0A1BoqMV7LenoOjHvY6rcEmnSxzIe+
-# NXKidrI2/PvWXPW2RzwCsp8yuhFezAqkHJITqlNFqjvZ/Pc8OR/TgtDD910iQBzO
-# Vwc2dO6YPgakzBI/kw7GegpywWfdXkRj58OZs+3tGebYVzoDmS8BChUH62Teb2/R
-# DZSDjWpKHYmf00MIcz1OEWSCP1MEvd/Yls+8ytlKsH0vjc/SZgEQKc2IVj5gtt22
-# cHDsL2EJkL46sFvQvJgewmz38FETXbHMfefjiVWMvsB7ekx7P0kheS9CuWP9L381
-# wUFT+eDPn7NtJkclUqB6bT0TGO9k8yCvzEikbkObQHXPEOcd277uOQCufgTF6JB8
-# pjcockDI31Ay+aD7g35ud9jWlCNvM3Ys3YNX62kv0gU1IsXlVih4
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAEyzmfodUHsB9
+# oaeq/RIWMkGbdq93x/+GWGN+KO5FMgOPQV8XMfWYQ5M/91+334tmavRBWV2zEnfd
+# he5Ez4vJJU9Bw4SAx/MFMvufUTwRhmAXBLu0DD2/uXzB17q9O6dbsPQ0QV44c8m1
+# 4k0juWAnVjF7nR5k1Qc5Cfj54dCaCN1wcU8nM4UwmselDALZhj7e7V4Kt5e2AfIv
+# VaH6Vubdaeww20L42DF3N6i2K9Eu5erdyawr/UPurwc4QrZrPO+A2QtFIPPOFW5w
+# QaxH9BaqGWx2Yk4SmMxBI6AcNc7FsbPNCQDV3GhBNaw3rnZPVrBwps3vjNh7od5o
+# 6YOy6viXtTtPdNL7FcMdOvdubH1VX75LFuYYYwiADXoEJ0WTNRDEVCzamuNHgp9V
+# cLNTcLg8GVUKHB7FDkoAbWwZUM+ASldmbrRb/0f9lomEtMK3+TI17HQ6ixtWD7dN
+# 5QTLANhiUF/jiNH3b0e5UONsOKxZG0g4tuizCqR7/n391SCZG4Qj
 # SIG # End signature block

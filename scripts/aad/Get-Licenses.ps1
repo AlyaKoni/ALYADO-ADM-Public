@@ -4,7 +4,7 @@
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -31,32 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     16.12.2020 Konrad Brunner       Initial Version
-    06.02.2026 Konrad Brunner       Added powershell documentation
 
-#>
-
-<#
-.SYNOPSIS
-Retrieves and displays a list of available Azure Active Directory licenses for the specified subscription.
-
-.DESCRIPTION
-The Get-Licenses.ps1 script connects to an Azure subscription using the Alya Base Configuration environment, ensures required Azure modules are installed, retrieves an authentication token, and queries the Azure AD API to list available account SKUs (licenses). The output includes key details such as license name, SKU ID, and unit counts. Logging is performed throughout the process, and results are written to both the console and a log file.
-
-.INPUTS
-None. The script does not take pipeline input.
-
-.OUTPUTS
-Displays a formatted table of available Azure AD licenses including name, accountSkuId, availableUnits, totalUnits, and consumedUnits.
-
-.EXAMPLE
-PS> .\Get-Licenses.ps1
-Connects to Azure, retrieves the list of Azure Active Directory licenses, and outputs them to the console and log file.
-
-.NOTES
-Copyright          : (c) Alya Consulting, 2019-2026
-Author             : Konrad Brunner
-License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
-Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
@@ -71,12 +46,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-Licenses-$($AlyaTimeString)
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+LoginTo-MgGraph -Scopes "Organization.Read.All"
 
 # =============================================================
 # Azure stuff
@@ -86,17 +61,20 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "AAD | Get-Licenses | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting token
-$apiToken = Get-AzAccessToken
 
 # Getting licenses
 Write-Host "Getting licenses" -ForegroundColor $CommandInfo
-$header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-$url = "https://main.iam.ad.ext.azure.com/api/AccountSkus"
-$response = Invoke-WebRequestIndep -Uri $url -Headers $header -Method GET -ErrorAction Stop
-$availableLics = $response | ConvertFrom-Json
+$availableLics = Get-MgSubscribedSku -All
 
-$availableLics | Select-Object name,accountSkuId,availableUnits,totalUnits,consumedUnits | Format-Table
+$availableLics | ConvertTo-Json -Depth 10 | Out-File -FilePath "$($AlyaData)\aad\Licenses.json" -Encoding UTF8
+$availableLics | Select-Object -Property SkuPartNumber, `
+    @{Name="EnabledUnits";Expression={$_.PrepaidUnits.Enabled}},  `
+    @{Name="LockedOutUnits";Expression={$_.PrepaidUnits.LockedOut}},  `
+    @{Name="SuspendedUnits";Expression={$_.PrepaidUnits.Suspended}},  `
+    @{Name="WarningUnits";Expression={$_.PrepaidUnits.Warning}},  `
+    @{Name="ConsumedUnits";Expression={$_.ConsumedUnits}} | Format-Table -AutoSize
+
+Write-Host "Licenses saved to $($AlyaData)\aad\Licenses.json" -ForegroundColor $CommandInfo
 
 #Stopping Transscript
 Stop-Transcript
@@ -104,8 +82,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDbqHEwJFeOU/v6
-# M/PJ3hVRSaYkV0bIg7GjgI/oxdJ1lqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCNEoCcQxIur17x
+# TTPyojwp3WDrPQhG119MIY3LrU2JQKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -189,23 +167,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGnEVEjoeY2yEJsg
-# OyPFO9p04dpItT9ZdCKib0MftWBNMA0GCSqGSIb3DQEBAQUABIICAE6uq5/JIkZQ
-# ly7k6pj6hSjs6iHq4wCmbf+h04J1ct8wRroXzQpcFuFJX9YjsJ0YgfCPBOzI6dtQ
-# Xk+t5AJdeqNEUZkcnH1GfCCMbHuBbZNTAM4EkeBAFG3Uy/z9rQzZcDdRuW+OEBJc
-# tfwmi0URJhF5y2O2heeB1HuUZvhdvv6BJuKoORnhDKBTcln1JegoicJhk3yTop6O
-# 2LHYWHNdKx75BKwyJlbWtZRq1ZWBvwSbcITJsbIp56Zmf19CxZehedqs+z/Whe3Y
-# M0hUyANKpNtoa3f339eL3trOws06ZfFyiKmnvavS5flpBa4pV6tgacIPrCriV0pN
-# sjAirjruXzHt8Qrb5Swnq627OXsZU4GdE231/YP7iv0di6jYy+MwV3sRilhKbsHZ
-# 5YVezXJF0ND0qoWoVbClvGaoZdlz8aK/ecXosgter1JkzlTAxcTQmDnUxNUHkONt
-# YIkNdPmCbJnv0vT6vuADzuCz+DWOtOCgtZ6gTAdHw9ePPPJDIeCnQG+cyxRqW83B
-# 3+l/5iM11+jscRsJ5lf4ZehJ94EZqn8hqQaJi4uEEgcha3SvZs5jZTpHVrBlupMH
-# 8v73aKoNUz6SfxuL4XsVzOHQdK8w5YczjwbDgdB7WJbf5KIiOavRqsJrJ+10S/Jx
-# wfNiyXQ5shUSWkfMkhlTN9+psKjHpX0hoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIE6uGVNwopEtnggz
+# NlX2kQu8Hwtm4/+odC1EDA863aVlMA0GCSqGSIb3DQEBAQUABIICAFhGH6bkp6Ke
+# 2teQfTKGsLDOjjuwdNJVLHzaWWZTJn+qbjrsDQ806oxQ6RDKNNDPelQOTnh7dFTq
+# K8h5HjzHnL0qElPG1qW2CqlbxCtdkldVGXs3+CMIIb00FqCr474R9ZX8pr509l7m
+# dvCkaXbNLhqN4Pm9Tq3J/lEGYzw+RKBdWMwX101TXkLCwoz8sGmS/Ed99nAdoX9a
+# ylBFsfYdwynKopYAeRs0qEvWKTFGBv4oB6JpIPt8RMMewfhSAoED208L2XvaWYOH
+# AiMs0OAPhC/Ri0gs6ZS6Swyn6C1P4MVBMfCEzAOFysx4Ms00IQ1waAtRLQSzXHVU
+# Bf2RzLDvudMnWBITwu6OWaUqZjrwbVdnktTPo+qW8bgkvy7ro15BmvooBAN3GcJo
+# zeg1NUc2UMo4jo9LE5i3bO3lG74K21hXWsFjokHNTYF03e7vu1Rbr6tYppjktUAa
+# Cs7gqhirgQtHzr1LG9sCeCOKNnXqSfInJfkugA+m6q1se+gkqTp8DHoGGgbOZaRv
+# R6/t1zY6eCdr2DTrFGYXY0C3ver9l9FddLEdrRcAcPhQkEtheW6v93XD7aNIdllE
+# jfuX3iwfR4kh4jzSbFbCElR3d7ZIdb5aDnl7VZ7WnidZg4c9hgWkVumjw8CBVOH7
+# j8wumIuDFWS7kBiUFsvta3yhOuOCouSPoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCB+zZz0ucokCWKZdGK9z7e9wcbZJ7WA/BDIMQc86zTd2gIUIHhOzJFTZsqU
-# GM2u9z1HcGpKLBcYDzIwMjYwMjEwMTEyNzIyWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAU5P1XgvZXxmK+4sKFtMly19Rkpe1T7dklBQ2GWyOLaAIUYOhDUIcQ9WNc
+# Ko1eJs6tBdIHHXkYDzIwMjYwMzE2MTI0NTMyWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -310,17 +288,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IJVoqwnmlhEupyvx3G61/eZY1/vtda4IUOZk5rC7gKDsMIGwBgsqhkiG9w0BCRAC
+# INUDyktGi+ACHF2cJuuzfD95L1LS5f5nWNu39/ttX8ZsMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAiLgnxcloMwb5
-# PvyKkXR4pRrDr/iBCMKkNvFIH+yxcZfL19Usc1/pvjNfoj8Tfj3JMb2XFXqWlI9D
-# CobqVVohQaCJq/1THCWPVSuk0cxzyIRaDRVtJFltqByvq5e+gJhX+aiXszSoX1Pj
-# d4o6zf+xHlICMzy3/bRrnWIkunml4kf5rQgqbYJOJQZHaT2aSaX7l7OHYWA+SP2N
-# gas/wuVQULi479g+IQoolAtOGHM50CFGmYiFrs9sdlv7fi1X6NJxZijSd72WXzsr
-# GG6DGEumOaV60tTWem8BF25ZmCZpw/ss79fi1cM/hW/3o0/Dr8/hQKE6YzJqUaku
-# UHpWLtYoIl8QzHEYQT8PmqpbGLlotO2g0DVH99OrGTQQ3bKa7ji/K+0f+kcX88mk
-# WwMQASCNyM4ACeqpRL6ikEjpuz6oHfU7n2qj1G573WY2sNQmL5x6xeGKKLiQLT2U
-# ZUBkaUKlV/Z6jr9MFjXx6mRI182za9YlwfLnuo92xUopRHpSxifX
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAVnTOI/Rj04Y+
+# FGjFk/tm80BgEvV+GssfITC9khUaWrE2mHAK5XYwgJ449hHQdjVsFCqGyKouhq2N
+# FGdCZ7I9NHuZXiQkuqMR2CUTm4Ke/bwQj5as6wRyQ+98IuuuBABBW6ubxUKgNYai
+# iopcsYsbKa7PZl04l6qCLaup4QMSS/BEMtZn85zZ1LfVeehh6cjCArxyZwWaWHJ6
+# gbxe2Q49tJilntbI+vR9oNyS3aG+uFplDm7dXrWmxTA74NKimX9xO1zlVoSOzm/X
+# nZJXZlt9DKZ3iXERje1fQVzIbP2EFH/gUB7FPlq+HCjr+AffLVcEOFu+zDrXa/1i
+# J2n3rSAaQE2prFFekep8Zji3+lE81+ilfSSMJT8UwOSjAlNYExQJx6ioAVoFpVm6
+# veN2O47Jz51Id07HDzsXuEws4rSZk24sZ1rcGsHk3Zc8fWBdOxYQjXZjfz4lmeTt
+# J39pFFT54Lsa+NidTT9NMyWC7HCkrf3Xf6DLYHC5B6LAetGoOYBm
 # SIG # End signature block

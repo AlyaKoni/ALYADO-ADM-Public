@@ -1,0 +1,430 @@
+#######################
+# Update
+sudo rm -rf /var/lib/dpkg/lock-frontend
+sudo rm -rf /var/lib/dpkg/lock
+sudo apt-get update
+sudo apt-get upgrade -y
+sudo apt-get dist-upgrade -y
+sudo apt-get autoremove -y
+sudo apt-get autoclean -y
+
+#######################
+# Install Desktop and RDP
+sudo apt install xfce4 xfce4-session xrdp
+sudo systemctl enable xrdp
+sudo adduser xrdp ssl-cert
+echo xfce4-session >~/.xsession
+sudo systemctl restart xrdp
+
+#######################
+# Install node
+
+curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
+
+sudo apt update
+sudo apt install nodejs
+sudo apt upgrade nodejs
+
+sudo apt install npm
+
+sudo apt install aptitude
+sudo aptitude install npm
+
+repeat at curl if required
+
+node --version
+npm --version
+
+#######################
+# Set local user password
+sudo passwd azureuser
+
+#######################
+# Add data disk
+lsblk -o NAME,HCTL,SIZE,MOUNTPOINT | grep -i "sd"
+
+sudo parted /dev/sdc --script mklabel gpt mkpart xfspart xfs 0% 100%
+sudo mkfs.xfs /dev/sdc1
+sudo partprobe /dev/sdc1
+
+sudo mkdir /mount
+sudo blkid
+echo "UUID=9c89aff0-9a9d-4ecc-b028-b6c143e0c4e7 /mount xfs defaults,nofail 0 2" | sudo tee -a /etc/fstab
+systemctl daemon-reload
+sudo mount -a
+
+lsblk -o NAME,HCTL,SIZE,MOUNTPOINT | grep -i "sd"
+
+#######################
+# create userName
+sudo useradd -m -g users userName
+sudo passwd userName
+su - userName
+echo xfce4-session >~/.xsession
+
+#######################
+# create group
+sudo addgroup userName
+sudo adduser userName userName
+sudo adduser adminuser userName
+
+#######################
+# folder structure
+sudo mkdir /mount/setup
+sudo mkdir /mount/npm
+sudo mkdir /mount/npm/global
+sudo mkdir /mount/npm/setup
+sudo mkdir /mount/npm/node_modules
+sudo mkdir /mount/repos
+sudo mkdir /mount/repos/company
+sudo mkdir /mount/repos/os
+sudo mkdir /mount/docs
+sudo mkdir /mount/docs/onedrive
+sudo mkdir /mount/docs/sharepoint
+sudo mkdir /mount/openclaw
+sudo mkdir /mount/openclaw/base
+sudo mkdir /mount/openclaw/setup
+sudo mkdir /mount/powershell
+sudo mkdir /mount/powershell/Modules
+sudo chown userName /mount/setup -R
+sudo chown userName /mount/npm -R
+sudo chown userName /mount/repos -R
+sudo chown userName:userName /mount/repos
+sudo chown adminuser:adminuser /mount/repos/os
+sudo chown userName /mount/docs -R
+sudo chown userName /mount/openclaw -R
+sudo chown userName /mount/powershell -R
+sudo chmod 700 /mount/setup -R
+sudo chmod 700 /mount/npm -R
+sudo chmod 700 /mount/repos -R
+sudo chmod 770 /mount/repos
+sudo chmod 700 /mount/repos/os
+sudo chmod 700 /mount/docs -R
+sudo chmod 700 /mount/openclaw -R
+sudo chmod 700 /mount/powershell -R
+sudo ln -s /mount/npm/node_modules /usr/lib/node_modules
+
+#######################
+# Install xrdp sound redirection
+sudo apt install pipewire
+sudo apt install git pkg-config autotools-dev libtool make gcc
+sudo apt install libpipewire-0.3-dev libspa-0.2-dev
+cd /mount/repos/os
+https://github.com/neutrinolabs/pipewire-module-xrdp.git
+cd pipewire-module-xrdp
+./bootstrap
+./configure
+make
+sudo make install
+
+###################################
+# Install PowerShell
+sudo apt-get update
+sudo apt-get install -y wget apt-transport-https software-properties-common
+uname -a # replace ubuntu version in next call
+wget -q https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64
+sudo dpkg -i packages-microsoft-prod.deb
+rm packages-microsoft-prod.deb
+sudo apt-get update
+sudo apt-get install -y powershell
+
+sudo ln -s /opt/microsoft/powershell/7/pwsh /usr/bin/pwsh.exe
+sudo ln -s /opt/microsoft/powershell/7/pwsh /usr/bin/powershell.exe
+sudo ln -s /opt/microsoft/powershell/7/pwsh /usr/bin/powershell
+
+#######################
+# Install VSCode
+sudo apt-get install -y xdg-utils
+
+wget -q https://vscode.download.prss.microsoft.com/dbazure/download/stable/07ff9d6178ede9a1bd12ad3399074d726ebe6e43/code_1.112.0-1773778351_amd64.deb
+sudo dpkg -i code_1.112.0-1773778351_amd64.deb
+rm code_1.112.0-1773778351_amd64.deb
+sudo apt-get update
+
+Configure:
+"keyboard.dispatch": "keyCode"
+"files.encoding": "utf8bom"
+
+
+###################################
+# Install Chrome
+
+wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install ./google-chrome-stable_current_amd64.deb
+
+###################################
+# Install Build tools
+sudo apt update && sudo apt install build-essential curl git -y
+
+###################################
+# Install ctags
+sudo apt install universal-ctags
+
+###################################
+# Install Homebrew
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+echo >> /home/$USER/.bashrc
+echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"' >> /home/$USER/.bashrc
+echo >> /home/$USER/.profile
+echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"' >> /home/$USER/.profile
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"
+
+brew install gcc
+
+###################################
+# Install nginx
+sudo apt update
+sudo apt install nginx certbot python3-certbot-nginx
+sudo apt-get reinstall nginx
+
+sudo nginx -t
+
+sudo nano /etc/nginx/sites-available/openclaw
+sudo touch /etc/nginx/sites-available/openclaw
+sudo tee /etc/nginx/sites-available/openclaw <<EOF
+server {
+    listen 80;
+    server_name host.domain.ch;
+
+    location / {
+        proxy_pass http://127.0.0.1:18789;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Timeout settings (AI responses can be slow)
+        proxy_read_timeout 600s;
+        proxy_send_timeout 600s;
+    }
+}
+EOF
+
+sudo ln -s /etc/nginx/sites-available/openclaw /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+sudo systemctl start nginx
+
+sudo certbot certonly --manual -d host.domain.ch --preferred-challenges dns
+Certificate is saved at: /etc/letsencrypt/live/host.domain.ch/fullchain.pem
+Key is saved at:         /etc/letsencrypt/live/host.domain.ch/privkey.pem
+
+sudo nano /etc/nginx/sites-available/openclaw
+server {
+    listen 443 ssl;
+    server_name host.domain.ch;
+
+    ssl_certificate /etc/letsencrypt/live/host.domain.ch/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/host.domain.ch/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # Add inside the server block
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+...
+}
+server {
+    listen 80;
+    server_name host.domain.ch;
+    return 301 https://$host$request_uri;
+}
+
+###################################
+# Install locales
+
+sudo locale-gen de_CH.UTF-8
+sudo locale-gen de_DE.UTF-8
+sudo locale-gen en_US.UTF-8
+sudo locale-gen fr_FR.UTF-8
+
+sudo update-locale LANG=en_US.UTF-8
+cat /etc/default/locale 
+
+###################################
+# Install .Net
+
+sudo apt-get install -y dotnet-sdk-8.0
+sudo apt-get install -y dotnet-sdk-10.0
+
+dotnet --list-sdks
+dotnet --list-runtimes
+
+###################################
+# Install docker
+sudo apt remove $(dpkg --get-selections docker.io docker-compose docker-compose-v2 docker-doc podman-docker containerd runc | cut -f1)
+
+# Add Docker's official GPG key:
+sudo apt update
+sudo apt install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+# Add the repository to Apt sources:
+sudo tee /etc/apt/sources.list.d/docker.sources <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo usermod -aG docker $USER (userName)
+
+sudo systemctl status docker
+sudo systemctl start docker
+sudo docker run hello-world
+
+###################################
+# Switch to user userName
+su - userName
+chsh -s /bin/bash
+
+#######################
+# Change CTRL+C/V
+stty intr ^K
+stty lnext ^-
+stty -g
+stty -g > ~/.stty
+
+.bashrc and .profile
+# Switching CTRL+C/V
+case $- in
+*i*)
+stty `cat ~/.stty`     #  reload the stored stty settings
+bind -u quoted-insert  #  unbind the quoted-insert function of bash - free Ctrl+V for paste
+esac
+
+Edit terminal preferences and switch Copy/Paste to CTRL+C/V
+
+Keyboard Shortcuts in VS Code:
+[
+    {
+        "key": "ctrl+c",
+        "command": "workbench.action.terminal.copySelection",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+v",
+        "command": "workbench.action.terminal.paste",
+        "when": "terminalFocus"
+    },
+    {
+        "key": "ctrl+shift+c",
+        "command": "workbench.action.terminal.sendSequence",
+        "args": {
+          "text": "\u0003"
+        },
+        "when": "terminalFocus"
+    }
+]
+
+###################################
+# Install Homebrew
+echo >> /home/$USER/.bashrc
+echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"' >> /home/$USER/.bashrc
+echo >> /home/$USER/.profile
+echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"' >> /home/$USER/.profile
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv bash)"
+
+###################################
+# Install nodejs and npm
+#curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+#nvm install --lts --latest-npm
+#nvm use --delete-prefix v24.14.0 --silent
+
+npm config set prefix '/mount/npm/global'
+edit .profile and .bash
+export PATH=/mount/npm/global/bin:$PATH
+export OPENCLAW_STATE_DIR=/mount/openclaw/base
+source ~/.bashrc 
+
+###################################
+# Configure firewall
+sudo ufw allow 22
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 3389/tcp
+sudo ufw allow 3978/tcp (wenn Teams Plugin genutzt wird)
+sudo ufw enable && sleep 60 && sudo ufw disable
+sudo ufw enable
+sudo ufw status numbered
+
+###################################
+# Configure locale
+
+locale
+locale -a
+locale-gen de_CH.UTF-8
+
+
+###################################
+# Install OpenClaw
+curl -fsSL https://openclaw.ai/install.sh | bash
+openclaw onboard --install-daemon
+openclaw gateway status
+
+Bei linger problemen im gateway:
+sudo loginctl enable-linger $(whoami)
+export XDG_RUNTIME_DIR=/run/user/$(id -u)
+openclaw gateway install --force
+
+
+###################################
+# Install OneDrive
+
+sudo add-apt-repository --remove ppa:yann1ck/onedrive
+sudo apt remove onedrive
+sudo rm /etc/systemd/user/default.target.wants/onedrive.service
+
+lsb_release -a
+wget -qO - https://download.opensuse.org/repositories/home:/npreining:/debian-ubuntu-onedrive/xUbuntu_24.04/Release.key | gpg --dearmor | sudo tee /usr/share/keyrings/obs-onedrive.gpg > /dev/null
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/obs-onedrive.gpg] https://download.opensuse.org/repositories/home:/npreining:/debian-ubuntu-onedrive/xUbuntu_24.04/ ./" | sudo tee /etc/apt/sources.list.d/onedrive.list
+sudo apt-get update
+sudo apt install --no-install-recommends --no-install-suggests onedrive
+
+mkdir -p ~/.config/onedrive
+wget https://raw.githubusercontent.com/abraunegg/onedrive/master/config -O ~/.config/onedrive/config
+
+change:
+sync_dir
+local_first = "false"
+
+onedrive --sync --download-only
+
+###################################
+# Libre Office
+
+sudo apt-get install hunspell hunspell-de-de 
+sudo apt-get install libreoffice libreoffice-l10n-de libreoffice-help-de
+sudo apt-get install libreoffice-impress libreoffice-draw libreoffice-base
+
+###################################
+# Install Recoll
+
+sudo apt install antiword
+sudo apt install ghostscript
+sudo apt install poppler-utils
+sudo apt install tesseract-ocr
+sudo apt install exiftool
+sudo apt install python3
+sudo apt install python3-pip
+python3 -m pip install py7zr==0.22
+
+sudo apt install recoll
+
+sudo apt install aspell-de aspell-en
+

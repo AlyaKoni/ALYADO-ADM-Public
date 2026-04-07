@@ -1,10 +1,10 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
 
     This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     The Alya Base Configuration is free software: you can redistribute it
     and/or modify it under the terms of the GNU General Public License as
     published by the Free Software Foundation, either version 3 of the
@@ -15,7 +15,7 @@
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
     Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    https://alyaconsulting.ch/Loesungen/BasisKonfiguration
     Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
     Bedingungen der GNU General Public License, wie von der Free Software
     Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
@@ -27,53 +27,101 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
-#>
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    16.03.2026 Konrad Brunner       Initial Version
 
-<#
-.SYNOPSIS
-Sets the customized synchronization cycle interval and purge run history interval for Azure AD Connect.
-
-.DESCRIPTION
-The Set-AdConnectScheduler.ps1 script modifies the Azure AD Connect synchronization schedule by setting a custom synchronization cycle interval and purge run history interval. The synchronization interval is defined in minutes and determines how frequently synchronization between on-premises Active Directory and Azure Active Directory occurs. The purge run history interval is defined in days and determines how frequently the synchronization run history is purged.
-
-.PARAMETER SyncCycleIntervalMinutes
-Specifies the synchronization interval in minutes. The default value is 30 minutes.
-
-.PARAMETER PurgeRunHistoryIntervalDays
-Specifies the purge run history interval in days. The default value is 2 days.
-
-.INPUTS
-You can input the number of minutes as an integer to set the custom sync interval and the number of days as an integer to set the purge run history interval.
-
-.OUTPUTS
-None. This script does not produce any output.
-
-.EXAMPLE
-PS> .\Set-AdConnectScheduler.ps1 -SyncCycleIntervalMinutes 45 -PurgeRunHistoryIntervalDays 3
-Sets the Azure AD Connect customized synchronization interval to 45 minutes and the purge run history interval to 3 days.
-
-.NOTES
-Copyright          : (c) Alya Consulting, 2019-2026
-Author             : Konrad Brunner
-License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
-Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
 Param(
-    [int]$SyncCycleIntervalMinutes = 30,
-    [int]$PurgeRunHistoryIntervalDays = 2
+    [Parameter(Mandatory = $true, Position = 0)]
+    [string]$fromSku = $null,
+    [Parameter(Mandatory = $true, Position = 1)]
+    [string]$toSku = $null
 )
 
-Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($SyncCycleIntervalMinutes):00"
-Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00:00:00"
+#Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
+#Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Change-DirectAssignedLicenses-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.DirectoryManagement"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All"
+
+# =============================================================
+# Azure stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "AAD | Change-DirectAssignedLicenses | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Getting all licenses
+Write-Host "Getting all licenses" -ForegroundColor $CommandInfo
+$availableLics = Get-MgSubscribedSku -All
+
+# Checking sku's
+Write-Host "Checking sku's" -ForegroundColor $CommandInfo
+$fromSkuObj = $availableLics | Where-Object { $_.SkuId -eq $fromSku -or $_.SkuPartNumber.ToUpper() -eq $fromSku.ToUpper() }
+if (-Not $fromSkuObj)
+{
+    throw "License '$fromSku' not found in tenant!"
+}
+$toSkuObj = $availableLics | Where-Object { $_.SkuId -eq $toSku -or $_.SkuPartNumber.ToUpper() -eq $toSku.ToUpper() }
+if (-Not $toSkuObj)
+{
+    throw "License '$toSku' not found in tenant!"
+}
+
+# Getting all users
+Write-Host "Getting all users" -ForegroundColor $CommandInfo
+$users = Get-MgUser -All -Property Id, UserPrincipalName, AssignedLicenses, DisplayName
+
+# Changing licenses
+Write-Host "Changing licenses" -ForegroundColor $CommandInfo
+foreach($user in $users)
+{
+    if ($fromSkuObj.SkuId -in $user.AssignedLicenses.SkuId -or $fromSkuObj.SkuPartNumber -in $user.AssignedLicenses.SkuPartNumber)
+    {
+        Write-Host "User '$($user.UserPrincipalName)' has license '$fromSku'. Changing to '$toSku'" -ForegroundColor $CommandInfo
+        do {
+            try
+            {
+                Set-MgUserLicense -UserId $user.Id -AddLicenses @{SkuId = $toSkuObj.SkuId} -RemoveLicenses @($fromSkuObj.SkuId) | Out-Null
+                $user = Get-MgUser -UserId $user.Id -Property Id, UserPrincipalName, AssignedLicenses, DisplayName
+                if ($fromSkuObj.SkuId -in $user.AssignedLicenses.SkuId)
+                {
+                    throw "License change not successful yet"
+                }
+                break
+            }
+            catch
+            {
+                Write-Warning "Error changing license for user '$($user.UserPrincipalName)'. Retrying in 5 seconds..."
+                Start-Sleep -Seconds 5
+            }
+        } while ($true)
+    }
+}
+
+#Stopping Transscript
+Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCButhpbnrICK9g0
-# o3FxJCxtqWpjSypFWG8MVCfITXPKLKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA+wkuAkHAQ6SUP
+# cUvht2b8QaOzhpsI2ae3Fzub+GonK6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -157,23 +205,23 @@ Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDhXTnLdNL7XyarA
-# qglfQOd+c1D0PmVGggG8mVbO2P4cMA0GCSqGSIb3DQEBAQUABIICAHr8DZHGgJO0
-# FGrZpTTDgMuUfg7G/M2vgfCrWFwmMWVRJQBSzDUDq4Jg8GtzXtJop/YOsejeoQAN
-# Qw/Lp92tNeIwBoxhNQIoeUpnCcOaAA4YDwUNm1JOCJ8dqlIexlEOVU+y7Q23dftq
-# uk1Oa7DaCC7kpwup/O41CCi3fflb+uw2VquWWZ3a14hpJJvs3oYhlA9GVpgiuRjA
-# KoQQhOvR8t7h1RSnQ2Hr6rFigZosl+Idh9dR6pzi0lPfVGkXUERtWrCueZQHkxfe
-# S8UnaRHkLiobs/d/4SJOVcBBG8ROIz6g3h72VweyZfMiqlBRxwf9IS80wAQAguqM
-# zneQRCXnlWAxw1IXoiOQGLsz4sNOSQXH+6IjSpnhgiguz2vgm92qhjD4aKArwNG9
-# L38zzJ+0Z5/ShJEGEK1omTIuVt/JsweI0Yb4feX9bUdX+WtIG4ofde+vcumKQKt7
-# Dn1x+BW90YXrMdHMB8PfQyT5R2kjG6mEiZt4dNA+/vVKXGhXtJIDwSVLIg3okFjD
-# 7IPN6NF1a+vzkXN2vjfmts/ksSST5A+Jo8b+zt+5CzVKQ38FFIzpPn7ImfrAeWni
-# MjSWXsKXgrwVAWla0dNPbN2w561xZ2oQYPNue/F04Xt+CEzqXdd269DaA4cdETbf
-# 3I9+ubIdO/SZME41/4ee6xMfoh21w4vioYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKSQxkSWV2HwcUgn
+# UqclXe/12i6A++001e7HrBdf5iGfMA0GCSqGSIb3DQEBAQUABIICAGYYHJ5d9DEb
+# e/J6eW40X1KdDSUYW4crUvI06yA46Xg4YngW77dQt/EWY4Jh9QpQRZJVRf7Q3Dzl
+# wSYN+T4ieE3ZgmQCZGOcF/5kggHp8bj2YydGEj8kvSdZzlTuCa3T3oQVeh1QzRFs
+# lf11VgmeeXHGNABSUYPg101qe80h61E9URvqQCy1uwbgvu/H27XIaVLSzYRTOQ7Y
+# GCv26uGFWXe4EpwzIyFuoqhDvuidRZgT+qzUy4EZVulpmozhYf6X1bTr9vskiK23
+# D6tBSv8dd5Z50MtCvXNzelE1meZe2temLR0+CRAssD3tZeUDfO2GR2RdyBjxnU6t
+# PedFBDYJvmwsEFHQaEoQK3Js61cIe9GlMs1oJVBQ8WRv1DKzHBavRqutARAlwmCo
+# iuadwa2PA84k3qDGOX9JnT3bRda6QC7rWAVPC2rmTCkWieyld6sji0IrZwT4vSD2
+# ruo9VHgkDKtq68gq0HqCSi3pk1A4uwSxR+EZdacqkutTd3T8LIM21urG+bQ0puIY
+# 1j2Nptb3JzzM/EaOmWYdFkUF27e3Wd9ywEwcb9k0azF4KdOrwSjR3RiOc3LVZB8C
+# T1xhRwiwYmPqHHGWsBEgro9+/4/3RsWHrD81Hxa71cJtZf3KatN5wCircj7Au/HQ
+# jkNg4KezAB1hZcYfUQ3yJWGTJRnwqv9xoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBb1gmqdUpjP/vUwrDLzPhGMIbhIStKX7hts5fZrmsdFwIUVRDnyB9P+iwI
-# dvhEYwkNk7oU6P0YDzIwMjYwNDA2MjEyMDI2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCAZDTJYE1axGj7ZA7qGhFRLpS7nLfIVrMS2ejk65PF3tAIUAoqNAI0deDHD
+# lLb1Qo28/uszg9IYDzIwMjYwMzE2MTMwMTI0WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -278,17 +326,17 @@ Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IH+rvFpRucWgVCcallqv3Z9knp2p1JAvpX0sR4PGzHDPMIGwBgsqhkiG9w0BCRAC
+# ICZMWJxQxvis5nrwTf8iD6tt7DQGXybhXgvgG+jAtfk7MIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMMnCJ1giy70j
-# yb1FX+tkpLgEIGMyMjPfBJdewNb/xnsEBZMZOLzf49q2U5M3wtTt4i0DQ4YinJI5
-# 6Netoo031V7CdZ3jYwQiZibKIzMvIQCh3tOFrgGOnxg9aKPKBiFdSH3SjFTNq+17
-# qGZ8gnM0bVAfudkpWl770J4F45b3fFw72xhq4CXvo8UjcvPydMLdo7/N2IEJr+oA
-# 7bIt7KUXXaCjJcV+5PaNKRi9jUHVEmFnlQ7V7F0lULwa+TXudXwS3hpfcw1iP1EI
-# 5Eg+lQm7b2GpX83VVINBpQkqpByuIBP6uK6ZWCGWQxeXwIGXgiR7+cPSgA/Skedf
-# fdW7nQywRS9nNFOBlwuoIFoeyFo0nkDRhnnYq1Tpm+bOolPgoj4M86q2qrFc9wJ7
-# i0qeQfqec6/KRMGN4DwQ3ZZJSuWC+MwQoPZrW0fUZbq1x48LWig7WtC+bEjuqQdf
-# z7yP6jyEh8klZPfTUZgBvidjNugTcCeon8i/6KjIvA3A5nf+vkRb
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGACPKld9NvjTIe
+# yym5ZtNN2jNgTF5m1sbrSDM+KUlyuJmrz6i10yVGcfNRyOypiOOGVIMz/1Pf7FGP
+# T66p9C+GPGPnd93MCqpQ3nfD6mrK43yMcyZq9jl6lUkONHSQEntJLAQuEZKztUC9
+# WZG6T5anRsKDeiqiPvFC34Se+9LuHFSWaPkQITGKDhVi1FDHojhHENxyCSt9GHEI
+# RRew0VzN0Po2aju6SELXH6aGFtt0M6YWdlJJiuKs7zWK1GeZo8o96Tj0NiXMVViO
+# gB7muXQyr46vdmtRXL8Lorrk+9WqQd6gPXyXQzgqGFVwdn4zB3h/vVXb9j5vprSU
+# 6wCwo8/UjcPakGj/g3QQiqPhMQ3mO2W7PqM9qmKjNEd01Uu2eZHO2CvC2QQ/7qzQ
+# aeLZ8mj1Djrk2IQjWoMsZMn7Wcg7DAN0lmnT7CkJuj/1PjFehku3ivrl5ZjovwWl
+# e1FPSkw5R9jFyEZT555ERhsEZ0nXZQcXbtIkbz6YIAUB4Lw9ZTUy
 # SIG # End signature block

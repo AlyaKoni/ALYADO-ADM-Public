@@ -1,4 +1,5 @@
 ﻿#Requires -Version 2
+#Requires -RunAsAdministrator
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -31,26 +32,17 @@
 
 <#
 .SYNOPSIS
-Sets the customized synchronization cycle interval and purge run history interval for Azure AD Connect.
+Shrinks the Azure AD Connect database.
 
 .DESCRIPTION
-The Set-AdConnectScheduler.ps1 script modifies the Azure AD Connect synchronization schedule by setting a custom synchronization cycle interval and purge run history interval. The synchronization interval is defined in minutes and determines how frequently synchronization between on-premises Active Directory and Azure Active Directory occurs. The purge run history interval is defined in days and determines how frequently the synchronization run history is purged.
-
-.PARAMETER SyncCycleIntervalMinutes
-Specifies the synchronization interval in minutes. The default value is 30 minutes.
-
-.PARAMETER PurgeRunHistoryIntervalDays
-Specifies the purge run history interval in days. The default value is 2 days.
-
-.INPUTS
-You can input the number of minutes as an integer to set the custom sync interval and the number of days as an integer to set the purge run history interval.
+The Shrink-AdConnectDatabase.ps1 script reduces the size of the Azure AD Connect database by performing a shrink operation. This helps in reclaiming unused space and optimizing database performance.
 
 .OUTPUTS
 None. This script does not produce any output.
 
 .EXAMPLE
-PS> .\Set-AdConnectScheduler.ps1 -SyncCycleIntervalMinutes 45 -PurgeRunHistoryIntervalDays 3
-Sets the Azure AD Connect customized synchronization interval to 45 minutes and the purge run history interval to 3 days.
+PS> .\Shrink-AdConnectDatabase.ps1
+Shrinks the Azure AD Connect database.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -61,19 +53,30 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [int]$SyncCycleIntervalMinutes = 30,
-    [int]$PurgeRunHistoryIntervalDays = 2
 )
 
-Set-ADSyncScheduler -CustomizedSyncCycleInterval "0:$($SyncCycleIntervalMinutes):00"
-Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00:00:00"
+winget install sqlcmd
 
+Stop-Service -Name "ADSync" -Force
+
+Get-ChildItem -Path "$($env:ProgramFiles)\Microsoft Azure AD Sync\Data\ADSync2019" | ForEach-Object {
+    $dbFile = $_.FullName
+    Copy-Item -Path $dbFile -Destination "$($dbFile).bak" -Force
+}
+
+Start-Service -Name "ADSync"
+
+Push-Location "$($env:ProgramFiles)\Microsoft Azure AD Sync\Data\ADSync2019"
+
+& "$($env:ProgramFiles)\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\sqlcmd.exe" -S "(localdb)\.\ADSync2019" -Q "USE [ADSync]; DBCC SHRINKDATABASE (N'ADSync', 0);"
+
+Pop-Location
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCButhpbnrICK9g0
-# o3FxJCxtqWpjSypFWG8MVCfITXPKLKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCReI9vUpCZOm9B
+# 9UAOnJDUUc27yf2zXikSXwhgQ3xfW6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -157,23 +160,23 @@ Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDhXTnLdNL7XyarA
-# qglfQOd+c1D0PmVGggG8mVbO2P4cMA0GCSqGSIb3DQEBAQUABIICAHr8DZHGgJO0
-# FGrZpTTDgMuUfg7G/M2vgfCrWFwmMWVRJQBSzDUDq4Jg8GtzXtJop/YOsejeoQAN
-# Qw/Lp92tNeIwBoxhNQIoeUpnCcOaAA4YDwUNm1JOCJ8dqlIexlEOVU+y7Q23dftq
-# uk1Oa7DaCC7kpwup/O41CCi3fflb+uw2VquWWZ3a14hpJJvs3oYhlA9GVpgiuRjA
-# KoQQhOvR8t7h1RSnQ2Hr6rFigZosl+Idh9dR6pzi0lPfVGkXUERtWrCueZQHkxfe
-# S8UnaRHkLiobs/d/4SJOVcBBG8ROIz6g3h72VweyZfMiqlBRxwf9IS80wAQAguqM
-# zneQRCXnlWAxw1IXoiOQGLsz4sNOSQXH+6IjSpnhgiguz2vgm92qhjD4aKArwNG9
-# L38zzJ+0Z5/ShJEGEK1omTIuVt/JsweI0Yb4feX9bUdX+WtIG4ofde+vcumKQKt7
-# Dn1x+BW90YXrMdHMB8PfQyT5R2kjG6mEiZt4dNA+/vVKXGhXtJIDwSVLIg3okFjD
-# 7IPN6NF1a+vzkXN2vjfmts/ksSST5A+Jo8b+zt+5CzVKQ38FFIzpPn7ImfrAeWni
-# MjSWXsKXgrwVAWla0dNPbN2w561xZ2oQYPNue/F04Xt+CEzqXdd269DaA4cdETbf
-# 3I9+ubIdO/SZME41/4ee6xMfoh21w4vioYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFF60wGUl4HDmMMt
+# K+sjIK9kHtmgwNuj7PbAwDaoVJOZMA0GCSqGSIb3DQEBAQUABIICACUXzCwYFKcB
+# hujHljaqfBXCgeLkrVWF/7FD6Lu8mOvMFkpZMoVbO3uG8qwdTkz23tDNFqz82EHL
+# pNQpUbBnO8pQr6lsfGG9JgpHoKoxTTPxyBOP4u92l3PA+VhYoqvq/NgNBZeJD1+H
+# +k2Q2cmQyp9Wm2qFCz3p0D8qGaeQXBxbHQ6QoIHCZHHNPReh1XgLedQmAhk1NGA6
+# 6NGWTmDeqzPuSszPGR8wqcXI5KXUa/0pKkRD6nUC5o2YcmkCXi6DYnrVSasjLHfT
+# utOzanSv2YVhi7HuwF7Ahqd9cK1NFnbUGE2BuLZBkyyxeW8QXIDgXUw4IU0sf5eD
+# xZX2QuEHJWjzTDUh7Yu22T/I1FSbOPgI8SxTMT9dHxbOldblKc3BIcdtg/GfXH/n
+# giQq27+dwwpLg8jRUg398d/4/8PHpIDCT0pvOyuMSPU9hrmTlnTIeCNsyus70VNc
+# 3UvpNedxrawkLJrVUkQP2yPA1m99PauXcsQLOaZVpa+k2HyoWVe/WEetqGYQAiFk
+# haSIzh+YzG3eqMr7AUcLiZLcAl9EkshGH58EM0QKOY89yKY435GTIZYJW6I3u/Ff
+# uD+2WbB3Hhee7J112BnLqTWSqJMYe6oEA+SDcZHeHuCcH6T6uquVt10dxx8mIC/q
+# BnTCXc/GwdNRvmoqjcBG5jKAcp3IUIiroYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCBb1gmqdUpjP/vUwrDLzPhGMIbhIStKX7hts5fZrmsdFwIUVRDnyB9P+iwI
-# dvhEYwkNk7oU6P0YDzIwMjYwNDA2MjEyMDI2WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCD6ZzrLX+urFJKsKR8ZwxhDhkXsXqgFF0ycH0muXRvdNwIUWVppIFecaLDv
+# R8LWYSbMoM+2p2wYDzIwMjYwNDA2MjIyODQ4WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -278,17 +281,17 @@ Set-ADSyncScheduler -PurgeRunHistoryInterval "$($PurgeRunHistoryIntervalDays).00
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IH+rvFpRucWgVCcallqv3Z9knp2p1JAvpX0sR4PGzHDPMIGwBgsqhkiG9w0BCRAC
+# IDeE/7pQZXYQzl8oZ4tPsRoIkhDK0E2WjZWifeU9Mh9eMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMMnCJ1giy70j
-# yb1FX+tkpLgEIGMyMjPfBJdewNb/xnsEBZMZOLzf49q2U5M3wtTt4i0DQ4YinJI5
-# 6Netoo031V7CdZ3jYwQiZibKIzMvIQCh3tOFrgGOnxg9aKPKBiFdSH3SjFTNq+17
-# qGZ8gnM0bVAfudkpWl770J4F45b3fFw72xhq4CXvo8UjcvPydMLdo7/N2IEJr+oA
-# 7bIt7KUXXaCjJcV+5PaNKRi9jUHVEmFnlQ7V7F0lULwa+TXudXwS3hpfcw1iP1EI
-# 5Eg+lQm7b2GpX83VVINBpQkqpByuIBP6uK6ZWCGWQxeXwIGXgiR7+cPSgA/Skedf
-# fdW7nQywRS9nNFOBlwuoIFoeyFo0nkDRhnnYq1Tpm+bOolPgoj4M86q2qrFc9wJ7
-# i0qeQfqec6/KRMGN4DwQ3ZZJSuWC+MwQoPZrW0fUZbq1x48LWig7WtC+bEjuqQdf
-# z7yP6jyEh8klZPfTUZgBvidjNugTcCeon8i/6KjIvA3A5nf+vkRb
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAl0YClnYZMHA8
+# Cso++TQVtB2CQXUqKIAqUfW0nLqvcU0AeFXqErVb5rXRB3kEcyQRpcBy/LsD0VWk
+# J16KkBvAlsvKnhzPQtzv+t9qre84Yc+KorARb9dgUZg2uJSfHUOFMLosbdhDQVMZ
+# EhZTlKCpYknWpigTRO0ai1XK8gtI8aOYtZLhQHAl4BNqyV0Kwh4Z5NJBuyUADAWE
+# gvRrLZ4u/E0Br7BwJUZBm1GPA0CKLQgdxLpSMsUMqbHNv04G8kC6/++/Ut8xaezG
+# kA0vBVw6SvN1DqqGLl9ubJpqBCUHO2vTwhsZ+ExhXFtHp0F8mkpBDrDPvJt62uKM
+# fJBOZbXztljnQU2iFwdNJz1pz3oq8re5fCtWRezz+5COOSA4kD4BGnWGTujco/Dl
+# ltbl49x32X7dKTiadWbNzpISgOOUoJBQZILcUWzA8GjAw7/mGUpkbUEatThbX+ZY
+# XBLZxlaoxpTB+kPRf2TBFuo8qyPFwy4fqcb2WpuDqHa/8lebpGWr
 # SIG # End signature block
