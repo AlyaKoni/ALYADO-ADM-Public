@@ -55,7 +55,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$version = 30
+$version = 40
 do
 {
     $version--
@@ -64,15 +64,23 @@ do
     try
     {
         $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get
-        [regex]$regex = "<h1>.*?General-Availability Release.*?</h1>"
+        [regex]$regex = "<h1>.*?GA Release.*?</h1>"
         $check = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+        if (-Not $check)
+        {
+            [regex]$regex = "<h1>.*?General-Availability Release.*?</h1>"
+            $check = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
+        }
     } catch {}
-} while (-Not $check -and $version -gt 16)
-if ($version -eq 29)
+} while (-Not $check -and $version -gt 26)
+if ($version -ge 39)
 {
 	Write-Warning "Please increwase starting version in this script!"
 	pause
 }
+
+[regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64"
+([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)
 
 [regex]$regex = "[^`"']*openjdk-[^`"']*windows-x64_bin\.zip"
 $newUrl = ([regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value)

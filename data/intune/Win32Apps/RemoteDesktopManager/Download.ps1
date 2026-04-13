@@ -58,23 +58,33 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 try {
     $pageUrl = "https://devolutions.net/remote-desktop-manager/downloadfree/"
     $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
-    [regex]$regex = "[^`"]*msi[^`"]*free[^`"]*windows[^`"]*"
+    [regex]$regex = "[^`"]*msi[^`"]*X64[^`"]*windows[^`"]*"
     $pageUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
     if ([string]::IsNullOrEmpty($pageUrl))
     {
-        $pageUrl = "https://devolutions.net/remote-desktop-manager/home/downloadfree/"
+        $pageUrl = "https://devolutions.net/remote-desktop-manager/downloadfree/"
         $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
         [regex]$regex = "[^`"]*msi[^`"]*free[^`"]*windows[^`"]*"
         $pageUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
         if ([string]::IsNullOrEmpty($pageUrl))
         {
-            throw "Download link not found"
+            $pageUrl = "https://devolutions.net/remote-desktop-manager/home/downloadfree/"
+            $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
+            [regex]$regex = "[^`"]*msi[^`"]*free[^`"]*windows[^`"]*"
+            $pageUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+            if ([string]::IsNullOrEmpty($pageUrl))
+            {
+                $pageUrl = "https://devolutions.net" + $pageUrl
+                $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
+                [regex]$regex = "[^`"]*download[^`"]*RemoteDesktopManager[^`"]*msi[^`"]*"
+                $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+                if ([string]::IsNullOrEmpty($pageUrl))
+                {
+                    throw "Download link not found"
+                }
+            }
         }
     }
-    $pageUrl = "https://devolutions.net" + $pageUrl
-    $req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
-    [regex]$regex = "[^`"]*download[^`"]*RemoteDesktopManager[^`"]*msi[^`"]*"
-    $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 } catch {
     try {
         $pageUrl = "https://devolutions.net/remote-desktop-manager/home/thankyou/rdmmsi/"
@@ -95,7 +105,15 @@ try {
     [regex]$regex = "[^`"]*Setup.RemoteDesktopManager[^`"]*\.msi"
     $newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 }
-            
+
+if (-Not $pageUrl.StartsWith("http"))
+{
+    $pageUrl = "https://devolutions.net"+$pageUrl
+}
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
+[regex]$regex = "[^`"]*Setup[^`"]*\.msi"
+$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+
 $fileName = Split-Path -Path $newUrl -Leaf
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"

@@ -9,6 +9,11 @@ sudo apt-get autoremove -y
 sudo apt-get autoclean -y
 
 #######################
+# Configure OS
+sudo vi /etc/hosts
+127.0.1.1 alyainfpserv066
+
+#######################
 # Install Desktop and RDP
 sudo apt install xfce4 xfce4-session xrdp
 sudo systemctl enable xrdp
@@ -253,6 +258,8 @@ cat /etc/default/locale
 ###################################
 # Install .Net
 
+sudo apt-get install -y dotnet-runtime-8.0
+sudo apt-get install -y dotnet-runtime-10.0
 sudo apt-get install -y dotnet-sdk-8.0
 sudo apt-get install -y dotnet-sdk-10.0
 

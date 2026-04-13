@@ -54,7 +54,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://www.logitech.com/de-ch/software/logi-options-plus.htm"
+$pageUrl = "https://www.logitech.com/de-ch/software/logi-options-plus"
 $headers = @{
     "accept" = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
     "accept-encoding" = "gzip, deflate, br"

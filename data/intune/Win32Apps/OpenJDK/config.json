@@ -45,7 +45,7 @@
       "valueName": "OpenJDK",
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "25.0.2"
+      "detectionValue": "26.0"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "valueName": "OpenJDK",
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "25.0.2"
+      "comparisonValue": "26.0"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "25.0.2"
+  "displayVersion": "26.0"
 }
