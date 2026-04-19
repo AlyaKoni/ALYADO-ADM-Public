@@ -101,15 +101,15 @@ $FirmwareVersion = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\
 $FirmwareReleaseDate = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name FirmwareReleaseDate -ErrorAction SilentlyContinue).FirmwareReleaseDate } catch {}
 $OSArchitecture = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name OSArchitecture -ErrorAction SilentlyContinue).OSArchitecture } catch {}
 $CanAttemptUpdateAfter = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name CanAttemptUpdateAfter -ErrorAction SilentlyContinue).CanAttemptUpdateAfter } catch {}
-$HostName = (Get-CIMInstance Win32_ComputerSystem).Name 
+$HostName = (Get-CIMInstance Win32_ComputerSystem).Name
 $OSVersion = (Get-CimInstance Win32_OperatingSystem).Version
-$Manufacturer = (Get-CIMInstance Win32_ComputerSystem).Manufacturer 
-$Model = (Get-CIMInstance Win32_ComputerSystem).Model 
+$Manufacturer = (Get-CIMInstance Win32_ComputerSystem).Manufacturer
+$Model = (Get-CIMInstance Win32_ComputerSystem).Model
 $BiosSerialNumber = (Get-CIMInstance Win32_BIOS).SerialNumber
 $BiosVersion = (Get-CIMInstance Win32_BIOS).Version
 $BaseBoardManufacturer = (Get-CimInstance Win32_BaseBoard).Manufacturer
 $BaseBoardSerialNumber = (Get-CimInstance Win32_BaseBoard).SerialNumber
-$BaseBoardProduct = (Get-CIMInstance Win32_BaseBoard).Product 
+$BaseBoardProduct = (Get-CIMInstance Win32_BaseBoard).Product
 $TpmVersion = (tpmtool getdeviceinformation | Where-Object { $_ -like "*TPM-Version*" }).Split()[-1]
 
 Write-Host "`nSystem information"
@@ -449,8 +449,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBhivK9LBv4NTs6
-# FdElfUgZ0Pj/NRa/PvEiO4GbYjeR0qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCwb+dWGEdZD92a
+# qgV/n7ITsjwRT8qTA8S7AwaSCOTeEqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -564,23 +564,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIF/DVYEm
-# KpuIc+ezo4UNMTVqfMskwPoqUWZgywYM8dFDMA0GCSqGSIb3DQEBAQUABIICAJI2
-# 8LNnxYprdApz2Bo3hh12I2npMJDPFRYIFFbrAGLpH+wNmTb3qhI+SHg56Fp0K2/6
-# yHFHtWyrCg/xYRiDhuWLjnUs2X00YF2UPszDdAn+Fcr/1ZmfpIBEuelfcm6OB8zH
-# kcD/MDMX46+HYhI+Bi8oHkGgzuK3o9SzqlXnwNFCaHFhW4IrhqBk6fsu+Sivzasm
-# 5UY18xQOGYztn/gJENDlpBY+kaxlhf1SMTLqoQYxq1N/go4o6cHhURjOEYbM/ku0
-# QZjoP/Eu8Su7jSmXeTBimp9v38FrFIaJ8+agW0DlwV30dOm1hLbqK+u7a7cGrFh0
-# 2xgCm+jLEGnRwoPMop3+vmNlekSUdD5PmM89Pipdtf/Dr9ybw5OW8wrq3AMeEK+g
-# UBXcj0amE+MqSS07MZN+XedC7Y3fY0PT0M00nLJVoCa5VXRKaFt+HY4YBGPZG44r
-# dFVnvtIo9ipi7X7D/bMvt82lNgDOcEqjrlUyjUuk4YZCwE8H+Nr1O032XlNVQRNt
-# iUFqit3ArCZvLA+JnUrkX+ohROj7dNP2npYVlzxhOuv0Q4B6bZTrwRxyIP39QS5S
-# AIl9xWQW7PLYd7aU1K/D6qG6WoRIzfTwNkgn9uEUCKAB+x1tu6CuRp5cw4iKSojo
-# ohLPnV1BUB9Z8ZXth5r6sanf65ccr3j5G+ZjQmMIoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIH72uPyC
+# hT86I2UlxIDKdPFdZ5EwBBDLv9T2BHE2b9CrMA0GCSqGSIb3DQEBAQUABIICAD9F
+# IEfzar4ZE9bzAV8535wB6yfuAe2kIxsYPwbTENJvy1gRoE9tpviHnQynH3L1JlUF
+# QzzVpDIf0npHMPkyxanAGdxWZq9P4+sL7ea1F/OixWPsOrS3Bs+D03lmORgXP60O
+# vj3PMEcxhvF+JAeG7T+evH3FoCs/OtcUSVQL3qjUmJfUA7/QhQRLE/yaiR3okyrY
+# fwmufCMiMGFrQrqVufiEau1EktjvdJecJrPdswcx86qkuAf1WsqRKtOWd+hRLuGx
+# REtJTd9i1Pi3evJ3mxJnU76A9kFqPNgMpaNi0tVGX4Kk9TJIKpDwTnG3HukLSD5H
+# zm7bVHEzo15gu1dqiD3+bHmgI9ybWE3qmd5kYnHWLHGI9onbFYkhpjtzfQ7iREuG
+# 4eTruz7/odKjc90xdm167HlISvEwIMkzmv266RzJa9qD/r6GA6S7lySxUp5MLZhP
+# o24x4PyL9qi49ytXbc6o8+qX4d3GKLhwNfxNidmy/rKmmhPBGGqRyY34RI4TH+qn
+# O6r0SOmrZuc14TSVwhysZWCsFLqLNiej7XExsEgEm1fAdxIJiI4W2jsNXdPp20oz
+# vVWEw6wLAgg6Nd/lKKz8ltkL6SKUU2FrdvPN5uTTFj2mrEzn/PVbjtYwMa8U3RRG
+# ouVCHLMc9zzg2bTnYmdoBHuhbFv0pj86qetY7gQsoYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCD8+ubwSEYLmwiFj76cOVfLxlWboZn4agJ98kzlzjCCWwIUYN38
-# fGKpw0UBb7cPil45GqC0RpQYDzIwMjYwNDA4MTQ1NDI1WjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCAoLJijvqoXXgtzrDOSWgiqqpH0vzDSKU/PJ8wNEWDVYwIUfX29
+# 8YgS/XGoO55AeBATnHnmFjgYDzIwMjYwNDE1MDYyODMyWjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -685,17 +685,17 @@ Stop-Transcript
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIAzLpXO51Wz8brWp/x8x2vFCNX9V6U5ThlFwQj13+Vs2MIGwBgsqhkiG
+# AQkEMSIEIDiVfwi58E3VJJ1c2M9u/wiF99xpukdxqWlGmWa3MIAdMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAU4hB
-# xHUKfcNC0+5beDsg5eOghez01TXymPNE+frSf87c/1K1DX91sh2MtmCgTRq3ZGSx
-# PudCzeYCV2FHdEv7N9vILstwHoYUoYY9p6bkQ1utA4Num2b+Me6CUsBLv8rmrHmy
-# Nuxr9nb5ZC4uO5sAMxAX08cyDa8Aueo1C7WSpuZ4e0usTLDcrXExlnWc5bqFDdTg
-# CLTsiMo58RrfLEiVKkq79GjbSjA1jKUBeOyo38DjCe/wDmrwthfF3RS92IbHAsyR
-# nbNTr8xrwrA0HYYr1Ekije+62A0/WFficfxzCvInz8yaMSmOFnpItfT9ulS3rAYv
-# 9NbEXtjZEy44slKC+szMsK7iYLv14HE/T2UfdGR7OIWUQQJE2HuKP6P2HoQlSZYU
-# dj5Ya8qFGcsJ8Poz2PdjdZHOfX/mNacOiwr2iZdl2j8K+MzEOvEWJ9EmRAhWqGQ8
-# doBXws9dyI685mWIswJWvXCTf6fVEXIag8RAMaf2NUN+50Jh43VmC5y1Lnmb
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAK8AI
+# ed6YaXklf1Z+Uw9fF3Ovh7XqR5WXthgHKGTYYlObdvUkL5HOcaKFAYQHsh3oX4ce
+# QSrPy8udp8Mhjsh0i+RSTH9NjBUy8NSWgffD1xuASV9uL14oAhhECd7Du4ubZWJE
+# I7Et1DskFuyPE6qw32aSdf35ekoxGAHHpQjm/pCFyXjP7n9eq06xG1PsHvFQlCnM
+# ctMiA4xQK8r9j37Wo60mGABxmooxxIGjYkXQimRIYk2eQsIdOjKlFm8YryLoHT9R
+# MoPL0VeUku+vN5cy/rtNj0XWSG9w3Zlg/3nyNUtgm9walCk5tS1vOKoyEO0Q9naT
+# DhkE0L6aQcIImHGZg45zTtXxQ4J//NG4h/a0EB1/MInnRo4lIrGso61B/e1dWeEj
+# d4vL5E0oSc80gcGfspq+uMLAAufd0OlbEEXjW7H5nY7MtKYZtlT0n6oLV81fMRoj
+# OVMoIWken4HjyTZWfro4rDilfNc1kJ2jqYrEG2/tB3/oi2W1xkoaTniQ17+1
 # SIG # End signature block

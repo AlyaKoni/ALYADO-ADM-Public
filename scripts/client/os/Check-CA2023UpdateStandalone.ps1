@@ -95,15 +95,15 @@ $FirmwareVersion = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\
 $FirmwareReleaseDate = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name FirmwareReleaseDate -ErrorAction SilentlyContinue).FirmwareReleaseDate } catch {}
 $OSArchitecture = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name OSArchitecture -ErrorAction SilentlyContinue).OSArchitecture } catch {}
 $CanAttemptUpdateAfter = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name CanAttemptUpdateAfter -ErrorAction SilentlyContinue).CanAttemptUpdateAfter } catch {}
-$HostName = (Get-CIMInstance Win32_ComputerSystem).Name 
+$HostName = (Get-CIMInstance Win32_ComputerSystem).Name
 $OSVersion = (Get-CimInstance Win32_OperatingSystem).Version
-$Manufacturer = (Get-CIMInstance Win32_ComputerSystem).Manufacturer 
-$Model = (Get-CIMInstance Win32_ComputerSystem).Model 
+$Manufacturer = (Get-CIMInstance Win32_ComputerSystem).Manufacturer
+$Model = (Get-CIMInstance Win32_ComputerSystem).Model
 $BiosSerialNumber = (Get-CIMInstance Win32_BIOS).SerialNumber
 $BiosVersion = (Get-CIMInstance Win32_BIOS).Version
 $BaseBoardManufacturer = (Get-CimInstance Win32_BaseBoard).Manufacturer
 $BaseBoardSerialNumber = (Get-CimInstance Win32_BaseBoard).SerialNumber
-$BaseBoardProduct = (Get-CIMInstance Win32_BaseBoard).Product 
+$BaseBoardProduct = (Get-CIMInstance Win32_BaseBoard).Product
 $TpmVersion = (tpmtool getdeviceinformation | Where-Object { $_ -like "*TPM-Version*" }).Split()[-1]
 
 Write-Host "`nSystem information"
@@ -440,8 +440,8 @@ if ($bootLoaderPending) {
 # SIG # Begin signature block
 # MIIvCQYJKoZIhvcNAQcCoIIu+jCCLvYCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBf5eIimGA29SV2
-# FEJaGshcbWk74aue+r13GKm/d45mDaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCkaTXp/y+DgOkR
+# GeSZGWAT7vp/PmBJk44Ij5F/UaUk2KCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -555,23 +555,23 @@ if ($bootLoaderPending) {
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBCZrE0f
-# Ps/K+93Rq1GokU4i+LADuhnCizkxXIIq9Tr8MA0GCSqGSIb3DQEBAQUABIICAESL
-# JAVfRjfLTegliR7Uk/ZtrmFIb3GIJbcTfrVsmiBM+IGlJ5KK2ner9MUiXckzt1is
-# BQYijeMSo78keLaAvxWI2qbHwIsfxPOQVBYNtrmQzHwBYlvOf/rUtgYQIisFuDi0
-# dlLjBbS/Mg0iLKFL1Nra1RxzDc8QUF0ENrOSNttPDqexT1pp8iyvU4RU11rjjpe5
-# znwHxUL4u2sH8h0vUxLicbj72Ua/H6oR8clUE3dJ+OECr9kKaEf874ondkIoZBbm
-# ZOPHdq7Qj+dPrdGfbIfEwJy0Pmjks/P00el8MKJVe1xO1GoqiCi1e1hodXm/4lIG
-# Csq1z32arMHGmO2LoeB5jQLNQViaoMF1Qa8U8m3hn4+0jg21rKH+S8JszELOJ9v8
-# uBYsoMhwOxS3Guti4oc2NDaHrZgRN//95/iAKw5UfA9H54Qj3fUUYbDFnCCempql
-# R61MoSYG+xYDPckf+PR+u5ex3xgwSE3kvrWrMfts54j6m2cN5FndQW7BVjhUr088
-# WqB610Z1t908xgLK6pnk1bOFBoWuvZi9mvD5gGDGUnSDera+mCeH9N7qp2CEFKfF
-# sN3pzMzP/7TkViDlApxPkCOL1XLeq7BZR91oX2NuAbvnU3k1vW6VlTcfUD8qcaT3
-# 5FAYsiU+WPsPDYhuaYlO3hNNJpnJnl5EjrpR1ChyoYIWuzCCFrcGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAyDqb3q
+# PC7fKGmFstaJG947b6yOdcGmJMvISMtSwKfdMA0GCSqGSIb3DQEBAQUABIICAFhZ
+# +B4wt7aZP/OO/grUYQMPJuyRcyYfWEVJ5Z1GAxpOwjyttu59HGSD/BlZY9qyclKt
+# PdbnTX2kTuOkkG2DWeekswX+4Ki9tBMQE5qjtPkkhXE0ap+XM20EMh1vMTPHDNIg
+# H2KHt5peOhP/juRU3NxEmf7AGnzNfcDVjs0GvMKyEHszGTxggIuYrqi3My5gK7ae
+# cQCSuFQsFq9x1HuxPvYJB017SjxxPuxFdXCfy9bw5aT4yjA4wvG3gabgc4SSzTLk
+# wLyMtmWZ+vu/kLv1RhYzeGi0zgTgD0QK9DcHWsVMnpqtsknoTq3jXO3XBqMqClDL
+# 24ElB1DHanUyPi+/mBOty8FAqPOSA7qqVUUS+bDC7oFLEnbm+AxpJcIG74r076F2
+# Jy9fORwVVM4VsJWZ2orTMgtLD3D2qh1vDe4RNd+obv59iBAQPb8QpfcFQ/vkSWKd
+# 9guJrKeR0Q6xvI69HYk8pi1ENbSmSYTXkzRYwBooUsED6YrnUhjPz53UHFDgeXUT
+# 6B6EBVw0po28kklyBdGeUzEcKJ0Y071/reXJdGGZ8nOv2BSasYajIFSV41B452o+
+# uKuDCuJG9DpRK66UKVhtvnzxQvaAMMC0UDqqiY5XNNlSKCV3prlqUMYL6VZBiRY0
+# ZMYdwMGJNHSBzB205aoSwqmUz6MaM2G1qbaBhaYboYIWuzCCFrcGCisGAQQBgjcD
 # AwExghanMIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEw
 # gd8GCyqGSIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCG
-# SAFlAwQCAQUABCCgxpKIFnEKFKPj8819sBuaZDgLWwhoceQs9EnxrO8ypQIULFzN
-# 92oot4ATZGQTYu79IduwMq0YDzIwMjYwNDA4MTQ1NDAzWjADAgEBoFikVjBUMQsw
+# SAFlAwQCAQUABCBnRzWoerBhOeSLCqR0UmA4/iXcY2QoUOPWSJYFxFwDAwIURE+R
+# BqMDdYVDzTH5M7I5qmh+sDYYDzIwMjYwNDE1MDYyODMxWjADAgEBoFikVjBUMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwh
 # R2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMC
 # AQICEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMC
@@ -676,17 +676,17 @@ if ($bootLoaderPending) {
 # ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJ
 # YIZIAWUDBAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZI
 # hvcNAQk0MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcN
-# AQkEMSIEIKQcd8e5GhdW7Mq3r9r4KSGTx6wUuQXhdsD0F4c0BMsmMIGwBgsqhkiG
+# AQkEMSIEIBW10oHatxc3u7X+hG29MrxM+nfqPj+dpKcqocCjvJwUMIGwBgsqhkiG
 # 9w0BCRACLzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1or
 # d69gXP0wczBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24g
 # bnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hB
-# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAcmwm
-# gpJ7d/y2Awr20MX3MV6wzp3lcc2nBWHXhRH+hewTrdoL79AR/MziCLrrUP8+8Jlk
-# hSO5lBFD1b5Yw2stOut6uyG4d++IMuWkDe5B378XG52cHAMmmtScw6NbpZ2PTJGA
-# qKlwmyeNIyqgYhe3V/79awqTqxuUlPWS30X1oa3jppyo7OzpMb7hpE9OrQX5aC02
-# iwarOar9KC5UtvRM1VknEOhd/ZhmYWeiSaY3FQWkYURMvJn7feS0CULu/DAyr0km
-# 6n3hZ5hFWHAnSc6PWJuzVOxsuMwM2IlOVxEUVAgSa/ZMlrAR2wKnkcs1ABrvmD2s
-# XD6QG18FS07o6dz+N1KA8+s6g9vLeRmYoemfOory5NCU2Q/WwlraS0GlpUyFwUAC
-# zMoFnYjLpu+/GigLN9UybPyFtSsQwn1BsblmhIa4kQB1uDuF6trZov5WDtFZwDxG
-# hg/MXtFRI7N1jFLfi4Fz9ZNFZd33IApra/mtx6S17y0i/LdCB/cnVP9CPa/s
+# Mzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGANmcP
+# 44P97DgJzrmC2oSyChsziWfxhjNK5CsXLBX8EYFEt3uZ7rWsOLhy2tL0gh2sOHSt
+# RI4W8ryo8Om6NTWS4EuTB/eLk4HegKZDBzznCEmyuyuviM2HNvMedJyq4aGbekK/
+# zE5UkTyXJRfiJPoMkv1yxGIWSVJN3vagl1gJJ3G6f344xa/hMV1JL7qmJ2fcORZl
+# Vn+PqnpS+IPaCS5cCH+xne2beqWyAqNe6PIaVgVC8RNj9NHLNxs73dgh1q9B+n0J
+# WLxbEvjG75FMxcFPfHYnBH54qBTuTxq/IbdrXaH713ZVDDP1rCfSzFay/7sA0ds/
+# vp1XpPknR6JUn0WthZ9JLdFn2rOFYiYHrn7YKFnrNH29q+5ihz0LMB1sCA+H0TyT
+# O9x/36LrsiSX7to8gy7pRYHugkPZIwEzmgfCuR0GJIgJCQFQia9wcjrQoP38SIGg
+# 8e2DYBBhtPd6qCsvLoOGYa/bKHHHc+HoZ6MZTzBX5gKcHtFlSpvD2OQtl/HC
 # SIG # End signature block
