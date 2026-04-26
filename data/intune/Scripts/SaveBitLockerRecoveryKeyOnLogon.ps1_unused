@@ -43,20 +43,20 @@ if (-Not (Test-Path $progDataScripts))
 }
 
 Write-Host "Updating scripts"
-$SaveBitlockerKeyCmdPath = "$progDataScripts\SaveBitlockerKey.cmd"
+$SaveBitlockerKeyCmdPath = "$progDataScripts\SaveBitLockerRecoveryKeyOnLogon.cmd"
 @"
 @echo off
 for /f %%a in ('powershell.exe -Command "Get-Date -format yyyyMMddHHmmssfff"') do set Timestamp=%%a
-powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -File "%~dp0SaveBitlockerKey.ps1" 2>&1 1>>C:\ProgramData\AlyaConsulting\Logs\SaveBitlockerKey.cmd-%Timestamp%.log
+powershell.exe -ExecutionPolicy Bypass -NoLogo -NonInteractive -File "%~dp0SaveBitLockerRecoveryKeyOnLogon.ps1" 2>&1 1>>C:\ProgramData\AlyaConsulting\Logs\SaveBitLockerRecoveryKeyOnLogon.cmd-%Timestamp%.log
 set RETURNCODE=%ERRORLEVEL%
-echo RETURNCODE: %RETURNCODE% 1>>C:\ProgramData\AlyaConsulting\Logs\SaveBitlockerKey.cmd-%Timestamp%.log
+echo RETURNCODE: %RETURNCODE% 1>>C:\ProgramData\AlyaConsulting\Logs\SaveBitLockerRecoveryKeyOnLogon.cmd-%Timestamp%.log
 EXIT /B %RETURNCODE%
 "@ | Set-Content -Path $SaveBitlockerKeyCmdPath -Encoding UTF8 -Force
 
-$SaveBitlockerKeyScriptPath = "$progDataScripts\SaveBitlockerKey.ps1"
+$SaveBitlockerKeyScriptPath = "$progDataScripts\SaveBitLockerRecoveryKeyOnLogon.ps1"
 $SaveBitlockerKeyScriptContent = @"
 `$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
-Start-Transcript -Path "$progDataLogs\SaveBitlockerKey.ps1-`$(`$AlyaTimeString).log" -IncludeInvocationHeader -Force
+Start-Transcript -Path "$progDataLogs\SaveBitLockerRecoveryKeyOnLogon.ps1-`$(`$AlyaTimeString).log" -IncludeInvocationHeader -Force
 `$ErrorActionPreference = "Stop"
 
 `$blDrive = `$env:SystemDrive
@@ -84,7 +84,7 @@ Stop-Transcript
 "@ | Set-Content -Path $SaveBitlockerKeyScriptPath -Encoding UTF8 -Force
 
 $taskPath = "\AlyaConsulting\"
-$taskName = "SaveBitlockerKey"
+$taskName = "SaveBitLockerRecoveryKeyOnLogon"
 $taskFullName = "$taskPath$taskName"
 $task = Get-ScheduledTask -TaskName $taskName -TaskPath $taskPath -ErrorAction SilentlyContinue
 if (-Not $task)

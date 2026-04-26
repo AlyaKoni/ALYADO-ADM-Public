@@ -14,6 +14,12 @@ sudo vi /etc/hosts
 127.0.1.1 alyainfpserv066
 
 #######################
+# Configure Timezone
+timedatectl list-timezones | grep Europe
+sudo timedatectl set-timezone Europe/Zurich
+sudo reboot
+
+#######################
 # Install Desktop and RDP
 sudo apt install xfce4 xfce4-session xrdp
 sudo systemctl enable xrdp

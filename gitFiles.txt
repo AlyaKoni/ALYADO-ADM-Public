@@ -1,3 +1,9 @@
+data/intune/Scripts/SyncTeamsMeetingBackgroundsOnLogon.ps1_unused
+data/intune/Scripts/SaveBitLockerRecoveryKeyOnLogon.ps1_unused
 gitFiles.txt
+scripts/aad/Create-RegisteredApplication.ps1
+scripts/automation/Create-AutomationAccount.ps1
 scripts/client/os/Check-CA2023Update.ps1
 scripts/client/os/Check-CA2023UpdateStandalone.ps1
+scripts/server/OpenClaw/Install-Linux.txt
+scripts/sharepoint/Configure-ServiceApplication.ps1
