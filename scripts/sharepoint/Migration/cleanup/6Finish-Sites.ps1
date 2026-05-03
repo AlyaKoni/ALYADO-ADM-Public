@@ -1,107 +1,245 @@
-﻿#Requires -Version 2.0
-
-<#
-    Copyright (c) Alya Consulting, 2019-2026
-
-    This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
-    The Alya Base Configuration is free software: you can redistribute it
-    and/or modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-    Alya Base Configuration is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of 
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
-
-    Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
-    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
-    Bedingungen der GNU General Public License, wie von der Free Software
-    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
-    veröffentlichten Version, weiter verteilen und/oder modifizieren.
-    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
-    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
-    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
-    Siehe die GNU General Public License fuer weitere Details:
-    https://www.gnu.org/licenses/gpl-3.0.txt
-
-
-    History:
-    Date       Author               Description
-    ---------- -------------------- ----------------------------
-    26.04.2023 Konrad Brunner       Initial Version
-    06.02.2026 Konrad Brunner       Added powershell documentation
-
-#>
-
-<#
-.SYNOPSIS
-Disables MSOL PowerShell access in the Microsoft 365 tenant by configuring the authorization policy through Microsoft Graph.
-
-.DESCRIPTION
-The Set-MSOLPowerShellBlocked.ps1 script connects to Microsoft Graph, verifies the tenant’s authorization policy, and ensures that the MSOL PowerShell interface is blocked to enhance security. It automatically installs and imports required Microsoft Graph modules if they are missing, establishes a connection with the necessary scopes, and updates the authorization policy when needed. All actions are logged to a timestamped transcript file in the Alya logs directory.
-
-.INPUTS
-None. The script does not accept pipeline input.
-
-.OUTPUTS
-Generates a policy status output in JSON format and creates a transcript log file recording all operations.
-
-.EXAMPLE
-PS> .\Set-MSOLPowerShellBlocked.ps1
-
-.NOTES
-Copyright          : (c) Alya Consulting, 2019-2026
-Author             : Konrad Brunner
-License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
-Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
-#>
+#Requires -Version 2.0
 
 [CmdletBinding()]
-Param(
+param(
+    [Parameter(Mandatory=$true)]
+    [string[]]$onlineSiteUrlsToFinish
 )
 
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+# Starting Finish-Sites
+Write-Host "Starting Finish-Sites"
+$root = $PSScriptRoot
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-MSOLPowerShellBlocked-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
-
-# Logins
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
-
-# =============================================================
-# O365 stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-MSOLPowerShellBlocked | O365" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Checking Msol PowerShell
-Write-Host "Checking Msol PowerShell" -ForegroundColor $CommandInfo
-$policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
-if (-Not $policy.BlockMsolPowerShell)
-{
-    Write-Warning "Msol PowerShell was enabled. Disabling it now"
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -BlockMsolPowerShell:$true
+# Starting Transscript
+Write-Host "Starting Transscript"
+$TimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+if (-not (Test-Path "$root\logs")) {
+    New-Item -Path "$root\logs" -ItemType Directory -Force | Out-Null
 }
-Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Start-Transcript -Path "$root\logs\Finish-Sites-$($TimeString).log" | Out-Null
+(Get-Date).ToString("yyyyMMddHHmmssfff")
 
-#Stopping Transscript
+# Members
+$DryRun = $false
+
+# Configurations
+. "$root\..\SharedPNP.ps1"
+if (-not (Test-Path "$root\Data")) {
+    New-Item -Path "$root\Data" -ItemType Directory -Force | Out-Null
+}
+
+# Getting mappings
+Write-Host "Getting clean mapping"
+if (-not (Test-Path "$root\..\2Migrate\Mapping\CleanMapping.xlsx")) {
+    Write-Error "Missing CleanMapping.xlsx file in $root\..\2Migrate\Mapping. Please create it first."
+    Stop-Transcript
+    exit
+}
+$CleanMappings = Import-Excel "$root\..\2Migrate\Mapping\CleanMapping.xlsx" -WorksheetName "CleanMapping" -ErrorAction Stop
+$CleanMappings += @{
+    Old = "AttrName7"
+    New = "UNUSED"
+    Type = "Metadata"
+}
+$requiredFields = @(
+    "ReqAttrName1",
+    "ReqAttrName2",
+    "ReqAttrName3",
+    "ReqAttrName4"
+)
+
+# Processing
+Write-Host "Processing"
+$allData = @()
+
+Write-Host "Login"
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+
+try {
+    $onlineSiteUrlsToFinish = $onlineSiteUrlsToFinish | Select-Object -Unique
+    foreach ($onlineSiteUrlToFinish in $onlineSiteUrlsToFinish) {
+        try {
+
+            # Cleaning map
+            Write-Host "Finishing $($onlineSiteUrlToFinish)/Documents"
+            $dstSiteUrl = $onlineSiteUrlToFinish
+            $dstListName = "Documents"
+
+            Write-Host "  Connecting site"
+            $siteCon = LoginTo-PnP -Url $onlineSiteUrlToFinish
+            
+            Write-Host "  Getting list"
+            $dstList = Get-PnPList -Connection $siteCon -Identity $dstListName
+            if (-Not $dstList) {
+                throw "Can't find destination list"
+            }
+
+            # #Checking unwanted properties
+            # Write-Host "  Checking unwanted properties"
+            # $foundProps = $false
+            # foreach($CleanMapping in $CleanMappings) {
+            #     $field = Get-PnPField -Connection $siteCon -List $dstList -Identity $CleanMapping.Old -ErrorAction SilentlyContinue
+            #     if ($field) {
+            #         $foundProps = $true
+            #         break
+            #     }
+            # }
+            # if ($foundProps -eq $false)
+            # {
+            #     Write-Host "SITE ALREADY FINISHED. Attributes not found!"
+            #     continue
+            # }
+
+            Write-Host "  Getting items"
+            $items = [System.Collections.ArrayList]@()
+            $pages = 0
+            $null = Get-PnPListItem -Connection $siteCon -List $dstList -PageSize 500 -ScriptBlock {
+                Param($objs)
+                $retries = 10
+                do {
+                    try {
+                        $pages++
+                        $objs.Context.ExecuteQuery()
+                        foreach ($obj in $objs) {
+                            $null = $items.Add($obj)
+                        }
+                        break
+                    }
+                    catch {
+                        Write-Host "Page $pages retry $($retries): $($_.Exception.Message)"
+                        Start-Sleep -Seconds 5
+                        $retries--
+                        if ($retries -lt 0) {
+                            throw
+                        }
+                    }
+                } while ($true)
+            }
+            Write-Host "    $($items.Count) items"
+
+            # Processing items
+            $hadError = $false
+            Write-Host "  Processing items"
+            foreach ($item in $items) {
+                try {
+                    $versions = Get-PnPProperty -Connection $siteCon -ClientObject $item -Property "Versions"
+                    $maxVersion = [Version]"0.0"
+                    $minVersion = [Version]"999.0"
+                    foreach($version in $versions)
+                    {
+                        if ([Version]($version.VersionLabel) -gt $maxVersion) { $maxVersion = [Version]($version.VersionLabel) }
+                        if ([Version]($version.VersionLabel) -lt $minVersion) { $minVersion = [Version]($version.VersionLabel) }
+                    }
+                    if ($maxVersion.Minor -ne 0)
+                    {
+                        $maxVersionObj = $versions | Where-Object { $_.VersionLabel -eq $maxVersion }
+                        $modBy = $maxVersionObj.FieldValues["Modified_x0020_By"]
+                        $doPublish = $true
+                        if (-Not $modBy.Contains("serviceUser@customer.onmicrosoft.com"))
+                        {
+                            $doPublish = $false
+                        }
+                        if ($doPublish)
+                        {
+                            $file = Get-PnPFile -Connection $siteCon -Url $item.FieldValues["FileRef"]
+                            $file.Publish("Published by migration from customer")
+                            $file.update()
+                            Invoke-PnPQuery -Connection $siteCon
+                        }
+                    }
+                }
+                catch {
+                    $hadError = $true
+                    $allData += [PSCustomObject]@{
+                        ResultType = "Exception"
+                        OLSite     = $SiteMapping.OLSite
+                        OLList     = $SiteMapping.OLList
+                        ItemID     = $null
+                        Data       = $_
+                    }
+                    Write-Error "Error processing $($SiteMapping.OLSite)/$($SiteMapping.OLList): $_" -ErrorAction Continue
+                }
+            }
+
+            if ($hadError -eq $false)
+            {
+
+                # Processing mandatory fields
+                Write-Host "  Processing mandatory fields"
+                foreach($requiredField in $requiredFields) {
+                    $field = Get-PnPField -Connection $siteCon -List $dstList -Identity $requiredField -ErrorAction SilentlyContinue
+                    if (-Not $field) {
+                        Write-Warning "    Field $requiredField not found"
+                        continue
+                    }
+                    if ($field.Required) {
+                        Write-Host "    Field $requiredField is already required"
+                    } else {
+                        Write-Host "    Setting field $requiredField as required"
+                        $allData += [PSCustomObject]@{
+                            ResultType = "FieldSetRequired"
+                            OLSite     = $onlineSiteUrlToFinish
+                            OLList     = "Documents"
+                            ItemID     = $null
+                            Data       = $requiredField
+                        }
+                        if (-Not $DryRun) {
+                            Set-PnPField  -Connection $siteCon -Identity $field.InternalName -List $dstList -Values @{Required=$true}
+                        }
+                    }
+                }
+
+                # Processing unwanted properties
+                Write-Host "  Processing unwanted properties"
+                foreach($CleanMapping in $CleanMappings) {
+                    $field = Get-PnPField -Connection $siteCon -List $dstList -Identity $CleanMapping.Old -ErrorAction SilentlyContinue
+                    if ($field) {
+                        $allData += [PSCustomObject]@{
+                            ResultType = "FieldRemoved"
+                            OLSite     = $onlineSiteUrlToFinish
+                            OLList     = "Documents"
+                            ItemID     = $null
+                            Data       = $CleanMapping.Old
+                        }
+                        Write-Host "    Removing field $($CleanMapping.Old)"
+                        if (-Not $DryRun) {
+                            Remove-PnPField -Connection $siteCon -Identity $CleanMapping.Old -List $dstList -Force
+                        }
+                    }
+                }
+
+            }
+
+        }
+        catch {
+            $allData += [PSCustomObject]@{
+                ResultType = "Exception"
+                OLSite     = $onlineSiteUrlToFinish
+                OLList     = "Documents"
+                ItemID     = $null
+                Data       = $_
+            }
+            Write-Error "Error processing $($onlineSiteUrlToFinish)/$("Documents"): $_" -ErrorAction Continue
+        }
+    }
+}
+catch {
+    Write-Warning "Error: $_"
+}
+
+$allData | Export-Clixml -Path "$root\data\Finish-$($TimeString).xml" -Force
+$excel = $allData | Export-Excel -Path "$root\data\Finish-$($TimeString).xlsx" -WorksheetName "Report" -TableName "Report" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru
+Close-ExcelPackage $excel
+
+# Stopping Transcript
+(Get-Date).ToString("yyyyMMddHHmmssfff")
 Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBOBajCM8JTTC/y
-# tW/8IzfOdwdEUKjcdTQ4UbUeKZ138aCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAxYiW0E+m6F/D5
+# B3FX+5t4Y97dBcZbKqz9BsTKsJ/v0qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -185,23 +323,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIM9n4+JdtmAyQNF5
-# zbXNqivv+W4zlWWL6XMd93aeDPz6MA0GCSqGSIb3DQEBAQUABIICAJ7WoHb/ciXt
-# /leIxkKPxg+Ar5j6F3t27Z67h4ycood9Z7CFCN17axCvUyAIND69s1PT6z1GXVmP
-# R4iY3TnjnxD0bh0oz6Agrn/0G9mw+ry6V4hdSm4E/rqSQE2LsoFmmu2IIn7E+J7D
-# HenauV9RMMAx7hov9NuSKyGDcQFY9WXGCCyr8qpHQFG6gBcQ8xkM6yIjhjWQOXME
-# cCN0jMrZjBDY0kvDVkRgfyuVzpc6unyBdX8JgyBHm5ZZIGoSj9pdL07//N1KV8AY
-# g+C3hGiKat3i9AilxzICs03Z1qtj4Fcr39Ip2XkHCtAQkPXUUnj9t/F+3AuwFUtZ
-# GFFuZPM0OtvWsLeh1cjCoay24pC091K1lfrcSZECPkSX2EihGczvA5qvICjR3KdP
-# scOg32wfEKygfPtrdAlDmw46KrA4gKQGNdIkjS7j6DQXoiD2PzhOL5Y3pAq1LXmR
-# CUz+rXosFPDDBfBw0B0Dm+m+Oj+VZFQi/N7fAA2ZB8em9HMQH4y6ZFCq/e3QDM6j
-# gT5BFtnLYOW2IGrf4y9sJLLwx7IfGLOM75+2AQTdBDTMOhjWRrBVwwjekFkjvoW6
-# 4lMwBxkf/oV5OsymHR1D2cVLdlkLIkshw0ojbpitIe+r4WbNpiQa7IEDCtj6pZY2
-# PeJzw5TEIXPB3UysjYSuCdJfvdls5dK8oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBCyMDDEfYxdPwEK
+# GyDY0XAdUwtp7av8Z1qot5SbwjqkMA0GCSqGSIb3DQEBAQUABIICADCg2d7XkYv/
+# ouC22GSzS0BWPoEBsX7YZvgEjZC1/goSngEkldhUSKLy5PpvEG3Ka3CF8fQTs0gD
+# W0OHjODtVLM+lQXZBS+5/wq+MtimCt/CosXFrxF0anMi85pcNZQofXwdsxV3sQFE
+# wbSznGvIXANX6pV0Xjb8ZH280xTi9VJExc071TzdtaGj+c//jZ3BQ+U9Ix1ytsgx
+# /voE5AtWvp2DEOyjvwG0dtmuU0sw1uArdIjK7+xoKDn9ON7WV5WmQitUIN0viOmv
+# IcuVYG5pAZNRB5DgQcmvQfJbxu8OXvowTAAhuJJdcE6FceJhjPc5noHWDJOrYOfE
+# ijIGFfwfdAz3RcRuQ+JQICFzWlA3rps4yNxWRXmPxUpC8l1uWW+T5KirHLX0+Xo6
+# FODE2J9AjyLAg7UGuNhH63A4e0KAPi0hSwMqP9Rr1RsP7XUA+dTy2NofcY187qOU
+# mMZc1DR8T/KyGTHmGL36muHi4F7HLLKBzpF58ypKH6WHWlzd+AtfsX1mLIS8vSz0
+# rAC0xP6Ozfk8ukIa1Ti50bNSAiHk/KYVAdGaNM6LGq8LoZbX3NZhpcp4TOS3IoZG
+# sxm51n6+9yDE2QYefaJUVclBYHEec9mncywdO/rQFan5k64Q3cBYNvo+QNDhlAD/
+# rc/10HWEeUXhRzlPIvBle4/nFh4vF4cZoYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCF8pMJ6lwLanYhJvCCwXQeQCxlHIwzYZAwrT82IzHzIwIUQ8Myz6flW6Z7
-# aVYZOkcc80cHEG8YDzIwMjYwMjEwMTE1NzM4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCD6Y5K43hlf53UhKF4L8iOeZsz95aR+wR91TQ+V2RjmEgIUICeSTjPu5UqW
+# 9VAun/WZAxnAQK4YDzIwMjYwMjI0MTg0NTAzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -306,17 +444,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDyKxEEFgUe/hp1wPl+VrcwupdhppQ8xsVKLwdSHF0GyMIGwBgsqhkiG9w0BCRAC
+# IDtLcojOLyLQIRAO1Vr7JnJ/+KJv6tvIo9W7lHCspu8GMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZQARfsgi7wbi
-# SPsrrS+lwo5VAPoMb6DJMlqQK49i3KS/0rAq24Rcb/k6rNtjBx/ObKHK+TJv3+x1
-# 3u7PpK3ockbyyHjh4W0p/0rCiVdonTyuGZb/YQnpMt16o+MndCWZhcKCEoUjIAdf
-# +EHpZ9rS+KifMZ2C6/9uZDWTTnugBgEZnMIPdDZ9RZOlPWFONhQ5tBfnynZc8zfF
-# PSUHLUh4ee7YHOlD1MX2GJg4AbW1R3d1LO7/3nlIumXbTJoM7VG9AF3KFyHWsQWL
-# XhDzalpU5pBR1DESXXYpy15yxTdQyyiRK0EbvCD8ScoNjMYW710ZYfdG5/jn5jqi
-# TYj74DiiDptK3JGItM6lqxiJARrUQB/+SeWBr4FjUlSV4rOtCBwCYxAWts1xkPS1
-# 12xZ8pmEnOCpqkc9VI7lUtv29MwO9xEJSN++91y1l+r6lRuKIBPyn797eNy77QWq
-# j674JB3mG37jpJHNwEvAKBQ3PpBxqAh2eSWm3k/0gzgw7bWmNTAH
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAb4I202Wr2KzU
+# y7izyaI6xdbcURBAcMFKRwSHxv8Onkzkomawj+gG9SvYQumYTKVsvONEV5uC4kaw
+# LvMKYq5eVPeflc7yNQ1k9F+kBo8oDBvsyG+Is6rICW6pKrEloAspG7Bx9Z5MCHWO
+# hYTIlgYWCShhwDYQl6L5Y9NbgxCgMX6TaoVwoMla3bn15M/YCR/V8wQG4lCwv/2f
+# JOJk4t+bamHyAWOaaiYcOS+BxjesLCmGd/Qo8JaKmvyfiKqzJz2Bd0tPXr9tjvTX
+# P23XccUvJC0GyfnZWUaex52R5BP/xbldGZc4fUowPMfJMY5lnA6BpWp9fXhXQ6/x
+# i6AGAF70DLNXxX0zcDu/i3822bay7m4p8DnSHlIyteNY20YxpJnUress7GLVz5mF
+# B1YeMdP3ksXX8Xb4MMSmRxhE2qFGOoThPb/Arz90Y9xD+cxsf/BR4IrAEOTMUU/L
+# KWA/ukkxYLnnqc7a8nRCed1UwlLrj70qXZrbtwevKoyDxVDdwIQJ
 # SIG # End signature block

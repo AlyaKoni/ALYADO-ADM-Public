@@ -1,107 +1,100 @@
 ﻿#Requires -Version 2.0
 
-<#
-    Copyright (c) Alya Consulting, 2019-2026
+# Starting Get-TaxonomyOnlineAsCsv
+Write-Host "Starting Get-TaxonomyOnlineAsCsv"
+$root = $PSScriptRoot
 
-    This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
-    The Alya Base Configuration is free software: you can redistribute it
-    and/or modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-    Alya Base Configuration is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of 
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
-
-    Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
-    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
-    Bedingungen der GNU General Public License, wie von der Free Software
-    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
-    veröffentlichten Version, weiter verteilen und/oder modifizieren.
-    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
-    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
-    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
-    Siehe die GNU General Public License fuer weitere Details:
-    https://www.gnu.org/licenses/gpl-3.0.txt
-
-
-    History:
-    Date       Author               Description
-    ---------- -------------------- ----------------------------
-    26.04.2023 Konrad Brunner       Initial Version
-    06.02.2026 Konrad Brunner       Added powershell documentation
-
-#>
-
-<#
-.SYNOPSIS
-Disables MSOL PowerShell access in the Microsoft 365 tenant by configuring the authorization policy through Microsoft Graph.
-
-.DESCRIPTION
-The Set-MSOLPowerShellBlocked.ps1 script connects to Microsoft Graph, verifies the tenant’s authorization policy, and ensures that the MSOL PowerShell interface is blocked to enhance security. It automatically installs and imports required Microsoft Graph modules if they are missing, establishes a connection with the necessary scopes, and updates the authorization policy when needed. All actions are logged to a timestamped transcript file in the Alya logs directory.
-
-.INPUTS
-None. The script does not accept pipeline input.
-
-.OUTPUTS
-Generates a policy status output in JSON format and creates a transcript log file recording all operations.
-
-.EXAMPLE
-PS> .\Set-MSOLPowerShellBlocked.ps1
-
-.NOTES
-Copyright          : (c) Alya Consulting, 2019-2026
-Author             : Konrad Brunner
-License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
-Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
-#>
-
-[CmdletBinding()]
-Param(
-)
-
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
-
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-MSOLPowerShellBlocked-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
-
-# Logins
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
-
-# =============================================================
-# O365 stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-MSOLPowerShellBlocked | O365" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Checking Msol PowerShell
-Write-Host "Checking Msol PowerShell" -ForegroundColor $CommandInfo
-$policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
-if (-Not $policy.BlockMsolPowerShell)
-{
-    Write-Warning "Msol PowerShell was enabled. Disabling it now"
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -BlockMsolPowerShell:$true
+# Starting Transscript
+Write-Host "Starting Transscript"
+$TimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+if (-not (Test-Path "$root\logs")) {
+    New-Item -Path "$root\logs" -ItemType Directory -Force | Out-Null
 }
-Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+Start-Transcript -Path "$root\logs\Get-TaxonomyOnlineAsCsv-$($TimeString).log" | Out-Null
+(Get-Date).ToString("yyyyMMddHHmmssfff")
 
-#Stopping Transscript
+# Configurations
+. "$root\..\..\SharedPNP.ps1"
+if (-not (Test-Path "$root\data")) {
+    New-Item -Path "$root\data" -ItemType Directory -Force | Out-Null
+}
+$saveDir = "$root\data"
+$currentTime= $(get-date).ToString("yyyyMMddHHmmss")
+$FilePath=".\TermStoreReport-"+$currentTime+".csv"  
+
+# Functions
+function ExportTerms
+{  
+    try  
+    {  
+        if($groups.Length -eq 0){
+            $groups = @(Get-PnPTermGroup -Connection $adminCon | ForEach-Object{ $_.Name })
+        }
+        # Loop through the term groups
+        foreach ($termGroup in $groups) {
+            try {
+                $termGroupName = $termGroup
+                Write-Host "Exporting terms from $termGroup"
+                $termGroupObj = Get-PnPTermGroup -Connection $adminCon -Identity $termGroupName -Includes TermSets
+                foreach ($termSet in $termGroupObj.TermSets) {
+                    $termSetObjs = Get-PnPTerm -Connection $adminCon -TermGroup $termGroupName -TermSet $termSet -IncludeChildTerms -IncludeDeprecated -Includes Labels,Terms
+                    $terms = [System.Collections.Queue]::new()
+                    foreach($term in $termSetObjs) {
+                        $terms.Enqueue(@{
+                            Term = $term
+                            Parent = $null
+                        })
+                    }
+                    while ($terms.Count -gt 0)
+                    {
+                        $entry = $terms.Dequeue()
+                        $current = $entry.Term
+                        $parent = $entry.Parent
+                        Add-Content $FilePath "`"$($termGroupObj.Name)`",`"$($termGroupObj.Id)`",`"$($termSet.Name)`",`"$($termSet.Id)`",`"$($current.Name)`",`"$($current.Id)`",`"$($parent.Name)`",`"$($parent.Id)`"" -Encoding utf8BOM
+                        foreach ($child in $current.Terms) {
+                            $terms.Enqueue(@{
+                                Term = $child
+                                Parent = $current
+                            })
+                        }
+                    }
+                }
+            }
+            catch {
+                Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            }
+            
+        }
+     }  
+     catch [Exception]  
+     {  
+        $ErrorMessage = $_.Exception.Message         
+        Write-Host "Error: $ErrorMessage" -ForegroundColor Red          
+     }  
+}
+
+# Processing
+Write-Host "Processing"
+
+try {
+    $adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+    Add-Content $FilePath "Term group name, Term group ID, Term set name, Term set ID, Term name, Term ID, Parent Term name, Parent Term ID" -Encoding utf8BOM
+    ExportTerms
+}
+catch {
+    $ErrorMessage = $_.Exception.Message         
+    Write-Host "Error: $ErrorMessage" -ForegroundColor Red          
+}
+
+# Stopping Transcript
+(Get-Date).ToString("yyyyMMddHHmmssfff")
 Stop-Transcript
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBOBajCM8JTTC/y
-# tW/8IzfOdwdEUKjcdTQ4UbUeKZ138aCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA8ENYc4ZHx5pPt
+# EskvlbHOEvxuxXFQoGLbMve7ysuT1qCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -185,23 +178,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIM9n4+JdtmAyQNF5
-# zbXNqivv+W4zlWWL6XMd93aeDPz6MA0GCSqGSIb3DQEBAQUABIICAJ7WoHb/ciXt
-# /leIxkKPxg+Ar5j6F3t27Z67h4ycood9Z7CFCN17axCvUyAIND69s1PT6z1GXVmP
-# R4iY3TnjnxD0bh0oz6Agrn/0G9mw+ry6V4hdSm4E/rqSQE2LsoFmmu2IIn7E+J7D
-# HenauV9RMMAx7hov9NuSKyGDcQFY9WXGCCyr8qpHQFG6gBcQ8xkM6yIjhjWQOXME
-# cCN0jMrZjBDY0kvDVkRgfyuVzpc6unyBdX8JgyBHm5ZZIGoSj9pdL07//N1KV8AY
-# g+C3hGiKat3i9AilxzICs03Z1qtj4Fcr39Ip2XkHCtAQkPXUUnj9t/F+3AuwFUtZ
-# GFFuZPM0OtvWsLeh1cjCoay24pC091K1lfrcSZECPkSX2EihGczvA5qvICjR3KdP
-# scOg32wfEKygfPtrdAlDmw46KrA4gKQGNdIkjS7j6DQXoiD2PzhOL5Y3pAq1LXmR
-# CUz+rXosFPDDBfBw0B0Dm+m+Oj+VZFQi/N7fAA2ZB8em9HMQH4y6ZFCq/e3QDM6j
-# gT5BFtnLYOW2IGrf4y9sJLLwx7IfGLOM75+2AQTdBDTMOhjWRrBVwwjekFkjvoW6
-# 4lMwBxkf/oV5OsymHR1D2cVLdlkLIkshw0ojbpitIe+r4WbNpiQa7IEDCtj6pZY2
-# PeJzw5TEIXPB3UysjYSuCdJfvdls5dK8oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIC8qDvyFM/22k5Yr
+# ZGJD48Z8NBYcaXWU5ooTw/CZJs3JMA0GCSqGSIb3DQEBAQUABIICAJVwPJEP5xgW
+# fim0wsmvJazy6pfukDNmXYHWgq2vGOO5oXAX1AXiOTBiHEnCE825AST4MmSJsN8w
+# yg8XBy4kbLidLaeHliLEd0BJcWgVdrUXYIJHPVpG26rJKOpNXgBh6lqQb2xtOCWO
+# IMXk4BIyKGgZ37gy9smpILTjW1s8qIO93f+ol45bgXq/i3LQ2uFVwL1Z8ou47LXx
+# /xE4D760/ERjp2q3AX9BzVDsPj51RhZmPJuMBRgaeWiJT3G7Lnlr5ngt/4mnWf1I
+# +vZRvhNibSD7/hCyzptp5L2TFlQjYPO97yQyd0JI47Z7xAhB6e2ZcQBVTbsMUTjc
+# FuPthM+YrLxweWp48DKDewZ7ov2MMnpZK9lvxv8QFKLMPbxyn7rbVoXg3OHzYxtx
+# 6zkPljAoYsNnixxuMvaNHRLbN6mDf5s3zBdcnFvkcyiIU0tBpCkBP8Kf8Sh3FjL7
+# SA/HOW9o87wVyznZaeWRDE2thCwZdBKIHX4NZbdCvwFOp7uDK7CKUqxn/5U+t3Oj
+# N95SNcF8Ulqw+7sINRrz8l9LKOZ2Kzfzf4Cuv31DYAeHNbp3Nxbx4rRnOyJ4005e
+# sIoLeucaZnE7Od6sVJvnWwHA03r1qBmprrP3iqRYPjtZ5e9LqP27nOzzk9UdRt8r
+# anjfeEvQtbZhrW8AE6gVu+HBr9TkE9FioYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCF8pMJ6lwLanYhJvCCwXQeQCxlHIwzYZAwrT82IzHzIwIUQ8Myz6flW6Z7
-# aVYZOkcc80cHEG8YDzIwMjYwMjEwMTE1NzM4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBnp5rAFEcxxqvLJNc6RQckJrCLZd8QHDywBSwufAd6KwIUBt+VMraAGkTs
+# lcuheoxLGvsFeCQYDzIwMjYwMjI0MDkxNjIzWjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -306,17 +299,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDyKxEEFgUe/hp1wPl+VrcwupdhppQ8xsVKLwdSHF0GyMIGwBgsqhkiG9w0BCRAC
+# IAXj2MmpMMzPVgINt4WryWwsesQ1yaM7zwpkQbuSsaJDMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZQARfsgi7wbi
-# SPsrrS+lwo5VAPoMb6DJMlqQK49i3KS/0rAq24Rcb/k6rNtjBx/ObKHK+TJv3+x1
-# 3u7PpK3ockbyyHjh4W0p/0rCiVdonTyuGZb/YQnpMt16o+MndCWZhcKCEoUjIAdf
-# +EHpZ9rS+KifMZ2C6/9uZDWTTnugBgEZnMIPdDZ9RZOlPWFONhQ5tBfnynZc8zfF
-# PSUHLUh4ee7YHOlD1MX2GJg4AbW1R3d1LO7/3nlIumXbTJoM7VG9AF3KFyHWsQWL
-# XhDzalpU5pBR1DESXXYpy15yxTdQyyiRK0EbvCD8ScoNjMYW710ZYfdG5/jn5jqi
-# TYj74DiiDptK3JGItM6lqxiJARrUQB/+SeWBr4FjUlSV4rOtCBwCYxAWts1xkPS1
-# 12xZ8pmEnOCpqkc9VI7lUtv29MwO9xEJSN++91y1l+r6lRuKIBPyn797eNy77QWq
-# j674JB3mG37jpJHNwEvAKBQ3PpBxqAh2eSWm3k/0gzgw7bWmNTAH
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAOvZdbGkNAVG7
+# 1az/JReZeJDTXP2Gs8ySecPAih4K6LPYpi1Ri6Y003pzr/8Si1DjB6bR5RLwZ0Lj
+# 64L/kaqLab9pbDIgo1LwNTzC+WWOfxh8MalER86WP7QfC2HnJxIlnd/7z1fAYkUM
+# 2yNf/k5/hOsRs0X1DAUL7CAAiloIv+fjhi7zbzthTL+s5wBmBA6JGFwa0xlPHJxE
+# LFWICEdeoyUai3FBgf9/QeNU61AqYBowgdFDKrx8/RBqsI9CmI8yaNaZzCLTfhiy
+# UzZG/fHnYkgsdfcpzCeZr215HixFkjnqFs0d+k84179yLnVGgPS0k71FiqYWyE4t
+# HQvYFpz8CoJfhdcvmSOSVFT8sWURz6ZsqDqiNwBco03vplCw+tfWoaKy00GEDLDW
+# tIn3cmyQX93Rep5GF+XPcrioUL2FSrR/MVpjJQ3YkkhSp/goCCQRtONFrqXXkGJn
+# 34uU+4CqK2rIIEsrWaX5goyMtoIW7HPHepPasHKQ8FFUlVkKW0Ot
 # SIG # End signature block

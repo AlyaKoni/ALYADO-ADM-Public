@@ -1,107 +1,28 @@
 ﻿#Requires -Version 2.0
+Write-Host "Load shared stuff"
 
-<#
-    Copyright (c) Alya Consulting, 2019-2026
-
-    This file is part of the Alya Base Configuration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
-    The Alya Base Configuration is free software: you can redistribute it
-    and/or modify it under the terms of the GNU General Public License as
-    published by the Free Software Foundation, either version 3 of the
-    License, or (at your option) any later version.
-    Alya Base Configuration is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of 
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
-    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
-
-    Diese Datei ist Teil der Alya Basis Konfiguration.
-    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
-    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
-    Bedingungen der GNU General Public License, wie von der Free Software
-    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
-    veröffentlichten Version, weiter verteilen und/oder modifizieren.
-    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
-    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
-    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
-    Siehe die GNU General Public License fuer weitere Details:
-    https://www.gnu.org/licenses/gpl-3.0.txt
-
-
-    History:
-    Date       Author               Description
-    ---------- -------------------- ----------------------------
-    26.04.2023 Konrad Brunner       Initial Version
-    06.02.2026 Konrad Brunner       Added powershell documentation
-
-#>
-
-<#
-.SYNOPSIS
-Disables MSOL PowerShell access in the Microsoft 365 tenant by configuring the authorization policy through Microsoft Graph.
-
-.DESCRIPTION
-The Set-MSOLPowerShellBlocked.ps1 script connects to Microsoft Graph, verifies the tenant’s authorization policy, and ensures that the MSOL PowerShell interface is blocked to enhance security. It automatically installs and imports required Microsoft Graph modules if they are missing, establishes a connection with the necessary scopes, and updates the authorization policy when needed. All actions are logged to a timestamped transcript file in the Alya logs directory.
-
-.INPUTS
-None. The script does not accept pipeline input.
-
-.OUTPUTS
-Generates a policy status output in JSON format and creates a transcript log file recording all operations.
-
-.EXAMPLE
-PS> .\Set-MSOLPowerShellBlocked.ps1
-
-.NOTES
-Copyright          : (c) Alya Consulting, 2019-2026
-Author             : Konrad Brunner
-License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
-Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
-#>
-
-[CmdletBinding()]
-Param(
-)
-
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
-
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-MSOLPowerShellBlocked-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
-
-# Logins
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
-
-# =============================================================
-# O365 stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-MSOLPowerShellBlocked | O365" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Checking Msol PowerShell
-Write-Host "Checking Msol PowerShell" -ForegroundColor $CommandInfo
-$policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
-if (-Not $policy.BlockMsolPowerShell)
-{
-    Write-Warning "Msol PowerShell was enabled. Disabling it now"
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -BlockMsolPowerShell:$true
+# Configurations
+Write-Host "Setting Configurations"
+[System.Net.ServicePointManager]::MaxServicePointIdleTime = 600000
+try {
+    [Net.ServicePointManager]::SecurityProtocol = @([Net.SecurityProtocolType]::Tls12, [Net.SecurityProtocolType]::Tls11, [Net.SecurityProtocolType]::Tls)
 }
-Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+catch {
+    Write-Warning $_.Exception.Message
+}
+$proxy = [System.Net.WebRequest]::GetSystemWebProxy()
+$proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 
-#Stopping Transscript
-Stop-Transcript
+# Sharegate setup
+Write-Host "Sharegate setup"
+$env:Path = "C:\Program Files (x86)\Sharegate;$($env:Path)"
+Import-Module Sharegate
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBOBajCM8JTTC/y
-# tW/8IzfOdwdEUKjcdTQ4UbUeKZ138aCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCceQsV7opkDi+y
+# t1t0uATVBOcZcOSuWMu8Rwk9OtARzaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -185,23 +106,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIM9n4+JdtmAyQNF5
-# zbXNqivv+W4zlWWL6XMd93aeDPz6MA0GCSqGSIb3DQEBAQUABIICAJ7WoHb/ciXt
-# /leIxkKPxg+Ar5j6F3t27Z67h4ycood9Z7CFCN17axCvUyAIND69s1PT6z1GXVmP
-# R4iY3TnjnxD0bh0oz6Agrn/0G9mw+ry6V4hdSm4E/rqSQE2LsoFmmu2IIn7E+J7D
-# HenauV9RMMAx7hov9NuSKyGDcQFY9WXGCCyr8qpHQFG6gBcQ8xkM6yIjhjWQOXME
-# cCN0jMrZjBDY0kvDVkRgfyuVzpc6unyBdX8JgyBHm5ZZIGoSj9pdL07//N1KV8AY
-# g+C3hGiKat3i9AilxzICs03Z1qtj4Fcr39Ip2XkHCtAQkPXUUnj9t/F+3AuwFUtZ
-# GFFuZPM0OtvWsLeh1cjCoay24pC091K1lfrcSZECPkSX2EihGczvA5qvICjR3KdP
-# scOg32wfEKygfPtrdAlDmw46KrA4gKQGNdIkjS7j6DQXoiD2PzhOL5Y3pAq1LXmR
-# CUz+rXosFPDDBfBw0B0Dm+m+Oj+VZFQi/N7fAA2ZB8em9HMQH4y6ZFCq/e3QDM6j
-# gT5BFtnLYOW2IGrf4y9sJLLwx7IfGLOM75+2AQTdBDTMOhjWRrBVwwjekFkjvoW6
-# 4lMwBxkf/oV5OsymHR1D2cVLdlkLIkshw0ojbpitIe+r4WbNpiQa7IEDCtj6pZY2
-# PeJzw5TEIXPB3UysjYSuCdJfvdls5dK8oYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIP/qAUJuJgXb0yD/
+# oE5ENRlKbEO0N/NbJAadNYWLUgUmMA0GCSqGSIb3DQEBAQUABIICAI3+dPLPog6Z
+# c0xe+n/50KRwQB59krEplpVO8Z6f45ZueAZYm9lDSc5TD0scw1tKanfS2Azqneeh
+# X5RhU3r4NaGjgaO05kxX6ikxmblhN0VbBXNMVWqq53wZ0NJArKWbvYcK48CHUCtl
+# CmIBbwORhnnZN4h46ShXKoIysFrBCCsmvZfetleEI3l2ZknnqqFtFQDmYNLuNLrA
+# K0p7qMlQpiGxfHbygSayJ9uzOCkLSgEbIpdkKJ9WEPaMyN5IpUpTMcboB6qjm5YA
+# QaH04BK+b+eycG7DHDkOqdL1g8CIRRr1JBoPIPCl8sf0MWGMxjL4WZdRwQdlSmeP
+# ir+87LuboAoJMAjQ2CfEBGh4qewjB7i8EmOjln48mXcCU5avCGEXseCsJBatAKY4
+# 7GF09w/U5z0HaonF4rJbQkxDa5T3HRNg1SqFxgvVfH47yRmj8Q97BNoB09r5+wkB
+# bfkGtzL2JfwZdpPUTtwgkTifKsnbl32yF9bUgJtB2BmSci7gd9iRqiwQhMy7SM9w
+# JER0GS+i1I28CYd2SCSyVkVZ7H+03+knxvsHk07IHL/PKcA2zRoePrQP+L+fqIRn
+# T9ZuLOhBEcBG0NnguzPiaMshLWOg1bIVPT+RUeBwFmKxdDmmekk2Ki6duh6uSZAS
+# XuiybcmIMvc8pxadOPPned8E5ow7XAQ3oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCF8pMJ6lwLanYhJvCCwXQeQCxlHIwzYZAwrT82IzHzIwIUQ8Myz6flW6Z7
-# aVYZOkcc80cHEG8YDzIwMjYwMjEwMTE1NzM4WjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCCr9RJYuzahagSVDIlHGUdLHNZo4Bnc+heyDytkazaOqAIUe74NSX+3PY3n
+# t4VAtdBDneHJvpwYDzIwMjYwMjE3MTQ1NjQ2WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -306,17 +227,17 @@ Stop-Transcript
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IDyKxEEFgUe/hp1wPl+VrcwupdhppQ8xsVKLwdSHF0GyMIGwBgsqhkiG9w0BCRAC
+# IL1mQUVHG4P4wYclfyKR2PbAf9ip0sCAKuJVvcMNetTHMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAZQARfsgi7wbi
-# SPsrrS+lwo5VAPoMb6DJMlqQK49i3KS/0rAq24Rcb/k6rNtjBx/ObKHK+TJv3+x1
-# 3u7PpK3ockbyyHjh4W0p/0rCiVdonTyuGZb/YQnpMt16o+MndCWZhcKCEoUjIAdf
-# +EHpZ9rS+KifMZ2C6/9uZDWTTnugBgEZnMIPdDZ9RZOlPWFONhQ5tBfnynZc8zfF
-# PSUHLUh4ee7YHOlD1MX2GJg4AbW1R3d1LO7/3nlIumXbTJoM7VG9AF3KFyHWsQWL
-# XhDzalpU5pBR1DESXXYpy15yxTdQyyiRK0EbvCD8ScoNjMYW710ZYfdG5/jn5jqi
-# TYj74DiiDptK3JGItM6lqxiJARrUQB/+SeWBr4FjUlSV4rOtCBwCYxAWts1xkPS1
-# 12xZ8pmEnOCpqkc9VI7lUtv29MwO9xEJSN++91y1l+r6lRuKIBPyn797eNy77QWq
-# j674JB3mG37jpJHNwEvAKBQ3PpBxqAh2eSWm3k/0gzgw7bWmNTAH
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAPvNyYMNNbfRL
+# vRGqfeF+7C4rHy+5SYaX+Xxu/lac+WrEcidjSCp54Bn8+57JcPM8AC2UVIvONLdW
+# mH81hwGExj0/NMWyKqfFZWjMq4Q0/5z06vCNY8IPAMxi2aD9cOwwaUZHkCY2CnFz
+# 5PEyATuldyB24tbHp6+AYTne8ZkFPRONrfoYYj3oEyTDCQ6cYnIotv/rzw9Mmh0Q
+# yCpdIBhaLsdQuvZoGDqlVi/3RUOGTWbiJhzovrIzWwCArYDCvgGi5mm5B9m6rBqQ
+# NfYIQXWVtrcZIWIndAGH7gkSL2Bfv4ko2Y65UoV3kMaPs97w7eEHjNeJ73UNy1wJ
+# 7OdCyM9A67AoAw6bs2TjqrcVGyyhvBRMdZlUseXcZqjsFj6IZKsbAzCGQhTGb7x9
+# Yn41MQg4fewW3n6CWZVbFbCwQWZWfyFv9t/vz4/cFOb/YJQh2ysJOskCIGTtEjvS
+# Zqd2f1nYDLWA3RyVPy7e1TeUmF76alk1qwq/3ly5Dai9Kd5RH/7F
 # SIG # End signature block

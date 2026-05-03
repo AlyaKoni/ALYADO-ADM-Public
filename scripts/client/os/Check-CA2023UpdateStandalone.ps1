@@ -37,6 +37,13 @@
 
 #>
 
+[CmdletBinding()]
+param (
+	$doLogging = $true,
+	$logDir = "$PSScriptRoot\logs",
+	$nonInteractive = $false
+)
+
 <#
 .SYNOPSIS
 Checks and validates installation and status of the Windows UEFI Secure Boot CA 2023 update.
@@ -61,6 +68,18 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
+$AlyaTimeString = Get-Date -Format "yyyyMMddHHmmss"
+if ($doLogging)
+{
+	if (-Not (Test-Path -Path $logDir))
+	{
+		New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+	}
+
+	#Starting Transcript
+	Start-Transcript -Path "$($logDir)\Check-CA2023UpdateStandalone-$($AlyaTimeString).log" | Out-Null
+}
+
 #Checking system information and prerequisites
 $isSecureBootEnabled = Confirm-SecureBootUEFI
 if (-Not $isSecureBootEnabled)
@@ -81,7 +100,10 @@ if (-Not $update)
 }
 
 Write-Warning "Please ensure that you have backed up your BitLocker recovery keys before proceeding, as Secure Boot updates can sometimes lead to BitLocker recovery mode on next reboot."
-pause
+if (-Not $nonInteractive)
+{
+	pause
+}
 
 $UEFISecureBootEnabled = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\State -Name UEFISecureBootEnabled -ErrorAction SilentlyContinue).UEFISecureBootEnabled } catch {}
 $HighConfidenceOptOut = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot -Name HighConfidenceOptOut -ErrorAction SilentlyContinue).HighConfidenceOptOut } catch {}
@@ -157,19 +179,25 @@ if ($UefiPartitionSize -lt 500MB)
 	Write-Warning "==============================================="
 	Write-Warning "Ihre UEFI-Partition hat nur $($UefiPartitionSize)MB. Empfohlen sind 500MB. Dies kann zu Problemen bei UEFI-Updates führen!"
 	Write-Host "Tipp:"
-	Write-Host "  Um Ihre UEFI-Partition zu vergrößern, starten Sie diskmgmt.msc und verkleinern Sie Ihre Hauptpartition um die benötigte Größe."
+	Write-Host "  Um Ihre UEFI-Partition zu vergrössern, starten Sie diskmgmt.msc und verkleinern Sie Ihre Hauptpartition um die benötigte Grösse."
 	Write-Host "  Deaktivieren Sie BitLocker auf der Hauptpartition."
 	Write-Host "  Laden Sie ein Partitionswerkzeug wie https://www.resize-c.com/ herunter."
 	Write-Host "  Verschieben Sie die Hauptpartition, um freien Speicherplatz direkt neben der UEFI-Partition zu schaffen."
-	Write-Host "  Vergrößern Sie die UEFI-Partition."
-	pause
+	Write-Host "  Vergrössern Sie die UEFI-Partition."
+	if (-Not $nonInteractive)
+	{
+		pause
+	}
 }
 if ($Manufacturer -like "*DELL*")
 {
 	Write-Warning "`nBekannte Hersteller-Ausnahmen"
 	Write-Warning "==============================================="
 	Write-Warning "DELL-System erkannt - bitte überprüfen Sie die DELL-Support-Website auf die neuesten UEFI-Firmware-Updates und wenden Sie diese bei Bedarf an. DELL ist dafür bekannt, dass es bei einigen Modellen Probleme mit dem Windows UEFI CA 2023-Update gibt, und möglicherweise ist ein Firmware-Update erforderlich, um Kompatibilitätsprobleme zu beheben. Es ist auch möglich, dass einige Einstellungen im BIOS konfiguriert werden müssen."
-	pause
+	if (-Not $nonInteractive)
+	{
+		pause
+	}
 }
 if ($Manufacturer -like "*LENOVO*")
 {
@@ -177,7 +205,10 @@ if ($Manufacturer -like "*LENOVO*")
 	Write-Warning "==============================================="
 	Write-Warning "LENOVO-System erkannt - bitte überprüfen Sie die LENOVO-Support-Website auf die neuesten UEFI-Firmware-Updates und wenden Sie diese bei Bedarf an. LENOVO ist dafür bekannt, dass es bei einigen Modellen Probleme mit dem Windows UEFI CA 2023-Update gibt, und möglicherweise ist ein Firmware-Update erforderlich, um Kompatibilitätsprobleme zu beheben. Es ist auch möglich, dass einige Einstellungen im BIOS konfiguriert werden müssen."
 	Write-Warning "Weitere Details: https://support.lenovo.com/bg/en/solutions/ht518129"
-	pause
+	if (-Not $nonInteractive)
+	{
+		pause
+	}
 }
 if ($Manufacturer -like "*HP*")
 {
@@ -185,7 +216,10 @@ if ($Manufacturer -like "*HP*")
 	Write-Warning "==============================================="
 	Write-Warning "HP-System erkannt - bitte überprüfen Sie die HP-Support-Website auf die neuesten UEFI-Firmware-Updates und wenden Sie diese bei Bedarf an. HP ist dafür bekannt, dass es bei einigen Modellen Probleme mit dem Windows UEFI CA 2023-Update gibt, und möglicherweise ist ein Firmware-Update erforderlich, um Kompatibilitätsprobleme zu beheben. Es ist auch möglich, dass einige Einstellungen im BIOS konfiguriert werden müssen."
 	Write-Warning "Weitere Details: https://support.hp.com/ch-de/document/ish_13070353-13070429-16"
-	pause
+	if (-Not $nonInteractive)
+	{
+		pause
+	}
 }
 if ($OSArchitecture -like "*ARM64*")
 {
@@ -193,7 +227,10 @@ if ($OSArchitecture -like "*ARM64*")
 	Write-Warning "==============================================="
 	Write-Warning "ARM64-System erkannt – bitte prüfen Sie die Support-Seite Ihres Geräteherstellers auf aktuelle UEFI-Firmware-Updates und installieren Sie diese, falls verfügbar. Bei ARM64-Geräten sind Probleme mit dem Windows UEFI CA 2023-Update bekannt. Möglicherweise ist ein Firmware-Update erforderlich, um Kompatibilitätsprobleme zu beheben. Es kann auch sein, dass bestimmte Einstellungen im BIOS konfiguriert werden müssen."
 	Write-Warning "Führen Sie dieses Skript nicht auf Qualcomm-basierten Geräten aus!"
-	pause
+	if (-Not $nonInteractive)
+	{
+		pause
+	}
 }
 
 Write-Host "`nChecking system events"
@@ -319,7 +356,7 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 	else
 	{
 		$answer = "n"
-		if ($bootLoaderPending)
+		if ($bootLoaderPending -and -Not $nonInteractive)
 		{
 			Write-Warning ("`n" + $errorMsg)
 			Write-Warning "Looks like the boot loader has not been updated yet."
@@ -333,7 +370,7 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 			exit 1
 		}
 		$answer = "n"
-		if ($zertPending)
+		if ($zertPending -and -Not $nonInteractive)
 		{
 			$zertRetry = $true
 			Write-Warning ("`n" + $errorMsg)
@@ -341,7 +378,7 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 			Write-Warning "This can happen on systems where the BIOS is blocking the update."
 			Write-Warning "Please check your BIOS before you try again."
 			$answer = Read-Host -Prompt "Try now again to update the certificates? (y/n)"
-		} elseif ($bootLoaderPending)
+		} elseif ($bootLoaderPending -and -Not $nonInteractive)
 		{
 			$zertRetry = $true
 			Write-Warning ("`n" + $errorMsg)
@@ -415,7 +452,7 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 	else
 	{
 		$answer = "n"
-		if ($zertPending)
+		if ($zertPending -and -Not $nonInteractive)
 		{
 			$zertRetry = $true
 			Write-Warning ("`n" + $errorMsg)
@@ -426,9 +463,9 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		}
 		if ($answer.ToLower() -eq "n")
 		{
-		Write-Error $errorMsg -ErrorAction Continue
-		exit 1
-	}
+			Write-Error $errorMsg -ErrorAction Continue
+			exit 1
+		}
 	}
 
 }
@@ -451,7 +488,7 @@ if ($zertPending) {
 	$RegValue += 0x0100 # replaces the boot manager?
 	if ($zertRetry -eq $false)
 	{
-	$RegValue += 0x4000 # apply update only if 2011 certificate is trusted
+		$RegValue += 0x4000 # apply update only if 2011 certificate is trusted
 	}
 
 	Write-Host "Setze AvailableUpdates auf: 0x$($RegValue.ToString("X"))"
@@ -472,7 +509,14 @@ if ($zertPending) {
 	Write-Host "AvailableUpdates hat nun den Wert: 0x$($RegSecureBoot.AvailableUpdates.ToString("X"))"
 
 	Write-Warning "Please reboot now and rerun this script to run the next step."
-	pause
+	if ($doLogging)
+	{
+		Stop-Transcript
+	}
+	if (-Not $nonInteractive)
+	{
+		pause
+	}
 	exit 0
 }
 
@@ -542,15 +586,27 @@ if ($bootLoaderPending) {
 	Write-Host "AvailableUpdates hat nun den Wert: 0x$($RegSecureBoot.AvailableUpdates.ToString("X"))"
 
 	Write-Warning "Please reboot now and rerun this script to check if the update process has completed successfully."
-	pause
+	if ($doLogging)
+	{
+		Stop-Transcript
+	}
+	if (-Not $nonInteractive)
+	{
+		pause
+	}
 	exit 0
+}
+
+if ($doLogging)
+{
+	Stop-Transcript
 }
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAWhixOZhtji0so
-# eXAE6ObRju7aWwR/ox4cP0Ev7KPjGKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCWJRYgM0DWpXZ4
+# L2mHpz280bujJ1RzKPKMGsR3OfsusqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -664,23 +720,23 @@ if ($bootLoaderPending) {
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINXYu/sX
-# I7MrFJcRD0e3VfcwZcigVw3VpuUy88iMuyEoMA0GCSqGSIb3DQEBAQUABIICAKoz
-# nSvqbsOWtZylBOD55d+XMa7COFrwo3+z5zkLGXJR/uw2S+T11xpp3ZnL5AkWh/GC
-# x+4pBuaUfb1cKqqZA4RLKgfwsE8TGGmYrIVmi0l0yCOsOPgV8ysogPSn5xDSTs2C
-# DdGR+pPKFRVJliU3e5IbrYko6Q7nh5JcM8PYgzerTWSVqv584M4II8s9UFyi6rPx
-# zXcc5DKfJWR9+ucmS9CgrJ36yaXyL/Az/+DRKzccJQnJSLnTxHGBGLPFVzPhHWw+
-# aGfBwU3DQKD7bUl3/oMuiQPpnygT85VHdya6TF0z/CnNtr+VqZnuyYArike69kYX
-# kyLbBVra5Dw+StKLQSaiqgmGWBc7E50knjXIQoBEQcTWlbEXGBw9OyPdYqLP+Vmt
-# Fqyb5pzF6mu/bLJpXsMCgLA0IYSJCkWvGQn53hJrpPNoRGhcm9yIpld/IzD4Nt1X
-# 224BXlWQ4IObjAKTKdjjDSdfFoOzTfGreE/FmwOrZvSDwhQ3W86PNIZNSWv2YFM8
-# RqhZF1xNVnzjVMi3UgXeSoVZM2QKXmTDT2TaV1TLogLCNHCQVTwP01L3vZykENd8
-# 7o4N/+r5TmjUlZmCP4JZvl6xRfQ/45tls//0SM8NT3HbBemvAueEE5+KLI9N8Tvu
-# tSFFhMk/tIGZlAJFqa+igcPdIQNsMwPJpyj8hc2LoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICK1k+oD
+# EcjQ7K9t/exT75wFXJ1HOOM+i5/1Rz8dkFb1MA0GCSqGSIb3DQEBAQUABIICAJAz
+# 2QutfiMjIksMTdzr2OHD17YS/59u/h9BczGxcdxyYroyXvoAhZy8M1hyrurNxDe8
+# 8Nvs5X2qdLBnAf0b1/TsEjrYArqE5abKnhyDbyhbOscgvEW/NNDpdCwFRlC7r2ct
+# YYqk65rixW+5pLBjXVY6Elqdq2nK/xjY2vRe492Dr2Sz2lV+U0x9JLexHal3C6Il
+# ux64bARaWzmjZ72y6uWyrfNug4d+yQlRWE1kgYMsIfhryj4tCCoc0GiLDckSJ0Gj
+# zfg0aXyRL8LWSlM0Ch7Dlq0H5lMvJya+mKfY9jCfpL/CPDc6g/cHz4w/7cPliSEa
+# V5psiW2HKqyRK31dCf4/q7nKw1Bo5AnF6APECE0BJGgafeu9wyUB5w1VIIXrkQ/u
+# OwWdgRMEBbTCPceDqZBR51MHw8kE+rUpzsOmcG6M2jY2uRZLlOy2bmiehEDusKAc
+# Fz+rNFvEXNhyzH8pj2jzeWF1TPpWyClC1G34sx3HbSCUvdmS3hGW0v9GTQW3AxhU
+# KHwsFii0u/Pr2Vj93FUJSg9Pka37fepf4GhM2SxTo8kSCsCpi66caQGtdUCDzAgX
+# MuYqgis/gKH2uem62NgP8Vz3vlDwqWv7xxyi8xIhPgpkSy7QCge1hHb5rMQY4hrq
+# HZ5ydOHpRPHb0dQFjUjgV1762nBt2XtvhB9j+Et/oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAfW4u9U9+GkrgLd34lTsKn29QAyuW12U1GFrkJJKzP5wIUCEdf
-# +wnc3IKM89mQqpX2IyVg180YDzIwMjYwNDIzMTQ0OTE4WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAi0RrrGDL3rf4UhecmP9RKY5hLa2ImQ4Qj2JHP+OvxFAIUeVFP
+# gR3ksszkNz8I3kJDYHJswwQYDzIwMjYwNDI5MTMzNzE0WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -823,18 +879,18 @@ if ($bootLoaderPending) {
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDANRqC/WJG4HYQumAoVsQHYQii4lSsm12s8MuDVBm3tHFKqApRyO16SHZwi
-# sVXw3AAwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBhlA+nrG8yGiFTs4tcrJX2O5APekcxQbcKAiPifl8Q2TGy8y9YKbxWpHs1
+# UNPbLvkwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAFLc2cE/kwES/AP3wlkmVAXGFJeKctPMny5Jt9cq41wZ4
-# ReX9UHURH81gK5SD9y+nXSxaS0pKTAuesg3OEPlHG1WZjhg4O6jJu6E4HUl2ar1H
-# Vwx5UioEqMWdQjF9hGUiIQHaorLZrm1YTerpE1JYW+kb+g6sKFOV77KJ6/8XYyqz
-# BE+4iSrGsGyOiy6PJLDLXCsxP0Gscs+7rc0Ljx93DjSirmx4NKK5GeS11HTWroSc
-# XsZIxOlkIcxqUJr9SxCwZwXt9nl0wIgy+j/VPoW+4pXWQvwiGEH8ryTQ9a3kaMlR
-# p7TwjbwvvbxRr+y0yA6mjG6jGRnWiSRG6AJgBQDF0w1MlShRW/qQ28H4tfyn1EkR
-# FZJCvQwnLFNDyQFoBWFVF3UnJOUUCeIGyF3fPzcB/dftgD9mvgGA49Wrc2MsxQir
-# KA0eBH+xTYWJdup3cnvqfih/aBOGs8NjSyVG8nsSDvAhLLgP3gBr9Juj+QNCEXlt
-# XzspNcr2Mpj/NvTHbIbS
+# KoZIhvcNAQEMBQAEggGAeQ8X7RSqmlzKuV6c1yI0tVJA8Nuh280Dw00i1NydqNJ1
+# d+JULMpeAXjUyiFp0zR1ovGf5VW2uYog5lYsHV0dK1vbqOmkizpuIEJMeq8bvB43
+# HI40hvAM8q4tsummniqx/ci/rQNpe7RlWsCcAArEfTmF3tKKzq5coo965R2OuCbv
+# SSRpJBDCyhlud4P/ZaJpzrrPJalv1hXVij7toN+AySfWmRFqbzxzYDbNgmE/xrJB
+# xPym5m6uhQpqbAdQ4KljUxpqCsJLtX1GPRejo9CqEHe+oNtuEc/IgnLWF0k0Y+3+
+# 8RELKigepHA3sLUpz6DcjXuqK8eBAD3RZi34Fh4TeIaMXONnEyFqFxeM6L+yM6Z5
+# 2daf39f4tqxVmZ9+kbrOvfoSJAfknoUiC0lD55o0Fd4RfbQ+lC2COO38IMqw4PWW
+# UoNe+ByGY6+E94j7fqbmUrnRrKd2nEmT09RdMf0Q87v2dSXy4OMHil40uWnpc7uK
+# Dr3bm1t1GNKU7FfKVKtY
 # SIG # End signature block
