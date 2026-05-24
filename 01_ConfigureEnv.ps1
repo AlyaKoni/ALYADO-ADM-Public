@@ -63,6 +63,7 @@
     19.10.2025 Konrad Brunner       LoginTo-MgGraph with clientid and cert
     06.01.2026 Konrad Brunner       LoginTo-Entra
     06.02.2026 Konrad Brunner       Added powershell documentation
+    21.05.2026 Konrad Brunner       Management app authentication
 
 #>
 
@@ -1674,6 +1675,10 @@ function LogoutAllFrom-Az()
 {
     Clear-AzContext -Scope Process -Force -ErrorAction SilentlyContinue
     Clear-AzContext -Scope CurrentUser -Force -ErrorAction SilentlyContinue
+    [Environment]::SetEnvironmentVariable("AlyaManagementApp", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementCrt", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementPwd", "", "Process")
+    Get-ChildItem -Path $env:TEMP -Filter "$AlyaTenantId-*.xpy" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 function Get-CustomersContext(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
@@ -1722,6 +1727,10 @@ function LogoutFrom-Az(
         Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
         $AlyaContext = $null
     }
+    [Environment]::SetEnvironmentVariable("AlyaManagementApp", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementCrt", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementPwd", "", "Process")
+    Get-ChildItem -Path $env:TEMP -Filter "$AlyaTenantId-*.xpy" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 function LoginTo-Az(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
@@ -1788,41 +1797,29 @@ function LoginTo-Az(
         }
         if (-Not $AlyaContext)
         {
-            #PowerShell login
-            #Write-Host "  PowerShell login"
+            $params = @{
+                Environment = $AlyaAzureEnvironment
+                Tenant      = $TenantId
+            }
+            if ($AuthScope)
+            {
+                $params["AuthScope"] = $AuthScope
+            }
             if ($SubscriptionId)
             {
-                if ($AuthScope)
-                {
-                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $TenantId -Subscription $SubscriptionId -AuthScope $AuthScope | Out-Null
-                }
-                else
-                {
-                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $TenantId -Subscription $SubscriptionId | Out-Null
-                }
+                $params["Subscription"] = $SubscriptionId
             }
             elseif ($SubscriptionName)
             {
-                if ($AuthScope)
-                {
-                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $TenantId -Subscription $SubscriptionName -AuthScope $AuthScope | Out-Null
-                }
-                else
-                {
-                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $TenantId -Subscription $SubscriptionName | Out-Null
-                }
+                $params["Subscription"] = $SubscriptionName
             }
-            else
+            if ($env:AlyaManagementCrt)
             {
-                if ($AuthScope)
-                {
-                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $TenantId -AuthScope $AuthScope | Out-Null
-                }
-                else
-                {
-                    Connect-AzAccount -Environment $AlyaAzureEnvironment -Tenant $TenantId | Out-Null
-                }
+                $params["CertificatePath"] = $env:AlyaManagementCrt
+                $params["CertificatePassword"] = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
+                $params["ApplicationId"] = $env:AlyaManagementApp
             }
+            Connect-AzAccount @params | Out-Null
             $AlyaContext = Get-CustomersContext -TenantId $TenantId -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
         }
         else
@@ -1886,16 +1883,29 @@ function LoginTo-Az(
 function LogoutAllFrom-MgGraph()
 {
     Disconnect-MgGraph
+    [Environment]::SetEnvironmentVariable("AlyaManagementApp", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementCrt", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementPwd", "", "Process")
+    Get-ChildItem -Path $env:TEMP -Filter "$AlyaTenantId-*.xpy" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 function LoginTo-MgGraph(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
     [string[]] [Parameter(Mandatory = $false)] $Scopes = $null,
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
-    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
 )
 {
-    if (-Not [string]::IsNullOrEmpty($ClientId))
+    if ($env:AlyaManagementCrt)
+    {
+        Write-Host "Login to Graph with management app" -ForegroundColor $CommandInfo
+        $ClientCertificateFile = $env:AlyaManagementCrt
+        $ClientCertificatePassword = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
+        $ClientId = $env:AlyaManagementApp
+    }
+    elseif (-Not [string]::IsNullOrEmpty($ClientId) -and $ClientCertificateThumbprint)
     {
         Write-Host "Login to Graph with app '$($ClientId)'" -ForegroundColor $CommandInfo
         $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
@@ -1996,7 +2006,14 @@ function LoginTo-MgGraph(
         if (-Not $mgContext)
         {
             if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
                     Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
+                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                    Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $ClientId -Certificate $cert -TenantId $AlyaTenantId -NoWelcome
+                } else {
+                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                }
             } else {
                 if ($null -ne $AlyaGraphAppId) {
                     Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
@@ -2012,7 +2029,14 @@ function LoginTo-MgGraph(
                 # TODO check bug still there, way to check if consent happended
                 $mgContext = Disconnect-MgGraph
                 if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                    if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
                         Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
+                    } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                        $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                        Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $ClientId -Certificate $cert -TenantId $AlyaTenantId -NoWelcome
+                    } else {
+                        throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                    }
                 } else {
                     if ($null -ne $AlyaGraphAppId) {
                         Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
@@ -2050,16 +2074,29 @@ function LoginTo-MgGraph(
 function LogoutAllFrom-Entra()
 {
     Disconnect-Entra
+    [Environment]::SetEnvironmentVariable("AlyaManagementApp", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementCrt", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementPwd", "", "Process")
+    Get-ChildItem -Path $env:TEMP -Filter "$AlyaTenantId-*.xpy" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 function LoginTo-Entra(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
     [string[]] [Parameter(Mandatory = $false)] $Scopes = $null,
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
-    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
 )
 {
-    if (-Not [string]::IsNullOrEmpty($ClientId))
+    if ($env:AlyaManagementCrt)
+    {
+        Write-Host "Login to Entra with management app" -ForegroundColor $CommandInfo
+        $ClientCertificateFile = $env:AlyaManagementCrt
+        $ClientCertificatePassword = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
+        $ClientId = $env:AlyaManagementApp
+    }
+    elseif (-Not [string]::IsNullOrEmpty($ClientId) -and $ClientCertificateThumbprint)
     {
         Write-Host "Login to Entra with app '$($ClientId)'" -ForegroundColor $CommandInfo
         $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
@@ -2105,7 +2142,14 @@ function LoginTo-Entra(
         if (-Not $mgContext)
         {
             if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
                     Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
+                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                    Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $ClientId -Certificate $cert -TenantId $AlyaTenantId -NoWelcome
+                } else {
+                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                }
             } else {
                 if ($null -ne $AlyaGraphAppId) {
                     Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
@@ -2121,7 +2165,14 @@ function LoginTo-Entra(
                 # TODO check bug still there, way to check if consent happended
                 $mgContext = Disconnect-Entra
                 if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                    if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
                         Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
+                    } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                        $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                        Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $ClientId -Certificate $cert -TenantId $AlyaTenantId -NoWelcome
+                    } else {
+                        throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                    }
                 } else {
                     if ($null -ne $AlyaGraphAppId) {
                         Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
@@ -2331,9 +2382,42 @@ function LoginTo-MSStore()
     }
 }
 
-function LoginTo-Teams()
+function LoginTo-Teams(
+    [string] [Parameter(Mandatory = $false)] $ClientId = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
+)
 {
-    Write-Host "Login to Teams" -ForegroundColor $CommandInfo
+    if ($env:AlyaManagementCrt)
+    {
+        Write-Host "Login to Teams with management app" -ForegroundColor $CommandInfo
+        $ClientCertificateFile = $env:AlyaManagementCrt
+        $ClientCertificatePassword = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
+        $ClientId = $env:AlyaManagementApp
+    }
+    elseif (-Not [string]::IsNullOrEmpty($ClientId) -and $ClientCertificateThumbprint)
+    {
+        Write-Host "Login to Teams with app '$($ClientId)'" -ForegroundColor $CommandInfo
+        $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        if (-Not $cert)
+        {
+            $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        }
+        if (-Not $cert)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' not found"
+        }
+        if (-Not $cert.HasPrivateKey)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' does not has a private key"
+        }
+    }
+    else
+    {
+        Write-Host "Login to Teams" -ForegroundColor $CommandInfo
+    }
+
     $mod = Get-Module -Name MicrosoftTeams
     if (-Not $mod) { Write-Host "  loading module MicrosoftTeams..." } # import of teams module requires long time!
     try { $TenantDetail = Get-CsTenant -ErrorAction SilentlyContinue } catch {}
@@ -2350,10 +2434,32 @@ function LoginTo-Teams()
     }
     else
     {
-        if ([string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
-            Connect-MicrosoftTeams
+        if (-Not [string]::IsNullOrEmpty($ClientId)) {
+            if ([string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
+                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
+                    Connect-MicrosoftTeams -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
+                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                    Connect-MicrosoftTeams -ClientId $ClientId -Certificate $cert -TenantId $AlyaTenantId -NoWelcome
+                } else {
+                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                }
+            } else {
+                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
+                    Connect-MicrosoftTeams -Environment $AlyaTeamsEnvironment -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
+                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                    Connect-MicrosoftTeams -Environment $AlyaTeamsEnvironment -ClientId $ClientId -Certificate $cert -TenantId $AlyaTenantId -NoWelcome
+                } else {
+                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                }
+            }
         } else {
-            Connect-MicrosoftTeams -TeamsEnvironmentName $AlyaTeamsEnvironment
+            if ([string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
+                Connect-MicrosoftTeams
+            } else {
+                Connect-MicrosoftTeams -TeamsEnvironmentName $AlyaTeamsEnvironment
+            }
         }
     }
 
@@ -2365,34 +2471,147 @@ function LoginTo-Teams()
     }
 }
 
-function LoginTo-EXO([String[]]$commandsToLoad = $null)
+function LoginTo-EXO(
+    [String[]]$commandsToLoad = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientId = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
+)
 {
-    Write-Host "Login to EXO" -ForegroundColor $CommandInfo
+    if ($env:AlyaManagementCrt)
+    {
+        Write-Host "Login to EXO with management app" -ForegroundColor $CommandInfo
+        $ClientCertificateFile = $env:AlyaManagementCrt
+        $ClientCertificatePassword = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
+        $ClientId = $env:AlyaManagementApp
+    }
+    elseif (-Not [string]::IsNullOrEmpty($ClientId) -and $ClientCertificateThumbprint)
+    {
+        Write-Host "Login to EXO with app '$($ClientId)'" -ForegroundColor $CommandInfo
+        $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        if (-Not $cert)
+        {
+            $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        }
+        if (-Not $cert)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' not found"
+        }
+        if (-Not $cert.HasPrivateKey)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' does not has a private key"
+        }
+    }
+    else
+    {
+        Write-Host "Login to EXO" -ForegroundColor $CommandInfo
+    }
 
     $actConnection = Get-ConnectionInformation | Where-Object { $_.IsEopSession -eq $false -and $_.State -eq "Connected" -and $_.TenantID -eq $AlyaTenantId -and $_.TokenExpiryTimeUTC -gt [DateTime]::UtcNow }
     if (-Not $actConnection)
     {
         if ($commandsToLoad)
         {
-            Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM -CommandName $commandsToLoad
+            if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
+                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -ShowProgress $true -DisableWAM -CommandName $commandsToLoad
+                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -Certificate $cert -ShowBanner:$false -ShowProgress $true -DisableWAM -CommandName $commandsToLoad
+                } else {
+                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                }
+            } else {
+                Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM -CommandName $commandsToLoad
+            }
         }
         else
         {
-            Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM
+            if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
+                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -ShowProgress $true -DisableWAM
+                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -Certificate $cert -ShowBanner:$false -ShowProgress $true -DisableWAM
+                } else {
+                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                }
+            } else {
+                Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM
+            }
         }
     }
 }
 
-function LoginTo-IPPS()
+function LoginTo-IPPS(
+    [string] [Parameter(Mandatory = $false)] $ClientId = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
+)
 {
-    Write-Host "Login to IPPS" -ForegroundColor $CommandInfo
+    if ($env:AlyaManagementCrt)
+    {
+        Write-Host "Login to IPPS with management app" -ForegroundColor $CommandInfo
+        $ClientCertificateFile = $env:AlyaManagementCrt
+        $ClientCertificatePassword = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
+        $ClientId = $env:AlyaManagementApp
+    }
+    elseif (-Not [string]::IsNullOrEmpty($ClientId) -and $ClientCertificateThumbprint)
+    {
+        Write-Host "Login to IPPS with app '$($ClientId)'" -ForegroundColor $CommandInfo
+        $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        if (-Not $cert)
+        {
+            $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        }
+        if (-Not $cert)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' not found"
+        }
+        if (-Not $cert.HasPrivateKey)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' does not has a private key"
+        }
+    }
+    else
+    {
+        Write-Host "Login to IPPS" -ForegroundColor $CommandInfo
+    }
+
     $actConnection = Get-ConnectionInformation | Where-Object { $_.IsEopSession -eq $true -and $_.State -eq "Connected" -and $_.TenantID -eq $AlyaTenantId -and $_.TokenExpiryTimeUTC -gt [DateTime]::UtcNow }
     if (-Not $actConnection)
     {
-        if ($AlyaLoginEndpoint -eq "https://login.microsoftonline.com") {
-            Connect-IPPSSession -DisableWAM -ShowBanner:$false
-        } else {
-            Connect-IPPSSession -DisableWAM -ShowBanner:$false -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+        if ($AlyaLoginEndpoint -eq "https://login.microsoftonline.com")
+        {
+            if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
+                    Connect-IPPSSession -AppId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -DisableWAM
+                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                    Connect-IPPSSession -AppId $ClientId -Certificate $cert -ShowBanner:$false -DisableWAM
+                } else {
+                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                }
+            } else {
+                Connect-IPPSSession -ShowBanner:$false -DisableWAM
+            }
+        }
+        else
+        {
+            if (-Not [string]::IsNullOrEmpty($ClientId)) {
+                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
+                    Connect-IPPSSession -AppId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -DisableWAM -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                    Connect-IPPSSession -AppId $ClientId -Certificate $cert -ShowBanner:$false -DisableWAM -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+                } else {
+                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                }
+            } else {
+                Connect-IPPSSession -ShowBanner:$false -DisableWAM -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+            }
         }
     }
 }
@@ -2469,10 +2688,42 @@ function LogoutFrom-SPO()
 }
 
 function LoginTo-SPO(
-    [string] [Parameter(Mandatory = $false)] $AdminUrl = $null
+    [string] [Parameter(Mandatory = $false)] $AdminUrl = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientId = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
 )
 {
-    Write-Host "Login to SPO $AdminUrl" -ForegroundColor $CommandInfo
+    if ($env:AlyaManagementCrt)
+    {
+        Write-Host "Login to SPO with management app" -ForegroundColor $CommandInfo
+        $ClientCertificateFile = $env:AlyaManagementCrt
+        $ClientCertificatePassword = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
+        $ClientId = $env:AlyaManagementApp
+    }
+    elseif (-Not [string]::IsNullOrEmpty($ClientId) -and $ClientCertificateThumbprint)
+    {
+        Write-Host "Login to SPO with app '$($ClientId)'" -ForegroundColor $CommandInfo
+        $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        if (-Not $cert)
+        {
+            $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        }
+        if (-Not $cert)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' not found"
+        }
+        if (-Not $cert.HasPrivateKey)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' does not has a private key"
+        }
+    }
+    else
+    {
+        Write-Host "Login to SPO" -ForegroundColor $CommandInfo
+    }
+
     if ([string]::IsNullOrEmpty($AdminUrl))
     {
         $AdminUrl = $AlyaSharePointAdminUrl
@@ -2481,7 +2732,18 @@ function LoginTo-SPO(
     try { $Site = Get-SPOSite -Identity $AdminUrl -ErrorAction SilentlyContinue } catch {}
     if (-Not $Site)
     {
-        Connect-SPOService -Region $AlyaSharePointEnvironment -Url $AdminUrl -ModernAuth $true -UseSystemBrowser $true
+        if (-Not [string]::IsNullOrEmpty($ClientId)) {
+            if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
+                Connect-SPOService -Region $AlyaSharePointEnvironment -Url $AdminUrl -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint
+            } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                Connect-SPOService -Region $AlyaSharePointEnvironment -Url $AdminUrl -ClientId $ClientId -Certificate $cert
+            } else {
+                throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+            }
+        } else {
+            Connect-SPOService -Region $AlyaSharePointEnvironment -Url $AdminUrl -ModernAuth $true -UseSystemBrowser $true
+        }
     }
     try { $Site = Get-SPOSite -Identity $AdminUrl -ErrorAction SilentlyContinue } catch {}
     if (-Not $Site)
@@ -2493,10 +2755,12 @@ function LoginTo-SPO(
 function ReloginTo-PnP(
     [string] [Parameter(Mandatory = $true)] $Url,
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
-    [string] [Parameter(Mandatory = $false)] $Thumbprint = $null
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
     )
 {
-    return LoginTo-PnP -Url $Url -ClientId $ClientId -Thumbprint $Thumbprint -Relogin $true
+    return LoginTo-PnP -Url $Url -ClientId $ClientId -Thumbprint $ClientCertificateThumbprint -ClientCertificateFile $ClientCertificateFile -ClientCertificatePassword $ClientCertificatePassword -Relogin $true
 }
 
 function LogoutAllFrom-PnP()
@@ -2510,11 +2774,15 @@ function LogoutAllFrom-PnP()
     }
     $Global:AlyaPnpAdminConnection = $null
     $Global:AlyaPnpConnections = @()
+    [Environment]::SetEnvironmentVariable("AlyaManagementApp", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementCrt", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementPwd", "", "Process")
+    Get-ChildItem -Path $env:TEMP -Filter "$AlyaTenantId-*.xpy" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
 function LogoutFrom-PnP(
     [object] [Parameter(Mandatory = $true)] $Connection
-    )
+)
 {
     if ($null -ne $Connection -and $null -ne $Connection.Url)
     {
@@ -2535,29 +2803,55 @@ function LoginTo-PnP(
     [string] [Parameter(Mandatory = $false)] $TenantAdminUrl = $null,
     [object] [Parameter(Mandatory = $false)] $AdminConnection = $null,
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
-    [string] [Parameter(Mandatory = $false)] $Thumbprint = $null,
-    [string] [Parameter(Mandatory = $false)] $CertFile = $null,
-    [SecureString] [Parameter(Mandatory = $false)] $CertPassword = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
+    [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null,
     [bool] [Parameter(Mandatory = $false)] $Relogin = $false,
     [bool] [Parameter(Mandatory = $false)] $DeviceLogin = $false
     )
 {
-    Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
-
-    if ([string]::IsNullOrEmpty($AlyaPnPAppId) -or $AlyaPnPAppId -eq "PleaseSpecify")
+    if ($env:AlyaManagementCrt)
     {
-        Write-Warning "We need to register the PnP app"
-        & "$AlyaScripts\sharepoint\Register-PnPApp.ps1"
-        throw "Please restart this script"
+        Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)' with management app" -ForegroundColor $CommandInfo
+        $ClientCertificateFile = $env:AlyaManagementCrt
+        $ClientCertificatePassword = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
+        $ClientId = $env:AlyaManagementApp
+    }
+    elseif (-Not [string]::IsNullOrEmpty($ClientId) -and $ClientCertificateThumbprint)
+    {
+        Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)' with app '$($ClientId)'" -ForegroundColor $CommandInfo
+        $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        if (-Not $cert)
+        {
+            $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $ClientCertificateThumbprint }
+        }
+        if (-Not $cert)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' not found"
+        }
+        if (-Not $cert.HasPrivateKey)
+        {
+            throw "Certificate with thumbprint '$ClientCertificateThumbprint' does not has a private key"
+        }
+    }
+    else
+    {
+        Write-Host "Login to SharePointPnPPowerShellOnline '$($Url)'" -ForegroundColor $CommandInfo
+        if ([string]::IsNullOrEmpty($AlyaPnPAppId) -or $AlyaPnPAppId -eq "PleaseSpecify")
+        {
+            Write-Warning "We need to register the PnP app"
+            & "$AlyaScripts\sharepoint\Register-PnPApp.ps1"
+            throw "Please restart this script"
+        }
     }
 
     if ($AlyaIsDevOpsPipeline)
     {
         Write-Host "  within DevOps"
-        $CertPasswordPlain = "!#$($AlyaTenantId)=%"
-        $CertPassword = ConvertTo-SecureString -String $CertPasswordPlain -AsPlainText -Force
-        $CertFile = "$($env:TEMP)\$AlyaTenantId.xpy"
-        if (-Not (Test-Path $CertFile))
+        $ClientCertificatePasswordPlain = "!#$($AlyaTenantId)=%"
+        $ClientCertificatePassword = ConvertTo-SecureString -String $ClientCertificatePasswordPlain -AsPlainText -Force
+        $ClientCertificateFile = "$($env:TEMP)\$AlyaTenantId.xpy"
+        if (-Not (Test-Path $ClientCertificateFile))
         {
             if ([string]::IsNullOrEmpty($AlyaSharePointRunAsCertificateKeyVault))
             {
@@ -2581,8 +2875,8 @@ function LoginTo-PnP(
             $CertificateBytes = [System.Convert]::FromBase64String(($CertificateRetrieved.SecretValue | Foreach-Object { [System.Net.NetworkCredential]::new("", $_).Password }))
             $CertCollection = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2Collection
             $CertCollection.Import($CertificateBytes, $null, [System.Security.Cryptography.X509Certificates.X509KeyStorageFlags]::Exportable)
-            $ProtectedCertificateBytes = $CertCollection.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, $CertPasswordPlain)
-            [System.IO.File]::WriteAllBytes($CertFile, $ProtectedCertificateBytes)
+            $ProtectedCertificateBytes = $CertCollection.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Pkcs12, $ClientCertificatePasswordPlain)
+            [System.IO.File]::WriteAllBytes($ClientCertificateFile, $ProtectedCertificateBytes)
             Clear-Variable -Name "CertPasswordPlain" -Force -ErrorAction SilentlyContinue
             Clear-Variable -Name "CertificateBytes" -Force -ErrorAction SilentlyContinue
             Clear-Variable -Name "ProtectedCertificateBytes" -Force -ErrorAction SilentlyContinue
@@ -2626,22 +2920,22 @@ function LoginTo-PnP(
     {
         if ($ClientId)
         {
-            if ($Thumbprint)
+            if ($ClientCertificateThumbprint)
             {
                 try {
-                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint -ValidateConnection
+                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $ClientCertificateThumbprint -ValidateConnection
                 }
                 catch {
-                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $Thumbprint
+                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -Thumbprint $ClientCertificateThumbprint
                 }
             }
-            elseif ($CertFile)
+            elseif ($ClientCertificateFile)
             {
                 try {
-                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $CertFile -CertificatePassword $CertPassword -ValidateConnection
+                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $ClientCertificateFile -CertificatePassword $ClientCertificatePassword -ValidateConnection
                 }
                 catch {
-                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $CertFile -CertificatePassword $CertPassword
+                    $AlyaConnection = Connect-PnPOnline -Tenant $AlyaTenantName -AzureEnvironment $AlyaPnpEnvironment -Url $Url -TenantAdminUrl $TenantAdminUrl -ReturnConnection -ClientId $ClientId -CertificatePath $ClientCertificateFile -CertificatePassword $ClientCertificatePassword
                 }
             }
             else
@@ -2861,6 +3155,10 @@ function Reset-AllAuthTokens
     {
         Remove-Item "$env:USERPROFILE\.Graph" -Recurse -Force
     }
+    [Environment]::SetEnvironmentVariable("AlyaManagementApp", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementCrt", "", "Process")
+    [Environment]::SetEnvironmentVariable("AlyaManagementPwd", "", "Process")
+    Get-ChildItem -Path $env:TEMP -Filter "$AlyaTenantId-*.xpy" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
 <# STRING FUNCTIONS #>
@@ -3688,13 +3986,33 @@ function Get-SeleniumEdgeBrowser()
     Install-PackageIfNotInstalled "Selenium.WebDriver" -exactVersion $seleniumVersion
     Install-PackageIfNotInstalled "Selenium.WebDriver.MSEdgeDriver" -exactVersion $edgeDriverVersion
     if($AlyaIsPsCore) {
-        if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll") {
-            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll"
+        if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\Selenium.WebDriver.dll") {
+            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\Selenium.WebDriver.dll"
         } else {
-            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\WebDriver.dll"
+            if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\Selenium.WebDriver.dll") {
+                Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\Selenium.WebDriver.dll"
+            } else {
+                if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll") {
+                    Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll"
+                } else {
+                    if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\WebDriver.dll") {
+                        Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\WebDriver.dll"
+                    } else {
+                        throw "Could not find Selenium.WebDriver.dll or WebDriver.dll for .NET Standard in $($AlyaTools)\Packages\Selenium.WebDriver\lib"
+                    }
+                }
+            }
         }
     } else {
-        Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
+        if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\Selenium.WebDriver.dll") {
+            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\Selenium.WebDriver.dll"
+        } else {
+            if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll") {
+                Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
+            } else {
+                throw "Could not find Selenium.WebDriver.dll or WebDriver.dll for .NET Framework in $($AlyaTools)\Packages\Selenium.WebDriver\lib"
+            }
+        }
     }
     if ($env:PATH.IndexOf("$($AlyaTools)\Packages\Selenium.WebDriver.MSEdgeDriver\driver\win64") -eq -1)
     {
@@ -3783,13 +4101,13 @@ function Get-SeleniumChromeBrowser()
     }
 
     if($AlyaIsPsCore) {
-        if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll") {
-            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\WebDriver.dll"
+        if (Test-Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\Selenium.WebDriver.dll") {
+            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.1\Selenium.WebDriver.dll"
         } else {
-            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\WebDriver.dll"
+            Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\netstandard2.0\Selenium.WebDriver.dll"
         }
     } else {
-        Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\WebDriver.dll"
+        Add-Type -Path "$($AlyaTools)\Packages\Selenium.WebDriver\lib\net48\Selenium.WebDriver.dll"
     }
     if ($env:PATH.IndexOf("$($AlyaTools)\Packages\Selenium.WebDriver.ChromeDriver\driver\win32") -eq -1)
     {
@@ -3984,180 +4302,248 @@ function Replace-AlyaStrings($obj, $depth)
 }
 
 # SIG # Begin signature block
-# MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
+# MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD1FG1DAdXIf5GT
-# P80LBB03BmmaRRSAkVty7OJKKVFwnaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
-# th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
-# ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
-# bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
-# CzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMTIwMAYDVQQD
-# EylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25pbmcgQ0EgMjAyMDCCAiIw
-# DQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAMsg75ceuQEyQ6BbqYoj/SBerjgS
-# i8os1P9B2BpV1BlTt/2jF+d6OVzA984Ro/ml7QH6tbqT76+T3PjisxlMg7BKRFAE
-# eIQQaqTWlpCOgfh8qy+1o1cz0lh7lA5tD6WRJiqzg09ysYp7ZJLQ8LRVX5YLEeWa
-# tSyyEc8lG31RK5gfSaNf+BOeNbgDAtqkEy+FSu/EL3AOwdTMMxLsvUCV0xHK5s2z
-# BZzIU+tS13hMUQGSgt4T8weOdLqEgJ/SpBUO6K/r94n233Hw0b6nskEzIHXMsdXt
-# HQcZxOsmd/KrbReTSam35sOQnMa47MzJe5pexcUkk2NvfhCLYc+YVaMkoog28vmf
-# vpMusgafJsAMAVYS4bKKnw4e3JiLLs/a4ok0ph8moKiueG3soYgVPMLq7rfYrWGl
-# r3A2onmO3A1zwPHkLKuU7FgGOTZI1jta6CLOdA6vLPEV2tG0leis1Ult5a/dm2tj
-# IF2OfjuyQ9hiOpTlzbSYszcZJBJyc6sEsAnchebUIgTvQCodLm3HadNutwFsDeCX
-# pxbmJouI9wNEhl9iZ0y1pzeoVdwDNoxuz202JvEOj7A9ccDhMqeC5LYyAjIwfLWT
-# yCH9PIjmaWP47nXJi8Kr77o6/elev7YR8b7wPcoyPm593g9+m5XEEofnGrhO7izB
-# 36Fl6CSDySrC/blTAgMBAAGjggGtMIIBqTAOBgNVHQ8BAf8EBAMCAYYwEwYDVR0l
-# BAwwCgYIKwYBBQUHAwMwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4EFgQUJZ3Q
-# /FkJhmPF7POxEztXHAOSNhEwHwYDVR0jBBgwFoAUHwC/RoAK/Hg5t6W0Q9lWULvO
-# ljswgZMGCCsGAQUFBwEBBIGGMIGDMDkGCCsGAQUFBzABhi1odHRwOi8vb2NzcC5n
-# bG9iYWxzaWduLmNvbS9jb2Rlc2lnbmluZ3Jvb3RyNDUwRgYIKwYBBQUHMAKGOmh0
-# dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2NvZGVzaWduaW5ncm9v
-# dHI0NS5jcnQwQQYDVR0fBDowODA2oDSgMoYwaHR0cDovL2NybC5nbG9iYWxzaWdu
-# LmNvbS9jb2Rlc2lnbmluZ3Jvb3RyNDUuY3JsMFUGA1UdIAROMEwwQQYJKwYBBAGg
-# MgECMDQwMgYIKwYBBQUHAgEWJmh0dHBzOi8vd3d3Lmdsb2JhbHNpZ24uY29tL3Jl
-# cG9zaXRvcnkvMAcGBWeBDAEDMA0GCSqGSIb3DQEBCwUAA4ICAQAldaAJyTm6t6E5
-# iS8Yn6vW6x1L6JR8DQdomxyd73G2F2prAk+zP4ZFh8xlm0zjWAYCImbVYQLFY4/U
-# ovG2XiULd5bpzXFAM4gp7O7zom28TbU+BkvJczPKCBQtPUzosLp1pnQtpFg6bBNJ
-# +KUVChSWhbFqaDQlQq+WVvQQ+iR98StywRbha+vmqZjHPlr00Bid/XSXhndGKj0j
-# fShziq7vKxuav2xTpxSePIdxwF6OyPvTKpIz6ldNXgdeysEYrIEtGiH6bs+XYXvf
-# cXo6ymP31TBENzL+u0OF3Lr8psozGSt3bdvLBfB+X3Uuora/Nao2Y8nOZNm9/Lws
-# 80lWAMgSK8YnuzevV+/Ezx4pxPTiLc4qYc9X7fUKQOL1GNYe6ZAvytOHX5OKSBoR
-# HeU3hZ8uZmKaXoFOlaxVV0PcU4slfjxhD4oLuvU/pteO9wRWXiG7n9dqcYC/lt5y
-# A9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0ixxnJpsoO
-# qHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7qWPLd0jV
-# +mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72f1LiSY25
-# EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGjuxOV7dX3H
-# 9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFs
-# U2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVWIENvZGVT
-# aWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgyNzE5WjCC
-# ATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQFEw9DSEUt
-# MjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEEAYI3PAIB
-# AhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYwFAYDVQQH
-# Ew1PYmVyZW50ZmVsZGVuMRQwEgYDVQQJEwtQZnJ1bmR3ZWcgMzEsMCoGA1UEChMj
-# QWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNVBAMTI0Fs
-# eWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZIhvcNAQkB
-# FhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEFAAOCAg8A
-# MIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQTAxEACqVq
-# 4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f46P2Iuky
-# tvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdYTA3E3kMH
-# BiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhDo6nZ2Iwj
-# 1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL1yf/30OV
-# yct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AHhviDcudo
-# 30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfdsbCXAJvY
-# NCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx/j+7m9WS
-# aK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cidmgdUVveo
-# BPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgftnoAWlVn
-# 8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsCAwEAAaOC
-# AdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8wTAYIKwYB
-# BQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2dzZ2Nj
-# cjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6Ly9vY3Nw
-# Lmdsb2JhbHNpZ24uY29tL2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMDBVBgNVHSAE
-# TjBMMEEGCSsGAQQBoDIBAjA0MDIGCCsGAQUFBwIBFiZodHRwczovL3d3dy5nbG9i
-# YWxzaWduLmNvbS9yZXBvc2l0b3J5LzAHBgVngQwBAzAJBgNVHRMEAjAAMEcGA1Ud
-# HwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3NnY2NyNDVl
-# dmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFjb25zdWx0
-# aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd0PxZCYZj
-# xezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vCoTANBgkq
-# hkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQZpE364hO
-# TSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTsoVYpQr3Io
-# zYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yoDsPU9IHP
-# /w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQX6ibUXqj
-# Xk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNpHbGY6Eg0
-# RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirMJk0b9UF2
-# hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnAmrVkGZj2
-# a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj3+nmvWbZ
-# fNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL/yMvbDOH
-# hREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtHdwO39ACa
-# udnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4QhtrofETAx
-# ghnUMIIZ0AIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
-# IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
-# bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
-# BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGK2JbqWHmv5xS7D
-# 2uygXr4zUH+2YRhTXnXeek74dsNeMA0GCSqGSIb3DQEBAQUABIICAB9GP9ywdyrQ
-# kJJd5Il57a7X9Hfy503hL8etTqrPWAZSphQep6TZcL1tImEBPbnxkTAtvcisHchr
-# Oj0iC0YfeUzQGs/EM0fHfo7iu2wlZ8B/FIKLc91NpbXw/CXnVugA56mgPzQy3v0L
-# l0gLBQ1O+auB456UEdz9rd5kAgFCs5GYUND5p4T0iakIoNzXtHne5fC/BtuRg99C
-# gmI09WKkCVabNplYZicPCVqoP24a+9tAZpVO2PbXAAQDQz/luvtXHFYMklIr284f
-# d02zSeKl+x4oIYwNhV1hRnetIojT1fSEVTvGfT9OcaASfgI13064k6FqRNl2TsXF
-# 7fyxXyr9iBsB/Z/6xLy67h75v4+YG7n8kiJcUF3nc7px9K3vqFC050+E5Gis3nQY
-# 8gWgl2NbFPUYVC8RxtPMYkzux/YtjJYTFAY9GGV8gZhJ9bphDlR2ud7yY3gxbfF2
-# K3ZahSyFedqAX0L0evAZjDOpx44QWWSD2XW89KeUJxTS3daszlVe2LEeOmt4GsCL
-# ixrmrfH6a3AUjzFEU+TJLcNFbsi5qRqXiA4dNgmWK/9s53UntZDrPz8OlYeC0w3F
-# gS/CIEwogh4Vr1ccTOV+6HBzhWdlG7yk+t0w5qQKjSZBQVz/qgCAnvUdj/ggtw8S
-# ZTFBQFWqi2BPp/0Npotrym6haTafQT0PoYIWuzCCFrcGCisGAQQBgjcDAwExghan
-# MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
-# SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCCYmkpGkzn4N9n2sTSXYSDN2FKdcsNlRGXW/n9rs0I3fwIUU2jR+2j0uThh
-# aEZD80s98e6jRYYYDzIwMjYwNDA1MDgxNjA2WjADAgEBoFikVjBUMQswCQYDVQQG
-# EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
-# c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
-# CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
-# BgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGlt
-# ZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQwHhcNMjUwNDExMTQ0NzM5WhcNMzQx
-# MjEwMDAwMDAwWjBUMQswCQYDVQQGEwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBu
-# di1zYTEqMCgGA1UEAwwhR2xvYmFsc2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2
-# MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAolvEqk1J5SN4PuCF6+aq
-# Cj7V8qyop0Rh94rLmY37Cn8er80SkfKzdJHJk3Tqa9QY4UwV6hedXfSb5gk0Xydy
-# 3MNEj1qE+ZomPEcjC7uRtGdfB/PtnieWJzjtPVUlmEPrUMsoFU7woJScRV1W6/6e
-# fi2BySHXshZ30V1EDZ2lKQ0DK3q3bI4sJE/5n/dQy8iL4hjTaS9v0YQy5RJY+o1N
-# WhxP/HsNum67Or4rFDsGIE85hg5r4g3CXFuiqWvlNmPbCBWgdxp/PCqY0Lie04Du
-# KbDwRd6nrm5AH5oIRJyFUjLvG4HO0L1UXYMuJ6J1JzO438RA0mJRvU2ZwbI6yiFH
-# aS0x3SgFakvhELLn4tmwngYPj+FDX3LaWHnni/MGJXRxnN0pQdYJqEYhKUlrMH9+
-# 2Klndcz/9yXYGEywTt88d3y+TUFvZlAA0BMOYMMrYFQEptlRg2DYrx5sWtX1qvCz
-# k6sEBLRVPEbE0i+J01ILlBzRpcJusZUQyGK2RVSOFfXPAgMBAAGjggGoMIIBpDAO
-# BgNVHQ8BAf8EBAMCB4AwFgYDVR0lAQH/BAwwCgYIKwYBBQUHAwgwHQYDVR0OBBYE
-# FIBDTPy6bR0T0nUSiAl3b9vGT5VUMFYGA1UdIARPME0wCAYGZ4EMAQQCMEEGCSsG
-# AQQBoDIBHjA0MDIGCCsGAQUFBwIBFiZodHRwczovL3d3dy5nbG9iYWxzaWduLmNv
-# bS9yZXBvc2l0b3J5LzAMBgNVHRMBAf8EAjAAMIGQBggrBgEFBQcBAQSBgzCBgDA5
-# BggrBgEFBQcwAYYtaHR0cDovL29jc3AuZ2xvYmFsc2lnbi5jb20vY2EvZ3N0c2Fj
-# YXNoYTM4NGc0MEMGCCsGAQUFBzAChjdodHRwOi8vc2VjdXJlLmdsb2JhbHNpZ24u
-# Y29tL2NhY2VydC9nc3RzYWNhc2hhMzg0ZzQuY3J0MB8GA1UdIwQYMBaAFOoWxmnn
-# 48tXRTkzpPBAvtDDvWWWMEEGA1UdHwQ6MDgwNqA0oDKGMGh0dHA6Ly9jcmwuZ2xv
-# YmFsc2lnbi5jb20vY2EvZ3N0c2FjYXNoYTM4NGc0LmNybDANBgkqhkiG9w0BAQwF
-# AAOCAgEAt6bHSpl2dP0gYie9iXw3Bz5XzwsvmiYisEjboyRZin+jqH26IFq7fQMI
-# rN5VdX8KGl5pEe21b8skPfUctiroo6QS5oWESl4kzZow2iJ/qJn76TkvL+v2f4mH
-# olGLBwyDm74fXr68W63xuiYSpnbf7NYPyBaHI7zJ/ErST4bA00TC+ftPttS+G/Mh
-# NUaKg34yaJ8Z6AENnPdCB8VIrt/sqd6R1k89Ojx1jL36QBEPUr2dtIIlS3Ki74CU
-# 15YTvG+Xxt9cwE+0Gx/qRQv8YbF+UcsdgYU4jNRZB0kTV3Bsd3lyIWmt8DT4RQj9
-# LQ1ILOpqG/Czwd9q9GJL6jSJeSq1AC4ZocVMuqcYd/D9JpIML9BQ/wk5lgJkgXEc
-# 1gRgPsDsU9zz36JymN1+Yhvx0Vr67jr0Qfqk3V0z6/xVmEAJKafTeIfD9hQchjiG
-# kyw3EKNiyHyM37rdK/BsTSx0rB3MHdqE9/dHQX5NUOQCWUvhkWy10u71yzGKWnbA
-# WQ6NNuq9ftcwYFTmcyo5YbFwzfkyS+Y78+O9utqgi6VoE2NzVJbucqGLZtJFJzGJ
-# D7xe/rqULwYHeQ3HPSnNCagb6jqBeFSnXTx0GbuYuk3jA51dQNtsogVAGXCqHsh6
-# 2QVAl/gadTfcRaMpIWAc3CPup3x19dDApspmRyOVzXBUtsiCWsIwggZZMIIEQaAD
-# AgECAg0B7BySQN79LkBdfEd0MA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0ds
-# b2JhbFNpZ24gUm9vdCBDQSAtIFI2MRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYD
-# VQQDEwpHbG9iYWxTaWduMB4XDTE4MDYyMDAwMDAwMFoXDTM0MTIxMDAwMDAwMFow
-# WzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNV
-# BAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0gRzQwggIi
-# MA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQDwAuIwI/rgG+GadLOvdYNfqUdS
-# x2E6Y3w5I3ltdPwx5HQSGZb6zidiW64HiifuV6PENe2zNMeswwzrgGZt0ShKwSy7
-# uXDycq6M95laXXauv0SofEEkjo+6xU//NkGrpy39eE5DiP6TGRfZ7jHPvIo7bmrE
-# iPDul/bc8xigS5kcDoenJuGIyaDlmeKe9JxMP11b7Lbv0mXPRQtUPbFUUweLmW64
-# VJmKqDGSO/J6ffwOWN+BauGwbB5lgirUIceU/kKWO/ELsX9/RpgOhz16ZevRVqku
-# vftYPbWF+lOZTVt07XJLog2CNxkM0KvqWsHvD9WZuT/0TzXxnA/TNxNS2SU07Zbv
-# +GfqCL6PSXr/kLHU9ykV1/kNXdaHQx50xHAotIB7vSqbu4ThDqxvDbm19m1W/ood
-# CT4kDmcmx/yyDaCUsLKUzHvmZ/6mWLLU2EESwVX9bpHFu7FMCEue1EIGbxsY1Tbq
-# ZK7O/fUF5uJm0A4FIayxEQYjGeT7BTRE6giunUlnEYuC5a1ahqdm/TMDAd6ZJflx
-# bumcXQJMYDzPAo8B/XLukvGnEt5CEk3sqSbldwKsDlcMCdFhniaI/MiyTdtk8EWf
-# usE/VKPYdgKVbGqNyiJc9gwE4yn6S7Ac0zd0hNkdZqs0c48efXxeltY9GbCX6oxQ
-# kW2vV4Z+EDcdaxoU3wIDAQABo4IBKTCCASUwDgYDVR0PAQH/BAQDAgGGMBIGA1Ud
-# EwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYEFOoWxmnn48tXRTkzpPBAvtDDvWWWMB8G
-# A1UdIwQYMBaAFK5sBaOTE+Ki5+LXHNbH8H/IZ1OgMD4GCCsGAQUFBwEBBDIwMDAu
-# BggrBgEFBQcwAYYiaHR0cDovL29jc3AyLmdsb2JhbHNpZ24uY29tL3Jvb3RyNjA2
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAAIeAq9y46OTMq
+# U448hweFTn1NhT2+Nc1BA4wP5zvJaKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
+# Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
+# YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
+# BhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExKTAnBgNVBAMTIEdsb2Jh
+# bFNpZ24gQ29kZSBTaWduaW5nIFJvb3QgUjQ1MIICIjANBgkqhkiG9w0BAQEFAAOC
+# Ag8AMIICCgKCAgEAti3FMN166KuQPQNysDpLmRZhsuX/pWcdNxzlfuyTg6qE9aND
+# m5hFirhjV12bAIgEJen4aJJLgthLyUoD86h/ao+KYSe9oUTQ/fU/IsKjT5GNswWy
+# KIKRXftZiAULlwbCmPgspzMk7lA6QczwoLB7HU3SqFg4lunf+RuRu4sQLNLHQx2i
+# CXShgK975jMKDFlrjrz0q1qXe3+uVfuE8ID+hEzX4rq9xHWhb71hEHREspgH4nSr
+# /2jcbCY+6R/l4ASHrTDTDI0DfFW4FnBcJHggJetnZ4iruk40mGtwEd44ytS+ocCc
+# 4d8eAgHYO+FnQ4S2z/x0ty+Eo7+6CTc9Z2yxRVwZYatBg/WsHet3DUZHc86/vZWV
+# 7Z0riBD++ljop1fhs8+oWukHJZsSxJ6Acj2T3IyU3ztE5iaA/NLDA/CMDNJF1i7n
+# j5ie5gTuQm5nfkIWcWLnBPlgxmShtpyBIU4rxm1olIbGmXRzZzF6kfLUjHlufKa7
+# fkZvTcWFEivPmiJECKiFN84HYVcGFxIkwMQxc6GYNVdHfhA6RdktpFGQmKmgBzfE
+# ZRqqHGsWd/enl+w/GTCZbzH76kCy59LE+snQ8FB2dFn6jW0XMr746X4D9OeHdZrU
+# SpEshQMTAitCgPKJajbPyEygzp74y42tFqfT3tWbGKfGkjrxgmPxLg4kZN8CAwEA
+# AaOCAXcwggFzMA4GA1UdDwEB/wQEAwIBhjATBgNVHSUEDDAKBggrBgEFBQcDAzAP
+# BgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQfAL9GgAr8eDm3pbRD2VZQu86WOzAf
+# BgNVHSMEGDAWgBSP8Et/qC5FJK5NUPpjmove4t0bvDB6BggrBgEFBQcBAQRuMGww
+# LQYIKwYBBQUHMAGGIWh0dHA6Ly9vY3NwLmdsb2JhbHNpZ24uY29tL3Jvb3RyMzA7
+# BggrBgEFBQcwAoYvaHR0cDovL3NlY3VyZS5nbG9iYWxzaWduLmNvbS9jYWNlcnQv
+# cm9vdC1yMy5jcnQwNgYDVR0fBC8wLTAroCmgJ4YlaHR0cDovL2NybC5nbG9iYWxz
+# aWduLmNvbS9yb290LXIzLmNybDBHBgNVHSAEQDA+MDwGBFUdIAAwNDAyBggrBgEF
+# BQcCARYmaHR0cHM6Ly93d3cuZ2xvYmFsc2lnbi5jb20vcmVwb3NpdG9yeS8wDQYJ
+# KoZIhvcNAQEMBQADggEBAKz3zBWLMHmoHQsoiBkJ1xx//oa9e1ozbg1nDnti2eEY
+# XLC9E10dI645UHY3qkT9XwEjWYZWTMytvGQTFDCkIKjgP+icctx+89gMI7qoLao8
+# 9uyfhzEHZfU5p1GCdeHyL5f20eFlloNk/qEdUfu1JJv10ndpvIUsXPpYd9Gup7EL
+# 4tZ3u6m0NEqpbz308w2VXeb5ekWwJRcxLtv3D2jmgx+p9+XUnZiM02FLL8Mofnre
+# kw60faAKbZLEtGY/fadY7qz37MMIAas4/AocqcWXsojICQIZ9lyaGvFNbDDUswar
+# AGBIDXirzxetkpNiIHd1bL3IMrTcTevZ38GQlim9wX8wggboMIIE0KADAgECAhB3
+# vQ4Ft1kLth1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkw
+# FwYDVQQKExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENv
+# ZGUgU2lnbmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAw
+# MDBaMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMTIw
+# MAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25pbmcgQ0EgMjAy
+# MDCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAMsg75ceuQEyQ6BbqYoj
+# /SBerjgSi8os1P9B2BpV1BlTt/2jF+d6OVzA984Ro/ml7QH6tbqT76+T3PjisxlM
+# g7BKRFAEeIQQaqTWlpCOgfh8qy+1o1cz0lh7lA5tD6WRJiqzg09ysYp7ZJLQ8LRV
+# X5YLEeWatSyyEc8lG31RK5gfSaNf+BOeNbgDAtqkEy+FSu/EL3AOwdTMMxLsvUCV
+# 0xHK5s2zBZzIU+tS13hMUQGSgt4T8weOdLqEgJ/SpBUO6K/r94n233Hw0b6nskEz
+# IHXMsdXtHQcZxOsmd/KrbReTSam35sOQnMa47MzJe5pexcUkk2NvfhCLYc+YVaMk
+# oog28vmfvpMusgafJsAMAVYS4bKKnw4e3JiLLs/a4ok0ph8moKiueG3soYgVPMLq
+# 7rfYrWGlr3A2onmO3A1zwPHkLKuU7FgGOTZI1jta6CLOdA6vLPEV2tG0leis1Ult
+# 5a/dm2tjIF2OfjuyQ9hiOpTlzbSYszcZJBJyc6sEsAnchebUIgTvQCodLm3HadNu
+# twFsDeCXpxbmJouI9wNEhl9iZ0y1pzeoVdwDNoxuz202JvEOj7A9ccDhMqeC5LYy
+# AjIwfLWTyCH9PIjmaWP47nXJi8Kr77o6/elev7YR8b7wPcoyPm593g9+m5XEEofn
+# GrhO7izB36Fl6CSDySrC/blTAgMBAAGjggGtMIIBqTAOBgNVHQ8BAf8EBAMCAYYw
+# EwYDVR0lBAwwCgYIKwYBBQUHAwMwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4E
+# FgQUJZ3Q/FkJhmPF7POxEztXHAOSNhEwHwYDVR0jBBgwFoAUHwC/RoAK/Hg5t6W0
+# Q9lWULvOljswgZMGCCsGAQUFBwEBBIGGMIGDMDkGCCsGAQUFBzABhi1odHRwOi8v
+# b2NzcC5nbG9iYWxzaWduLmNvbS9jb2Rlc2lnbmluZ3Jvb3RyNDUwRgYIKwYBBQUH
+# MAKGOmh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2NvZGVzaWdu
+# aW5ncm9vdHI0NS5jcnQwQQYDVR0fBDowODA2oDSgMoYwaHR0cDovL2NybC5nbG9i
+# YWxzaWduLmNvbS9jb2Rlc2lnbmluZ3Jvb3RyNDUuY3JsMFUGA1UdIAROMEwwQQYJ
+# KwYBBAGgMgECMDQwMgYIKwYBBQUHAgEWJmh0dHBzOi8vd3d3Lmdsb2JhbHNpZ24u
+# Y29tL3JlcG9zaXRvcnkvMAcGBWeBDAEDMA0GCSqGSIb3DQEBCwUAA4ICAQAldaAJ
+# yTm6t6E5iS8Yn6vW6x1L6JR8DQdomxyd73G2F2prAk+zP4ZFh8xlm0zjWAYCImbV
+# YQLFY4/UovG2XiULd5bpzXFAM4gp7O7zom28TbU+BkvJczPKCBQtPUzosLp1pnQt
+# pFg6bBNJ+KUVChSWhbFqaDQlQq+WVvQQ+iR98StywRbha+vmqZjHPlr00Bid/XSX
+# hndGKj0jfShziq7vKxuav2xTpxSePIdxwF6OyPvTKpIz6ldNXgdeysEYrIEtGiH6
+# bs+XYXvfcXo6ymP31TBENzL+u0OF3Lr8psozGSt3bdvLBfB+X3Uuora/Nao2Y8nO
+# ZNm9/Lws80lWAMgSK8YnuzevV+/Ezx4pxPTiLc4qYc9X7fUKQOL1GNYe6ZAvytOH
+# X5OKSBoRHeU3hZ8uZmKaXoFOlaxVV0PcU4slfjxhD4oLuvU/pteO9wRWXiG7n9dq
+# cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
+# xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
+# qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
+# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
+# Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
+# AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
+# FAYDVQQHEw1PYmVyZW50ZmVsZGVuMRQwEgYDVQQJEwtQZnJ1bmR3ZWcgMzEsMCoG
+# A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
+# BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
+# hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
+# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
+# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
+# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
+# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
+# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
+# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
+# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
+# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
+# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
+# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
+# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
+# TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
+# L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
+# Ly9vY3NwLmdsb2JhbHNpZ24uY29tL2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMDBV
+# BgNVHSAETjBMMEEGCSsGAQQBoDIBAjA0MDIGCCsGAQUFBwIBFiZodHRwczovL3d3
+# dy5nbG9iYWxzaWduLmNvbS9yZXBvc2l0b3J5LzAHBgVngQwBAzAJBgNVHRMEAjAA
+# MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
+# Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
+# b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
+# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
+# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
+# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
+# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
+# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
+# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
+# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
+# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
+# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
+# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
+# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
+# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
+# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAOqOGXO
+# 82rlRcf8DsyxDxAlNsoo6DkmRyGEQwWurGRZMA0GCSqGSIb3DQEBAQUABIICADWv
+# TDYgOkXfVBOcXi32lLY/aD8emn2EO41mbDqIv8n7d1zyojpc5xlX5Hf/wyZY4gds
+# mCCwH1+EAUiQOGa+5XAvw2y2L/YMFYHG1XocENQbecapZe1UHnw6IYHoskl5In0X
+# ZW3TcRf1Fgow66WpjZ0Oqur9440R41MXsFigu665aMGABKE+PazT20x46USbaJ9+
+# V9QmjfyFVh9KJoeuPWi0+mjRrn9devRsfOwe9j0+CnZeQJTQJvQTwtZY5nRel9wa
+# 5osTAY1HAgy9zH4NVtRiCrT3m8jU09o++oBrHYBXnZAVHz2QMC+oUsH4uz8imvIR
+# t1oe7QFia8rtdJtSQm69uVd7i1uoXyKTZY188vTBYI7sppzQqgeU6PGtaBRq2iYs
+# lDPl5kelhjBmLjlNsby6xp9UaW2FlB4KYabb4xtdHfEDBy+RwxQHiLS9oGVBEmIx
+# EyjrPYv73kHVw8ykFiaa92vYkltNFt6IVtmK0ZW3ZbHVaBeSecHsoYIytqTQBMdw
+# PlqdNJRsVtLTsY7nWj1cyDgA6W49UztdzeYE/CLY56WGCPPtlvTpHver0yytMG1s
+# oW83JI3WgxGgziG0krQ22xR1yHF1cyzrQMx3p1uzy2puJerVc6OUb7zs4aVNPZmB
+# 7dtYug2sLl7ndYOzGMSwCpPiO4YFwLytqfNdnO1voYId7TCCHekGCisGAQQBgjcD
+# AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
+# geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
+# SAFlAwQCAQUABCDzwwCl/ONpPJs8hH4bALiR/Ieg86oPZIUU6Ii7LLA3OwIUNn9N
+# PcUc4t4JSaa7s9WFI2m3W1wYDzIwMjYwNTIyMDc1MDExWjADAgEBoF2kWzBZMQsw
+# CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
+# R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
+# BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
+# A1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExNDAyBgNVBAMTK0ds
+# b2JhbFNpZ24gT2ZmbGluZSBSNDUgVGltZXN0YW1waW5nIENBIDIwMjUwHhcNMjUx
+# MDE1MDcyNTA0WhcNMzcwMTEwMDAwMDAwWjBZMQswCQYDVQQGEwJCRTEZMBcGA1UE
+# ChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMmR2xvYmFsc2lnbiBSNDUgVFNB
+# IGZvciBDb2RlU2lnbiAyMDI1MTAwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGK
+# AoIBgQDRSo2hjYZASCijCQSc2RMQPPKojE/xf4Uija2JnsJ7Snl2gDoxKjQ9HcU6
+# rVD8pgy1sBKdVxtLLFhY3gzY/PA2iwIs6ZzCnxshtjShsN1RyzRrzc4Fq+0xQx6q
+# ADUMn96mqHE/0ok53DPbmpBkkUDytGM79nQfw9WVymYgA+TkbA0/QOmPNNJIZ6Cj
+# X0t3wJfhL0caiXthBBMEWKxT5v2U7ZRbCq/DVDXA9oX1iFVBVaBpx57MLL00nyHu
+# x0InYS7Rr54M3tNhm7+0maxpyTFa51uY1PHtTJMup/l3RGooQ5YweCH2hDoUNwKO
+# C7QkFbklhPdq27EXkueg8qLOnRDmVO1r+B1yMAbl6QuV0L+OPB1SKBAPpmIFklmJ
+# 0SoibbUqxsTzejjdI+ywQLUcXilogwKWsJ46h6wjlU5AVqT7FEBYzWCTt6hf7SLQ
+# bPGs02Ba8oaaNfo0SL+aApN94luEB/wuE1lgptrckLzbQlCp56OgkAJYpqYuui+T
+# fueCIU0CAwEAAaOCAcYwggHCMA4GA1UdDwEB/wQEAwIHgDAWBgNVHSUBAf8EDDAK
+# BggrBgEFBQcDCDAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBQy+tPhB2gnkGsI0j8d
+# PIxlNigGGTAfBgNVHSMEGDAWgBR3AjsBMQ8edHfDSMjDB2NViKU7ojCBpQYIKwYB
+# BQUHAQEEgZgwgZUwQgYIKwYBBQUHMAGGNmh0dHA6Ly9vY3NwLmdsb2JhbHNpZ24u
+# Y29tL2dzb2ZmbGluZXI0NXRpbWVzdGFtcGNhMjAyNTBPBggrBgEFBQcwAoZDaHR0
+# cDovL3NlY3VyZS5nbG9iYWxzaWduLmNvbS9jYWNlcnQvZ3NvZmZsaW5lcjQ1dGlt
+# ZXN0YW1wY2EyMDI1LmNydDBKBgNVHR8EQzBBMD+gPaA7hjlodHRwOi8vY3JsLmds
+# b2JhbHNpZ24uY29tL2dzb2ZmbGluZXI0NXRpbWVzdGFtcGNhMjAyNS5jcmwwVgYD
+# VR0gBE8wTTAIBgZngQwBBAIwQQYJKwYBBAGgMgEeMDQwMgYIKwYBBQUHAgEWJmh0
+# dHBzOi8vd3d3Lmdsb2JhbHNpZ24uY29tL3JlcG9zaXRvcnkvMA0GCSqGSIb3DQEB
+# DAUAA4ICAQCOrnCmj0eGkYpuniz6/WFm91s6KjnhkMKYlbcftgpMBtlhysVniEOf
+# BvhcvoFQw4AOHG9NRVvZpkBnag5Dt1HM3Jg21gRVCBwFyP1ET8IDxoflYx5OD4SC
+# NLHs6vCg6rFkNT81v9Zy8u0xXy3WboN5iK/SbTmLGqCrAGJihLLrfIhvddwVrdBy
+# iHteLxgjugT6JQogCSoBF2JqmH0ZBCl515btbTuWZLrQUs5vvl2o98Mdju9yyJRW
+# LzPVcUkRk9d8xBBi638FBOAuo3fcyThGcne7wUOa+TghhwIHbZ3pxTYpgo5cCxEZ
+# sH8EXwiTUTwHf0qesssg/2XdcGH7s0AR4TyOJ2QnAayYOAM/XOBxNzURQg4mhMdP
+# L/F8VCMKj3koJaVcx2akh0B82le/aBU8q2Oa++OwOwiHF5e+f9m+yhyYbwGSogWI
+# V3hgRl+VyKrch8gv35FHr/cVz8n0/CPGRXGiYJZ7P1wOOgYdkMD2iDKVYQby5Ix/
+# xCB0/lSKLnqEoFezfmnCJbGgACVswMsxhJEUjtxEcQc9afalne+IOts0v/yCRikJ
+# snmVbS0x50Dk2OH+VCiU9s/XyzgfC7WzrtQ5diIdc2Ksi3JMTJm4a0LiEIZWitD5
+# +6PokOkQ8+35TsHOwUhs87I/yyJjlIZpAV4Of1/JN8bWVB3Edm4WzjCCBqAwggSI
+# oAMCAQICEQCD2oY3t58MhAyUe4QKUngfMA0GCSqGSIb3DQEBDAUAMFMxCzAJBgNV
+# BAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9i
+# YWxTaWduIFRpbWVzdGFtcGluZyBSb290IFI0NTAeFw0yNTA3MTYwMzA1MDRaFw00
+# MTA3MTYwMDAwMDBaMF4xCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
+# IG52LXNhMTQwMgYDVQQDEytHbG9iYWxTaWduIE9mZmxpbmUgUjQ1IFRpbWVzdGFt
+# cGluZyBDQSAyMDI1MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEApHcW
+# +O19i+LdAoZFYzS+5X+WYvnWoFqXAfir1hynhUTdH4RW1Db+yOmrQ275jlsQ6bzo
+# Z3nN0CMncZX4E0Qhpp6Qvx27+flpfzeMQacD7VciWUiF3TLiu7wT2bBCSENUn3hf
+# GMG4PJvYFvO5o4DA1iNvHhG4oSzctodoJfb4c8EjVahCw/NLizB3ra+NWe2gZBSa
+# ZKraMxFt676yqx7RcQnjbF4R0OLGovsZt23vU69A5BdoPxdA9zu9rM+qTBsPDVUJ
+# exYwEVU0GY7BJ5mUWWniyAPHW0Wv4Azk5t7I0XUIjA3+2OGkr0dVBXVBDyEeGBVr
+# YXEdhfVLwuh6HBGJFdIrEY5KoGlpoT+4BBQe4XCH5sv15Uo+M72VKWjPA5Ex3nfF
+# JC4P5FW1SR6olCSaIrtnZzc+zgmpSyiD+GcE2udQRQHbDi74enXgazk0+ktpHZ1Z
+# 8oTvSaSIREovXSLbH3KC8uFIkXucl7XPH7ZGIrmF9eF4zuoo5FIUnsvV60kLqFDz
+# Pk+UbLmgZDUCPlFFBBehaaNvixEymx9ON2KXev+MfK6OZChqGbrOC2wvvAFHyKlT
+# ZbVHdqNiu0u5a2T1C9dSTRny1/hxLwcxL9BWPzQLwhsiyXqUzM7uD0lD9+PYMaxU
+# YgoVSxqb4xvPCiVqLNabI+WtjEzYfQ0P+6tBTFsCAwEAAaOCAWIwggFeMA4GA1Ud
+# DwEB/wQEAwIBhjATBgNVHSUEDDAKBggrBgEFBQcDCDASBgNVHRMBAf8ECDAGAQH/
+# AgEAMB0GA1UdDgQWBBR3AjsBMQ8edHfDSMjDB2NViKU7ojAfBgNVHSMEGDAWgBRG
+# shx34XsV8KU5oXDe0cQu6m2y3jCBjgYIKwYBBQUHAQEEgYEwfzA3BggrBgEFBQcw
+# AYYraHR0cDovL29jc3AuZ2xvYmFsc2lnbi5jb20vdGltZXN0YW1wcm9vdHI0NTBE
+# BggrBgEFBQcwAoY4aHR0cDovL3NlY3VyZS5nbG9iYWxzaWduLmNvbS9jYWNlcnQv
+# dGltZXN0YW1wcm9vdHI0NS5jcnQwPwYDVR0fBDgwNjA0oDKgMIYuaHR0cDovL2Ny
+# bC5nbG9iYWxzaWduLmNvbS90aW1lc3RhbXByb290cjQ1LmNybDARBgNVHSAECjAI
+# MAYGBFUdIAAwDQYJKoZIhvcNAQEMBQADggIBADKj7n7RbuRmMZZYXqlMPRJoR6X1
+# n//quXGLVfOpFoR9Ya05L94w0ywBjelyGGf+nAB+CZFQ7gUOd2a2bpfpW8Xw5ArM
+# +YjPEf8AtC4E6Yr105U1YNjlTSERoWJKc1hkSN5m4dpsYteFykzFQVwX50hYKH3y
+# Z6Vcu6Ha0EA5ofzLpi2jK2jbRDCXbFNLi5mO1xKRdB2AzAF0f5C00b4H3d5sCOB8
+# njTvAwaTMGEMeTkLWM4Z9Y+3UOtOpo1QuxXbDpXVkLXraG25iL1VtvjxEAy4534n
+# UINB9whORicJJSTLba6fOK2f/1QGWEdewWLHAzE+N5oH0QoNRALpJ5JjIfeInvO+
+# sQdBidnPuLKJ95HTj7XyMvJhFZjtbHJGlEWx4UgKcuNKLDLXWALfwQDN2Dey3kTf
+# d4yw4nQdk1PctLLK3F4L2nnLv94BMkpY+Rfl53oOEN4yTvtwCYP+VDuZrktc7Nac
+# oTVxZnKGkv8a1akckdOwQZC+i8Ay1VyzMAX/Tb4+r3c65B7cpAtq3OoUijXUJgvZ
+# xci6TX78smL2TYy2tWn+8G4krnXvy2ELR2XYnKEOS4MVmrSCsjM5nxSrghE10VDX
+# QbEfa93lhikfFoIuINKzWDLqvu8ZucmxEufxpHjNnnRVXX/Zv5KQq8pu/MQoOz6D
+# C74n5+O5bSwvT5sgMIIGozCCBIugAwIBAgIQeEqqgXNmnJAJVOQhyUfrwDANBgkq
+# hkiG9w0BAQwFADBMMSAwHgYDVQQLExdHbG9iYWxTaWduIFJvb3QgQ0EgLSBSNjET
+# MBEGA1UEChMKR2xvYmFsU2lnbjETMBEGA1UEAxMKR2xvYmFsU2lnbjAeFw0yMDEy
+# MDkwMDAwMDBaFw0zNDEyMTAwMDAwMDBaMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
+# ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIFRpbWVzdGFt
+# cGluZyBSb290IFI0NTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALp0
+# M+wn3BI4IRvF02Eo1lq8T9+LzJGEQyRXvGQhvDscHz1PjK0Ht/PF1wLpERSCmqq0
+# lHI7cQ0a72hrhXmOr2bqWJgNusF8edL/zbNvMUXQBXQEAHJqJ364Nz86iO2Xg/Wr
+# NU0Pn1k79S/fWcV8pTJ2YJbI7e74BH4ZUXKov0RBerx7HjsAm7y64Ja/kP6Nm8Ny
+# iwAS+CA6YDj3wcyFivuHeS6hKyDmy6CFkSO2xCgHVCje7BAxT4ryzRQfHt1VHOoo
+# MUz5IWqozfOWZ/oBQZvNDwtof7ve8UPqF+Ww3HAis2k2WXRrxuWJKnzlC4Fdqz+P
+# uNF2cvN8oqnil0G/zIxF/mHJ9mwHCwAE6BUjT4IqLfbvw/oRNkih0f16OTo0XaMs
+# Dpt3UCA0QN2xAzGtX+lih3OWA2H3lLDZXGxP5xTF4fF7DSOczXCMHWreSi2LKrvb
+# QhQFB6r7FNwx0/YfbMu+aGZEcE1tF/lx6wVzjpGSdetoXB72RGEYKWLdF2aI7Ci6
+# SW/bPnf+uTEfdRwYoqZHvdjuSIU7/bPiDz8qmMaa+oJvsaWlhh1aOvqkbHQPd1Jh
+# an+HKd45m4vus0VgMCSXFRIqhTCTJqyWpi3ocG0LqTKtLJsoCnZC8lVhUZiU3u32
+# xRdvPBUQsA6tsN7FFvRl0cwvWlYIz5nE8FWRwix5AgMBAAGjggF4MIIBdDAOBgNV
+# HQ8BAf8EBAMCAYYwEwYDVR0lBAwwCgYIKwYBBQUHAwgwDwYDVR0TAQH/BAUwAwEB
+# /zAdBgNVHQ4EFgQURrIcd+F7FfClOaFw3tHELuptst4wHwYDVR0jBBgwFoAUrmwF
+# o5MT4qLn4tcc1sfwf8hnU6AwewYIKwYBBQUHAQEEbzBtMC4GCCsGAQUFBzABhiJo
+# dHRwOi8vb2NzcDIuZ2xvYmFsc2lnbi5jb20vcm9vdHI2MDsGCCsGAQUFBzAChi9o
+# dHRwOi8vc2VjdXJlLmdsb2JhbHNpZ24uY29tL2NhY2VydC9yb290LXI2LmNydDA2
 # BgNVHR8ELzAtMCugKaAnhiVodHRwOi8vY3JsLmdsb2JhbHNpZ24uY29tL3Jvb3Qt
 # cjYuY3JsMEcGA1UdIARAMD4wPAYEVR0gADA0MDIGCCsGAQUFBwIBFiZodHRwczov
 # L3d3dy5nbG9iYWxzaWduLmNvbS9yZXBvc2l0b3J5LzANBgkqhkiG9w0BAQwFAAOC
-# AgEAf+KI2VdnK0JfgacJC7rEuygYVtZMv9sbB3DG+wsJrQA6YDMfOcYWaxlASSUI
-# HuSb99akDY8elvKGohfeQb9P4byrze7AI4zGhf5LFST5GETsH8KkrNCyz+zCVmUd
-# vX/23oLIt59h07VGSJiXAmd6FpVK22LG0LMCzDRIRVXd7OlKn14U7XIQcXZw0g+W
-# 8+o3V5SRGK/cjZk4GVjCqaF+om4VJuq0+X8q5+dIZGkv0pqhcvb3JEt0Wn1yhjWz
-# Alcfi5z8u6xM3vreU0yD/RKxtklVT3WdrG9KyC5qucqIwxIwTrIIc59eodaZzul9
-# S5YszBZrGM3kWTeGCSziRdayzW6CdaXajR63Wy+ILj198fKRMAWcznt8oMWsr1EG
-# 8BHHHTDFUVZg6HyVPSLj1QokUyeXgPpIiScseeI85Zse46qEgok+wEr1If5iEO0d
-# MPz2zOpIJ3yLdUJ/a8vzpWuVHwRYNAqJ7YJQ5NF7qMnmvkiqK1XZjbclIA4bUaDU
-# Y6qD6mxyYUrJ+kPExlfFnbY8sIuwuRwx773vFNgUQGwgHcIt6AvGjW2MtnHtUiH+
-# PvafnzkarqzSL3ogsfSsqh3iLRSd+pZqHcY8yvPZHL9TTaRHWXyVxENB+SXiLBB+
-# gfkNlKd98rUJ9dhgckBQlSDUQ0S++qCV5yBZtnjGpGqqIpswggWDMIIDa6ADAgEC
+# AgEAi0i6Nlc8csXadfnvMvWGvdwSKOOILk82XyaZ7A8BIRCWkjjGcGtt867UDr0l
+# 74Z/4omNlaV+KUQDTaqYqPG33OopYyHc7c2ICssQaWF5KUIMI7zpxe9SHi8zN9VP
+# ZnpmqUdUM7HdFvLYZHGjMZTlb/ZNS+KEbNDJJWdPyEvQzksF1j37fUH6irHAIeB+
+# CLDZZCv56vLHCvTPLgw0YO5su5LwP/F7UhJod1mB9RwupDqMOQMN7eXMr2ZIeWPV
+# Sbj/S9IlT0hOkzuTd7CaSGy2oB2zdJ5fvSIEO3w3DYW1w5q73ZxaA420DZ9MdjTV
+# ha1Fe7Wfuy6Ju6zIv5JjSMY/yheqDbwAEV+L6ONDhIpDNM39O8Cie9sfuGfIjBXe
+# P6Z/xyjvoW9vskHPAiLrAfhLyNJ2byXfXtpoaD17RATCQW5JO6eYVgTt0SYrBJTb
+# 5O1mjj2AnaSkVXlQXuP4Gh/AFm+QFTyKpkihDHu6KuCxqYcFRpvtJVU9N2mY7UaZ
+# mIVHCh5i2/2c5cFDQo69z2/2jJH9guSf7K3jlVUF80kvbTT3/2fumUC705qAQkDa
+# I4lgH4NxkrXp5soK+d3HbLJYQZxmjZsqbx9vVwRDXINdO2mc3jn6hE0183sbbYvx
+# bwPBKVLilL97VIvfQHoLcAJ3Py+IBwIAddKvxtYiMhmjO+gwggWDMIIDa6ADAgEC
 # Ag5F5rsDgzPDhWVI5v9FUTANBgkqhkiG9w0BAQwFADBMMSAwHgYDVQQLExdHbG9i
 # YWxTaWduIFJvb3QgQ0EgLSBSNjETMBEGA1UEChMKR2xvYmFsU2lnbjETMBEGA1UE
 # AxMKR2xvYmFsU2lnbjAeFw0xNDEyMTAwMDAwMDBaFw0zNDEyMTAwMDAwMDBaMEwx
@@ -4187,22 +4573,23 @@ function Replace-AlyaStrings($obj, $depth)
 # v4aW2ZlatJlXHKTMuxWJU7osBQ/kxJ4ZsRg01Uyduu33H68klQR4qAO77oHl2l98
 # i0qhkHQlp7M+S8gsVr3HyO844lyS8Hn3nIS6dC1hASB+ftHyTwdZX4stQ1LrRgyU
 # 4fVmR3l31VRbH60kN8tFWk6gREjI2LCZxRWECfbWSUnAZbjmGnFuoKjxguhFPmzW
-# AtcKZ4MFWsmkEDGCA0kwggNFAgEBMG8wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoT
-# EEdsb2JhbFNpZ24gbnYtc2ExMTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1w
-# aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
-# BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
-# MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# IKbtmJMY+6OZMy9a9rD0NVYzCdWJEpYsrcsB0gnq3aN8MIGwBgsqhkiG9w0BCRAC
-# LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
-# czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
-# MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAJYDDKCItBlmF
-# f6jE5ue5L5yyI8z6N49WfvoYKBkRAMvR+0MDXJJPAFXCTdfVpmKSjWGmlshHe9WJ
-# NLGZE6yD8a1wRd7cXiU22cJZ+zkuuqM9zehTmzDCWVZ+awjJF9X564uPQCUQjBuj
-# b6zI8MgrnRNcK/xyLcqP0IBDLWIDtQZynAXhJYPM+7BRg3lxQwaNzAnUVIjUVpgv
-# XaJQp9XfnkVRtpEgqeBzZQ1/3Une0VAOygDy1HuUtvZAjcQiDuqAlvARo41pdY4/
-# 33hOZupWknchtaHq+DyKv3LKbZnEvRfNX6T5+yf0NetBiM13ETtM13ryIsozIsxq
-# s1+7cM+uuz/9sBImHYVcgNg/WOBOFNuZRzvQypOUNDb8IV94ruCSwAPvrsiRGhBJ
-# AJ67FvnmBssjZmGhIjpsg/E14W7z2/biBSbbBeSDY5p8RvD4t4rUQcc5CHYM5/hp
-# 1WvpK1gIahrnILQsJqIWXDFSvD2BRiQdaRhTLhUbVdg+12lB8l+/
+# AtcKZ4MFWsmkEDGCA2EwggNdAgEBMHMwXjELMAkGA1UEBhMCQkUxGTAXBgNVBAoT
+# EEdsb2JhbFNpZ24gbnYtc2ExNDAyBgNVBAMTK0dsb2JhbFNpZ24gT2ZmbGluZSBS
+# NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
+# SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
+# DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
+# BDEyBDBR9AIrrhP8qi5QHBsBSTuSRfEevWtZan3F7HC12WpeOT38SA8+CMm79mwB
+# pJg5QCcwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
+# ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
+# IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
+# KoZIhvcNAQEMBQAEggGAST4geY/yVWUCIkjz5mTBOhQRIKvvx8AF0R6LX1NiUrPL
+# 3A29Tn9EifBr3B+CABUDWa0H9ynXS/ZH07q9/ezlrJw/tUQ7AkSI+9SFtI1Cg4Jx
+# noLs5o61t9rvdeHHNSf7fFS2mIxAJRRG+tvkbA70sP9SDZFsZly7OlW+KAdWF9iE
+# BM8B9Hw5cTSv+toKqX919u32pr3Fk9lq4EKJVabIO4iwD5Vlqlconxq5/B2vPBu0
+# gj9N8phDWHxDZCJXtBACcETd2SyyxoPWVQOxD+DKM3WlaOXW+nHYNTuUfcH+eYMj
+# kQOp5dAz6R9II/BKICAFiolvMkw11xOqTNIUwS68/hUirZn+i7NEe43f/cMjwCIC
+# zNMEyOYJEBxO7PhVAF5aRMI3xoW2i6/V+84bWSR7hy5p5Zj2hftM5t1MTfODow95
+# s5f0HsmbqaLKqxh3FvaX/Q8cTHRHaZ8C+NNjLlRZAwjHSuKGu8+WTclLTqSZcmYK
+# py1wKbGCI0gUNNfNtMhX
 # SIG # End signature block

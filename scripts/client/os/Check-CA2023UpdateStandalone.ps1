@@ -235,8 +235,8 @@ if ($OSArchitecture -like "*ARM64*")
 
 Write-Host "`nChecking system events"
 Write-Host "==============================================="
-$allEventIds = @(1801,1802,1803,1808,1037,1042)
-$events = @(Get-WinEvent -FilterHashtable @{LogName='System'; ID=$allEventIds} -MaxEvents 200 -ErrorAction SilentlyContinue)
+$allEventIds = @(1801,1802,1803,1808,1037,1042,1795)
+$events = @(Get-WinEvent -FilterHashtable @{LogName='System'; ID=$allEventIds} -MaxEvents 1000 -ErrorAction SilentlyContinue)
 
 $latest_1801_Event = $events | Where-Object {$_. ID -eq 1801} | Sort-Object TimeCreated -Descending | Select-Object -First 1
 $latest_1802_Event = $events | Where-Object {$_. ID -eq 1802} | Sort-Object TimeCreated -Descending | Select-Object -First 1
@@ -244,17 +244,19 @@ $latest_1803_Event = $events | Where-Object {$_. ID -eq 1803} | Sort-Object Time
 $latest_1808_Event = $events | Where-Object {$_. ID -eq 1808} | Sort-Object TimeCreated -Descending | Select-Object -First 1
 $latest_1037_Event = $events | Where-Object {$_. ID -eq 1037} | Sort-Object TimeCreated -Descending | Select-Object -First 1
 $latest_1042_Event = $events | Where-Object {$_. ID -eq 1042} | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1795_Event = $events | Where-Object {$_. ID -eq 1795} | Sort-Object TimeCreated -Descending | Select-Object -First 1
 
 $bootLoaderPending = $false
 $zertPending = $true
 $zertRetry = $false
 
-if ($latest_1801_Event -or $latest_1802_Event -or $latest_1803_Event) {
+if ($latest_1801_Event -or $latest_1802_Event -or $latest_1803_Event -or $latest_1795_Event) {
 	#https://support.microsoft.com/en-us/topic/secure-boot-db-and-dbx-variable-update-events-37e47cf8-608b-4a87-8175-bdead630eb69
 	Write-Warning "Folgende Ereignisse im System Log gefunden, die auf einen kürzlich durchgeführten Versuch hinweisen, die Secure Boot CA Zertifikate zu aktualisieren:"
 	$latest_1801_Event | Format-List
 	$latest_1802_Event | Format-List
 	$latest_1803_Event | Format-List
+	$latest_1795_Event | Format-List
 	Write-Host ""
 	if ($latest_1801_Event.Message -match 'BucketConfidenceLevel:\s*(.*)') { 
 		$confidence = $matches[1]
@@ -480,6 +482,10 @@ if ($zertPending) {
 
 	$RegSecureBoot = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot"
 	Write-Host "AvailableUpdates hat derzeit den Wert: 0x$($RegSecureBoot.AvailableUpdates.ToString("X"))"
+	if ("0x$($RegSecureBoot.AvailableUpdates.ToString("X"))" -eq "0x4100")
+	{
+		Write-Warning "Gerät kommt beim Ausrollen des neuen KEK nicht weiter. Dies kann darauf hinweisen, dass das Update bereits angewendet wurde oder dass es ein Problem mit der Registrierung gibt. Bitte überprüfe die Ereignisse im Systemprotokoll und die UEFI-Zertifikate, um den Status des Updates zu bestätigen."
+	}
 	$RegValue = 0x0
 	$RegValue += 0x0040 # add the Windows UEFI CA 2023 certificate to the Secure Boot DB.
 	$RegValue += 0x0800 # apply the Microsoft Option ROM UEFI CA 2023 to the DB
@@ -605,8 +611,8 @@ if ($doLogging)
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCWJRYgM0DWpXZ4
-# L2mHpz280bujJ1RzKPKMGsR3OfsusqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCjqe6dtwaiMSVc
+# IaW19kdkvX/u400LEm/IQFJP7iWZ56CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -720,23 +726,23 @@ if ($doLogging)
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICK1k+oD
-# EcjQ7K9t/exT75wFXJ1HOOM+i5/1Rz8dkFb1MA0GCSqGSIb3DQEBAQUABIICAJAz
-# 2QutfiMjIksMTdzr2OHD17YS/59u/h9BczGxcdxyYroyXvoAhZy8M1hyrurNxDe8
-# 8Nvs5X2qdLBnAf0b1/TsEjrYArqE5abKnhyDbyhbOscgvEW/NNDpdCwFRlC7r2ct
-# YYqk65rixW+5pLBjXVY6Elqdq2nK/xjY2vRe492Dr2Sz2lV+U0x9JLexHal3C6Il
-# ux64bARaWzmjZ72y6uWyrfNug4d+yQlRWE1kgYMsIfhryj4tCCoc0GiLDckSJ0Gj
-# zfg0aXyRL8LWSlM0Ch7Dlq0H5lMvJya+mKfY9jCfpL/CPDc6g/cHz4w/7cPliSEa
-# V5psiW2HKqyRK31dCf4/q7nKw1Bo5AnF6APECE0BJGgafeu9wyUB5w1VIIXrkQ/u
-# OwWdgRMEBbTCPceDqZBR51MHw8kE+rUpzsOmcG6M2jY2uRZLlOy2bmiehEDusKAc
-# Fz+rNFvEXNhyzH8pj2jzeWF1TPpWyClC1G34sx3HbSCUvdmS3hGW0v9GTQW3AxhU
-# KHwsFii0u/Pr2Vj93FUJSg9Pka37fepf4GhM2SxTo8kSCsCpi66caQGtdUCDzAgX
-# MuYqgis/gKH2uem62NgP8Vz3vlDwqWv7xxyi8xIhPgpkSy7QCge1hHb5rMQY4hrq
-# HZ5ydOHpRPHb0dQFjUjgV1762nBt2XtvhB9j+Et/oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILYYgFce
+# L7TvhRpF8lIyhYC08NN4r62UfnpT4JqYnUj5MA0GCSqGSIb3DQEBAQUABIICALUp
+# C0VWhl1LCosabfvk/kvht4jzo4CpQzZ+82O7uJ7xtUUgkRxpeQpt7/iBM/UftrKK
+# F8oU7R4yt3VrxoQdcFFBXf7nmn1lwGV1qr3/Ozuun8+5aEPZiY4n1pwfRIAh1gLo
+# 8wftdA8honYDdMKFLl8eL0GVIH6Dzq/dexDS0bxqhx3HCvSMa8y3PcwvLrCEI9js
+# g4EnZpgpC5gcvxJcgoEDiTO7T23LEW+urhtLPc7ii0drp93Cjc+LZX5twdNb8eMX
+# 7gncP2GFchXHDEJIXrYvfOisFOPta5Dgskq+SWGYs5/+J0NCxrlBAfTpFziuvKeL
+# G90F6uKj9UFu9vj32NFYpIp+QgWCk0i54CDyxPewYoqGPTiamUKeT0Z+EilO5HIx
+# 6iOVMcJv0eZvmd9M4DRu0CluZxE7vFcDWFo/tNz+4YElwDgD8MNN9yGNbvV6GHgs
+# 8Ke5dl/mzeoaTa5cIXMVSK1J74Jc0fMrA0bngXYBYzeF87JxetNL0DSpcheuWhc/
+# PCBTb6s4Wh41qtfnsPgUTteZy4j6IR2/ASq02at2KxLx3GylNRDpUmm2yMAVc12t
+# GwHQknOnnzJaDDSlt/Q7aq0eqWlf5yjMLBUIO0RGDTqtN/YVPKH07V8wQi2fpaCn
+# uTf01KvFzrmhj9C6zzkhkxdvWxKtMGF1SkTtrbFwoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAi0RrrGDL3rf4UhecmP9RKY5hLa2ImQ4Qj2JHP+OvxFAIUeVFP
-# gR3ksszkNz8I3kJDYHJswwQYDzIwMjYwNDI5MTMzNzE0WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAc+/0pr7hrvRD5yiLLvTXAOxTQoAlMtFw81IO0UTm2bAIUP/yD
+# xJ2Kqr6NomRrL5ZIjwmcZrAYDzIwMjYwNTIxMTIzNTExWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -879,18 +885,18 @@ if ($doLogging)
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBhlA+nrG8yGiFTs4tcrJX2O5APekcxQbcKAiPifl8Q2TGy8y9YKbxWpHs1
-# UNPbLvkwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDB/chFFhyyjyheZsN24B7+3giQcEo8olBoe1TYGi3irXR0ykeLC4hygKXNI
+# PWUtoPgwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAeQ8X7RSqmlzKuV6c1yI0tVJA8Nuh280Dw00i1NydqNJ1
-# d+JULMpeAXjUyiFp0zR1ovGf5VW2uYog5lYsHV0dK1vbqOmkizpuIEJMeq8bvB43
-# HI40hvAM8q4tsummniqx/ci/rQNpe7RlWsCcAArEfTmF3tKKzq5coo965R2OuCbv
-# SSRpJBDCyhlud4P/ZaJpzrrPJalv1hXVij7toN+AySfWmRFqbzxzYDbNgmE/xrJB
-# xPym5m6uhQpqbAdQ4KljUxpqCsJLtX1GPRejo9CqEHe+oNtuEc/IgnLWF0k0Y+3+
-# 8RELKigepHA3sLUpz6DcjXuqK8eBAD3RZi34Fh4TeIaMXONnEyFqFxeM6L+yM6Z5
-# 2daf39f4tqxVmZ9+kbrOvfoSJAfknoUiC0lD55o0Fd4RfbQ+lC2COO38IMqw4PWW
-# UoNe+ByGY6+E94j7fqbmUrnRrKd2nEmT09RdMf0Q87v2dSXy4OMHil40uWnpc7uK
-# Dr3bm1t1GNKU7FfKVKtY
+# KoZIhvcNAQEMBQAEggGAnmJ1o1d+Cq/dicNNUwqYcbR19Vphy5ob/zwy3UkiL7rM
+# CVAH3d6EWOGPc10pa18yHu9itzXLDAPT4qdcCf8iDnQ9UvR4nPG1x6P+ilNdPSQR
+# YUeP9uvvWMYV+6r6srdk5yUx/hT6ZtVTvPutFKIWy4tas7bRVRBRGKD7rRSIDWsp
+# a8Jbi9M2+xLkujBa0z2vE7rVLEnRNxCPYHn/LRWgVcG6QgqrzXl0AJSxkE27NGhP
+# B5IJI4Y5BCOCcfWiJH7Xv9zZj8ZPN81Ztrhzrpx4bLUOMlfJLLIWjGEU3pJ7wERY
+# 6EsOeP/BY4+tOkw3dWJeyg3K6Y/QAqAzUmj88MNdGiYyT4DnJS4T3hdMlLWiikG9
+# 5bm7FRnOIPDN+OpqI/uFwCjDE4j2XPnlr9O0K5rXiFjJjahX5iRhOZgRj5NX4YjH
+# 2xGwWL+6mY7nzmyueEgJqN2N6Xs+J4rRPYTwduaas5jQSZnGniJJiEVP5/xsb2qO
+# 5Gk6xnCj2+vED03T1Xze
 # SIG # End signature block

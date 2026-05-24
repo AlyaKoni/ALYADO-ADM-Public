@@ -33,6 +33,7 @@
     10.03.2020 Konrad Brunner       Initial Version
 	16.08.2021 Konrad Brunner		Added provider registration
     06.02.2026 Konrad Brunner       Added powershell documentation
+    18.08.2026 Konrad Brunner       Network watcher
 
 #>
 
@@ -80,6 +81,7 @@ $DefaultSubnetName = "$($VirtualNetworkNameTest)snet{0}"
 $DefaultSubnetSecGrpName = "$($VirtualNetworkNameTest)snet{0}sgrp"
 $VirtualNetworkProdPeeringName = "$($VirtualNetworkNameProd)peer$($VirtualNetworkNameTest)"
 $VirtualNetworkTestPeeringName = "$($VirtualNetworkNameTest)peer$($VirtualNetworkNameProd)"
+$NetworkWatcherName = "$($AlyaNamingPrefix)ntww_$($AlyaLocation)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -185,6 +187,48 @@ for ($i = 1; $i -lt ($Networks.Count+1); $i++)
 if ($dirty)
 {
     $VNet | Set-AzVirtualNetwork
+}
+
+# Checking network watcher
+Write-Host "Checking network watcher" -ForegroundColor $CommandInfo
+$watchers = Get-AzNetworkWatcher
+foreach($watcher in $watchers)
+{
+    if ($watcher.ResourceGroupName -ne $VNet.ResourceGroupName)
+    {
+        Write-Warning "  Deleting watcher $($watcher.Name) in resource group $($watcher.ResourceGroupName)."
+        Remove-AzNetworkWatcher -NetworkWatcher $watcher
+    }
+}
+$ResGrp = Get-AzResourceGroup -Name "NetworkWatcherRG" -ErrorAction SilentlyContinue
+if ($ResGrp)
+{
+    Write-Warning "Network watcher resource group NetworkWatcherRG exists. Cleaning up."
+    $resources = Get-AzResource -ResourceGroupName "NetworkWatcherRG" -ErrorAction SilentlyContinue | Remove-AzResource -Force
+    if (@($resources).Count -gt 0)
+    {
+        Write-Warning "  Still found resources in NetworkWatcherRG. Please clean up manually."
+        foreach($res in @($resources))
+        {
+            Write-Host "    Resource $($res.Name) of type $($res.ResourceType)" -ForegroundColor $CommandWarning
+        }
+    }
+    else
+    {
+        $null = Remove-AzResourceGroup -Name "NetworkWatcherRG" -Force -ErrorAction SilentlyContinue
+    }
+}
+$watcher = Get-AzNetworkWatcher | Where-Object { $_.Location -eq $VNet.Location }
+if ($watcher -and $watcher.Name -ne $NetworkWatcherName)
+{
+    Write-Warning "  Deleting watcher $($watcher.Name) in resource group $($watcher.ResourceGroupName)."
+    Remove-AzNetworkWatcher -NetworkWatcher $watcher
+}
+$Watcher = Get-AzNetworkWatcher -ResourceGroupName $VNet.ResourceGroupName -Name $NetworkWatcherName -ErrorAction SilentlyContinue
+if (-Not $Watcher)
+{
+    Write-Host "  Creating watcher $($NetworkWatcherName) in resource group $($VNet.ResourceGroupName)" -ForegroundColor $CommandWarning
+    $Watcher = New-AzNetworkWatcher -Name $NetworkWatcherName -ResourceGroupName $VNet.ResourceGroupName -Location $VNet.Location
 }
 
 # Checking peering test

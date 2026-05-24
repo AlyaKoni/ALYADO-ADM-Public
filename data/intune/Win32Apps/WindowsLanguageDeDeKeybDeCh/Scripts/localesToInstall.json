@@ -1,50 +1,50 @@
 [
   {
-    "InputLanguageID": "0409:00000807",
-    "SkuId": "0016",
-    "LanguageTag": "en-CH",
-    "LicenseType": "online",
-    "PackageFamilyName": "Microsoft.LanguageExperiencePacken-US_8wekyb3d8bbwe",
-    "ProductTitle": "English (United States) Local Experience Pack",
-    "ProductId": "9PDSCC711RVF",
     "Locale": "en-US",
+    "ProductId": "9PDSCC711RVF",
+    "SkuId": "0016",
+    "LicenseType": "online",
+    "LanguageTag": "en-CH",
+    "PackageFamilyName": "Microsoft.LanguageExperiencePacken-US_8wekyb3d8bbwe",
+    "GeoId": 223,
     "Order": 4,
-    "GeoId": 223
+    "ProductTitle": "English (United States) Local Experience Pack",
+    "InputLanguageID": "0409:00000807"
   },
   {
-    "InputLanguageID": "0810:00000807",
-    "SkuId": "0016",
-    "LanguageTag": "it-CH",
-    "LicenseType": "online",
-    "PackageFamilyName": "Microsoft.LanguageExperiencePackit-IT_8wekyb3d8bbwe",
-    "ProductTitle": "italiano Pacchetto di esperienze locali",
-    "ProductId": "9P8PQWNS6VJX",
     "Locale": "it-IT",
+    "ProductId": "9P8PQWNS6VJX",
+    "SkuId": "0016",
+    "LicenseType": "online",
+    "LanguageTag": "it-CH",
+    "PackageFamilyName": "Microsoft.LanguageExperiencePackit-IT_8wekyb3d8bbwe",
+    "GeoId": 223,
     "Order": 3,
-    "GeoId": 223
+    "ProductTitle": "italiano Pacchetto di esperienze locali",
+    "InputLanguageID": "0810:00000807"
   },
   {
-    "InputLanguageID": "100c:00000807",
-    "SkuId": "0016",
-    "LanguageTag": "fr-CH",
-    "LicenseType": "online",
-    "PackageFamilyName": "Microsoft.LanguageExperiencePackfr-FR_8wekyb3d8bbwe",
-    "ProductTitle": "Module d\\u0027expérience locale français (France)",
-    "ProductId": "9NHMG4BJKMDG",
     "Locale": "fr-FR",
+    "ProductId": "9NHMG4BJKMDG",
+    "SkuId": "0016",
+    "LicenseType": "online",
+    "LanguageTag": "fr-CH",
+    "PackageFamilyName": "Microsoft.LanguageExperiencePackfr-FR_8wekyb3d8bbwe",
+    "GeoId": 223,
     "Order": 2,
-    "GeoId": 223
+    "ProductTitle": "Module d\\u0027expérience locale français (France)",
+    "InputLanguageID": "100c:00000807"
   },
   {
-    "InputLanguageID": "0807:00000807",
-    "SkuId": "0016",
-    "LanguageTag": "de-CH",
-    "LicenseType": "online",
-    "PackageFamilyName": "Microsoft.LanguageExperiencePackde-DE_8wekyb3d8bbwe",
-    "ProductTitle": "Deutsch Local Experience Pack",
-    "ProductId": "9P6CT0SLW589",
     "Locale": "de-DE",
+    "ProductId": "9P6CT0SLW589",
+    "SkuId": "0016",
+    "LicenseType": "online",
+    "LanguageTag": "de-CH",
+    "PackageFamilyName": "Microsoft.LanguageExperiencePackde-DE_8wekyb3d8bbwe",
+    "GeoId": 223,
     "Order": 1,
-    "GeoId": 223
+    "ProductTitle": "Deutsch Local Experience Pack",
+    "InputLanguageID": "0807:00000807"
   }
 ]

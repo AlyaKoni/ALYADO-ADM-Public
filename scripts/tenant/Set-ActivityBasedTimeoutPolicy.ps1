@@ -94,8 +94,12 @@ Write-Host "=====================================================`n" -Foreground
 
 $TimeOutStr = (New-TimeSpan -Minutes $TimeoutInMinutes).ToString("hh\:mm\:ss")
 $PolicyDefinition = "{`"ActivityBasedTimeoutPolicy`":{`"Version`":1,`"ApplicationPolicies`":[{`"ApplicationId`":`"default`",`"WebSessionIdleTimeout`":`"$TimeOutStr`"}]}}"
-
-$activityBasedTimeoutPolicy = Get-MgBetaPolicyActivityBasedTimeoutPolicy -All | Where-Object { $_.DisplayName -eq "AlyaTenantDefaultPolicy" }
+$activityBasedTimeoutPolicies = Get-MgBetaPolicyActivityBasedTimeoutPolicy -All
+$activityBasedTimeoutPolicy = $activityBasedTimeoutPolicies | Where-Object { $_.DisplayName -eq "AlyaTenantDefaultPolicy" }
+if (-Not $activityBasedTimeoutPolicy)
+{
+    $activityBasedTimeoutPolicy = $activityBasedTimeoutPolicies | Where-Object { $_.IsOrganizationDefault -eq $true }
+}
 if (-Not $activityBasedTimeoutPolicy)
 {
     Write-Host "No ActivityBasedTimeoutPolicy found. Creating one with TimeoutInMinutes=$TimeoutInMinutes." -ForegroundColor $CommandInfo

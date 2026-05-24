@@ -55,7 +55,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 try
 {
-    $fileDir = "##FILEPATH##"
+    $fileDir = [Environment]::ExpandEnvironmentVariables("##FILEPATH##")
     $fileName = "##FILENAME##"
 	$filePath = "$fileDir\$fileName"
     if (-Not (Test-Path $filePath))

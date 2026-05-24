@@ -31,7 +31,6 @@
     Date       Author     Description
     ---------- -------------------- ----------------------------
     01.02.2025 Konrad Brunner       Initial Version
-
     06.02.2026 Konrad Brunner       Added powershell documentation
 
 #>
@@ -45,6 +44,9 @@ This script connects to Microsoft Graph, prepares a specified profile picture, o
 
 .PARAMETER SetOnAllUsers
 Indicates whether the profile picture should be applied to all users. If set to $true, it updates all users; if $false, only users without an existing profile picture will be updated.
+
+.PARAMETER SetOnlyOnUpn
+If set, profile picture will be updated only for this upn.
 
 .PARAMETER bgColor
 Specifies the background color used when resizing or processing the profile picture image. The default value is "White".
@@ -68,6 +70,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 # Parameters
 [CmdletBinding()]
 Param(
+    [string]$SetOnlyOnUpn = $null,
     [bool]$SetOnAllUsers = $false,
     [string]$bgColor = "White"
 )
@@ -150,6 +153,7 @@ Write-Host "Gettting users" -ForegroundColor $CommandInfo
 $users = Get-MgBetaUser -Property "id,userPrincipalName" -All
 foreach($user in $users)
 {
+    if (-Not [string]::IsNullOrWhiteSpace($SetOnlyOnUpn) -and $SetOnlyOnUpn -ne $user.userPrincipalName) { continue }
     Write-Host "Processing $($user.userPrincipalName)"
     $photo = $null
     try { $photo = Get-MgBetaUserPhoto -UserId $user.Id } catch{}

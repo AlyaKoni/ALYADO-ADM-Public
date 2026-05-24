@@ -53,7 +53,7 @@
       "check32BitOn64System": true,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "26.1.21411"
+      "detectionValue": "26.1.21529"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": true,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "26.1.21411"
+      "comparisonValue": "26.1.21529"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "26.1.21411"
+  "displayVersion": "26.1.21529"
 }

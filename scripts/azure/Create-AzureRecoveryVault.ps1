@@ -204,10 +204,23 @@ if (-Not $RecVault)
 }
 Write-Host "Configuring recovery vault"
 Set-AzRecoveryServicesBackupProperty -Vault $RecVault -BackupStorageRedundancy GeoRedundant
-#TODO Monitor Alerts and Notifications not working yet, needs to be fixed
-#Set-AzRecoveryServicesVaultContext -Vault $RecVault
-#Set-AzRecoveryServicesAsrAlertSetting -CustomEmailAddress $AlyaGeneralInformEmail -EnableEmailSubscriptionOwner -LocaleID DE
-#Set-AzRecoveryServicesAsrNotificationSetting -CustomEmailAddress $AlyaGeneralInformEmail -EnableEmailSubscriptionOwner -LocaleID DE
+$parent = [System.IO.Path]::GetTempPath()
+$name = [System.IO.Path]::GetRandomFileName()
+$tempPath = (Join-Path $parent $name)
+New-Item -ItemType Directory -Path $tempPath -Force | Out-Null
+$setFile = Get-AzRecoveryServicesVaultSettingsFile -Vault $RecVault -Path $tempPath
+$RecVaultSettings = Import-AzRecoveryServicesAsrVaultSettingsFile -Path $setFile.FilePath
+Set-AzRecoveryServicesVaultContext -Vault $RecVault
+try {
+    Set-AzRecoveryServicesVaultContext -Vault $RecVaultSettings
+}
+catch {
+    Write-Warning $_
+}
+Set-AzRecoveryServicesAsrAlertSetting -CustomEmailAddress $AlyaGeneralInformEmail -EnableEmailSubscriptionOwner -LocaleID "de-de"
+Set-AzRecoveryServicesAsrNotificationSetting -CustomEmailAddress $AlyaGeneralInformEmail -EnableEmailSubscriptionOwner -LocaleID "de-de"
+Remove-Item -Path $tempPath -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
+
 
 # Checking backup policy
 Write-Host "Checking backup policy" -ForegroundColor $CommandInfo

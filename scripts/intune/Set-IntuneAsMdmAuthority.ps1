@@ -76,7 +76,8 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logins
 LoginTo-MgGraph -Scopes @(
-    "Directory.ReadWrite.All"
+    "Directory.ReadWrite.All",
+    "Policy.ReadWrite.MobilityManagement"
 )
 
 # =============================================================
@@ -117,6 +118,39 @@ if($MDMAuthority -notlike "intune")
 }
 else {
     Write-Host "Authority is already set to intune"
+}
+
+# Getting actual mdm policy
+Write-Host "Getting actual MDM policy" -ForegroundColor $CommandInfo
+$uri = "/beta/policies/mobileDeviceManagementPolicies/0000000a-0000-0000-c000-000000000000"
+$MDMPolicy = Get-MsGraphObject -Uri $uri
+Write-Host "  Actual MDM policy: $($MDMPolicy.displayName)"
+
+# Checking mdm policy
+Write-Host "Checking mdm policy" -ForegroundColor $CommandInfo
+if($MDMPolicy.displayName -notlike "Microsoft Intune")
+{
+    throw "MDM policy is not set to Microsoft Intune. Please check the MDM policy in the Azure portal and set it to Microsoft Intune."
+}
+
+if ($MDMPolicy.isMdmEnrollmentDuringRegistrationDisabled)
+{
+    Write-Warning "isMdmEnrollmentDuringRegistrationDisabled is enabled. Disabling now."
+    $ret = Patch-MsGraph -Uri $uri -Body "{`"isMdmEnrollmentDuringRegistrationDisabled`": false}"
+}
+else
+{
+    Write-Host "isMdmEnrollmentDuringRegistrationDisabled was already disabled."
+}
+
+if ($MDMPolicy.appliesTo -ne "all")
+{
+    Write-Warning "appliesTo is set to $($MDMPolicy.appliesTo). Setting now to all."
+    $ret = Patch-MsGraph -Uri $uri -Body "{`"appliesTo`": `"all`"}"
+}
+else
+{
+    Write-Host "appliesTo was already set to all."
 }
 
 #Stopping Transscript
