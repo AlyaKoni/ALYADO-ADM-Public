@@ -30,25 +30,23 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    18.05.2026 Konrad Brunner       Initial Version
+    27.05.2026 Konrad Brunner       Initial Version
 
 #>
 
 <#
 .SYNOPSIS
-Configures and deploys Azure virtual networks watchers.
+Queries an Azure Log Analytics Workspace.
 
 .DESCRIPTION
-The Configure-VirtualNetworkWatchers.ps1 script automates the setup and validation of Azure virtual network watchers. It checks for required modules, logs into Azure, ensures the Microsoft.Network provider is registered, and verifies the resource group and virtual network watcher configuration. The script creates missing network watchers and ensures the network environment is consistent with defined Alya configuration standards.
-
-.INPUTS
-None.
+The Query-AzureLogAnalyticsWorkspace.ps1 script automates the process of querying an Azure Log Analytics workspace.
 
 .OUTPUTS
-The script produces log files in the AlyaLogs directory and modifies or creates Azure networking resources as necessary. It outputs progress and status messages to the console.
+Generates a PowerShell transcript log of the execution and displays the results of the query.
 
 .EXAMPLE
-PS> .\Configure-VirtualNetworkWatchers.ps1
+PS> .\Query-AzureLogAnalyticsWorkspace.ps1
+Runs the script to query the Azure Log Analytics Workspace and display the results.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -59,21 +57,30 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [string]$SubscriptionFilter = $null,
-    [object]$WatcherConfig = $null
+    [Parameter(Mandatory=$true)]
+    [string]$Query,
+    [Parameter(Mandatory=$false)]
+    [string]$ResourceGroupName = $null,
+    [Parameter(Mandatory=$false)]
+    [string]$LogAnaWrkspcName = $null,
+    [switch]$PassThru
 )
 
 #Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\network\Configure-VirtualNetworkWatchers-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Query-AzureLogAnalyticsWorkspace-$($AlyaTimeString).log" | Out-Null
+
+# Constants
+$ResourceGroupName = $null -ne $ResourceGroupName ? $ResourceGroupName : "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)"
+$LogAnaWrkspcName = $null -ne $LogAnaWrkspcName ? $LogAnaWrkspcName : "$($AlyaNamingPrefix)loga$($AlyaResIdLogAnalytics)"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "Az.Network"
+Install-ModuleIfNotInstalled "Az.OperationalInsights"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -83,7 +90,7 @@ LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Network | Configure-VirtualNetworkWatchers | Azure" -ForegroundColor $CommandInfo
+Write-Host "Tenant | Query-AzureLogAnalyticsWorkspace | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context
@@ -94,135 +101,30 @@ if (-Not $Context)
     Exit 1
 }
 
-# Checking existing and required watchers
-Write-Host "Checking existing and required watchers" -ForegroundColor $MenuColor
-$existing = @()
-$required = @()
-$accepted = @()
-$subs = Get-AzSubscription -ErrorAction SilentlyContinue
-foreach($sub in $subs)
+# Checking ressource group
+Write-Host "Checking ressource group $ResourceGroupName" -ForegroundColor $CommandInfo
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $ResGrp)
 {
-    Write-Host "Processing subscription $($sub.Name) ($($sub.Id))" -ForegroundColor $CommandInfo
-    if (-Not [string]::IsNullOrWhiteSpace($SubscriptionFilter) -and $sub.Name -notlike "*$SubscriptionFilter*")
-    {
-        Write-Host "  Skipping subscription due to filter $SubscriptionFilter" -ForegroundColor $CommandInfo
-        continue
-    }
-    $null = Select-AzSubscription -SubscriptionId $sub.Id -WarningAction SilentlyContinue
-    $existing += Get-AzNetworkWatcher
-    $VNets = Get-AzVirtualNetwork -ErrorAction SilentlyContinue
-    foreach($VNet in $VNets)
-    {
-        Write-Host "Processing virtual network $($VNet.Name)" -ForegroundColor $CommandInfo
-        $VNetPrefix = $null
-        if (-Not $WatcherConfig)
-        {
-            if ($VNet.ResourceGroupName.IndexOf("resg") -gt 0)
-            {
-                $VNetPrefix = $VNet.ResourceGroupName.Substring(0, $VNet.ResourceGroupName.IndexOf("resg"))        
-            } elseif ($VNet.Name.IndexOf("vnet") -gt 0)
-            {
-                $VNetPrefix = $VNet.Name.Substring(0, $VNet.Name.IndexOf("vnet"))        
-            }
-            $ResourceGroupName = "$($VNetPrefix)resg$($AlyaResIdMainNetwork)"
-            $NetworkWatcherName = "$($sub.Name)ntww_$($VNet.Location)"
-        }
-        else
-        {
-            if ($WatcherConfig."$($VNet.Name)")
-            {
-                $VNetPrefix = $WatcherConfig."$($VNet.Name)".Prefix
-                $ResourceGroupName = $WatcherConfig."$($VNet.Name)".ResourceGroupName
-                $NetworkWatcherName = $WatcherConfig."$($VNet.Name)".NetworkWatcherName
-            }
-            else
-            {
-                throw "No watcher configuration found for virtual network $($VNet.Name). Skipping."
-            }
-        }
-        if (-Not $VNetPrefix)
-        {
-            Write-Warning "  Can't determine prefix for virtual network $($VNet.Name) in resource group $($VNet.ResourceGroupName). Skipping."
-            continue
-        }
-        if ($required.Name -notcontains $NetworkWatcherName)
-        {
-            $required += @{
-                Name = $NetworkWatcherName
-                ResourceGroupName = $ResourceGroupName
-                SubscriptionId = $sub.Id
-                Location = $VNet.Location
-            }
-        }
-        if ($accepted -notcontains $ResourceGroupName)
-        {
-            $accepted += $ResourceGroupName
-        }
-    }
+    throw "Ressource Group $ResourceGroupName not found."
 }
 
-# Cleaning unwanted watchers
-Write-Host "Cleaning unwanted watchers" -ForegroundColor $MenuColor
-foreach($watcher in $existing)
+# Checking log analytics workspace
+Write-Host "Checking log analytics workspace $LogAnaWrkspcName" -ForegroundColor $CommandInfo
+$LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $ResourceGroupName -Name $LogAnaWrkspcName -ErrorAction SilentlyContinue
+if (-Not $LogAnaWrkspc)
 {
-    if ($required.Name -notcontains $watcher.Name -or $accepted -notcontains $watcher.ResourceGroupName)
-    {
-        Write-Warning "  Deleting watcher $($watcher.Name) in resource group $($watcher.ResourceGroupName)."
-        $null = Select-AzSubscription -SubscriptionId $watcher.Id.Split("/", [System.StringSplitOptions]::RemoveEmptyEntries)[1] -WarningAction SilentlyContinue
-        Remove-AzNetworkWatcher -NetworkWatcher $watcher
-    }
+    throw "Log analytics workspace $LogAnaWrkspcName not found."
 }
 
-# Creating missing watchers
-Write-Host "Creating missing watchers" -ForegroundColor $MenuColor
-foreach($watcherDef in $required)
+$kqlQuery = Invoke-AzOperationalInsightsQuery -WorkspaceId $LogAnaWrkspc.CustomerID -Query $Query
+if ($PassThru)
 {
-    if ($existing.Name -notcontains $watcherDef.Name)
-    {
-        Write-Warning "  Watcher $($watcherDef.Name) is missing. Creating it now."
-        $null = Select-AzSubscription -SubscriptionId $watcherDef.SubscriptionId -WarningAction SilentlyContinue
-
-        # Checking ressource group
-        Write-Host "Checking ressource group $($watcherDef.ResourceGroupName)"
-        $ResGrp = Get-AzResourceGroup -Name $watcherDef.ResourceGroupName -ErrorAction SilentlyContinue
-        if (-Not $ResGrp)
-        {
-            Write-Warning "Ressource Group not found. Creating the Ressource Group $($watcherDef.ResourceGroupName)"
-            $ResGrp = New-AzResourceGroup -Name $watcherDef.ResourceGroupName -Location $watcherDef.Location -Tag @{displayName="Main Network Services";ownerEmail=$Context.Account.Id}
-        }
-
-        # Creating watcher
-        Write-Host "  Creating watcher $($watcherDef.Name) in resource group $($watcherDef.ResourceGroupName)" -ForegroundColor $CommandWarning
-        $Watcher = New-AzNetworkWatcher -Name $watcherDef.Name -ResourceGroupName $watcherDef.ResourceGroupName -Location $watcherDef.Location
-    }
+    return $kqlQuery
 }
-
-# Cleaning unwanted resource groups
-Write-Host "Cleaning unwanted resource groups" -ForegroundColor $MenuColor
-$subs = Get-AzSubscription -ErrorAction SilentlyContinue
-foreach($sub in $subs)
+else
 {
-    Write-Host "Processing subscription $($sub.Name) ($($sub.Id))" -ForegroundColor $CommandInfo
-    $null = Select-AzSubscription -SubscriptionId $sub.Id -WarningAction SilentlyContinue
-
-    $ResGrp = Get-AzResourceGroup -Name "NetworkWatcherRG" -ErrorAction SilentlyContinue
-    if ($ResGrp)
-    {
-        Write-Warning "Network watcher resource group NetworkWatcherRG exists. Cleaning up."
-        $resources = Get-AzResource -ResourceGroupName "NetworkWatcherRG" -ErrorAction SilentlyContinue | Remove-AzResource -Force
-        if (@($resources).Count -gt 0)
-        {
-            Write-Warning "  Still found resources in NetworkWatcherRG. Please clean up manually."
-            foreach($res in @($resources))
-            {
-                Write-Host "    Resource $($res.Name) of type $($res.ResourceType)" -ForegroundColor $CommandWarning
-            }
-        }
-        else
-        {
-            $null = Remove-AzResourceGroup -Name "NetworkWatcherRG" -Force -ErrorAction SilentlyContinue
-        }
-    }
+    $kqlQuery | ConvertTo-Json -Depth 100
 }
 
 #Stopping Transscript
@@ -231,8 +133,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAdBy3CJipL0w51
-# fCVorRZGpGh4dspqw+pt7kr9rV3546CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCnd33HP/tnTB1k
+# 9RD3oH3Z3mIYOpn2SBnCMdJuTfmGGqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -346,23 +248,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHe1RW4E
-# BMSNRtE1Cd9IBB4ZQUTtWpW7nrITx6/gBLjPMA0GCSqGSIb3DQEBAQUABIICAJvR
-# ErEl8AM0DMWc0/GaiW5e3YveoZMndPepg0QIJoVhc11FVMR5KHSS8YoRJleB1aZr
-# AiXL/VFyk+//z0R6f2sXoF6L3Qv9RcuLIdI29NvMc/SnV871rTa/agBMy7vxRicu
-# Nzy1IkRHqt4DISgkDrCWiajGyWn09MTgz96mkawbpEnCis3rRXVy9MCaxVC/yUNc
-# EjJzWdBHS8TH7tEH59/uk49icHBd9mLQqQshj6vYSPX9+6ZCkDUkHompNSdymlxY
-# zGCXJsnkLc8y/C50WLu7SfgkCRW6UQMGueRgWXX0l8zxqGZZb5byuLlZj62r6za5
-# JNm1iNnnNz1Undm1a8AaVPj7amjSFAT/anFi4Mrztebv2i8HJ1Q4NB6v+Z61P1hy
-# md1LCVh1DpzNMvnzaTxpvxcoBvj7nND3KJM9kO5bMyjUwhM6E/OiJ3glTwyX/09j
-# /gAWRBAreNAq9TGxdBn0lsz+T0oMoZkWkLGYfKrqN02c3BQ9X19ZgRFz1ALJm5IQ
-# fd3dOHv/r0l1iM04jtItJPdfh6DMGKhUCilB4zkG+mpGHOfBQH9Qw+V8Dy1JGEIm
-# bEMZyXYKMka0RABEOrcXsfweKvOkiLh5k5KVu0YAeuUCmjWpvIV4ePNidrzgn3HN
-# qPlhHCHa92kH31eoUnag1K64y92oir54Nq0V4fYYoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIE/SdyCO
+# bY2n1XZ3nDGUoDA83SnQx3ARfip8WnW18NblMA0GCSqGSIb3DQEBAQUABIICAJon
+# z79YLcrayrCqWOPwzG7U4fFYCGyJp3XlA6NKwqzeNwKCbPYbrJa4DoeKZSVsPFG0
+# X12E5WBzXrZIM4+IwVA2FhCQvWDydXIlOvzK8YEHmpNKD9+izmkAX1DbkMSBiQOY
+# JsQW9DnhtgNq7oHEFw31S5a0OWOLrpW8uJCfYeejtmZst0RH3ZIHVCTosqaArRYn
+# Qqi3BSnBXLsdsPfbv+PTNdkVY66SVHiJVpTaVxcYZpmaeS48xJ8cypri+bxaOmoJ
+# 0uXAtL3gnrPH3rIaQbDUgU05uqzU7VR/EVuQ5z6H1vtZ8izWhe5QKC58LUjfwB03
+# /c9Rv1Un/jJsaTm0BaXhOtwCEykFGLR1ZzTape03IYoZiXRpTerM5N5JddApD1Y3
+# NIxHNZi7uSpPRIRDaLFl3Y7a9WMHzsg/FQ9obkI+kYLBJpDFuhiLkfRnZnlHl3/9
+# iJ/DWGjFYXkpWElXObQTiMPfwMnJcD+DIygHHkXPFkZ5BFbbTqfmQuOhg6dPy+xQ
+# 5ok+S9bBUFCjxw/QJ03H3YhzXIOeNvLW0V5/aPk7WFIIeLz6kCgvnHO+5uDCdSiF
+# dmPPAbFAzYHwhrFbhClOnUddwZ+hS2+HMwZnf0UmTKeB8HBtlbPI36acLk0gSx29
+# bgp9ZkJ4Vfj9mUfjl+Cx51sPtvYnBRMlbahawNr1oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCC4eB5GFPfbsody4eG9KtkFFmJl209sXBQwDnFl9tnzXgIUTE6n
-# g0yH10rXK3B/9SEi8r9mM74YDzIwMjYwNTI5MTAxOTA5WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDfbjbfKJTkiCiEJYuBhtQkctr/s1bC+OfFCpYgQXgCbgIUI9x+
+# zK5zU62kw5NDBzUEATOZ1McYDzIwMjYwNTI3MjAzMzAzWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -505,18 +407,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDD08XXxNvWFz3ZqHMxw95QPtwgHkxijUDKnhTWDc61TG++YovF3YUbEQGBb
-# 4ZlziBUwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDrFhqc8lkAAU3yvcregFJLrureocGYAq7wYLOJ3Ww4voBgMwqgm+fva63X
+# Biy8oKEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAsC4DU8L2bfN0WF7AQqe83FrvUpF6MPmcTUXuvIdLKhAk
-# /26v/ynFl1zd0qAHVbBPEiVbBuNoYt+nj+kkIYfdTKLRWIL2efg5ViRCngoLfTIY
-# //XUzh8OcNEQl36dJiKjIB/iF+FNCE6F+PnukSDIV190iB2wSgYIIhGIjgGWDDpr
-# owkPTudNyOFHBmvSgqJu6mQX0XXIDxE8H5d/Iy4cDmfT27vJLJMcPs7Hyuf9XJ9a
-# rLRNnhL2nXqkfDEE6Cq6udpxMBpFKycNozm52CpgPka/DZpcOfRr2tnadhjfGBcF
-# uB6RwzhTa8tCMAxQVmo8SnFDSvDphERjDx82j8vUucFmKlw2AXhFUJtDf3ysVAjy
-# 7QRZxiz/5cOxCB4bMYJK2mrtjI7wzeRB4/fkEmOybTjliFt1TB0BpzXxgQMqlPKf
-# KHvFKdQpGX4l9UbePHlnMf6/o/XJ1t6SgKxvXgDQVnmeYc7AXTrZay2qMXx5jz35
-# 6hV/r0S0/d/utIN2l21Y
+# KoZIhvcNAQEMBQAEggGABuGtF/qOhIwvFWXnKcLpzO5XT+V+Ug6TPRu3jrN+NOGa
+# ImEOg6HvNAWmJaq6iUcfdmlpdCpN+mADV5zYfFL3yVvRuX3UL0bXeLU65n6L7Co4
+# FiOJK2x6rSvHwHQUp9/bgdTYbuGAwhNolXSNnhb7LNEFsOZgj07p1Y9XVlZeNTW9
+# oUOzmWAG/xXD25MAT89mlvX+SoLfRV+Z6gl8bvoVCe+9HFxakSQRxwtCmgXp0dhV
+# zVWRaA+nE+cLcoUqE3ibOi3YT9loJfDUbdQ7gOXt2iOJGF+hXRc/j7o6qtA6uHUI
+# AjybItOWCBurb1tGwo/dGDCGIcbxuqgRA2K0Pde6aOmNvIFfHIwSKzlZpVfypZoD
+# RBzkOAHFUjLCmKQNZz615GiPo23CclbNbVWF++CnN9QfNIw5yOIFjil/DoGQ43x1
+# pqFihp6cqTZ9A/FtsKL/I5tOhiRN4ZLNvICV9vQVaSpw27sMaPd8uNJAj2EPh2HY
+# rB1wdwm+hvytHlvaWMw1
 # SIG # End signature block

@@ -166,11 +166,22 @@ $FlowLogToEnable = $FlowLogsDisabled[$num - 1]
 Write-Host "Enabling flow log $($FlowLogToEnable.FlowLog.Name)" -ForegroundColor $MenuColor
 $null = Select-AzSubscription -SubscriptionId $FlowLogToEnable.Subscription.Id -WarningAction SilentlyContinue
 
-Set-AzNetworkWatcherFlowLog -NetworkWatcher $FlowLogToEnable.NetworkWatcher -Name $FlowLogToEnable.FlowLog.Name `
-    -Enabled $true -TargetResourceId $FlowLogToEnable.FlowLog.TargetResourceId -StorageId $FlowLogToEnable.FlowLog.StorageId `
-    -EnableRetention $FlowLogToEnable.FlowLog.RetentionPolicy.Enabled -RetentionPolicyDays $FlowLogToEnable.FlowLog.RetentionPolicy.Days -FormatVersion ($FlowLogToEnable.FlowLog.FormatText | ConvertFrom-Json).Version `
-    -UserAssignedIdentityId $FlowLogToEnable.FlowLog.Identity.UserAssignedIdentities.Keys -Force `
-    -EnableTrafficAnalytics:($WithTrafficAnalytics ? $true : $false) -TrafficAnalyticsWorkspaceId ($WithTrafficAnalytics ? $LogAnaWrkspc.ResourceId : $null) -TrafficAnalyticsInterval $TrafficAnalyticsInterval
+if ($WithTrafficAnalytics)
+{
+    Set-AzNetworkWatcherFlowLog -NetworkWatcher $FlowLogToEnable.NetworkWatcher -Name $FlowLogToEnable.FlowLog.Name `
+        -Enabled $true -TargetResourceId $FlowLogToEnable.FlowLog.TargetResourceId -StorageId $FlowLogToEnable.FlowLog.StorageId `
+        -EnableRetention $FlowLogToEnable.FlowLog.RetentionPolicy.Enabled -RetentionPolicyDays $FlowLogToEnable.FlowLog.RetentionPolicy.Days -FormatVersion ($FlowLogToEnable.FlowLog.FormatText | ConvertFrom-Json).Version `
+        -UserAssignedIdentityId $FlowLogToEnable.FlowLog.Identity.UserAssignedIdentities.Keys -Force `
+        -EnableTrafficAnalytics:$true -TrafficAnalyticsWorkspaceId $LogAnaWrkspc.ResourceId -TrafficAnalyticsInterval $TrafficAnalyticsInterval
+}
+else
+{
+    Set-AzNetworkWatcherFlowLog -NetworkWatcher $FlowLogToEnable.NetworkWatcher -Name $FlowLogToEnable.FlowLog.Name `
+        -Enabled $true -TargetResourceId $FlowLogToEnable.FlowLog.TargetResourceId -StorageId $FlowLogToEnable.FlowLog.StorageId `
+        -EnableRetention $FlowLogToEnable.FlowLog.RetentionPolicy.Enabled -RetentionPolicyDays $FlowLogToEnable.FlowLog.RetentionPolicy.Days -FormatVersion ($FlowLogToEnable.FlowLog.FormatText | ConvertFrom-Json).Version `
+        -UserAssignedIdentityId $FlowLogToEnable.FlowLog.Identity.UserAssignedIdentities.Keys -Force `
+        -EnableTrafficAnalytics:$false
+}
 
 #Stopping Transscript
 Stop-Transcript
@@ -178,8 +189,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCByVJq/jUcRwqE7
-# uPckeTYakupY3TMa95QfTFPTrqtMkaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCrVsCGqPZGrx/Z
+# W8XPAB9eMnB/4F71rFZIxLWwFhf11aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -293,23 +304,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMVKQgBp
-# JlSqiWtfQHdUym6Qr8yqyLN4Rmq70YAbcSoYMA0GCSqGSIb3DQEBAQUABIICAMqQ
-# nhpoMkm2poPZkqVKeVSbGkczp4F7+boMDRgur5NBNYCSxoeG1DG/dUgw6k3eqM1h
-# qMhZG8Bpt7DhJ4jwzqsM3Xxpn5Vr2FU4v9VUCiY3dixZyc+JqPui/SrKWNqDcghm
-# QEho/22I1qYfrtojzkgya9USX2T0hRm6hgRPO2CDtz8a9zvaYGsemslU4sD5dai7
-# ls7EIEPQY3UjfDCtzBo90mUUjPmpieMAcPb8UBkr07voFdA1/W9o+IEZfMN7Astq
-# uA+SbdNXLbtu35zw1BEG9c1JFP6I9H+ruB7vCKXZHUxJ3VLsy2nYwa0g5zSyySUk
-# mN3XkNjDZt4mcw2uUsWdPBEgekmnoaRg+zmPqOKdXCPi+aBkLvd0MCnDBGi0e7Jx
-# ybusmGEyhLi/J4FkXDxaK3lSX+8x5Idp7nLZsOHpT+lFdp/KeP6nRqE2IbS3z/gi
-# oVaHrBHtPDvhzv1sZp/e1r9VdvUnExmPhMP+sS6NLOxe+E8ZyCxIRLUJZPJ+evvv
-# DkwAvTJ0CEmiTka2I5mNgHIkm3IWeKYi5eZGMzcUXrzKRZRA/sYtgXUjcXtvrKAs
-# yfn8l6DuDZPraNPXHL+VDPsQMeIdmtTGCVOrthWn30WzwG3+TSVwNqli6bk/dtwu
-# XUWEqIbSTE87b8oGWMZI8YGi5Cv4Bpb6H0E/7WCmoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILAPXFc7
+# 1rR92POCLx5KIfteycIdHExyDJgWTVtcHpTbMA0GCSqGSIb3DQEBAQUABIICAEl4
+# 4WqirSCsbvzCyinPXbgX36aVHyg/bvp58SywTAKuXymBd0NjqJMzdq3R7qRJ170v
+# LwlBFyo8J/uu2iqKKpLUrx6QaHakfiZbGXMvY448L1YY1erR7/84O17HzQhbos35
+# acNOLU9cQe+wL5aJCQLW+UmIxDNtPsxaO8b8iKkHelLMNIMKV0DjVlG9ssqbwmmC
+# ACKFNO+5OLvLDx73NjWhSoEIVmhzIKx1P31H3WRU6YOlcxztBiq4zONuDChsRNd5
+# jCElmHVyrx21vtjr3rUFv0pWUdNlI3rTqHQx79taZkeq+PjDg81yLBdwUP2WEI1u
+# egd8HimzDW/ycGkfndpLTT4rRGV3nTYqz7IyEeeCS3CPZ0lOx9QFDK6yeyxni7BN
+# JeCN0tjoN9DaTSTofk5CC4UHjaxygx6cpNmeIvTJGQb8InQZb5nQgqqW5/fZv3LL
+# vsM5cFlCTl/JmZ3BAqURe229yoLfuGqzv9n19MF8eG6mRrvgFpLPnWdTzN74a/s/
+# FvqdAhtLK9h/XZgAUAYAJPmXNvUQXvezO4eftzZJpfq1oDB6sAZOf/3JYMej5dgL
+# fvM4HlaFcJrCk82YprLkrbAcbYAw7KNxXoEp5Hro9O7crHvryMZ+gYu5diDtYzO/
+# OqPt9kRGP/DZ3oN6YQ76eLnQ52dxfNc9+5LyV5/boYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCC0gOEk5WohG1b6qvtFje088uB30I/nujW0Z2sx/K8anQIUGapQ
-# 04OP/t4SRWjifX3XY6x4gFsYDzIwMjYwNTIxMTUyNjQ2WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCD/BynXY8HvSjI0Fc1qGlZG0fKICmMe180yQ2XIgE973gIUFGC7
+# 3+EcwV4guj3RhVpL7Smgo8kYDzIwMjYwNTI5MTIwMjMyWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -452,18 +463,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDACVFC35P5LGC3tH7njDtzp76Qz4UGp42v7HDJ7IFzNJ0pjlwKtd4C5nqOl
-# aJV6UzYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCNH17HapKR6xdKjPHR5LFJ0Hj92jbLMuNIrlIf88pLDGz41ppbIdS/uejf
+# sBUHxE4wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAN52fxXU0xtZIjOv20avKlS4bKpxKL1hsKAHaIxwwTIc8
-# AXQTvdMZgFtIryPnSUsoflKm5M7kFhGxWILalYPlaLC/2hzIc3Q5HqbE4qQd2OM5
-# IIb5fXSmwuIQNcUXBLEtIo71TEP9l7fD7ApleLfYMyzN9ldqEd1AsrhZX82+MIDH
-# lna/2xbmMt67zA64ysIancSo8GWbvIFS7pZsW46tYGsRsG64WCzqvR7w5rdC3bKl
-# PhD4Q4UwoxQVOhb49MWWeuSlpgNcGW2Y2d5fLq5YMxwXK2MDaJikgQUiIiMw3OTU
-# dPiFzqApL+lB/AuW2yoRECaijVk6nWEnpKa1wddFqnA1RZjIB2Xd+q3O/we0krxz
-# yYK8T6lL1B3eBscO8+zR19J4L1rll3a2yTTFLlNqB+wqG7LiQ0HaY2LpRJK9ePT8
-# YJsbksbAJ3HoPXMv+fx/BiekmYpHs1j1fzKBTRm8oGrTrl4ulqKx4PYH7YIlkr1R
-# SnhxuLUyDAOSrXZtp43c
+# KoZIhvcNAQEMBQAEggGAFNHZyDGAtKMGa4VgXeHPg7TfmTbTOt9A7HUCM+wWoYEa
+# B9bvCRT8KZPHlkjYSYijbh/NaIF7VsGUvmSQqMKiYRrrNoWUXuSu3tcHULHhCmRP
+# Cbv3bi4Ox79/beF0hV6hHzAguoM8kXDuQDw8eLjSPhDaYQjm1ZDPLrdUb1wMD6mr
+# 8migwL21K27yP+Y9p9KrKvHS9gRweb/HNddUUbkcNo+Ix+mpao7LQN1+lr/lOjmf
+# HyBkJlVpiSFTqYSDtxb0wSYYj+rqrAUiW7dOP2FwI+z1kcqYj8MDYHFysV2pzh+X
+# moSXhQMdeRssy+iOtFRmZLIIqpSnvMdq71xrB1cbbbePVUPhpPcAwP8a3vQwAvXO
+# CTTco00aIxOI20Sscw73BKNR+ZgkvrdoYtnwoo4vuRqhPINIhzit9MhMYTO8Dcfx
+# wf/vVluyP7OgvrP4I027b7W0Turd9XSTDITUZV3WgtvDdeQi7KBXf7bh+wLJqIrk
+# 34w0w+5fjuuGZTrKb1NW
 # SIG # End signature block

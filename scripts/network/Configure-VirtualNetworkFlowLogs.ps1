@@ -66,7 +66,9 @@ Param(
     [string]$StorageAccountName = $null,
     [string]$UserAssignedIdentityName = $null,
     [string]$LogAnaWrkspcResourceGroupName = $null,
-    [string]$LogAnaWrkspcName = $null
+    [string]$LogAnaWrkspcName = $null,
+    [string]$SubscriptionFilter = $null,
+    [object]$WatcherConfig = $null
 )
 
 #Reading configuration
@@ -88,6 +90,7 @@ Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Az.Network"
 Install-ModuleIfNotInstalled "Az.ManagedServiceIdentity"
+Install-ModuleIfNotInstalled "Az.Storage"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
@@ -109,7 +112,7 @@ if (-Not $Context)
 }
 
 # Checking resource provider registration
-Write-Host "Checking resource provider registration" -ForegroundColor $CommandInfo
+Write-Host "Checking resource provider registration Microsoft.Storage" -ForegroundColor $CommandInfo
 $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Storage" -Location $AlyaLocation
 if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
 {
@@ -136,6 +139,20 @@ if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne
     } while ($resProv[0].RegistrationState -ne "Registered")
 }
 
+# Checking resource provider registration
+Write-Host "Checking resource provider registration Microsoft.Insights" -ForegroundColor $CommandInfo
+$resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
+if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne "Registered")
+{
+    Write-Warning "Resource provider Microsoft.Insights not registered. Registering now resource provider Microsoft.Insights"
+    Register-AzResourceProvider -ProviderNamespace "Microsoft.Insights" | Out-Null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $resProv = Get-AzResourceProvider -ProviderNamespace "Microsoft.Insights" -Location $AlyaLocation
+    } while ($resProv[0].RegistrationState -ne "Registered")
+}
+
 # Checking ressource group
 Write-Host "Checking ressource group $ResourceGroupName" -ForegroundColor $CommandInfo
 $ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
@@ -151,6 +168,11 @@ $locations = @()
 foreach($sub in $subs)
 {
     Write-Host "Processing subscription $($sub.Name) ($($sub.Id))"
+    if (-Not [string]::IsNullOrWhiteSpace($SubscriptionFilter) -and $sub.Name -notlike "*$SubscriptionFilter*")
+    {
+        Write-Host "  Skipping subscription due to filter $SubscriptionFilter" -ForegroundColor $CommandInfo
+        continue
+    }
     $null = Select-AzSubscription -SubscriptionId $sub.Id -WarningAction SilentlyContinue
     $existings += Get-AzNetworkWatcher
     foreach($existing in $existings)
@@ -163,6 +185,9 @@ foreach($sub in $subs)
 }
 $null = Select-AzSubscription -SubscriptionId $Context.Subscription.Id -WarningAction SilentlyContinue
 
+# Checking storage accounts
+Write-Host "Checking storage accounts" -ForegroundColor $CommandInfo
+$StorageAccounts = @{}
 foreach($loc in $locations)
 {
     $locShort = $loc.Replace("switzerland", "ch").Replace("germany", "de").Replace("france", "fr").Replace("europe", "eu").Replace("austria", "at").Replace("norway", "no").Replace("belgium", "be").Replace("italy", "it").Replace("spain", "es")
@@ -181,6 +206,7 @@ foreach($loc in $locations)
             Exit 1
         }
     }
+    $StorageAccounts.Add($locShort, $StrgAccount)
 }
 
 # Checking user assigned managed identity
@@ -358,6 +384,11 @@ $subs = Get-AzSubscription -ErrorAction SilentlyContinue
 foreach($sub in $subs)
 {
     Write-Host "Processing subscription $($sub.Name) ($($sub.Id))" -ForegroundColor $MenuColor
+    if (-Not [string]::IsNullOrWhiteSpace($SubscriptionFilter) -and $sub.Name -notlike "*$SubscriptionFilter*")
+    {
+        Write-Host "  Skipping subscription due to filter $SubscriptionFilter" -ForegroundColor $CommandInfo
+        continue
+    }
     $null = Select-AzSubscription -SubscriptionId $sub.Id -WarningAction SilentlyContinue
 
     # Processing virtual networks
@@ -367,7 +398,27 @@ foreach($sub in $subs)
         Write-Host "Processing virtual network $($VNet.Name)" -ForegroundColor $CommandInfo
         
         # Checking watcher
-        $NetworkWatcherName = "$($sub.Name)ntww_$($VNet.Location)"
+        $NetworkWatcherName = $null
+        if (-Not $WatcherConfig)
+        {
+            $NetworkWatcherName = "$($sub.Name)ntww_$($VNet.Location)"
+        }
+        else
+        {
+            if ($WatcherConfig."$($VNet.Name)")
+            {
+                $NetworkWatcherName = $WatcherConfig."$($VNet.Name)".NetworkWatcherName
+            }
+            else
+            {
+                throw "No watcher configuration found for virtual network $($VNet.Name). Skipping."
+            }
+        }
+        if (-Not $NetworkWatcherName)
+        {
+            Write-Warning "  Can't determine network watcher for virtual network $($VNet.Name) in resource group $($VNet.ResourceGroupName). Skipping."
+            continue
+        }
         Write-Host "  Checking network watcher $NetworkWatcherName"
         $watcher = Get-AzNetworkWatcher | Where-Object { $_.Name -eq $NetworkWatcherName }
         if (-Not $watcher)
@@ -378,8 +429,12 @@ foreach($sub in $subs)
 
         # Checking storage account
         $loc = $VNet.Location.Replace("switzerland", "ch").Replace("germany", "de").Replace("france", "fr").Replace("europe", "eu").Replace("austria", "at").Replace("norway", "no").Replace("belgium", "be").Replace("italy", "it").Replace("spain", "es")
-        $StorageAccountNameLoc = "$($StorageAccountName)$($loc)"
-        $StrgAccount = Get-AzStorageAccount -ResourceGroupName $ResourceGroupName -Name $StorageAccountNameLoc
+        $StrgAccount = $StorageAccounts[$loc]
+        if (-Not $StrgAccount)
+        {
+            Write-Warning "No storage account found for location $($VNet.Location). Skipping."
+            continue
+        }
 
         # Creating VNet flow log
         $FlowLogName = "$($sub.Name)-$($VNet.Name)-flowlog"
@@ -392,6 +447,13 @@ foreach($sub in $subs)
             
             # Creating subnet flow log
             $FlowLogName = "$($sub.Name)-$($VNet.Name)-$($SNet.Name)-flowlog"
+            if ($FlowLogName.Length -gt 80)
+            {
+                $FlowLogNameLength = "$($sub.Name)-$($VNet.Name)--flowlog".Length
+                $SNetNameMaxLength = [math]::Floor((80 - $FlowLogNameLength) / 2)
+                $SNetName = $SNet.Name.Substring(0, $SNetNameMaxLength) + $SNet.Name.Substring($SNet.Name.Length - $SNetNameMaxLength, $SNetNameMaxLength)
+                $FlowLogName = "$($sub.Name)-$($VNet.Name)-$($SNetName)-flowlog"
+            }
             Check-WatcherFlowLog -Watcher $watcher -StrgAccount $StrgAccount -FlowLogName $FlowLogName -ResourceId $SNet.Id
         }
 
@@ -404,8 +466,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBycpnpkl5PBgGj
-# Wq4Gpr268XkfqU2ThUvtYK2afP/h26CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCJKWrZAbx/jj26
+# 5NCo/ftJJyEIUwHthSCpSIQogU2QIqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -519,23 +581,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEkNYQrD
-# o5++IBkMxGHYm2FKWod982XNg2pF6yaOgL5nMA0GCSqGSIb3DQEBAQUABIICAJSO
-# 4tUwiRRIuSet6YnUvJ2fzyNRcqVgJ5jk0T/sDKu3aJyhRBTNpaGRXqdj4Ts/wq8v
-# Tq6P067E+i2rwNfZ1UxMRHOa+epGzZtGgjotr8A7fm4pPHfF5R8j6wk3lJo8uqA4
-# c+aKyM4gI9GMpllnVmPAiot5048DOiCZm2oTknTCEXdhBk2mima8wuI1l/SSX04p
-# 3Cjm7wN2cJkVo4NiLDuTK7vybTIIDQgxYi4Kbf0NqV9YKSe8jl4U70+29vWWCmrv
-# iadXqBOrwox1uoM6iELg+pm5YcfKJtQfrNeAzmKUsB5dJ0yOTiD0i7Lxb/Zv2W7c
-# H6Ql4Kns8Zvkb+UMrvcR8w/EZv/PBs/zGUb/dKWFdE1eTU+YFttWSkIE8ldGgz+B
-# 6RlCtqZWAoLWW6w3gNx5WDythOjtdd8IVE3dlW1Rn0ss9tij/vhh4kV6LlpteFs8
-# dOHcpTKrFxYspiVea4FXEuP1dxqcYLYtB4cN2lQkPlTnjFGkL8ZztHMtDJDgweRH
-# IY/nyiywAeFBccbF1CY2JRYfo3rPg/9DXYffPVVqPYIwAslHqrStvN6WCsqkDPpg
-# sGt5pSBd24vet8gkK0KHbtJ8lKtK6Irvx3oqqQkpM2jC0F3asyn9SCS8MJlg8VAp
-# mPFog0NBINkKpzhBmBCd9qIeqluX17nI+3s5amhFoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIK2ooyNl
+# rqsZEuwX0WNjWdyDLZAFtUzbGcI0Neis6V0ZMA0GCSqGSIb3DQEBAQUABIICAIY8
+# y+PM6RIboDytjCNeU9mny5824mI2tWCxMWZiDrWRX6zFhVwySGv1GN308oRg+PwQ
+# guukhBmZFbbopOm2nEOIWgeBV3znxNWMEwS/ZwpFlejtCtTyK2BbGa3WDqFZG4H9
+# eZ9eoIdYUzBElZjuAMYoYMHzPHuqza6/YJBd2qjBK6Q2NturJtM0skacEHJ/AbGk
+# MxCV/N7wRjRlMiqzEXh2tDd8voova0x+Z5nXuD2UAF9CFnkcMzORCSyOMj3pLXLR
+# x27vB7d5nat1YF6d7nMa2ZKFrGjxEV/pgzyohd3AwfuD4WdhHytUlCK8M7H2jfAK
+# /CLQRdSiYMb1Ski+RsVtl8Ss/15SKWFMvtAvoaNjcPnikr4yeJIpoSaN0GNbHQGw
+# 6mQM1kxSXTQJTpNhqTeNGdUxrarxV9rxz5TRKEsKFZMZMijvOEr7H8ElErhcF0X4
+# b5Jm1FOeoLlrWw6/CYiWiK11uc3HJ4bQP78rutSE42SQuXXbzcHIM7hy1ltmcf73
+# GN2tSjUIzWxaqYqidHAleoXlUlLEu14OCBzmeqC/Pnze8z6gINqzAstJnCsiXjhb
+# pOKyb1I21LGwll8mK6fU2Othbg6kKpJpXziviqrA4AzcdovvyNFHGnJneH8YiChR
+# 5XBZ4gtWj0hyn9csMwodVbMsWKoqZ6b/TdL/C60BoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCnl1j/ub+F63GXY6mVe1dB+L725aakiIA6neIl4UuQhwIUKI8y
-# MqV+FnRLpSq7g34s1tAX/GcYDzIwMjYwNTIxMTUyNTU4WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAugZ9gDb4LVZK/94hYZz7N4n3Pi4iHCuuc6icpZY0ErwIUXJXK
+# uY+S97txnQlmAw82WLTuxa8YDzIwMjYwNTI5MTI0MDQ2WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -678,18 +740,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDB8NbufKZtFOIQ/ujRT+YdXydT5Tui3pGW4EKo/6t6eLBUaQzeEEetSvrwG
-# 9BB8OggwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBLOVifYrMOVYQ0Foh45TliOIcDSNawUAXWXMaKo+8iUNZq7myKuA3uC/UH
+# ZjNDYa8wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGANs3h8Afry7nHOkmp+X+ZZX7S9xzko+hu/R1NB0ZQ1glT
-# 3CZo7ujuzFZMwPIYM4zaHV2wccik8IPGRmB0K367YZPqEmqS+W5LQT3vUv7HQ7CB
-# /XCbDDLAFZ3U6JAbwdvfS/xe5X/IzwyveitEXEJMsADTD4JyVohE843Z7mf1iwNQ
-# ps7fczs3HzI7+pJElMwU8Sxq21r5VPZAeJo6RJqRefv19epPE6wAhh7UPG93e/64
-# DbpVrkPzB/BGkmUe0ohzunM4na2XJ3yy8F5v0IfKaWXqxQujXfpyVYkQzhgi1PHt
-# iFsQHY2U1vnnebVOY0FgmXoTO8Oid7Gd8LdA9txWvRg5xtR3izNE2yfOioWBqVVh
-# lTykebwPObyvERATWezQgsUlrBnaPHniErkshWQRkTWqi4+yVmYjMJDReTwyng7q
-# DIstskfND3OgiDWycpMbzjCKjOZjPwYKQWfLo7Yuga5w+ftNNsp4iAV0S9ZqPkmJ
-# MEc5A0Qu+ER9ysnZVS/s
+# KoZIhvcNAQEMBQAEggGAGbNwJByO0AepJRk0V2SSxcA/6oYJb3XGpvYRKJHbO6e4
+# YRWYJQ/b27DQzJbIwB2FBUXkxv4tHSkKtl9ELywMIMdoU9hZdq+FHP7nksAAL6+X
+# Js5iRqO5vyuC+0MuTYIyOwLgzeDy4sHURgLD3G7UtcXwF26nVzSdR3GDjxA4KwjY
+# dsQPugyv8Ig5uuJPCVzYpPFQEQCAg4xlyiaViEwnlmbl2tdDjcSmeTBYvnRSpXtM
+# eHvT9FUuFV4XlvrxnUxUT1LlngVNylpHVpKAY7p/FdNymOjKI5TuehGqfMz7StZQ
+# WiPWSE9LuP/ed2KWKECflX/d3apT9JXrANkGZ8E2faEL9eJyjBIaxYkr3cvmLc32
+# ID7mmg4rQqIgLeiJeQTLqkIRwTSaUATAZ64vz9TGr6w4TsAErrBiCTLVqbbWHDKG
+# 7UnYzkLInpOmIvqLEaYtJKYKQMsQcWZcgbAtEoZqT/yM2Gaa3hesTvWnQaN1QHv8
+# oFeaQIs2OmSwul6gNKZn
 # SIG # End signature block

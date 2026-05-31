@@ -30,27 +30,25 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    02.03.2020 Konrad Brunner       Initial Version
-    07.01.2021 Konrad Brunner       Fixed file extension (.json)
-    06.02.2026 Konrad Brunner       Added powershell documentation
+    26.05.2026 Konrad Brunner       Initial Version
 
 #>
 
 <#
 .SYNOPSIS
-Extracts and exports Azure Resource Group templates for all subscriptions defined in the environment configuration.
+Extracts and exports Azure subscriptions.
 
 .DESCRIPTION
-The Extract-Templates.ps1 script automates the extraction of ARM templates for all resource groups across multiple Azure subscriptions defined in the Alya Base Configuration environment. It ensures all required Azure PowerShell modules are installed, logs into Azure, and exports each resource group’s deployment template to JSON files stored in a designated output directory. The script also creates a log transcript for auditing and troubleshooting purposes.
+The Extract-Subscriptions.ps1 script automates the extraction of Azure subscriptions defined in the Alya Base Configuration environment. It ensures all required Azure PowerShell modules are installed, logs into Azure, and exports each subscription’s details to JSON files stored in a designated output directory. The script also creates a log transcript for auditing and troubleshooting purposes.
 
 .INPUTS
 None. All required configuration variables are imported from the Alya environment configuration script (01_ConfigureEnv.ps1).
 
 .OUTPUTS
-Generates JSON files for each exported Azure Resource Group template and a log file documenting script activity.
+Generates JSON files for each exported Azure subscription and a log file documenting script activity.
 
 .EXAMPLE
-PS> .\Extract-Templates.ps1
+PS> .\Extract-Subscriptions.ps1
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -67,7 +65,7 @@ Param(
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 #Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-Templates-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-Subscriptions-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
@@ -82,7 +80,7 @@ LoginTo-Az -SubscriptionName $sub.Name
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Azure | Extract-Templates | AZURE" -ForegroundColor $CommandInfo
+Write-Host "Azure | Extract-Subscriptions | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context
@@ -93,38 +91,20 @@ if (-Not $Context)
     Exit 1
 }
 
-# Exporting all resourcegroup templates
-Write-Host "Exporting all resourcegroup templates" -ForegroundColor $CommandInfo
-$TemplateRoot = "$($AlyaData)\azure\templates"
-Write-Host "  to $($TemplateRoot)" -ForegroundColor $CommandInfo
-if (-Not (Test-Path -Path $TemplateRoot -PathType Container))
+# Exporting all subscriptions
+Write-Host "Exporting all subscriptions" -ForegroundColor $CommandInfo
+$SubscriptionRoot = "$($AlyaData)\azure\subscriptions"
+Write-Host "  to $($SubscriptionRoot)" -ForegroundColor $CommandInfo
+if (-Not (Test-Path -Path $SubscriptionRoot -PathType Container))
 {
-    New-Item -Path $TemplateRoot -ItemType Directory -Force | Out-Null
+    New-Item -Path $SubscriptionRoot -ItemType Directory -Force | Out-Null
 }
-Push-Location -Path $TemplateRoot
 
 $subs = Get-AzSubscription -TenantId $AlyaTenantId
 foreach ($sub in $subs)
 {
-    Select-AzSubscription -SubscriptionObject $sub -Force
-    $grps = Get-AzResourceGroup
-    foreach($grp in $grps)
-    {
-        Write-Host "Exporting ressource group $($grp.ResourceId) from subscription $($sub.Name)"
-        $fileName = ($grp.ResourceId -replace "/", "_") + ".json"
-        try
-        {
-            Export-AzResourceGroup -ResourceGroupName $grp.ResourceGroupName -Path . -IncludeParameterDefaultValue -IncludeComments -Pre -Force
-            Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($sub.Name + "_" + $grp.ResourceGroupName + ".json") -Force
-        }
-        catch
-        {
-            Write-Error $_.Exception -ErrorAction SilentlyContinue
-        }
-    }
+    $sub | ConvertTo-Json -Depth 10 | Out-File -FilePath "$SubscriptionRoot\$($sub.Name).json" -Encoding UTF8
 }
-
-Pop-Location
 
 #Stopping Transscript
 Stop-Transcript
@@ -132,8 +112,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MIIwlQYJKoZIhvcNAQcCoIIwhjCCMIICAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBizM4PxiukZd2V
-# AGNF3N1lAb/v+RKDdYRVIEIK6vISkKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA2Om1jZP/jae3N
+# 1r5Q+eIxmtD5dBKmrJlg+qagNrfBYqCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -217,23 +197,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIde/+4fYPFUZVcP
-# LGWDSAFIvEFxJJ0xv8v5NLdwgBFYMA0GCSqGSIb3DQEBAQUABIICAGu+zYlNLzGo
-# DiOr/oNJqnVdfMBDlHk0GQCeGtAeQ8xEs+uY1qHU4uSzMLmaTTCI9JrUj7TIzyqb
-# cBuzisvgAR9YHqmR3fCBRlfHascrgfEJe8hB1lvwtyoc2pyEtMAco/igqWQUbMwH
-# 3UJggz7jZ7cz6k+ClIKp1zZo5rR8JikvWHio+GK2Tf8vUzr64T1KHtaurx+gHe3z
-# Eg76hLpZpM7IsReAOlsNkJIkHSSPFa18J89jpVy1wT4Jg6bDlpXypWEimcbWnNOG
-# 8pvHtRvgvxi7tDYBskHflApwkDV2nwj0OcAO9pbD39liA0zgcm8pMUNJrt5wBIax
-# 8u15LEbWWGvy5uGoQhbY/n2VPuKb9pIWg5NMngseHVZxBzE0Tw4yfHipSEdf0/tT
-# 0/464xvEvqpq0mcYT3NRzxrCJawd2U2mXHFuxO0VLNNvOiude7MHdyZ+IZLKJRaI
-# Cql+ScglbDoTAzsKnrfRskmwdaexdchvZlTIF1/XsA0KxpMN8xREsAzsI7640pnq
-# nCOAPiURSYi6vVUirDZWaO7Gybr0dl4npkOhs5CQUC43arrNIpA1cETzl3VBEdqJ
-# lekmRpcKpjxw058YNRlajjojvISVHjhywUHtQxRIxQ+iCGdplzF2IRmgbD7hr/RS
-# CHe9UBcjJh6DxCLcTYTc9Y50ffabYlDNoYId7TCCHekGCisGAQQBgjcDAwExgh3Z
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKmel8DK++He4z5U
+# pNSGwJg3ZqMHSGvkGYu9pVAU0LZGMA0GCSqGSIb3DQEBAQUABIICAG8Q0HydgDzW
+# hJzR6alo0IO969nN9C1CApwKPgtfvlysOL2cGco0ZKAXExZClSkI5r1FRLrBUBJf
+# HM0kEkNd68/uxRfClxBmmLLbhw1h1T5GtGpeRJ6VajLdMEwIHQV+uT+vaw5qCc/d
+# 2iYr3LGRyOjVftemyYdk1oKxn+BZ58favG4YX57m58V0ejWPphPcHpDlDTe2eusH
+# ap8Ba5Yx2zPg0YLdh42akTGI06cGthtKEUiJExiC7wGFaQN9PKAyob+s+BfCgJqx
+# +wbG+6ipl4BK99HWKPtSLH/fhg5c8uBlqVtgwqhLYudQygJ/XvCxHyJYnO3gLHml
+# PpxwAXgr8XiESXrXFEeVoUniuHYM+E+vmyUeTV3SVyGSl+LoAxi/KPo2CJRLP0Pp
+# d1teo0y17H1RCasxn295aKCPIjAGwP1/7tYKMhRx24X7QKTqkX9RFhid6f+BYN/v
+# ONnkEIGDSGqUn6nxDPeqIpR1WFpHaPuOHtuPKzrvCfr71pAWQrY+ylPu+ULTDb1i
+# 3xkNXAkJcQDQvIgvLmJnd6oUhR9kIwd0W0x7v8sRl1fmWKHVJPD/ojzJxFaQQl8N
+# JWSh616upUdi2h9ULLFH7sQq16Y6unjH3IpLDbNWWf4aiIR4kXwaYcPfsIaz5Q8j
+# FOcDtz7HfRRp/aELAvE2QdfGhbhk7J4goYId7TCCHekGCisGAQQBgjcDAwExgh3Z
 # MIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIwgeQGCyqG
 # SIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCGSAFlAwQC
-# AQUABCBQDBs9MOHumZyO/NLbDGfg6jAzuaktFrtsAz/0Bzn5yAIUMfakJw+QQaPq
-# 31+24HXDN/Smd5IYDzIwMjYwNTI2MTE0ODM2WjADAgEBoF2kWzBZMQswCQYDVQQG
+# AQUABCDVLnZReiYcPcHcJCbtAoY/Cd/8Fp20oGtBjepkyyoz3gIUfwenFGxLgsKJ
+# UelqIrHG5GLj/v0YDzIwMjYwNTI2MTE1MjUzWjADAgEBoF2kWzBZMQswCQYDVQQG
 # EwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMmR2xvYmFs
 # c2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCCBHKgAwIB
 # AgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkGA1UEBhMC
@@ -375,19 +355,19 @@ Stop-Transcript
 # bFNpZ24gbnYtc2ExNDAyBgNVBAMTK0dsb2JhbFNpZ24gT2ZmbGluZSBSNDUgVGlt
 # ZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCGSAFlAwQC
 # AqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3DQEJNDEe
-# MBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJBDEyBDAc
-# zktug9nZp0nmAOZBuEXVq8FOLBwuhylHPtcJntvEG+B24UEkxlVdyvox3GqlfSEw
+# MBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJBDEyBDDa
+# QgyDjy+iDKJmtlwFKVBxt81yI+9TRla83s/eRNtsrsljdJv+6sA4RLohX5ixUkcw
 # gbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS858bMJhdk
 # iChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xv
 # YmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5lIFI0NSBU
 # aW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcN
-# AQEMBQAEggGAqdNu3iaEMSCyxqgnI/d9fau0Aa8jW1T9IDulsukg2+FXiacF/4dG
-# QlqLdfBgdvPY7/5iITsPs26PJwA/AP+yKXrCyTCJDTlxzzJZzrSyzWwDk0p+FLA8
-# OreHa4p4m2xCMlMwKaigkO92X6cI67LmEv+ctHq004sTXo+MJGUTRXToC5CZnVzP
-# pMYDtX7aFnXaxL+CV1MiEN1/YA/E66bm4Q6ZRWWR5g1gC4MuKD6Mvm2/KM79BpQC
-# uNwn88My5bYrVHLICbM+HtyaPIXQfIAcy7qpWynQ5PX1ENa8Je+y/hrLgIAJKrjo
-# nzc7yPuJeNkIKtEE8kQJfLYfEJZpOvaS4Nq+dzTstf6KZCRdSidxbnJR3/wu8XYw
-# 9CBiV8D6oEkGHmRhV1ozk2K7B2jNITsTn8uYHMY/Khx9t+u9WJeMtQAi1G12zez7
-# jPx00K9psAA+e9Ki1Ds1wNc+wPiAnUzykyEZTs5zwaXpQ0jfQlWAanf5GEjNvV/1
-# Jt2ud7cIYU6O
+# AQEMBQAEggGAKzBdI65zcIsQc+5qOzSVK5eCe/Vj0yW1l7THbdQhof92fIj8C+fJ
+# P6cu093EZ6hIMakZxyJVBpc4PtIzyGrp7LDgwyVaaXOEah7912Xr7bOYx6Eo8W0A
+# xva5U8KJ+Uv5PXLZd2AMmbh0IFLfLLbe08PcR9rV/yp3gsSF4wSkOeXgVJuZJbtt
+# 19g454RpGW5H/nwEtos3/cBxTkvxL6J3eXkFFRLFGwTaUznubtONG5h2i7YfteAZ
+# GoCNUt6i/AjTypZ/VyReh9n3cNc7haCozbfTQ8bt+j1DHWNPyHLf01Q0GWt+k0J+
+# CcrTpHNv+8C4HMACGMGeLFBctb28r/nizbn4yOSBlTlR4jIY9CrtYBrvtRpTIKAL
+# HM+TW0MRU4Pwg9YoShM1Ak+WmIg6CC3HvsK7UMP/mJlg3QpD5s6fkZtcnD0fDsYm
+# USfGdOupTYRXY7vrqzzc7EPEooaPf/88T+oH1Z8FdgRhCabJXw5+uGP7R+E9ZuUS
+# DSP+kyN1XxGZ
 # SIG # End signature block

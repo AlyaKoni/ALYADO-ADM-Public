@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 2
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,30 +27,24 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
-    History:
-    Date       Author               Description
-    ---------- -------------------- ----------------------------
-    02.03.2020 Konrad Brunner       Initial Version
-    07.01.2021 Konrad Brunner       Fixed file extension (.json)
-    06.02.2026 Konrad Brunner       Added powershell documentation
-
 #>
 
 <#
 .SYNOPSIS
-Extracts and exports Azure Resource Group templates for all subscriptions defined in the environment configuration.
+Downloads the latest MSI installer for Remote Desktop Manager Free from the Devolutions website.
 
 .DESCRIPTION
-The Extract-Templates.ps1 script automates the extraction of ARM templates for all resource groups across multiple Azure subscriptions defined in the Alya Base Configuration environment. It ensures all required Azure PowerShell modules are installed, logs into Azure, and exports each resource group’s deployment template to JSON files stored in a designated output directory. The script also creates a log transcript for auditing and troubleshooting purposes.
+The script retrieves the current download link for the Remote Desktop Manager Free MSI package by parsing the Devolutions website. It handles multiple potential URL patterns to ensure compatibility with site changes. Once the correct installer link is found, it downloads the MSI file to a "Content" directory located in the same folder as the script.
 
 .INPUTS
-None. All required configuration variables are imported from the Alya environment configuration script (01_ConfigureEnv.ps1).
+None. The script does not accept pipeline input.
 
 .OUTPUTS
-Generates JSON files for each exported Azure Resource Group template and a log file documenting script activity.
+Downloads an MSI installer file to the "Content" directory under the script location.
 
 .EXAMPLE
-PS> .\Extract-Templates.ps1
+PS> .\Download.ps1
+Retrieves and downloads the latest Remote Desktop Manager Free MSI file to the Content directory.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -59,81 +53,31 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
-[CmdletBinding()]
-Param(
-)
+. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-#Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
-
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-Templates-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Az.Accounts"
-Install-ModuleIfNotInstalled "Az.Resources"
-
-# Logins
-LoginTo-Az -SubscriptionName $sub.Name
-
-# =============================================================
-# Azure stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Azure | Extract-Templates | AZURE" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Getting context
-$Context = Get-AzContext
-if (-Not $Context)
+$pageUrl = "https://devolutions.net/remote-desktop-manager/download/"
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
+[regex]$regex = "[^`"]*Setup.RemoteDesktopManager.win-x64[^`"]*\.msi[^`"]*"
+$newUrl = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
+if (-Not $newUrl)
 {
-    Write-Error "Can't get Az context! Not logged in?" -ErrorAction Continue
-    Exit 1
+    throw "Could not find the download link for Remote Desktop Manager Free MSI installer on the Devolutions website."
 }
 
-# Exporting all resourcegroup templates
-Write-Host "Exporting all resourcegroup templates" -ForegroundColor $CommandInfo
-$TemplateRoot = "$($AlyaData)\azure\templates"
-Write-Host "  to $($TemplateRoot)" -ForegroundColor $CommandInfo
-if (-Not (Test-Path -Path $TemplateRoot -PathType Container))
+$fileName = Split-Path -Path $newUrl -Leaf
+$packageRoot = "$PSScriptRoot"
+$contentRoot = Join-Path $packageRoot "Content"
+if (-Not (Test-Path $contentRoot))
 {
-    New-Item -Path $TemplateRoot -ItemType Directory -Force | Out-Null
+    $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-Push-Location -Path $TemplateRoot
-
-$subs = Get-AzSubscription -TenantId $AlyaTenantId
-foreach ($sub in $subs)
-{
-    Select-AzSubscription -SubscriptionObject $sub -Force
-    $grps = Get-AzResourceGroup
-    foreach($grp in $grps)
-    {
-        Write-Host "Exporting ressource group $($grp.ResourceId) from subscription $($sub.Name)"
-        $fileName = ($grp.ResourceId -replace "/", "_") + ".json"
-        try
-        {
-            Export-AzResourceGroup -ResourceGroupName $grp.ResourceGroupName -Path . -IncludeParameterDefaultValue -IncludeComments -Pre -Force
-            Move-Item -Path ($grp.ResourceGroupName + ".json") -Destination ($sub.Name + "_" + $grp.ResourceGroupName + ".json") -Force
-        }
-        catch
-        {
-            Write-Error $_.Exception -ErrorAction SilentlyContinue
-        }
-    }
-}
-
-Pop-Location
-
-#Stopping Transscript
-Stop-Transcript
+Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newUrl -Outfile "$contentRoot\$fileName"
 
 # SIG # Begin signature block
 # MIIwlQYJKoZIhvcNAQcCoIIwhjCCMIICAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBizM4PxiukZd2V
-# AGNF3N1lAb/v+RKDdYRVIEIK6vISkKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAA0STYOQPFnNIC
+# MiC72UnAc1EqMmZi2cTQ2gNnSmYlLaCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -217,23 +161,23 @@ Stop-Transcript
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIde/+4fYPFUZVcP
-# LGWDSAFIvEFxJJ0xv8v5NLdwgBFYMA0GCSqGSIb3DQEBAQUABIICAGu+zYlNLzGo
-# DiOr/oNJqnVdfMBDlHk0GQCeGtAeQ8xEs+uY1qHU4uSzMLmaTTCI9JrUj7TIzyqb
-# cBuzisvgAR9YHqmR3fCBRlfHascrgfEJe8hB1lvwtyoc2pyEtMAco/igqWQUbMwH
-# 3UJggz7jZ7cz6k+ClIKp1zZo5rR8JikvWHio+GK2Tf8vUzr64T1KHtaurx+gHe3z
-# Eg76hLpZpM7IsReAOlsNkJIkHSSPFa18J89jpVy1wT4Jg6bDlpXypWEimcbWnNOG
-# 8pvHtRvgvxi7tDYBskHflApwkDV2nwj0OcAO9pbD39liA0zgcm8pMUNJrt5wBIax
-# 8u15LEbWWGvy5uGoQhbY/n2VPuKb9pIWg5NMngseHVZxBzE0Tw4yfHipSEdf0/tT
-# 0/464xvEvqpq0mcYT3NRzxrCJawd2U2mXHFuxO0VLNNvOiude7MHdyZ+IZLKJRaI
-# Cql+ScglbDoTAzsKnrfRskmwdaexdchvZlTIF1/XsA0KxpMN8xREsAzsI7640pnq
-# nCOAPiURSYi6vVUirDZWaO7Gybr0dl4npkOhs5CQUC43arrNIpA1cETzl3VBEdqJ
-# lekmRpcKpjxw058YNRlajjojvISVHjhywUHtQxRIxQ+iCGdplzF2IRmgbD7hr/RS
-# CHe9UBcjJh6DxCLcTYTc9Y50ffabYlDNoYId7TCCHekGCisGAQQBgjcDAwExgh3Z
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKlEMg2/K3/mnxLT
+# CdIg3+3L3mfZaj6t4xPgeSwnIRQEMA0GCSqGSIb3DQEBAQUABIICAJKsYyxomn7k
+# I4vKBb2eWWbY1NHOvvfghreqAANnI7unJy+ypFa2cvnR2siAdVhNqWumVpcOG+Ph
+# 0HyobeiZjD3a1evUqyjF+d+jW1MKv8oog3f+g6sm2gMHZyxRlxZdP6HqKhZabvmQ
+# 1JWOWzP8sijfh+U0UEadg0/MHDN3/w66rTH/fw+GHxDdDIpKb+nGwYr6iHUfBZcy
+# tpDyRQpi7UrbjEb1219ROzPghb63iEUcn7ugkL30C8va2WeW5FgH+ypJsWmXiUgo
+# c8+o/RHqcHE5RVPsJiDQT8MQcBgHem6FAHRwli9n7Bn+2xuB2K5Xz/mPoN3tPAo/
+# n+Z2HKL1oLy+unqZWgP+CbbvLXzYKCislBu2QZkHhsTn7a2t1H9dsqhWMXWMBYw6
+# 6tG/zt2Bo5WN9zDRqjAWy9M5b5yNmmLdX9Ok2tolTs8eRa2W5jskP5Gk6roStm0j
+# i4VcBmq3yjg4EaE2U/vJKmF2wLkZxKpEGwHH94jtUbURoy3nfXGtVsmBgZkHHvRj
+# Jsyg8CchQw2YLFa5Qnktt7lvkH/01OmYHovOrVI56vvX0OFzIqfoUoHHFQj5qNY7
+# h1YdqWG30bqtXwmFcvX/1koFJf3Lg4wrZxynwUYXrtRjdiSrcMdjpwhSiaeyr6cj
+# 4tqL82Xww2wb7EzDBEfXzU0i0I8Q2FfRoYId7TCCHekGCisGAQQBgjcDAwExgh3Z
 # MIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIwgeQGCyqG
 # SIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCGSAFlAwQC
-# AQUABCBQDBs9MOHumZyO/NLbDGfg6jAzuaktFrtsAz/0Bzn5yAIUMfakJw+QQaPq
-# 31+24HXDN/Smd5IYDzIwMjYwNTI2MTE0ODM2WjADAgEBoF2kWzBZMQswCQYDVQQG
+# AQUABCAkYyZOPuCcYDbfi7thDql6A+cZO7+/X5uz+9u1nTTnVgIUCIkUvi24joWb
+# x+zCfkDqa8dtAzAYDzIwMjYwNTI2MDgxODAwWjADAgEBoF2kWzBZMQswCQYDVQQG
 # EwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMmR2xvYmFs
 # c2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCCBHKgAwIB
 # AgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkGA1UEBhMC
@@ -375,19 +319,19 @@ Stop-Transcript
 # bFNpZ24gbnYtc2ExNDAyBgNVBAMTK0dsb2JhbFNpZ24gT2ZmbGluZSBSNDUgVGlt
 # ZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCGSAFlAwQC
 # AqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3DQEJNDEe
-# MBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJBDEyBDAc
-# zktug9nZp0nmAOZBuEXVq8FOLBwuhylHPtcJntvEG+B24UEkxlVdyvox3GqlfSEw
+# MBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJBDEyBDCL
+# 6BXhaTRNjcugyyDYg7YjaDw4ojwOQzvdIfEzP6Ez31GA/34CGBe0LPFLrtTAYYww
 # gbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS858bMJhdk
 # iChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQR2xv
 # YmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5lIFI0NSBU
 # aW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcN
-# AQEMBQAEggGAqdNu3iaEMSCyxqgnI/d9fau0Aa8jW1T9IDulsukg2+FXiacF/4dG
-# QlqLdfBgdvPY7/5iITsPs26PJwA/AP+yKXrCyTCJDTlxzzJZzrSyzWwDk0p+FLA8
-# OreHa4p4m2xCMlMwKaigkO92X6cI67LmEv+ctHq004sTXo+MJGUTRXToC5CZnVzP
-# pMYDtX7aFnXaxL+CV1MiEN1/YA/E66bm4Q6ZRWWR5g1gC4MuKD6Mvm2/KM79BpQC
-# uNwn88My5bYrVHLICbM+HtyaPIXQfIAcy7qpWynQ5PX1ENa8Je+y/hrLgIAJKrjo
-# nzc7yPuJeNkIKtEE8kQJfLYfEJZpOvaS4Nq+dzTstf6KZCRdSidxbnJR3/wu8XYw
-# 9CBiV8D6oEkGHmRhV1ozk2K7B2jNITsTn8uYHMY/Khx9t+u9WJeMtQAi1G12zez7
-# jPx00K9psAA+e9Ki1Ds1wNc+wPiAnUzykyEZTs5zwaXpQ0jfQlWAanf5GEjNvV/1
-# Jt2ud7cIYU6O
+# AQEMBQAEggGAztX4Ok1aVeVoIR1IHF2RcsXZyQnFlqlpUqmjfCryz4pfKa4E9xLS
+# 0/4sfVQZbaXPqRWyS3hp6dyY9GfhQ2z3moFsLqNIwLIL5MeIOP/vwTphxwogxDmV
+# aVIGR5YJMYlro+ybJ12RfUHhTA8aPAjPSYGRoyxETD9qdYSCwAKprpYwL+U8o4/u
+# GCqgrXSuc+TGzc5ZTDjzs7zsD3gDIrRUgecVH9OGg1ky7gjwicZg5c73VQbPvqWm
+# Mq+eIp+FB7AmgsJCdCBj0HP9Pq29Iwe9eYC3OOCcTUucZz7ScdnhzjotJmC9dGeZ
+# weO3TWqZ8zuSA42GjfJeYgATiYcCi5wy85lo4F6MlCidMhyombTYiD6ov6GCuhJC
+# chZaRfjtUI9mWytlTxhQ8ZdctuvtINPLya5QkmMTx/Jv5wMVfr33NyKTAiBQ462o
+# KkseA8xk7eTV9JHLbDxeWvlPV6q7Bj0sI+Ww48SDHPMm5GWCtJWBCRu5Vd25SRBq
+# KQdf06vRqUxe
 # SIG # End signature block
