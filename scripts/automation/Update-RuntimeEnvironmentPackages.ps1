@@ -80,6 +80,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
     [string]$Language = "PowerShell",
     [string]$ProcessOnlyRunTimeEnvironment = $null,
+    [bool]$AllowPrereleases = $false,
     [string[]]$ProcessOnlyPackagesWithPartialName = $null,
     [string[]]$ProcessOnlyPackagesWithNameStarting = @("Az.", "Microsoft.Graph."),
     [string[]]$ProcessOnlyPackagesWithName = @(

@@ -517,6 +517,7 @@ $siteCon = LoginTo-PnP -Url $absSiteUrl
 $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedOwnerGroup
 foreach ($usrEmail in $siteOwners)
 {
+    if ([string]::IsNullOrWhiteSpace($usrEmail)) { continue }
     $agroup = $null
     try {
         $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $usrEmail -ErrorAction SilentlyContinue
@@ -537,6 +538,7 @@ Write-Host "Setting siteMembers access" -ForegroundColor $CommandInfo
 $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
 foreach ($usrEmail in $siteMembers)
 {
+    if ([string]::IsNullOrWhiteSpace($usrEmail)) { continue }
     $agroup = $null
     try {
         $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $usrEmail -ErrorAction SilentlyContinue
@@ -572,6 +574,7 @@ Write-Host "Setting siteReaders access" -ForegroundColor $CommandInfo
 $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
 foreach ($usrEmail in $siteReaders)
 {
+    if ([string]::IsNullOrWhiteSpace($usrEmail)) { continue }
     $agroup = $null
     try {
         $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $usrEmail -ErrorAction SilentlyContinue
@@ -603,6 +606,7 @@ if ($null -ne $groupOwners -and $groupOwners.Length -gt 0)
     }
     foreach($own in $groupOwners)
     {
+        if ([string]::IsNullOrWhiteSpace($own)) { continue }
         $fnd = $false
         foreach($gown in $grpOwners)
         {
@@ -611,13 +615,16 @@ if ($null -ne $groupOwners -and $groupOwners.Length -gt 0)
                 $fnd = $true
                 break
             }
-            if (-Not $fnd)
-            {
-                $grpOwnersNew += $own
-            }
+        }
+        if (-Not $fnd)
+        {
+            $grpOwnersNew += $own
         }
     }
-    Set-PnPMicrosoft365Group -Connection $adminCon -Identity $m365GroupId -Owners $grpOwnersNew
+    if ($grpOwnersNew.Count -gt 0)
+    {
+        Set-PnPMicrosoft365Group -Connection $adminCon -Identity $m365GroupId -Owners $grpOwnersNew
+    }
 }
 
 # Setting group Members
@@ -636,6 +643,7 @@ if ($null -ne $groupMembers -and $groupMembers.Length -gt 0)
     }
     foreach($memb in $groupMembers)
     {
+        if ([string]::IsNullOrWhiteSpace($memb)) { continue }
         $fnd = $false
         foreach($gmemb in $grpMembers)
         {
@@ -644,13 +652,16 @@ if ($null -ne $groupMembers -and $groupMembers.Length -gt 0)
                 $fnd = $true
                 break
             }
-            if (-Not $fnd)
-            {
-                $grpMembersNew += $memb
-            }
+        }
+        if (-Not $fnd)
+        {
+            $grpMembersNew += $memb
         }
     }
-    Set-PnPMicrosoft365Group -Connection $adminCon -Identity $m365GroupId -Members $grpMembersNew
+    if ($grpMembersNew.Count -gt 0)
+    {
+        Set-PnPMicrosoft365Group -Connection $adminCon -Identity $m365GroupId -Members $grpMembersNew
+    }
 }
 
 # M365 Group Sharing Capability

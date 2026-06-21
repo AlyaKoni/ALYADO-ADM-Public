@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     05.04.2026 Konrad Brunner       Initial Version
     20.04.2026 Konrad Brunner       Several updates
+    10.06.2026 Konrad Brunner       Report only parameter added, several updates
 
 	https://support.microsoft.com/en-us/topic/how-to-manage-the-windows-boot-manager-revocations-for-secure-boot-changes-associated-with-cve-2023-24932-41a975df-beb2-40c1-99a3-b3ff139f832d#bkmk_mitigation_guidelines
 
@@ -39,7 +40,8 @@
 
 [CmdletBinding()]
 param (
-	$nonInteractive = $false
+	$nonInteractive = $false,
+	$reportOnly = $false
 )
 
 <#
@@ -97,6 +99,10 @@ if (-Not $nonInteractive)
 	pause
 }
 
+$systeminfo = systeminfo
+$OSName = (($systeminfo | Where-Object { $_ -like "*OS Name*" -or $_ -like "*Betriebssystemname*" }).Split(":")[-1]).Trim()
+$OSVersion = (($systeminfo | Where-Object { $_ -like "*OS Version*" -or $_ -like "*Betriebssystemversion*" }).Split(":")[-1]).Trim()
+$OSConfiguration = (($systeminfo | Where-Object { $_ -like "*OS Configuration*" -or $_ -like "*Betriebssystemkonfiguration*" }).Split(":")[-1]).Trim()
 $UEFISecureBootEnabled = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\State -Name UEFISecureBootEnabled -ErrorAction SilentlyContinue).UEFISecureBootEnabled } catch {}
 $HighConfidenceOptOut = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot -Name HighConfidenceOptOut -ErrorAction SilentlyContinue).HighConfidenceOptOut } catch {}
 $AvailableUpdates = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot -Name AvailableUpdates -ErrorAction SilentlyContinue).AvailableUpdates } catch {}
@@ -119,7 +125,7 @@ $BiosVersion = (Get-CIMInstance Win32_BIOS).Version
 $BaseBoardManufacturer = (Get-CimInstance Win32_BaseBoard).Manufacturer
 $BaseBoardSerialNumber = (Get-CimInstance Win32_BaseBoard).SerialNumber
 $BaseBoardProduct = (Get-CIMInstance Win32_BaseBoard).Product
-$TpmVersion = (tpmtool getdeviceinformation | Where-Object { $_ -like "*TPM-Version*" }).Split()[-1]
+$TpmVersion = (tpmtool getdeviceinformation | Where-Object { $_ -like "*TPM Version*" -or $_ -like "*TPM-Version*" }).Split()[-1]
 $UefiPartitionSize = 0
 foreach($disk in (Get-Disk))
 {
@@ -139,6 +145,9 @@ detail partition
 
 Write-Host "`nSystem information"
 Write-Host "==============================================="
+Write-Host "OSName: $OSName"
+Write-Host "OSVersion: $OSVersion"
+Write-Host "OSConfiguration: $OSConfiguration"
 Write-Host "UEFISecureBootEnabled: $UEFISecureBootEnabled"
 Write-Host "HighConfidenceOptOut: $HighConfidenceOptOut"
 Write-Host "AvailableUpdates: $AvailableUpdates"
@@ -240,6 +249,7 @@ $latest_1795_Event = $events | Where-Object {$_. ID -eq 1795} | Sort-Object Time
 
 $bootLoaderPending = $false
 $zertPending = $true
+$zertPendingWarning = $true
 $zertRetry = $false
 
 if ($latest_1801_Event -or $latest_1802_Event -or $latest_1803_Event -or $latest_1795_Event) {
@@ -278,9 +288,11 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 	Write-Host "Ereigniszeit: $($latest_1808_Event.TimeCreated)"
 
 	$zertPending = $false
+	$zertPendingWarning = $false
 	$bootLoaderPending = $false
 
 	$errorMsg = ""
+	$warningMsg = ""
 	if ([System.Text.Encoding]::ASCII.GetString((Get-SecureBootUEFI DB).Bytes) -notmatch 'Microsoft Option ROM UEFI CA 2023')
 	{
 		Write-Warning "Microsoft Option ROM UEFI CA 2023 certificate is not present in the UEFI Secure Boot ROM. Update may not have been applied successfully. On some systems (servers) this certificate is not available."
@@ -316,12 +328,12 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		$zertPending = $true
 	}
 
-	$configQuery = (WinCsFlags.exe /query) -join "`n"
-	if ($configQuery -notmatch 'Current Configuration: F33E0C8E002')
-	{
-		$errorMsg += "`nWindows UEFI CA 2023 update does not appear to have been applied successfully. Expected key 'F33E0C8E002' not found in WinCsFlags.exe /query output."
-		$zertPending = $true
-	}
+	#$configQuery = (WinCsFlags.exe /query) -join "`n"
+	#if ($configQuery -notmatch 'Current Configuration: F33E0C8E002')
+	#{
+	#	$errorMsg += "`nWindows UEFI CA 2023 update does not appear to have been applied successfully. Expected key 'F33E0C8E002' not found in WinCsFlags.exe /query output."
+	#	$zertPending = $true
+	#}
 
 	if ((Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing").UEFICA2023Status -ne "Updated")
 	{
@@ -329,39 +341,88 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		$zertPending = $true
 	}
 
+	
+	if ((Get-AuthenticodeSignature "$env:SystemRoot\Boot\EFI\bootmgfw.efi").SignerCertificate.Issuer -notmatch 'Windows UEFI CA 2023')
+	{
+		if ($UEFICA2023Status -eq "Updated" -and [string]::IsNullOrWhitespace($UEFICA2023Error))
+		{
+			$warningMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemRoot boot manager. Update may not have been applied successfully."
+			$zertPendingWarning = $true
+		}
+		else
+	{
+			$errorMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemRoot boot manager. Update may not have been applied successfully."
+			$bootLoaderPending = $true
+		}
+	}
+
 	mountvol s: /s | Out-Null
 	if ((Get-AuthenticodeSignature "S:\EFI\Microsoft\Boot\bootmgfw.efi").SignerCertificate.Issuer -notmatch 'Windows UEFI CA 2023')
 	{
-		$errorMsg += "`nWindows UEFI CA 2023 certificate is not present in the boot manager. Update may not have been applied successfully."
+		if ($UEFICA2023Status -eq "Updated" -and [string]::IsNullOrWhitespace($UEFICA2023Error))
+		{
+			$warningMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemPartition boot manager bootmgfw.efi. Update may not have been applied successfully."
+			$zertPendingWarning = $true
+		}
+		else
+		{
+			$errorMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemPartition boot manager bootmgfw.efi. Update may not have been applied successfully."
 		$bootLoaderPending = $true
+	}
 	}
 	if ((Get-AuthenticodeSignature "S:\EFI\Boot\bootx64.efi").SignerCertificate.Issuer -notmatch 'Windows UEFI CA 2023')
 	{
-		$errorMsg += "`nWindows UEFI CA 2023 certificate is not present in the boot manager. Update may not have been applied successfully."
+		if ($UEFICA2023Status -eq "Updated" -and [string]::IsNullOrWhitespace($UEFICA2023Error))
+		{
+			$warningMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemPartition boot manager bootx64.efi. Update may not have been applied successfully."
+			$zertPendingWarning = $true
+		}
+		else
+		{
+			$errorMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemPartition boot manager bootx64.efi. Update may not have been applied successfully."
 		$bootLoaderPending = $true
+	}
 	}
 	mountvol s: /d | Out-Null
 
+
 	if ([string]::IsNullOrWhiteSpace($errorMsg))
 	{
-		$errorMsg = "All checks passed - Secure Boot CA certificates appear to be updated successfully and boot manager has been replaced."
+		if ([string]::IsNullOrWhiteSpace($warningMsg))
+		{
+			Write-Host "All checks passed - Secure Boot CA certificates appear to be updated successfully and boot manager has been replaced." -ForegroundColor Green
+		}
+		else
+		{
+			Write-Warning ("`n" + $warningMsg)
+			Write-Warning "Looks like the boot loader has been updated: UEFICA2023Status=Updated"
+			Write-Warning "May the reported the boot loader has not been updated yet."
+		}
 		exit
 	}
 	else
 	{
 		$answer = "n"
-		if ($bootLoaderPending -and -Not $nonInteractive)
+		if ($bootLoaderPending)
 		{
 			Write-Warning ("`n" + $errorMsg)
 			Write-Warning "Looks like the boot loader has not been updated yet."
 			Write-Warning "Sometimes a secondy reboot is required."
+			Write-Warning "Make sure it's a hard reboot (Shift+Reboot or shutdown /r /t 0)."
+			Write-Warning "On Azure VMs, deallocate and start again."
+			if (-Not $nonInteractive)
+			{
 			$answer = Read-Host -Prompt "Already rebooted twice? (y/n)"
+		}
 		}
 		if ($answer.ToLower() -eq "n")
 		{
 			Write-Error $errorMsg -ErrorAction Continue
 			Write-Warning "Please reboot now a second time."
+			if (-Not $reportOnly)
+			{
 			exit 1
+		}
 		}
 		$answer = "n"
 		if ($zertPending -and -Not $nonInteractive)
@@ -384,8 +445,11 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		if ($answer.ToLower() -eq "n")
 		{
 			Write-Error $errorMsg -ErrorAction Continue
+			if (-Not $reportOnly)
+			{
 			exit 1
 		}
+	}
 	}
 
 } elseif ($latest_1808_Event) {
@@ -426,12 +490,12 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		$zertPending = $true
 	}
 
-	$configQuery = (WinCsFlags.exe /query) -join "`n"
-	if ($configQuery -notmatch 'Current Configuration: F33E0C8E002')
-	{
-		$errorMsg += "`nWindows UEFI CA 2023 update does not appear to have been applied successfully. Expected key 'F33E0C8E002' not found in WinCsFlags.exe /query output."
-		$zertPending = $true
-	}
+	#$configQuery = (WinCsFlags.exe /query) -join "`n"
+	#if ($configQuery -notmatch 'Current Configuration: F33E0C8E002')
+	#{
+	#	$errorMsg += "`nWindows UEFI CA 2023 update does not appear to have been applied successfully. Expected key 'F33E0C8E002' not found in WinCsFlags.exe /query output."
+	#	$zertPending = $true
+	#}
 
 	if ((Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing").UEFICA2023Status -ne "Updated")
 	{
@@ -458,19 +522,29 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		if ($answer.ToLower() -eq "n")
 		{
 			Write-Error $errorMsg -ErrorAction Continue
+			if (-Not $reportOnly)
+			{
 			exit 1
 		}
+	}
 	}
 
 }
 
-if ($zertPending) {
+if ($reportOnly)
+{
+	$RegSecureBoot = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot"
+	Write-Host "AvailableUpdates hat derzeit den Wert: 0x$($RegSecureBoot.AvailableUpdates.ToString("X"))"
+	#WinCsFlags.exe /query
+}
+
+if ($zertPending -and -not $reportOnly) {
 
 	Write-Warning "Kein Ereignis 1808 oder andere Probleme gefunden - Secure Boot CA Zertifikate sind noch nicht aktualisiert"
 	Write-Warning "Starte Updateprozess: Neue Zertifikate installieren."
 
-	Write-Host "Setze WinCsFlags auf F33E0C8E002"
-	WinCsFlags.exe /apply --key "F33E0C8E002"
+	#Write-Host "Setze WinCsFlags auf F33E0C8E002"
+	#WinCsFlags.exe /apply --key "F33E0C8E002"
 
 	$RegSecureBoot = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot"
 	Write-Host "AvailableUpdates hat derzeit den Wert: 0x$($RegSecureBoot.AvailableUpdates.ToString("X"))"
@@ -515,7 +589,7 @@ if ($zertPending) {
 	exit 0
 }
 
-if ($bootLoaderPending) {
+if ($bootLoaderPending -and -not $reportOnly) {
 
 	Write-Warning "Starte Updateprozess: Altes Zertifikat entfernen."
 	$RegSecureBoot = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot"
@@ -540,7 +614,7 @@ if ($bootLoaderPending) {
 	{
 		throw "No relevant events found in the System log after running the Secure Boot update task. This may indicate that the update process did not run successfully or that event logging is not working as expected."
 	}
-	if (@($events)[0].Message -notlike "*erfolgreich angewendet*")
+	if (@($events)[0].Message -notlike "*erfolgreich angewendet*" -and @($events)[0].Message -notlike "*applied successfully*")
 	{
 		throw "The most recent event in the System log after running the Secure Boot update task does not appear to be related to the Secure Boot update process. Please review the events above for any relevant information or errors."
 	}
@@ -572,7 +646,7 @@ if ($bootLoaderPending) {
 	{
 		throw "No relevant events found in the System log after running the Secure Boot update task. This may indicate that the update process did not run successfully or that event logging is not working as expected."
 	}
-	if (@($events)[0].Message -notlike "*erfolgreich angewendet*")
+	if (@($events)[0].Message -notlike "*erfolgreich angewendet*" -and @($events)[0].Message -notlike "*applied successfully*")
 	{
 		throw "The most recent event in the System log after running the Secure Boot update task does not appear to be related to the Secure Boot update process. Please review the events above for any relevant information or errors."
 	}
@@ -595,8 +669,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCSo4uzIOGRxqDa
-# nX0/28Si7PjcfMpuslpCJrgOx8bhbKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDP5iF3dbpzFa7v
+# 5qZUo25uz8c4Cj052FJzG6TI5yq4wqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -710,23 +784,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDcBXRI6
-# 3eLs0F5c8gASt6SKifUfu/pVXS0Gmo9RqW7wMA0GCSqGSIb3DQEBAQUABIICADIU
-# yqMT+/IhbL85cDkE/otjzNmPjK7ncM9XgFAIMIKwW3ZQaYBloui/Ok9eAVVUOt3j
-# bL862WLOVqNmlkw6z/BXMpms9Q/JNmx8uatnrvv16H4KLq158/3a7fexAq2LJ9gx
-# 0yLNeHpxaT2T9bzb0TI7b+ky1fpdOcOS4DUddLFNO09oqwBmMFnlKk31+hg6ZMZk
-# eRaFEKf8ArFeQ9iWG2TpiNXl1rhr2BSwkyEEF74JPYKg8iijnkzeuadErFNR3Y9o
-# X9Fix8VuBm4gpP9hW8G+6Z3DHzGm9WIiXaCNxZlXbFyKsZ2UNqaZKwdaZKBUJyBs
-# tezbuibvrg/NaO+ASVp3/bw9H8UBNWHwY0UqEdO4N4zNcV5OlqSPXWWzySnQur8q
-# o2XeEcYGBpFkjIMWA+64/vZ6svedh2KB7RAbhyianzS9t0WE73VXMlUeN84w7r1T
-# vc3DWISJCfBOUkFj0shGUlSw5t/0Ao9zM0pgdRdvwHxBVa43W8tdxoQr7iFTCCv1
-# lHYWV+fm4STwDhRNJpNjqvbdHSJSCILcQBB+xhtjwNArXBgHNbScXipgOXyoppGk
-# bEukHGb8XWJIpaBWHnZVBG0HjweL++QgtGsLQkfvwvdPGkJcV1PjJldLcqP+1att
-# PRPFLiAdggdfuBwckScISIBJp2g1NfPkj8Ll2cIAoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIP5hRhp6
+# nlyrTBtwHSR3gEME2zh8jTfn2S6qFi4ocLYGMA0GCSqGSIb3DQEBAQUABIICACB6
+# KWYXTJ1DC49WBQU29X7lWy1sHKyALDPKCSxK8EPFwm6NDIcAuxHbJTX/fUl5iZgR
+# Hp7cF61q4UZ6Dwjk4qO4p0Y+kPSAAZexXv3P9xvYpBk36Uhhr4r0952pC7Jkauqn
+# ytPemqL7StqFKVw52kxc90dKRIZo5kqZZOkqVpnAhpLfOYD3J7pWB5a5SjkW7qON
+# br8WAjfctK4yGw53LA/7WJvLsJTuabFCeBW38oYqwDXK/u5RipdNmhd6FfUIhqbp
+# 8FAjhLekAQXsdnPbU/KmrxcS+z2BUej1WoD/AuP6bOh7ONdeqKevWmH4eQVXEh7k
+# rp/0M+F6KBtaeIg6LtzpFoCAYpJcn6CWBAj7rLtFj+Ar6CNDGehg8mpj6F6Nd6Lz
+# kyBk02oPj+/J1Vb8IcuuSMXYlVco1LYxYVgcJcR6Hpa3KGsJqIwDh6vbjVMYGKiW
+# dgcq0qLbFNVdHWJ5WzijNt/fAlrgVrDqbife3YzpAV3Hv3JItOkuMvYy4GP0V0hF
+# XHfGQfLU1+iuf0cnNqebZZRH2jDY7h/9ifCifflLpf6QV80Q+vpJdpNvKWcmZ3RX
+# b3zRCewK6mt9926BN5g4wBfV63jXgtKioSeLwGGrEz5HG3volHiGBVZKEtDyt8MO
+# wGdx4dvkSXYW186IaOa4N4jE0rf6gzZBX8/zsmUroYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCC4xRVszAE86m4yg3Fk5seXM0BjLWcnePy+INc4Dw5pUwIUET2m
-# J8JdxaJNqrdzj41PiupqHd0YDzIwMjYwNTIxMTIyNjU2WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAZkSuV1k+lxaRPd8qnuUfI4tilqI0V2SbCY91KFHV7MAIUI0gQ
+# FAXHT/50XVEstXxZZrOcAFAYDzIwMjYwNjEwMjEzNzAwWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -869,18 +943,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAyreseDlJNY/9PuZab7x9l1wTE/015W84BOiwQEytpCWjqefAnuUmQ5qts
-# 0Jk2pRwwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBDLbPqickdsGCIYGShjUzfnbSO6SRQkxJ4jeibqo4kdufSb5aRy982puwb
+# bPJa6g0wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAGs5wgrgUOdXZXRYDuZwH+iIkuNBKsMbCxpWvH0xsrhAa
-# Dv8jn0rrQWzDUViNWlQ8hppFviBr6ZHvtY4RjxNhSrNq5yQQXg5RpS6TuNAY+FBA
-# +wJs9Jc5vgsX1Lt7dezlySfSp43UbIbG8FQ4FMNorBRYioGMfM0NIsIozmAryQBM
-# U7gIkrn+NVB15wvGAyibvWAK4CmLBKQQJxm4YcYjdy4JXTwYdzWu+/41BPnF/uZQ
-# rfTJr4DPlGd+T6Lwsx/O5gTWDlLBrjDrsNpjhS0RBWP7taCWLDFKfwebM32X1sBa
-# nmAk1mMhKoaC8ycYaxXXuI/YRWXzgpxWTCGq2+1vRVLaZ0nawBDbk73EZj7bw4z1
-# ebA5Y0ZF1HoL8xgaZSZfmhhNJhwXWC3f3I0G0oDsHwSu71sAQ5hQY2MOlTIcylTY
-# cBpthxPmHG8DqKtgp0H04w0KuNuels+MvJLlnwEkliZZZ+Km8HNH5YDahoK3O0CU
-# ba0ye3eUvxoIK8Wq0HPe
+# KoZIhvcNAQEMBQAEggGAXs7NbycDD3Qs2mA0rdLe8UfT3Pps9+9FqYYJtXtM2D6Y
+# fIfPrcorqHyQ5zN9gRSERxydd4DtfnZA8YAdLezBEjkKpZaC2gX2dDcICcxsKZ35
+# hSGD4MGD3++owtXLm/K45q6ewXsFRjDQgrmHHexTe2oFrm/6DXNe522SamMZVsil
+# bGL2DMnjD6Ba5m5OnUxfTI54wfuQHg479V0faDONbvC0BEoFMz8HqRcmmkMtUfi9
+# vQEVO2ZRWw/KR7JeU/Wf8ENsw1ChacoWA6+O8taaWHjVWMc67/SsEBRBovEIQKPv
+# V6FNlOw7jFRrD1C487E4Z1UENJVenx3Db+7/x8JrVTcDcp21XzJy1jv50Ay3U+Xu
+# HG05bOuf5+mzh9wHX1BXNFPpsxaMrk1VojL1MaUNAEdVmgAvFi1A6mu4VvlQgXeP
+# xvi9oQ9nTqrReOsynp50y/VRryoFW+Fb8teomx1B3DCM7MfIu9SIJJlsSdBxCNvW
+# 9mYD59Ychg6tE/TT4KaJ
 # SIG # End signature block
