@@ -11,7 +11,7 @@
         "displayName": "WIN QualityUpdate Configuration",
         "expeditedUpdateSettings": {
             "daysUntilForcedReboot": 1,
-            "qualityUpdateRelease": "2022-06-20T00:00:00Z"
+            "qualityUpdateRelease": "2026-06-23T00:00:00Z"
         },
         "releaseDateDisplayName": null,
         "roleScopeTagIds": [

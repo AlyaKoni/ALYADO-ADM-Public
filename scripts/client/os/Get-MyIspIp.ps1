@@ -76,23 +76,18 @@ $myIp = $null
 if (-not $myIpTest -or $myIp -ne $myIpTest)
 {
     $myIp = $myIpTest
-    $myIpTest = (Invoke-WebRequestIndep "bot.whatismyipaddress.com?$($guid)=1" -ErrorAction SilentlyContinue).content
+    $myIpTest = (Invoke-WebRequestIndep "ident.me?$($guid)=1" -ErrorAction SilentlyContinue).content
     if (-not $myIpTest -or $myIp -ne $myIpTest)
     {
         $myIp = $myIpTest
-        $myIpTest = (Invoke-WebRequestIndep "ident.me?$($guid)=1" -ErrorAction SilentlyContinue).content
+        $myIpTest = (Invoke-WebRequestIndep "api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
         if (-not $myIpTest -or $myIp -ne $myIpTest)
         {
             $myIp = $myIpTest
-            $myIpTest = (Invoke-WebRequestIndep "api.ipify.org?$($guid)=1" -ErrorAction SilentlyContinue).content
+            $myIpTest = (Invoke-WebRequestIndep "ipconfig.me?$($guid)=1" -ErrorAction SilentlyContinue).content
             if (-not $myIpTest -or $myIp -ne $myIpTest)
             {
-                $myIp = $myIpTest
-                $myIpTest = (Invoke-WebRequestIndep "ipconfig.me?$($guid)=1" -ErrorAction SilentlyContinue).content
-                if (-not $myIpTest -or $myIp -ne $myIpTest)
-                {
-                    $myIp = (Invoke-WebRequestIndep "ifconfig.me/ip?$($guid)=1" -ErrorAction SilentlyContinue).content
-                }
+                $myIp = (Invoke-WebRequestIndep "ifconfig.me/ip?$($guid)=1" -ErrorAction SilentlyContinue).content
             }
         }
     }
