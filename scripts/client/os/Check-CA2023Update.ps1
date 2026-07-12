@@ -76,27 +76,27 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Check-CA2023Update-$($Aly
 
 #Checking system information and prerequisites
 $isSecureBootEnabled = Confirm-SecureBootUEFI
-if (-Not $isSecureBootEnabled)
+if (-not $isSecureBootEnabled)
 {
 	throw "SecureBootUEFI is not enabled on this device!"
 }
 
 $taskPresent = Get-ScheduledTask -TaskName Secure-Boot-Update
-if (-Not $taskPresent)
+if (-not $taskPresent)
 {
 	throw "Looks like KB5036210 or later is not installed!"
 }
 
 $update = Get-Item -Path "C:\Windows\system32\SecureBootUpdates\DBUpdate3P2023.bin"
-if (-Not $update)
+if (-not $update)
 {
 	throw "Looks like DBUpdate3P2023 is not installed!"
 }
 
 Write-Warning "Please ensure that you have backed up your BitLocker recovery keys before proceeding, as Secure Boot updates can sometimes lead to BitLocker recovery mode on next reboot."
-if (-Not $nonInteractive)
+if (-not $nonInteractive)
 {
-	pause
+	Pause
 }
 
 $systeminfo = systeminfo
@@ -116,20 +116,20 @@ $FirmwareVersion = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\
 $FirmwareReleaseDate = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name FirmwareReleaseDate -ErrorAction SilentlyContinue).FirmwareReleaseDate } catch {}
 $OSArchitecture = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name OSArchitecture -ErrorAction SilentlyContinue).OSArchitecture } catch {}
 $CanAttemptUpdateAfter = try { (Get-ItemProperty -Path HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot\Servicing\DeviceAttributes -Name CanAttemptUpdateAfter -ErrorAction SilentlyContinue).CanAttemptUpdateAfter } catch {}
-$HostName = (Get-CIMInstance Win32_ComputerSystem).Name
+$HostName = (Get-CimInstance Win32_ComputerSystem).Name
 $OSVersion = (Get-CimInstance Win32_OperatingSystem).Version
-$Manufacturer = (Get-CIMInstance Win32_ComputerSystem).Manufacturer
-$Model = (Get-CIMInstance Win32_ComputerSystem).Model
-$BiosSerialNumber = (Get-CIMInstance Win32_BIOS).SerialNumber
-$BiosVersion = (Get-CIMInstance Win32_BIOS).Version
+$Manufacturer = (Get-CimInstance Win32_ComputerSystem).Manufacturer
+$Model = (Get-CimInstance Win32_ComputerSystem).Model
+$BiosSerialNumber = (Get-CimInstance Win32_BIOS).SerialNumber
+$BiosVersion = (Get-CimInstance Win32_BIOS).Version
 $BaseBoardManufacturer = (Get-CimInstance Win32_BaseBoard).Manufacturer
 $BaseBoardSerialNumber = (Get-CimInstance Win32_BaseBoard).SerialNumber
-$BaseBoardProduct = (Get-CIMInstance Win32_BaseBoard).Product
+$BaseBoardProduct = (Get-CimInstance Win32_BaseBoard).Product
 $TpmVersion = (tpmtool getdeviceinformation | Where-Object { $_ -like "*TPM Version*" -or $_ -like "*TPM-Version*" }).Split()[-1]
 $UefiPartitionSize = 0
-foreach($disk in (Get-Disk))
+foreach ($disk in (Get-Disk))
 {
-	foreach($part in (Get-Partition -DiskNumber $disk.Number))
+	foreach ($part in (Get-Partition -DiskNumber $disk.Number))
 	{
 		$output = @"
 select disk $($part.DiskNumber)
@@ -138,7 +138,7 @@ detail partition
 "@ | diskpart
 		if ($output -like "*c12a7328-f81f-11d2-ba4b-00a0c93ec93b*")
 		{
-			$UefiPartitionSize = $part.Size  / 1MB
+			$UefiPartitionSize = $part.Size / 1MB
 		}
 	}
 }
@@ -185,9 +185,9 @@ if ($UefiPartitionSize -lt 500MB)
 	Write-Host "  Laden Sie ein Partitionswerkzeug wie https://www.resize-c.com/ herunter."
 	Write-Host "  Verschieben Sie die Hauptpartition, um freien Speicherplatz direkt neben der UEFI-Partition zu schaffen."
 	Write-Host "  Vergrössern Sie die UEFI-Partition."
-	if (-Not $nonInteractive)
+	if (-not $nonInteractive)
 	{
-		pause
+		Pause
 	}
 }
 if ($Manufacturer -like "*DELL*")
@@ -195,9 +195,9 @@ if ($Manufacturer -like "*DELL*")
 	Write-Warning "`nBekannte Hersteller-Ausnahmen"
 	Write-Warning "==============================================="
 	Write-Warning "DELL-System erkannt - bitte überprüfen Sie die DELL-Support-Website auf die neuesten UEFI-Firmware-Updates und wenden Sie diese bei Bedarf an. DELL ist dafür bekannt, dass es bei einigen Modellen Probleme mit dem Windows UEFI CA 2023-Update gibt, und möglicherweise ist ein Firmware-Update erforderlich, um Kompatibilitätsprobleme zu beheben. Es ist auch möglich, dass einige Einstellungen im BIOS konfiguriert werden müssen."
-	if (-Not $nonInteractive)
+	if (-not $nonInteractive)
 	{
-		pause
+		Pause
 	}
 }
 if ($Manufacturer -like "*LENOVO*")
@@ -206,9 +206,9 @@ if ($Manufacturer -like "*LENOVO*")
 	Write-Warning "==============================================="
 	Write-Warning "LENOVO-System erkannt - bitte überprüfen Sie die LENOVO-Support-Website auf die neuesten UEFI-Firmware-Updates und wenden Sie diese bei Bedarf an. LENOVO ist dafür bekannt, dass es bei einigen Modellen Probleme mit dem Windows UEFI CA 2023-Update gibt, und möglicherweise ist ein Firmware-Update erforderlich, um Kompatibilitätsprobleme zu beheben. Es ist auch möglich, dass einige Einstellungen im BIOS konfiguriert werden müssen."
 	Write-Warning "Weitere Details: https://support.lenovo.com/bg/en/solutions/ht518129"
-	if (-Not $nonInteractive)
+	if (-not $nonInteractive)
 	{
-		pause
+		Pause
 	}
 }
 if ($Manufacturer -like "*HP*")
@@ -217,9 +217,9 @@ if ($Manufacturer -like "*HP*")
 	Write-Warning "==============================================="
 	Write-Warning "HP-System erkannt - bitte überprüfen Sie die HP-Support-Website auf die neuesten UEFI-Firmware-Updates und wenden Sie diese bei Bedarf an. HP ist dafür bekannt, dass es bei einigen Modellen Probleme mit dem Windows UEFI CA 2023-Update gibt, und möglicherweise ist ein Firmware-Update erforderlich, um Kompatibilitätsprobleme zu beheben. Es ist auch möglich, dass einige Einstellungen im BIOS konfiguriert werden müssen."
 	Write-Warning "Weitere Details: https://support.hp.com/ch-de/document/ish_13070353-13070429-16"
-	if (-Not $nonInteractive)
+	if (-not $nonInteractive)
 	{
-		pause
+		Pause
 	}
 }
 if ($OSArchitecture -like "*ARM64*")
@@ -228,31 +228,32 @@ if ($OSArchitecture -like "*ARM64*")
 	Write-Warning "==============================================="
 	Write-Warning "ARM64-System erkannt – bitte prüfen Sie die Support-Seite Ihres Geräteherstellers auf aktuelle UEFI-Firmware-Updates und installieren Sie diese, falls verfügbar. Bei ARM64-Geräten sind Probleme mit dem Windows UEFI CA 2023-Update bekannt. Möglicherweise ist ein Firmware-Update erforderlich, um Kompatibilitätsprobleme zu beheben. Es kann auch sein, dass bestimmte Einstellungen im BIOS konfiguriert werden müssen."
 	Write-Warning "Führen Sie dieses Skript nicht auf Qualcomm-basierten Geräten aus!"
-	if (-Not $nonInteractive)
+	if (-not $nonInteractive)
 	{
-		pause
+		Pause
 	}
 }
 
 Write-Host "`nChecking system events"
 Write-Host "==============================================="
-$allEventIds = @(1801,1802,1803,1808,1037,1042,1795)
-$events = @(Get-WinEvent -FilterHashtable @{LogName='System'; ID=$allEventIds} -MaxEvents 1000 -ErrorAction SilentlyContinue)
+$allEventIds = @(1801, 1802, 1803, 1808, 1037, 1042, 1795)
+$events = @(Get-WinEvent -FilterHashtable @{LogName = 'System'; ID = $allEventIds } -MaxEvents 100000 -ErrorAction SilentlyContinue)
 
-$latest_1801_Event = $events | Where-Object {$_. ID -eq 1801} | Sort-Object TimeCreated -Descending | Select-Object -First 1
-$latest_1802_Event = $events | Where-Object {$_. ID -eq 1802} | Sort-Object TimeCreated -Descending | Select-Object -First 1
-$latest_1803_Event = $events | Where-Object {$_. ID -eq 1803} | Sort-Object TimeCreated -Descending | Select-Object -First 1
-$latest_1808_Event = $events | Where-Object {$_. ID -eq 1808} | Sort-Object TimeCreated -Descending | Select-Object -First 1
-$latest_1037_Event = $events | Where-Object {$_. ID -eq 1037} | Sort-Object TimeCreated -Descending | Select-Object -First 1
-$latest_1042_Event = $events | Where-Object {$_. ID -eq 1042} | Sort-Object TimeCreated -Descending | Select-Object -First 1
-$latest_1795_Event = $events | Where-Object {$_. ID -eq 1795} | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1801_Event = $events | Where-Object { $_. ID -eq 1801 } | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1802_Event = $events | Where-Object { $_. ID -eq 1802 } | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1803_Event = $events | Where-Object { $_. ID -eq 1803 } | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1808_Event = $events | Where-Object { $_. ID -eq 1808 } | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1037_Event = $events | Where-Object { $_. ID -eq 1037 } | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1042_Event = $events | Where-Object { $_. ID -eq 1042 } | Sort-Object TimeCreated -Descending | Select-Object -First 1
+$latest_1795_Event = $events | Where-Object { $_. ID -eq 1795 } | Sort-Object TimeCreated -Descending | Select-Object -First 1
 
 $bootLoaderPending = $false
 $zertPending = $true
 $zertPendingWarning = $true
 $zertRetry = $false
 
-if ($latest_1801_Event -or $latest_1802_Event -or $latest_1803_Event -or $latest_1795_Event) {
+if ($latest_1801_Event -or $latest_1802_Event -or $latest_1803_Event -or $latest_1795_Event)
+{
 	#https://support.microsoft.com/en-us/topic/secure-boot-db-and-dbx-variable-update-events-37e47cf8-608b-4a87-8175-bdead630eb69
 	Write-Warning "Folgende Ereignisse im System Log gefunden, die auf einen kürzlich durchgeführten Versuch hinweisen, die Secure Boot CA Zertifikate zu aktualisieren:"
 	$latest_1801_Event | Format-List
@@ -260,20 +261,22 @@ if ($latest_1801_Event -or $latest_1802_Event -or $latest_1803_Event -or $latest
 	$latest_1803_Event | Format-List
 	$latest_1795_Event | Format-List
 	Write-Host ""
-	if ($latest_1801_Event.Message -match 'BucketConfidenceLevel:\s*(.*)') { 
+	if ($latest_1801_Event.Message -match 'BucketConfidenceLevel:\s*(.*)')
+	{ 
 		$confidence = $matches[1]
 		Write-Host "BucketConfidenceLevel: $confidence"
 		if ($confidence -like "*Temporarily Paused*" -or `
-			$confidence -like "*Under Observation*" -or `
-			$confidence -like "*Vorübergehend angehalten*" -or `
-			$confidence -like "*Unter Beobachtung*")
+				$confidence -like "*Under Observation*" -or `
+				$confidence -like "*Vorübergehend angehalten*" -or `
+				$confidence -like "*Unter Beobachtung*")
 		{
 			Write-Warning "Microsoft untersucht dieses Gerät auf mögliche Kompatibilitätsprobleme mit dem Windows UEFI CA 2023-Update. Bitte überprüfen Sie den Microsoft Update-Katalog und die Support-Seite Ihres Geräteherstellers auf Updates oder Hinweise zu diesem Problem."
 			Write-Warning "Möglicherweise wird das Gerät später automatisch aktualisiert."
-		} elseif ($confidence -like "*Not Supported*" -or `
-				  $confidence -like "*No Data Observed*" -or `
-				  $confidence -like "*Nicht unterstützt*" -or `
-				  $confidence -like "*Keine Daten wurden beobachtet*")
+		}
+		elseif ($confidence -like "*Not Supported*" -or `
+				$confidence -like "*No Data Observed*" -or `
+				$confidence -like "*Nicht unterstützt*" -or `
+				$confidence -like "*Keine Daten wurden beobachtet*")
 		{
 			Write-Warning "Das Zertifikatsupdate wird von Microsoft nicht unterstützt oder es wurden keine Daten beobachtet."
 			Write-Warning "Bitte wenden Sie sich an den Microsoft-Support oder/und den Support des Geräteherstellers."
@@ -281,7 +284,8 @@ if ($latest_1801_Event -or $latest_1802_Event -or $latest_1803_Event -or $latest
 	}
 }
 
-if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
+if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event)
+{
 	Write-Host "Ereignis 1808 gefunden - Zertifikate der Zertifizierungsstelle für den sicheren Start wurden aktualisiert"
 	Write-Host "Ereignis 1037 gefunden - Das alte Zertifikat wurde aus dem UEFI Secure Boot DBX entfernt"
 	Write-Host "Ereignis 1042 gefunden - Boot manager wurde aktualisiert"
@@ -322,7 +326,7 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		$zertPending = $true
 	}
 
-	if (-Not [string]::IsNullOrWhiteSpace($UEFICA2023Error))
+	if (-not [string]::IsNullOrWhiteSpace($UEFICA2023Error))
 	{
 		$errorMsg += "`nUEFICA2023Error is set: $($UEFICA2023Error)."
 		$zertPending = $true
@@ -350,7 +354,7 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 			$zertPendingWarning = $true
 		}
 		else
-	{
+		{
 			$errorMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemRoot boot manager. Update may not have been applied successfully."
 			$bootLoaderPending = $true
 		}
@@ -367,8 +371,8 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		else
 		{
 			$errorMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemPartition boot manager bootmgfw.efi. Update may not have been applied successfully."
-		$bootLoaderPending = $true
-	}
+			$bootLoaderPending = $true
+		}
 	}
 	if ((Get-AuthenticodeSignature "S:\EFI\Boot\bootx64.efi").SignerCertificate.Issuer -notmatch 'Windows UEFI CA 2023')
 	{
@@ -380,8 +384,8 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		else
 		{
 			$errorMsg += "`nWindows UEFI CA 2023 certificate is not present in the SystemPartition boot manager bootx64.efi. Update may not have been applied successfully."
-		$bootLoaderPending = $true
-	}
+			$bootLoaderPending = $true
+		}
 	}
 	mountvol s: /d | Out-Null
 
@@ -410,22 +414,22 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 			Write-Warning "Sometimes a secondy reboot is required."
 			Write-Warning "Make sure it's a hard reboot (Shift+Reboot or shutdown /r /t 0)."
 			Write-Warning "On Azure VMs, deallocate and start again."
-			if (-Not $nonInteractive)
+			if (-not $nonInteractive)
 			{
-			$answer = Read-Host -Prompt "Already rebooted twice? (y/n)"
-		}
+				$answer = Read-Host -Prompt "Already rebooted twice? (y/n)"
+			}
 		}
 		if ($answer.ToLower() -eq "n")
 		{
 			Write-Error $errorMsg -ErrorAction Continue
 			Write-Warning "Please reboot now a second time."
-			if (-Not $reportOnly)
+			if (-not $reportOnly)
 			{
-			exit 1
-		}
+				exit 1
+			}
 		}
 		$answer = "n"
-		if ($zertPending -and -Not $nonInteractive)
+		if ($zertPending -and -not $nonInteractive)
 		{
 			$zertRetry = $true
 			Write-Warning ("`n" + $errorMsg)
@@ -433,7 +437,8 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 			Write-Warning "This can happen on systems where the BIOS is blocking the update."
 			Write-Warning "Please check your BIOS before you try again."
 			$answer = Read-Host -Prompt "Try now again to update the certificates? (y/n)"
-		} elseif ($bootLoaderPending -and -Not $nonInteractive)
+		}
+		elseif ($bootLoaderPending -and -not $nonInteractive)
 		{
 			$zertRetry = $true
 			Write-Warning ("`n" + $errorMsg)
@@ -445,14 +450,16 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		if ($answer.ToLower() -eq "n")
 		{
 			Write-Error $errorMsg -ErrorAction Continue
-			if (-Not $reportOnly)
+			if (-not $reportOnly)
 			{
-			exit 1
+				exit 1
+			}
 		}
 	}
-	}
 
-} elseif ($latest_1808_Event) {
+}
+elseif ($latest_1808_Event)
+{
 	Write-Host "Ereignis 1808 gefunden - Zertifikate der Zertifizierungsstelle für den sicheren Start wurden aktualisiert"
 	Write-Host "Ereignis 1037 aber nicht - Das alte Zertifikat wurde NOCH NICHT aus dem UEFI Secure Boot DBX entfernt und der boot loader wurde NOCH NICHT ersetzt"
 	Write-Host "Ereigniszeit: $($latest_1808_Event.TimeCreated)"
@@ -484,7 +491,7 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		$zertPending = $true
 	}
 
-	if (-Not [string]::IsNullOrWhiteSpace($UEFICA2023Error))
+	if (-not [string]::IsNullOrWhiteSpace($UEFICA2023Error))
 	{
 		$errorMsg += "`nUEFICA2023Error is set: $($UEFICA2023Error)."
 		$zertPending = $true
@@ -510,7 +517,7 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 	else
 	{
 		$answer = "n"
-		if ($zertPending -and -Not $nonInteractive)
+		if ($zertPending -and -not $nonInteractive)
 		{
 			$zertRetry = $true
 			Write-Warning ("`n" + $errorMsg)
@@ -522,11 +529,11 @@ if ($latest_1808_Event -and $latest_1037_Event -and $latest_1042_Event) {
 		if ($answer.ToLower() -eq "n")
 		{
 			Write-Error $errorMsg -ErrorAction Continue
-			if (-Not $reportOnly)
+			if (-not $reportOnly)
 			{
-			exit 1
+				exit 1
+			}
 		}
-	}
 	}
 
 }
@@ -538,7 +545,8 @@ if ($reportOnly)
 	#WinCsFlags.exe /query
 }
 
-if ($zertPending -and -not $reportOnly) {
+if ($zertPending -and -not $reportOnly)
+{
 
 	Write-Warning "Kein Ereignis 1808 oder andere Probleme gefunden - Secure Boot CA Zertifikate sind noch nicht aktualisiert"
 	Write-Warning "Starte Updateprozess: Neue Zertifikate installieren."
@@ -568,28 +576,30 @@ if ($zertPending -and -not $reportOnly) {
 
 	$StartTimeStamp = (Get-Date).AddSeconds(-1)
 	Start-ScheduledTask -TaskName "\Microsoft\Windows\PI\Secure-Boot-Update"
-	do {
+	do
+	{
 		$task = Get-ScheduledTask -TaskName "Secure-Boot-Update"
 		$task
 		Start-Sleep -Seconds 20
 	} while ( $task.State -eq "Running" )
 
-	Get-WinEvent -FilterHashtable @{ProviderName='microsoft-windows-tpm-wmi'; StartTime=$StartTimeStamp } -ErrorAction SilentlyContinue | Format-Table -Wrap -AutoSize
-	Get-WinEvent -FilterHashtable @{LogName='System'; StartTime=$StartTimeStamp } -ErrorAction SilentlyContinue | Format-Table -Wrap -AutoSize
+	Get-WinEvent -FilterHashtable @{ProviderName = 'microsoft-windows-tpm-wmi'; StartTime = $StartTimeStamp } -ErrorAction SilentlyContinue | Format-Table -Wrap -AutoSize
+	Get-WinEvent -FilterHashtable @{LogName = 'System'; StartTime = $StartTimeStamp } -ErrorAction SilentlyContinue | Format-Table -Wrap -AutoSize
 
 	$RegSecureBoot = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot"
 	Write-Host "AvailableUpdates hat nun den Wert: 0x$($RegSecureBoot.AvailableUpdates.ToString("X"))"
 
 	Write-Warning "Please reboot now and rerun this script to run the next step."
 	Stop-Transcript
-	if (-Not $nonInteractive)
+	if (-not $nonInteractive)
 	{
-		pause
+		Pause
 	}
 	exit 0
 }
 
-if ($bootLoaderPending -and -not $reportOnly) {
+if ($bootLoaderPending -and -not $reportOnly)
+{
 
 	Write-Warning "Starte Updateprozess: Altes Zertifikat entfernen."
 	$RegSecureBoot = Get-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\SecureBoot"
@@ -602,15 +612,16 @@ if ($bootLoaderPending -and -not $reportOnly) {
 
 	$StartTimeStamp = (Get-Date).AddSeconds(-1)
 	Start-ScheduledTask -TaskName "\Microsoft\Windows\PI\Secure-Boot-Update"
-	do {
+	do
+	{
 		$task = Get-ScheduledTask -TaskName "Secure-Boot-Update"
 		$task
 		Start-Sleep -Seconds 20
 	} while ( $task.State -eq "Running" )
 
-	$events = @(Get-WinEvent -FilterHashtable @{LogName='System'; ID=$allEventIds; StartTime=$StartTimeStamp} -MaxEvents 200 -ErrorAction SilentlyContinue)
+	$events = @(Get-WinEvent -FilterHashtable @{LogName = 'System'; ID = $allEventIds; StartTime = $StartTimeStamp } -MaxEvents 200 -ErrorAction SilentlyContinue)
 	$events | Format-Table -Wrap -AutoSize
-	if (-Not $events -or @($events).Count -eq 0)
+	if (-not $events -or @($events).Count -eq 0)
 	{
 		throw "No relevant events found in the System log after running the Secure Boot update task. This may indicate that the update process did not run successfully or that event logging is not working as expected."
 	}
@@ -634,15 +645,16 @@ if ($bootLoaderPending -and -not $reportOnly) {
 
 	$StartTimeStamp = (Get-Date).AddSeconds(-1)
 	Start-ScheduledTask -TaskName "\Microsoft\Windows\PI\Secure-Boot-Update"
-	do {
+	do
+	{
 		$task = Get-ScheduledTask -TaskName "Secure-Boot-Update"
 		$task
 		Start-Sleep -Seconds 20
 	} while ( $task.State -eq "Running" )
 
-	$events = @(Get-WinEvent -FilterHashtable @{LogName='System'; ID=$allEventIds; StartTime=$StartTimeStamp} -MaxEvents 200 -ErrorAction SilentlyContinue)
+	$events = @(Get-WinEvent -FilterHashtable @{LogName = 'System'; ID = $allEventIds; StartTime = $StartTimeStamp } -MaxEvents 200 -ErrorAction SilentlyContinue)
 	$events | Format-Table -Wrap -AutoSize
-	if (-Not $events -or @($events).Count -eq 0)
+	if (-not $events -or @($events).Count -eq 0)
 	{
 		throw "No relevant events found in the System log after running the Secure Boot update task. This may indicate that the update process did not run successfully or that event logging is not working as expected."
 	}
@@ -656,9 +668,9 @@ if ($bootLoaderPending -and -not $reportOnly) {
 
 	Write-Warning "Please reboot now and rerun this script to check if the update process has completed successfully."
 	Stop-Transcript
-	if (-Not $nonInteractive)
+	if (-not $nonInteractive)
 	{
-		pause
+		Pause
 	}
 	exit 0
 }
@@ -669,8 +681,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDP5iF3dbpzFa7v
-# 5qZUo25uz8c4Cj052FJzG6TI5yq4wqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDyaZTdX/bfQ9Vj
+# +iGXpf7vGQAgx5RyWxqZA3rM9esC06CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -784,23 +796,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIP5hRhp6
-# nlyrTBtwHSR3gEME2zh8jTfn2S6qFi4ocLYGMA0GCSqGSIb3DQEBAQUABIICACB6
-# KWYXTJ1DC49WBQU29X7lWy1sHKyALDPKCSxK8EPFwm6NDIcAuxHbJTX/fUl5iZgR
-# Hp7cF61q4UZ6Dwjk4qO4p0Y+kPSAAZexXv3P9xvYpBk36Uhhr4r0952pC7Jkauqn
-# ytPemqL7StqFKVw52kxc90dKRIZo5kqZZOkqVpnAhpLfOYD3J7pWB5a5SjkW7qON
-# br8WAjfctK4yGw53LA/7WJvLsJTuabFCeBW38oYqwDXK/u5RipdNmhd6FfUIhqbp
-# 8FAjhLekAQXsdnPbU/KmrxcS+z2BUej1WoD/AuP6bOh7ONdeqKevWmH4eQVXEh7k
-# rp/0M+F6KBtaeIg6LtzpFoCAYpJcn6CWBAj7rLtFj+Ar6CNDGehg8mpj6F6Nd6Lz
-# kyBk02oPj+/J1Vb8IcuuSMXYlVco1LYxYVgcJcR6Hpa3KGsJqIwDh6vbjVMYGKiW
-# dgcq0qLbFNVdHWJ5WzijNt/fAlrgVrDqbife3YzpAV3Hv3JItOkuMvYy4GP0V0hF
-# XHfGQfLU1+iuf0cnNqebZZRH2jDY7h/9ifCifflLpf6QV80Q+vpJdpNvKWcmZ3RX
-# b3zRCewK6mt9926BN5g4wBfV63jXgtKioSeLwGGrEz5HG3volHiGBVZKEtDyt8MO
-# wGdx4dvkSXYW186IaOa4N4jE0rf6gzZBX8/zsmUroYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBjkXJc8
+# sr3v/g17rpIYhoth9T1qbJopSmcw+Mb9q/hRMA0GCSqGSIb3DQEBAQUABIICABva
+# cNSFE60sp/ebt2T9mlCwDmpOTVcvCK2kUEgLUDLYJhtzT+9JRd1QGLkhxra5/C6i
+# I2h6QI9HynG11JO940H5SayMXJjfPS6n6L7ELzypVgdEoeYMOWOHShShJ+dtOAQf
+# 4A7HYEUQUTxD7LN4n3M8T7rnJEtRogGhV/2iCb88g/5xd5Y+zAmqWFQe2rjO7zxH
+# ruAH6t8hwuOoc41gFA1VzVXz3yxmf9ZbEZabUBQDab0UIBfMGxd+ZjUJWrvQOx4W
+# sM9almzEhGfpiB6kskRgCyBl8dpiMIXULJslKwtDWySqAK3j2VE51uyx+cCDCuwe
+# 8wiJuMpdPlTJ5P+yQL6r6ZjCUJhEn+lRtaqwSnIxj16K4UIA3TE7z3gaJSeUx+We
+# 2UnbuWOBhqNeGrgeYGLuXvttmhm36noBE51SMOMNewTTx1vPCIOBCwBs2DMYOTi/
+# nRkHGk2U3WN0fx+DELHdONJYNdREoFQo8R2/aKsm0p9m6nV9209BwY6hpUwmvNFi
+# QSu/vm+7RInHtMiI57/g/qEfnpEQTfdiSkdxPVxtLIXWL3Q1iXAlkNRQ25w5akGE
+# ONBhS3ro298uImjxBLxET/s/vs8iChlkuq1WzC6o4oT5r3yCVnGuqt9bmKTWwLac
+# Md3VVpNgqvHTe/jIpK2BFFBNLw4G7sYRjOn8dl3foYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAZkSuV1k+lxaRPd8qnuUfI4tilqI0V2SbCY91KFHV7MAIUI0gQ
-# FAXHT/50XVEstXxZZrOcAFAYDzIwMjYwNjEwMjEzNzAwWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDb9lq3hrZljuX8nwZAg7qAutcXPK9y2VAQqLAXF9QwDQIUOzst
+# Acqvqjx2wPc29YOIHkuEC/AYDzIwMjYwNzA4MTAwMTI4WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -943,18 +955,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBDLbPqickdsGCIYGShjUzfnbSO6SRQkxJ4jeibqo4kdufSb5aRy982puwb
-# bPJa6g0wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDACqi8a0xGHMxC5oocAX5rwNkuUy+0r13UOGmOeO9CUV1KhsCEC4jsNMxj/
+# jl0l1jowgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAXs7NbycDD3Qs2mA0rdLe8UfT3Pps9+9FqYYJtXtM2D6Y
-# fIfPrcorqHyQ5zN9gRSERxydd4DtfnZA8YAdLezBEjkKpZaC2gX2dDcICcxsKZ35
-# hSGD4MGD3++owtXLm/K45q6ewXsFRjDQgrmHHexTe2oFrm/6DXNe522SamMZVsil
-# bGL2DMnjD6Ba5m5OnUxfTI54wfuQHg479V0faDONbvC0BEoFMz8HqRcmmkMtUfi9
-# vQEVO2ZRWw/KR7JeU/Wf8ENsw1ChacoWA6+O8taaWHjVWMc67/SsEBRBovEIQKPv
-# V6FNlOw7jFRrD1C487E4Z1UENJVenx3Db+7/x8JrVTcDcp21XzJy1jv50Ay3U+Xu
-# HG05bOuf5+mzh9wHX1BXNFPpsxaMrk1VojL1MaUNAEdVmgAvFi1A6mu4VvlQgXeP
-# xvi9oQ9nTqrReOsynp50y/VRryoFW+Fb8teomx1B3DCM7MfIu9SIJJlsSdBxCNvW
-# 9mYD59Ychg6tE/TT4KaJ
+# KoZIhvcNAQEMBQAEggGAzyHxhperw2UZNH5OCZ+X99ESaw/OiXHxaxnbI3uLWRtM
+# kuAzW2XlEXj6OPV2mdOfJnaeusWGGE73uDNjTiiTuL7j0ANxDEJKNVzR/bf/2k+X
+# KP3lpu9a4rPOTdBFw/WUiTUfrUf+wj9HQame639Gw9ijT0aT6D7tjAOjtVhHOyuE
+# /IJ7c+sLbMJHFoUqkmL7R3eRNRSet1ngTV9EhWIda2zTYj1lrJiNrIMDCi48/8oQ
+# DrcLsj9DDWLNX3Z9LniCsurMCFBX62qlNR7XtIr4oMuTM6zKxK1if5jTJykpGeX0
+# vspOpTAuuJ6wGujXnQIj8qqh7SGqwLGq2tD4ry8XsVKrphZ6ViaM4hkx0ieMEZuc
+# jc2TC0BuxIGZ6yZJaoDq0qKodsw1EYKqVHkH2UJ9mie/JIKGxBXgJcwK7AIeG0mm
+# hM90sbRT3jcB/nA7vXkVMw5T0DV48Px3NK4Co+T5gaEP12AvNe+hSkt0fUkDcbfv
+# pqzo/BFyHLweE/EJwKpA
 # SIG # End signature block
