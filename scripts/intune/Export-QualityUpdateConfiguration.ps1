@@ -1,4 +1,4 @@
-﻿#Requires -Version 7.0
+﻿#Requires -Version 2.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -30,43 +30,26 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    25.03.2021 Konrad Brunner       Initial Version
-    07.07.2022 Konrad Brunner       New PnP Login and some fixes
-    20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
-    05.08.2023 Konrad Brunner       Added role admins, changed internal access to visitors
-    26.10.2025 Konrad Brunner       Multi-Geo support
-    06.02.2026 Konrad Brunner       Added powershell documentation
-    14.07.2026 Konrad Brunner       Better app catalog site url handling
+    16.07.2026 Konrad Brunner       Initial Version
 
 #>
 
 <#
 .SYNOPSIS
-Configures the SharePoint Online App Catalog site within the Alya Base Configuration environment.
+Exports Microsoft Intune quality update configuration data using Microsoft Graph API.
 
 .DESCRIPTION
-The Configure-AppCatalogSite.ps1 script automates the setup and configuration of the SharePoint Online App Catalog site. It validates prerequisites, ensures required PowerShell modules are installed, logs into SharePoint administration and hub sites, creates or updates the app catalog site collection, configures site administrators, associates the site with a hub, and manages access permissions for internal and external users. It also sets visual properties like site title and logo. The script supports multi-geo tenants and allows custom hub site configuration files and locale handling.
-
-.PARAMETER siteLocale
-Specifies the locale used for the site configuration. Default is "de-CH".
-
-.PARAMETER hubSitesConfigurationFile
-Optional parameter that provides a path to a custom hub site configuration file. If not provided, a default or template configuration file is used based on the locale.
-
-.PARAMETER multiGeoAdminUrl
-Optional parameter specifying the Multi-Geo SharePoint Admin URL. If not provided, the default admin URL from the environment configuration is used.
-
-.PARAMETER localesToHandle
-Specifies a list of locales to process for localization considerations. Defaults to "en-us" and "de-de".
+The Export-QualityUpdateConfiguration.ps1 script connects to Microsoft Graph and retrieves the Intune quality update configuration.
 
 .INPUTS
-None. You cannot pipe input to this script.
+None. The script does not accept pipeline input.
 
 .OUTPUTS
-None. The script writes progress and status information to the host and logs details to a transcript file.
+Creates JSON and log files under the Intune configuration export directory structure for different Intune object types and reports.
 
 .EXAMPLE
-PS> .\Configure-AppCatalogSite.ps1 -siteLocale "en-US" -hubSitesConfigurationFile "C:\Configs\HubSites.ps1" -multiGeoAdminUrl "https://contoso-admin.sharepoint.com" -localesToHandle @("en-us","fr-fr")
+PS> .\Export-QualityUpdateConfiguration.ps1
+Exports Intune quality update configuration.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -77,307 +60,62 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [string]$siteLocale = "de-CH",
-    [string]$hubSitesConfigurationFile = $null,
-    [Parameter(Mandatory=$false)]
-    [string]$multiGeoAdminUrl = $null,
-    [string[]]$localesToHandle = @("en-us","de-de")
 )
 
-#Reading configuration
+# Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-AppCatalogSite-$($AlyaTimeString).log" | Out-Null
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-QualityUpdateConfiguration-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+
+# Constants
+$IsOneDriveDir = $true
+$IntuneRoot = Join-Path $AlyaData "intune"
+$DataFile = Join-Path $IntuneRoot "deviceQualityUpdateProfiles.json"
+if (-Not (Test-Path $DataFile))
+{
+    throw "Intune export path $DataFile does not exist."
+}
+Write-Host "Exporting Intune quality update configuration to $DataFile"
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "PnP.PowerShell"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
-# Members
-if ([string]::IsNullOrEmpty($multiGeoAdminUrl))
-{
-    $multiGeoAdminUrl = $AlyaSharePointAdminUrl
-}
-
-# Logging in
-$adminCon = LoginTo-PnP -Url $multiGeoAdminUrl
-
-# Constants
-if ($siteLocale -eq "de-CH")
-{
-    $catalogTitle = "AppKatalog"
-}
-else
-{
-    $catalogTitle = "AppCatalog"
-}
-$catalogTitleByLocale = @{}
-foreach($locale in $localesToHandle)
-{
-    $catalogTitleByLocale[$locale] = if ($locale -like "de-*") { "AppKatalog" } else { "AppCatalog"  }
-}
-
-if ($hubSitesConfigurationFile)
-{
-    if ((Test-Path $hubSitesConfigurationFile))
-    {
-        Write-Host "Using hub site configuration from: $($hubSitesConfigurationFile)"
-    }
-    else
-    {
-        throw "Provided hub site configuration file $($hubSitesConfigurationFile) not found!"
-    }
-}
-else
-{
-    if ((Test-Path "$AlyaData\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"))
-    {
-        Write-Host "Using hub site configuration from: $($AlyaData)\sharepoint\HubSitesConfiguration-$($siteLocale).ps1"
-        $hubSitesConfigurationFile = "$AlyaData\sharepoint\HubSitesConfiguration-$siteLocale.ps1"
-    }
-    else
-    {
-        Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
-        Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
-        pause
-        $hubSitesConfigurationFile = "$AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1"
-    }
-}
-. $hubSitesConfigurationFile
-
+# Logins
+LoginTo-MgGraph -Scopes @(
+    "Organization.Read.All",
+    "Directory.Read.All",
+    "DeviceManagementManagedDevices.Read.All",
+    "DeviceManagementServiceConfig.Read.All",
+    "DeviceManagementConfiguration.Read.All",
+    "DeviceManagementApps.Read.All",
+    "DeviceManagementRBAC.Read.All"
+)
 
 # =============================================================
-# O365 stuff
+# Intune stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Configure-AppCatalogSite | O365" -ForegroundColor $CommandInfo
+Write-Host "Intune | Export-QualityUpdateConfiguration | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking ADM hub site
-Write-Host "Checking ADM hub site" -ForegroundColor $CommandInfo
-$hubSiteDef = $hubSites | Where-Object { $_.short -eq "ADM" }
-$hubSiteName = $hubSiteDef.title
-$admHubSite = Get-PnPHubSite -Connection $adminCon -Identity "$($AlyaSharePointUrl)/sites/$hubSiteName" -ErrorAction SilentlyContinue
-if (-Not $admHubSite)
-{
-    Write-Error "ADM Hub site $hubSiteName not found. Please crate it first"
-}
-$hubCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)/sites/$hubSiteName"
-
-# Getting role groups
-$siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
-$web = Get-PnPWeb -Connection $siteCon
-
-$spAdminRoleName = "Company Administrator"
 try {
-    $gauser = $web.EnsureUser($spAdminRoleName)
-    $gauser.Context.Load($gauser)
-    Invoke-PnPQuery -Connection $siteCon
-    $gauserLoginName = $gauser.LoginName
+    #QualityUpdateProfiles
+    $uri = "/beta/deviceManagement/windowsQualityUpdateProfiles"
+    $windowsQualityUpdateProfilesWin = Get-MsGraphObject -Uri $uri
+    $settings = $windowsQualityUpdateProfilesWin.value.expeditedUpdateSettings
+    $release = $settings.qualityUpdateRelease.ToString("yyyy-MM-ddT00:00:00Z")
+
+    $content = Get-Content -Path $DataFile -Encoding $AlyaUtf8Encoding -Raw
+    $content = $content -replace '"qualityUpdateRelease":\s*".*?"', ('"qualityUpdateRelease": "' + $release + '"')
+    $content = $content -replace '"daysUntilForcedReboot":\s*\d+', ('"daysUntilForcedReboot": ' + $settings.daysUntilForcedReboot)
+    $content | Set-Content -Path $DataFile -Encoding $AlyaUtf8Encoding
+} catch {
+    Write-Warning "Could not export windowsQualityUpdateProfiles"
+    Write-Warning $_
 }
-catch {
-    $spAdminRoleName = "Global Administrator"
-    try {
-        $gauser = $web.EnsureUser($spAdminRoleName)
-        $gauser.Context.Load($gauser)
-        Invoke-PnPQuery -Connection $siteCon
-        $gauserLoginName = $gauser.LoginName
-    }
-    catch {
-        $gauserLoginName = $null
-    }
-}
-
-$spAdminRoleName = "SharePoint Service Administrator"
-try {
-    $sauser = $web.EnsureUser($spAdminRoleName)
-    $sauser.Context.Load($sauser)
-    Invoke-PnPQuery -Connection $siteCon
-    $sauserLoginName = $sauser.LoginName
-}
-catch {
-    $spAdminRoleName = "SharePoint Administrator"
-    try {
-        $sauser = $web.EnsureUser($spAdminRoleName)
-        $sauser.Context.Load($sauser)
-        Invoke-PnPQuery -Connection $siteCon
-        $sauserLoginName = $sauser.LoginName
-    }
-    catch {
-        $sauserLoginName = $null
-    }
-}
-
-# Checking app catalog site collection
-Write-Host "Checking app catalog site collection" -ForegroundColor $CommandInfo
-$catalogSiteName = "$prefix-ADM-$catalogTitle"
-$catalogSiteUrl = "$($AlyaSharePointUrl)/sites/$catalogSiteName"
-$site = $null
-$site = Get-PnPTenantSite -Connection $adminCon -Url $catalogSiteUrl -Detailed -ErrorAction SilentlyContinue
-if (-Not $site)
-{
-    $site = Get-PnPTenantSite -Connection $adminCon | Where-Object { $_.Title -eq $catalogSiteName }
-    if ($site)
-    {
-        $catalogSiteUrl = $site.Url
-        $site = Get-PnPTenantSite -Connection $adminCon -Url $catalogSiteUrl -Detailed -ErrorAction SilentlyContinue
-    }
-}
-if (-Not $site)
-{
-    Write-Host "Checking existance of other App Catalog site"
-    $appCatalogUrl = Get-PnPTenantAppCatalogUrl -Connection $adminCon
-    if (-Not $appCatalogUrl)
-    {
-        $apiCon = LoginTo-PnP -Url "$($AlyaSharePointUrl)"
-        $res = Invoke-PnPSPRestMethod -Connection $apiCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current"
-        $appCatalogUrl = $res.CorporateCatalogUrl
-    }
-    if ($appCatalogUrl -and -not $appCatalogUrl.EndsWith($catalogSiteName))
-    {
-        Write-Warning "There is already an app catalog with different title registered!"
-        Write-Warning "Please rename it to $catalogSiteName an attach it to hub"
-        throw "There is already an app catalog with different title registered!"
-    }
-
-    Write-Host "Getting current user"
-    $ctx = Get-PnPContext -Connection $adminCon
-    $ctx.Load($ctx.Web.CurrentUser)
-    $ctx.ExecuteQuery()
-    $actUser = $ctx.Web.CurrentUser.Email
-
-    Write-Warning "App Catalog site not found. Creating now app catalog site $catalogSiteName"
-    Register-PnPAppCatalogSite -Connection $adminCon -Url $catalogSiteUrl -Owner $actUser -TimeZoneId 4 -Force
-
-    do {
-        Start-Sleep -Seconds 15
-        $site = Get-PnPTenantSite -Connection $adminCon -Url $catalogSiteUrl -Detailed -ErrorAction SilentlyContinue
-    } while (-Not $site)
-
-}
-
-# Setting admin access
-Write-Host "Setting admin access" -ForegroundColor $TitleColor
-$owners = @()
-if ($null -ne $sauserLoginName) { $owners += $sauserLoginName }
-foreach ($owner in $AlyaSharePointNewSiteCollectionAdmins)
-{
-    if (-Not [string]::IsNullOrEmpty($owner) -and $owner -ne "PleaseSpecify")
-    {
-        $owners += $owner
-    }
-}
-Set-PnPTenantSite -Connection $adminCon -Identity $catalogSiteUrl -PrimarySiteCollectionAdmin $gauserLoginName -Owners $owners
-
-# Login to app catalog
-Write-Host "Login to app catalog" -ForegroundColor $CommandInfo
-$siteCon = LoginTo-PnP $catalogSiteUrl
-
-# Adding site to hub
-Write-Host "Adding site to hub" -ForegroundColor $CommandInfo
-$hubSite = Get-PnPSite -Connection $hubCon
-$siteSite = Get-PnPSite -Connection $siteCon
-Add-PnPHubSiteAssociation -Connection $adminCon -Site $siteSite -HubSite $hubSite
-
-# Configuring access to catalog site for internals and externals
-Write-Host "Configuring access to catalog site" -ForegroundColor $CommandInfo
-$assGroups = Get-PnPPropertyBag -Connection $siteCon -Key "vti_associategroups"
-$aRoles = Get-PnPRoleDefinition -Connection $siteCon
-if (-Not $assGroups)
-{
-    Write-Host "Site does not has configured groups"
-    $rRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Reader" }
-    $vgroup = Get-PnPSiteGroup -Connection $siteCon -Group "$catalogSiteName Visitors" -ErrorAction SilentlyContinue
-    if (-Not $agroup)
-    {
-        $vgroup = New-PnPSiteGroup -Connection $siteCon -Name "$catalogSiteName Visitors" -PermissionLevels $rRole.Name
-    }
-    $vgroup = Get-PnPGroup -Connection $siteCon -Identity "$catalogSiteName Visitors"
-    foreach($grpName in @($AlyaAllInternals, $AlyaAllExternals))
-    {
-        $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $grpName
-        Add-PnPGroupMember -Connection $siteCon -Group $vgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
-    }
-}
-else
-{
-    $vgroup = Get-PnPGroup -Connection $siteCon -AssociatedVisitorGroup
-    $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $AlyaAllInternals
-    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
-    $agroup = Get-PnPMicrosoft365Group -Connection $adminCon -Identity $AlyaAllExternals
-    Add-PnPGroupMember -Connection $siteCon -Group $vgroup -LoginName "c:0o.c|federateddirectoryclaimprovider|$($agroup.Id)"
-
-    # Configuring permissions
-    Write-Host "Configuring permissions" -ForegroundColor $CommandInfo
-    $mgroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
-    $eRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Editor" }
-    $cRole = $aRoles | Where-Object { $_.RoleTypeKind -eq "Contributor" }
-    $perms = Get-PnPGroupPermissions -Connection $siteCon -Identity $mgroup
-    if (-Not ($perms | Where-Object { $_.Id -eq $cRole.Id }))
-    {
-        Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -AddRole $cRole.Name
-    }
-    if (($perms | Where-Object { $_.Id -eq $eRole.Id }))
-    {
-        Set-PnPGroupPermissions -Connection $siteCon -Identity $mgroup -RemoveRole $eRole.Name
-    }
-}
-
-# Configuring site logo
-Write-Host "Configuring site logo" -ForegroundColor $CommandInfo
-$web = Get-PnPWeb -Connection $siteCon -Includes SiteLogoUrl
-if ([string]::IsNullOrEmpty($web.SiteLogoUrl))
-{
-    $fname = Split-Path -Path $AlyaLogoUrlQuad -Leaf
-    $tempFile = [System.IO.Path]::GetTempFileName()+$fname
-    Invoke-RestMethod -Method GET -UseBasicParsing -Uri $AlyaLogoUrlQuad -OutFile $tempFile
-    Set-PnPSite -Connection $siteCon -LogoFilePath $tempFile
-    Remove-Item -Path $tempFile
-}
-
-Write-Host "Configuring site title" -ForegroundColor $CommandInfo
-Set-PnPWeb -Connection $siteCon -Title "$catalogSiteName"
-Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -Title "$catalogSiteName"
-
-# Enabling site scripts
-Write-Host "Enabling site scripts" -ForegroundColor $CommandInfo
-& "$AlyaScripts\sharepoint\Set-ModernSiteEnableScripts.ps1" -Url $site.Url
-
-# Setting app catalog url
-Write-Host "Setting app catalog url" -ForegroundColor $CommandInfo
-Set-PnPTenantAppCatalogUrl -Connection $adminCon -Url $catalogSiteUrl
-
-# Checking app catalog url
-Write-Host "Checking app catalog url" -ForegroundColor $CommandInfo
-$catalogSiteName = "$prefix-ADM-$catalogTitle"
-$site = $null
-$site = Get-PnPTenantSite -Connection $adminCon -Url $catalogSiteUrl -Detailed -ErrorAction SilentlyContinue
-if (-Not $site)
-{
-    throw "App Catalog site collection not found!"
-}
-do {
-    Set-PnPTenantAppCatalogUrl -Connection $adminCon -Url $catalogSiteUrl
-    $appCatalogUrl = Get-PnPTenantAppCatalogUrl -Connection $adminCon -ErrorAction SilentlyContinue
-    $appCatalogUrlApi = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
-    if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or [string]::IsNullOrWhiteSpace($appCatalogUrlApi) -or
-        $appCatalogUrl -ne $catalogSiteUrl -or $appCatalogUrlApi -ne $catalogSiteUrl)
-    {
-        Write-Warning "appCatalogUrl: $appCatalogUrl"
-        Write-Warning "appCatalogUrlApi: $appCatalogUrlApi"
-        Write-Warning "App Catalog URL not found or not correct!"
-        Write-Warning "Please create app catalog site with the script Configure-AppCatalogSite.ps1 if not yet done."
-        Write-Warning "If you have created the app catalog recently, it can take some time until the URL is available."
-    }
-    else
-    {
-        Write-Host "App Catalog URL is correct now."
-        break
-    }
-    Read-Host "Press Enter to check again or Ctrl+C to stop waiting"
-} while ($true)
 
 #Stopping Transscript
 Stop-Transcript
@@ -385,8 +123,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCALGGS1PUH5qtpc
-# TIrhj7zhU62pmY+7jV1uKQj22Gfy5qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBucF+nxJkNkUwJ
+# lKbqHgUiw/S7oKMelFXZd0BJf1FZyKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -500,23 +238,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGO+vliG
-# tGYYhNSCMm0TLvWTRZmcyusSlWEZ6U0uCCwSMA0GCSqGSIb3DQEBAQUABIICALQN
-# iF09TqlxbmnW0QtY+f6QJfGgaV2K70XHs4jOjWK1WNM/qRmNzIv2wwzwLF6XE1JG
-# jDxlMeem+FFITBtAkzgWP+qGdy2bSK9Sx4YyDF6lwbbrqYQFpyyW7zqSdUWMlwuE
-# nqYEU065M9BufVfJCqFZc5aYWIuJRGXrrqUlo+gxtDkImiKWfOneoy5XtCF5PJRq
-# /3+87lrPA0gjhX+ikPXMXEawDlzlaYA8rmPC/IuEnW6d1FOuUbEctC2ljcGi0mHG
-# 7r/xtqCabf8szyZWzIdKWOSlNZenDFKOY1t/Gaujr4lGF8MPUP5rQecdXulDO0Lc
-# YSkD/BOMEPOktbOaUU7syCTvMdyc53nEFi3cCTaby8Ysj5/gxzlHhzmBvoPPHtD9
-# dOFd0t/QemGB/sSQVRqb5+HtijnvzE/I3WBkNILG2iWPfdwSweeqVMA94J3ehoGy
-# rXiqgRq7OGnEKPr87oFB888yJyY8xpRNlC1pjilFeH41Wud1vrV2Lly8C+peOvu3
-# T/X+YeBX8uBfUxbE2M2ue7MEQCqkpwsYJ2009NWgRrOTpicn6z9AhUHv04z4LK+U
-# unocJqW9wTwL8/djZ7Sx73o/CEZWyBN36RXM3Xo+tMeqQmc3/1gzvz3Di+1w+rvK
-# XXzmChRyaXT95rwQVrtuxtagaa03KcGoX3St7fXqoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICHLEO/e
+# +cBeJZ+EIjG3gOXe0jb72D1KBbdESFQOXZihMA0GCSqGSIb3DQEBAQUABIICAJpG
+# ctZ4z8wcvRxYbB7UO2RfvSp0AFKtHImjip0/pZkmm7VnvRdG/SSM5mXEMj3TYwa3
+# AvG8isMT7Kxbl6Ib7A2u1vKTMLOCnahz2JNfgdhLqn0yDANtd3Qm7sYWfWLUFVj4
+# 71J1CjZxbjrs5Bw/sEguv50kDwCL2zQEkTDffImKpM7ztYnqAUEg5/D1+9swEwp3
+# ext7jjnBKEDQL1GOYS9P3V4kBLtqFZXSfDp7JeJTn+F/w4ZX3sCau3InQcsxGokS
+# 5Taxuz8DVqf+9GpvVwYP0wNq3aTgeCQlYIVrFxaSK0p2rTUcIW6ZVGNWnAPoYA14
+# 5H3Jr6kqq+w3VUnCo8S7QLyzm6rQJuGHLDe+OJjWq9omV0zrimarbTR+c0FlnU2c
+# 7sf3GkAtDUAOOjw3LjsiOPNS27H4mK3foIvnVNRV1qzXK/t7JWmeuwFNRNvJBlW6
+# 26CAtlPwyaivG7kIsH31Ef16DN0cmFeMwVr7xb5A5v1d4bpRuQGoTRE1hkYobgtl
+# b2HEIRyXpismn4hCZOFmARrlkeAaeZUeSVkewnSeSPnMONhnLj/NfhzKVZPIUHz9
+# O3+hWrU5ZzHp4PSdFR5an0BVcZeyjy98Y4dUUdtZlAcfKzXNoWSfFUXdi6EkUJGG
+# 8WKS31BVyPN+24SrdQj2Qvx72ykX/lF3PkiKyPOYoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAXu7/Fm6y6ZWGN2yYSyG8om94cRjovVazRt9m4NKMXBgIUaMPr
-# lXkow7Re+ooScr7lHSa0IPEYDzIwMjYwNTE1MTI0MjUzWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCByPF+uNi4BHrLlApA91pt4xSnFLzKYzTnN+5kY9UtyFgIUZyJV
+# NLtHNo1PWpRcZ4I8+M25Pw0YDzIwMjYwNzE2MDcwODI4WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -659,18 +397,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBCn3u/kc9d9LFSIqmLKJ+qSD0lObpfG+qXF4d0gIzkVZIzGkF5JAAghbX3
-# IzCVxw4wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDe88h5MbliRSAKNaHy+r2V8XAyksLD+ySx2xJSvBs2pC+YxIX4yGpTob3E
+# d+eJTL8wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAU3Er64zVAm6X+1b4TBipM4tCqcfIy0gEi1n3PUy10LsQ
-# thKsSWtg4aD8Iww0YCgPfJW93LRyOZV3dibmKMCmQbNFf6V5y5luodLOk+M3TJ3G
-# 9a71Aynj0C0w3kNTZTrtFyMlPRoTpe6zFUjlABJsL56Oi+rbKyAk5+WVDfW/FTQj
-# s0AojkpsA8MS9xSWBVD0Dy2KjOBX3UXKCYfmrUeMW1pJg2X/ZKYqD/voWbAN2r76
-# ZpfCYuFgDS0TXFQSPJbEs27hjF05qDQtr4NSX+TnP3Jt4+VG+Z1Xo8uccyRa3tP7
-# nuhYfVTg1pU4eu0dOr1ikk+5wyYm5GXmYMQZZjCCUnoVUOXBM/fd55Zsu749jIJ0
-# X2ihwDfDiX8R+ebD5vJVNxYj1WkRkxpKwd50Ckv0sO4dF62t8P4eFuxbwEwNxzp3
-# itFjfI7bNGRHvu/wl7+UDCq0DOOfEsDxXcYsfNTzAorLdPCIXhU3mm8a7ZuPH3U4
-# n1V6uah7X5jsimsggkZh
+# KoZIhvcNAQEMBQAEggGAyV57eJckYi87vTlDxVy8sqxFTyU7XLfsm0oZn/ZoB3jf
+# 7Y/tjuCazQwTEKtB+ydaawBPtKVM9C0PydbGXNYV4TaZUQSHzQidmRO2Usy8+HZn
+# OeeFy2GxKomKsH+50/opYoTkbpQJ2h+wg8e2iXdHkoIQfPfmdo4JuE1Qg7MxfTYO
+# qsofgw5S1baebJGEyccAZAxUE5/6Y+FQCIrc1SYxu9VM1CU+f9voA4cfP/SF69Pd
+# YlOMvLvCxiViBwAre3Wp3hdbtjPRtQm4c5ryv9aEmRGQ59uWvFapDIrSo6PS1JqN
+# rUEO6g4+S6xCt+5Hq76QSg8/QB8Abee7rKO59JVCG4fHBUzbslH8U8amCcOWBvUW
+# HhCp2jW1Sl/wVNOZcC00Uy6qM3DLQJ3wYT8tSYHvbnFBoVncfj+67+kjV8bBt6co
+# bVbL7hinXT07A6eqnstUqbP4Yuebwx+tqmaoBAr+7DtVA9kHBTUbJikx8i3E2+Wo
+# 9CJiHqpZW96KxJGRkQ9O
 # SIG # End signature block

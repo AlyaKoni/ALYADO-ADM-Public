@@ -441,7 +441,11 @@ foreach($packageDir in $packages)
     $packagePath = Join-Path $packageDir.FullName "Package"
     $configPath = Join-Path $packageDir.FullName "config.json"
     $contentPath = Join-Path $packageDir.FullName "Content"
-    $requirementDetectionPath = Join-Path $packageDir.FullName "RequirementDetection.ps1"
+    $requirementDetectionPath = Join-Path $packageDir.FullName "RequirementDetectionUser.ps1"
+    if (-Not (Test-Path $requirementDetectionPath))
+    {
+        $requirementDetectionPath = Join-Path $packageDir.FullName "RequirementDetection.ps1"
+    }
 
     # Checking intunewin package
     Write-Host "  Checking intunewin package"
@@ -781,6 +785,11 @@ foreach($packageDir in $packages)
             "@odata.type" = "#microsoft.graph.win32LobAppPowerShellScriptRule"
             "displayName" = "RequirementDetection.ps1"
             "enforceSignatureCheck" = $false
+        }
+        if ($requirementDetectionPath -like "*User*")
+        {
+            ($appConfig.requirementRules | Where-Object { $_.displayName -eq "RequirementDetection.ps1" }).runAsAccount = "user"
+            ($appConfig.rules | Where-Object { $_.displayName -eq "RequirementDetection.ps1" }).runAsAccount = "user"
         }
         $appConfigJson = $appConfig | ConvertTo-Json
 

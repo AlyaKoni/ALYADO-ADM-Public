@@ -55,14 +55,14 @@ try
 {
     $keyPath = "##KEYPATH##"
     $keyName = "##KEYNAME##"
-    $keyPath = [Regex]::Replace($keyPath, "Computer\\HKEY_LOCAL_MACHINE\\", "HKLM:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    $keyPath = [Regex]::Replace($keyPath, "HKEY_LOCAL_MACHINE\\", "HKLM:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    $keyPath = [Regex]::Replace($keyPath, "Computer\\HKEY_CURRENT_USER\\", "HKCU:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    $keyPath = [Regex]::Replace($keyPath, "HKEY_CURRENT_USER\\", "HKCU:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $keyPath = [Regex]::Replace($keyPath, "Computer\\HKEY_LOCAL_MACHINE\\", "HKLM:\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $keyPath = [Regex]::Replace($keyPath, "HKEY_LOCAL_MACHINE\\", "HKLM:\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $keyPath = [Regex]::Replace($keyPath, "Computer\\HKEY_CURRENT_USER\\", "HKCU:\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    $keyPath = [Regex]::Replace($keyPath, "HKEY_CURRENT_USER\\", "HKCU:\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
     $actVers = [Version](Get-ItemProperty -Path $keyPath -Name $keyName -ErrorAction SilentlyContinue).$keyName
-    if (-Not $actVers)
+    if (-Not $actVers -and $keyPath -notlike "*WOW6432Node*")
     {
-        $keyPath = [Regex]::Replace($keyPath, "\\SOFTWARE\\", "\\SOFTWARE\\WOW6432Node\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+        $keyPath = [Regex]::Replace($keyPath, "\\SOFTWARE\\", "\SOFTWARE\WOW6432Node\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
         $actVers = [Version](Get-ItemProperty -Path $keyPath -Name $keyName -ErrorAction SilentlyContinue).$keyName
     }
     if (-Not $actVers)

@@ -104,7 +104,8 @@ try
     if (-not $mailbox)
     {
         Write-Warning "Creating the shared mailbox Intune"
-        New-Mailbox -Shared -Name "Intune" -DisplayName "$AlyaCompanyName Intune" -Alias "Intune" -PrimarySmtpAddress $IntuneEmail
+        New-Mailbox -Shared -Name "Intune" -DisplayName "$AlyaCompanyName Intune" -Alias "Intune" `
+            -PrimarySmtpAddress $IntuneEmail
     }
 
     Write-Host "  Configuring mailbox" -ForegroundColor $CommandInfo
@@ -121,6 +122,8 @@ try
 
             $intuneUserId = $mailbox.ExternalDirectoryObjectId
         
+            Set-Mailbox -Identity $IntuneEmail -HiddenFromAddressListsEnabled $true
+            Set-Mailbox -Identity $IntuneEmail -WindowsEmailAddress $IntuneEmail
             Set-MailboxRegionalConfiguration -Identity $IntuneEmail -TimeZone $AlyaTimeZone
             Set-MailboxCalendarConfiguration -Identity $IntuneEmail -WorkingHoursTimeZone $AlyaTimeZone
             break

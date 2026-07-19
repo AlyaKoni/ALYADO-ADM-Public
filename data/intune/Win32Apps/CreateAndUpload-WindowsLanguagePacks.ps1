@@ -65,7 +65,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
     [bool]$reuseExistingPackages = $false,
     [bool]$askForSameVersionPackages = $true,
-    [bool]$overwriteSameVersionPackages = $true
+    [bool]$overwriteSameVersionPackages = $false
 )
 
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1

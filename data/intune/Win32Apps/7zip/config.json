@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN 7zip",
-  "description": "Installs 7-Zip 26.01 (x64 edition)",
+  "description": "Installs 7-Zip 26.02 (x64 edition)",
   "publisher": "7-zip.org",
   "largeIcon": {
     "@odata.type": "#Microsoft.Graph.mimeContent",
@@ -23,16 +23,16 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "publisher": "Igor Pavlov",
-    "productName": "7-Zip 26.01 (x64 edition)",
+    "productName": "7-Zip 26.02 (x64 edition)",
     "upgradeCode": "{23170F69-40C1-2702-0000-000004000000}",
-    "requiresReboot": "false",
+    "publisher": "Igor Pavlov",
+    "productCode": "{23170F69-40C1-2702-2602-000001000000}",
     "packageType": "DualPurpose",
-    "productCode": "{23170F69-40C1-2702-2601-000001000000}",
-    "productVersion": "26.01.00.0"
+    "requiresReboot": "false",
+    "productVersion": "26.02.00.0"
   },
-  "fileName": "7z2601-x64.intunewin",
-  "setupFilePath": "7z2601-x64.msi",
+  "fileName": "7z2602-x64.intunewin",
+  "setupFilePath": "7z2602-x64.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "26.1.0.0"
+      "detectionValue": "26.2.0.0"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "26.1.0.0"
+      "comparisonValue": "26.2.0.0"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "26.1.0.0"
+  "displayVersion": "26.2.0.0"
 }

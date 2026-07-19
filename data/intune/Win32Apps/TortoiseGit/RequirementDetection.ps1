@@ -30,19 +30,21 @@
 
 <#
 .SYNOPSIS
-Checks a registry key for a specific version and determines whether an update or installation is required.
+Determines whether a specific software or file update is required based on version information.
 
 .DESCRIPTION
-The RequirementDetection.ps1 script reads a specified registry path and value, compares the current version found with a target version, and outputs whether an update or installation is required. It supports both HKLM and HKCU registry hives and automatically handles WOW6432Node redirection for 32-bit applications on 64-bit systems.
+The RequirementDetection.ps1 script checks if a given file exists in a specified directory and compares its version to a reference version. It handles cases where the file path might differ between Program Files and Program Files (x86). If the existing version is greater than or equal to the target version, it outputs "Not required"; otherwise, it outputs "Required". If the file does not exist, it also outputs "Not required".
 
 .INPUTS
-None. The script uses predefined registry path, key name, and version placeholders.
+None. The script uses predefined variables within the code.
 
 .OUTPUTS
-String output to the host indicating "Required" or "Not required" based on the version comparison. Outputs an error message if an exception occurs.
+String output to the host indicating whether an update is "Required" or "Not required".  
+On error, the exception type and message are written to the host.
 
 .EXAMPLE
 PS> .\RequirementDetection.ps1
+Checks the existence and version of a specified file and outputs whether an update is required.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -53,33 +55,37 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 try
 {
-    $keyPath = "##KEYPATH##"
-    $keyName = "##KEYNAME##"
-    $keyPath = [Regex]::Replace($keyPath, "Computer\\HKEY_LOCAL_MACHINE\\", "HKLM:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    $keyPath = [Regex]::Replace($keyPath, "HKEY_LOCAL_MACHINE\\", "HKLM:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    $keyPath = [Regex]::Replace($keyPath, "Computer\\HKEY_CURRENT_USER\\", "HKCU:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    $keyPath = [Regex]::Replace($keyPath, "HKEY_CURRENT_USER\\", "HKCU:\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    $actVers = [Version](Get-ItemProperty -Path $keyPath -Name $keyName -ErrorAction SilentlyContinue).$keyName
-    if (-Not $actVers)
+    $fileDir = [Environment]::ExpandEnvironmentVariables("##FILEPATH##")
+    $fileName = "##FILENAME##"
+	$filePath = "$fileDir\$fileName"
+    if (-Not (Test-Path $filePath))
+	{
+		if ($filePath.StartsWith("$($env:ProgramFiles)\"))
+		{
+			$filePath = $filePath.Replace("$($env:ProgramFiles)\", "$(${env:ProgramFiles(x86)})\")
+		}
+		if ($filePath.StartsWith("$(${env:ProgramFiles(x86)})\"))
+		{
+			$filePath = $filePath.Replace("$(${env:ProgramFiles(x86)})\", "$($env:ProgramFiles)\")
+		}
+	}
+    if (Test-Path $filePath)
     {
-        $keyPath = [Regex]::Replace($keyPath, "\\SOFTWARE\\", "\\SOFTWARE\\WOW6432Node\\", [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-        $actVers = [Version](Get-ItemProperty -Path $keyPath -Name $keyName -ErrorAction SilentlyContinue).$keyName
-    }
-    if (-Not $actVers)
-    {
-        Write-Host "Not required"
-    }
-    else
-    {
-        $tobeVers = [Version]"##KEYVERSION##"
+        $file = Get-Item -Path $filePath
+        $actVers = [Version]$file.VersionInfo.FileVersionRaw
+        $tobeVers = [Version]"##FILEVERSION##"
         if ($actVers -ge $tobeVers)
         {
             Write-Host "Not required"
         }
-	    else
+		else
         {
             Write-Host "Required"
         }
+    }
+    else
+    {
+        Write-Host "Not required"
     }
 } catch {
     Write-Host "$($_.Exception.GetType().Name): $($_.Exception.Message)"
@@ -89,8 +95,8 @@ try
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAm7bHgoc3QYYl5
-# OPW0zu2vD4p9+jYjhkzu0r/zNoEco6CCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDS/vcoeueVp1Ze
+# 0l30hhmYSH5JwKy8S/OI8E1BTm2cyKCCDuUwggboMIIE0KADAgECAhB3vQ4Ft1kL
 # th1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
 # ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENvZGUgU2ln
 # bmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAwMDBaMFwx
@@ -174,23 +180,23 @@ try
 # IG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25p
 # bmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHwwEAYKKwYB
 # BAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYKKwYBBAGC
-# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGwz6fx5IESjMlTY
-# JXK+16d/7QLT5n6vyhtWJED2N0o8MA0GCSqGSIb3DQEBAQUABIICAEzxsp/YMlKU
-# IYQSuaDaadW6m10ThIPNUWw6+8ZIetCcLpFrA5vkmlKrK9weRq3WpHcszxMZm2iT
-# mPT5UKSYAYr4tzHjJD/1aJTRxmGD2Vs36SirEVdUwPdgVvIlVmu1+IUbTxhHeRVi
-# 16gEHEKtc8Btj6prip/s720wUCDEjrh1BBcT2ZMsvH38Ic8c0zpZenihJVLf/6CC
-# l1BVp+Isf2D0PzxlGqYGyTvVkION7jZRjuBbZiXtIeFOnh8T2jMx/eXSeDfnwQDE
-# D5jme+XXWN5sn27MOKJ4o12ubRNSCgGZwkeBPFK68voIM7A6Vma3RUbINkxHjziM
-# 2PZbJ8h3OEgoQj+IpYUim10SzmpLQmvC3b6iIQYlt/ey5vI/xHuDq1WlLsD5OlpF
-# I4rz6QzLxt1n7MR5fqV6FecZUxq95SYUBo5PozcXOY9ooUjF8mIHiXWJgZ02KrwC
-# 9X4JPLidiuqy6TWPP3msQrEQh4GQji1M7Cx3q8Et4GYTD8jPhAGtFgVgY93UuW1G
-# oExGL/LhmbsM8O5npQ+ONERVRTzT8zP40pMnk1i/HapGoQEk0f1HkUg0mjyRrw0W
-# CBquw/68SpkYDoBF/vYr5XgeDplfXFjC+Q4lq6YD+fpdmkE5BbPtpAEJ63ShUvw8
-# NuYxeOWocURyGsW4fPAe96p/ZquVFwSuoYIWuzCCFrcGCisGAQQBgjcDAwExghan
+# NwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOCodaEV79L7yYet
+# r7PW19L1+6D4dAsIXdnyrzbJJoJOMA0GCSqGSIb3DQEBAQUABIICAKSr8JIbReL4
+# 4JLxWJJpns1Ak2c3eWepcnIxL28brFCtFEVBQ95IiYJ0MSG4Np5YKrCQ+4YYmxmi
+# FJyE68HnDzlEy8IeDv2ZbPGY1ZnxrzNOvSNtsMxbl+O8ho+Rvk30b3CVLOOokP9V
+# u0JxI+v93tfvSKQX7oXgCGYT1md3ASTp2HWVQGdD3yRBFhIyglRw8m2lsAA1DjlK
+# XVn4aDNAhzhOJuFxnpcgQpdqj6o4X9SNFoelWXSEnzqCO7qJuFPlho8DZiJ2aGG+
+# kQxfeUo495WN5pCuz7IJZy6uXvdV9PLFtz8EF2subtEoKTMK0DLsV3fC1KRV1UNG
+# lggFi3C+WMqp0Pc9MEwEpybUkKkPJJHnWW0ihFv3zIwis2kigMNCQKQmnohzwVQ4
+# cdYDDbF3IFaqFtczpxWm2MBAZMLpn6xWoqkI0THhwYQM6iL27HOLLzKbsQk4bykQ
+# sCAyfIzdutqzP43i63sApISTw8b1T6oGRSlXe2/W8Q2q7SuyWRuRFe8fxB/x1Jk9
+# 6VL49ua/JYHdOPTUVF7kw8yGHz/V1WfJWceWNwb0PpiqmwBCXzS9fHcvz2RZF5un
+# LDA+UuCkGVoDL7a39tWjzl6vmFQuzwKiRtoGrGT3XjUAIh0nkNANVMcszamH2kVu
+# hiJMag7qkolG3QNwUx5tRM38mFaNDq85oYIWuzCCFrcGCisGAQQBgjcDAwExghan
 # MIIWowYJKoZIhvcNAQcCoIIWlDCCFpACAQMxDTALBglghkgBZQMEAgEwgd8GCyqG
 # SIb3DQEJEAEEoIHPBIHMMIHJAgEBBgsrBgEEAaAyAgMBAjAxMA0GCWCGSAFlAwQC
-# AQUABCClr/kfUBoSGpsITJA0aOUphatwCKTyMjZRN9Mbatn+GgIUJ5JNcjJyBVID
-# Rmlw4FBRvGmO/9AYDzIwMjYwMjEwMTExNjQwWjADAgEBoFikVjBUMQswCQYDVQQG
+# AQUABCBWwkH+l3HwKUaVb3hmpISbgw8d1k/giwYJKNbQzeljAQIUXC1+fr4GGq0S
+# FoiIBHum29vk6VkYDzIwMjYwMjEwMTEwNTE2WjADAgEBoFikVjBUMQswCQYDVQQG
 # EwJCRTEZMBcGA1UECgwQR2xvYmFsU2lnbiBudi1zYTEqMCgGA1UEAwwhR2xvYmFs
 # c2lnbiBUU0EgZm9yIENvZGVTaWduMSAtIFI2oIISSzCCBmMwggRLoAMCAQICEAEA
 # CyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQEMBQAwWzELMAkGA1UEBhMCQkUxGTAX
@@ -295,17 +301,17 @@ try
 # aW5nIENBIC0gU0hBMzg0IC0gRzQCEAEACyAFs5QHYts+NnmUm6kwCwYJYIZIAWUD
 # BAIBoIIBLTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQwKwYJKoZIhvcNAQk0
 # MR4wHDALBglghkgBZQMEAgGhDQYJKoZIhvcNAQELBQAwLwYJKoZIhvcNAQkEMSIE
-# ID4OFOsgTBbu8TMI9inmrqhKlvlxPc4W/YdfoXaG8NQ2MIGwBgsqhkiG9w0BCRAC
+# ICLfzpSo5uzbRQsLpE/c/m8ipKQmv/845l1WdmZZpVirMIGwBgsqhkiG9w0BCRAC
 # LzGBoDCBnTCBmjCBlwQgcl7yf0jhbmm5Y9hCaIxbygeojGkXBkLI/1ord69gXP0w
 # czBfpF0wWzELMAkGA1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2Ex
 # MTAvBgNVBAMTKEdsb2JhbFNpZ24gVGltZXN0YW1waW5nIENBIC0gU0hBMzg0IC0g
-# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAMNplkqqq1Ast
-# 9Gao/qaCQvgfYz4O1y/NAPQWkYM5wU+hCKWih4mHCA1fuvqgQC4SV+e4qHZAf+O3
-# 0VqBkRRVFZiX2c7QLO8He82j77wLP0LhGSqIyAEK2qmncLh5HN7cqCU3rFBj3FvA
-# Z+nu6UTLfcT4O+Ar1MXhG2J46U2CZ0sa0evYZNMWiTAJ8jdbbBQLM2tEVY3CNeCa
-# EnTSTaGPN+wntqi/5J7WKPzovaOIRJfStj115B9GNv3o+oLFfozUxLr8jvkquukp
-# /IpAH4x0+m0mVzJR2EMjThP2yqcLBoZzc1p77IePFD6yZYgpDXfXCB2HuJiloHZg
-# cctXFtrX4lReK3FRo5nLutTQx/aQnQ/Uk93bwK+Xklh4jKbW6LBTui6IFBhZBmH0
-# PPbZa98dAQg+RnamKyzNDcgAasqDQ/FmAYay7YO/CTQe51ZxpBX9V5U9l8ETVFXu
-# gSMV5kZyXf0XH+FeflatYDpUlO6DNRxOHdZ09ErFraY4MdVtgqKj
+# RzQCEAEACyAFs5QHYts+NnmUm6kwDQYJKoZIhvcNAQELBQAEggGAXSykqDvfYKpA
+# 3nilzUwl7o8sob28yegkbrH2A9LiyeYZ7phiNB7LNZGuxCd3WQ2a1pVKkw2HGqyN
+# QUhSJHWk0OaYHx32dtliuJMUSfm+Zki+MDN2N99RDyheAAGzKcbzcnWB7K3+3o9s
+# TFc++MacJqobekpJaOVbbeyEd9yUqMFVzr7CmbfVgnRRGm/u3tLlolwJp1GVnbc7
+# IiD59ULi7cLro//MnYccKu3UQcPKaTKSk/ijO+/+WriksgyQqtKMvPaWha49JEVP
+# QU8euLw1msSEXbqLnSy//a6FmeDJh0ExLnIiRKSexr6FCatxlyVsTmP57IBU1uu2
+# yTybzSgxA83Of5pf6wuWH9FKfw8T/IbqxNTzfdosFrscxi+WW2aCyuY+6OYEgoyW
+# 7A6gNOtc+Fu/w3CWjBtVdGlY5knI9VlB08XbNFGqE/Zp8g9NLI4akbWwJGAJN5wF
+# XXaqQmQnugdMbrSt5mdsbYf4WL2IGAGVQ1v1PqgIVuUR2aVgbBsI
 # SIG # End signature block

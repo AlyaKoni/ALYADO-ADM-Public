@@ -107,6 +107,17 @@ else
     {
         $ErrorActionPreference = "Stop"
 
+        # Stopping running processes
+		$prc = Get-Process -Name "notepad++" -ErrorAction SilentlyContinue
+		if (-Not $prc)
+		{
+			$prc = Get-Process -Name "notepad++.exe" -ErrorAction SilentlyContinue
+		}
+		if ($prc)
+		{
+			$prc | Stop-Process -Force
+		}
+		
         # Install exe
         $toInstall = Get-ChildItem -Path $AlyaScriptDir -Filter "*.exe"
         foreach($toInst in $toInstall)

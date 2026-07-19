@@ -55,7 +55,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://openvpn.net/client/client-connect-vpn-for-windows/"
+$pageUrl = "https://openvpn.net/connect-docs/connect-for-windows.html"
 
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
@@ -63,10 +63,20 @@ if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -UserAgent "wget"
+$headers = @{
+    "accept" = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+    "accept-encoding" = "gzip, deflate, br"
+    "accept-language" = "de,de-DE;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"
+    "cache-control" = "max-age=0"
+    "upgrade-insecure-requests" = "1"
+    "user-agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/"
+}
+$req = Invoke-WebRequestIndep -Uri $pageUrl -UseBasicParsing -Method Get -Headers $headers -SkipHeaderValidation
 [regex]$regex = "[^`"]*/openvpn-([^`"]*)\.msi"
 $newUrl = $regex.Match($req.Content, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Value
 if (-Not $newUrl.StartsWith("http")) { $newUrl = "https://openvpn.net" + $newUrl }
+$newFileUrl = (Invoke-WebRequest -Uri $newUrl -MaximumRedirection 0 -UseBasicParsing -ErrorAction Ignore).Headers.Location
+if (-Not [string]::IsNullOrWhiteSpace($newFileUrl)) { $newUrl = $newFileUrl}
 $outfile = Join-Path $contentRoot (Split-Path $newUrl -Leaf)
 $dreq = Invoke-WebRequestIndep -Uri $newUrl -Method Get -OutFile $outfile
 

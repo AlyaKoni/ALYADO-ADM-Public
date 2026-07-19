@@ -33,6 +33,7 @@
     18.08.2025 Konrad Brunner       Initial Version
     26.10.2025 Konrad Brunner       Multi-Geo support
     06.02.2026 Konrad Brunner       Added powershell documentation
+    14.07.2026 Konrad Brunner       Better app catalog site url handling
 
 #>
 
@@ -125,8 +126,18 @@ if ($seleniumBrowser) {
 Write-Host "Checking app catalog url" -ForegroundColor $CommandInfo
 $prefix = "$($AlyaCompanyNameShortM365.ToUpper())SP"
 $catalogSiteName = "$prefix-ADM-$catalogTitle"
+$catalogSiteUrl = "$($AlyaSharePointUrl)/sites/$catalogSiteName"
 $site = $null
-$site = Get-PnPTenantSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Detailed -ErrorAction SilentlyContinue
+$site = Get-PnPTenantSite -Connection $adminCon -Url $catalogSiteUrl -Detailed -ErrorAction SilentlyContinue
+if (-Not $site)
+{
+    $site = Get-PnPTenantSite -Connection $adminCon | Where-Object { $_.Title -eq $catalogSiteName }
+    if ($site)
+    {
+        $catalogSiteUrl = $site.Url
+        $site = Get-PnPTenantSite -Connection $adminCon -Url $catalogSiteUrl -Detailed -ErrorAction SilentlyContinue
+    }
+}
 if (-Not $site)
 {
     throw "App Catalog site collection not found!"
@@ -135,7 +146,7 @@ do {
     $appCatalogUrl = Get-PnPTenantAppCatalogUrl -Connection $adminCon -ErrorAction SilentlyContinue
     $appCatalogUrlApi = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
     if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or [string]::IsNullOrWhiteSpace($appCatalogUrlApi) -or
-        $appCatalogUrl -ne "$($AlyaSharePointUrl)/sites/$catalogSiteName" -or $appCatalogUrlApi -ne "$($AlyaSharePointUrl)/sites/$catalogSiteName")
+        $appCatalogUrl -ne $catalogSiteUrl -or $appCatalogUrlApi -ne $catalogSiteUrl)
     {
         Write-Warning "appCatalogUrl: $appCatalogUrl"
         Write-Warning "appCatalogUrlApi: $appCatalogUrlApi"
@@ -205,29 +216,29 @@ if (-Not $app -or -Not $app.Deployed)
     throw "App package is not deployed!"
 }
 
-Write-Warning "Please approve access requests"
-Write-Host "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
-if (-Not $browser) {
-    Start-Process "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
-} else {
-    $browser.Url =  "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
-}
-
 # Approving web part permission requests
-<#
-https://github.com/SharePoint/sp-dev-docs/issues/9633
 Write-Host "Approving web part permission requests" -ForegroundColor $CommandInfo
-$requests = Get-PnPTenantServicePrincipalPermissionRequests -Connection $adminCon
-foreach ($request in $requests)
-{
-    if ($request.PackageName -like "PnP Modern Search*")
+try {
+    $requests = Get-PnPTenantServicePrincipalPermissionRequests -Connection $adminCon
+    foreach ($request in $requests)
     {
-        Write-Host "Approving request: $($request.Scope) - $($request.Id) - $($request.Resource)" -ForegroundColor $CommandInfo
-        Approve-PnPTenantServicePrincipalPermissionRequest -Connection $adminCon -RequestId $request.Id -Force
-        break
+        if ($request.PackageName -like "PnP Modern Search*")
+        {
+            Write-Host "Approving request: $($request.Scope) - $($request.Id) - $($request.Resource)" -ForegroundColor $CommandInfo
+            Approve-PnPTenantServicePrincipalPermissionRequest -Connection $adminCon -RequestId $request.Id -Force
+            break
+        }
     }
 }
-#>
+catch {
+    Write-Warning "Please approve access requests"
+    Write-Host "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement" -ForegroundColor $CommandSuccess
+    if (-Not $browser) {
+        Start-Process "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
+    } else {
+        $browser.Url =  "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
+    }
+}
 
 #Stopping Transscript
 Stop-Transcript

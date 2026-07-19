@@ -10,8 +10,8 @@
         "description": "Configures quality updates on windows devices",
         "displayName": "WIN QualityUpdate Configuration",
         "expeditedUpdateSettings": {
-            "daysUntilForcedReboot": 1,
-            "qualityUpdateRelease": "2026-06-23T00:00:00Z"
+            "daysUntilForcedReboot": 0,
+            "qualityUpdateRelease": "2026-07-14T00:00:00Z"
         },
         "releaseDateDisplayName": null,
         "roleScopeTagIds": [

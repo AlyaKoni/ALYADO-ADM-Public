@@ -34,6 +34,7 @@
     20.04.2023 Konrad Brunner       Fully PnP, removed all other modules, PnP has issues with other modules
     05.08.2023 Konrad Brunner       Added role admins and browser param
     06.02.2026 Konrad Brunner       Added powershell documentation
+    14.07.2026 Konrad Brunner       Better app catalog site url handling
 
 #>
 
@@ -158,8 +159,18 @@ if ($seleniumBrowser) {
 # Checking app catalog url
 Write-Host "Checking app catalog url" -ForegroundColor $CommandInfo
 $catalogSiteName = "$prefix-ADM-$catalogTitle"
+$catalogSiteUrl = "$($AlyaSharePointUrl)/sites/$catalogSiteName"
 $site = $null
-$site = Get-PnPTenantSite -Connection $adminCon -Url "$($AlyaSharePointUrl)/sites/$catalogSiteName" -Detailed -ErrorAction SilentlyContinue
+$site = Get-PnPTenantSite -Connection $adminCon -Url $catalogSiteUrl -Detailed -ErrorAction SilentlyContinue
+if (-Not $site)
+{
+    $site = Get-PnPTenantSite -Connection $adminCon | Where-Object { $_.Title -eq $catalogSiteName }
+    if ($site)
+    {
+        $catalogSiteUrl = $site.Url
+        $site = Get-PnPTenantSite -Connection $adminCon -Url $catalogSiteUrl -Detailed -ErrorAction SilentlyContinue
+    }
+}
 if (-Not $site)
 {
     throw "App Catalog site collection not found!"
@@ -168,7 +179,7 @@ do {
     $appCatalogUrl = Get-PnPTenantAppCatalogUrl -Connection $adminCon -ErrorAction SilentlyContinue
     $appCatalogUrlApi = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
     if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or [string]::IsNullOrWhiteSpace($appCatalogUrlApi) -or
-        $appCatalogUrl -ne "$($AlyaSharePointUrl)/sites/$catalogSiteName" -or $appCatalogUrlApi -ne "$($AlyaSharePointUrl)/sites/$catalogSiteName")
+        $appCatalogUrl -ne $catalogSiteUrl -or $appCatalogUrlApi -ne $catalogSiteUrl)
     {
         Write-Warning "appCatalogUrl: $appCatalogUrl"
         Write-Warning "appCatalogUrlApi: $appCatalogUrlApi"
@@ -276,7 +287,7 @@ if (-Not $site)
     }
     $Web.Update()
     Invoke-PnPQuery -Connection $siteCon
-    Enable-PnPFeature -Connection $siteCon -Identity "24611c05-ee19-45da-955f-6602264abaf8" -Force
+    Enable-PnPFeature -Connection $siteCon -Identity "24611c05-ee19-45da-955f-6602264abaf8"
 
     # Setting site design
     Write-Host "Setting site design" -ForegroundColor $CommandInfo
