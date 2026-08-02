@@ -27,6 +27,10 @@ sudo adduser xrdp ssl-cert
 echo xfce4-session >~/.xsession
 sudo systemctl restart xrdp
 
+As User:
+echo "xset s off" > ~/.xsession
+echo "xfce4-session" >> ~/.xsession
+
 #######################
 # Install node
 
