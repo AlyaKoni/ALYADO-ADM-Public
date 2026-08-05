@@ -66,10 +66,10 @@ Param(
     [string[]]$revokeAdminConsentFromApps = @() # "Microsoft Graph PowerShell","Graph Explorer","PnP Management Shell","Microsoft Intune PowerShell","MSFT Power Platform - Azure AD"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Revoke-AdminConsentsFromManagedIdentities-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -124,7 +124,7 @@ foreach($revokeAdminConsentFromApp in $revokeAdminConsentFromApps)
 Write-Host "Removed assignments" -ForegroundColor $CommandInfo
 $assignedRoles.GetEnumerator() | Select-Object -Property Type, App, ToApp, Role | Format-Table
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\02_createServicePrincipal-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -167,7 +167,7 @@ Write-Host "Testing login with service principal" -ForegroundColor $CommandInfo
 $creds = New-Object System.Management.Automation.PSCredential($AzAdServicePrincipal.AppId, $AlyaWvdServicePrincipalPasswordSave)
 Add-RdsAccount -DeploymentUrl $AlyaWvdRDBroker -Credential $creds -ServicePrincipal -AadTenantId $AlyaTenantId -ErrorAction Stop
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

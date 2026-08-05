@@ -4,8 +4,8 @@
 Write-Host "Starting Create-MigrationView"
 $root = $PSScriptRoot
 
-# Starting Transscript
-Write-Host "Starting Transscript"
+# Starting Transcript
+Write-Host "Starting Transcript"
 $TimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 if (-not (Test-Path "$root\logs")) {
     New-Item -Path "$root\logs" -ItemType Directory -Force | Out-Null

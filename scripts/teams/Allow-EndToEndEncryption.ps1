@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Allow-EndToEndEncryption-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -96,7 +96,7 @@ if ($encPol.MeetingEndToEndEncryption -ne "DisabledUserOverride")
     $null = Set-CsTeamsEnhancedEncryptionPolicy -Identity Global -MeetingEndToEndEncryption "DisabledUserOverride"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

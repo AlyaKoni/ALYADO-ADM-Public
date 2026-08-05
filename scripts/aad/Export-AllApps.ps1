@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Export-AllApps-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -95,7 +95,7 @@ Write-Host "Retrieving Service Principal objects. Please wait..." -ForegroundCol
 $servicePrincipals = Get-AzADServicePrincipal
 $servicePrincipals | ConvertTo-Json -Depth 100 | Set-Content -Path "$($AlyaData)\aad\AllServicePrincipals.json" -Force -Encoding UTF8
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

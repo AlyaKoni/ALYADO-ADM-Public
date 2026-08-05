@@ -78,10 +78,10 @@ Param(
     [String]$RegionKey = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Install-NewDataGateway-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -148,7 +148,7 @@ $AdminUserId = (Get-AzContext).Account.ExtendedProperties["HomeAccountId"].Split
 Write-Host "`n`nAdding $((Get-AzContext).Account.Id)[$($AdminUserId)] as gateway cluster admin" -ForegroundColor $CommandInfo
 Add-DataGatewayClusterUser -GatewayClusterId $GatewayDetails.Id -PrincipalObjectId $AdminUserId -AllowedDataSourceTypes $null -Role Admin
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

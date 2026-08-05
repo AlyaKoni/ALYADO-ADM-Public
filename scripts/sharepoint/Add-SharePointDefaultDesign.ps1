@@ -68,10 +68,10 @@ Param(
     [string]$CompanyName = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-SharePointDefaultDesign-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -171,7 +171,7 @@ else
 }
 $SiteDesignComm = Get-PnPSiteDesign -Connection $adminCon | Where-Object { $_.Title -eq "$SiteDesignNameComm"}
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -80,10 +80,10 @@ Param(
     [string]$hostpoolShareName
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\06_prepareShare-$($AlyaTimeString).log" | Out-Null
 
 # Creating share directory for hostpool
@@ -166,7 +166,7 @@ if (-Not (Test-Path $hostpoolSharePath))
     New-SMBShare –Name $hostpoolShareName –Path $hostpoolShareDir –FullAccess "$AlyaLocalDomainName\$AdminGroupName", "$AlyaLocalDomainName\$UserGroupName"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

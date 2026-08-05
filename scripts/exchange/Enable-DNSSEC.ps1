@@ -71,10 +71,10 @@ Param(
     [string]$onlyOnDomain = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Enable-DNSSEC-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -194,7 +194,7 @@ catch
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

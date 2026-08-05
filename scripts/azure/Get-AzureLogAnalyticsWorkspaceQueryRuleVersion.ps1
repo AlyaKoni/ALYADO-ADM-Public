@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Get-AzureLogAnalyticsWorkspaceQueryRuleVersion-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -101,7 +101,7 @@ if (-Not $Context)
 Write-Host "Getting query rules version" -ForegroundColor $CommandInfo
 Invoke-AzRestMethod -Path "/subscriptions/$($Context.subscription.id)/resourcegroups/$ResourceGroupName/providers/microsoft.operationalinsights/workspaces/$LogAnaWrkspcName/alertsversion?api-version=2017-04-26-preview" -Method "Get"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

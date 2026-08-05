@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\autoscale\Create-AutoscalingServicePrincipal-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -145,7 +145,7 @@ Clear-Variable -Name AzureKeyVaultSecret -Force -ErrorAction SilentlyContinue
 
 Write-Host "ApplicationId: $($AzAdApplication.AppId)"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

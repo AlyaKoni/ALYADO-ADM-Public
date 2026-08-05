@@ -85,10 +85,10 @@ Param(
     [string]$TeamPicturePath = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Set-TeamLogo-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -141,7 +141,7 @@ else
     $null = Set-TeamPicture -GroupId $Team.GroupId -ImagePath $TeamPicturePath
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

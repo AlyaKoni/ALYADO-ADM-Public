@@ -77,10 +77,10 @@ if ($newDomainName.IndexOf("-") -gt -1)
     throw "Hyphens (-) are not supported in newDomainName"
 }
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Rename-SharePointDomainName-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -162,7 +162,7 @@ else
     $state | Format-List
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Register-AutopilotDevice-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -85,7 +85,7 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Intune Autopilot registration" -ForegroundColor $CommandInfo
 Get-WindowsAutoPilotInfo -OutputFile "$($AlyaData)\intune\WindowsAutoPilotInfo.csv" -Append -GroupTag "Standard" -Online -Assign -AssignedComputerName "$($AlyaCompanyNameShort.ToUpper())-%SERIAL%"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

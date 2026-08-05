@@ -75,7 +75,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Set-OnPremDnsForwarderRules-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
@@ -175,7 +175,7 @@ foreach($domain in $allDomains)
     Add-DnsServerConditionalForwarderZone -Name $domain -ReplicationScope "Forest" -MasterServers $forwarderIp
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

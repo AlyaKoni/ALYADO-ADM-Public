@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\prod\Create-Workspace-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -121,7 +121,7 @@ if (-Not $WrkSpc)
         -Tag @{displayName=$WorkspaceFriendlyName;ownerEmail=$Context.Account.Id}
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

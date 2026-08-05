@@ -74,10 +74,10 @@ Param(
     [string]$UserUpn = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Remove-ApplicationAdminConsent-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -140,7 +140,7 @@ $grants | Format-List
 Write-Host "Deleting Grants" -ForegroundColor $CommandInfo
 $grants | Remove-AzureADOAuth2PermissionGrant
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

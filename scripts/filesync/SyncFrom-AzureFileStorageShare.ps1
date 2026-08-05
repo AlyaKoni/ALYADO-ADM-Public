@@ -78,10 +78,10 @@ Param(
     $StorageAccountName = $null # Private Storage by default
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\SyncFrom-AzureFileStorageShare-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -183,7 +183,7 @@ robocopy /R:10 /W:10 /MT:4 /MIR /COPYALL /DCOPY:DAT /SECFIX /TIMFIX /XJ "$($UseL
 Write-Host "Removing drive" -ForegroundColor $CommandInfo
 Remove-PSDrive -Name $UseLocalTempDriveLetter
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

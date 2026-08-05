@@ -84,7 +84,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Add-AdminCenterExtensionToVm-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Checking modules
@@ -246,7 +246,7 @@ if (-Not $VmExt)
 
 #ToDo WinRM configuration
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

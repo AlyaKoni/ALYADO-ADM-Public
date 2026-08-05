@@ -87,10 +87,10 @@ Param(
     [Nullable[DateTime]]$moveEnd = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Move-GroupsToMultiGeoLocation-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -201,7 +201,7 @@ foreach($group in $groupAliasesToMove)
     }   
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

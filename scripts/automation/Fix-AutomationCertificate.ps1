@@ -65,7 +65,7 @@ param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\automation\Fix-AutomationCertificate-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
@@ -200,7 +200,7 @@ else
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

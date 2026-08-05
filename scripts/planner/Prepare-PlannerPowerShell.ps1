@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\planner\Prepare-PlannerPowerShell-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -106,7 +106,7 @@ Get-ChildItem -Path "$AlyaTemp\PlannerAdmin" -Recurse | Unblock-File
 
 Import-module "$AlyaTemp\PlannerAdmin\PlannerTenantAdmin.psm1"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

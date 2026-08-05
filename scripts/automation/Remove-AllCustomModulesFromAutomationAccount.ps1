@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\automation\Remove-AllCustomModulesFromAutomationAccount-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
@@ -139,7 +139,7 @@ function Delete-AllModules($psVersionSelector)
 Delete-AllModules -psVersionSelector "modules"
 Delete-AllModules -psVersionSelector "powershell7Modules"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

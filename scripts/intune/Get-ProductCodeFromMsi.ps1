@@ -69,7 +69,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Get-ProductCodeFromMsi-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # =============================================================
@@ -140,7 +140,7 @@ $MsiUpgradeCode = $xml.ApplicationInfo.MsiInfo.MsiUpgradeCode
 
 Remove-Item -Path $temp -Recurse -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

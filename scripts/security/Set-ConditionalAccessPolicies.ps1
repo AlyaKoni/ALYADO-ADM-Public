@@ -79,10 +79,10 @@ Param(
     [bool]$UpdateExistingPolicies = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-ConditionalAccessPolicies-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -717,7 +717,7 @@ foreach($policy in $msftPolicies)
 Write-Host "Disabling security defaults" -ForegroundColor $CommandInfo
 & "$AlyaScripts\tenant\Set-SecurityDefaultsDisabled.ps1"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

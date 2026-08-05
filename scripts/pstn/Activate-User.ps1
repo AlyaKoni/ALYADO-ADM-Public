@@ -86,10 +86,10 @@ if ($number.StartsWith("tel:"))
     exit
 }
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Activate-User-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -125,7 +125,7 @@ if ($type -eq "AutoAttendant" -or $type -eq "CallQueue")
     Grant-CsOnlineVoiceRoutingPolicy -Identity $upn -PolicyName $AlyaPstnVoiceRoutePolicyName
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Get-SmartScreenEvents-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -80,7 +80,7 @@ Write-Host "=====================================================`n" -Foreground
 Get-WinEvent -FilterHashtable @{ProviderName='Microsoft-Windows-SmartScreen'} | Select-Object -ExpandProperty Properties
 Write-Host "`n"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

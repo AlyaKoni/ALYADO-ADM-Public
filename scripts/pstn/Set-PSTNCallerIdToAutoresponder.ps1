@@ -72,10 +72,10 @@ Param(
     [bool]$enableUserOverride = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Set-PSTNCallerIdToAutoresponder-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -107,7 +107,7 @@ if (-Not $CallLineId)
 }
 Set-CsCallingLineIdentity -Identity $CallLineId.Identity -CallingIDSubstitute "Resource" -EnableUserOverride $enableUserOverride -ResourceAccount $attendant.ObjectId
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

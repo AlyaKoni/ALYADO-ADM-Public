@@ -72,10 +72,10 @@ Param(
     [string]$TemplateFile
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Import-PnPTemplate-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -104,7 +104,7 @@ Invoke-PnPSiteTemplate -Connection $siteCon -Path $TemplateFile
 
 Write-Host "Template imported to $outfile" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

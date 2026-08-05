@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-TenantDisplayName-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -127,7 +127,7 @@ if ($org.DisplayName -ne $AlyaCompanyNameFull) {
     Write-Host "Tenant display name is already set to '$AlyaCompanyNameFull'" -ForegroundColor $CommandInfo
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

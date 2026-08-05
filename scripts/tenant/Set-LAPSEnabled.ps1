@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-LAPSEnabled-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -97,7 +97,7 @@ if (-Not $policy.LocalAdminPassword.IsEnabled)
 }
 Get-MgBetaPolicyDeviceRegistrationPolicy | Where-Object { $_.Id -eq "deviceRegistrationPolicy" } | ConvertTo-Json -Depth 5
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

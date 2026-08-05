@@ -80,10 +80,10 @@ Param(
     [string]$CompanyName = $null
     )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-ProjectsTeam-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -407,7 +407,7 @@ if (-Not $msgs -or $msgs.Count -eq 0)
 }
 
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

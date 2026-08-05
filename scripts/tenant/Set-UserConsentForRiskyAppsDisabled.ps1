@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-UserConsentForRiskyAppsDisabled-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -101,7 +101,7 @@ else
     Write-Host "AllowUserConsentForRiskyApps was already disabled." -ForegroundColor $CommandSuccess
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

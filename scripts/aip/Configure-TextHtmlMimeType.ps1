@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Configure-TextHtmlMimeType-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -100,7 +100,7 @@ if (-Not $owapolicy)
 Write-Host "Configuring text/html mime type in OwaMailboxPolicy $($owapolicy.Identity)" -ForegroundColor $CommandInfo
 Set-OwaMailboxPolicy -AllowedMimeTypes @{remove = "text/html"} -BlockedMimeTypes @{remove = "text/html"} -ForceSaveMimeTypes @{add = "text/html"} -Identity $owapolicy.Identity
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

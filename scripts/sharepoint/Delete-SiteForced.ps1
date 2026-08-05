@@ -67,10 +67,10 @@ Param(
     [string]$siteUrl
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Delete-SiteForced-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -92,7 +92,7 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Deleting site $siteUrl" -ForegroundColor $CommandInfo
 Remove-SPODeletedSite -Identity $siteUrl
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

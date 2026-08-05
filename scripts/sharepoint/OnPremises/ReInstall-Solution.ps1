@@ -75,13 +75,13 @@ Param
     [string] $SolutionId = $null #Defaults to existing one or a dynamic selection
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\onprem\ReInstall-Solution-$($AlyaTimeString).log" | Out-Null
 
-#Checking modules
+# Checking modules
 Check-Module "Microsoft.SharePoint.PowerShell"
 Add-PSSnapin "Microsoft.SharePoint.PowerShell" -ErrorAction Stop
 
@@ -258,7 +258,7 @@ else
 # done 
 Write-Host "Done" -ForegroundColor $CommandInfo
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

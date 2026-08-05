@@ -73,10 +73,10 @@ Param(
     [string]$ExternalMarker = "Ext"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Prepare-GuestUsers-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -181087,7 +181087,7 @@ ae
 #Starting function
 Main
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

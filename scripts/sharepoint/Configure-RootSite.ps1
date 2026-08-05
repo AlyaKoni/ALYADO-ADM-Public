@@ -78,10 +78,10 @@ Param(
     [string]$CompanyName = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-RootSite-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -322,7 +322,7 @@ foreach($hubSiteI in ($hubSites | Sort-Object -Property title))
     }
 }
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

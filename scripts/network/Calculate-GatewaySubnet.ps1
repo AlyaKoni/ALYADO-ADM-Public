@@ -73,10 +73,10 @@ Param
     [string] $gatewayPrefixLength
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Calculate-GatewaySubnet-$((Get-Date).ToString("yyyyMMddHHmmss")).log" | Out-Null
 
 # https://gallery.technet.microsoft.com/scriptcenter/Address-prefix-calculator-a94b6eed
@@ -121,7 +121,7 @@ $dx = [string]$w2 + "." + [string]$x2 + "." + [string]$y2 + "." + [
 
 Write-Host "Your gateway address prefix is: " $dx 
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -74,10 +74,10 @@ Param(
     $ImageOption = "Gallery"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\prod\06_Update-SessionHosts-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -173,7 +173,7 @@ else
 # Starting session host creation
 & "$PSScriptRoot\06_Create-SessionHosts.ps1" -JoinOption $JoinOption -ImageOption $ImageOption
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

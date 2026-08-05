@@ -66,10 +66,10 @@ Param(
     $PassThrough = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-ServiceApplication-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -381,7 +381,7 @@ if ($PassThrough)
     return $OutputObject
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

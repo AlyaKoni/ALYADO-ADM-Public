@@ -61,10 +61,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-Subscriptions-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -106,7 +106,7 @@ foreach ($sub in $subs)
     $sub | ConvertTo-Json -Depth 10 | Out-File -FilePath "$SubscriptionRoot\$($sub.Name).json" -Encoding UTF8
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -65,7 +65,7 @@ Param(
 # Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Disable-CustomScriptsOnAllSites-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -121,7 +121,7 @@ foreach ($tsite in $sitesToProcess)
     }
 }
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

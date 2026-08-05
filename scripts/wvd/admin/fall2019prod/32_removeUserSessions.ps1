@@ -67,10 +67,10 @@ Param(
     [string]$UserUpn = "konrad.brunner@alyaconsulting.ch"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\32_removeUserSessions-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -146,7 +146,7 @@ foreach ($tenant in $tenants)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

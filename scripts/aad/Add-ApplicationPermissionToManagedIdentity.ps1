@@ -83,10 +83,10 @@ Param(
     [string]$PermissionToAssign = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Add-ApplicationPermissionToManagedIdentity-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -174,7 +174,7 @@ else
     Write-Host "Assignment already exists"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\source\Git-CheckIn-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 #Checkin
@@ -89,7 +89,7 @@ finally {
     $ErrorActionPreference = $errAct
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

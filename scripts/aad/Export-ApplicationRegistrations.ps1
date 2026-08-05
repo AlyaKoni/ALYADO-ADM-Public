@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Export-ApplicationRegistrations-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -102,7 +102,7 @@ foreach($application in $applications)
     $app | ConvertTo-Json -Depth 10 | Set-Content -Path "$AlyaData\aad\appRegistrations\$($app["displayName"])-$($app["appId"]).json"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

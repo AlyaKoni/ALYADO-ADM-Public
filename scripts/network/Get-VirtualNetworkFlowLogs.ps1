@@ -65,10 +65,10 @@ Param(
     [string]$StorageAccountName = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Get-VirtualNetworkFlowLogs-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -272,7 +272,7 @@ $reports | Out-GridView -Title "$($FlowLog.FlowLog.Name)"
 
 return $allLogs
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

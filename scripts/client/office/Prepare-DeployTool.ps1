@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Prepare-DeployTool-$($AlyaTimeString).log" | Out-Null
 
 Write-Host "Checking office deploy tool installation" -ForegroundColor $CommandInfo
@@ -159,7 +159,7 @@ if (-Not (Test-Path "$AlyaDeployToolRoot"))
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

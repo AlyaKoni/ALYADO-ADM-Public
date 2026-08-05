@@ -73,10 +73,10 @@ Param(
     [string]$rightDirectory
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\Diff-Directories-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -276,7 +276,7 @@ $diffDate | Out-GridView -Title "Files with different write date"
 $diffProps | Out-GridView -Title "Files with different properties"
 #>
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

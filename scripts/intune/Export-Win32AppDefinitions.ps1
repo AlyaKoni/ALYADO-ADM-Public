@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-Win32AppDefinitions-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -101,7 +101,7 @@ $win32Apps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path $filePa
 
 Write-Host "Win32 apps exported to: $filePath" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -84,10 +84,10 @@ Param(
     [bool]$askBeforeRoleRemoval = $true
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-Roles-$($AlyaTimeString).log" | Out-Null
 
 #Members
@@ -797,7 +797,7 @@ foreach($roleName in $allRoles.Keys.Trim())
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

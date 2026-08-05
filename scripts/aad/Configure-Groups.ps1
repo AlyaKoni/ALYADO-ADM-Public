@@ -74,10 +74,10 @@ Param(
     [bool]$dynamicMembershipDisabled = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-Groups-$($AlyaTimeString).log" | Out-Null
 
 #Members
@@ -451,7 +451,7 @@ foreach ($group in $GroupsToDisable)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

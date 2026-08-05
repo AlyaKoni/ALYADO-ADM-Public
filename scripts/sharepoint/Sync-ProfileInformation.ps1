@@ -66,10 +66,10 @@ Param(
     $overwriteExistingSPOUPAValue = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Sync-ProfileInformation-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -173,7 +173,7 @@ foreach ($AzureADUser in $AzureADUsers)
 
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

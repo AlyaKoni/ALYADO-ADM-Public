@@ -77,7 +77,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Set-TlsVersionOnAllStorageAccounts-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -147,7 +147,7 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
 
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

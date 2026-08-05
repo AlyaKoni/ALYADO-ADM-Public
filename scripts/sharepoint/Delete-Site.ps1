@@ -71,10 +71,10 @@ Param(
     [bool]$skipRecycleBin = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Delete-Site-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -103,7 +103,7 @@ if (-Not $site)
 # Deleting site
 Remove-PnPTenantSite -Connection $adminCon -Url $siteUrl -SkipRecycleBin:$skipRecycleBin -Force
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

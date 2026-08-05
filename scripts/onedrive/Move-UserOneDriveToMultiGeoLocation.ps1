@@ -93,10 +93,10 @@ Param(
     [string]$moveToSite = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\onedrive\Move-UserOneDriveToMultiGeoLocation-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -269,7 +269,7 @@ do
 $state = Get-SPOUserAndContentMoveState -UserPrincipalName $userUpn
 Write-Host "Final state: $($state.MoveState)"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

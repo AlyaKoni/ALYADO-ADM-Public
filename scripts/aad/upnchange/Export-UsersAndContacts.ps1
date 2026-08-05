@@ -64,13 +64,13 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Reading configuration
+# Reading configuration
 Import-Module "ActiveDirectory" -ErrorAction Stop
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\upnchange\Export-UsersAndContacts-$($AlyaTimeString).log" | Out-Null
 
 
@@ -98,7 +98,7 @@ Write-Host "Exporting users" -ForegroundColor $CommandInfo
 Get-ADobject -Filter {(ObjectClass -eq "User")} -Property * | Select-Object samAccountName,sn,givenname,userPrincipalName,DistinguishedName,objectguid,CN,DisplayName,Name,Mail,Mailnickname,telephonenumber,Description | Export-Csv "$AlyaData\aad\upnchange\exportUsers.csv" -NoTypeInformation -Encoding UTF8
 Write-Host " to $AlyaData\aad\upnchange\exportUsers.csv" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\00_prepareWvd-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -85,7 +85,7 @@ Write-Host " - Assign the TenantCreator application role to a user in your Azure
 Write-Host "   Enterprise applications->AllApplications->Srch: Windows Virtual Desktop->Windows Virtual Desktop (not client)->Users and groups" -ForegroundColor Red
 Write-Host "   Assign WVD Tenant Admins (Remove first existing one)" -ForegroundColor Red
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

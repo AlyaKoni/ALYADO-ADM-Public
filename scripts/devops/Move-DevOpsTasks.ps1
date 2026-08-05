@@ -78,10 +78,10 @@ Param(
     $toUser = "Konrad Brunner <konrad.brunner@alyaconsulting.ch>"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\devops\Move-DevOpsTasks-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -128,7 +128,7 @@ for ($i=1; $i -le 2100; $i++)
 Write-Host "Min work item $($wiMin)"
 Write-Host "Max work item $($wiMax)"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

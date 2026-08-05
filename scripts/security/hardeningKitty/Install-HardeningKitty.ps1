@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\data\security\hardeningKitty\Install-HardeningKitty-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # =============================================================
@@ -112,7 +112,7 @@ Function InstallHardeningKitty() {
 Set-Location $PSScriptRoot
 InstallHardeningKitty
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

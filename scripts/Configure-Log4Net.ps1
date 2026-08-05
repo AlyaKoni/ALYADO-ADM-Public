@@ -68,10 +68,10 @@ Param
 #Exporting dynamic module
 New-Module -Script {
 
-    #Reading configuration
+    # Reading configuration
     . $PSScriptRoot\..\01_ConfigureEnv.ps1
 
-    #Starting Transscript
+    # Starting Transcript
     Start-Transcript -Path "$($AlyaLogs)\scripts\Configure-Log4Net-$($AlyaTimeString).log" | Out-Null
 
     # Getting log4net if not already present
@@ -171,7 +171,7 @@ New-Module -Script {
     Export-ModuleMember -Function Configure-ConsoleAppender | Out-Null
     Export-ModuleMember -Function Get-Logger | Out-Null
     
-    #Stopping Transscript
+    # Stopping Transcript
     Stop-Transcript
 
 } | Out-Null

@@ -74,13 +74,13 @@ Param(
     $webApplications = @("https://webapp1.alyaconsulting.ch","https://webapp2.alyaconsulting.ch")
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Reading configuration
+# Reading configuration
 Add-PSSnapin Microsoft.SharePoint.PowerShell -ErrorAction Stop
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\upnchange\Change-UpnInSharePoint-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -141,7 +141,7 @@ $webApplications | Foreach-Object {
 $proxy = Get-SPServiceApplicationProxy | ?{$_.TypeName -eq 'User Profile Service Application Proxy'}
 Update-SPRepopulateMicroblogLMTCache -ProfileServiceApplicationProxy $proxy
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

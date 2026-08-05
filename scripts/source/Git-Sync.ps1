@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\source\Git-Sync-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 #Syncing
@@ -87,7 +87,7 @@ finally {
     $ErrorActionPreference = $errAct
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

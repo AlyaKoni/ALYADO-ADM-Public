@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Get-MyIspIp-$($AlyaTimeString).log" | Out-Null
 
 #Main
@@ -97,7 +97,7 @@ Write-Host "Your public ip: "
 Write-Host "$myIp" -ForegroundColor $CommandSuccess
 pause
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -71,10 +71,10 @@ Param(
     [int]$quotaInTB = 2
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\onedrive\Set-UserOneDriveStorageQuota-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -112,7 +112,7 @@ Write-Host "StorageQuota: $($site.StorageQuota)"
 Write-Host "StorageQuotaType: $($site.StorageQuotaType)"
 Write-Host "StorageQuotaWarningLevel: $($site.StorageQuotaWarningLevel)"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

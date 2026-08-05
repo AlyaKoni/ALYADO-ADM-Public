@@ -86,7 +86,7 @@ Param(
     [string]$delemitter = ","
 )
 
-#Starting Transscript
+# Starting Transcript
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 Start-Transcript -Path "$($PSScriptRoot)\Analyse-Dir4MigrationStandalone-$($AlyaTimeString).log" | Out-Null
 
@@ -750,7 +750,7 @@ Close-ExcelPackage $excel
 $excel = $SPShareAnalysisFiles | Export-Excel -Path $outputFile -WorksheetName "Files" -TableName "Files" -BoldTopRow -AutoFilter -FreezeTopRow -ClearSheet -PassThru
 Close-ExcelPackage $excel -Show
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -67,10 +67,10 @@ Param(
     [int]$TimeoutInMinutes = 240
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-ActivityBasedTimeoutPolicy-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -126,7 +126,7 @@ else
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Create-AzureDiagnosticLoggingStorageTest-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -138,7 +138,7 @@ if (-Not $StrgAccount)
 Write-Host "Checking storage lifecycle management" -ForegroundColor $CommandInfo
 & "$($AlyaScripts)\azure\Set-RetentionOnAllStorageAccounts.ps1" -processOnlyStorageAccountWithName $StorageAccountName -subscriptionName $AlyaSubscriptionNameTest
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

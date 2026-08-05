@@ -66,10 +66,10 @@ Param(
     [String]$HostName = "localhost"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Get-BitlockerRecoveryKey-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -104,7 +104,7 @@ $recoveryInformation | ForEach-Object {
     $volumeId.ToString()
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

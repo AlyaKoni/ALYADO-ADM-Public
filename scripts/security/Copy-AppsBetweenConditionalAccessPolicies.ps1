@@ -72,10 +72,10 @@ Param(
     [string]$condAccessRuleNameTo
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Copy-AppsBetweenConditionalAccessPolicies-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -120,7 +120,7 @@ $policyTo = Get-AzureADMSConditionalAccessPolicy | Where-Object { $_.displayName
 Write-Host "Copying apps from $($condAccessRuleNameFrom) to $($condAccessRuleNameTo)" -ForegroundColor $CommandInfo
 Set-AzureADMSConditionalAccessPolicy -PolicyId $policyTo.id -Conditions $policyFrom.Conditions
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

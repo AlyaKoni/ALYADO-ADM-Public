@@ -111,10 +111,10 @@ Param(
     [string]$o3 = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\03_StartMenu-$($AlyaTimeString).log" | Out-Null
 
 #Menu definition

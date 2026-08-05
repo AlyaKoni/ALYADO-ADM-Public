@@ -70,7 +70,7 @@ Param(
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Pscx"
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Create-AutopilotWinPEStick-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # =============================================================
@@ -510,7 +510,7 @@ if ((Test-Path "C:\AlyaADKpe"))
     cmd /c rmdir "C:\AlyaADKpe"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

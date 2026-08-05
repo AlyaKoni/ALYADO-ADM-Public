@@ -67,10 +67,10 @@ Param(
     $adminUsers = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Add-AdminsToAllTeams-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -136,7 +136,7 @@ foreach($Team in $Teams)
     
 }
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

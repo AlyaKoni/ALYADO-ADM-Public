@@ -66,10 +66,10 @@ Param(
     [String]$groupMailOrIdOrTitle
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Hide-GroupFromOutlookClients-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -127,7 +127,7 @@ else {
     Write-Host "Group '$($group.DisplayName)' is now hidden from outlook clients." -ForegroundColor $CommandSuccess
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

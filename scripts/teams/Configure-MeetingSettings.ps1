@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-MeetingSettings-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -88,7 +88,7 @@ Write-Host "Checking MeetingSettings" -ForegroundColor $CommandInfo
 $Configuration = Get-CsTeamsMeetingConfiguration
 Set-CsTeamsMeetingConfiguration -Identity $Configuration.Identity -LogoURL $AlyaLogoUrlRect -LegalURL $AlyaPrivacyUrl
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

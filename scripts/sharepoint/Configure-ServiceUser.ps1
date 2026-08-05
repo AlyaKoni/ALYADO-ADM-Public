@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-ServiceUser-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -225,7 +225,7 @@ if (-Not $actMemb)
     $actMemb = New-MgBetaRoleManagementDirectoryRoleAssignment -RoleDefinitionId $builtInRole.Id -PrincipalId $User.Id -DirectoryScopeId "/"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

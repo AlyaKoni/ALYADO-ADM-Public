@@ -71,10 +71,10 @@ Param(
     [int]$NumberOfInstances
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\12_AddLoadBalancer-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -283,7 +283,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
 
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

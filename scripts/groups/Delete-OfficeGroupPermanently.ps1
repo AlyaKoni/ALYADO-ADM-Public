@@ -68,15 +68,15 @@ Param(
     [bool]$ProcessSharePoint = $true
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\groups\Delete-OfficeGroupPermanently-$($AlyaTimeString).log" | Out-Null
 
 & "$($AlyaScripts)\exchange\Delete-OfficeGroupPermanently.ps1" -ProcessSharePoint $ProcessSharePoint
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -87,10 +87,10 @@ Param(
     [int]$targetLcid = 1031 # German (Germany)
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\Translate-PerformanceCounters-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -326,7 +326,7 @@ $translations.CounterMappings = $counterMaps
 #$translations.CounterMappings = $null
 $translations | Export-Clixml -Path "$($AlyaData)\client\PerformanceCounters.xml" -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

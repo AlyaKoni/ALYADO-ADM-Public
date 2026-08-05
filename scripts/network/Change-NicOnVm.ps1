@@ -94,10 +94,10 @@ Param(
     $DiagnosticStorageName = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Change-NicOnVm-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -365,7 +365,7 @@ if (-Not $vmFromFile) {
 Write-Host "Stopping VM" -ForegroundColor $CommandInfo
 Stop-AzVM -ResourceGroupName $ResourceGroupName -Name $VmName -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

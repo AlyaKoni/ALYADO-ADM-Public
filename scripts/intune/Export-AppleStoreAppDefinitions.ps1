@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-AppleStoreAppDefinitions-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # =============================================================
@@ -98,7 +98,7 @@ $filePath = "$AlyaData\intune\appleAppDefinitions.json"
 $appDefs | ConvertTo-Json -Depth 100 | Set-Content -Path $filePath -Encoding UTF8 -Force
 Write-Host "Apple Store app defintions exported to: $filePath" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

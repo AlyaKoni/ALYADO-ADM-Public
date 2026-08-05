@@ -67,13 +67,13 @@ Param(
     $samAccName = "konradbrunner"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Reading configuration
+# Reading configuration
 Import-Module "ActiveDirectory" -ErrorAction Stop
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\upnchange\Change-UpnInAdSingleUser-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -134,7 +134,7 @@ else
 }
 repadmin /syncall /AdeP
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -84,10 +84,10 @@ Param(
     [string[]]$localesToHandle = @("en-us","de-de")
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-AppCatalogSite-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -379,7 +379,7 @@ do {
     Read-Host "Press Enter to check again or Ctrl+C to stop waiting"
 } while ($true)
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

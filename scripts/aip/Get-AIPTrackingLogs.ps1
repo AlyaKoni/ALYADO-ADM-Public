@@ -66,10 +66,10 @@ Param(
     [string]$userEmail = "konrad.brunner@alyaconsulting.ch"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Get-AIPTrackingLogs-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -89,7 +89,7 @@ Write-Host "=====================================================`n" -Foreground
 
 Get-AipServiceTrackingLog -UserEmail $userEmail
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

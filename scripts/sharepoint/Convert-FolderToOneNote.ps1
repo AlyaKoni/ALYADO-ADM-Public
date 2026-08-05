@@ -67,10 +67,10 @@ Param(
     [string]$folderUrl
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Convert-FolderToOneNote-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -116,7 +116,7 @@ $item["HTML_x0020_File_x0020_Type"] = "Document.OneNote"
 $item.SystemUpdate()
 $folder.Context.ExecuteQuery()
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

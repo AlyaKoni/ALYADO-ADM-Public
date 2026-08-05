@@ -69,7 +69,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\20_ExtractAzure-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
@@ -92,7 +92,7 @@ Write-Host "Extracting DNS Zones" -ForegroundColor $CommandInfo
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
 & "$($AlyaScripts)\network\Extract-DnsZoneFiles.ps1"
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

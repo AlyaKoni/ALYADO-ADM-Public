@@ -80,10 +80,10 @@ Param(
     [string]$CompanyName = $null
     )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeam-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -450,7 +450,7 @@ $mgChannelFolder = Get-MgBetaTeamChannelFileFolder -TeamId $Team.GroupId -Channe
 $mgChannelFolder = (Split-Path -Path (Split-Path -Path $mgChannelFolder.WebUrl -Parent) -Parent) -replace "\\", "/"
 Write-Output "¬"+$mgChannelFolder+"¬"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

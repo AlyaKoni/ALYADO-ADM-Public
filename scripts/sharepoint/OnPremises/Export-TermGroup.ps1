@@ -73,13 +73,13 @@ Param(
     [switch]$termGroupName
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\onprem\Export-TermGroup-$($AlyaTimeString).log" | Out-Null
 
-#Checking modules
+# Checking modules
 Check-Module "Microsoft.SharePoint.PowerShell"
 Add-PSSnapin "Microsoft.SharePoint.PowerShell" -ErrorAction Stop
 
@@ -344,7 +344,7 @@ $grpFile = "$($AlyaData)\sharepoint\Export-TermGroup-$($termGroupName)-$($AlyaTi
 $resultInXml.Save($grpFile)
 Write-Host Finished -ForegroundColor $successColor
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

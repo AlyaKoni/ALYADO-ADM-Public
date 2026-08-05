@@ -68,10 +68,10 @@ Param(
     [string]$upn
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Export-ProfilePicture-$($AlyaTimeString).log" | Out-Null
 
 #Prepare PicDir
@@ -113,7 +113,7 @@ if ($photo)
     Get-MgBetaUserPhotoContent -UserId $user.Id -OutFile $picPath
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

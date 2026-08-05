@@ -15,7 +15,7 @@
   "developer": "OpenVPN Inc.",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "Install.intunewin",
+  "fileName": "openvpn-connect-3.9.0.5008_signed.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -32,7 +32,7 @@
     "upgradeCode": "{7A36BDBE-2D2D-4771-A8F9-0F28AF7F8A2D}",
     "productVersion": "3.6.0"
   },
-  "setupFilePath": "Install.cmd",
+  "setupFilePath": "openvpn-connect-3.9.0.5008_signed.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,

@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Get-AdvisorServiceRetirements-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
@@ -140,7 +140,7 @@ $recomContent.value[0].properties.supportedValues | Where-Object { $_.id -in $se
     ImpactedServices = $impacted
 } | ConvertTo-Json -Depth 10 | Out-File -FilePath $expFile -Encoding UTF8
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

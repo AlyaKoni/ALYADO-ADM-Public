@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Download-AdminTemplates-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # =============================================================
@@ -103,7 +103,7 @@ Remove-Item -Path "$dataRoot\$fileName" -Force
 
 Write-Host "Policies downloaded to $dataRoot" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

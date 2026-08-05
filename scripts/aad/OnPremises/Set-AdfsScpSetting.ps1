@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Set-AdfsScpSetting-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -100,7 +100,7 @@ pause
 
 Start-Process "$($AlyaData)\aad\OnPremises\AdfsScpSetting.reg"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

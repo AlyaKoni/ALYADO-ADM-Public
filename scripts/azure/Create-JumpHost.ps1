@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Create-JumpHost-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -337,7 +337,7 @@ $null = Set-AzResource -ResourceId $vm.Id -Tag $tags -ApiVersion "2022-03-01" -F
 
 #TODO Domain Join
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\data\security\hardeningKitty\Create-GroupPolicy-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Checking modules

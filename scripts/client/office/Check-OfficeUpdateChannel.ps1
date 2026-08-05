@@ -66,7 +66,7 @@ Param(
 # Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Check-OfficeUpdateChannel-$($AlyaTimeString).log" | Out-Null
 
 # Main
@@ -161,7 +161,7 @@ for ($i=0; $i -lt 2; $i++)
 Write-Host "Updating Office Applications..."
 & "C:\Program Files\Common Files\microsoft shared\ClickToRun\OfficeC2RClient.exe" /update user
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\planner\Export-PlannerConfiguration-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -92,7 +92,7 @@ Set-Content -Path $expFile -Value ($config | ConvertTo-Json -Depth 10)
 
 Write-Host "Planner configuration exported to $expFile" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

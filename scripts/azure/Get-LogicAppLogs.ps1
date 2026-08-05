@@ -81,7 +81,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Get-LogicAppLogs-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
@@ -271,7 +271,7 @@ foreach($Run in $SRuns)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

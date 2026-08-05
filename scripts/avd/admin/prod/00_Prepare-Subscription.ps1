@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\prod\Prepare-Subscription-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -164,7 +164,7 @@ if (-Not $resProv -or $resProv.Count -eq 0 -or $resProv[0].RegistrationState -ne
     } while ($resProv[0].RegistrationState -ne "Registered")
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

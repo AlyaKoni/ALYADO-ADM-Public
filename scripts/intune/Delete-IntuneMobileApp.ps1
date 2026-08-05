@@ -70,7 +70,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneMobileApp-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -118,7 +118,7 @@ Write-Host "Deleting app" -ForegroundColor $CommandInfo
 $uri = "/beta/deviceAppManagement/mobileApps/$appId"
 $appCat = Delete-MsGraphObject -Uri $uri
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

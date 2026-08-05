@@ -69,10 +69,10 @@ Param(
     $UPN2 = "first2.last2@alyaconsulting.ch"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Compair-Users-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -145,7 +145,7 @@ cls
 $UserComparison | Where-Object { $_.Comparison -eq "Different" } | Format-List
 
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

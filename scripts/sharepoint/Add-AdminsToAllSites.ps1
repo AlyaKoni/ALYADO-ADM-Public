@@ -75,7 +75,7 @@ Param(
 # Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-AdminsToAllSites-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -242,7 +242,7 @@ foreach ($site in $sitesToProcess)
     Set-PnPTenantSite -Connection $adminCon -Identity $site.Url -PrimarySiteCollectionAdmin $sprimaryAdmin -Owners $sowners
 }
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

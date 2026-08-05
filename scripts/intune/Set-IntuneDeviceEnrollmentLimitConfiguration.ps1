@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-IntuneDeviceEnrollmentLimitConfiguration-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -106,7 +106,7 @@ if ($deviceEnrollmentLimitConfiguration.AdditionalProperties.limit -eq 15) {
     $null = Update-MgBetaDeviceManagementDeviceEnrollmentConfiguration -DeviceEnrollmentConfigurationId $deviceEnrollmentLimitConfiguration.Id -BodyParameter $params
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

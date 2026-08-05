@@ -93,10 +93,10 @@ Param(
     [bool]$onlyShowValues = $true
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Set-DnsServerConditionalForwarderZonesMinProfile-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -220,7 +220,7 @@ foreach($domain in $allDomains)
     if (-Not $onlyShowValues) { Add-DnsServerConditionalForwarderZone -Name $domain -ReplicationScope "Forest" -MasterServers $forwarderIp -ForwarderTimeout $dnsTimeout }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

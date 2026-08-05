@@ -69,7 +69,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-IntuneDevices-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 #Members
@@ -126,7 +126,7 @@ foreach($device in $managedDevices)
 }
 $managedDevices | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path "$outputDirectory\managedDevices.json" -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

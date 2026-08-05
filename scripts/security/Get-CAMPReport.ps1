@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Get-CAMPReport-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -93,7 +93,7 @@ if (-Not $Context)
 Write-Host "Getting CAMP report" -ForegroundColor $CommandInfo
 Get-CAMPReport
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

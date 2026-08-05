@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\20_ExtractM365-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
@@ -73,7 +73,7 @@ Write-Host "Extracting SharePoint configuration" -ForegroundColor $CommandInfo
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
 & "$($AlyaScripts)\sharepoint\Export-Configuration.ps1"
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

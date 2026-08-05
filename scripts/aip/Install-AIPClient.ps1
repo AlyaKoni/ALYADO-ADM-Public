@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Install-AIPClient-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -95,7 +95,7 @@ if (-Not (Test-Path "$($AlyaTools)\Setups\AzInfoProtection_UL.exe"))
 Write-Host "Install now the AIP Client with the following command:" -ForegroundColor $CommandInfo
 Write-Host "$($AlyaTools)\Setups\AzInfoProtection_UL.exe /quiet ServiceLocation=$serviceLocation" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

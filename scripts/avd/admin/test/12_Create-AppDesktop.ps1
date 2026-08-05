@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\test\Create-AppDesktop-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -122,7 +122,7 @@ else
     Update-AzWvdDesktop -ResourceGroupName $ResourceGroupName -ApplicationGroupName $AppGroupName -Name $AppName -Description $AppDescription -FriendlyName $AppFriendlyName
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

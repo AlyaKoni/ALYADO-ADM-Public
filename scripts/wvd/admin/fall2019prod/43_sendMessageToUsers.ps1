@@ -71,10 +71,10 @@ Param(
     #[string]$MessageBody = "Bitte vor dem nach Hause gehen alles speichern. Wir mÃ¼ssen heute Abend die Hosts neu starten. Nicht gespeicherte Arbeit geht verloren!"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\43_sendMessageToUsers-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -151,7 +151,7 @@ foreach ($tenant in $tenants)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

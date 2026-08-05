@@ -72,10 +72,10 @@ Param(
     [bool]$AskForEachSite = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Set-SiteLogoOnAllSites-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -123,7 +123,7 @@ foreach($site in $sitesToProcess)
 $siteCon = LoginTo-PnP -Url $AlyaSharePointUrl
 Set-PnpWeb -Connection $siteCon -SiteLogoUrl $LogoUrl
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

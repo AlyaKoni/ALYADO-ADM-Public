@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Enable-EmailAccountMatch-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -100,7 +100,7 @@ else {
     Write-host "Require account match was alreadyset to '$true'"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

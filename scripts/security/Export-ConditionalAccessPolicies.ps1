@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Export-ConditionalAccessPolicies-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -114,7 +114,7 @@ foreach($policy in $policies)
     $exPolicy | Set-Content -Path "$AlyaData\security\conditionalAccessPolicies\$($policy.displayName).json" -Encoding $AlyaUtf8Encoding -Force
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

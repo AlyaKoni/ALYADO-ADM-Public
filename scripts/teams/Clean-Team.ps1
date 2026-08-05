@@ -68,10 +68,10 @@ Param(
     [string]$TitleAndGroupName
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Clean-Team-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -102,7 +102,7 @@ if (-Not $Team)
 Write-Host "Deleting team" -ForegroundColor $CommandInfo
 Remove-Team -GroupId $Team.GroupId
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

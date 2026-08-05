@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Get-DataversOrganization-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -94,7 +94,7 @@ Write-Host "Geo                        : $($connection.OrganizationDetail.Geo)"
 Write-Host "State                      : $($connection.OrganizationDetail.State)"
 Write-Host "CurrentAccessToken         : ******" #$connection.CurrentAccessToken
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

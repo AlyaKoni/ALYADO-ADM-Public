@@ -78,7 +78,7 @@ if ($doLogging)
 		New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 	}
 
-	#Starting Transcript
+	# Starting Transcript
 	Start-Transcript -Path "$($logDir)\Check-CA2023UpdateStandalone-$($AlyaTimeString).log" | Out-Null
 }
 

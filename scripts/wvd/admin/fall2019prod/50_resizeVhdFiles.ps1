@@ -65,10 +65,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\50_resizeVhdFiles-$($AlyaTimeString).log" | Out-Null
 
 # Main
@@ -91,7 +91,7 @@ exit
 }
 Remove-Item -Path $tmp.FullName -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

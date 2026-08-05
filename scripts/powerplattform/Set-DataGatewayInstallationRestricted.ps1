@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Set-DataGatewayInstallationRestricted-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -96,7 +96,7 @@ if ($pol.Policy -ne "Restricted" -and $pol.Policy -ne "EnterpriseInstallRestrict
     Write-Host "Add allowed gateway installers with Set-DataGatewayInstaller" -ForegroundColor $CommandWarning
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

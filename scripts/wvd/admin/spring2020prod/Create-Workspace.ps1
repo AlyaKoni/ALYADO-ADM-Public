@@ -78,10 +78,10 @@ Param(
     [string]$WorkspaceFriendlyName = "ALYA Data Sience"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\spring2020prod\Create-Workspace-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -131,7 +131,7 @@ if (-Not $WrkSpc)
         -Tag @{displayName=$WorkspaceFriendlyName;ownerEmail=$Context.Account.Id}
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

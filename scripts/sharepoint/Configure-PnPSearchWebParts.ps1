@@ -76,10 +76,10 @@ Param(
     [string]$siteLocale = "de-CH"
     )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-PnPSearchWebParts-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -240,7 +240,7 @@ catch {
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -73,10 +73,10 @@ Param(
     [bool]$AskForEachTeam = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Set-TeamLogoOnAllTeams-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -130,7 +130,7 @@ if ($removeLogoFile)
     Remove-Item -Path $logoFile -ErrorAction SilentlyContinue
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -72,10 +72,10 @@ Param(
     $picDir = $null #Defaults to "$($AlyaData)\aad\ProfilePictures"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Import-ProfilePictures-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -117,7 +117,7 @@ foreach($pic in $pics)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

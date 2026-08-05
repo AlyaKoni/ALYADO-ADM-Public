@@ -67,10 +67,10 @@ Param(
     [string]$userUpn = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Disable-MfaForUser-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -115,7 +115,7 @@ if (-Not $member)
     Add-AzADGroupMember -TargetGroupObjectId $noMfaGrp.Id -MemberObjectId $noMfaUsr.Id
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

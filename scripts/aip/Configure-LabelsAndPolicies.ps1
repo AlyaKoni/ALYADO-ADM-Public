@@ -75,10 +75,10 @@ Param(
     [switch]$DisablingUnusedLabels = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Configure-LabelsAndPolicies-$($AlyaTimeString).log" | Out-Null
 
 #Members
@@ -541,7 +541,7 @@ foreach ($actTemplate in $actTemplates)
     }
 }
 #>
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

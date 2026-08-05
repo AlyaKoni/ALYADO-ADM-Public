@@ -78,10 +78,10 @@ Param(
     $StorageAccountName = $null # Public Storage by default
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\SyncFrom-AzureFileStorageBlob-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -205,7 +205,7 @@ foreach($SourceBlob in $SourceBlobs)
 
 #TODO Clean part
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

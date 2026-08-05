@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Get-ExtensionAttributeStatistic-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -138,7 +138,7 @@ Write-Host "  extensionAttribute13: $($extensionAttribute13)"
 Write-Host "  extensionAttribute14: $($extensionAttribute14)"
 Write-Host "  extensionAttribute15: $($extensionAttribute15)"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

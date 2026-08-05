@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Get-AdminConsentsFromManagedIdentities-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -131,7 +131,7 @@ if (-Not (Test-Path "$AlyaData\security"))
 }
 $assignedRoles.GetEnumerator() | Select-Object -Property Type, App, ToApp, Role | Export-Csv -Path "$AlyaData\security\consentsFromManagedIdentities.csv" -IncludeTypeInformation:$false -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

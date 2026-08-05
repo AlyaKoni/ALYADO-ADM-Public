@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\automation\Allow-AutomationAccountOnNewSubscription-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
@@ -153,7 +153,7 @@ Get-AzSubscription | Foreach-Object {
 #TODO
 Write-Host "Please update the runbook 4 with the new subscription id" -ForegroundColor Cyan
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

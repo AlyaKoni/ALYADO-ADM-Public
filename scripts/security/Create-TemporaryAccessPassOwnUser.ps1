@@ -67,10 +67,10 @@ Param(
     [string]$upn
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Create-TemporaryAccessPassOwnUser-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -102,7 +102,7 @@ $body = "{`"isUsableOnce`":true}"
 $tapResponse = Invoke-MgRestMethod -Uri $tapUri -Body $body -Method POST
 $tapResponse.temporaryAccessPass
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

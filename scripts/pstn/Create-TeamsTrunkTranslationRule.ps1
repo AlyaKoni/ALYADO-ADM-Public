@@ -89,7 +89,7 @@ Param(
 # Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\pstn\Create-TeamsTrunkTranslationRule-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -176,7 +176,7 @@ if ($existingTrunkTranslationsCount -gt 0) {
     Set-CsOnlinePSTNGateway @params
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

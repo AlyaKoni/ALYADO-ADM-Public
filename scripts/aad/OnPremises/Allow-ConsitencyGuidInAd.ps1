@@ -69,10 +69,10 @@ Param(
     $Account = "ALYACONSULTING\MSOL_ffffffffffff"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Allow-ConsitencyGuidInAd-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -92,7 +92,7 @@ Write-Host "=====================================================`n" -Foreground
 $cmd = "dsacls ‘$($DN)‘ /I:S /G ‘`"$($Account)`":RPWP;`"mS-DS-ConsistencyGuid`";user’"
 Invoke-Expression $cmd
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

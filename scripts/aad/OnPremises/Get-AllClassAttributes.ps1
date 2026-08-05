@@ -71,10 +71,10 @@ Param(
     [bool]$removeAttributesBASEONLY = $true
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Get-AllClassAttributes-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -126,7 +126,7 @@ else
     $ClassAttributes | Sort-Object | Get-Unique
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

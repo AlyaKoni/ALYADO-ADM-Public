@@ -65,10 +65,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Export-UsersAndContacts-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -93,7 +93,7 @@ Get-ADobject -Filter {(ObjectClass -eq "User")} -Property * | `
     Select-Object samAccountName,sn,givenname,userPrincipalName,DistinguishedName,objectguid,CN,DisplayName,Name,Mail,Mailnickname,telephonenumber,Description | `
     Export-Csv "$($AlyaData)\aad\OnPremises\Users.csv" -NoTypeInformation -Encoding UTF8 -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

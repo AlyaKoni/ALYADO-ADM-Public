@@ -75,10 +75,10 @@ Param
     [switch] $HKLM = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Set-O365AndAzureTrustedSites-$((Get-Date).ToString("yyyyMMddHHmmss")).log" | Out-Null
 
 #TODO local URLs in Intranet Zone dword:00000001
@@ -109,7 +109,7 @@ $regStr | Set-Content -Path $regFile -Force
 Write-Host "Importing registry file '$($AlyaData)\client\os'" -ForegroundColor $CommandInfo
 & $regFile
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

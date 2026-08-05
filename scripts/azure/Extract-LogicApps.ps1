@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-LogicApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Checking modules
@@ -110,7 +110,7 @@ foreach($logicApp in $LogicApps)
     if ($logicApp.Parameters -and $logicApp.Parameters.'$connections' -and $logicApp.Parameters.'$connections'.Value) { $logicApp.Parameters.'$connections'.Value.ToString() | Set-Content -Path "$LogicAppRoot\$($logicAppName)_Connections.json" -Force -Encoding UTF8 }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

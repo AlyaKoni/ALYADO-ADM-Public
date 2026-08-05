@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-IntuneBranding-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -226,7 +226,7 @@ if (-Not [string]::IsNullOrEmpty($intuneBrandId)) {
     pause
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -74,10 +74,10 @@ Param(
     $UserHomePath = "\\server\e$\userHomes"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\Set-UserHomeAccess-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -144,7 +144,7 @@ foreach($dir in $dirs)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

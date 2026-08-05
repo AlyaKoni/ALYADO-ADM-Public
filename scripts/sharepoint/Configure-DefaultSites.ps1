@@ -76,10 +76,10 @@ Param(
     [string]$hubSitesConfigurationFile = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\data\sharepoint\Configure-DefaultSites-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -178,7 +178,7 @@ foreach($siteDef in $siteStrcuture)
         -allowSiteScripts $false#>
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

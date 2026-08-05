@@ -74,10 +74,10 @@ if ($ConfigFile -eq "Autoscaling_Config.json")
 
 $RootDir = Split-Path $script:MyInvocation.MyCommand.Path
 
-#Reading configuration
+# Reading configuration
 . $RootDir\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\autoscale\ScaleHostPool_MS-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -1274,7 +1274,7 @@ if ($HostpoolInfo.LoadBalancerType -eq "BreadthFirst") {
   Write-Host "End WVD Tenant BreadthFirst Scale Optimization."
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

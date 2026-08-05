@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\30_ExportFavoritesHtml-$($AlyaTimeString).log" | Out-Null
 
 #Main
@@ -180,7 +180,7 @@ $Global:fileContent | Set-Content -Path "$AlyaData\Favorites.html"
 Write-Host "Favorites exported to $AlyaData\Favorites.html"
 notepad "$AlyaData\Favorites.html"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

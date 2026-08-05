@@ -66,10 +66,10 @@ Param(
     [string]$bannedPasswordFile = $null # Defaults to $AlyaScripts\security\CustomBannedPasswordList.txt
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-BannedPasswords-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -152,7 +152,7 @@ Write-Warning "Setting 'BannedPasswordList' to content from banned password file
 
 Update-MgBetaDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

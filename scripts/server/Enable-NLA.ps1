@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\server\Disable-NLA-$($AlyaTimeString).log" | Out-Null
 
 #Main
@@ -78,7 +78,7 @@ Set-ItemProperty -Path $path -Name UserAuthentication -Type DWord -Value 1
 Set-ItemProperty -Path $path -Name fAllowSecProtocolNegotiation -Type DWord -Value 1
 Write-Output "Restart the VM for the change to take effect." -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

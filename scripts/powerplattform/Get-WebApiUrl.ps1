@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Get-WebApiUrl-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -116,7 +116,7 @@ $headers = @{
 $envs = Invoke-RestMethod -Headers $headers -Uri $uri -UseBasicParsing -Method "GET" -ContentType "application/json"
 
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

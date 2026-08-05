@@ -95,10 +95,10 @@ Param(
     [switch] $NoO365 = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Sparrow-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -569,7 +569,7 @@ Get-AzureSPAppRoles -AzureEnvironment $AzureEnvironment -ExportDir $ExportDir -V
 New-ExcelFromCsv -ExportDir $ExportDir
 Write-Host "Exported excel $((Join-Path $ExportDir 'Summary_Export.xlsx'))" -ForegroundColor $CommandInfo
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

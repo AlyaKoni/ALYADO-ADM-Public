@@ -69,10 +69,10 @@ Param(
     [string]$permissionAppId = "00000002-0000-0000-c000-000000000000" #Azure Active Directory Graph API
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AllAppsByAppPermission-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -246,7 +246,7 @@ Write-Host "Non Microsoft Apps with Application Permission Grants..." -Foregroun
 $script:NonMSAppsApplication.Values.DisplayName
 $script:NonMSAppsApplication.Values
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

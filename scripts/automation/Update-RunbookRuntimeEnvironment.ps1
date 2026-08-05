@@ -30,25 +30,34 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    19.05.2026 Konrad Brunner       Initial Version
+    03.08.2026 Konrad Brunner       Initial Version
 
 #>
 
 <#
 .SYNOPSIS
-Enables Azure virtual network flow logs.
+Updates Runbook Automation runtime environments to their latest or defined versions.
 
 .DESCRIPTION
-The Enable-VirtualNetworkFlowLogs.ps1 script automates the enablement of Azure virtual network flow logs. It checks for required modules, logs into Azure, ensures the Microsoft.Network provider is registered, and verifies the resource group and virtual network flow log configuration. The script creates missing flow logs and ensures the network environment is consistent with defined Alya configuration standards.
+The Update-RunbookRuntimeEnvironment.ps1 script connects to an Azure Automation Account, retrieves all runtime environments, and sets latest or specified on all or specified runbook.
+
+.PARAMETER Language
+Specifies the language of the runtime environment to process. Defaults to "PowerShell".
+
+.PARAMETER ProcessOnlyRunbook
+Specifies a single runbook name to process. If not provided, all runbooks are processed.
+
+.PARAMETER NewRuntimeEnvironment
+The new runtime environment to set for the runbook. Defaults to latest if omitted.
 
 .INPUTS
-None.
+None. The script does not accept pipeline input.
 
 .OUTPUTS
-The script produces log files in the AlyaLogs directory and modifies or creates Azure networking resources as necessary. It outputs progress and status messages to the console.
+None. The script writes progress and status information to the host and log file but does not produce objects to the pipeline.
 
 .EXAMPLE
-PS> .\Enable-VirtualNetworkFlowLogs.ps1
+PS> .\Update-RunbookRuntimeEnvironment.ps1 -Language "PowerShell"
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -59,38 +68,49 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [bool]$WithTrafficAnalytics = $true,
-    [int]$TrafficAnalyticsInterval = 60,
-    [string]$LogAnaWrkspcResourceGroupName = $null,
-    [string]$LogAnaWrkspcName = $null
+    [string]$Language = "PowerShell",
+    [string]$ProcessOnlyRunbook = $null,
+    [string]$NewRuntimeEnvironment = $null,
+    [string]$ResourceGroupName = $null,
+    [string]$AutomationAccountName = $null,
+    [string]$SubscriptionName = $null
 )
 
-# Reading configuration
+# Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 # Starting Transcript
-Start-Transcript -Path "$($AlyaLogs)\scripts\network\Enable-VirtualNetworkFlowLogs-$($AlyaTimeString).log" | Out-Null
+Start-Transcript -Path "$($AlyaLogs)\scripts\automation\Update-RunbookRuntimeEnvironment-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
-if (-not $LogAnaWrkspcResourceGroupName) { $LogAnaWrkspcResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAuditing)" }
-if (-not $LogAnaWrkspcName) { $LogAnaWrkspcName = "$($AlyaNamingPrefix)loga$($AlyaResIdLogAnalytics)" }
+if ([string]::IsNullOrEmpty($ResourceGroupName))
+{
+    $ResourceGroupName = "$($AlyaNamingPrefix)resg$($AlyaResIdAutomation)"
+}
+if ([string]::IsNullOrEmpty($AutomationAccountName))
+{
+    $AutomationAccountName = "$($AlyaNamingPrefix)aacc$($AlyaResIdAutomationAccount)"
+}
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "Az.Network"
-Install-ModuleIfNotInstalled "Az.ManagedServiceIdentity"
+Install-ModuleIfNotInstalled "Az.Automation"
 
 # Logins
-LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+if ([string]::IsNullOrEmpty($SubscriptionName))
+{
+    $SubscriptionName = $AlyaSubscriptionName
+}
+LoginTo-Az -SubscriptionName $SubscriptionName
 
 # =============================================================
 # Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Network | Configure-VirtualNetworkFlowLogs | Azure" -ForegroundColor $CommandInfo
+Write-Host "Automation | Update-RunbookRuntimeEnvironment | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Getting context
@@ -101,86 +121,67 @@ if (-Not $Context)
     Exit 1
 }
 
-if ($WithTrafficAnalytics)
+# Checking ressource group
+Write-Host "Checking ressource group for automation account" -ForegroundColor $CommandInfo
+$ResGrp = Get-AzResourceGroup -Name $ResourceGroupName -ErrorAction SilentlyContinue
+if (-Not $ResGrp)
 {
-    # Checking log analytics workspace
-    Write-Host "Checking log analytics workspace $LogAnaWrkspcName" -ForegroundColor $CommandInfo
-    $LogAnaWrkspc = Get-AzOperationalInsightsWorkspace -ResourceGroupName $LogAnaWrkspcResourceGroupName -Name $LogAnaWrkspcName -ErrorAction SilentlyContinue
-    if (-Not $LogAnaWrkspc)
-    {
-        throw "Log analytics workspace $LogAnaWrkspcName does not exist. Please create it first"
-    }
+    throw "Ressource Group not found"
 }
 
-# Getting existing flow logs
-Write-Host "Getting existing flow logs" -ForegroundColor $CommandInfo
-$subs = Get-AzSubscription -ErrorAction SilentlyContinue
-$FlowLogs = @()
-foreach($sub in $subs)
+# Checking automation account
+Write-Host "Checking automation account" -ForegroundColor $CommandInfo
+$AutomationAccount = Get-AzAutomationAccount -ResourceGroupName $ResourceGroupName -Name $AutomationAccountName -ErrorAction SilentlyContinue
+if (-Not $AutomationAccount)
 {
-    Write-Host "Processing subscription $($sub.Name) ($($sub.Id))" -ForegroundColor $MenuColor
-    $null = Select-AzSubscription -SubscriptionId $sub.Id -WarningAction SilentlyContinue
-    $watchers = Get-AzNetworkWatcher
-    foreach($watcher in $watchers)
+    throw "Automation Account not found"
+}
+$AutomationAccountId = "/subscriptions/$($AutomationAccount.SubscriptionId)/resourceGroups/$($AutomationAccount.ResourceGroupName)/providers/Microsoft.Automation/automationAccounts/$AutomationAccountName"
+
+# Checking runtime environments
+Write-Host "Checking runtime environments" -ForegroundColor $CommandInfo
+$reqUrl = "$($AutomationAccountId)/runtimeEnvironments?api-version=2024-10-23"
+$resp = Invoke-AzRestMethod -Method Get -Path $reqUrl
+if ($resp.StatusCode -ge 400)
+{
+    throw "Error getting runtime environments: $($resp.Content)"
+}
+$runEnvs = $resp.Content | ConvertFrom-Json
+if (-Not $runEnvs)
+{
+    throw "Can't get runtime environments"
+}
+if (-Not $NewRuntimeEnvironment)
+{
+    $NewRuntimeEnvironment = ($runEnvs.value | Where-Object { $_.properties.runtime.language -eq $Language } | Sort-Object { $_.properties.runtime.version } -Descending | Select-Object -First 1).name
+}
+$RuntimeEnvironment = $runEnvs.value | Where-Object { $_.name -eq $NewRuntimeEnvironment } | Select-Object -First 1
+
+$Runbooks = Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $AutomationAccountName -ErrorAction SilentlyContinue
+$Runbooks = $Runbooks | Where-Object { $_.RunbookType -eq $Language }
+foreach ($Runbook in $Runbooks)
+{
+    if ($ProcessOnlyRunbook -and $ProcessOnlyRunbook -ne $Runbook.Name)
     {
-        Write-Host "  Processing network watcher $($watcher.Name)" -ForegroundColor $CommandInfo
-        $flowLogs = Get-AzNetworkWatcherFlowLog -NetworkWatcher $watcher -ErrorAction SilentlyContinue
-        foreach ($flowLog in $flowLogs)
-        {
-            $FlowLogs += [pscustomobject]@{
-                Subscription = $sub
-                NetworkWatcher = $watcher
-                FlowLog = $flowLog
-            }
+        continue
+    }
+    Write-Host "Updating runbook '$($Runbook.Name)' to use runtime environment '$($RuntimeEnvironment.name)' (version $($RuntimeEnvironment.properties.runtime.version))" -ForegroundColor $CommandInfo
+    # Update the runbook to use the new runtime environment
+    $reqUrl = "$($AutomationAccountId)/runbooks/$($Runbook.Name)?api-version=2024-10-23"
+    $body = @{
+        properties = @{
+            runtimeEnvironment = $RuntimeEnvironment.name
         }
     }
-}
-$FlowLogsEnabled = $FlowLogs | Where-Object { $_.FlowLog.Enabled -eq $true }
-$FlowLogsDisabled = $FlowLogs | Where-Object { $_.FlowLog.Enabled -eq $false }
-
-# Flow logs already enabled
-Write-Host "Flow logs already enabled:" -ForegroundColor $CommandInfo
-$cnt = 0
-$FlowLogsEnabled | ForEach-Object {
-    $cnt++
-    Write-Host "$($cnt): $($_.FlowLog.Name)"
-}
-
-# Flow logs disabled
-Write-Host "Flow logs disabled:" -ForegroundColor $CommandInfo
-$cnt = 0
-$FlowLogsDisabled | ForEach-Object {
-    $cnt++
-    Write-Host "$($cnt): $($_.FlowLog.Name)"
-}
-$num = Read-Host "Press enter the flow log number to enable (or press enter to exit)"
-
-if ([string]::IsNullOrEmpty($num))
-{
-    Write-Host "No flow log selected. Exiting."
-    Exit 0
-}
-
-$FlowLogToEnable = $FlowLogsDisabled[$num - 1]
-
-Write-Host "Enabling flow log $($FlowLogToEnable.FlowLog.Name)" -ForegroundColor $MenuColor
-$null = Select-AzSubscription -SubscriptionId $FlowLogToEnable.Subscription.Id -WarningAction SilentlyContinue
-
-if ($WithTrafficAnalytics)
-{
-    Set-AzNetworkWatcherFlowLog -NetworkWatcher $FlowLogToEnable.NetworkWatcher -Name $FlowLogToEnable.FlowLog.Name `
-        -Enabled $true -TargetResourceId $FlowLogToEnable.FlowLog.TargetResourceId -StorageId $FlowLogToEnable.FlowLog.StorageId `
-        -EnableRetention $FlowLogToEnable.FlowLog.RetentionPolicy.Enabled -RetentionPolicyDays $FlowLogToEnable.FlowLog.RetentionPolicy.Days -FormatVersion ($FlowLogToEnable.FlowLog.FormatText | ConvertFrom-Json).Version `
-        -UserAssignedIdentityId $FlowLogToEnable.FlowLog.Identity.UserAssignedIdentities.Keys -Force `
-        -EnableTrafficAnalytics:$true -TrafficAnalyticsWorkspaceId $LogAnaWrkspc.ResourceId -TrafficAnalyticsInterval $TrafficAnalyticsInterval
-}
-else
-{
-    Set-AzNetworkWatcherFlowLog -NetworkWatcher $FlowLogToEnable.NetworkWatcher -Name $FlowLogToEnable.FlowLog.Name `
-        -Enabled $true -TargetResourceId $FlowLogToEnable.FlowLog.TargetResourceId -StorageId $FlowLogToEnable.FlowLog.StorageId `
-        -EnableRetention $FlowLogToEnable.FlowLog.RetentionPolicy.Enabled -RetentionPolicyDays $FlowLogToEnable.FlowLog.RetentionPolicy.Days -FormatVersion ($FlowLogToEnable.FlowLog.FormatText | ConvertFrom-Json).Version `
-        -UserAssignedIdentityId $FlowLogToEnable.FlowLog.Identity.UserAssignedIdentities.Keys -Force `
-        -EnableTrafficAnalytics:$false
+    $resp = Invoke-AzRestMethod -Method Patch -Path $reqUrl -Payload ($body | ConvertTo-Json -Depth 10)
+    if ($resp.StatusCode -ge 400)
+    {
+        Write-Error "Error updating runbook '$($Runbook.Name)': $($resp.Content)" -ErrorAction Continue
+    }
+    else
+    {
+        Write-Host "Runbook '$($Runbook.Name)' updated successfully." -ForegroundColor $CommandSuccess
+    }
 }
 
 # Stopping Transcript
@@ -189,8 +190,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCrVsCGqPZGrx/Z
-# W8XPAB9eMnB/4F71rFZIxLWwFhf11aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDRQG9UG1eVmLtE
+# PJyM9BV3FaE+5Si1s8IBS4IFTa+NNaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -257,10 +258,10 @@ Stop-Transcript
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -268,17 +269,17 @@ Stop-Transcript
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -288,39 +289,39 @@ Stop-Transcript
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILAPXFc7
-# 1rR92POCLx5KIfteycIdHExyDJgWTVtcHpTbMA0GCSqGSIb3DQEBAQUABIICAEl4
-# 4WqirSCsbvzCyinPXbgX36aVHyg/bvp58SywTAKuXymBd0NjqJMzdq3R7qRJ170v
-# LwlBFyo8J/uu2iqKKpLUrx6QaHakfiZbGXMvY448L1YY1erR7/84O17HzQhbos35
-# acNOLU9cQe+wL5aJCQLW+UmIxDNtPsxaO8b8iKkHelLMNIMKV0DjVlG9ssqbwmmC
-# ACKFNO+5OLvLDx73NjWhSoEIVmhzIKx1P31H3WRU6YOlcxztBiq4zONuDChsRNd5
-# jCElmHVyrx21vtjr3rUFv0pWUdNlI3rTqHQx79taZkeq+PjDg81yLBdwUP2WEI1u
-# egd8HimzDW/ycGkfndpLTT4rRGV3nTYqz7IyEeeCS3CPZ0lOx9QFDK6yeyxni7BN
-# JeCN0tjoN9DaTSTofk5CC4UHjaxygx6cpNmeIvTJGQb8InQZb5nQgqqW5/fZv3LL
-# vsM5cFlCTl/JmZ3BAqURe229yoLfuGqzv9n19MF8eG6mRrvgFpLPnWdTzN74a/s/
-# FvqdAhtLK9h/XZgAUAYAJPmXNvUQXvezO4eftzZJpfq1oDB6sAZOf/3JYMej5dgL
-# fvM4HlaFcJrCk82YprLkrbAcbYAw7KNxXoEp5Hro9O7crHvryMZ+gYu5diDtYzO/
-# OqPt9kRGP/DZ3oN6YQ76eLnQ52dxfNc9+5LyV5/boYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGrtCL9K
+# 3/HQjVSqF5jX1DtPBZ7qD+yBXaP4gXYi7rABMA0GCSqGSIb3DQEBAQUABIICAFxl
+# j2iYrCqbJZZCnKdOxkpphTFX+lnxgL6BymO0pWjPxci51hBxUVZ7/MTDGCytxMbm
+# 5Si5nAnVU1mJAlpHf5aGWUdC+xpZf0eub4srCED0Olffa05eomkCaApT0DewJa4V
+# PyFzxqpKGUoY7oWKp2X7+XiRK0IH+eNDxtM58xmy5423s7skx3TYO4ZI0+mhVzY8
+# U6KbyF8hSjdU57zIo/iHO3LZyZ+e6RDvIGVDv1+CmWgaYYQQmvgEYhkHyYx9adb4
+# nxUW7WY3+Ocln6TVX4EVVysFEjZERuPbkNezMo19SiIgtMBEhVgPUApfrIGQsnzR
+# 1H1FjlZXW+yH1gOah+anGaNxdtshvp8/XI+cO7qAzMrQ3B4lRC93lZSwgmcO2FPo
+# GD6VxwKqCw5wWuaS+noASlZgrtUJVk48uVfc7USgLARJuHqN3Yq3BLPxAjNyM2U1
+# SqZ+Uyp0/LKZrjjhBid4UOkHu2ZtUPHguTSXTEvowSP8Bis1jU4Jv6VwnKpSgieK
+# rHT7W5LjBZAzKP5+L8ZXF7mW+r6lhh7vXA0CFObY0mHAUcBH8thPqzaAWOWS4Oaz
+# SxZpav3wgYfKW3vu74QpZgzo1TA1M7SNPlyCGzeiFXII0mEGCqxtlfcGyYrIr0tg
+# mRD07I/v4g9Y25NNoBBfJjBk1tpQL21EFWVHfshPoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCD/BynXY8HvSjI0Fc1qGlZG0fKICmMe180yQ2XIgE973gIUFGC7
-# 3+EcwV4guj3RhVpL7Smgo8kYDzIwMjYwNTI5MTIwMjMyWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCBk8GuDlpCQbY14ocVprfMMWElJMDM173TI1YAvMSSAlgIUZ1yV
+# QOVmWTpIeKve1ykfPcz9b/cYDzIwMjYwODAzMTAwNzU0WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -463,18 +464,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDCNH17HapKR6xdKjPHR5LFJ0Hj92jbLMuNIrlIf88pLDGz41ppbIdS/uejf
-# sBUHxE4wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCrtgRfSo4mMR54fTHKPMTD0Fm+f+zDTmHeyxX98DQx6GgY/sl5JbBavE1H
+# o+hDq2YwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAFNHZyDGAtKMGa4VgXeHPg7TfmTbTOt9A7HUCM+wWoYEa
-# B9bvCRT8KZPHlkjYSYijbh/NaIF7VsGUvmSQqMKiYRrrNoWUXuSu3tcHULHhCmRP
-# Cbv3bi4Ox79/beF0hV6hHzAguoM8kXDuQDw8eLjSPhDaYQjm1ZDPLrdUb1wMD6mr
-# 8migwL21K27yP+Y9p9KrKvHS9gRweb/HNddUUbkcNo+Ix+mpao7LQN1+lr/lOjmf
-# HyBkJlVpiSFTqYSDtxb0wSYYj+rqrAUiW7dOP2FwI+z1kcqYj8MDYHFysV2pzh+X
-# moSXhQMdeRssy+iOtFRmZLIIqpSnvMdq71xrB1cbbbePVUPhpPcAwP8a3vQwAvXO
-# CTTco00aIxOI20Sscw73BKNR+ZgkvrdoYtnwoo4vuRqhPINIhzit9MhMYTO8Dcfx
-# wf/vVluyP7OgvrP4I027b7W0Turd9XSTDITUZV3WgtvDdeQi7KBXf7bh+wLJqIrk
-# 34w0w+5fjuuGZTrKb1NW
+# KoZIhvcNAQEMBQAEggGAjfUITPFs5dbKLLltOho4gGrep2cIWjIsCObXCzCKMgWb
+# pO6mYrPGD96TFNr7qdM1YOw4fl0dm/iSheYe+iFbyo2NGzOzk10ag0LXasDF8ooc
+# ORmAX1H7ETtC01OBJxh+FAT4mlA3X3vB5Lb1Q0H4hdQiB91z9NCK2lrT0UberRaF
+# to21dNcxAtPwqgEpn/LBMRa+TAxdRg8KmNxcUq1IKM+hMbdOuTQ+1I/au/dHWAIg
+# oyaAAZOdmAqABitstpQ86hFj9eewE8lcW6cXexQYaNpaRjBotIwbMaV/Ejh8bxWN
+# dpiuShY0bZqHP1qfHSGyXgJzWQ7HCLeWdycD8Ahudm9C4xAtcZye2ES2zK984EeU
+# huEdCRql2DqRSm114Fj2EFvTRDS9yWsWpByT+b13xKOeybX3UqTuOdzLgO+TsMVx
+# To2UKS6R/2nVoJUlu0oZJJPx9gH7YHhfr6Tl4E4OnIuF0ZbUVDiJBnwghR8LrlWz
+# 5qbB8PjSy5hT1oEmjsEv
 # SIG # End signature block

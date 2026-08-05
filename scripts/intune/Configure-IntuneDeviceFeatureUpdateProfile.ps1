@@ -71,7 +71,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneDeviceFeatureUpdateProfile-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -369,7 +369,7 @@ foreach($pprofile in $profiles)
 
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

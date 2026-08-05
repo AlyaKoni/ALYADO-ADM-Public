@@ -70,10 +70,10 @@ Param(
     [string]$certThumbPrint = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Export-SMIMERootCasToSst-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -139,7 +139,7 @@ $certExp | Export-Certificate -FilePath $fileName -Type "SST" -Force
 
 Write-Host "SST exported to $AlyaData\exchange\smime\$($rCert.Thumbprint).sst"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

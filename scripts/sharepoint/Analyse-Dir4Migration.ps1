@@ -81,10 +81,10 @@ Param(
     [string]$delemitter = ","
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Analyse-Dir4Migration-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -757,7 +757,7 @@ Remove-Item -Path "$AlyaTemp\SPShareAnalysis_Dirs.csv" -Force
 Remove-Item -Path "$AlyaTemp\SPShareAnalysis_Errors.csv" -Force
 Remove-Item -Path "$AlyaTemp\SPShareAnalysis_Types.csv" -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -68,7 +68,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\20_ExtractIntune-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
@@ -76,7 +76,7 @@ Write-Host "Extracting Intune configuration" -ForegroundColor $CommandInfo
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
 & "$($AlyaScripts)\intune\Export-IntuneConfiguration.ps1"
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

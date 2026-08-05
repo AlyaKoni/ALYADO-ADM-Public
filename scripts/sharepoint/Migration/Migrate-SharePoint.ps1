@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\migration\Migrate-SharePoint-$($AlyaTimeString).log" | Out-Null
 
 # TODO Set site collections read only
@@ -80,7 +80,7 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\migration\Migrate-ShareP
 . $PSScriptRoot\sponline\Fix-Permissions.ps1
 . $PSScriptRoot\sponline\Fix-WebParts.ps1
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

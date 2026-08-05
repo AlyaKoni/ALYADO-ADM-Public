@@ -98,10 +98,10 @@ Param(
     [string]$IsTestHostPool = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\spring2020prod\Create-HostPool-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -168,7 +168,7 @@ if ((-Not $HstPlRegInf) -or (-Not $HstPlRegInf.Token))
         -ExpirationTime $((get-date).ToUniversalTime().AddDays(1).ToString('yyyy-MM-ddTHH:mm:ss.fffffffZ'))
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

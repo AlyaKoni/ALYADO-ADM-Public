@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Register-PnPApp.ps1-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -166,7 +166,7 @@ else
 }
 Write-Warning "PnP AppId $pnpAppId has been set in variable AlyaPnPAppId in data\ConfigureEnv.ps1"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

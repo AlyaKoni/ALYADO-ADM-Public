@@ -73,10 +73,10 @@ Param(
     [string]$onlyDomain = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Copy-DnsRecords-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -521,7 +521,7 @@ foreach($zone in $AlyaAdditionalDomainNames)
 
 Write-Host "`n`nMore information about the domain: https://dnsdumpster.com/`n`n" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

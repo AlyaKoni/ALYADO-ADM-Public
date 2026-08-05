@@ -80,10 +80,10 @@ Param
     [switch] $dataonly = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Get-MSIPRangesAndUrls-$($AlyaTimeString).log" | Out-Null
 
 # Azure IP ranges updated every Wednesday
@@ -183,7 +183,7 @@ if (-Not $ipsonly)
     $o365Urls.url | Sort-Object -Unique
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

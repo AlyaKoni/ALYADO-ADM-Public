@@ -71,10 +71,10 @@ Param(
     [bool]$dryRun = $true
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Remove-Domain-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -490,7 +490,7 @@ Write-Host "We did following changes:" -ForegroundColor $CommandInfo
 $allChanges | Format-List
 $allChanges | Format-Table
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

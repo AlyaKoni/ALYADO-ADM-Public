@@ -69,10 +69,10 @@ Param(
     [string]$SiteUrl
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-PnPTemplate-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -115,7 +115,7 @@ catch
 
 Write-Host "Template exported to $outfile" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

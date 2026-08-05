@@ -69,10 +69,10 @@ Param(
     [bool]$IncludeOneDriveSites = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Export-AlertsFromAllSites-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -237,7 +237,7 @@ foreach($site in $sitesToProcess)
 $allSiteAlerts | ConvertTo-Csv -NoTypeInformation | Set-Content -Path "$AlyaData\sharepoint\AlertsPerSite.csv" -Encoding $AlyaUtf8Encoding -Force
 Write-Host "Report expoted to $AlyaData\sharepoint\AlertsPerSite.csv"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -72,10 +72,10 @@ Param(
     [string]$userName = "konrad.brunner"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\48_logoutUserDirect-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -148,7 +148,7 @@ foreach($re in $res)
 Write-Host "New situation" -ForegroundColor $CommandInfo
 Invoke-Command -ComputerName $serverName -ScriptBlock { quser }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

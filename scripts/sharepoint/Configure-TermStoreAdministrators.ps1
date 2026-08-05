@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\data\sharepoint\dms\Configure-TermStoreAdministrators-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -130,7 +130,7 @@ foreach($AlyaSharePointNewSiteCollectionAdmin in $AlyaSharePointNewSiteCollectio
 
 #TODO admins on store
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

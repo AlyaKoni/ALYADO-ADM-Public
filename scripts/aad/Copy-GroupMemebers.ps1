@@ -76,10 +76,10 @@ Param(
     [bool]$mergeMembers = $true # Members in destinationGroup not in sourceGroup will be removed from destinationGroup
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Copy-GroupMemebers-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -157,7 +157,7 @@ foreach ($srcMember in $srcMembers)
     } 
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

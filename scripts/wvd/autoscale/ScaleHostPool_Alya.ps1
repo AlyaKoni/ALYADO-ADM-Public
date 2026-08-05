@@ -76,10 +76,10 @@ if ($ConfigFile -eq "Autoscaling_Config.json")
 
 $RootDir = Split-Path $script:MyInvocation.MyCommand.Path
 
-#Reading configuration
+# Reading configuration
 . $RootDir\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\autoscale\ScaleHostPool_Alya-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -381,7 +381,7 @@ if ($NumberOfSessions -gt $PeakSessions)
 Write-Host "HostpoolName:$HostpoolName, NumberofRunnighosts:$NumberOfRunningHost"
 Write-UsageLog -HostPoolName $HostpoolName -VMCount $NumberOfRunningHost -DepthBool $true
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

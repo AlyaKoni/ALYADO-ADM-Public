@@ -71,13 +71,13 @@ Param(
     $picDir = $null #Defaults to "$($AlyaData)\sharepoint\ProfilePictures"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\onprem\Import-ProfilePictures-$($AlyaTimeString).log" | Out-Null
 
-#Checking modules
+# Checking modules
 Check-Module "Microsoft.SharePoint.PowerShell"
 Add-PSSnapin "Microsoft.SharePoint.PowerShell" -ErrorAction Stop
 
@@ -146,7 +146,7 @@ foreach($pic in $pics)
 Write-Host "Updating Photo Store"
 Update-SPProfilePhotoStore -MySiteHostLocation $mySiteUrl
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

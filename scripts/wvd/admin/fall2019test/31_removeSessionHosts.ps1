@@ -67,10 +67,10 @@ Param(
     [string]$HostPoolName = "alyainfthpol001"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\31_removeSessionHosts-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -153,7 +153,7 @@ if ($hosts)
 #Remove-RdsSessionHost -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -Name "$($AlyaNamingPrefixTest)vd51-1.alyaconsulting.ch" -Force
 #Remove-RdsSessionHost -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -Name "$($AlyaNamingPrefixTest)vd51-2.alyaconsulting.ch" -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

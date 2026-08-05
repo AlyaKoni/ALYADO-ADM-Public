@@ -72,10 +72,10 @@ Param(
     [string]$processOnlyDomain = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Create-AzureCommunicationEmailService-$($AlyaTimeString).log" | Out-Null
 
 # Checks
@@ -389,7 +389,7 @@ foreach($domain in $domains)
 }
 Write-Host "  To add more senders, please create a Microsoft ticket and request Default Sending Limits change"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

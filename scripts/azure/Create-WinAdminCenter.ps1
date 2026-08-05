@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Create-WinAdminCenter-$($AlyaTimeString).log" -IncludeInvocationHeader -Force | Out-Null
 
 # Constants
@@ -796,7 +796,7 @@ $wacIp = $VMNic.IpConfigurations[0].PrivateIpAddress
 Write-Host "Windows Admin Center was successfully installed." -ForegroundColor Green
 Write-Host "Please access WAC by visiting https://$VMName or https://$wacIp" -ForegroundColor Green
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

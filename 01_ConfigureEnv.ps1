@@ -129,6 +129,7 @@ $AlyaTools = "$AlyaRoot\tools"
 $AlyaEnvSwitch = ""
 $AlyaModuleVersionOverwrite = @( <#@{Name="PnP.PowerShell";Version="2.4.0"}#> )
 $AlyaPackageVersionOverwrite = @( <#@{Name="Selenium.WebDriver";Version="4.10.0"}#> )
+$AlyaWamEnabled = $false
 
 if (-Not (Test-Path $AlyaTemp))
 {
@@ -2404,7 +2405,7 @@ function LoginTo-Az(
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
     if (-Not $TenantId) { $TenantId = $AlyaTenantId }
 
-    try { Update-AzConfig -Scope Process -EnableLoginByWam $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
+    try { Update-AzConfig -Scope Process -EnableLoginByWam $AlyaWamEnabled -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -DisplaySurveyMessage $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -EnableDataCollection $false -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
     try { Update-AzConfig -Scope Process -DefaultSubscriptionForLogin $AlyaSubscriptionName -Confirm:$false -ErrorAction SilentlyContinue | Out-Null } catch {}
@@ -2609,7 +2610,7 @@ function LoginTo-MgGraph(
         Write-Host "Login to Graph" -ForegroundColor $CommandInfo
     }
 
-    try { Set-MgGraphOption -EnableLoginByWAM $false -ErrorAction SilentlyContinue | Out-Null } catch {}
+    try { Set-MgGraphOption -EnableLoginByWAM $AlyaWamEnabled -ErrorAction SilentlyContinue | Out-Null } catch {}
 
     if ($AlyaIsDevOpsPipeline)
     {
@@ -3157,9 +3158,9 @@ function LoginTo-Teams(
             }
         } else {
             if ([string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
-                Connect-MicrosoftTeams
+                Connect-MicrosoftTeams -DisableWAM:$AlyaWamEnabled
             } else {
-                Connect-MicrosoftTeams -TeamsEnvironmentName $AlyaTeamsEnvironment
+                Connect-MicrosoftTeams -DisableWAM:$AlyaWamEnabled -TeamsEnvironmentName $AlyaTeamsEnvironment
             }
         }
     }
@@ -3225,30 +3226,30 @@ function LoginTo-EXO(
         {
             if (-Not [string]::IsNullOrEmpty($ClientId)) {
                 if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
-                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -ShowProgress $true -DisableWAM -CommandName $commandsToLoad
+                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -ShowProgress $true -DisableWAM:$AlyaWamEnabled -CommandName $commandsToLoad
                 } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
                     $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
-                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -Certificate $cert -ShowBanner:$false -ShowProgress $true -DisableWAM -CommandName $commandsToLoad
+                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -Certificate $cert -ShowBanner:$false -ShowProgress $true -DisableWAM:$AlyaWamEnabled -CommandName $commandsToLoad
                 } else {
                     throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                 }
             } else {
-                Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM -CommandName $commandsToLoad
+                Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM:$AlyaWamEnabled -CommandName $commandsToLoad
             }
         }
         else
         {
             if (-Not [string]::IsNullOrEmpty($ClientId)) {
                 if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
-                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -ShowProgress $true -DisableWAM
+                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -ShowProgress $true -DisableWAM:$AlyaWamEnabled 
                 } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
                     $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
-                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -Certificate $cert -ShowBanner:$false -ShowProgress $true -DisableWAM
+                    Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -AppId $ClientId -Organization $AlyaTenantName -Certificate $cert -ShowBanner:$false -ShowProgress $true -DisableWAM:$AlyaWamEnabled 
                 } else {
                     throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                 }
             } else {
-                Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM
+                Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM:$AlyaWamEnabled
             }
         }
     }
@@ -3306,30 +3307,30 @@ function LoginTo-IPPS(
         {
             if (-Not [string]::IsNullOrEmpty($ClientId)) {
                 if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
-                    Connect-IPPSSession -AppId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -DisableWAM
+                    Connect-IPPSSession -AppId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -DisableWAM:$AlyaWamEnabled 
                 } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
                     $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
-                    Connect-IPPSSession -AppId $ClientId -Certificate $cert -ShowBanner:$false -DisableWAM
+                    Connect-IPPSSession -AppId $ClientId -Certificate $cert -ShowBanner:$false -DisableWAM:$AlyaWamEnabled
                 } else {
                     throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                 }
             } else {
-                Connect-IPPSSession -ShowBanner:$false -DisableWAM
+                Connect-IPPSSession -ShowBanner:$false -DisableWAM:$AlyaWamEnabled
             }
         }
         else
         {
             if (-Not [string]::IsNullOrEmpty($ClientId)) {
                 if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
-                    Connect-IPPSSession -AppId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -DisableWAM -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+                    Connect-IPPSSession -AppId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -ShowBanner:$false -DisableWAM:$AlyaWamEnabled -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
                 } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
                     $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
-                    Connect-IPPSSession -AppId $ClientId -Certificate $cert -ShowBanner:$false -DisableWAM -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+                    Connect-IPPSSession -AppId $ClientId -Certificate $cert -ShowBanner:$false -DisableWAM:$AlyaWamEnabled -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
                 } else {
                     throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                 }
             } else {
-                Connect-IPPSSession -ShowBanner:$false -DisableWAM -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
+                Connect-IPPSSession -ShowBanner:$false -DisableWAM:$AlyaWamEnabled -AzureADAuthorizationEndpointUri $AlyaLoginEndpoint
             }
         }
     }
@@ -5043,8 +5044,8 @@ function Replace-AlyaStrings($obj, $depth)
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAWRg9XrWb22e6J
-# lj0AHoxkZ8oKSX3ia5pPif0ZWjT4vKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDHVFCLGZGWSohe
+# VnG9JoplNDvC5Hb9ZtauSIhQy5ggL6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -5158,23 +5159,23 @@ function Replace-AlyaStrings($obj, $depth)
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKTj1Ct2
-# m0gpTqlbmLcbOKAadBwxgKokuFoRnzxmJr7oMA0GCSqGSIb3DQEBAQUABIICAEZS
-# 3rE2iivsKmkTtz27RCbceMHj/DqQLoHjInITVp5kE3IEFLbx5CTegf8UpSazxThb
-# 7xPAeJvXBzu6h7PHYzzWPpu/mfml8AgbJXZcMkH4XRLtU8cjU6C0iarVm4hUSfnC
-# CzCgvOb/IWBH8/3LiLJPKt+UjMOuOo3HbnRUY2cRh/vjRq0Hd9k2CL1u5LNP4RBf
-# lfhhbaJi6CZ4JbL+FrA4P83inERNPAm28vKAsdDBw0WB4Vj9n7EZaZK5hSGpUerU
-# MRSTxSArbzvZvI/3NYIirT5q0HuDJIJIlYpoxNQcR5Xxbyw1/1V0QaOm6pgwAtdE
-# KRTGj4ZVjkfkFnuXGP0FlhWrja6yq0HbZIkGp2GHYcUsR1g/cvIsCxGzeYUqGvUg
-# SFPqQy6eYMgdTy0yjf/r9NNfDx5PXChWQ5LR9EPr1jmCypKBvrJtQuWKBC+azbvN
-# PmhioySp/Wf40ge+gle+rqvJ7+AvodY42LbiZSeGpQdTKOFl3KY86LzsmXMmUfm/
-# uRpQNLg3TuLGSgsE9SUg2AFTvEfUq5aYH2pON4zpS/YbqkAkO+pZDF4rnWUHAYOI
-# NsQtf7VPhmrJoFWu/mjc1eb6ewQadwfgFkWrO7VoE+7CpnRowuNT3s4xFxJ5S/jm
-# uzvZtPoIwn9lT1hCEVDkTiSHkPBClSPC3qp3o9zqoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEqbWp1E
+# slGaJCnXsOkvwzdci5TWaauMMnKBmzdwtgBnMA0GCSqGSIb3DQEBAQUABIICAHa7
+# 1CR5eiURqO3OwCcfcj11PaHPvj9gMk/iJUjVc18RYcyCZaksgVa52lgJlbrGmIO4
+# nJqNhQwc6Iu2DJ/ipEmAvbUiIQ474bGDO+w3N7PC2HIm92lD5r6o+8dQ7XB97u/6
+# ruAWQug15z1ahV4FbJ2agXeQwjTQ/9v394wFqzxDmJeH/e7N3orTHkvLcYGg6xPm
+# ZWnvvoDBUyoJPDyLipCoAPWhxL2N8Qw2XdbTmV82rQDy+b8nZ+uzqG5Xll6c6y5l
+# RkagUSV4WBYSwTBbPy2L9PluqtIbon0msK1CWh4Dl5rNv6msjhbUsg9n+iUgBg3v
+# IYw79LYLh6x1WifdZkdAAqT1brcMV1Kv8+WD9XZIU5WlbJ8XM1veOMbu14Oh1v6P
+# MOq3Jq4ajhPAXvtGK/FUbX4+e1Tu+CRKMVlDRsOsYxRR9RiAyXTWbHby8SufmMcd
+# heOX+dDUSIP2jBXmmQDJ8ii47towbFPJzBJGOqIihow5lFKx40oDxUv7pDXDEVi2
+# jjXGzu9zBSG7MwA1oHeFIU7j7ExIrc0wcb8l9f7pLF+hi9xdA9RKEA/TJ3i3V/eX
+# mOA7JvCxcvDB9aWO6zN5bLswD4E3M/oMf2CsVE6Mv3CbC8wV94/ad+TnP6yy6/EJ
+# B1Mbod8ivr/Yem9mkBNk9oyew6pcU8MkJM8fR3vcoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCqPTocwegCUcKzQ2+Q+cBgEWXMz6fj9/ChPaiymwU4kAIUZPhX
-# s/4Ioitn73dbiV0Mx5OHttAYDzIwMjYwNzA5MDgyMDIzWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAT1DDnIftys4HZCBwP0MvVOt2rHPl3MePtxkaHiX4pBgIUGvy1
+# +dJY6C8RHh6cOTR/vcTnTI8YDzIwMjYwODA1MTQzOTQ0WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -5317,18 +5318,18 @@ function Replace-AlyaStrings($obj, $depth)
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAqEPUJq5JdwjwdsM09+SERbdwal+3fkQErfdgXJSiShhbdxza42VYruERT
-# AXqugHAwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDYB37hy1Hee6ZJsg35EHGOlSemVa7FKcIviKZrjY/WQpw+8cXueFBB5yUv
+# YpwKo9YwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGANF7+E1/rKUCQEdyjsdYkKzyDJ+1kWRXuCm7Gactp3NxP
-# Ic5N8GQnPv39DyHLBCu8qjORrly2Sf4FJHmJiv8qOvejK7qaTQLlQqFzzs7sBRJO
-# jiZmrW/CMcLcLMkZqLJFr/spyTIYmKCO/y7zLg1T4N+RGkuh1ULhmecE9FgHywvc
-# oqaQvJCHlKXndx4pOrltitqRoGwClBEeIIrb9jFNbXpvxEmasxw1TiGtwg15T7hr
-# KaWzp+uVxRk5lPKzln80M851+5Fn7foC8/UuPSutpIxP16F2M7SCbOmZpE76u8nP
-# O82tx76Y3B3coYZNC/RXIVPqmHE9txwh3xio8BXHf7VVxkfz/KDm99ujZPejkLvD
-# 8AVYCgs3pPvpsJyhi7Y7G6xaxU/ul7f3cyF/k5bXrQaBVSiKXE3r/JDwWMRMAJ7Q
-# vXOQKjWjq8iUwYRbjBF1kplurY2cjw3CBI875kzbdvefMqD2DllmfFfiScB+F/Ll
-# QIwkVMeXMYX5GXjUHENS
+# KoZIhvcNAQEMBQAEggGADwrSRU4hiTUdM3nbyIMGMwidl7dLxL+ZYTvy+lG1QiLo
+# qTvPVQRBrIUI8JD/RIU5fo67uaeZ4Ngyw3sc4TZLu4+MpkEzcgeXSllBz46HKj8i
+# Gc/q+Yiu7+uUDJUNhiNMTj+764R7ikMuXU7NGPko4b2V1yVTGf6mTXdOQEhwenkc
+# NJOEVlcTjBoSuABLpfEqNl7KQYDSJiJmM9jvX3DsKdoO/PIYGoC0CxIa4m4I+KQw
+# VUzm4B9vXFtBT6uGWenqk811gr6YE4wMGH2OxJ+RbsJGs2im2XAkq09MZX+n/C3J
+# QR8ToplAbE3g4o55o8PkP6/DzATR0FVTcCxkbzG9jaiMrxwnuBPGXV/PYBDhMHPh
+# n+TpM1pkgkWWHVpt2OR/UmmsjORwNxW2INMG2nYZrQpoBXYsmZNJGm+WvOalr8ui
+# T8ElhnKlqqXV8PesUzl7m4SxLhxFLV0/kLNEKsY0ifcOw7FAJAbcZ5Y053woRdC8
+# 4D7HXRcLk/eGiQTvDXJ5
 # SIG # End signature block

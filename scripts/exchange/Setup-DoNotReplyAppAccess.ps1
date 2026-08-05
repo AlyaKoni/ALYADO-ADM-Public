@@ -71,10 +71,10 @@ if (-Not $appId)
     throw "Please specify the appId the access has to be restricted"
 }
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Setup-DoNotReplyAppAccess-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -112,7 +112,7 @@ catch
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

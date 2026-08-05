@@ -66,10 +66,10 @@ Param(
     [string]$inputPublishFile = $null #Defaults to "$AlyaData\aip\PublishProfiles.xlsx"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\onprem\Republish-LabelPolicies-$($AlyaTimeString).log" | Out-Null
 
 #Members
@@ -125,7 +125,7 @@ catch
 	Write-Error ($_.Exception) -ErrorAction Continue
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

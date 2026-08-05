@@ -58,10 +58,10 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019prod\41_getDiagnostics-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -210,7 +210,7 @@ foreach ($hpool in $hpools)
 #(Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameProd -UserName first.last@alyaconsulting.ch -Detailed -StartTime "19.08.2019 17:00:00" | Where-Object { $_.Outcome -eq "Failure" }).Errors
 #Get-RdsDiagnosticActivities -TenantName $AlyaWvdTenantNameProd -Detailed -ActivityId 05427ab5-6582-4346-8e12-30a1262b89b0
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -67,10 +67,10 @@ Param(
     [string]$userPrincipalName
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AssignedRbacRolesFromUser-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -102,7 +102,7 @@ Write-Host $roles | Format-Table | Out-String
 
 return $roles
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

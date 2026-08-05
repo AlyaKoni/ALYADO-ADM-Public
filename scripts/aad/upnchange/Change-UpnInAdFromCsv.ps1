@@ -67,13 +67,13 @@ Param(
     $dryRun = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 #Importing modules
 Import-Module "ActiveDirectory" -ErrorAction Stop
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\upnchange\Change-UpnInAdFromCsv-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -150,7 +150,7 @@ Get-Date
 Write-Host "Finished changing $($cnt) UPNs" -ForegroundColor $CommandInfo
 
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

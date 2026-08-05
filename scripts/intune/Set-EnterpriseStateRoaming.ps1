@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-EnterpriseStateRoaming-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # =============================================================
@@ -86,7 +86,7 @@ Write-Host "https://portal.azure.com/#blade/Microsoft_AAD_Devices/DevicesMenuBla
 Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_Devices/DevicesMenuBlade/RoamingSettings/menuId/RoamingSettings"
 pause
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

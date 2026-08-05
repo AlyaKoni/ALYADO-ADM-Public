@@ -90,7 +90,7 @@ Param(
 )
 if ($installUpgradesStr) { $installUpgrades = [bool]::Parse($installUpgradesStr) }
 
-#Starting Transscript
+# Starting Transcript
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 if (-Not $logLocation) { $logLocation = $PSScriptRoot }
 $logPath = "$logLocation\Logs\Install-Updates-Standalone-$($AlyaTimeString).log"
@@ -581,7 +581,7 @@ else
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

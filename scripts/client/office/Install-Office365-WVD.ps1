@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\Install-Office365-WVD-$($AlyaTimeString).log" | Out-Null
 
 #Checking prepare tool
@@ -93,7 +93,7 @@ if (-Not (Test-Path "C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Word.l
 Write-Host "Cleaning downloads" -ForegroundColor $CommandInfo
 Remove-Item -Path "$AlyaTemp\Office" -Recurse -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

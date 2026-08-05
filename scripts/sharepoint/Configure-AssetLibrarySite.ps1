@@ -74,10 +74,10 @@ Param(
     [string[]]$localesToHandle = @("en-us","de-de")
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Configure-AssetLibrarySite-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -397,7 +397,7 @@ $homePageTemplate | Set-Content -Path $tempFile -Encoding $AlyaUtf8Encoding
 $null = Invoke-PnPSiteTemplate -Connection $siteCon -Path $tempFile
 Remove-Item -Path $tempFile
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

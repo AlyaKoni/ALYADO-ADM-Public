@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Get-DataGatewayInstallers-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -124,7 +124,7 @@ foreach($installer in $installers)
 Write-Host ""
 Write-Host ""
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

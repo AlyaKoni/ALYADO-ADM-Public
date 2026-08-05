@@ -63,10 +63,10 @@ Param(
 
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\Get-PerformanceCounters-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -179,7 +179,7 @@ foreach($counterSet in $counterSets)
 }
 $counters | Export-Clixml -Path "$($AlyaData)\client\PerformanceCounters.xml" -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

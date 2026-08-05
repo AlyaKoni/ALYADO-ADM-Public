@@ -71,7 +71,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-AndroidApps-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -214,7 +214,7 @@ if ($hadError)
     Write-Host "There was an error. Please see above." -ForegroundColor $CommandError
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

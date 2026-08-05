@@ -67,10 +67,10 @@ Param(
     [string]$upn
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Configure-ServiceUser-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -100,7 +100,7 @@ pause
 Write-Host "Please login once to https://portal.office.com with user $upn"
 pause
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

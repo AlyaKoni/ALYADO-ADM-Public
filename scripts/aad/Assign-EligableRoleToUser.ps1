@@ -79,7 +79,7 @@ Param(
 # Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Assign-EligableRoleToUser-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -165,7 +165,7 @@ $params = @{
 }
 New-MgBetaRoleManagementDirectoryRoleEligibilityScheduleRequest -BodyParameter $params
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

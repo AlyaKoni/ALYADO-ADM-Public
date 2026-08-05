@@ -67,10 +67,10 @@ Param(
     [string]$OneDriveSiteUrl
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\onedirve\Set-OneDriveReadOnly-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -83,7 +83,7 @@ $siteCon = LoginTo-PnP -Url $OneDriveSiteUrl
 Write-Host "Locking OneDrive" -ForegroundColor $CommandSuccess
 Set-PnPSite -Connection $siteCon -Identity $OneDriveSiteUrl -LockState ReadOnly -Wait
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

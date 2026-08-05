@@ -67,7 +67,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-DeviceRegistrationServicePolicy-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -216,7 +216,7 @@ Write-Host "Getting new DeviceRegistrationServicePolicy" -ForegroundColor $Comma
 $policy = Get-MgBetaPolicyDeviceRegistrationPolicy
 $policy | ConvertTo-Json -Depth 99
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

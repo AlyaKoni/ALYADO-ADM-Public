@@ -74,10 +74,10 @@ Param(
     [string[]]$appIdsToExclude = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Add-AllAppsToConditionalAccessPolicy-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -305,7 +305,7 @@ while ($true)
 }
 Write-Host "Policy has now $($appsIn.Count) included and $($appsEx.Count) excluded apps assigned" -ForegroundColor $CommandInfo
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

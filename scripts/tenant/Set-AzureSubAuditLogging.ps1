@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-AzureSubAuditLogging-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -244,7 +244,7 @@ if ($AlyaSubscriptionNameTest -and $AlyaSubscriptionName -ne $AlyaSubscriptionNa
     Set-SubscriptionRule -subName $AlyaSubscriptionNameTest
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

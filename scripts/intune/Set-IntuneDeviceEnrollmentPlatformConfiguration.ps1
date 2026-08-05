@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-IntuneDeviceEnrollmentPlatformConfiguration-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -158,7 +158,7 @@ $params = @{
 
 $null = Update-MgBetaDeviceManagementDeviceEnrollmentConfiguration -DeviceEnrollmentConfigurationId $deviceEnrollmentPlatformConfiguration.Id -BodyParameter $params
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

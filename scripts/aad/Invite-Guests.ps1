@@ -90,10 +90,10 @@ Param(
     [String]$messageLanguage = "de"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Invite-Guests-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -162,7 +162,7 @@ foreach($userEmailToInvite in $userEmailsToInvite)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -67,10 +67,10 @@ Param(
     [string]$HostPoolName = "alyainfthpol002"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\22_setHostPoolCustomProerties-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -369,7 +369,7 @@ if ($Dirty){
     Set-RdsHostPool -TenantName $AlyaWvdTenantNameTest -Name $HostPoolName -CustomRdpProperty $properties
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

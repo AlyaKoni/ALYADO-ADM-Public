@@ -73,10 +73,10 @@ Param(
 	[object]$seleniumBrowser = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-CompanyBranding-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -424,7 +424,7 @@ if (-Not $browser) {
 }
 pause
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

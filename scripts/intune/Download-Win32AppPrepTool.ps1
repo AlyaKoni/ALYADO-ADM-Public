@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Download-Win32AppPrepTool-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # =============================================================
@@ -153,7 +153,7 @@ Pop-Location
 Write-Host "IntuneWinAppUtil is present at:" -ForegroundColor $CommandSuccess
 Write-Host "$RepRoot" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -79,10 +79,10 @@ Param(
     [bool]$configureAllowedKeys = $false
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Set-AuthenticationMethods-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -476,7 +476,7 @@ if (-Not $prmfatapPolicy)
     New-MgBetaPolicyAuthenticationStrengthPolicy -BodyParameter $params
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -1333,6 +1333,26 @@
     },
     {
         "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
+        "description": "Disables SSO prompts in Windows",
+        "displayName": "WIN Disable SSO Prompts",
+        "omaSettings": [
+            {
+				"@odata.type": "#microsoft.graph.omaSettingInteger",
+				"isReadOnly": false,
+				"value": 1,
+				"description": "Disable SSO Prompts",
+				"displayName": "AutoAcceptSsoPermission",
+				"isEncrypted": false,
+				"secretReferenceValueId": null,
+				"omaUri": "./Device/Vendor/MSFT/Registry/HKLM/SOFTWARE/Policies/Microsoft/Windows/AAD/AutoAcceptSsoPermission"
+            }
+        ],
+        "roleScopeTagIds": [
+            "0"
+        ]
+    },
+    {
+        "@odata.type": "#microsoft.graph.windows10CustomConfiguration",
         "description": "Injects outlook admx and sets some settings",
         "displayName": "WIN Outlook Settings",
         "omaSettings": [

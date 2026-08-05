@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Create-IntuneMACPackagesCertificate-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -98,7 +98,7 @@ security import "$keyName" -T /usr/bin/productbuild -T /usr/bin/pkgbuild
 
 Write-Host "Please backup and secure the private key: $keyName" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

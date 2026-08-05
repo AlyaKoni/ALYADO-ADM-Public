@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Enable-SmtpLegacyEndpoint-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -115,7 +115,7 @@ catch
 Write-Host "Please use the following endpoint as client SMTP server:" -ForegroundColor $CommandSuccess
 Write-Host "smtp-legacy.office365.com" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

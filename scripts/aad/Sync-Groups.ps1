@@ -72,10 +72,10 @@ Param(
     [string]$destinationGroup
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Sync-Groups-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -141,7 +141,7 @@ foreach ($member in $dstGrpMembers)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

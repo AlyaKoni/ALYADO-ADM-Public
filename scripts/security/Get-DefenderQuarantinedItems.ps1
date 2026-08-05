@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Get-DefenderQuarantinedItems-$($AlyaTimeString).log" | Out-Null
 
 # =============================================================
@@ -81,7 +81,7 @@ Write-Host "=====================================================`n" -Foreground
 & "C:\Program Files\Windows Defender\MpCmdRun.exe" -Restore -ListAll
 Write-Host "`n"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -67,10 +67,10 @@ Param(
     [string]$UserNameToRemove = "test.cloud@alyaconsulting.ch"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\36_removeUserFromAllPools-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -147,7 +147,7 @@ foreach ($hpool in $hpools)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -71,10 +71,10 @@ Param(
     [string]$outputFile = $null #Defaults to "$AlyaData\aad\Users.xlsx"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\security\Check-PwnedUsers-$($AlyaTimeString).log" | Out-Null
 
 #Members
@@ -214,7 +214,7 @@ do
     }
 } while ($true)
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 Copy-Item "$($AlyaLogs)\scripts\security\Check-PwnedUsers-$($AlyaTimeString).log" "$outputFile.log"

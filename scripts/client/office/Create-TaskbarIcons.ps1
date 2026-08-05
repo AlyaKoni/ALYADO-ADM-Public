@@ -62,12 +62,12 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
 throw "Pinning is not supported any more by Microsoft. You have to use the official XML method!"
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\office\CreateTaskbarIcons-$($AlyaTimeString).log" | Out-Null
 
 #throw "We do not yet have a solution! Sorry."
@@ -120,7 +120,7 @@ if ((-Not $Key3WasPresent) -and $Key3.SubKeyCount -eq 0 -and $Key3.ValueCount -e
 #Restarting explorer
 Stop-Process -Name "explorer" -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript | Out-Null
 
 # SIG # Begin signature block

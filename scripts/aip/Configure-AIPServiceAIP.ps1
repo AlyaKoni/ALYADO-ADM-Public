@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Configure-AIPServiceAIP-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -139,7 +139,7 @@ $aipConfiguration | Format-List
 if (-Not (Test-Path "$($AlyaLogs)\data\aip")) { New-Item -Path "$($AlyaLogs)\data\aip" -ItemType Directory | Out-Null } 
 $aipConfiguration | Export-Clixml -Path "$($AlyaData)\aip\AipServiceConfiguration.xml" -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

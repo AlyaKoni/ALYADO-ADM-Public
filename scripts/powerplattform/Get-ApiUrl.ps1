@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Get-ApiUrl-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -92,7 +92,7 @@ if (-Not $AlyaPowerAppsApiUrl)
 }
 Write-Host "Your PowerApps Web API Url: $AlyaPowerAppsApiUrl" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

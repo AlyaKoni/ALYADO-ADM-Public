@@ -92,10 +92,10 @@ if ($SessionHostPrefix.Length -gt 11)
     throw "SessionHostPrefix must have a length of at most 11"
 }
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\spring2020prod\Create-SessionHosts-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -159,7 +159,7 @@ if (-Not $ResGrp)
     $ResGrp = New-AzResourceGroup -Name $ResourceGroupName -Location $AlyaLocation -Tag @{displayName="WVD $($WrkSpc.FriendlyName)";ownerEmail=$Context.Account.Id}
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

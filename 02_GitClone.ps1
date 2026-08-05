@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\GitClone-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 Write-Host "Checking git installation" -ForegroundColor $CommandInfo
@@ -262,7 +262,7 @@ finally {
     $ErrorActionPreference = $errAct
 }
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

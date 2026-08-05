@@ -62,16 +62,16 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\06_UnblockAllFiles-$($AlyaTimeString).log" | Out-Null
 
 #Main
 Get-ChildItem -Path $AlyaRoot -Recurse | Unblock-File
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

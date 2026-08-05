@@ -119,10 +119,10 @@ $global:paramSetName = $PSCmdlet.ParameterSetName
 #Exporting dynamic module
 New-Module -Script {
 
-    #Reading configuration
+    # Reading configuration
     . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-    #Starting Transscript
+    # Starting Transcript
     Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\SyncTo-SharePoint-$($AlyaTimeString).log" | Out-Null
 
     # Members
@@ -652,7 +652,7 @@ New-Module -Script {
     Export-ModuleMember -Function Reset-Watcher | Out-Null
 
     
-    #Stopping Transscript
+    # Stopping Transcript
     Stop-Transcript
 
 } | Out-Null

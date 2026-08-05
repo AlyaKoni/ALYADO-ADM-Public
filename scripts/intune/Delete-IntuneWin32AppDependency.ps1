@@ -78,7 +78,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneWin32AppDependency-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -173,7 +173,7 @@ if ($depFound)
     $appCat = Post-MsGraph -Uri $uri -Body ($body | ConvertTo-Json -Depth 50)
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

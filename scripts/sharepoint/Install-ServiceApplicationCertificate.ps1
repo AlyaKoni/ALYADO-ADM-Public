@@ -64,10 +64,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Install-ServiceApplicationCertificate-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -197,7 +197,7 @@ finally
     Remove-Item -Path $PfxCertPathForRunAsAccount -Force | Out-Null
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

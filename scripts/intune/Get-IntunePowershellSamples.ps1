@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Get-IntunePowershellSamples-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -136,7 +136,7 @@ Wait-UntilProcessEnds -processName "git"
 
 Write-Host "IntunePowershellSamples installed to $RepRoot" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

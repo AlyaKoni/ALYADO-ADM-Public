@@ -75,10 +75,10 @@ Param(
     [string]$defaultLabel = $null #Defaults to Internal default from PublishFile
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aip\Configure-SharePointClassification-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -211,7 +211,7 @@ else {
 
 Update-MgBetaDirectorySetting -DirectorySettingId $Setting.Id -Values $Setting.Values
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

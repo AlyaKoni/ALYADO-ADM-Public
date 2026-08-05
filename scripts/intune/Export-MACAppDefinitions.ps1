@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-MACAppDefinitions-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -101,7 +101,7 @@ $macApps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path $filePath
 
 Write-Host "mac apps exported to: $filePath" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

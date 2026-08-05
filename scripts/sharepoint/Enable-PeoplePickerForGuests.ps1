@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Enable-PeoplePickerForGuests-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -96,7 +96,7 @@ else
     Write-Host "People picker for guests was already enabled." -ForegroundColor $CommandSuccess
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

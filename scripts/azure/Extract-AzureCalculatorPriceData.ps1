@@ -66,10 +66,10 @@ Param(
     $exportCurrencyName = "chf"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Extract-AzureCalculatorData-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -1082,7 +1082,7 @@ Close-ExcelPackage $excel -Show
 ############################################################################################
 Write-Host "Building keyvault table" -ForegroundColor $CommandInfo
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

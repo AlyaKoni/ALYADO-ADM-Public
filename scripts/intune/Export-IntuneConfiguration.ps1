@@ -82,7 +82,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-IntuneConfiguration-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -1638,7 +1638,7 @@ if ($zipAllData -eq $true)
     Remove-Item -Path $DataRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

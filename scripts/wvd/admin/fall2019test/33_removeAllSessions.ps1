@@ -68,10 +68,10 @@ Param(
     [string]$HostPoolName = "alyainfthpol001"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\33_removeAllSessions-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -151,7 +151,7 @@ else
     Write-Error "Hostpool not found!" -ErrorAction Continue
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -67,13 +67,13 @@ Param(
     $picDir = $null #Defaults to "$($AlyaData)\sharepoint\ProfilePictures"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\onprem\Export-ProfilePictures-$($AlyaTimeString).log" | Out-Null
 
-#Checking modules
+# Checking modules
 Check-Module "Microsoft.SharePoint.PowerShell"
 Add-PSSnapin "Microsoft.SharePoint.PowerShell" -ErrorAction Stop
 
@@ -120,7 +120,7 @@ foreach($profile in $allprofiles) {
   else { Write-Host "$($sccountName) does not have profile picture" -ForegroundColor $CommandWarning }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

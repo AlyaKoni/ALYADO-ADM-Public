@@ -86,10 +86,10 @@ if (-Not (Test-Path $FromLocalDir))
     exit
 }
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\SyncTo-AzureFileStorageBlob-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -216,7 +216,7 @@ foreach($SourceFile in $UploadItems)
 
 #TODO Clean part
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

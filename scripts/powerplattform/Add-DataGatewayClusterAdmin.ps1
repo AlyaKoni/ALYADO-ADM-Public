@@ -72,10 +72,10 @@ Param(
     [string]$AdminUpn
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Add-DataGatewayClusterAdmin-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -106,7 +106,7 @@ if (-Not $AdminUser)
 $GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $GatewayName }
 Add-DataGatewayClusterUser -GatewayClusterId $GatewayDetails.Id -PrincipalObjectId $AdminUser.Id -AllowedDataSourceTypes $null -Role Admin
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

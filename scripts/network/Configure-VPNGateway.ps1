@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\network\Configure-VPNGateway-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -285,7 +285,7 @@ $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "$($V
 Remove-Item -Path "$($tmpScript).ps1" -Force
 Remove-Item -Path $tmpScript -Force
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

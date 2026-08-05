@@ -69,10 +69,10 @@ Param(
     $membersToAdd
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Add-MembersToAllSites-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -153,7 +153,7 @@ foreach($site in $sitesToProcess)
     }
 }
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

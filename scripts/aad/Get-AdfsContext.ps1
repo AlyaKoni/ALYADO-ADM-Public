@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AdfsContext-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -91,7 +91,7 @@ Write-Host "Getting ADFS context" -ForegroundColor $CommandInfo
 $adfsContext = Get-MsolAdfscontext
 $adfsContext | Format-List
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

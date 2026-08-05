@@ -65,7 +65,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Export-WinGetAppDefinitions-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -101,7 +101,7 @@ $winGetApps | ConvertTo-Json -Depth 50 | Set-Content -Encoding UTF8 -Path $fileP
 
 Write-Host "WinGet apps exported to: $filePath" -ForegroundColor $CommandSuccess
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

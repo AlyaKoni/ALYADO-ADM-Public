@@ -67,10 +67,10 @@ Param(
     [string]$spSiteUrl
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeamSharePointAccess-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -106,7 +106,7 @@ $mGroup = Get-PnPGroup -Connection $siteCon -AssociatedMemberGroup
 Set-PnPGroupPermissions -Connection $siteCon -Identity $mGroup -AddRole @("Read") -RemoveRole @("Contributor","Editor") -ErrorAction SilentlyContinue
 Set-PnPGroupPermissions -Connection $siteCon -Identity $mGroup -AddRole @("Lesen") -RemoveRole @("Bearbeiten","Mitwirken") -ErrorAction SilentlyContinue
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

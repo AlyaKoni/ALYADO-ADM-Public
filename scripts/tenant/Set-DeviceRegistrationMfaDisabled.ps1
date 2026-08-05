@@ -63,10 +63,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-DeviceRegistrationMfaDisabled-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -102,7 +102,7 @@ if ($policy.MultiFactorAuthConfiguration -eq "1")
     Put-MsGraph -Uri "/beta/policies/deviceRegistrationPolicy" -Body $body
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

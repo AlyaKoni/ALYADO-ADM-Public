@@ -67,10 +67,10 @@ Param(
     $path = "C:\Temp"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\server\Set-AdministratorsReadRecursive-$($AlyaTimeString).log" | Out-Null
 
 #Main
@@ -109,7 +109,7 @@ if ($actOwner.Value -ne $BuiltinAdminName)
     Set-Acl $path $acl
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

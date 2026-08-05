@@ -70,7 +70,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Delete-IntuneDeviceConfigurationPolicy-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -108,7 +108,7 @@ Write-Host "  Deleting policy $PolicyName"
 $uri = "/beta/deviceManagement/configurationPolicies/$($extPolicy.Id)"
 Delete-MsGraphObject -Uri $uri
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

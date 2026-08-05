@@ -68,10 +68,10 @@ Param(
     [string]$backupPath = $null #ex.: "D:\Backup"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Backup-Device-$($AlyaTimeString).log" | Out-Null
 
 #Main
@@ -83,7 +83,7 @@ if (-Not (Test-Path $backupPath))
 
 cmd /c wbadmin start backup -backupTarget:"$backupPath" -include:C -allCritical -vssCopy 
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

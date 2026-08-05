@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\01_createWvdTenant-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -125,7 +125,7 @@ Get-RdsTenant -Name $AlyaWvdTenantNameTest -ErrorAction Stop | Format-List
 #Get-RdsDiagnosticActivities -Detailed
 #Remove-RdsTenant -Name $AlyaWvdTenantNameTest
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

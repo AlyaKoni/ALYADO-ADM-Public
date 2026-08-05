@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\teams\Configure-DefaultTeamTemplate-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -121,7 +121,7 @@ Remove-CsTeamTemplate -OdataId /api/teamtemplates/v1.0/09750b21-1b50-4f81-a9bf-1
 Remove-CsTeamTemplate -OdataId /api/teamtemplates/v1.0/5b26980c-0691-46da-b9e9-1dbee63794fb/Tenant/en-US
 #>
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

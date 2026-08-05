@@ -66,10 +66,10 @@ Param(
     $VmName = "alyapinfserv010"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\filesync\Get-VmAgentState-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -101,7 +101,7 @@ $vm = Get-AzVM -Name $VmName
 $agent = $vm | Select-Object -ExpandProperty OSProfile | Select-Object -ExpandProperty Windowsconfiguration | Select-Object ProvisionVMAgent
 Write-Host $vm.Name $agent.ProvisionVMAgent
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

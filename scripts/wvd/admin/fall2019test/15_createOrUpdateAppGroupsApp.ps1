@@ -79,10 +79,10 @@ Param(
     $availableIcons
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\15_createOrUpdateAppGroupsApp-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -272,7 +272,7 @@ foreach($appGrp in $appsToGroup)
 #Set-RdsRemoteApp -TenantName $AlyaWvdTenantNameTest -HostPoolName $HostPoolName -AppGroupName "Standard Apps" -Name "Explorer" -IconPath "C:\SSV\WvdIcons\Explorer.Ico" -IconIndex 0
 
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

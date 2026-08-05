@@ -167,7 +167,7 @@ Param(
     [string]$AlyaSharePointUrl = "PleaseSpecify"
 )
 
-# Starting Transscript
+# Starting Transcript
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 if (-Not (Test-Path "$PSScriptRoot\purgeReports"))
 {

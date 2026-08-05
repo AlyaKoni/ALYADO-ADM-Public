@@ -87,10 +87,10 @@ Param(
     [int]$DoNotCheckProcessesLaunchedWithinLastChecks = 10
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Find-MemoryLeak-$($AlyaTimeString).log" | Out-Null
 
 $processHistory = [System.Collections.Generic.LinkedList[System.Diagnostics.Process[]]]::new()
@@ -224,7 +224,7 @@ try {
     $candidates | Export-Clixml -Path "$($AlyaLogs)\data\client\os\Find-MemoryLeak-Candidates-$($AlyaTimeString).xml"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 <#

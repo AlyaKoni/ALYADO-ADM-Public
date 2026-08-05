@@ -68,10 +68,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\microsoft365\ProfilePictures\Import-ProfilePicsToExo-$($AlyaTimeString).log" | Out-Null
 
 #Prepare PicDir
@@ -156,7 +156,7 @@ catch {
     Write-Error $_.Exception -ErrorAction Continue
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

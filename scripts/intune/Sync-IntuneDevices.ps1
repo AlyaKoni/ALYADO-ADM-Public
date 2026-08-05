@@ -71,7 +71,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Sync-IntuneDevices-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -101,7 +101,7 @@ Foreach ($device in $devices)
   
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

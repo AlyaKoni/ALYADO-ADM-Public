@@ -67,10 +67,10 @@ Param(
     [string]$GatewayName
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\powerplattform\Get-DataGatewayClusterDataSources-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -95,7 +95,7 @@ Write-Host "=====================================================`n`n" -Foregrou
 $GatewayDetails = Get-DataGatewayCluster -Scope Organization -ErrorAction SilentlyContinue | Where-Object { $_.Name -eq $GatewayName }
 Get-DataGatewayClusterDatasource -GatewayClusterId $GatewayDetails.Id
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

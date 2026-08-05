@@ -73,10 +73,10 @@ Param(
     [string]$ConfigEnv = "Prod"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\autoscale\Save-AutoscalingCredentials-$($AlyaTimeString).log" | Out-Null
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
@@ -233,7 +233,7 @@ else
 Write-Host "Actual credentials: "
 Get-StoredCredential -List
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

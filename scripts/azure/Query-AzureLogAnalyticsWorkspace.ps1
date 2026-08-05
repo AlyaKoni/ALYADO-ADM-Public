@@ -66,10 +66,10 @@ Param(
     [switch]$PassThru
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\azure\Query-AzureLogAnalyticsWorkspace-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -127,7 +127,7 @@ else
     $kqlQuery | ConvertTo-Json -Depth 100
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

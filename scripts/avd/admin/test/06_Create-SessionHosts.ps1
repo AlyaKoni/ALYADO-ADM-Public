@@ -74,10 +74,10 @@ Param(
     $ImageOption = "Gallery"
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\test\Create-SessionHosts-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -958,7 +958,7 @@ Clear-Variable -Name "DomJoinCredential" -Force -ErrorAction SilentlyContinue
 #Setting role on resourcegroup
 & "$PSScriptRoot\07_Configure-AutoStartRole.ps1"
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

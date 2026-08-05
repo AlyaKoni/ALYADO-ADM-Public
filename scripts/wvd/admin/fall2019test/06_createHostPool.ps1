@@ -88,10 +88,10 @@ Param(
     [bool]$EnableAcceleratedNetworking
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\wvd\admin\fall2019test\06_createRdpHostPool-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -453,7 +453,7 @@ for ($hi=0; $hi -lt $NumberOfInstances; $hi++)
     $null = Set-AzResource -ResourceId $vm.Id -Tag $tags -ApiVersion "2022-03-01" -Force
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Configure-IntuneDeviceCategories-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Checking modules
@@ -119,7 +119,7 @@ foreach($categoryName in $AlyaDeviceCategories)
     $actCategory = Patch-MsGraph -Uri $uri -Body $body
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

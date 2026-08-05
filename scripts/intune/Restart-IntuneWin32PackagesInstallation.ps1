@@ -70,7 +70,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Restart-IntuneWin32PackagesInstallation-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # =============================================================
@@ -98,7 +98,7 @@ foreach($regp in (Get-ChildItem -Path $regsitryRoot))
 net stop IntuneManagementExtension
 net start IntuneManagementExtension
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

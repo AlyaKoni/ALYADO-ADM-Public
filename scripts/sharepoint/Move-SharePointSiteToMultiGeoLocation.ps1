@@ -87,10 +87,10 @@ Param(
     [Nullable[DateTime]]$moveEnd = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Move-SharePointSiteToMultiGeoLocation-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -184,7 +184,7 @@ foreach($siteUrl in $siteUrlsToMove)
 
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

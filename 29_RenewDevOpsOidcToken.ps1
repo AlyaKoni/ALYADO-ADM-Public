@@ -91,7 +91,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\29_RenewDevOpsOidcToken-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 Write-Host "Checking access token"
@@ -204,7 +204,7 @@ Write-Host "AlyaDevOpsIdToken $env:idToken"
 Write-Host "AlyaDevOpsServicePrincipalId $env:servicePrincipalId"
 Write-Host "AlyaDevOpsTenantId $env:tenantId"
 
-# Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -75,10 +75,10 @@ Param(
     [string[]]$addSenders = $null
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\exchange\Set-MailboxTrustedSenders-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
@@ -130,7 +130,7 @@ if ($mbx)
     }
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

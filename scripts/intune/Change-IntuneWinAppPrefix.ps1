@@ -66,7 +66,7 @@ Param(
 # Loading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Change-IntuneWinAppPrefix-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
 
 # Constants
@@ -352,7 +352,7 @@ if ($AlyaAppPrefix -ne "WIN")
     Write-Warning "Please change `$AlyaAppPrefix to WIN in $($AlyaData)\ConfigureEnv.ps1"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

@@ -68,10 +68,10 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\client\os\Check-CA2023Update-$($AlyaTimeString).log" | Out-Null
 
 #Checking system information and prerequisites
@@ -675,7 +675,7 @@ if ($bootLoaderPending -and -not $reportOnly)
 	exit 0
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block

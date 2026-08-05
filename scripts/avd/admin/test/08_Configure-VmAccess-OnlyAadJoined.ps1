@@ -62,10 +62,10 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
 )
 
-#Reading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1
 
-#Starting Transscript
+# Starting Transcript
 Start-Transcript -Path "$($AlyaLogs)\scripts\avd\admin\test\08_Configure-VmAccess-OnlyAadJoined-$($AlyaTimeString).log" | Out-Null
 
 # Constants
@@ -131,7 +131,7 @@ if (-Not $ra)
     $ra = New-AzRoleAssignment -RoleDefinitionName "Virtual Machine Administrator Login" -ObjectId $obj.Id -ResourceGroupName $ResourceGroupName
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block
