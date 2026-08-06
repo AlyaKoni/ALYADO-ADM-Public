@@ -61,6 +61,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseApprovedVerbs", "")]
 $Global:ErrorActionPreference = "Stop"
+[System.Net.ServicePointManager]::SecurityProtocol =[System.Net.SecurityProtocolType]::Tls12
 $Global:ProgressPreference = "SilentlyContinue"
 $VerbosePreference = "Continue"
 $ProgressPreference = "Continue"

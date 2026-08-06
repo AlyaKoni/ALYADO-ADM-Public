@@ -180,12 +180,31 @@ $proxy = [System.Net.WebRequest]::GetSystemWebProxy()
 $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 
 <# OTHER PATHS #>
-$AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Modules"
-$AlyaDefaultModulePathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Modules"
-$AlyaDefaultScriptPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Scripts"
-$AlyaDefaultScriptPathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Scripts"
-if (-Not $AlyaModulePath) { $AlyaModulePath = $AlyaDefaultModulePath }
-if (-Not $AlyaScriptPath) { $AlyaScriptPath = $AlyaDefaultScriptPath }
+if ($AlyaIsPsUnix) { 
+    $AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".local/share/windowspowershell/Modules"
+    $AlyaDefaultModulePathCore = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".local/share/powershell/Modules"
+    $AlyaDefaultScriptPath = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".local/share/windowspowershell/Scripts"
+    $AlyaDefaultScriptPathCore = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".local/share/powershell/Scripts"
+} else {
+    $AlyaDefaultModulePath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Modules"
+    $AlyaDefaultModulePathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Modules"
+    $AlyaDefaultScriptPath = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "WindowsPowerShell\Scripts"
+    $AlyaDefaultScriptPathCore = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Scripts"
+}
+if (-Not $AlyaModulePath) {
+    if ($AlyaIsPsCore) {
+        $AlyaModulePath = $AlyaDefaultModulePathCore
+    } else {
+        $AlyaModulePath = $AlyaDefaultModulePath
+    }
+}
+if (-Not $AlyaScriptPath) {
+    if ($AlyaIsPsCore) {
+        $AlyaScriptPath = $AlyaDefaultScriptPathCore
+    } else {
+        $AlyaScriptPath = $AlyaDefaultScriptPath
+    }
+}
 $AlyaOfficeRoot = "C:\Program Files\Microsoft Office\root\Office16"
 $AlyaGitRoot = Join-Path (Join-Path $AlyaRoot "tools") "git"
 $AlyaDeployToolRoot = Join-Path (Join-Path $AlyaRoot "tools") "officedeploy"
@@ -223,7 +242,16 @@ if ((Test-Path $AlyaLocal\ConfigureEnv.ps1))
 }
 if ($AlyaModulePath -ne $AlyaDefaultModulePath -and $AlyaModulePath -ne $AlyaDefaultModulePathCore)
 {
-    if (((Test-Path $AlyaDefaultModulePath) -or (Test-Path $AlyaDefaultModulePathCore)) -and -not $Global:AlyaDefaultModulePathWarningDone)
+    $modDIrs = $null
+    if ((Test-Path $AlyaDefaultModulePath) -and -not $Global:AlyaDefaultModulePathWarningDone)
+    {
+        $modDIrs = Get-ChildItem -Path $AlyaDefaultModulePath -Directory
+    }
+    if ((Test-Path $AlyaDefaultModulePathCore) -and -not $Global:AlyaDefaultModulePathWarningDone)
+    {
+        $modDIrs = Get-ChildItem -Path $AlyaDefaultModulePathCore -Directory
+    }
+    if ($modDIrs -and $modDIrs.Count -gt 0)
     {
         $Global:AlyaDefaultModulePathWarningDone = $true
         Write-Host "You have specified the variable AlyaModulePath and modules are present in the default module path:"  -ForegroundColor Red
@@ -259,7 +287,12 @@ if (-Not $env:PATH.Contains("$($AlyaScriptPath)"))
 {
     $env:PATH = "$($AlyaScriptPath)$AlyaPathSep$($env:PATH)"
 }
-$vsCodeProfileDir = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell"
+
+if ($AlyaIsPsUnix) { 
+    $vsCodeProfileDir = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".local/share/powershell"
+} else {
+    $vsCodeProfileDir = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell"
+}
 $vsCodeProfileFile = Join-Path $vsCodeProfileDir "Microsoft.VSCode_profile.ps1"
 try
 {
@@ -1202,6 +1235,7 @@ function Remove-OneDriveItemRecursive
     if ($Path -and (Test-Path -LiteralPath $Path))
     {
         $Items = Get-ChildItem -LiteralPath $Path -File -Recurse
+        $Items += Get-ChildItem -LiteralPath $Path -File -Recurse -Attributes "Hidden"
         foreach ($Item in $Items)
         {
             try
@@ -1209,10 +1243,19 @@ function Remove-OneDriveItemRecursive
                 $Item.Delete()
             } catch
             {
-                throw "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message)"
+                Write-Warning "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message). Trying Remove-Item instead."
+                try
+                {
+                    $null = Remove-Item -Path $Item.FullName -Force -ErrorAction Stop
+                } catch
+                {
+                    throw "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message)"
+                }
             }
         }
-        $Items = Get-ChildItem -LiteralPath $Path -Directory -Recurse | Sort-object -Property { $_.FullName.Length } -Descending
+        $Items = Get-ChildItem -LiteralPath $Path -Directory -Recurse
+        $Items += Get-ChildItem -LiteralPath $Path -Directory -Recurse -Attributes "Hidden"
+        $Items = $Items| Sort-object -Property { $_.FullName.Length } -Descending
         foreach ($Item in $Items)
         {
             try
@@ -1220,15 +1263,30 @@ function Remove-OneDriveItemRecursive
                 $Item.Delete()
             } catch
             {
-                throw "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message)"
+                Write-Warning "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message). Trying Remove-Item instead."
+                try
+                {
+                    $null = Remove-Item -Path $Item.FullName -Recurse -Force -ErrorAction Stop
+                } catch
+                {
+                    throw "Remove-OneDriveItemRecursive - Couldn't delete $($Item.FullName), error: $($_.Exception.Message)"
+                }
             }
         }
         try
         {
-            (Get-Item -LiteralPath $Path).Delete()
+            $Item = Get-Item -Path $Path
+            $Item.Delete()
         } catch
         {
-            throw "Remove-OneDriveItemRecursive - Couldn't delete $($Path), error: $($_.Exception.Message)"
+            Write-Warning "Remove-OneDriveItemRecursive - Couldn't delete $($Path), error: $($_.Exception.Message). Trying Remove-Item instead."
+            try
+            {
+                $null = Remove-Item -Path $Path -Recurse -Force -ErrorAction Stop
+            } catch
+            {
+                throw "Remove-OneDriveItemRecursive - Couldn't delete $($Path), error: $($_.Exception.Message)"
+            }
         }
     } else
     {
@@ -1646,9 +1704,12 @@ function Install-PackageIfNotInstalled (
         }
         Write-Host ('Package {0} is installed. Used:v{1} Requested:v{2}' -f $packageName, $nuvrsInstalled, $nuvrs)
     }
-    foreach($file in (Get-ChildItem -Path "$($AlyaTools)\Packages\$packageName" -Recurse))
+    if (-Not $AlyaIsPsUnix)
     {
-        Unblock-File -Path $file.FullName
+        foreach($file in (Get-ChildItem -Path "$($AlyaTools)\Packages\$packageName" -Recurse))
+        {
+            Unblock-File -Path $file.FullName
+        }
     }
 }
 #Install-PackageIfNotInstalled "Selenium.WebDriver"
@@ -2105,6 +2166,10 @@ function Install-ScriptIfNotInstalled (
     if ($exactVersion -ne "0.0.0.0")
     {
         $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue | Where-Object { $_.Version -eq $exactVersion }
+        if ($AlyaIsPsUnix -and $null -eq $script)
+        {
+            $script = Get-Command -CommandType ExternalScript -ErrorAction SilentlyContinue | Where-Object { $_.Name.Replace(".ps1","").Replace(".PS1","") -eq $scriptName <#-and $_.Version -eq $exactVersion#> }
+        }
         if ($null -ne $script)
         {
             $autoUpdate = $false
@@ -2127,6 +2192,11 @@ function Install-ScriptIfNotInstalled (
     {
         $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue | `
             Where-Object { $_.Version -ge $minimalVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        if ($AlyaIsPsUnix -and $null -eq $script)
+        {
+            $script = Get-Command -CommandType ExternalScript -ErrorAction SilentlyContinue| `
+                Where-Object { $_.Name.Replace(".ps1","").Replace(".PS1","") -eq $scriptName <#-and $_.Version -ge $minimalVersion#> } | Sort-Object -Property Version | Select-Object -Last 1
+        }
         if ($null -ne $script)
         {
             $autoUpdate = $false
@@ -2149,6 +2219,11 @@ function Install-ScriptIfNotInstalled (
     {
         $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue | `
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        if ($AlyaIsPsUnix -and $null -eq $script)
+        {
+            $script = Get-Command -CommandType ExternalScript -ErrorAction SilentlyContinue | `
+                Where-Object { $_.Name.Replace(".ps1","").Replace(".PS1","") -eq $scriptName <#-and $_.Version -ge $minimalVersion#> } | Sort-Object -Property Version | Select-Object -Last 1
+        }
     }
     if ($script)
     {
@@ -2200,6 +2275,11 @@ function Install-ScriptIfNotInstalled (
         }
         $script = Get-InstalledScript -Name $scriptName -ErrorAction SilentlyContinue | `
             Where-Object { $_.Version -eq $requestedVersion } | Sort-Object -Property Version | Select-Object -Last 1
+        if ($AlyaIsPsUnix -and $null -eq $script)
+        {
+            $script = Get-Command -CommandType ExternalScript -ErrorAction SilentlyContinue | `
+                Where-Object { $_.Name.Replace(".ps1","").Replace(".PS1","") -eq $scriptName <#-and $_.Version -ge $minimalVersion#> } | Sort-Object -Property Version | Select-Object -Last 1
+        }
         if (-Not $script)
         {
             Write-Error "Not able to install the script!" -ErrorAction Continue
@@ -5044,8 +5124,8 @@ function Replace-AlyaStrings($obj, $depth)
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDHVFCLGZGWSohe
-# VnG9JoplNDvC5Hb9ZtauSIhQy5ggL6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDuy2Vs0yfr6/4k
+# MFQL34z5sFlKfRjd43V+PaZ1IqxkhaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -5159,23 +5239,23 @@ function Replace-AlyaStrings($obj, $depth)
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEqbWp1E
-# slGaJCnXsOkvwzdci5TWaauMMnKBmzdwtgBnMA0GCSqGSIb3DQEBAQUABIICAHa7
-# 1CR5eiURqO3OwCcfcj11PaHPvj9gMk/iJUjVc18RYcyCZaksgVa52lgJlbrGmIO4
-# nJqNhQwc6Iu2DJ/ipEmAvbUiIQ474bGDO+w3N7PC2HIm92lD5r6o+8dQ7XB97u/6
-# ruAWQug15z1ahV4FbJ2agXeQwjTQ/9v394wFqzxDmJeH/e7N3orTHkvLcYGg6xPm
-# ZWnvvoDBUyoJPDyLipCoAPWhxL2N8Qw2XdbTmV82rQDy+b8nZ+uzqG5Xll6c6y5l
-# RkagUSV4WBYSwTBbPy2L9PluqtIbon0msK1CWh4Dl5rNv6msjhbUsg9n+iUgBg3v
-# IYw79LYLh6x1WifdZkdAAqT1brcMV1Kv8+WD9XZIU5WlbJ8XM1veOMbu14Oh1v6P
-# MOq3Jq4ajhPAXvtGK/FUbX4+e1Tu+CRKMVlDRsOsYxRR9RiAyXTWbHby8SufmMcd
-# heOX+dDUSIP2jBXmmQDJ8ii47towbFPJzBJGOqIihow5lFKx40oDxUv7pDXDEVi2
-# jjXGzu9zBSG7MwA1oHeFIU7j7ExIrc0wcb8l9f7pLF+hi9xdA9RKEA/TJ3i3V/eX
-# mOA7JvCxcvDB9aWO6zN5bLswD4E3M/oMf2CsVE6Mv3CbC8wV94/ad+TnP6yy6/EJ
-# B1Mbod8ivr/Yem9mkBNk9oyew6pcU8MkJM8fR3vcoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIM0NO/tp
+# hE0sxjN52XDsEouqkUwOeVusfAzypbskf6MgMA0GCSqGSIb3DQEBAQUABIICAIBr
+# Ks9aX1ZXHow3Tm7dawuBhSdtDnUGYGvz2kMAQeqzq2tVIAApDittV3KEtx21DdH1
+# sWqUQ3p5qPoXBklGiOKfjHMFqQAvLj3Gj1cC3mqDC2urO8bNuCrkAFMHojsOy7VX
+# UZ62WEDwqXPfJv6rFO2KFGLpGNrflXJZjUKFHBqF4Ji9ifZiXxtjOzjccLR+W1cY
+# A2VZZj8u2gbEFP5Qwx22dU33MHrpH/yHpvYjo94C6G0V3i3chOVCwFUbyA2D42D/
+# oDlLIw11vc+VW4oHysO6Pl5ZWltQ5m7Zj0t+DmZ7imJzf818wHHX1P46/mpnQeU+
+# 699wKB4e6HY+XxUuGySg64KrAPY+g8URN16SlZyU2l4FvDYkkoeotzqU3xWkmxnK
+# EfwUghRPDPVFYdd/zBpVCMT+lv9YoJUi1R4bxfxNtg5zlPnRHSBNHgrzMxnQkKKW
+# tQvbR1YuLkR6Q2VHpipxWzn0XFlaDqRTnPhPte2Nd2EG+fBSzlvW9jUqCZgtTjg7
+# ujefpSjxibyCVhiHAuIS8DVN1HsAs48mLI0khVNV8IjuY0vY/A7AEEsTesEBEps4
+# H7pFCoOOih12eRzeBtTRdCl+BB8SzTrhFZugOBbIFRkhc2o6j5wjOMqfw26y3drW
+# Eq5ntIUaPSHKuGk6J3+QilB0VLydeGUqSCmr0J/coYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAT1DDnIftys4HZCBwP0MvVOt2rHPl3MePtxkaHiX4pBgIUGvy1
-# +dJY6C8RHh6cOTR/vcTnTI8YDzIwMjYwODA1MTQzOTQ0WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAk4/shtLNbzV86TRayZXHeoDXHKaO/CL/LXud8/RQ8PwIUB0VV
+# CWfV20xyQo6kCskDVOfF3woYDzIwMjYwODA2MDgyMDEzWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -5318,18 +5398,18 @@ function Replace-AlyaStrings($obj, $depth)
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDDYB37hy1Hee6ZJsg35EHGOlSemVa7FKcIviKZrjY/WQpw+8cXueFBB5yUv
-# YpwKo9YwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBF1eY1aQckTLvHJ6S85NTR67T6j7LonVvUNRB8yZq3JrrgP4kK1USSgT0a
+# P05rHnAwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGADwrSRU4hiTUdM3nbyIMGMwidl7dLxL+ZYTvy+lG1QiLo
-# qTvPVQRBrIUI8JD/RIU5fo67uaeZ4Ngyw3sc4TZLu4+MpkEzcgeXSllBz46HKj8i
-# Gc/q+Yiu7+uUDJUNhiNMTj+764R7ikMuXU7NGPko4b2V1yVTGf6mTXdOQEhwenkc
-# NJOEVlcTjBoSuABLpfEqNl7KQYDSJiJmM9jvX3DsKdoO/PIYGoC0CxIa4m4I+KQw
-# VUzm4B9vXFtBT6uGWenqk811gr6YE4wMGH2OxJ+RbsJGs2im2XAkq09MZX+n/C3J
-# QR8ToplAbE3g4o55o8PkP6/DzATR0FVTcCxkbzG9jaiMrxwnuBPGXV/PYBDhMHPh
-# n+TpM1pkgkWWHVpt2OR/UmmsjORwNxW2INMG2nYZrQpoBXYsmZNJGm+WvOalr8ui
-# T8ElhnKlqqXV8PesUzl7m4SxLhxFLV0/kLNEKsY0ifcOw7FAJAbcZ5Y053woRdC8
-# 4D7HXRcLk/eGiQTvDXJ5
+# KoZIhvcNAQEMBQAEggGAGLrBYHYneqhFRHLkAVXaVYDO5fyqZn2ObCG6a3sywgWi
+# 2Jopjx5hYBYf2kg/1wM+nJIGr3Xvkao39B+BTEXET4e7GZj6enmE7BzALIaB7CpI
+# 1Mu6vyMLniJMn/CsR7isw7kdhQ+6N60UcIuRZI8DSJCOj4hWLStcCx2TGGSqosWT
+# 62PD9xVMeK9yXa48CW0LglafW/QrC3mIUseo9leat1k8VNJOPtgsBiREJvb8Sktj
+# Cmaai98ap2ZIYjOT7U2fGfzE1ACYNSmzKcYCAEZlOehCoUglVz7PRNLIhrZP8elM
+# rTH+rwnxixfYR18GGgmn0hwsUq80u3z+eYbMLxZlVQ3ABLuOJ8iMtqsNHMc5HYEE
+# nwSA/MjPxGlTJXt5A9WfwvcdcRQJ+s/Ye9g/L3S/el/U51uI0J7KpzuHVBRi8sH+
+# Nqk/Qf9zTGAluSB+OI/G1zMjmf6Ygq58nSiIdGnRvgLN/ZLC2eneSMHWZvVOOdDG
+# KgUeRhf+AMFnuHrbLJfY
 # SIG # End signature block

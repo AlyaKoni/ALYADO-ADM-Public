@@ -126,202 +126,203 @@ foreach($location in $tenantInstances)
     Write-Host "Tenant settings" -ForegroundColor $CommandInfo
     $tenantPnP = Get-PnPTenant -Connection $conPnP
     $tenantPnP | ConvertTo-Json -Depth 10 | Out-File "$($AlyaData)\sharepoint\TenantConfig-$($location.DataLocation).json" -Force
-    if ($DryRun -eq $false)
-    {
-        $retries = 5
-        do {
-            try {
-                $parms = @{}
-                if ($tenantPnP.SpecialCharactersStateInFileFolderNames -ne $tenant.SpecialCharactersStateInFileFolderNames) { $parms["SpecialCharactersStateInFileFolderNames"] = $tenant.SpecialCharactersStateInFileFolderNames }
-                if ($tenantPnP.ExternalServicesEnabled -ne $tenant.ExternalServicesEnabled) { $parms["ExternalServicesEnabled"] = $tenant.ExternalServicesEnabled }
-                if ($tenantPnP.NoAccessRedirectUrl -ne $tenant.NoAccessRedirectUrl) { $parms["NoAccessRedirectUrl"] = $tenant.NoAccessRedirectUrl }
-                if ($tenantPnP.SharingCapability -ne $tenant.SharingCapability) { $parms["SharingCapability"] = $tenant.SharingCapability }
-                if ($tenantPnP.DisplayStartASiteOption -ne $tenant.DisplayStartASiteOption) { $parms["DisplayStartASiteOption"] = $tenant.DisplayStartASiteOption }
-                if ($tenantPnP.StartASiteFormUrl -ne $tenant.StartASiteFormUrl) { $parms["StartASiteFormUrl"] = $tenant.StartASiteFormUrl }
-                if ($tenantPnP.ShowAllUsersClaim -ne $tenant.ShowAllUsersClaim) { $parms["ShowAllUsersClaim"] = $tenant.ShowAllUsersClaim }
-                if ($tenantPnP.ShowEveryoneExceptExternalUsersClaim -ne $tenant.ShowEveryoneExceptExternalUsersClaim) { $parms["ShowEveryoneExceptExternalUsersClaim"] = $tenant.ShowEveryoneExceptExternalUsersClaim }
-                if ($tenantPnP.SearchResolveExactEmailOrUPN -ne $tenant.SearchResolveExactEmailOrUPN) { $parms["SearchResolveExactEmailOrUPN"] = $tenant.SearchResolveExactEmailOrUPN }
-                if ($tenantPnP.OfficeClientADALDisabled -ne $tenant.OfficeClientADALDisabled) { $parms["OfficeClientADALDisabled"] = $tenant.OfficeClientADALDisabled }
-                if ($tenantPnP.LegacyAuthProtocolsEnabled -ne $tenant.LegacyAuthProtocolsEnabled) { $parms["LegacyAuthProtocolsEnabled"] = $tenant.LegacyAuthProtocolsEnabled }
-                if ($tenantPnP.RequireAcceptingAccountMatchInvitedAccount -ne $tenant.RequireAcceptingAccountMatchInvitedAccount) { $parms["RequireAcceptingAccountMatchInvitedAccount"] = $tenant.RequireAcceptingAccountMatchInvitedAccount }
-                if ($tenantPnP.ProvisionSharedWithEveryoneFolder -ne $tenant.ProvisionSharedWithEveryoneFolder) { $parms["ProvisionSharedWithEveryoneFolder"] = $tenant.ProvisionSharedWithEveryoneFolder }
-                if ($tenantPnP.SignInAccelerationDomain -ne $tenant.SignInAccelerationDomain) { $parms["SignInAccelerationDomain"] = $tenant.SignInAccelerationDomain }
-                if ($tenantPnP.EnableGuestSignInAcceleration -ne $tenant.EnableGuestSignInAcceleration) { $parms["EnableGuestSignInAcceleration"] = $tenant.EnableGuestSignInAcceleration }
-                if ($tenantPnP.UsePersistentCookiesForExplorerView -ne $tenant.UsePersistentCookiesForExplorerView) { $parms["UsePersistentCookiesForExplorerView"] = $tenant.UsePersistentCookiesForExplorerView }
-                if ($tenantPnP.BccExternalSharingInvitations -ne $tenant.BccExternalSharingInvitations) { $parms["BccExternalSharingInvitations"] = $tenant.BccExternalSharingInvitations }
-                if ($tenantPnP.BccExternalSharingInvitationsList -ne $tenant.BccExternalSharingInvitationsList) { $parms["BccExternalSharingInvitationsList"] = $tenant.BccExternalSharingInvitationsList }
-                if ($tenantPnP.PublicCdnEnabled -ne $tenant.PublicCdnEnabled) { $parms["PublicCdnEnabled"] = $tenant.PublicCdnEnabled }
-                if ($tenantPnP.PublicCdnAllowedFileTypes -ne $tenant.PublicCdnAllowedFileTypes) { $parms["PublicCdnAllowedFileTypes"] = $tenant.PublicCdnAllowedFileTypes }
-                if ($tenantPnP.RequireAnonymousLinksExpireInDays -ne $tenant.RequireAnonymousLinksExpireInDays) { $parms["RequireAnonymousLinksExpireInDays"] = $tenant.RequireAnonymousLinksExpireInDays }
-                if ($tenantPnP.SharingAllowedDomainList -ne $tenant.SharingAllowedDomainList) { $parms["SharingAllowedDomainList"] = $tenant.SharingAllowedDomainList }
-                if ($tenantPnP.SharingBlockedDomainList -ne $tenant.SharingBlockedDomainList) { $parms["SharingBlockedDomainList"] = $tenant.SharingBlockedDomainList }
-                if ($tenantPnP.SharingDomainRestrictionMode -ne $tenant.SharingDomainRestrictionMode) { $parms["SharingDomainRestrictionMode"] = $tenant.SharingDomainRestrictionMode }
-                if ($tenantPnP.OneDriveStorageQuota -ne $tenant.OneDriveStorageQuota) { $parms["OneDriveStorageQuota"] = $tenant.OneDriveStorageQuota }
-                if ($tenantPnP.OneDriveForGuestsEnabled -ne $tenant.OneDriveForGuestsEnabled) { $parms["OneDriveForGuestsEnabled"] = $tenant.OneDriveForGuestsEnabled }
-                if ($tenantPnP.IPAddressEnforcement -ne $tenant.IPAddressEnforcement) { $parms["IPAddressEnforcement"] = $tenant.IPAddressEnforcement }
-                if ($tenantPnP.IPAddressAllowList -ne $tenant.IPAddressAllowList) { $parms["IPAddressAllowList"] = $tenant.IPAddressAllowList }
-                if ($tenantPnP.IPAddressWACTokenLifetime -ne $tenant.IPAddressWACTokenLifetime) { $parms["IPAddressWACTokenLifetime"] = $tenant.IPAddressWACTokenLifetime }
-                if ($tenantPnP.UseFindPeopleInPeoplePicker -ne $tenant.UseFindPeopleInPeoplePicker) { $parms["UseFindPeopleInPeoplePicker"] = $tenant.UseFindPeopleInPeoplePicker }
-                if ($tenantPnP.DefaultSharingLinkType -ne $tenant.DefaultSharingLinkType) { $parms["DefaultSharingLinkType"] = $tenant.DefaultSharingLinkType }
-                if ($tenantPnP.ODBMembersCanShare -ne $tenant.ODBMembersCanShare) { $parms["ODBMembersCanShare"] = $tenant.ODBMembersCanShare }
-                if ($tenantPnP.ODBAccessRequests -ne $tenant.ODBAccessRequests) { $parms["ODBAccessRequests"] = $tenant.ODBAccessRequests }
-                if ($tenantPnP.PreventExternalUsersFromReSharing -ne $tenant.PreventExternalUsersFromReSharing) { $parms["PreventExternalUsersFromReSharing"] = $tenant.PreventExternalUsersFromReSharing }
-                if ($tenantPnP.ShowPeoplePickerSuggestionsForGuestUsers -ne $tenant.ShowPeoplePickerSuggestionsForGuestUsers) { $parms["ShowPeoplePickerSuggestionsForGuestUsers"] = $tenant.ShowPeoplePickerSuggestionsForGuestUsers }
-                if ($tenantPnP.FileAnonymousLinkType -ne $tenant.FileAnonymousLinkType) { $parms["FileAnonymousLinkType"] = $tenant.FileAnonymousLinkType }
-                if ($tenantPnP.FolderAnonymousLinkType -ne $tenant.FolderAnonymousLinkType) { $parms["FolderAnonymousLinkType"] = $tenant.FolderAnonymousLinkType }
-                if ($tenantPnP.NotifyOwnersWhenItemsReShared -ne $tenant.NotifyOwnersWhenItemsReShared) { $parms["NotifyOwnersWhenItemsReShared"] = $tenant.NotifyOwnersWhenItemsReShared }
-                if ($tenantPnP.NotifyOwnersWhenInvitationsAccepted -ne $tenant.NotifyOwnersWhenInvitationsAccepted) { $parms["NotifyOwnersWhenInvitationsAccepted"] = $tenant.NotifyOwnersWhenInvitationsAccepted }
-                if ($tenantPnP.NotificationsInOneDriveForBusinessEnabled -ne $tenant.NotificationsInOneDriveForBusinessEnabled) { $parms["NotificationsInOneDriveForBusinessEnabled"] = $tenant.NotificationsInOneDriveForBusinessEnabled }
-                if ($tenantPnP.NotificationsInSharePointEnabled -ne $tenant.NotificationsInSharePointEnabled) { $parms["NotificationsInSharePointEnabled"] = $tenant.NotificationsInSharePointEnabled }
-                if ($tenantPnP.OwnerAnonymousNotification -ne $tenant.OwnerAnonymousNotification) { $parms["OwnerAnonymousNotification"] = $tenant.OwnerAnonymousNotification }
-                if ($tenantPnP.CommentsOnSitePagesDisabled -ne $tenant.CommentsOnSitePagesDisabled) { $parms["CommentsOnSitePagesDisabled"] = $tenant.CommentsOnSitePagesDisabled }
-                if ($tenantPnP.SocialBarOnSitePagesDisabled -ne $tenant.SocialBarOnSitePagesDisabled) { $parms["SocialBarOnSitePagesDisabled"] = $tenant.SocialBarOnSitePagesDisabled }
-                if ($tenantPnP.OrphanedPersonalSitesRetentionPeriod -ne $tenant.OrphanedPersonalSitesRetentionPeriod) { $parms["OrphanedPersonalSitesRetentionPeriod"] = $tenant.OrphanedPersonalSitesRetentionPeriod }
-                if ($tenantPnP.DisallowInfectedFileDownload -ne $tenant.DisallowInfectedFileDownload) { $parms["DisallowInfectedFileDownload"] = $tenant.DisallowInfectedFileDownload }
-                if ($tenantPnP.DefaultLinkPermission -ne $tenant.DefaultLinkPermission) { $parms["DefaultLinkPermission"] = $tenant.DefaultLinkPermission }
-                if ($tenantPnP.ConditionalAccessPolicy -ne $tenant.ConditionalAccessPolicy) { $parms["ConditionalAccessPolicy"] = $tenant.ConditionalAccessPolicy }
-                if ($tenantPnP.AllowDownloadingNonWebViewableFiles -ne $tenant.AllowDownloadingNonWebViewableFiles) { $parms["AllowDownloadingNonWebViewableFiles"] = $tenant.AllowDownloadingNonWebViewableFiles }
-                if ($tenantPnP.AllowEditing -ne $tenant.AllowEditing) { $parms["AllowEditing"] = $tenant.AllowEditing }
-                if ($tenantPnP.ApplyAppEnforcedRestrictionsToAdHocRecipients -ne $tenant.ApplyAppEnforcedRestrictionsToAdHocRecipients) { $parms["ApplyAppEnforcedRestrictionsToAdHocRecipients"] = $tenant.ApplyAppEnforcedRestrictionsToAdHocRecipients }
-                if ($tenantPnP.FilePickerExternalImageSearchEnabled -ne $tenant.FilePickerExternalImageSearchEnabled) { $parms["FilePickerExternalImageSearchEnabled"] = $tenant.FilePickerExternalImageSearchEnabled }
-                if ($tenantPnP.EmailAttestationRequired -ne $tenant.EmailAttestationRequired) { $parms["EmailAttestationRequired"] = $tenant.EmailAttestationRequired }
-                if ($tenantPnP.EmailAttestationReAuthDays -ne $tenant.EmailAttestationReAuthDays) { $parms["EmailAttestationReAuthDays"] = $tenant.EmailAttestationReAuthDays }
-                if ($tenantPnP.HideDefaultThemes -ne $tenant.HideDefaultThemes) { $parms["HideDefaultThemes"] = $tenant.HideDefaultThemes }
-                if ($tenantPnP.DisabledWebPartIds -ne $tenant.DisabledWebPartIds) { $parms["DisabledWebPartIds"] = $tenant.DisabledWebPartIds }
-                if ($tenantPnP.EnableAIPIntegration -ne $tenant.EnableAIPIntegration) { $parms["EnableAIPIntegration"] = $tenant.EnableAIPIntegration }
-                #if ($tenantPnP.DisableCustomAppAuthentication -ne $tenant.DisableCustomAppAuthentication) { $parms["DisableCustomAppAuthentication"] = $tenant.DisableCustomAppAuthentication }
-                if ($tenantPnP.InformationBarriersSuspension -ne $tenant.InformationBarriersSuspension) { $parms["InformationBarriersSuspension"] = $tenant.InformationBarriersSuspension }
-                if ($tenantPnP.AllowFilesWithKeepLabelToBeDeletedODB -ne $tenant.AllowFilesWithKeepLabelToBeDeletedODB) { $parms["AllowFilesWithKeepLabelToBeDeletedODB"] = $tenant.AllowFilesWithKeepLabelToBeDeletedODB }
-                if ($tenantPnP.AllowFilesWithKeepLabelToBeDeletedSPO -ne $tenant.AllowFilesWithKeepLabelToBeDeletedSPO) { $parms["AllowFilesWithKeepLabelToBeDeletedSPO"] = $tenant.AllowFilesWithKeepLabelToBeDeletedSPO }
-                if ($tenantPnP.ExternalUserExpirationRequired -ne $tenant.ExternalUserExpirationRequired) { $parms["ExternalUserExpirationRequired"] = $tenant.ExternalUserExpirationRequired }
-                if ($tenantPnP.ExternalUserExpireInDays -ne $tenant.ExternalUserExpireInDays) { $parms["ExternalUserExpireInDays"] = $tenant.ExternalUserExpireInDays }
-                if ($tenantPnP.OneDriveRequestFilesLinkEnabled -ne $tenant.OneDriveRequestFilesLinkEnabled) { $parms["OneDriveRequestFilesLinkEnabled"] = $tenant.OneDriveRequestFilesLinkEnabled }
-                if ($tenantPnP.EnableRestrictedAccessControl -ne $tenant.EnableRestrictedAccessControl) { $parms["EnableRestrictedAccessControl"] = $tenant.EnableRestrictedAccessControl }
-                if ($tenantPnP.EnableAzureADB2BIntegration -ne $tenant.EnableAzureADB2BIntegration) { $parms["EnableAzureADB2BIntegration"] = $tenant.EnableAzureADB2BIntegration }
-                if ($tenantPnP.CoreRequestFilesLinkEnabled -ne $tenant.CoreRequestFilesLinkEnabled) { $parms["CoreRequestFilesLinkEnabled"] = $tenant.CoreRequestFilesLinkEnabled }
-                if ($tenantPnP.CoreRequestFilesLinkExpirationInDays -ne $tenant.CoreRequestFilesLinkExpirationInDays) { $parms["CoreRequestFilesLinkExpirationInDays"] = $tenant.CoreRequestFilesLinkExpirationInDays }
-                if ($tenantPnP.DisableDocumentLibraryDefaultLabeling -ne $tenant.DisableDocumentLibraryDefaultLabeling) { $parms["DisableDocumentLibraryDefaultLabeling"] = $tenant.DisableDocumentLibraryDefaultLabeling }
-                if ($tenantPnP.IsEnableAppAuthPopUpEnabled -ne $tenant.IsEnableAppAuthPopUpEnabled) { $parms["IsEnableAppAuthPopUpEnabled"] = $tenant.IsEnableAppAuthPopUpEnabled }
-                if ($tenantPnP.ExpireVersionsAfterDays -ne $tenant.ExpireVersionsAfterDays) { $parms["ExpireVersionsAfterDays"] = $tenant.ExpireVersionsAfterDays }
-                if ($tenantPnP.MajorVersionLimit -ne $tenant.MajorVersionLimit) { $parms["MajorVersionLimit"] = $tenant.MajorVersionLimit }
-                if ($tenantPnP.EnableAutoExpirationVersionTrim -ne $tenant.EnableAutoExpirationVersionTrim) { $parms["EnableAutoExpirationVersionTrim"] = $tenant.EnableAutoExpirationVersionTrim }
-                if ($tenantPnP.OneDriveLoopSharingCapability -ne $tenant.OneDriveLoopSharingCapability) { $parms["OneDriveLoopSharingCapability"] = $tenant.OneDriveLoopSharingCapability }
-                if ($tenantPnP.OneDriveLoopDefaultSharingLinkScope -ne $tenant.OneDriveLoopDefaultSharingLinkScope) { $parms["OneDriveLoopDefaultSharingLinkScope"] = $tenant.OneDriveLoopDefaultSharingLinkScope }
-                if ($tenantPnP.OneDriveLoopDefaultSharingLinkRole -ne $tenant.OneDriveLoopDefaultSharingLinkRole) { $parms["OneDriveLoopDefaultSharingLinkRole"] = $tenant.OneDriveLoopDefaultSharingLinkRole }
-                if ($tenantPnP.CoreLoopSharingCapability -ne $tenant.CoreLoopSharingCapability) { $parms["CoreLoopSharingCapability"] = $tenant.CoreLoopSharingCapability }
-                if ($tenantPnP.CoreLoopDefaultSharingLinkScope -ne $tenant.CoreLoopDefaultSharingLinkScope) { $parms["CoreLoopDefaultSharingLinkScope"] = $tenant.CoreLoopDefaultSharingLinkScope }
-                if ($tenantPnP.CoreLoopDefaultSharingLinkRole -ne $tenant.CoreLoopDefaultSharingLinkRole) { $parms["CoreLoopDefaultSharingLinkRole"] = $tenant.CoreLoopDefaultSharingLinkRole }
-                if ($tenantPnP.DisableVivaConnectionsAnalytics -ne $tenant.DisableVivaConnectionsAnalytics) { $parms["DisableVivaConnectionsAnalytics"] = $tenant.DisableVivaConnectionsAnalytics }
-                if ($tenantPnP.IsCollabMeetingNotesFluidEnabled -ne $tenant.IsCollabMeetingNotesFluidEnabled) { $parms["IsCollabMeetingNotesFluidEnabled"] = $tenant.IsCollabMeetingNotesFluidEnabled }
-                if ($tenantPnP.AllowAnonymousMeetingParticipantsToAccessWhiteboards -ne $tenant.AllowAnonymousMeetingParticipantsToAccessWhiteboards) { $parms["AllowAnonymousMeetingParticipantsToAccessWhiteboards"] = $tenant.AllowAnonymousMeetingParticipantsToAccessWhiteboards }
-                if ($tenantPnP.IBImplicitGroupBased -ne $tenant.IBImplicitGroupBased) { $parms["IBImplicitGroupBased"] = $tenant.IBImplicitGroupBased }
-                if ($tenantPnP.ShowPeoplePickerGroupSuggestionsForIB -ne $tenant.ShowPeoplePickerGroupSuggestionsForIB) { $parms["ShowPeoplePickerGroupSuggestionsForIB"] = $tenant.ShowPeoplePickerGroupSuggestionsForIB }
-                if ($tenantPnP.BlockDownloadFileTypeIds -ne $tenant.BlockDownloadFileTypeIds) { $parms["BlockDownloadFileTypeIds"] = $tenant.BlockDownloadFileTypeIds }
-                if ($tenantPnP.ExcludedBlockDownloadGroupIds -ne $tenant.ExcludedBlockDownloadGroupIds) { $parms["ExcludedBlockDownloadGroupIds"] = $tenant.ExcludedBlockDownloadGroupIds }
-                if ($tenantPnP.StopNew2013Workflows -ne $tenant.StopNew2013Workflows) { $parms["StopNew2013Workflows"] = $tenant.StopNew2013Workflows }
-                if ($tenantPnP.SiteOwnerManageLegacyServicePrincipalEnabled -ne $tenant.SiteOwnerManageLegacyServicePrincipalEnabled) { $parms["SiteOwnerManageLegacyServicePrincipalEnabled"] = $tenant.SiteOwnerManageLegacyServicePrincipalEnabled }
-                if ($tenantPnP.BusinessConnectivityServiceDisabled -ne $tenant.BusinessConnectivityServiceDisabled) { $parms["BusinessConnectivityServiceDisabled"] = $tenant.BusinessConnectivityServiceDisabled }
-                if ($tenantPnP.EnableSensitivityLabelForPDF -ne $tenant.EnableSensitivityLabelForPDF) { $parms["EnableSensitivityLabelForPDF"] = $tenant.EnableSensitivityLabelForPDF }
-                if ($tenantPnP.IsDataAccessInCardDesignerEnabled -ne $tenant.IsDataAccessInCardDesignerEnabled) { $parms["IsDataAccessInCardDesignerEnabled"] = $tenant.IsDataAccessInCardDesignerEnabled }
-                if ($tenantPnP.CoreSharingCapability -ne $tenant.CoreSharingCapability) { $parms["CoreSharingCapability"] = $tenant.CoreSharingCapability }
-                if ($tenantPnP.BlockUserInfoVisibilityInOneDrive -ne $tenant.BlockUserInfoVisibilityInOneDrive) { $parms["BlockUserInfoVisibilityInOneDrive"] = $tenant.BlockUserInfoVisibilityInOneDrive }
-                if ($tenantPnP.AllowOverrideForBlockUserInfoVisibility -ne $tenant.AllowOverrideForBlockUserInfoVisibility) { $parms["AllowOverrideForBlockUserInfoVisibility"] = $tenant.AllowOverrideForBlockUserInfoVisibility }
-                if ($tenantPnP.AllowEveryoneExceptExternalUsersClaimInPrivateSite -ne $tenant.AllowEveryoneExceptExternalUsersClaimInPrivateSite) { $parms["AllowEveryoneExceptExternalUsersClaimInPrivateSite"] = $tenant.AllowEveryoneExceptExternalUsersClaimInPrivateSite }
-                if ($tenantPnP.AIBuilderEnabled -ne $tenant.AIBuilderEnabled) { $parms["AIBuilderEnabled"] = $tenant.AIBuilderEnabled }
-                if ($tenantPnP.AllowSensitivityLabelOnRecords -ne $tenant.AllowSensitivityLabelOnRecords) { $parms["AllowSensitivityLabelOnRecords"] = $tenant.AllowSensitivityLabelOnRecords }
-                if ($tenantPnP.AnyoneLinkTrackUsers -ne $tenant.AnyoneLinkTrackUsers) { $parms["AnyoneLinkTrackUsers"] = $tenant.AnyoneLinkTrackUsers }
-                if ($tenantPnP.EnableSiteArchive -ne $tenant.EnableSiteArchive) { $parms["EnableSiteArchive"] = $tenant.EnableSiteArchive }
-                if ($tenantPnP.ESignatureEnabled -ne $tenant.ESignatureEnabled) { $parms["ESignatureEnabled"] = $tenant.ESignatureEnabled }
-                if ($tenantPnP.BlockUserInfoVisibilityInSharePoint -ne $tenant.BlockUserInfoVisibilityInSharePoint) { $parms["BlockUserInfoVisibilityInSharePoint"] = $tenant.BlockUserInfoVisibilityInSharePoint }
-                if ($tenantPnP.MarkNewFilesSensitiveByDefault -ne $tenant.MarkNewFilesSensitiveByDefault) { $parms["MarkNewFilesSensitiveByDefault"] = $tenant.MarkNewFilesSensitiveByDefault }
-                if ($tenantPnP.OneDriveDefaultShareLinkScope -ne $tenant.OneDriveDefaultShareLinkScope) { $parms["OneDriveDefaultShareLinkScope"] = $tenant.OneDriveDefaultShareLinkScope }
-                if ($tenantPnP.OneDriveDefaultShareLinkRole -ne $tenant.OneDriveDefaultShareLinkRole) { $parms["OneDriveDefaultShareLinkRole"] = $tenant.OneDriveDefaultShareLinkRole }
-                if ($tenantPnP.OneDriveDefaultLinkToExistingAccess -ne $tenant.OneDriveDefaultLinkToExistingAccess) { $parms["OneDriveDefaultLinkToExistingAccess"] = $tenant.OneDriveDefaultLinkToExistingAccess }
-                if ($tenantPnP.OneDriveBlockGuestsAsSiteAdmin -ne $tenant.OneDriveBlockGuestsAsSiteAdmin) { $parms["OneDriveBlockGuestsAsSiteAdmin"] = $tenant.OneDriveBlockGuestsAsSiteAdmin }
-                if ($tenantPnP.RecycleBinRetentionPeriod -ne $tenant.RecycleBinRetentionPeriod) { $parms["RecycleBinRetentionPeriod"] = $tenant.RecycleBinRetentionPeriod }
-                if ($tenantPnP.CoreDefaultShareLinkScope -ne $tenant.CoreDefaultShareLinkScope) { $parms["CoreDefaultShareLinkScope"] = $tenant.CoreDefaultShareLinkScope }
-                if ($tenantPnP.CoreDefaultShareLinkRole -ne $tenant.CoreDefaultShareLinkRole) { $parms["CoreDefaultShareLinkRole"] = $tenant.CoreDefaultShareLinkRole }
-                if ($tenantPnP.GuestSharingGroupAllowListInTenantByPrincipalIdentity -ne $tenant.GuestSharingGroupAllowListInTenantByPrincipalIdentity) { $parms["GuestSharingGroupAllowListInTenantByPrincipalIdentity"] = $tenant.GuestSharingGroupAllowListInTenantByPrincipalIdentity }
-                if ($tenantPnP.OneDriveSharingCapability -ne $tenant.OneDriveSharingCapability) { $parms["OneDriveSharingCapability"] = $tenant.OneDriveSharingCapability }
-                if ($tenantPnP.AllowWebPropertyBagUpdateWhenDenyAddAndCustomizePagesIsEnabled -ne $tenant.AllowWebPropertyBagUpdateWhenDenyAddAndCustomizePagesIsEnabled) { $parms["AllowWebPropertyBagUpdateWhenDenyAddAndCustomizePagesIsEnabled"] = $tenant.AllowWebPropertyBagUpdateWhenDenyAddAndCustomizePagesIsEnabled }
-                if ($tenantPnP.SelfServiceSiteCreationDisabled -ne $tenant.SelfServiceSiteCreationDisabled) { $parms["SelfServiceSiteCreationDisabled"] = $tenant.SelfServiceSiteCreationDisabled }
-                if ($tenantPnP.ExtendPermissionsToUnprotectedFiles -ne $tenant.ExtendPermissionsToUnprotectedFiles) { $parms["ExtendPermissionsToUnprotectedFiles"] = $tenant.ExtendPermissionsToUnprotectedFiles }
-                if ($tenantPnP.WhoCanShareAllowListInTenant -ne $tenant.WhoCanShareAllowListInTenant) { $parms["WhoCanShareAllowListInTenant"] = $tenant.WhoCanShareAllowListInTenant }
-                if ($tenantPnP.LegacyBrowserAuthProtocolsEnabled -ne $tenant.LegacyBrowserAuthProtocolsEnabled) { $parms["LegacyBrowserAuthProtocolsEnabled"] = $tenant.LegacyBrowserAuthProtocolsEnabled }
-                if ($tenantPnP.EnableDiscoverableByOrganizationForVideos -ne $tenant.EnableDiscoverableByOrganizationForVideos) { $parms["EnableDiscoverableByOrganizationForVideos"] = $tenant.EnableDiscoverableByOrganizationForVideos }
-                if ($tenantPnP.RestrictedAccessControlforSitesErrorHelpLink -ne $tenant.RestrictedAccessControlforSitesErrorHelpLink) { $parms["RestrictedAccessControlforSitesErrorHelpLink"] = $tenant.RestrictedAccessControlforSitesErrorHelpLink }
-                if ($tenantPnP.Workflow2010Disabled -ne $tenant.Workflow2010Disabled) { $parms["Workflow2010Disabled"] = $tenant.Workflow2010Disabled }
-                if ($tenantPnP.AllowSharingOutsideRestrictedAccessControlGroups -ne $tenant.AllowSharingOutsideRestrictedAccessControlGroups) { $parms["AllowSharingOutsideRestrictedAccessControlGroups"] = $tenant.AllowSharingOutsideRestrictedAccessControlGroups }
-                if ($tenantPnP.HideSyncButtonOnDocLib -ne $tenant.HideSyncButtonOnDocLib) { $parms["HideSyncButtonOnDocLib"] = $tenant.HideSyncButtonOnDocLib }
-                if ($tenantPnP.HideSyncButtonOnODB -ne $tenant.HideSyncButtonOnODB) { $parms["HideSyncButtonOnODB"] = $tenant.HideSyncButtonOnODB }
-                #if ($tenantPnP.StreamLaunchConfig -ne $tenant.StreamLaunchConfig) { $parms["StreamLaunchConfig"] = $tenant.StreamLaunchConfig }
-                if ($tenantPnP.EnableMediaReactions -ne $tenant.EnableMediaReactions) { $parms["EnableMediaReactions"] = $tenant.EnableMediaReactions }
-                if ($tenantPnP.ContentSecurityPolicyEnforcement -ne $tenant.ContentSecurityPolicyEnforcement) { $parms["ContentSecurityPolicyEnforcement"] = $tenant.ContentSecurityPolicyEnforcement }
-                if ($tenantPnP.DisableSpacesActivation -ne $tenant.DisableSpacesActivation) { $parms["DisableSpacesActivation"] = $tenant.DisableSpacesActivation }
-                #Added 05.08.2026
-                if ($tenantPnP.MinCompatibilityLevel -ne $tenant.MinCompatibilityLevel) { $parms["MinCompatibilityLevel"] = $tenant.MinCompatibilityLevel }
-                if ($tenantPnP.MaxCompatibilityLevel -ne $tenant.MaxCompatibilityLevel) { $parms["MaxCompatibilityLevel"] = $tenant.MaxCompatibilityLevel }
-                if ($tenantPnP.ShowEveryoneClaim -ne $tenant.ShowEveryoneClaim) { $parms["ShowEveryoneClaim"] = $tenant.ShowEveryoneClaim }
-                if ($tenantPnP.UserVoiceForFeedbackEnabled -ne $tenant.UserVoiceForFeedbackEnabled) { $parms["UserVoiceForFeedbackEnabled"] = $tenant.UserVoiceForFeedbackEnabled }
-                if ($tenantPnP.OneDriveOrganizationSharingLinkMaxExpirationInDays -ne $tenant.OneDriveOrganizationSharingLinkMaxExpirationInDays) { $parms["OneDriveOrganizationSharingLinkMaxExpirationInDays"] = $tenant.OneDriveOrganizationSharingLinkMaxExpirationInDays }
-                if ($tenantPnP.OneDriveOrganizationSharingLinkRecommendedExpirationInDays -ne $tenant.OneDriveOrganizationSharingLinkRecommendedExpirationInDays) { $parms["OneDriveOrganizationSharingLinkRecommendedExpirationInDays"] = $tenant.OneDriveOrganizationSharingLinkRecommendedExpirationInDays }
-                if ($tenantPnP.CoreOrganizationSharingLinkMaxExpirationInDays -ne $tenant.CoreOrganizationSharingLinkMaxExpirationInDays) { $parms["CoreOrganizationSharingLinkMaxExpirationInDays"] = $tenant.CoreOrganizationSharingLinkMaxExpirationInDays }
-                if ($tenantPnP.CoreOrganizationSharingLinkRecommendedExpirationInDays -ne $tenant.CoreOrganizationSharingLinkRecommendedExpirationInDays) { $parms["CoreOrganizationSharingLinkRecommendedExpirationInDays"] = $tenant.CoreOrganizationSharingLinkRecommendedExpirationInDays }
-                if ($tenantPnP.AllowAppsBypassOfUnmanagedDevicePolicy -ne $tenant.AllowAppsBypassOfUnmanagedDevicePolicy) { $parms["AllowAppsBypassOfUnmanagedDevicePolicy"] = $tenant.AllowAppsBypassOfUnmanagedDevicePolicy }
-                if ($tenantPnP.DisabledAdaptiveCardExtensionIds -ne $tenant.DisabledAdaptiveCardExtensionIds) { $parms["DisabledAdaptiveCardExtensionIds"] = $tenant.DisabledAdaptiveCardExtensionIds }
-                if ($tenantPnP.EnableAutoNewsDigest -ne $tenant.EnableAutoNewsDigest) { $parms["EnableAutoNewsDigest"] = $tenant.EnableAutoNewsDigest }
-                if ($tenantPnP.CommentsOnListItemsDisabled -ne $tenant.CommentsOnListItemsDisabled) { $parms["CommentsOnListItemsDisabled"] = $tenant.CommentsOnListItemsDisabled }
-                if ($tenantPnP.CommentsOnFilesDisabled -ne $tenant.CommentsOnFilesDisabled) { $parms["CommentsOnFilesDisabled"] = $tenant.CommentsOnFilesDisabled }
-                if ($tenantPnP.AllowCommentsTextOnEmailEnabled -ne $tenant.AllowCommentsTextOnEmailEnabled) { $parms["AllowCommentsTextOnEmailEnabled"] = $tenant.AllowCommentsTextOnEmailEnabled }
-                if ($tenantPnP.DisableBackToClassic -ne $tenant.DisableBackToClassic) { $parms["DisableBackToClassic"] = $tenant.DisableBackToClassic }
-                if ($tenantPnP.LabelMismatchEmailHelpLink -ne $tenant.LabelMismatchEmailHelpLink) { $parms["LabelMismatchEmailHelpLink"] = $tenant.LabelMismatchEmailHelpLink }
-                if ($tenantPnP.FileTypesForVersionExpiration -ne $tenant.FileTypesForVersionExpiration) { $parms["FileTypesForVersionExpiration"] = $tenant.FileTypesForVersionExpiration }
-                if ($tenantPnP.CoreDefaultLinkToExistingAccess -ne $tenant.CoreDefaultLinkToExistingAccess) { $parms["CoreDefaultLinkToExistingAccess"] = $tenant.CoreDefaultLinkToExistingAccess }
-                if ($tenantPnP.HideSyncButtonOnTeamSite -ne $tenant.HideSyncButtonOnTeamSite) { $parms["HideSyncButtonOnTeamSite"] = $tenant.HideSyncButtonOnTeamSite }
-                if ($tenantPnP.CoreBlockGuestsAsSiteAdmin -ne $tenant.CoreBlockGuestsAsSiteAdmin) { $parms["CoreBlockGuestsAsSiteAdmin"] = $tenant.CoreBlockGuestsAsSiteAdmin }
-                if ($tenantPnP.IsWBFluidEnabled -ne $tenant.IsWBFluidEnabled) { $parms["IsWBFluidEnabled"] = $tenant.IsWBFluidEnabled }
-                if ($tenantPnP.ShowOpenInDesktopOptionForSyncedFiles -ne $tenant.ShowOpenInDesktopOptionForSyncedFiles) { $parms["ShowOpenInDesktopOptionForSyncedFiles"] = $tenant.ShowOpenInDesktopOptionForSyncedFiles }
-                if ($tenantPnP.AuthContextResilienceMode -ne $tenant.AuthContextResilienceMode) { $parms["AuthContextResilienceMode"] = $tenant.AuthContextResilienceMode }
-                if ($tenantPnP.BlockDownloadFileTypePolicy -ne $tenant.BlockDownloadFileTypePolicy) { $parms["BlockDownloadFileTypePolicy"] = $tenant.BlockDownloadFileTypePolicy }
-                if ($tenantPnP.TlsTokenBindingPolicyValue -ne $tenant.TlsTokenBindingPolicyValue) { $parms["TlsTokenBindingPolicyValue"] = $tenant.TlsTokenBindingPolicyValue }
-                if ($tenantPnP.ArchiveRedirectUrl -ne $tenant.ArchiveRedirectUrl) { $parms["ArchiveRedirectUrl"] = $tenant.ArchiveRedirectUrl }
-                if ($tenantPnP.MediaTranscription -ne $tenant.MediaTranscription) { $parms["MediaTranscription"] = $tenant.MediaTranscription }
-                if ($tenantPnP.MediaTranscriptionAutomaticFeatures -ne $tenant.MediaTranscriptionAutomaticFeatures) { $parms["MediaTranscriptionAutomaticFeatures"] = $tenant.MediaTranscriptionAutomaticFeatures }
-                if ($tenantPnP.ReduceTempTokenLifetimeEnabled -ne $tenant.ReduceTempTokenLifetimeEnabled) { $parms["ReduceTempTokenLifetimeEnabled"] = $tenant.ReduceTempTokenLifetimeEnabled }
-                if ($tenantPnP.ReduceTempTokenLifetimeValue -ne $tenant.ReduceTempTokenLifetimeValue) { $parms["ReduceTempTokenLifetimeValue"] = $tenant.ReduceTempTokenLifetimeValue }
-                if ($tenantPnP.ViewersCanCommentOnMediaDisabled -ne $tenant.ViewersCanCommentOnMediaDisabled) { $parms["ViewersCanCommentOnMediaDisabled"] = $tenant.ViewersCanCommentOnMediaDisabled }
-                if ($tenantPnP.AllOrganizationSecurityGroupId -ne $tenant.AllOrganizationSecurityGroupId) { $parms["AllOrganizationSecurityGroupId"] = $tenant.AllOrganizationSecurityGroupId }
-                if ($tenantPnP.AllowGuestUserShareToUsersNotInSiteCollection -ne $tenant.AllowGuestUserShareToUsersNotInSiteCollection) { $parms["AllowGuestUserShareToUsersNotInSiteCollection"] = $tenant.AllowGuestUserShareToUsersNotInSiteCollection }
-                if ($tenantPnP.ContentTypeSyncSiteTemplatesList -ne $tenant.ContentTypeSyncSiteTemplatesList) { $parms["ContentTypeSyncSiteTemplatesList"] = $tenant.ContentTypeSyncSiteTemplatesList }
-                if ($tenantPnP.ConditionalAccessPolicyErrorHelpLink -ne $tenant.ConditionalAccessPolicyErrorHelpLink) { $parms["ConditionalAccessPolicyErrorHelpLink"] = $tenant.ConditionalAccessPolicyErrorHelpLink }
-                if ($tenantPnP.CustomizedExternalSharingServiceUrl -ne $tenant.CustomizedExternalSharingServiceUrl) { $parms["CustomizedExternalSharingServiceUrl"] = $tenant.CustomizedExternalSharingServiceUrl }
-                if ($tenantPnP.IncludeAtAGlanceInShareEmails -ne $tenant.IncludeAtAGlanceInShareEmails) { $parms["IncludeAtAGlanceInShareEmails"] = $tenant.IncludeAtAGlanceInShareEmails }
-                if ($tenantPnP.MassDeleteNotificationDisabled -ne $tenant.MassDeleteNotificationDisabled) { $parms["MassDeleteNotificationDisabled"] = $tenant.MassDeleteNotificationDisabled }
-                if ($tenantPnP.RestrictExternalSharing -ne $tenant.RestrictExternalSharing) { $parms["RestrictExternalSharing"] = $tenant.RestrictExternalSharing }
-                if ($tenantPnP.AllowFileArchive -ne $tenant.AllowFileArchive) { $parms["AllowFileArchive"] = $tenant.AllowFileArchive }
-                if ($tenantPnP.AllowFileArchiveOnNewSitesByDefault -ne $tenant.AllowFileArchiveOnNewSitesByDefault) { $parms["AllowFileArchiveOnNewSitesByDefault"] = $tenant.AllowFileArchiveOnNewSitesByDefault }
-                if ($tenantPnP.IsSharePointAddInsDisabled -ne $tenant.IsSharePointAddInsDisabled) { $parms["IsSharePointAddInsDisabled"] = $tenant.IsSharePointAddInsDisabled }
-                if ($tenantPnP.SyncAadB2BManagementPolicy -ne $tenant.SyncAadB2BManagementPolicy) { $parms["SyncAadB2BManagementPolicy"] = $tenant.SyncAadB2BManagementPolicy }
-                if ($tenantPnP.ResyncContentSecurityPolicyConfigurationEntries -ne $tenant.ResyncContentSecurityPolicyConfigurationEntries) { $parms["ResyncContentSecurityPolicyConfigurationEntries"] = $tenant.ResyncContentSecurityPolicyConfigurationEntries }
-                if ($tenantPnP.DelayContentSecurityPolicyEnforcement -ne $tenant.DelayContentSecurityPolicyEnforcement) { $parms["DelayContentSecurityPolicyEnforcement"] = $tenant.DelayContentSecurityPolicyEnforcement }
-                if ($tenantPnP.RestrictResourceAccountAccess -ne $tenant.RestrictResourceAccountAccess) { $parms["RestrictResourceAccountAccess"] = $tenant.RestrictResourceAccountAccess }
-                if ($tenantPnP.EnforceRequestDigest -ne $tenant.EnforceRequestDigest) { $parms["EnforceRequestDigest"] = $tenant.EnforceRequestDigest }
-                if ($tenantPnP.RestrictExternalSharingForAgents -ne $tenant.RestrictExternalSharingForAgents) { $parms["RestrictExternalSharingForAgents"] = $tenant.RestrictExternalSharingForAgents }
-                if ($tenantPnP.EnableNotificationsSubscriptions -ne $tenant.EnableNotificationsSubscriptions) { $parms["EnableNotificationsSubscriptions"] = $tenant.EnableNotificationsSubscriptions }
-                Set-PnPTenant -Connection $conPnP -Force @parms
-                $retries = -1
-            } catch {
-                Write-Warning "Error setting tenant properties, retrying... $($_.Exception.Message)"
-                $tenantPnP = Get-PnPTenant -Connection $conPnP
-                if ($retries -eq 0)
-                {
-                    throw
+    $retries = 5
+    do {
+        try {
+            $parms = @{}
+            if ($tenantPnP.SpecialCharactersStateInFileFolderNames -ne $tenant.SpecialCharactersStateInFileFolderNames) { $parms["SpecialCharactersStateInFileFolderNames"] = $tenant.SpecialCharactersStateInFileFolderNames }
+            if ($tenantPnP.ExternalServicesEnabled -ne $tenant.ExternalServicesEnabled) { $parms["ExternalServicesEnabled"] = $tenant.ExternalServicesEnabled }
+            if ($tenantPnP.NoAccessRedirectUrl -ne $tenant.NoAccessRedirectUrl) { $parms["NoAccessRedirectUrl"] = $tenant.NoAccessRedirectUrl }
+            if ($tenantPnP.SharingCapability -ne $tenant.SharingCapability) { $parms["SharingCapability"] = $tenant.SharingCapability }
+            if ($tenantPnP.DisplayStartASiteOption -ne $tenant.DisplayStartASiteOption) { $parms["DisplayStartASiteOption"] = $tenant.DisplayStartASiteOption }
+            if ($tenantPnP.StartASiteFormUrl -ne $tenant.StartASiteFormUrl) { $parms["StartASiteFormUrl"] = $tenant.StartASiteFormUrl }
+            if ($tenantPnP.ShowAllUsersClaim -ne $tenant.ShowAllUsersClaim) { $parms["ShowAllUsersClaim"] = $tenant.ShowAllUsersClaim }
+            if ($tenantPnP.ShowEveryoneExceptExternalUsersClaim -ne $tenant.ShowEveryoneExceptExternalUsersClaim) { $parms["ShowEveryoneExceptExternalUsersClaim"] = $tenant.ShowEveryoneExceptExternalUsersClaim }
+            if ($tenantPnP.SearchResolveExactEmailOrUPN -ne $tenant.SearchResolveExactEmailOrUPN) { $parms["SearchResolveExactEmailOrUPN"] = $tenant.SearchResolveExactEmailOrUPN }
+            if ($tenantPnP.OfficeClientADALDisabled -ne $tenant.OfficeClientADALDisabled) { $parms["OfficeClientADALDisabled"] = $tenant.OfficeClientADALDisabled }
+            if ($tenantPnP.LegacyAuthProtocolsEnabled -ne $tenant.LegacyAuthProtocolsEnabled) { $parms["LegacyAuthProtocolsEnabled"] = $tenant.LegacyAuthProtocolsEnabled }
+            if ($tenantPnP.RequireAcceptingAccountMatchInvitedAccount -ne $tenant.RequireAcceptingAccountMatchInvitedAccount) { $parms["RequireAcceptingAccountMatchInvitedAccount"] = $tenant.RequireAcceptingAccountMatchInvitedAccount }
+            if ($tenantPnP.ProvisionSharedWithEveryoneFolder -ne $tenant.ProvisionSharedWithEveryoneFolder) { $parms["ProvisionSharedWithEveryoneFolder"] = $tenant.ProvisionSharedWithEveryoneFolder }
+            if ($tenantPnP.SignInAccelerationDomain -ne $tenant.SignInAccelerationDomain) { $parms["SignInAccelerationDomain"] = $tenant.SignInAccelerationDomain }
+            if ($tenantPnP.EnableGuestSignInAcceleration -ne $tenant.EnableGuestSignInAcceleration) { $parms["EnableGuestSignInAcceleration"] = $tenant.EnableGuestSignInAcceleration }
+            if ($tenantPnP.UsePersistentCookiesForExplorerView -ne $tenant.UsePersistentCookiesForExplorerView) { $parms["UsePersistentCookiesForExplorerView"] = $tenant.UsePersistentCookiesForExplorerView }
+            if ($tenantPnP.BccExternalSharingInvitations -ne $tenant.BccExternalSharingInvitations) { $parms["BccExternalSharingInvitations"] = $tenant.BccExternalSharingInvitations }
+            if ($tenantPnP.BccExternalSharingInvitationsList -ne $tenant.BccExternalSharingInvitationsList) { $parms["BccExternalSharingInvitationsList"] = $tenant.BccExternalSharingInvitationsList }
+            if ($tenantPnP.PublicCdnEnabled -ne $tenant.PublicCdnEnabled) { $parms["PublicCdnEnabled"] = $tenant.PublicCdnEnabled }
+            if ($tenantPnP.PublicCdnAllowedFileTypes -ne $tenant.PublicCdnAllowedFileTypes) { $parms["PublicCdnAllowedFileTypes"] = $tenant.PublicCdnAllowedFileTypes }
+            if ($tenantPnP.RequireAnonymousLinksExpireInDays -ne $tenant.RequireAnonymousLinksExpireInDays) { $parms["RequireAnonymousLinksExpireInDays"] = $tenant.RequireAnonymousLinksExpireInDays }
+            if ($tenantPnP.SharingAllowedDomainList -ne $tenant.SharingAllowedDomainList) { $parms["SharingAllowedDomainList"] = $tenant.SharingAllowedDomainList }
+            if ($tenantPnP.SharingBlockedDomainList -ne $tenant.SharingBlockedDomainList) { $parms["SharingBlockedDomainList"] = $tenant.SharingBlockedDomainList }
+            if ($tenantPnP.SharingDomainRestrictionMode -ne $tenant.SharingDomainRestrictionMode) { $parms["SharingDomainRestrictionMode"] = $tenant.SharingDomainRestrictionMode }
+            if ($tenantPnP.OneDriveStorageQuota -ne $tenant.OneDriveStorageQuota) { $parms["OneDriveStorageQuota"] = $tenant.OneDriveStorageQuota }
+            if ($tenantPnP.OneDriveForGuestsEnabled -ne $tenant.OneDriveForGuestsEnabled) { $parms["OneDriveForGuestsEnabled"] = $tenant.OneDriveForGuestsEnabled }
+            if ($tenantPnP.IPAddressEnforcement -ne $tenant.IPAddressEnforcement) { $parms["IPAddressEnforcement"] = $tenant.IPAddressEnforcement }
+            if ($tenantPnP.IPAddressAllowList -ne $tenant.IPAddressAllowList) { $parms["IPAddressAllowList"] = $tenant.IPAddressAllowList }
+            if ($tenantPnP.IPAddressWACTokenLifetime -ne $tenant.IPAddressWACTokenLifetime) { $parms["IPAddressWACTokenLifetime"] = $tenant.IPAddressWACTokenLifetime }
+            if ($tenantPnP.UseFindPeopleInPeoplePicker -ne $tenant.UseFindPeopleInPeoplePicker) { $parms["UseFindPeopleInPeoplePicker"] = $tenant.UseFindPeopleInPeoplePicker }
+            if ($tenantPnP.DefaultSharingLinkType -ne $tenant.DefaultSharingLinkType) { $parms["DefaultSharingLinkType"] = $tenant.DefaultSharingLinkType }
+            if ($tenantPnP.ODBMembersCanShare -ne $tenant.ODBMembersCanShare) { $parms["ODBMembersCanShare"] = $tenant.ODBMembersCanShare }
+            if ($tenantPnP.ODBAccessRequests -ne $tenant.ODBAccessRequests) { $parms["ODBAccessRequests"] = $tenant.ODBAccessRequests }
+            if ($tenantPnP.PreventExternalUsersFromReSharing -ne $tenant.PreventExternalUsersFromReSharing) { $parms["PreventExternalUsersFromReSharing"] = $tenant.PreventExternalUsersFromReSharing }
+            if ($tenantPnP.ShowPeoplePickerSuggestionsForGuestUsers -ne $tenant.ShowPeoplePickerSuggestionsForGuestUsers) { $parms["ShowPeoplePickerSuggestionsForGuestUsers"] = $tenant.ShowPeoplePickerSuggestionsForGuestUsers }
+            if ($tenantPnP.FileAnonymousLinkType -ne $tenant.FileAnonymousLinkType) { $parms["FileAnonymousLinkType"] = $tenant.FileAnonymousLinkType }
+            if ($tenantPnP.FolderAnonymousLinkType -ne $tenant.FolderAnonymousLinkType) { $parms["FolderAnonymousLinkType"] = $tenant.FolderAnonymousLinkType }
+            if ($tenantPnP.NotifyOwnersWhenItemsReShared -ne $tenant.NotifyOwnersWhenItemsReShared) { $parms["NotifyOwnersWhenItemsReShared"] = $tenant.NotifyOwnersWhenItemsReShared }
+            if ($tenantPnP.NotifyOwnersWhenInvitationsAccepted -ne $tenant.NotifyOwnersWhenInvitationsAccepted) { $parms["NotifyOwnersWhenInvitationsAccepted"] = $tenant.NotifyOwnersWhenInvitationsAccepted }
+            if ($tenantPnP.NotificationsInOneDriveForBusinessEnabled -ne $tenant.NotificationsInOneDriveForBusinessEnabled) { $parms["NotificationsInOneDriveForBusinessEnabled"] = $tenant.NotificationsInOneDriveForBusinessEnabled }
+            if ($tenantPnP.NotificationsInSharePointEnabled -ne $tenant.NotificationsInSharePointEnabled) { $parms["NotificationsInSharePointEnabled"] = $tenant.NotificationsInSharePointEnabled }
+            if ($tenantPnP.OwnerAnonymousNotification -ne $tenant.OwnerAnonymousNotification) { $parms["OwnerAnonymousNotification"] = $tenant.OwnerAnonymousNotification }
+            if ($tenantPnP.CommentsOnSitePagesDisabled -ne $tenant.CommentsOnSitePagesDisabled) { $parms["CommentsOnSitePagesDisabled"] = $tenant.CommentsOnSitePagesDisabled }
+            if ($tenantPnP.SocialBarOnSitePagesDisabled -ne $tenant.SocialBarOnSitePagesDisabled) { $parms["SocialBarOnSitePagesDisabled"] = $tenant.SocialBarOnSitePagesDisabled }
+            if ($tenantPnP.OrphanedPersonalSitesRetentionPeriod -ne $tenant.OrphanedPersonalSitesRetentionPeriod) { $parms["OrphanedPersonalSitesRetentionPeriod"] = $tenant.OrphanedPersonalSitesRetentionPeriod }
+            if ($tenantPnP.DisallowInfectedFileDownload -ne $tenant.DisallowInfectedFileDownload) { $parms["DisallowInfectedFileDownload"] = $tenant.DisallowInfectedFileDownload }
+            if ($tenantPnP.DefaultLinkPermission -ne $tenant.DefaultLinkPermission) { $parms["DefaultLinkPermission"] = $tenant.DefaultLinkPermission }
+            if ($tenantPnP.ConditionalAccessPolicy -ne $tenant.ConditionalAccessPolicy) { $parms["ConditionalAccessPolicy"] = $tenant.ConditionalAccessPolicy }
+            if ($tenantPnP.AllowDownloadingNonWebViewableFiles -ne $tenant.AllowDownloadingNonWebViewableFiles) { $parms["AllowDownloadingNonWebViewableFiles"] = $tenant.AllowDownloadingNonWebViewableFiles }
+            if ($tenantPnP.AllowEditing -ne $tenant.AllowEditing) { $parms["AllowEditing"] = $tenant.AllowEditing }
+            if ($tenantPnP.ApplyAppEnforcedRestrictionsToAdHocRecipients -ne $tenant.ApplyAppEnforcedRestrictionsToAdHocRecipients) { $parms["ApplyAppEnforcedRestrictionsToAdHocRecipients"] = $tenant.ApplyAppEnforcedRestrictionsToAdHocRecipients }
+            if ($tenantPnP.FilePickerExternalImageSearchEnabled -ne $tenant.FilePickerExternalImageSearchEnabled) { $parms["FilePickerExternalImageSearchEnabled"] = $tenant.FilePickerExternalImageSearchEnabled }
+            if ($tenantPnP.EmailAttestationRequired -ne $tenant.EmailAttestationRequired) { $parms["EmailAttestationRequired"] = $tenant.EmailAttestationRequired }
+            if ($tenantPnP.EmailAttestationReAuthDays -ne $tenant.EmailAttestationReAuthDays) { $parms["EmailAttestationReAuthDays"] = $tenant.EmailAttestationReAuthDays }
+            if ($tenantPnP.HideDefaultThemes -ne $tenant.HideDefaultThemes) { $parms["HideDefaultThemes"] = $tenant.HideDefaultThemes }
+            if ($tenantPnP.DisabledWebPartIds -ne $tenant.DisabledWebPartIds) { $parms["DisabledWebPartIds"] = $tenant.DisabledWebPartIds }
+            if ($tenantPnP.EnableAIPIntegration -ne $tenant.EnableAIPIntegration) { $parms["EnableAIPIntegration"] = $tenant.EnableAIPIntegration }
+            #if ($tenantPnP.DisableCustomAppAuthentication -ne $tenant.DisableCustomAppAuthentication) { $parms["DisableCustomAppAuthentication"] = $tenant.DisableCustomAppAuthentication }
+            if ($tenantPnP.InformationBarriersSuspension -ne $tenant.InformationBarriersSuspension) { $parms["InformationBarriersSuspension"] = $tenant.InformationBarriersSuspension }
+            if ($tenantPnP.AllowFilesWithKeepLabelToBeDeletedODB -ne $tenant.AllowFilesWithKeepLabelToBeDeletedODB) { $parms["AllowFilesWithKeepLabelToBeDeletedODB"] = $tenant.AllowFilesWithKeepLabelToBeDeletedODB }
+            if ($tenantPnP.AllowFilesWithKeepLabelToBeDeletedSPO -ne $tenant.AllowFilesWithKeepLabelToBeDeletedSPO) { $parms["AllowFilesWithKeepLabelToBeDeletedSPO"] = $tenant.AllowFilesWithKeepLabelToBeDeletedSPO }
+            if ($tenantPnP.ExternalUserExpirationRequired -ne $tenant.ExternalUserExpirationRequired) { $parms["ExternalUserExpirationRequired"] = $tenant.ExternalUserExpirationRequired }
+            if ($tenantPnP.ExternalUserExpireInDays -ne $tenant.ExternalUserExpireInDays) { $parms["ExternalUserExpireInDays"] = $tenant.ExternalUserExpireInDays }
+            if ($tenantPnP.OneDriveRequestFilesLinkEnabled -ne $tenant.OneDriveRequestFilesLinkEnabled) { $parms["OneDriveRequestFilesLinkEnabled"] = $tenant.OneDriveRequestFilesLinkEnabled }
+            if ($tenantPnP.EnableRestrictedAccessControl -ne $tenant.EnableRestrictedAccessControl) { $parms["EnableRestrictedAccessControl"] = $tenant.EnableRestrictedAccessControl }
+            if ($tenantPnP.EnableAzureADB2BIntegration -ne $tenant.EnableAzureADB2BIntegration) { $parms["EnableAzureADB2BIntegration"] = $tenant.EnableAzureADB2BIntegration }
+            if ($tenantPnP.CoreRequestFilesLinkEnabled -ne $tenant.CoreRequestFilesLinkEnabled) { $parms["CoreRequestFilesLinkEnabled"] = $tenant.CoreRequestFilesLinkEnabled }
+            if ($tenantPnP.CoreRequestFilesLinkExpirationInDays -ne $tenant.CoreRequestFilesLinkExpirationInDays) { $parms["CoreRequestFilesLinkExpirationInDays"] = $tenant.CoreRequestFilesLinkExpirationInDays }
+            if ($tenantPnP.DisableDocumentLibraryDefaultLabeling -ne $tenant.DisableDocumentLibraryDefaultLabeling) { $parms["DisableDocumentLibraryDefaultLabeling"] = $tenant.DisableDocumentLibraryDefaultLabeling }
+            if ($tenantPnP.IsEnableAppAuthPopUpEnabled -ne $tenant.IsEnableAppAuthPopUpEnabled) { $parms["IsEnableAppAuthPopUpEnabled"] = $tenant.IsEnableAppAuthPopUpEnabled }
+            if ($tenantPnP.ExpireVersionsAfterDays -ne $tenant.ExpireVersionsAfterDays) { $parms["ExpireVersionsAfterDays"] = $tenant.ExpireVersionsAfterDays }
+            if ($tenantPnP.MajorVersionLimit -ne $tenant.MajorVersionLimit) { $parms["MajorVersionLimit"] = $tenant.MajorVersionLimit }
+            if ($tenantPnP.EnableAutoExpirationVersionTrim -ne $tenant.EnableAutoExpirationVersionTrim) { $parms["EnableAutoExpirationVersionTrim"] = $tenant.EnableAutoExpirationVersionTrim }
+            if ($tenantPnP.OneDriveLoopSharingCapability -ne $tenant.OneDriveLoopSharingCapability) { $parms["OneDriveLoopSharingCapability"] = $tenant.OneDriveLoopSharingCapability }
+            if ($tenantPnP.OneDriveLoopDefaultSharingLinkScope -ne $tenant.OneDriveLoopDefaultSharingLinkScope) { $parms["OneDriveLoopDefaultSharingLinkScope"] = $tenant.OneDriveLoopDefaultSharingLinkScope }
+            if ($tenantPnP.OneDriveLoopDefaultSharingLinkRole -ne $tenant.OneDriveLoopDefaultSharingLinkRole) { $parms["OneDriveLoopDefaultSharingLinkRole"] = $tenant.OneDriveLoopDefaultSharingLinkRole }
+            if ($tenantPnP.CoreLoopSharingCapability -ne $tenant.CoreLoopSharingCapability) { $parms["CoreLoopSharingCapability"] = $tenant.CoreLoopSharingCapability }
+            if ($tenantPnP.CoreLoopDefaultSharingLinkScope -ne $tenant.CoreLoopDefaultSharingLinkScope) { $parms["CoreLoopDefaultSharingLinkScope"] = $tenant.CoreLoopDefaultSharingLinkScope }
+            if ($tenantPnP.CoreLoopDefaultSharingLinkRole -ne $tenant.CoreLoopDefaultSharingLinkRole) { $parms["CoreLoopDefaultSharingLinkRole"] = $tenant.CoreLoopDefaultSharingLinkRole }
+            if ($tenantPnP.DisableVivaConnectionsAnalytics -ne $tenant.DisableVivaConnectionsAnalytics) { $parms["DisableVivaConnectionsAnalytics"] = $tenant.DisableVivaConnectionsAnalytics }
+            if ($tenantPnP.IsCollabMeetingNotesFluidEnabled -ne $tenant.IsCollabMeetingNotesFluidEnabled) { $parms["IsCollabMeetingNotesFluidEnabled"] = $tenant.IsCollabMeetingNotesFluidEnabled }
+            if ($tenantPnP.AllowAnonymousMeetingParticipantsToAccessWhiteboards -ne $tenant.AllowAnonymousMeetingParticipantsToAccessWhiteboards) { $parms["AllowAnonymousMeetingParticipantsToAccessWhiteboards"] = $tenant.AllowAnonymousMeetingParticipantsToAccessWhiteboards }
+            if ($tenantPnP.IBImplicitGroupBased -ne $tenant.IBImplicitGroupBased) { $parms["IBImplicitGroupBased"] = $tenant.IBImplicitGroupBased }
+            if ($tenantPnP.ShowPeoplePickerGroupSuggestionsForIB -ne $tenant.ShowPeoplePickerGroupSuggestionsForIB) { $parms["ShowPeoplePickerGroupSuggestionsForIB"] = $tenant.ShowPeoplePickerGroupSuggestionsForIB }
+            if ($tenantPnP.BlockDownloadFileTypeIds -ne $tenant.BlockDownloadFileTypeIds) { $parms["BlockDownloadFileTypeIds"] = $tenant.BlockDownloadFileTypeIds }
+            if ($tenantPnP.ExcludedBlockDownloadGroupIds -ne $tenant.ExcludedBlockDownloadGroupIds) { $parms["ExcludedBlockDownloadGroupIds"] = $tenant.ExcludedBlockDownloadGroupIds }
+            if ($tenantPnP.StopNew2013Workflows -ne $tenant.StopNew2013Workflows) { $parms["StopNew2013Workflows"] = $tenant.StopNew2013Workflows }
+            if ($tenantPnP.SiteOwnerManageLegacyServicePrincipalEnabled -ne $tenant.SiteOwnerManageLegacyServicePrincipalEnabled) { $parms["SiteOwnerManageLegacyServicePrincipalEnabled"] = $tenant.SiteOwnerManageLegacyServicePrincipalEnabled }
+            if ($tenantPnP.BusinessConnectivityServiceDisabled -ne $tenant.BusinessConnectivityServiceDisabled) { $parms["BusinessConnectivityServiceDisabled"] = $tenant.BusinessConnectivityServiceDisabled }
+            if ($tenantPnP.EnableSensitivityLabelForPDF -ne $tenant.EnableSensitivityLabelForPDF) { $parms["EnableSensitivityLabelForPDF"] = $tenant.EnableSensitivityLabelForPDF }
+            if ($tenantPnP.IsDataAccessInCardDesignerEnabled -ne $tenant.IsDataAccessInCardDesignerEnabled) { $parms["IsDataAccessInCardDesignerEnabled"] = $tenant.IsDataAccessInCardDesignerEnabled }
+            if ($tenantPnP.CoreSharingCapability -ne $tenant.CoreSharingCapability) { $parms["CoreSharingCapability"] = $tenant.CoreSharingCapability }
+            if ($tenantPnP.BlockUserInfoVisibilityInOneDrive -ne $tenant.BlockUserInfoVisibilityInOneDrive) { $parms["BlockUserInfoVisibilityInOneDrive"] = $tenant.BlockUserInfoVisibilityInOneDrive }
+            if ($tenantPnP.AllowOverrideForBlockUserInfoVisibility -ne $tenant.AllowOverrideForBlockUserInfoVisibility) { $parms["AllowOverrideForBlockUserInfoVisibility"] = $tenant.AllowOverrideForBlockUserInfoVisibility }
+            if ($tenantPnP.AllowEveryoneExceptExternalUsersClaimInPrivateSite -ne $tenant.AllowEveryoneExceptExternalUsersClaimInPrivateSite) { $parms["AllowEveryoneExceptExternalUsersClaimInPrivateSite"] = $tenant.AllowEveryoneExceptExternalUsersClaimInPrivateSite }
+            if ($tenantPnP.AIBuilderEnabled -ne $tenant.AIBuilderEnabled) { $parms["AIBuilderEnabled"] = $tenant.AIBuilderEnabled }
+            if ($tenantPnP.AllowSensitivityLabelOnRecords -ne $tenant.AllowSensitivityLabelOnRecords) { $parms["AllowSensitivityLabelOnRecords"] = $tenant.AllowSensitivityLabelOnRecords }
+            if ($tenantPnP.AnyoneLinkTrackUsers -ne $tenant.AnyoneLinkTrackUsers) { $parms["AnyoneLinkTrackUsers"] = $tenant.AnyoneLinkTrackUsers }
+            if ($tenantPnP.EnableSiteArchive -ne $tenant.EnableSiteArchive) { $parms["EnableSiteArchive"] = $tenant.EnableSiteArchive }
+            if ($tenantPnP.ESignatureEnabled -ne $tenant.ESignatureEnabled) { $parms["ESignatureEnabled"] = $tenant.ESignatureEnabled }
+            if ($tenantPnP.BlockUserInfoVisibilityInSharePoint -ne $tenant.BlockUserInfoVisibilityInSharePoint) { $parms["BlockUserInfoVisibilityInSharePoint"] = $tenant.BlockUserInfoVisibilityInSharePoint }
+            if ($tenantPnP.MarkNewFilesSensitiveByDefault -ne $tenant.MarkNewFilesSensitiveByDefault) { $parms["MarkNewFilesSensitiveByDefault"] = $tenant.MarkNewFilesSensitiveByDefault }
+            if ($tenantPnP.OneDriveDefaultShareLinkScope -ne $tenant.OneDriveDefaultShareLinkScope) { $parms["OneDriveDefaultShareLinkScope"] = $tenant.OneDriveDefaultShareLinkScope }
+            if ($tenantPnP.OneDriveDefaultShareLinkRole -ne $tenant.OneDriveDefaultShareLinkRole) { $parms["OneDriveDefaultShareLinkRole"] = $tenant.OneDriveDefaultShareLinkRole }
+            if ($tenantPnP.OneDriveDefaultLinkToExistingAccess -ne $tenant.OneDriveDefaultLinkToExistingAccess) { $parms["OneDriveDefaultLinkToExistingAccess"] = $tenant.OneDriveDefaultLinkToExistingAccess }
+            if ($tenantPnP.OneDriveBlockGuestsAsSiteAdmin -ne $tenant.OneDriveBlockGuestsAsSiteAdmin) { $parms["OneDriveBlockGuestsAsSiteAdmin"] = $tenant.OneDriveBlockGuestsAsSiteAdmin }
+            if ($tenantPnP.RecycleBinRetentionPeriod -ne $tenant.RecycleBinRetentionPeriod) { $parms["RecycleBinRetentionPeriod"] = $tenant.RecycleBinRetentionPeriod }
+            if ($tenantPnP.CoreDefaultShareLinkScope -ne $tenant.CoreDefaultShareLinkScope) { $parms["CoreDefaultShareLinkScope"] = $tenant.CoreDefaultShareLinkScope }
+            if ($tenantPnP.CoreDefaultShareLinkRole -ne $tenant.CoreDefaultShareLinkRole) { $parms["CoreDefaultShareLinkRole"] = $tenant.CoreDefaultShareLinkRole }
+            if ($tenantPnP.GuestSharingGroupAllowListInTenantByPrincipalIdentity -ne $tenant.GuestSharingGroupAllowListInTenantByPrincipalIdentity) { $parms["GuestSharingGroupAllowListInTenantByPrincipalIdentity"] = $tenant.GuestSharingGroupAllowListInTenantByPrincipalIdentity }
+            if ($tenantPnP.OneDriveSharingCapability -ne $tenant.OneDriveSharingCapability) { $parms["OneDriveSharingCapability"] = $tenant.OneDriveSharingCapability }
+            if ($tenantPnP.AllowWebPropertyBagUpdateWhenDenyAddAndCustomizePagesIsEnabled -ne $tenant.AllowWebPropertyBagUpdateWhenDenyAddAndCustomizePagesIsEnabled) { $parms["AllowWebPropertyBagUpdateWhenDenyAddAndCustomizePagesIsEnabled"] = $tenant.AllowWebPropertyBagUpdateWhenDenyAddAndCustomizePagesIsEnabled }
+            if ($tenantPnP.SelfServiceSiteCreationDisabled -ne $tenant.SelfServiceSiteCreationDisabled) { $parms["SelfServiceSiteCreationDisabled"] = $tenant.SelfServiceSiteCreationDisabled }
+            if ($tenantPnP.ExtendPermissionsToUnprotectedFiles -ne $tenant.ExtendPermissionsToUnprotectedFiles) { $parms["ExtendPermissionsToUnprotectedFiles"] = $tenant.ExtendPermissionsToUnprotectedFiles }
+            if ($tenantPnP.WhoCanShareAllowListInTenant -ne $tenant.WhoCanShareAllowListInTenant) { $parms["WhoCanShareAllowListInTenant"] = $tenant.WhoCanShareAllowListInTenant }
+            if ($tenantPnP.LegacyBrowserAuthProtocolsEnabled -ne $tenant.LegacyBrowserAuthProtocolsEnabled) { $parms["LegacyBrowserAuthProtocolsEnabled"] = $tenant.LegacyBrowserAuthProtocolsEnabled }
+            if ($tenantPnP.EnableDiscoverableByOrganizationForVideos -ne $tenant.EnableDiscoverableByOrganizationForVideos) { $parms["EnableDiscoverableByOrganizationForVideos"] = $tenant.EnableDiscoverableByOrganizationForVideos }
+            if ($tenantPnP.RestrictedAccessControlforSitesErrorHelpLink -ne $tenant.RestrictedAccessControlforSitesErrorHelpLink) { $parms["RestrictedAccessControlforSitesErrorHelpLink"] = $tenant.RestrictedAccessControlforSitesErrorHelpLink }
+            if ($tenantPnP.Workflow2010Disabled -ne $tenant.Workflow2010Disabled) { $parms["Workflow2010Disabled"] = $tenant.Workflow2010Disabled }
+            if ($tenantPnP.AllowSharingOutsideRestrictedAccessControlGroups -ne $tenant.AllowSharingOutsideRestrictedAccessControlGroups) { $parms["AllowSharingOutsideRestrictedAccessControlGroups"] = $tenant.AllowSharingOutsideRestrictedAccessControlGroups }
+            if ($tenantPnP.HideSyncButtonOnDocLib -ne $tenant.HideSyncButtonOnDocLib) { $parms["HideSyncButtonOnDocLib"] = $tenant.HideSyncButtonOnDocLib }
+            if ($tenantPnP.HideSyncButtonOnODB -ne $tenant.HideSyncButtonOnODB) { $parms["HideSyncButtonOnODB"] = $tenant.HideSyncButtonOnODB }
+            #if ($tenantPnP.StreamLaunchConfig -ne $tenant.StreamLaunchConfig) { $parms["StreamLaunchConfig"] = $tenant.StreamLaunchConfig }
+            if ($tenantPnP.EnableMediaReactions -ne $tenant.EnableMediaReactions) { $parms["EnableMediaReactions"] = $tenant.EnableMediaReactions }
+            if ($tenantPnP.ContentSecurityPolicyEnforcement -ne $tenant.ContentSecurityPolicyEnforcement) { $parms["ContentSecurityPolicyEnforcement"] = $tenant.ContentSecurityPolicyEnforcement }
+            if ($tenantPnP.DisableSpacesActivation -ne $tenant.DisableSpacesActivation) { $parms["DisableSpacesActivation"] = $tenant.DisableSpacesActivation }
+            #Added 05.08.2026
+            if ($tenantPnP.MinCompatibilityLevel -ne $tenant.MinCompatibilityLevel) { $parms["MinCompatibilityLevel"] = $tenant.MinCompatibilityLevel }
+            if ($tenantPnP.MaxCompatibilityLevel -ne $tenant.MaxCompatibilityLevel) { $parms["MaxCompatibilityLevel"] = $tenant.MaxCompatibilityLevel }
+            if ($tenantPnP.ShowEveryoneClaim -ne $tenant.ShowEveryoneClaim) { $parms["ShowEveryoneClaim"] = $tenant.ShowEveryoneClaim }
+            if ($tenantPnP.UserVoiceForFeedbackEnabled -ne $tenant.UserVoiceForFeedbackEnabled) { $parms["UserVoiceForFeedbackEnabled"] = $tenant.UserVoiceForFeedbackEnabled }
+            if ($tenantPnP.OneDriveOrganizationSharingLinkMaxExpirationInDays -ne $tenant.OneDriveOrganizationSharingLinkMaxExpirationInDays) { $parms["OneDriveOrganizationSharingLinkMaxExpirationInDays"] = $tenant.OneDriveOrganizationSharingLinkMaxExpirationInDays }
+            if ($tenantPnP.OneDriveOrganizationSharingLinkRecommendedExpirationInDays -ne $tenant.OneDriveOrganizationSharingLinkRecommendedExpirationInDays) { $parms["OneDriveOrganizationSharingLinkRecommendedExpirationInDays"] = $tenant.OneDriveOrganizationSharingLinkRecommendedExpirationInDays }
+            if ($tenantPnP.CoreOrganizationSharingLinkMaxExpirationInDays -ne $tenant.CoreOrganizationSharingLinkMaxExpirationInDays) { $parms["CoreOrganizationSharingLinkMaxExpirationInDays"] = $tenant.CoreOrganizationSharingLinkMaxExpirationInDays }
+            if ($tenantPnP.CoreOrganizationSharingLinkRecommendedExpirationInDays -ne $tenant.CoreOrganizationSharingLinkRecommendedExpirationInDays) { $parms["CoreOrganizationSharingLinkRecommendedExpirationInDays"] = $tenant.CoreOrganizationSharingLinkRecommendedExpirationInDays }
+            if ($tenantPnP.AllowAppsBypassOfUnmanagedDevicePolicy -ne $tenant.AllowAppsBypassOfUnmanagedDevicePolicy) { $parms["AllowAppsBypassOfUnmanagedDevicePolicy"] = $tenant.AllowAppsBypassOfUnmanagedDevicePolicy }
+            if ($tenantPnP.DisabledAdaptiveCardExtensionIds -ne $tenant.DisabledAdaptiveCardExtensionIds) { $parms["DisabledAdaptiveCardExtensionIds"] = $tenant.DisabledAdaptiveCardExtensionIds }
+            if ($tenantPnP.EnableAutoNewsDigest -ne $tenant.EnableAutoNewsDigest) { $parms["EnableAutoNewsDigest"] = $tenant.EnableAutoNewsDigest }
+            if ($tenantPnP.CommentsOnListItemsDisabled -ne $tenant.CommentsOnListItemsDisabled) { $parms["CommentsOnListItemsDisabled"] = $tenant.CommentsOnListItemsDisabled }
+            if ($tenantPnP.CommentsOnFilesDisabled -ne $tenant.CommentsOnFilesDisabled) { $parms["CommentsOnFilesDisabled"] = $tenant.CommentsOnFilesDisabled }
+            if ($tenantPnP.AllowCommentsTextOnEmailEnabled -ne $tenant.AllowCommentsTextOnEmailEnabled) { $parms["AllowCommentsTextOnEmailEnabled"] = $tenant.AllowCommentsTextOnEmailEnabled }
+            if ($tenantPnP.DisableBackToClassic -ne $tenant.DisableBackToClassic) { $parms["DisableBackToClassic"] = $tenant.DisableBackToClassic }
+            if ($tenantPnP.LabelMismatchEmailHelpLink -ne $tenant.LabelMismatchEmailHelpLink) { $parms["LabelMismatchEmailHelpLink"] = $tenant.LabelMismatchEmailHelpLink }
+            if ($tenantPnP.FileTypesForVersionExpiration -ne $tenant.FileTypesForVersionExpiration) { $parms["FileTypesForVersionExpiration"] = $tenant.FileTypesForVersionExpiration }
+            if ($tenantPnP.CoreDefaultLinkToExistingAccess -ne $tenant.CoreDefaultLinkToExistingAccess) { $parms["CoreDefaultLinkToExistingAccess"] = $tenant.CoreDefaultLinkToExistingAccess }
+            if ($tenantPnP.HideSyncButtonOnTeamSite -ne $tenant.HideSyncButtonOnTeamSite) { $parms["HideSyncButtonOnTeamSite"] = $tenant.HideSyncButtonOnTeamSite }
+            if ($tenantPnP.CoreBlockGuestsAsSiteAdmin -ne $tenant.CoreBlockGuestsAsSiteAdmin) { $parms["CoreBlockGuestsAsSiteAdmin"] = $tenant.CoreBlockGuestsAsSiteAdmin }
+            if ($tenantPnP.IsWBFluidEnabled -ne $tenant.IsWBFluidEnabled) { $parms["IsWBFluidEnabled"] = $tenant.IsWBFluidEnabled }
+            if ($tenantPnP.ShowOpenInDesktopOptionForSyncedFiles -ne $tenant.ShowOpenInDesktopOptionForSyncedFiles) { $parms["ShowOpenInDesktopOptionForSyncedFiles"] = $tenant.ShowOpenInDesktopOptionForSyncedFiles }
+            if ($tenantPnP.AuthContextResilienceMode -ne $tenant.AuthContextResilienceMode) { $parms["AuthContextResilienceMode"] = $tenant.AuthContextResilienceMode }
+            if ($tenantPnP.BlockDownloadFileTypePolicy -ne $tenant.BlockDownloadFileTypePolicy) { $parms["BlockDownloadFileTypePolicy"] = $tenant.BlockDownloadFileTypePolicy }
+            if ($tenantPnP.TlsTokenBindingPolicyValue -ne $tenant.TlsTokenBindingPolicyValue) { $parms["TlsTokenBindingPolicyValue"] = $tenant.TlsTokenBindingPolicyValue }
+            if ($tenantPnP.ArchiveRedirectUrl -ne $tenant.ArchiveRedirectUrl) { $parms["ArchiveRedirectUrl"] = $tenant.ArchiveRedirectUrl }
+            if ($tenantPnP.MediaTranscription -ne $tenant.MediaTranscription) { $parms["MediaTranscription"] = $tenant.MediaTranscription }
+            if ($tenantPnP.MediaTranscriptionAutomaticFeatures -ne $tenant.MediaTranscriptionAutomaticFeatures) { $parms["MediaTranscriptionAutomaticFeatures"] = $tenant.MediaTranscriptionAutomaticFeatures }
+            if ($tenantPnP.ReduceTempTokenLifetimeEnabled -ne $tenant.ReduceTempTokenLifetimeEnabled) { $parms["ReduceTempTokenLifetimeEnabled"] = $tenant.ReduceTempTokenLifetimeEnabled }
+            if ($tenantPnP.ReduceTempTokenLifetimeValue -ne $tenant.ReduceTempTokenLifetimeValue) { $parms["ReduceTempTokenLifetimeValue"] = $tenant.ReduceTempTokenLifetimeValue }
+            if ($tenantPnP.ViewersCanCommentOnMediaDisabled -ne $tenant.ViewersCanCommentOnMediaDisabled) { $parms["ViewersCanCommentOnMediaDisabled"] = $tenant.ViewersCanCommentOnMediaDisabled }
+            if ($tenantPnP.AllOrganizationSecurityGroupId -ne $tenant.AllOrganizationSecurityGroupId) { $parms["AllOrganizationSecurityGroupId"] = $tenant.AllOrganizationSecurityGroupId }
+            if ($tenantPnP.AllowGuestUserShareToUsersNotInSiteCollection -ne $tenant.AllowGuestUserShareToUsersNotInSiteCollection) { $parms["AllowGuestUserShareToUsersNotInSiteCollection"] = $tenant.AllowGuestUserShareToUsersNotInSiteCollection }
+            if ($tenantPnP.ContentTypeSyncSiteTemplatesList -ne $tenant.ContentTypeSyncSiteTemplatesList) { $parms["ContentTypeSyncSiteTemplatesList"] = $tenant.ContentTypeSyncSiteTemplatesList }
+            if ($tenantPnP.ConditionalAccessPolicyErrorHelpLink -ne $tenant.ConditionalAccessPolicyErrorHelpLink) { $parms["ConditionalAccessPolicyErrorHelpLink"] = $tenant.ConditionalAccessPolicyErrorHelpLink }
+            if ($tenantPnP.CustomizedExternalSharingServiceUrl -ne $tenant.CustomizedExternalSharingServiceUrl) { $parms["CustomizedExternalSharingServiceUrl"] = $tenant.CustomizedExternalSharingServiceUrl }
+            if ($tenantPnP.IncludeAtAGlanceInShareEmails -ne $tenant.IncludeAtAGlanceInShareEmails) { $parms["IncludeAtAGlanceInShareEmails"] = $tenant.IncludeAtAGlanceInShareEmails }
+            if ($tenantPnP.MassDeleteNotificationDisabled -ne $tenant.MassDeleteNotificationDisabled) { $parms["MassDeleteNotificationDisabled"] = $tenant.MassDeleteNotificationDisabled }
+            if ($tenantPnP.RestrictExternalSharing -ne $tenant.RestrictExternalSharing) { $parms["RestrictExternalSharing"] = $tenant.RestrictExternalSharing }
+            if ($tenantPnP.AllowFileArchive -ne $tenant.AllowFileArchive) { $parms["AllowFileArchive"] = $tenant.AllowFileArchive }
+            if ($tenantPnP.AllowFileArchiveOnNewSitesByDefault -ne $tenant.AllowFileArchiveOnNewSitesByDefault) { $parms["AllowFileArchiveOnNewSitesByDefault"] = $tenant.AllowFileArchiveOnNewSitesByDefault }
+            if ($tenantPnP.IsSharePointAddInsDisabled -ne $tenant.IsSharePointAddInsDisabled) { $parms["IsSharePointAddInsDisabled"] = $tenant.IsSharePointAddInsDisabled }
+            if ($tenantPnP.SyncAadB2BManagementPolicy -ne $tenant.SyncAadB2BManagementPolicy) { $parms["SyncAadB2BManagementPolicy"] = $tenant.SyncAadB2BManagementPolicy }
+            if ($tenantPnP.ResyncContentSecurityPolicyConfigurationEntries -ne $tenant.ResyncContentSecurityPolicyConfigurationEntries) { $parms["ResyncContentSecurityPolicyConfigurationEntries"] = $tenant.ResyncContentSecurityPolicyConfigurationEntries }
+            if ($tenantPnP.DelayContentSecurityPolicyEnforcement -ne $tenant.DelayContentSecurityPolicyEnforcement) { $parms["DelayContentSecurityPolicyEnforcement"] = $tenant.DelayContentSecurityPolicyEnforcement }
+            if ($tenantPnP.RestrictResourceAccountAccess -ne $tenant.RestrictResourceAccountAccess) { $parms["RestrictResourceAccountAccess"] = $tenant.RestrictResourceAccountAccess }
+            if ($tenantPnP.EnforceRequestDigest -ne $tenant.EnforceRequestDigest) { $parms["EnforceRequestDigest"] = $tenant.EnforceRequestDigest }
+            if ($tenantPnP.RestrictExternalSharingForAgents -ne $tenant.RestrictExternalSharingForAgents) { $parms["RestrictExternalSharingForAgents"] = $tenant.RestrictExternalSharingForAgents }
+            if ($tenantPnP.EnableNotificationsSubscriptions -ne $tenant.EnableNotificationsSubscriptions) { $parms["EnableNotificationsSubscriptions"] = $tenant.EnableNotificationsSubscriptions }
+            if ($parms.Count -gt 0) {
+                Write-Host "Syncing tenant properties: $($parms.Keys -join ', ')"
+                if ($DryRun -eq $false) {
+                    Set-PnPTenant -Connection $conPnP -Force @parms
                 }
-                $retries--
             }
-        } while ($retries -gt 0)
-
-    }
+            break
+        } catch {
+            Write-Warning "Error syncing tenant properties, retrying... $($_.Exception.Message)"
+            $tenantPnP = Get-PnPTenant -Connection $conPnP
+            if ($retries -eq 0)
+            {
+                throw
+            }
+            $retries--
+        }
+    } while ($retries -gt 0)
 
     # Write-Host "Site scripts" -ForegroundColor $CommandInfo
     # $siteScripts = Get-PnPSiteScript -Connection $conPnP
@@ -390,8 +391,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBVqEBYwKeI18Qm
-# LUzRvDAb+DsUwaI3x4jZoqyqQ7Y2MqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD3XU2yx0G7Vpcx
+# rr/828GqCqg6/lvDgkjjnQFFgiayrqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -505,23 +506,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIF1cCv9q
-# kIJFj+cSKjPu7/kUmCg8Hs2CFHi3KSOYo0m0MA0GCSqGSIb3DQEBAQUABIICAA6E
-# yOL0K3LYwmiF6ECJaDtQx6kQyCRx8a/NUWeeDkYUamkPMAsyURA61CmCqrWq+9cS
-# 40yYuBsf8RKFk0KsrNU11uj4Ms1qrwpki2FudALGmYAe6hwzghOMvLjqEJwfTHYS
-# oTMjP5+HQesNtOg2orrDp2HjLe88RDBJ0XZ25ljz/ilfUsQ4ua9mIDPV3yFl3ySp
-# +jam3N1tEF3ewN+Mash/JnG4X3n18tcm0Vk3RY+fahfL/tSbMgha2WlOQFWv0oRt
-# l7CExZWpBw7GgsuxyOjfWiEOurkj8u1cOugZUcZZmJCYQbkOEOsgmc4gmmGmCTbW
-# Z38D3AC3iLS4IRaZewNuZwYvvJEuRGAju/Rcl9O1V91PWMNPU6KnfPH+316Xw+jy
-# zVRnMxYvJqLZb28m+XbOcoPK64zMnWV3XPx0mpyobDZcwuMw2okEB5Lep1sz1SKb
-# HQeMu9IThGa5nXyjfv8he8zx0e8vKuYHaFsPLOIC1xU8CUPxXQUFOhjowd14sAKq
-# ozE1l+IbwHd23F8x9v50RU02KciJd4/LS3Cxuc1MahXgapsDXUUOp5Pp79cXrxi8
-# MrC1JjJjf6cTanvQiUHGQCULuuFma2CclBg03bkahUixu6A/Wo+0VZfCa6VOImFa
-# qKJpgKQm8kcCRZRF+CjPgyCS10j19E0Ccs2ImcYMoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIF6PGPd8
+# Nk7hHomtIhgorUcJe/C4qDWlAkT216S+LoosMA0GCSqGSIb3DQEBAQUABIICAG3n
+# gpDAI3yG/M4SVhYHvm3WsE16QXTGz20pNXMAzPJYt1goW4gcG11BQE4UaV67osjx
+# mRUxm/pf+OLiXu9tQtdgPjTKRc80ro6Tb3byvk5g1ZV81UsDYeZ64Ab73hnBvduQ
+# sN9ewZC88p+qd34xkiGsNuhsupMSe+58ZKFmspALMWk5/fe2KNIROsJY14zwj39Y
+# I5IpOvw5jLMoWv0xskep0sWLxgI7S5llJqR0fDpv08nhjdS29TubLmubYVF5CBz4
+# mCLdFhQ41ZDGch04nXykcOnvqZeFmS6Rk1JEOG4vKi350YwhQIeBS/yTJ+YSFA4E
+# sxAcHnNYZWCH3OhtoVqWtdjQpo5E+tLf+/87TCUxAv8ZN3DTg1++sNlEDcIPU1Y7
+# jWPry0WPdsa2F5JqWGhiRU61TUXDMprYurRZoOD0TT24Ig+VYt5qHtWCKJPFkity
+# 5bKRBvcoH4yEO+oH2/5i3dAS+EF26g/2JNc9sKtEcBK/M2GLgZ6xrSMIMUECLrmh
+# GQC/AHczu1Cw4YsfJi66FPmKrIZwA7rP8SfIv2PT8db6qg02zk+/eugQrGWgFx0y
+# kz6SbaHdpe9RMcacZ3+NbNebzIaxsl4XcgJ0ev1Bj/y+HH4//JUgzvGfzKzesG63
+# /uBeVQrU/UarRDQicksF4sPCAJa0pCi5SPmEk7MsoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCC/RSH1s7lssD55nQ/WYwMho2d3pu6p72GmndipBu/KsAIUNjlX
-# Vq0YxWi0JuMWUd3i82yKMR8YDzIwMjYwODA1MTcyMzAxWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCBgzepBlWL8TW3aA/uaQmfJZzFnSY1f1Ekf62UicRZu+gIUS5jB
+# hvy9VodVjqd3RHEV28BRP88YDzIwMjYwODA2MDYzNzM1WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -664,18 +665,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBnR/i9om2vNPdwnQVLL9dyEq9SfMKNOsxZfvU1tka3e41d5My0rVnadzth
-# 7+Tx2bowgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDTk8ecahdbQPU/392pWRifDhw4S7hg9mLazyFfp48p3j4ZLlc4ZaUeo3CE
+# cTBXmhEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAyZpNlJEY9ehuaEwUPNCvqtmrPITW2tGNYrAZhCkhdm5s
-# C+zCXkpKbIwGp55xx2tHOu+y2ySakw+Ft7kQitlOmY8Mciq2iChS7LyxBoEakD1D
-# F/DfV55cjt4sCRhrlhN3isUGgQsz/kq3RNA5tFYeDgn/NmpPJDCH5bMs3zUDwTcm
-# ueOAtqfqA0SXhV2wKeHqUvGjNxg/BCyWL1RxN1Py0lJu8IAawdN259bDMn2gXamf
-# wH3qP11cvt34p0h1BxWZotcJPrd1v5VD0l1S/OPs1hrKjrh5Orw3DvDpFuRwWLkh
-# qL+HChAY7I8D6Pp6oHiSlbpSHS3MowOo8b75ih6OuvVEIllW/KyyXkVyCbQC8SZ9
-# TKaYOXigEiVW/rFF4gV5vtiBfmr1vg2GX+4vIFJ8zJM3Jk9PIguBO3SXHVVXbzhM
-# vHQhAVieV18695sm8Xs5RsZgOyGqok5VZO58ezg1xBUFmvJcjCYPn1cKqtbd59Kl
-# e98fjivEotTDwm00dwYZ
+# KoZIhvcNAQEMBQAEggGADHhbNE5GiCLlF7xiHOUPMQGcLtUSK57hMwhnzEeY1/rS
+# 6cBiQCf1qZ5LAoDLhfwBzjOZvdXNQB4LZlvrj/K0Rf+gza4XBCajhlowfenmug/k
+# YnRWQbQ8F+eU/f+fWGyBpYh5nwtTHJ1kWLSupMcNVVAvRPpVQMlw1zdNdMiZrisI
+# 0d8NHA0DqAi+s7u7gkC1Ix1xvvClFERLwZxYMB/9SM2be30DtwUps2EOonwSM8pP
+# vVOEb4orSYltMuIC8D5TD2gTJhqiLFbM2m4s9gDg2P5wda3bNMYRCNN8vVKjYCyQ
+# wqRxEI6+ZqY4T6FVbcyArDltHCe4I5kzNTNWh+AFoTsi+ELY2OlyshqB1dqSn51+
+# r/ptvO0KCJKa7is99sdMmH7AlbBJqUD7i+D1L9zvDI7vnPjbo9WykLJten5od7tL
+# lFAnzPvLgnlpLkCqr+NjmKkN+rzptr0Arh08zaGFvNEimh9gdAsxpdXNRcXY9Uz/
+# y5Oi4GaKFf4PQew1AtMM
 # SIG # End signature block
