@@ -30,200 +30,119 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    06.10.2020 Konrad Brunner       Initial Version
-    24.04.2023 Konrad Brunner       Switched to Graph
-    06.02.2026 Konrad Brunner       Added powershell documentation
+    11.08.2026 Konrad Brunner       Initial Version
 
-#>
-
-<#
-.SYNOPSIS
-Sets Microsoft Intune as the Mobile Device Management (MDM) authority for the tenant using Microsoft Graph.
-
-.DESCRIPTION
-The Set-IntuneAsMdmAuthority.ps1 script configures Microsoft Intune as the designated MDM authority in an Azure AD tenant. It loads the environment configuration, checks and installs required modules, authenticates to Microsoft Graph with the appropriate permissions, and then updates the organization settings if Intune is not already set as MDM authority. If the script encounters issues setting the MDM authority automatically, it provides manual steps for completing the configuration through the Azure portal.
-
-.INPUTS
-None. The script does not accept pipeline input.
-
-.OUTPUTS
-None. The script writes progress and status messages to the console and logs the operations in a transcript file.
-
-.EXAMPLE
-PS> .\Set-IntuneAsMdmAuthority.ps1
-Executes the script to verify and, if necessary, set Microsoft Intune as the MDM authority in the Azure AD tenant.
-
-.NOTES
-Copyright          : (c) Alya Consulting, 2019-2026
-Author             : Konrad Brunner
-License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
-Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 [CmdletBinding()]
 Param(
-    [bool]$ResetUris = $false
 )
 
-# Loading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
 # Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-IntuneAsMdmAuthority-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Configure-CustomRoles-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.Governance"
 
-# Logins
-LoginTo-MgGraph -Scopes @(
-    "Directory.ReadWrite.All",
-    "Policy.ReadWrite.MobilityManagement"
-)
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes "Directory.ReadWrite.All","RoleManagement.ReadWrite.Directory"
 
 # =============================================================
-# Intune stuff
+# Azure stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Set-IntuneAsMdmAuthority | Graph" -ForegroundColor $CommandInfo
+Write-Host "AVD | Configure-CustomRoles | AZURE" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting actual authority
-Write-Host "Getting actual authority" -ForegroundColor $CommandInfo
-$uri = "/beta/organization('$AlyaTenantId')?`$select=mobiledevicemanagementauthority"
-$MDMAuthority = (Get-MsGraphObject -Uri $uri).mobileDeviceManagementAuthority
-Write-Host "  Actual authority: $MDMAuthority"
-
-# Checking authority
-Write-Host "Checking authority" -ForegroundColor $CommandInfo
-if($MDMAuthority -notlike "intune")
+# Checking custom role 'Bitlocker Key Reader'
+Write-Host "Checking custom role 'Bitlocker Key Reader'" -ForegroundColor $CommandInfo
+$role = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "displayName eq '$($AlyaCompanyNameShortM365) Bitlocker Key Reader'" -ErrorAction SilentlyContinue
+if (-Not $role)
 {
-    try
-    {
-        # Setting intune as authority
-        Write-Host "Setting intune as authority" -ForegroundColor $CommandInfo
-        $uri = "/beta/organization/$AlyaTenantId/setMobileDeviceManagementAuthority"
-        $ret = Post-MsGraph -Uri $uri -Body "{}"
-    }
-    catch
-    {
-        Write-Host "We have actually an issue, configuring the MDM authority by script."
-        Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
-        Write-Host " - Select 'Microsoft Intune'"
-        Write-Host " - Set for MDM and MAM 'All'"
-        Write-Host " - Save"
-        Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
-        pause
-    }
+    Write-Host "Custom role does not exists. Creating..."
+    $role = New-MgBetaRoleManagementDirectoryRoleDefinition `
+      -DisplayName "$($AlyaCompanyNameShortM365) Bitlocker Key Reader" `
+      -Description "Allows reading BitLocker recovery keys and metadata" `
+      -IsEnabled:$true `
+      -RolePermissions @(
+        @{
+          allowedResourceActions = @(
+              "microsoft.directory/bitlockerKeys/key/read",
+              "microsoft.directory/bitlockerKeys/metadata/read"
+          )
+        }
+      )
 }
-else {
-    Write-Host "Authority is already set to intune"
-}
-
-# Getting actual mdm policy
-Write-Host "Getting actual MDM policy" -ForegroundColor $CommandInfo
-$uri = "/beta/policies/mobileDeviceManagementPolicies"
-$MDMPolicies = Get-MsGraphCollection -Uri $uri
-
-foreach($MDMPolicy in $MDMPolicies)
+else
 {
-
-    $uri = "/beta/policies/mobileDeviceManagementPolicies/$($MDMPolicy.id)"
-    $MDMPolicy = Get-MsGraphObject -Uri $uri
-    Write-Host "  Actual MDM policy: $($MDMPolicy.displayName)"
-
-    # Checking mdm policy
-    Write-Host "Checking mdm policy" -ForegroundColor $CommandInfo
-    if($MDMPolicy.displayName -notlike "Microsoft Intune")
-    {
-        throw "MDM policy is not set to Microsoft Intune. Please check the MDM policy in the Azure portal and set it to Microsoft Intune."
-    }
-
-    if ($MDMPolicy.isMdmEnrollmentDuringRegistrationDisabled)
-    {
-        Write-Warning "isMdmEnrollmentDuringRegistrationDisabled is enabled. Disabling now."
-        $ret = Patch-MsGraph -Uri $uri -Body "{`"isMdmEnrollmentDuringRegistrationDisabled`": false}"
-    }
-    else
-    {
-        Write-Host "isMdmEnrollmentDuringRegistrationDisabled was already disabled."
-    }
-
-    if ($MDMPolicy.appliesTo -ne "all")
-    {
-        Write-Warning "appliesTo is set to $($MDMPolicy.appliesTo). Setting now to all."
-        $ret = Patch-MsGraph -Uri $uri -Body "{`"appliesTo`": `"all`"}"
-    }
-    else
-    {
-        Write-Host "appliesTo was already set to all."
-    }
-
-    if ($MDMPolicy.complianceUrl -ne "https://portal.manage.microsoft.com/?portalAction=Compliance")
-    {
-        if ($ResetUris -or [string]::IsNullOrEmpty($MDMPolicy.complianceUrl))
-        {
-            Write-Warning "complianceUrl is set to $($MDMPolicy.complianceUrl). Setting now to https://portal.manage.microsoft.com/?portalAction=Compliance."
-            $ret = Patch-MsGraph -Uri $uri -Body "{`"complianceUrl`": `"https://portal.manage.microsoft.com/?portalAction=Compliance`"}"
+    Write-Host "Custom role already exists. Updating..."
+    $role = Update-MgBetaRoleManagementDirectoryRoleDefinition `
+      -UnifiedRoleDefinitionId $role.Id `
+      -DisplayName "$($AlyaCompanyNameShortM365) Bitlocker Key Reader" `
+      -Description "Allows reading BitLocker recovery keys and metadata" `
+      -IsEnabled:$true `
+      -RolePermissions @(
+        @{
+          allowedResourceActions = @(
+              "microsoft.directory/bitlockerKeys/key/read",
+              "microsoft.directory/bitlockerKeys/metadata/read"
+          )
         }
-        else
-        {
-            Write-Warning "complianceUrl is set to $($MDMPolicy.complianceUrl). Should be set to https://portal.manage.microsoft.com/?portalAction=Compliance."
-            pause
-        }
-    }
-    else
-    {
-        Write-Host "complianceUrl was already set to https://portal.manage.microsoft.com/?portalAction=Compliance."
-    }
-
-    if ($MDMPolicy.discoveryUrl -ne "https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc")
-    {
-        if ($ResetUris -or [string]::IsNullOrEmpty($MDMPolicy.discoveryUrl))
-        {
-            Write-Warning "discoveryUrl is set to $($MDMPolicy.discoveryUrl). Setting now to https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc."
-            $ret = Patch-MsGraph -Uri $uri -Body "{`"discoveryUrl`": `"https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc`"}"
-        }
-        else
-        {
-            Write-Warning "discoveryUrl is set to $($MDMPolicy.discoveryUrl). Should be set to https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc."
-            pause
-        }
-    }
-    else
-    {
-        Write-Host "discoveryUrl was already set to https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc."
-    }
-
-    if ($MDMPolicy.termsOfUseUrl -ne "https://portal.manage.microsoft.com/TermsofUse.aspx")
-    {
-        if ($ResetUris -or [string]::IsNullOrEmpty($MDMPolicy.termsOfUseUrl))
-        {
-            Write-Warning "termsOfUseUrl is set to $($MDMPolicy.termsOfUseUrl). Setting now to https://portal.manage.microsoft.com/TermsofUse.aspx."
-            $ret = Patch-MsGraph -Uri $uri -Body "{`"termsOfUseUrl`": `"https://portal.manage.microsoft.com/TermsofUse.aspx`"}"
-        }
-        else
-        {
-            Write-Warning "termsOfUseUrl is set to $($MDMPolicy.termsOfUseUrl). Should be set to https://portal.manage.microsoft.com/TermsofUse.aspx."
-            pause
-        }
-    }
-    else
-    {
-        Write-Host "termsOfUseUrl was already set to https://portal.manage.microsoft.com/TermsofUse.aspx."
-    }
-
+      )
 }
 
-#Stopping Transscript
+# Checking custom role 'LAPS Password Reader'
+Write-Host "Checking custom role 'LAPS Password Reader'" -ForegroundColor $CommandInfo
+$role = Get-MgBetaRoleManagementDirectoryRoleDefinition -Filter "displayName eq '$($AlyaCompanyNameShortM365) LAPS Password Reader'" -ErrorAction SilentlyContinue
+if (-Not $role)
+{
+    Write-Host "Custom role does not exists. Creating..."
+    $role = New-MgBetaRoleManagementDirectoryRoleDefinition `
+      -DisplayName "$($AlyaCompanyNameShortM365) LAPS Password Reader" `
+      -Description "Allows reading LAPS passwords and metadata" `
+      -IsEnabled:$true `
+      -RolePermissions @(
+        @{
+          allowedResourceActions = @(
+              "microsoft.directory/deviceLocalCredentials/standard/read",
+              "microsoft.directory/deviceLocalCredentials/password/read"
+          )
+        }
+      )
+}
+else
+{
+    Write-Host "Custom role already exists. Updating..."
+    $role = Update-MgBetaRoleManagementDirectoryRoleDefinition `
+      -UnifiedRoleDefinitionId $role.Id `
+      -DisplayName "$($AlyaCompanyNameShortM365) LAPS Password Reader" `
+      -Description "Allows reading LAPS passwords and metadata" `
+      -IsEnabled:$true `
+      -RolePermissions @(
+        @{
+          allowedResourceActions = @(
+              "microsoft.directory/deviceLocalCredentials/standard/read",
+              "microsoft.directory/deviceLocalCredentials/password/read"
+          )
+        }
+      )
+}
+
+# Stopping Transscript
 Stop-Transcript
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCGAon/5PUBxltm
-# 8duCz4gzjc6VyhvmEem6q1tsPtPTeaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA1YzieSLQ1Dur5
+# 7QYMjEMcLyuFxX3GADBqV6XCQ3IoR6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -290,10 +209,10 @@ Stop-Transcript
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -301,17 +220,17 @@ Stop-Transcript
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -321,39 +240,39 @@ Stop-Transcript
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIP+sx82E
-# kGMAcqndk3TRhQuK1WDFf60/1PnbPJz2FQ0/MA0GCSqGSIb3DQEBAQUABIICALi9
-# az4TsuaIs2RPbOAbAnt6mXQujHm5CUM6HAWeB0my+iZ7quVy0G9MTMyCYlQwJVfV
-# 3G7gIcssMACni/37rk4QYw5Eaf5B6No8vImOb7bBw+NjIMqC4jNE0B/zYWMRV+06
-# jC1gCKJZOOf23ZZ/l2H6/8Zg8ywB5dtFJPeZ81O5ZOV0zL1uGQgFFxNh2Sqpa8FX
-# AMjKrPAX+xfMWjLcWO8UV/k70633SJd4EZzjxo/94CwfMwiwXARr6566g+KUKuuW
-# 6DdWR7/nQQn/DJ3C3amzJx9N2Hwqe7ftpXFZgqhVhyh1jjBUYoRU2P04V3DEeH/a
-# ieMay7EharS97TlXpylB/ynF49NyIbq9o+4AjwIJXxUj3e8hPLzKGbiNsCYs48bf
-# lVRgkwbWsAiXnq2etr2OZrh5tkkEeBcVLJGafib7atuRaiM4wUb3vKY42wQoZGMi
-# 9yM+LaKlb1sefTXzj/9peqwcyAEh62RHy5bER2o1lV0/mmWgr7NxiMAwTNieWqvu
-# 9ttBOThJ0k57Hqj7A7941Y2cN5M+HLnxqsi9oHiWknohZUqJMcyTshUqEgwSokHc
-# 3ZD0tuIMqGfzDBC9tMUdxJvh4ORaa7fr2q5v0rM59hiiu/b6m50j7hV68Q7Pksjd
-# pxrinbd1xQifY6bU4UjrzQCCFmUCOn94CvpJ9o65oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFcEAsc8
+# Kvxur6c10yjho+mPIDEVi5zlw3C/1J/pfveVMA0GCSqGSIb3DQEBAQUABIICADdg
+# jIZdg8SSEnFZB9sDXPAuKwwS1eGr2DhBYSHipeg/xRv/8BuSXxs95ZKSXNmeghCw
+# oEIetgi9pLiEoPoKJDd5/R9vrFH226rBwMmxmqLULC8h4is0uGnl+WTt30CwixIj
+# NEuWnWnoyVHQmx+phw6doXkFm5tASV7BfqVxeYZKZk8cdvdWUc2FHkdvA3ROI5Hz
+# XVG/BwpWCTucoMP/qyojUNLV0V73OjhtlQp5mUgmiBwzHdls07RAtOkpWZXcgsO9
+# tbPyvArib+LfjJ643osOIbilxg+FdZCQQDKQdxYdCClab70ggH6wChrpmjblvOjJ
+# egW923lLzkWN7tfex48h902zPZxEkDAlXwXV6KBuE8NufFWu1E1YnxKIPljLoBpk
+# P4Qc+KQT4B2yIC6RWDYZdJDiNzS26NZgMpek74/ZqeUUlLr5hAZNsXJ5Pl54T1t0
+# z4Bh671bIJV4ekVKjZnL0Z91IvUpvGxFIN5Yi2pJCBcOj+FQBkggKdc4iaHiZGmU
+# GVoUkzSI6cUfWCx1oLSYC9AymaSr+qUuyos5I885bwgAgxkgF14/XEX0McfDpBrZ
+# l8JbZ+PZHYmilM/azZpCaKONdTVvrUs9QRLtcnOe4RNtYrOWuUrYP719cM8VXmQZ
+# rUoMZGh6Sjmx2zOufJJVt+kgz5AxirOyk+nYTaU6oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCB8ho0R+OgjusErHN1WPAAWH6bGGu2hvtqFSxY4ktT2kgIUKiFg
-# i/c4oqtu+4J7DySA+SbOTYQYDzIwMjYwODEyMTM0NTM0WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCD5zrB4ytr/ot9QXZ9sudgSZq+cnl3RpmyeeqH/x0yHTwIUP1aI
+# tQ+cH2001ZUjcmBYXqDZ43kYDzIwMjYwODExMTAxNzAyWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -496,18 +415,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDCmcsTaWdTxxJHTIjbPvd8mjOMQJdK86jX/qBlnEicL9k5U+sSIKiPQluxN
-# UQkvOwkwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDzojsVuFZMrOtAwuC41HKykMNpRfvnrYHOmqlRdJ4r3lPRyp748pE6gYIi
+# 6XfDq4IwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAVdaXh/Mnzlh+ecXydKaYDDAXjksGrM0UL/CrlE4aEYcA
-# QRKsz4kbO3f0V1V+z95fRyNH53kH6WqPPMDaWv5vWaTzAGTnc+buTIjYkpv6IMQ8
-# +WZh570G3Y5chFVJ7UkW9HI6pzxCyqa6vqj2+RFj8+Kxd7fPTEWaZaluVZzNhAsp
-# b565kucZ0t/y6rcMDY0oMJdSGLT2NWUdQcEYckijNhM9lZs5KrPZrdEbUbRssF0e
-# CIkwmmfWvf+zG0J11K2JbduXwpq5QDOp1tLfT4D7yq8eTOQnATXVMe8yASBEAnSD
-# ay7BslOPdPCBcXXBwRIEGNs/8nAwrsClOhsapQTfy7bYcF/bKnTklxf7Sx/gigUK
-# ZYNjV/dL3aXLjnUOcK0WhgfddVEGzX1zYg06BblMFkIyxyPZ2U5ukd/bVJyz9Hs4
-# aHm5IrU5MAfAdDbIMNg+f4qzEVHUgsvfLyvEKUEcaAF8j7RHLtJPSmG/+WxKHVYV
-# bq9AwlRgrYW+LBBajUnx
+# KoZIhvcNAQEMBQAEggGAJItouo1hxv91g08ybyLGWr0NbKcUme/HOyg+9Zkb22nd
+# jxs2MElC/qLtkCIIsmPsZ0Hi9ALZWSoJeQtIGFEg13wmKNK/aLtYSqjNRamyF78R
+# 9Jnibb6uinku408BYPFwsGE2p20KEQnxlIdv0IX4dapDuCkJtj+Y4383+LrARgIn
+# /+kKZSo4gxEqD4hLlggC2usxUExwNwzn/O7wXcbpd/gYUSXrtjdt3fGf58o43rcZ
+# pICqV2YmBaMTfsZ0V5YiZlOuR1t6sDK0su2OiREtdu2Ta/kYQHfFWSH/rwhoBikw
+# xkOhDIsEVYa+Kvlp9zZw+BOG6H7Wkl15KrteNhhUWJFWAcDUeNVC3GQEIXCNM/ti
+# vdLmD7lTPiRHI9gajDVPMMNFZbpVAqFqGrucrsQ2nIYw7haO5kc3ZEMrUNDkUIiy
+# mM2FKUDb6c1w7Mfglwdgwucl3K1rcKuogVnd/jEHFjplV5GBexq8jGtnZDAzESur
+# 7WpadEETKNx7kDqbikby
 # SIG # End signature block

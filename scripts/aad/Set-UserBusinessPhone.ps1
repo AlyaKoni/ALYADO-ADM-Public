@@ -30,28 +30,31 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    06.10.2020 Konrad Brunner       Initial Version
-    24.04.2023 Konrad Brunner       Switched to Graph
-    06.02.2026 Konrad Brunner       Added powershell documentation
+    12.08.2026 Konrad Brunner       Initial Version
 
 #>
 
 <#
 .SYNOPSIS
-Sets Microsoft Intune as the Mobile Device Management (MDM) authority for the tenant using Microsoft Graph.
+Sets the Azure AD user business phone to either Member or Guest using Microsoft Graph Beta API.
 
 .DESCRIPTION
-The Set-IntuneAsMdmAuthority.ps1 script configures Microsoft Intune as the designated MDM authority in an Azure AD tenant. It loads the environment configuration, checks and installs required modules, authenticates to Microsoft Graph with the appropriate permissions, and then updates the organization settings if Intune is not already set as MDM authority. If the script encounters issues setting the MDM authority automatically, it provides manual steps for completing the configuration through the Azure portal.
+The Set-UserBusinessPhone.ps1 script updates the business phone attribute of an Azure AD user to the specified value (Member or Guest). It ensures required modules are installed, logs activity, and uses Microsoft Graph authentication to perform the update. The script verifies the current business phone before making changes and provides detailed logging throughout execution.
+
+.PARAMETER userUpn
+Specifies the User Principal Name (UPN) of the Azure AD user whose business phone will be updated.
+
+.PARAMETER phoneNumber
+Defines the new business phone for the user. Accepted values are "Member" or "Guest".
 
 .INPUTS
-None. The script does not accept pipeline input.
+System.String. The user's UPN and desired business phone are passed as string parameters.
 
 .OUTPUTS
-None. The script writes progress and status messages to the console and logs the operations in a transcript file.
+None. The script performs actions and writes output messages to the console and log file.
 
 .EXAMPLE
-PS> .\Set-IntuneAsMdmAuthority.ps1
-Executes the script to verify and, if necessary, set Microsoft Intune as the MDM authority in the Azure AD tenant.
+PS> .\Set-UserBusinessPhone.ps1 -userUpn "john.doe@tenant.onmicrosoft.com" -phoneNumber "+41123456789"
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -62,168 +65,62 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [bool]$ResetUris = $false
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNull()]
+    [string]$userUpn,
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern("^\+\d{8,15}$")]
+    [string]$phoneNumber
 )
 
-# Loading configuration
+# Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-# Starting Transscript
-Start-Transcript -Path "$($AlyaLogs)\scripts\intune\Set-IntuneAsMdmAuthority-$($AlyaTimeString).log" -IncludeInvocationHeader -Force
+# Starting Transcript
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Set-UserBusinessPhone-$($AlyaTimeString).log" | Out-Null
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
-# Logins
-LoginTo-MgGraph -Scopes @(
-    "Directory.ReadWrite.All",
-    "Policy.ReadWrite.MobilityManagement"
-)
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All")
 
 # =============================================================
-# Intune stuff
+# O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Intune | Set-IntuneAsMdmAuthority | Graph" -ForegroundColor $CommandInfo
+Write-Host "AAD | Set-UserBusinessPhone | Graph" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Getting actual authority
-Write-Host "Getting actual authority" -ForegroundColor $CommandInfo
-$uri = "/beta/organization('$AlyaTenantId')?`$select=mobiledevicemanagementauthority"
-$MDMAuthority = (Get-MsGraphObject -Uri $uri).mobileDeviceManagementAuthority
-Write-Host "  Actual authority: $MDMAuthority"
-
-# Checking authority
-Write-Host "Checking authority" -ForegroundColor $CommandInfo
-if($MDMAuthority -notlike "intune")
+Write-Host "Getting user" -ForegroundColor $CommandInfo
+$user = Get-MgBetaUser -UserId $userUpn -Property Id, UserPrincipalName, PasswordPolicies, BusinessPhones
+if ($user)
 {
-    try
-    {
-        # Setting intune as authority
-        Write-Host "Setting intune as authority" -ForegroundColor $CommandInfo
-        $uri = "/beta/organization/$AlyaTenantId/setMobileDeviceManagementAuthority"
-        $ret = Post-MsGraph -Uri $uri -Body "{}"
-    }
-    catch
-    {
-        Write-Host "We have actually an issue, configuring the MDM authority by script."
-        Write-Host "Please go to https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
-        Write-Host " - Select 'Microsoft Intune'"
-        Write-Host " - Set for MDM and MAM 'All'"
-        Write-Host " - Save"
-        Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/Mobility"
-        pause
+    Write-Host "Actual business phone: $($user.BusinessPhones[0])" -ForegroundColor $CommandInfo
+    if ($user.BusinessPhones[0] -ne $phoneNumber) {
+        Write-Host "Updating business phone to: $phoneNumber" -ForegroundColor $CommandInfo
+        Update-MgBetaUser -UserId $userUpn -BusinessPhones @($phoneNumber)
+    } else {
+        Write-Host "business phone is already set to: $phoneNumber" -ForegroundColor $CommandInfo
     }
 }
-else {
-    Write-Host "Authority is already set to intune"
-}
-
-# Getting actual mdm policy
-Write-Host "Getting actual MDM policy" -ForegroundColor $CommandInfo
-$uri = "/beta/policies/mobileDeviceManagementPolicies"
-$MDMPolicies = Get-MsGraphCollection -Uri $uri
-
-foreach($MDMPolicy in $MDMPolicies)
+else
 {
-
-    $uri = "/beta/policies/mobileDeviceManagementPolicies/$($MDMPolicy.id)"
-    $MDMPolicy = Get-MsGraphObject -Uri $uri
-    Write-Host "  Actual MDM policy: $($MDMPolicy.displayName)"
-
-    # Checking mdm policy
-    Write-Host "Checking mdm policy" -ForegroundColor $CommandInfo
-    if($MDMPolicy.displayName -notlike "Microsoft Intune")
-    {
-        throw "MDM policy is not set to Microsoft Intune. Please check the MDM policy in the Azure portal and set it to Microsoft Intune."
-    }
-
-    if ($MDMPolicy.isMdmEnrollmentDuringRegistrationDisabled)
-    {
-        Write-Warning "isMdmEnrollmentDuringRegistrationDisabled is enabled. Disabling now."
-        $ret = Patch-MsGraph -Uri $uri -Body "{`"isMdmEnrollmentDuringRegistrationDisabled`": false}"
-    }
-    else
-    {
-        Write-Host "isMdmEnrollmentDuringRegistrationDisabled was already disabled."
-    }
-
-    if ($MDMPolicy.appliesTo -ne "all")
-    {
-        Write-Warning "appliesTo is set to $($MDMPolicy.appliesTo). Setting now to all."
-        $ret = Patch-MsGraph -Uri $uri -Body "{`"appliesTo`": `"all`"}"
-    }
-    else
-    {
-        Write-Host "appliesTo was already set to all."
-    }
-
-    if ($MDMPolicy.complianceUrl -ne "https://portal.manage.microsoft.com/?portalAction=Compliance")
-    {
-        if ($ResetUris -or [string]::IsNullOrEmpty($MDMPolicy.complianceUrl))
-        {
-            Write-Warning "complianceUrl is set to $($MDMPolicy.complianceUrl). Setting now to https://portal.manage.microsoft.com/?portalAction=Compliance."
-            $ret = Patch-MsGraph -Uri $uri -Body "{`"complianceUrl`": `"https://portal.manage.microsoft.com/?portalAction=Compliance`"}"
-        }
-        else
-        {
-            Write-Warning "complianceUrl is set to $($MDMPolicy.complianceUrl). Should be set to https://portal.manage.microsoft.com/?portalAction=Compliance."
-            pause
-        }
-    }
-    else
-    {
-        Write-Host "complianceUrl was already set to https://portal.manage.microsoft.com/?portalAction=Compliance."
-    }
-
-    if ($MDMPolicy.discoveryUrl -ne "https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc")
-    {
-        if ($ResetUris -or [string]::IsNullOrEmpty($MDMPolicy.discoveryUrl))
-        {
-            Write-Warning "discoveryUrl is set to $($MDMPolicy.discoveryUrl). Setting now to https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc."
-            $ret = Patch-MsGraph -Uri $uri -Body "{`"discoveryUrl`": `"https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc`"}"
-        }
-        else
-        {
-            Write-Warning "discoveryUrl is set to $($MDMPolicy.discoveryUrl). Should be set to https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc."
-            pause
-        }
-    }
-    else
-    {
-        Write-Host "discoveryUrl was already set to https://enrollment.manage.microsoft.com/enrollmentserver/discovery.svc."
-    }
-
-    if ($MDMPolicy.termsOfUseUrl -ne "https://portal.manage.microsoft.com/TermsofUse.aspx")
-    {
-        if ($ResetUris -or [string]::IsNullOrEmpty($MDMPolicy.termsOfUseUrl))
-        {
-            Write-Warning "termsOfUseUrl is set to $($MDMPolicy.termsOfUseUrl). Setting now to https://portal.manage.microsoft.com/TermsofUse.aspx."
-            $ret = Patch-MsGraph -Uri $uri -Body "{`"termsOfUseUrl`": `"https://portal.manage.microsoft.com/TermsofUse.aspx`"}"
-        }
-        else
-        {
-            Write-Warning "termsOfUseUrl is set to $($MDMPolicy.termsOfUseUrl). Should be set to https://portal.manage.microsoft.com/TermsofUse.aspx."
-            pause
-        }
-    }
-    else
-    {
-        Write-Host "termsOfUseUrl was already set to https://portal.manage.microsoft.com/TermsofUse.aspx."
-    }
-
+    Write-Error "User does not exist"
 }
 
-#Stopping Transscript
+# Stopping Transcript
 Stop-Transcript
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCGAon/5PUBxltm
-# 8duCz4gzjc6VyhvmEem6q1tsPtPTeaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC4WVAmC8Pa6gUw
+# tcNL1NkCrn0a8YpNuNZiJ+Dac7DbfqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -337,23 +234,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIP+sx82E
-# kGMAcqndk3TRhQuK1WDFf60/1PnbPJz2FQ0/MA0GCSqGSIb3DQEBAQUABIICALi9
-# az4TsuaIs2RPbOAbAnt6mXQujHm5CUM6HAWeB0my+iZ7quVy0G9MTMyCYlQwJVfV
-# 3G7gIcssMACni/37rk4QYw5Eaf5B6No8vImOb7bBw+NjIMqC4jNE0B/zYWMRV+06
-# jC1gCKJZOOf23ZZ/l2H6/8Zg8ywB5dtFJPeZ81O5ZOV0zL1uGQgFFxNh2Sqpa8FX
-# AMjKrPAX+xfMWjLcWO8UV/k70633SJd4EZzjxo/94CwfMwiwXARr6566g+KUKuuW
-# 6DdWR7/nQQn/DJ3C3amzJx9N2Hwqe7ftpXFZgqhVhyh1jjBUYoRU2P04V3DEeH/a
-# ieMay7EharS97TlXpylB/ynF49NyIbq9o+4AjwIJXxUj3e8hPLzKGbiNsCYs48bf
-# lVRgkwbWsAiXnq2etr2OZrh5tkkEeBcVLJGafib7atuRaiM4wUb3vKY42wQoZGMi
-# 9yM+LaKlb1sefTXzj/9peqwcyAEh62RHy5bER2o1lV0/mmWgr7NxiMAwTNieWqvu
-# 9ttBOThJ0k57Hqj7A7941Y2cN5M+HLnxqsi9oHiWknohZUqJMcyTshUqEgwSokHc
-# 3ZD0tuIMqGfzDBC9tMUdxJvh4ORaa7fr2q5v0rM59hiiu/b6m50j7hV68Q7Pksjd
-# pxrinbd1xQifY6bU4UjrzQCCFmUCOn94CvpJ9o65oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHGTn685
+# TcIVKP0yQZ3Rf/1CkuWDknB8h0Uq/nvV4wqVMA0GCSqGSIb3DQEBAQUABIICAFWN
+# FeoFDCW3yBGe/cBwv5f+76O0qHER8AZi0kmV7W1B1Q4zHBWaiLT5s4Tg7iMa3szL
+# BpEolTbiRePk3atkHb9yrXEr0pAHM4Tm5PkNK62t5q5ZbRXbvvFjDoCChXt+yWOo
+# WN9e3vt/4kuYpvTX/TEcA4cwqLeuJlgFySRCEbIypWK+9vcxmHaXeiURJGR1bxEZ
+# ANeuaCbXrAs7BiUx6hKpdOUx4CXiuM4Zql+1yheVU41NP3+K8TuZG6GMjpm34FXP
+# HB3EKc+0Bop22NDUEVfBmzkzu6MrbYkSk6tD0/OfrnCatp9U0z28J2Ltj+TdrNvx
+# MIml304WqAeSbwvPyc1gEfHm6oW/4OAcH2+iKO0tmmsYDt2Jk+A9Kmu0dXMhxtp9
+# NMdBUPH9tY2jTzT+pElr6WjhG/KuUm1WouXywimOkInxeV1H7NcAlG3E2jTo83bn
+# /qfJONhkeu23T1M7AvaFCvhybe8sD0iHnWt7hoS92k+XcBpVpjBLPESreaxs+uZR
+# QIqsw4pbFcNf7POVkOENW/3R3hR/s7aOW/3zN8C0SBvt+zGtOKUwstvPEN/JVfVT
+# GkvGnyc8iE6hcJrMR/dSKuOldtZV6AndM8yoZ03KN+qnq0TlfNcuEsobPRALKPuV
+# zbZCBGBo+LFxMx1dHbpCoCNF+m1u7NoONyoRM1pdoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCB8ho0R+OgjusErHN1WPAAWH6bGGu2hvtqFSxY4ktT2kgIUKiFg
-# i/c4oqtu+4J7DySA+SbOTYQYDzIwMjYwODEyMTM0NTM0WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAnr2zQVS/clMJJOJx5AsHXhA3Hn8NbpBdAOvGdnKJDDgIURZsw
+# dccShfdogIMWKWbl6DaViYEYDzIwMjYwODEyMTQ1MjAwWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -496,18 +393,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDCmcsTaWdTxxJHTIjbPvd8mjOMQJdK86jX/qBlnEicL9k5U+sSIKiPQluxN
-# UQkvOwkwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDQoxdVC55EkqP1vbsNn6ksWs2ZBOdlpICFnhsI3Q596wWemQ68dHg/myiF
+# JMAzhIswgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAVdaXh/Mnzlh+ecXydKaYDDAXjksGrM0UL/CrlE4aEYcA
-# QRKsz4kbO3f0V1V+z95fRyNH53kH6WqPPMDaWv5vWaTzAGTnc+buTIjYkpv6IMQ8
-# +WZh570G3Y5chFVJ7UkW9HI6pzxCyqa6vqj2+RFj8+Kxd7fPTEWaZaluVZzNhAsp
-# b565kucZ0t/y6rcMDY0oMJdSGLT2NWUdQcEYckijNhM9lZs5KrPZrdEbUbRssF0e
-# CIkwmmfWvf+zG0J11K2JbduXwpq5QDOp1tLfT4D7yq8eTOQnATXVMe8yASBEAnSD
-# ay7BslOPdPCBcXXBwRIEGNs/8nAwrsClOhsapQTfy7bYcF/bKnTklxf7Sx/gigUK
-# ZYNjV/dL3aXLjnUOcK0WhgfddVEGzX1zYg06BblMFkIyxyPZ2U5ukd/bVJyz9Hs4
-# aHm5IrU5MAfAdDbIMNg+f4qzEVHUgsvfLyvEKUEcaAF8j7RHLtJPSmG/+WxKHVYV
-# bq9AwlRgrYW+LBBajUnx
+# KoZIhvcNAQEMBQAEggGAluT2I+OUpIND/HKK+fkShAmmb24HB0KZtwOUE7wJ1t0P
+# FP09eiSPvHhNOo+vico+OBoxccA8vir8Js4DfYTonKrEyFz/KHd5ouDf2uYp2nSF
+# jqrGnIV1aL8uI+xZAPhj6aIQ9nn6IBqrhmFkDGqjO7TEdy0vN6T1Xj++lKOkL3Z9
+# pD8RSS2sA6IK49hY9SQcQQFe7Ls2G3x37mPvhD8uHPRABcwfohsF+FrdV22WU2ig
+# ee5xQCAP4tyxPCGzMtiHKL4OEoBPeQp7+Hy+zkT/u7xk5vjbS4exvtxT5wFSFtf0
+# RrI4kuaUH9/r4RNxz3c7WrVVD6yCmPRqtSZxJt9vSx4c5LE0cbefI091x7pzoBKb
+# esNcnucO6+Caym63JIrMM4VdLXfBCGt+VTFbj7isXetFfgsPncBv6jsPpzB/rzlO
+# T607Pv2N2FG+8hY+Ety9XV3FMFXkJ9o4uJLY2CZs1xc9oz3XysW1hIiqNZs3LFHO
+# YCjFpCm7yz3wpkhlkrwC
 # SIG # End signature block

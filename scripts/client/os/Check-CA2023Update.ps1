@@ -237,6 +237,7 @@ if ($OSArchitecture -like "*ARM64*")
 Write-Host "`nChecking system events"
 Write-Host "==============================================="
 $allEventIds = @(1801, 1802, 1803, 1808, 1037, 1042, 1795)
+$bootLoaderEventIds = @(1037, 1042, 1795)
 $events = @(Get-WinEvent -FilterHashtable @{LogName = 'System'; ID = $allEventIds } -MaxEvents 100000 -ErrorAction SilentlyContinue)
 
 $latest_1801_Event = $events | Where-Object { $_. ID -eq 1801 } | Sort-Object TimeCreated -Descending | Select-Object -First 1
@@ -619,7 +620,7 @@ if ($bootLoaderPending -and -not $reportOnly)
 		Start-Sleep -Seconds 20
 	} while ( $task.State -eq "Running" )
 
-	$events = @(Get-WinEvent -FilterHashtable @{LogName = 'System'; ID = $allEventIds; StartTime = $StartTimeStamp } -MaxEvents 200 -ErrorAction SilentlyContinue)
+	$events = @(Get-WinEvent -FilterHashtable @{LogName = 'System'; ID = $bootLoaderEventIds; StartTime = $StartTimeStamp } -MaxEvents 200 -ErrorAction SilentlyContinue)
 	$events | Format-Table -Wrap -AutoSize
 	if (-not $events -or @($events).Count -eq 0)
 	{
@@ -652,7 +653,7 @@ if ($bootLoaderPending -and -not $reportOnly)
 		Start-Sleep -Seconds 20
 	} while ( $task.State -eq "Running" )
 
-	$events = @(Get-WinEvent -FilterHashtable @{LogName = 'System'; ID = $allEventIds; StartTime = $StartTimeStamp } -MaxEvents 200 -ErrorAction SilentlyContinue)
+	$events = @(Get-WinEvent -FilterHashtable @{LogName = 'System'; ID = $bootLoaderEventIds; StartTime = $StartTimeStamp } -MaxEvents 200 -ErrorAction SilentlyContinue)
 	$events | Format-Table -Wrap -AutoSize
 	if (-not $events -or @($events).Count -eq 0)
 	{
@@ -681,8 +682,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDyaZTdX/bfQ9Vj
-# +iGXpf7vGQAgx5RyWxqZA3rM9esC06CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC5C5mD+crDCOv/
+# gFRg6s1e4r0lDSWMiaHfj6zqVgqxuaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -796,23 +797,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBjkXJc8
-# sr3v/g17rpIYhoth9T1qbJopSmcw+Mb9q/hRMA0GCSqGSIb3DQEBAQUABIICABva
-# cNSFE60sp/ebt2T9mlCwDmpOTVcvCK2kUEgLUDLYJhtzT+9JRd1QGLkhxra5/C6i
-# I2h6QI9HynG11JO940H5SayMXJjfPS6n6L7ELzypVgdEoeYMOWOHShShJ+dtOAQf
-# 4A7HYEUQUTxD7LN4n3M8T7rnJEtRogGhV/2iCb88g/5xd5Y+zAmqWFQe2rjO7zxH
-# ruAH6t8hwuOoc41gFA1VzVXz3yxmf9ZbEZabUBQDab0UIBfMGxd+ZjUJWrvQOx4W
-# sM9almzEhGfpiB6kskRgCyBl8dpiMIXULJslKwtDWySqAK3j2VE51uyx+cCDCuwe
-# 8wiJuMpdPlTJ5P+yQL6r6ZjCUJhEn+lRtaqwSnIxj16K4UIA3TE7z3gaJSeUx+We
-# 2UnbuWOBhqNeGrgeYGLuXvttmhm36noBE51SMOMNewTTx1vPCIOBCwBs2DMYOTi/
-# nRkHGk2U3WN0fx+DELHdONJYNdREoFQo8R2/aKsm0p9m6nV9209BwY6hpUwmvNFi
-# QSu/vm+7RInHtMiI57/g/qEfnpEQTfdiSkdxPVxtLIXWL3Q1iXAlkNRQ25w5akGE
-# ONBhS3ro298uImjxBLxET/s/vs8iChlkuq1WzC6o4oT5r3yCVnGuqt9bmKTWwLac
-# Md3VVpNgqvHTe/jIpK2BFFBNLw4G7sYRjOn8dl3foYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG8yqGjt
+# Z0h1rxvPdEQzcUnXD8Qo8T4wPDXeHvMIF7ZlMA0GCSqGSIb3DQEBAQUABIICABqT
+# ndROfirX6ss55ib9HChOJ2TZgy5u+Tmjhm2gJMn1KLC0YqBuQlcRw35lKWTCIpPE
+# LMwhDzocOgsqWzGW3z7lDRb1g+PqYNU7ziN/sIrAa6bBU1UVvuBktuTc5NJ6CfYv
+# xnAFRW85AV2RTuCrNJ/gXR9uOR6S7Kql0yjCDZ5/OqqQ6grYLA0+vWY+atsY4Ldw
+# hOAHydNXswrmvDs81F+tv+CZzqRHP0fkRBoqMqRiv9gcXDMWTJPVO94PfRuTJDvp
+# jACYyD1qLLwid43DmbZp9v/kKz4DsLJ8dc1txITskOFLU6SC/0wLqcy2tiEsT91z
+# DUKhBq7z188pVS7dcUuvYyXb4gA0qS2hHxdrwSttAift0104VTmWhD24s2alPYIu
+# LShb457Bv/RSbZof6/GDEelbo9x9i/MTXdwV546p+EJWmSLRos3ac9HsNoH1ZyFd
+# XXnvQkzw/c+kfqvJoLaEskR3itCzb5neMA5Oayf7uFDwOyA4pV9M/lpYDdujunUa
+# cuxcAf6vn5whTOcFtGW48i/0Ael+e0zp1i49pKrYqcEOReIWxGD49igUt904dvIP
+# 7RTLoga2hxvhOXHRJ7yg3xCnYgG8wlXLsHlkGthiQRw7VHbi1MnGYoE78Qbaq5RH
+# kKroNl9UXM/leBwhzbpsDwT1gWp1FQBgAj4ejFyaoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDb9lq3hrZljuX8nwZAg7qAutcXPK9y2VAQqLAXF9QwDQIUOzst
-# Acqvqjx2wPc29YOIHkuEC/AYDzIwMjYwNzA4MTAwMTI4WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDq/BOfIW149xdUGT7lBiEjoPMWWWHd6EiQzyX6xqr3iQIUSbJ2
+# uLbf+DduI4eNWrv7oW0ELdMYDzIwMjYwODEyMTQyNTQ5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -955,18 +956,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDACqi8a0xGHMxC5oocAX5rwNkuUy+0r13UOGmOeO9CUV1KhsCEC4jsNMxj/
-# jl0l1jowgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDA7cB7qlSQ28FP03kvZRDsOw6abdQylzCf0mS2ngA2OwTkF6x/tbIIcV32
+# Zrpr1SEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAzyHxhperw2UZNH5OCZ+X99ESaw/OiXHxaxnbI3uLWRtM
-# kuAzW2XlEXj6OPV2mdOfJnaeusWGGE73uDNjTiiTuL7j0ANxDEJKNVzR/bf/2k+X
-# KP3lpu9a4rPOTdBFw/WUiTUfrUf+wj9HQame639Gw9ijT0aT6D7tjAOjtVhHOyuE
-# /IJ7c+sLbMJHFoUqkmL7R3eRNRSet1ngTV9EhWIda2zTYj1lrJiNrIMDCi48/8oQ
-# DrcLsj9DDWLNX3Z9LniCsurMCFBX62qlNR7XtIr4oMuTM6zKxK1if5jTJykpGeX0
-# vspOpTAuuJ6wGujXnQIj8qqh7SGqwLGq2tD4ry8XsVKrphZ6ViaM4hkx0ieMEZuc
-# jc2TC0BuxIGZ6yZJaoDq0qKodsw1EYKqVHkH2UJ9mie/JIKGxBXgJcwK7AIeG0mm
-# hM90sbRT3jcB/nA7vXkVMw5T0DV48Px3NK4Co+T5gaEP12AvNe+hSkt0fUkDcbfv
-# pqzo/BFyHLweE/EJwKpA
+# KoZIhvcNAQEMBQAEggGAzErBbbYeyWRhc28MRTvZCO/2tH7O6AOuzF9iQqJWLP82
+# eELqxWVc2zSiq94B42itGfWcZSOsSMgc0ITY8CMbvfF2c+PpZdvHd+FkSqe8vUVb
+# vEe0sjI1xLXpqNcq1VBltV0fxYYOwRSR21BKqORVgz+wUp+J62KlSJMqbbKAa89w
+# ivPBV+JJ2Rvw+iYrxqz7jkpRZ+jXsAfTswhg1KVJMDQEsPw97b35IL54I2cOaWw4
+# Cf/YhVnX63ZMijMXEJeyCgKUMGiOEg2ZRyI9BotWStWPCGHejFHreXlm7mwvnqNB
+# qjxkMpfVAdgpiu/W96GOlLlTv4hM5xrria/jZTUI/qG70eD0IYn7H6RuYtZnUuV7
+# VPI0+LioKr/9vWIdcmse1eXliekNiRkUKjYmLNCHamSn5S0+uPciofnyHALdCdFt
+# dLyFDSpWEn0LPJeTwx/Avmm/2whZpvMFCssfbLqNgds18iwgVZz3FtFw9nqCPFDA
+# WLExi1Gwhxwd6rqbKOc4
 # SIG # End signature block
