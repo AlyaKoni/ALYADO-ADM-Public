@@ -1,4 +1,15 @@
 #######################
+# Configure Swap
+sudo dd if=/dev/zero of=/swapfile bs=1M count=8192
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+swapon --show
+echo "vm.swappiness = 20" | sudo tee -a /etc/sysctl.d/99-swappiness.conf
+sudo sysctl --system
+
+#######################
 # Update
 sudo rm -rf /var/lib/dpkg/lock-frontend
 sudo rm -rf /var/lib/dpkg/lock
@@ -18,6 +29,10 @@ sudo vi /etc/hosts
 timedatectl list-timezones | grep Europe
 sudo timedatectl set-timezone Europe/Zurich
 sudo reboot
+
+#######################
+# Install Emoji font
+sudo apt-get install -y fonts-noto-color-emoji
 
 #######################
 # Install Desktop and RDP
@@ -375,6 +390,7 @@ sudo ufw allow 22
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw allow 3389/tcp
+sudo ufw allow 3333/tcp (wenn Twilio Plugin genutzt wird)
 sudo ufw allow 3978/tcp (wenn Teams Plugin genutzt wird)
 sudo ufw enable && sleep 60 && sudo ufw disable
 sudo ufw enable

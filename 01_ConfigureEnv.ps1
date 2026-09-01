@@ -64,6 +64,8 @@
     06.01.2026 Konrad Brunner       LoginTo-Entra
     06.02.2026 Konrad Brunner       Added powershell documentation
     21.05.2026 Konrad Brunner       Management app authentication
+    30.08.2026 Konrad Brunner       Added Make-JsonGitReady
+    30.08.2026 Konrad Brunner       Make-JsonGitReady strips volatile attributes; appregistrationSummary: DateTime columns removed
 
 #>
 
@@ -381,6 +383,72 @@ else
 $AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 
 <# MISC HELPER FUNCTIONS #>
+
+function MakeFsCompatiblePath()
+{
+    [CmdletBinding()]
+    [OutputType([string])]
+    Param
+    (
+        [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+        [string]$path,
+        [bool]$IsOneDriveDir = $true
+    )
+    $npath = $path
+    $hadDisk = $false
+    if ($npath.Substring(1,1) -eq ":") { $hadDisk = $true }
+    $npath = $npath.Replace("<", "_"). `
+       Replace(">", "_"). `
+       Replace(":", "_"). `
+       Replace("`"", "_"). `
+       Replace("'", "_"). `
+       Replace("|", "_"). `
+       Replace("?", "_"). `
+       Replace("*", "_")
+
+    if ($AlyaIsPsUnix)
+    {
+        $npath = $npath.Replace("\", "_")
+    }
+    else
+    {
+        $npath = $npath.Replace("/", "_")
+    }
+
+    if ($hadDisk) { $npath = $npath.Remove(1,1).Insert(1,":") }
+
+    $parent = Split-Path -Path $npath -Parent
+    $leaf = Split-Path -Path $npath -Leaf
+
+    $maxDirLen = 248
+    $maxFileLen = 260
+    if ($IsOneDriveDir)
+    { 
+        $maxDirLen = 236
+        $maxFileLen = 248
+    }
+
+    if ($parent.Length -gt $maxDirLen)
+    {
+        throw "Directory too long. Max $maxDirLen charcters allowed if OneDrive=$IsOneDriveDir"
+    }
+    if ($npath.Length -gt $maxFileLen)
+    {
+        $name = [System.IO.Path]::GetFileNameWithoutExtension($leaf)
+        $ext = [System.IO.Path]::GetExtension($leaf)
+        $maxLength = $maxFileLen - $parent.Length - $ext.Length - 1
+        $npath = Join-Path $parent ($name.Substring(0,$maxLength)+$ext)
+    }
+
+    if ($npath.Length -ne $path.Length)
+    {
+        Write-Warning "Path shortened (OneDrive=$IsOneDriveDir)"
+        Write-Warning "  from $path"
+        Write-Warning "  to   $npath"
+    }
+
+    return $npath
+}
 
 function IIf($If, $Then, $Else) {
     If ($If -IsNot "Boolean") {$_ = $If}
@@ -2511,40 +2579,47 @@ function LoginTo-Az(
     }
     else 
     {
-        $AlyaContext = Get-CustomersContext -TenantId $TenantId -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
-        if ($AlyaContext)
+        if ($env:AlyaManagementCrt)
         {
-            Write-Host "  checking existing az context"
-            if ($AlyaContext.Count -gt 1)
+            $AlyaContext = $null
+        }
+        else
+        {
+            $AlyaContext = Get-CustomersContext -TenantId $TenantId -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
+            if ($AlyaContext)
             {
-                $AlyaContext = Select-Item -message "Please select an existing context" -list $AlyaContext
-            }
-            if ($AlyaContext.Tenant.Id -ne $TenantId)
-            {
-                Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
-                Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
-                Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
-                $AlyaContext = $null
-            }
-            else
-            {
-                $actContext = Get-AzContext
-                if ($actContext.Name -ne $AlyaContext.Name)
+                Write-Host "  checking existing az context"
+                if ($AlyaContext.Count -gt 1)
                 {
-                    Set-AzContext -Context $AlyaContext -Force | Out-Null
+                    $AlyaContext = Select-Item -message "Please select an existing context" -list $AlyaContext
                 }
-                $user = Get-AzAdUser -UserPrincipalName $actContext.Account.Id -ErrorAction SilentlyContinue
-                if (-Not $user)
+                if ($AlyaContext.Tenant.Id -ne $TenantId)
                 {
-                    $user = Get-AzAdUser -Mail $actContext.Account.Id -ErrorAction SilentlyContinue
-                }
-                if (-Not $user)
-                {
-                    Write-Host "  existing context not working"
                     Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
-                    Remove-AzAccount -ContextName $AlyaContext.Name -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
-                    Remove-AzContext -InputObject $AlyaContext -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+                    Remove-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+                    Remove-AzContext -InputObject $AlyaContext -ErrorAction SilentlyContinue | Out-Null
                     $AlyaContext = $null
+                }
+                else
+                {
+                    $actContext = Get-AzContext
+                    if ($actContext.Name -ne $AlyaContext.Name)
+                    {
+                        Set-AzContext -Context $AlyaContext -Force | Out-Null
+                    }
+                    $user = Get-AzAdUser -UserPrincipalName $actContext.Account.Id -ErrorAction SilentlyContinue
+                    if (-Not $user)
+                    {
+                        $user = Get-AzAdUser -Mail $actContext.Account.Id -ErrorAction SilentlyContinue
+                    }
+                    if (-Not $user)
+                    {
+                        Write-Host "  existing context not working"
+                        Logout-AzAccount -ContextName $AlyaContext.Name -ErrorAction SilentlyContinue | Out-Null
+                        Remove-AzAccount -ContextName $AlyaContext.Name -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+                        Remove-AzContext -InputObject $AlyaContext -Force -Confirm:$false -ErrorAction SilentlyContinue | Out-Null
+                        $AlyaContext = $null
+                    }
                 }
             }
         }
@@ -2568,6 +2643,7 @@ function LoginTo-Az(
             }
             if ($env:AlyaManagementCrt)
             {
+                Write-Host "Login to Az with management app" -ForegroundColor $CommandInfo
                 $params["CertificatePath"] = $env:AlyaManagementCrt
                 $params["CertificatePassword"] = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
                 $params["ApplicationId"] = $env:AlyaManagementApp
@@ -5031,6 +5107,14 @@ function Replace-AlyaString($str)
     $str =  $str.Replace("##AlyaSupportTel##", $AlyaSupportTel)
     $str =  $str.Replace("##AlyaSupportMail##", $AlyaSupportMail)
     $str =  $str.Replace("##AlyaSupportUrl##", $AlyaSupportUrl)
+    $str =  $str.Replace("##AlyaTeamsNewTeamOwner##", $AlyaTeamsNewTeamOwner)
+    $str =  $str.Replace("##AlyaSharePointNewSiteOwner##", $AlyaSharePointNewSiteOwner)
+    $str =  $str.Replace("##AlyaTeamsNewTeamAdditionalOwner##", $AlyaTeamsNewTeamAdditionalOwner)
+    $str =  $str.Replace("##AlyaSharePointNewSiteAdditionalOwner##", $AlyaSharePointNewSiteAdditionalOwner)
+    $str =  $str.Replace("##AlyaAllInternals##", $AlyaAllInternals)
+    $str =  $str.Replace("##AlyaAllExternals##", $AlyaAllExternals)
+    $str =  $str.Replace("##AlyaSubscriptionId##", $AlyaSubscriptionId)
+    $str =  $str.Replace("##AlyaSubscriptionIds##", $AlyaSubscriptionIds)
     $str =  $str.Replace("##AlyaTimeZone##", $AlyaTimeZone)
     $domPrts = $AlyaWebPage.Split("./")
     $AlyaLocalDomains = "https://*." + $domPrts[$domPrts.Length-2] + "." + $domPrts[$domPrts.Length-1]
@@ -5121,11 +5205,232 @@ function Replace-AlyaStrings($obj, $depth)
     }
 }
 
+# Deterministically normalizes exported JSON files for git:
+# recursive removal of volatile attributes ($VolatileKeys), recursive canonical key sorting
+# (ordinal, stable via LINQ) and stable array sorting.
+# Output format (repo standard): ConvertTo-Json (-Depth 100, not compressed), UTF-8 with BOM, LF line endings.
+# Idempotent: applying it twice results in the identical file.
+# Special cases (by file name):
+# - managedDeviceOverview.json: snapshot report, root keys "id" (random instance GUID per fetch) and
+#   "lastModifiedDateTime" (report creation time) are removed as well.
+# - appregistrationSummary.json: embedded sync timestamps inside the values[] arrays change with every
+#   export. Decision 30.08.2026: do NOT skip the file; instead remove all DateTime typed columns
+#   (currently "LastCheckInDate") from content.header[] and from every content.body[].values[] array.
+# createdDateTime and lastModifiedDateTime are kept everywhere, except the special cases above.
+function Make-JsonGitReady()
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Path,
+        [Parameter()]
+        [string[]]$VolatileKeys = @("@odata.context", "etag", "appMetadata", "microsoftPolicyGroup", "lastAppSyncDateTime", "lastSyncTriggeredDateTime", "lastSyncErrorCode")
+    )
+
+    function Get-CanonicalJson([object]$Item)
+    {
+        return (ConvertTo-Json -InputObject $Item -Depth 100 -Compress)
+    }
+
+    function Remove-VolatileJsonKeys([object]$Value)
+    {
+        if ($null -eq $Value)
+        {
+            return $null
+        }
+        if ($Value -is [System.Management.Automation.PSCustomObject])
+        {
+            foreach ($key in $VolatileKeys)
+            {
+                $prop = $Value.PSObject.Properties[$key]
+                if ($null -ne $prop)
+                {
+                    $Value.PSObject.Properties.Remove($key)
+                }
+            }
+            foreach ($prop in $Value.PSObject.Properties)
+            {
+                $prop.Value = Remove-VolatileJsonKeys -Value $prop.Value
+            }
+            return $Value
+        }
+        if ($Value -is [System.Collections.IList])
+        {
+            for ($i = 0; $i -lt $Value.Count; $i++)
+            {
+                $Value[$i] = Remove-VolatileJsonKeys -Value $Value[$i]
+            }
+            return $Value
+        }
+        return $Value
+    }
+
+    function Remove-ArrayItems([object[]]$Items, [int[]]$Indexes)
+    {
+        $result = New-Object System.Collections.Generic.List[object]
+        for ($i = 0; $i -lt $Items.Count; $i++)
+        {
+            if ($Indexes -notcontains $i)
+            {
+                $result.Add($Items[$i])
+            }
+        }
+        return ,([object[]]$result)
+    }
+
+    function ConvertTo-OrderedJson([object]$Value)
+    {
+        if ($null -eq $Value)
+        {
+            return $null
+        }
+        if ($Value -is [System.Management.Automation.PSCustomObject])
+        {
+            $orderedProps = [ordered]@{}
+            $sortedProps = [System.Linq.Enumerable]::OrderBy(
+                @($Value.PSObject.Properties),
+                [Func[object,string]]{ param($prop) $prop.Name },
+                [System.StringComparer]::Ordinal)
+            foreach ($prop in $sortedProps)
+            {
+                $orderedProps[$prop.Name] = ConvertTo-OrderedJson -Value $prop.Value
+            }
+            return ([PSCustomObject]$orderedProps)
+        }
+        if ($Value -is [System.Collections.IList])
+        {
+            $items = New-Object System.Collections.Generic.List[object]
+            foreach ($element in $Value)
+            {
+                $items.Add((ConvertTo-OrderedJson -Value $element))
+            }
+            $allHaveId = ($items.Count -gt 0)
+            $allHaveDisplayName = ($items.Count -gt 0)
+            $allHaveKeyId = ($items.Count -gt 0)
+            foreach ($element in $items)
+            {
+                $names = @()
+                if ($null -ne $element -and $element -is [System.Management.Automation.PSCustomObject])
+                {
+                    $names = @($element.PSObject.Properties.Name)
+                }
+                if ($names -notcontains "id")
+                {
+                    $allHaveId = $false
+                }
+                if ($names -notcontains "displayName")
+                {
+                    $allHaveDisplayName = $false
+                }
+                if ($names -notcontains "keyId")
+                {
+                    $allHaveKeyId = $false
+                }
+            }
+            if ($allHaveId)
+            {
+                $sortedItems = [System.Linq.Enumerable]::OrderBy(
+                    [object[]]$items,
+                    [Func[object,string]]{ param($element) Get-CanonicalJson -Item $element.id },
+                    [System.StringComparer]::Ordinal)
+            }
+            elseif ($allHaveKeyId)
+            {
+                $sortedItems = [System.Linq.Enumerable]::OrderBy(
+                    [object[]]$items,
+                    [Func[object,string]]{ param($element) Get-CanonicalJson -Item $element.keyId },
+                    [System.StringComparer]::Ordinal)
+            }
+            elseif ($allHaveDisplayName)
+            {
+                $sortedItems = [System.Linq.Enumerable]::OrderBy(
+                    [object[]]$items,
+                    [Func[object,string]]{ param($element) Get-CanonicalJson -Item $element.displayName },
+                    [System.StringComparer]::Ordinal)
+            }
+            else
+            {
+                $sortedItems = [System.Linq.Enumerable]::OrderBy(
+                    [object[]]$items,
+                    [Func[object,string]]{ param($element) Get-CanonicalJson -Item $element },
+                    [System.StringComparer]::Ordinal)
+            }
+            return ,([object[]]@($sortedItems))
+        }
+        return $Value
+    }
+
+    foreach ($currentPath in $Path)
+    {
+        if (-Not (Test-Path -Path $currentPath))
+        {
+            Write-Warning "Make-JsonGitReady: file does not exist, skipping: $($currentPath)"
+            continue
+        }
+        $resolvedPath = (Resolve-Path -Path $currentPath).Path
+        $content = Get-Content -Path $resolvedPath -Raw -Encoding UTF8
+        $jsonObject = ConvertFrom-Json -InputObject $content -NoEnumerate -DateKind Utc
+        $jsonObject = Remove-VolatileJsonKeys -Value $jsonObject
+        $fileName = [System.IO.Path]::GetFileName($resolvedPath)
+        if ($jsonObject -is [System.Management.Automation.PSCustomObject] -and $fileName -eq "managedDeviceOverview.json")
+        {
+            # Special case: snapshot report, remove root keys "id" and "lastModifiedDateTime"
+            foreach ($rootKey in @("id", "lastModifiedDateTime"))
+            {
+                $rootProp = $jsonObject.PSObject.Properties[$rootKey]
+                if ($null -ne $rootProp)
+                {
+                    $jsonObject.PSObject.Properties.Remove($rootKey)
+                }
+            }
+        }
+        elseif ($jsonObject -is [System.Management.Automation.PSCustomObject] -and $fileName -eq "appregistrationSummary.json")
+        {
+            # Special case: remove all DateTime typed columns (currently "LastCheckInDate") from
+            # content.header[] and from every content.body[].values[] array
+            $dateTimeColumnIndexes = @()
+            if ($null -ne $jsonObject.content -and $null -ne $jsonObject.content.header)
+            {
+                $headerItems = @($jsonObject.content.header)
+                for ($i = 0; $i -lt $headerItems.Count; $i++)
+                {
+                    if ($null -ne $headerItems[$i] -and $headerItems[$i].typeName -eq "DateTime")
+                    {
+                        $dateTimeColumnIndexes += $i
+                    }
+                }
+            }
+            if ($dateTimeColumnIndexes.Count -gt 0)
+            {
+                $jsonObject.content.header = Remove-ArrayItems -Items @($jsonObject.content.header) -Indexes $dateTimeColumnIndexes
+                if ($null -ne $jsonObject.content.body)
+                {
+                    foreach ($row in @($jsonObject.content.body))
+                    {
+                        if ($null -ne $row -and $null -ne $row.values)
+                        {
+                            $row.values = Remove-ArrayItems -Items @($row.values) -Indexes $dateTimeColumnIndexes
+                        }
+                    }
+                }
+            }
+        }
+        $orderedObject = ConvertTo-OrderedJson -Value $jsonObject
+        $json = ConvertTo-Json -InputObject $orderedObject -Depth 100
+        if ($IsLinux)
+        {
+            $json = $json -replace "`r`n", "`n"
+        }
+        $utf8WithBom = New-Object System.Text.UTF8Encoding($true)
+        [System.IO.File]::WriteAllText($resolvedPath, "$($json)$($Environment.NewLine)", $utf8WithBom)
+    }
+}
+
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB6v/fG3hRJb7+m
-# 04xnVcSzzLjj81L/XxQXRNcOV6pk3aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCXES/dtCyiLrgY
+# OFOMojOkShsd5PNABaCP6xmNEczCaaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -5192,10 +5497,10 @@ function Replace-AlyaStrings($obj, $depth)
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -5203,17 +5508,17 @@ function Replace-AlyaStrings($obj, $depth)
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -5223,39 +5528,39 @@ function Replace-AlyaStrings($obj, $depth)
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIFeLqMD8
-# ieH4HWIiXoxeLtPOSSRUVf9+hng1laQyXNCAMA0GCSqGSIb3DQEBAQUABIICAE3O
-# 4l0I4if5z3pzkUFNzjbqXg5sCHSz/UF6BKy6cznca1zCZg9Rk3MEQwOMuPiwTGYi
-# T5pKuNeFHoJryuuQcroLVi54bcL2UqbOIqYuWzN2MRNHVROYdvX0k77aqtxr6ZAh
-# E688HJlgjrp4qIA5uGxb404wvcd/lzdJoZqPirH557CTX3y2q5KuyXMMbwnNxGcx
-# cxxW0LChkWReUmxF+2JYkgvlKMYc6cJEVL0+mT8JQnEfzFcMdhUi/ybBpaDLFnem
-# h4Kjl+03zphUkeKbEXRbCLpo3DmjCWguIw2Mj8/Oji1xJweQf8ATEHJC/jTA9F6b
-# oMid95+a8Ff2xGu7B46b2nhdsxLe9pOYpAW0iB3IuBA2OD0weCGf1ghrkJDllCGe
-# FLd8jASGtF/VxsigzcuZMTicw1kDLUQS1+k/PUG/CA/8JjfByPQSJeIBEANwbVkB
-# Sw3+bjlyyyb2QqLEUOSAxZqw9zD97NZCHMr5l8QZ5sI6mzV0iVWGo4ljoNoLgnX6
-# NVJNc9KKStrUVLfavHfvXbfwpSjbE/Kyg67f5MtfGZDM10ttGQatOMYNvbLx9ZB0
-# 1ulCpEghW+MoVEYnwasUGRbWirk3daxCiqMhQDpFlGan0HYFMmmkqk0/jbS1QlnU
-# 3B2/k7svntcgSVf7a5eAozy7Ebe+5kuzPN7ESBiwoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINKdUFk8
+# kwvZ1LltTWUNbRognUmgBRmPL/4U7lWqnLggMA0GCSqGSIb3DQEBAQUABIICACGk
+# qtjMKuaFHVczugLION9tILf6RhVaJFrm2w8rblNJBaTFMtwLt/xdZFrGPItmiiGs
+# qNlF5x6b2d04ErSvkcGd2I4ciVUrv262SMzeivNXiGCNpbQoZn6UE69HBNIPrMqg
+# JB9xdJkOZBuTdD5k0T1B8qaP4EZfaE4V0D8y8YiLLRZ99Plh2HvSE4wa/tVXFcn6
+# 3xnqgoxqq5oarTziz2DhhSmCb/oosYeixyJyFQORPJPqoOPx6jK/yEcNtgWuJHbt
+# Gk1VLqcwHuoJsmwSEG/eASr/boehfvlcl3YYQWV+juXRut1dSKUWXfwjwUJwvbe+
+# vO3tO6/NyOfrMfXZolTIV6+0HQuLO0avZ6ix1So9pWYGH2JHE2UDQxAJeW0nc6Ad
+# Zc7debuLrLY4phLsfrMc1nnGOfUnPeBLgR2BO+u9sCzjINIDXOEF4yGaZQG3ba5z
+# RnMHjWkAed1UhbPDnMC2iARcPBh8jPQtpcKTiz8DFF2iKd+X3dmiCYtOl8MYVsaM
+# 9d2HV7DOENWlGZTImphN9UBSdgNMMFiz/kWkM6hZHFXDzFZnAhat0DN0p7W4yc8v
+# aNKGaUn/Yf3kfNuVzwP15VWg/WIsKG5gJCrMj+/ASNj5KsFt4qSS3yuhZnHKR/Bc
+# TSU9VOK+spC71K8Rk47cfHHcuF71UJPVynZl6h/IoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCB+Q6Yw4mUqRL1VRw4O75RRDK8bO3me5gI5Z/mQ0f6LRwIUGZ3j
-# qAgZmPm42gEgmurOFhqCWogYDzIwMjYwODA3MTE0MjMyWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCJ2VsNFOv2Up8PhZ4iiVIlX8p2pdtBrmXg+cMXK3E4TgIUIF0u
+# UwvqQiK4HPvVI5CnHQUP9nkYDzIwMjYwODMxMTgwOTU1WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -5398,18 +5703,18 @@ function Replace-AlyaStrings($obj, $depth)
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDB+Z0JVO+IKX8INrlVy7GBVwZtaeOcTLPOPR46vu5hAjgP/NAr08ZRPWp43
-# 693tCjEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBc54kdv3Zl5QaNuroF/CQnXXXKa2lqGIg0TklNvya0NWITE9PSLhxTpJQj
+# D1T6o48wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGATQW/wVY4PYCd+iHwK5AvgG1WTpfv1lJTiqzs8rqNMiPy
-# 6Ke6NHK42jqH9MnOGvTDi436Wuu0tTZw3+9BXA/wjSW6CJ/ujTUrB4v6Jf1+mwIn
-# RmG/j/MxIWmIPGUZwnJ5C5uCAdn4dgF17KteSL1WvK1N38ortx04gSMb3mvFw/up
-# Hg7T034+ITtzuRKb9HQJom4PuR+6J8GFlVxq/IWNLuKKKsgDdOhBxThqZRbSk/Cz
-# W3i12xObUa6wDqDCx8tEHdyC8mVcWvSWvW7L2EW3hWYxNQkfUk259DgvATuHmr3L
-# K4rgNnrraEPvH9F/ydf2o8O8vjxlYJ5MydGiEnWqvrMx9t06Tax2Lyq957plkai8
-# 3pIBajjvw6GOGOKHfdm6cpFtq7+5jpn9c9ENN1IKejUnN3fktKPv9sRmhirbXLu+
-# CFjaYcw66k4KRqubX1gvkGDinNnJcCKLntH7zLf+IYZZYcCIk+laOvZxFLxolqvS
-# brdgrglEU9B/8zLppatN
+# KoZIhvcNAQEMBQAEggGADfldLR3IeS10nOR3B9CukZWn3+YcY80KRkOiN+xX/lq4
+# P5xR7hBRNaFK9C1VrUfHY7MdEbQGmp++wuxeVda0Hh5l8Qeb4xxJ6bExLWOf9UkL
+# 30GBHNUx9C/ajNZyg4ZFLo8Wfs1WunpZMXaFcyXx3KBxsBKaYVu9mXohHAH+YtoB
+# K/+p9W1i6Et+NHHaMTFLTdc8Y5a19qTivKjnBnixsHWuX6lUHGUHuYK760AZ8NZA
+# bl6PhYAfqXySOCxM2btIYZcKo/3jeR4IX0MTQAX8Yn3XJEeNXjl4nX2ou7cugE5h
+# eGOul0KTccC4Sd/2sVEHQbXXpOvR3w7EYjJPFzeswDsiZhQgJyV1yb1tIzWGBkLC
+# 9SZqfwmTZqStJa+VQ+YWttHf7ujyyTQ37ehGQN3+gbtMpMk92JS7qfwst3Yzjpgy
+# NILaMyV6yd25G6zBlWQRbPnNjzzTR8bbaxjcVBEiKgxPmQ29vHDx7u6jXlTsrGKI
+# xs03q6hwaFCj8nlGBasp
 # SIG # End signature block
