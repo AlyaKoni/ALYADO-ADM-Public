@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 5
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -31,10 +31,21 @@
 
 <#
 .SYNOPSIS
-Downloads the latest FortiClientVPN client installer for Windows and saves it to a local directory.
+Downloads the FortiClient VPN installer by automating the bootstrapper extraction.
 
 .DESCRIPTION
-This script retrieves the current download link for the FortiClientVPN client for Windows from the official OpenVPN website and downloads the MSI installer file to a designated "Content" directory under the script location. It ensures the target directory exists and automatically handles URL extraction using a regex pattern. The script depends on an external helper function Invoke-WebRequestIndep, which is assumed to be defined in the referenced configuration script 01_ConfigureEnv.ps1.
+This script automates the manual process of extracting the installer from the FortiClient VPN
+bootstrapper. It performs the following steps fully automated with a single UAC prompt:
+
+1. Downloads the latest FortiClient VPN bootstrapper from the official Fortinet link
+2. Starts the bootstrapper elevated which downloads the actual installer to Admin %TEMP%
+3. Monitors Admin %TEMP% for the FortiClientVPN.exe file to appear and finish downloading
+4. Copies the installer to the Content directory once the download is complete
+5. Terminates the bootstrapper process
+6. Cleans up temporary files
+
+Single UAC prompt. No manual Cancel click. No second elevation.
+The entire process runs headless and is suitable for CI/CD and Intune packaging workflows.
 
 .INPUTS
 None. This script does not accept pipeline input.
@@ -43,8 +54,8 @@ None. This script does not accept pipeline input.
 None. The script creates an installer file in the "Content" directory.
 
 .EXAMPLE
-PS> .\Download.ps1
-Downloads the latest FortiClientVPN client for Windows to the local "Content" folder located in the same directory as the script.
+PS> .\DownloadNew.ps1
+Downloads the latest FortiClient VPN installer to the local "Content" folder.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -55,32 +66,140 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
 
-$pageUrl = "https://links.fortinet.com/forticlient/win/vpnagent"
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
 if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-$outfile = Join-Path $contentRoot "FortiClientVPNInstaller.exe"
-$dreq = Invoke-WebRequestIndep -Uri $pageUrl -Method Get -OutFile $outfile
 
-Write-Warning "Attention: UAC window!"
-Write-Warning "Installer starts now. Please hit cancel when it has launched."
+# Step 1: Download the bootstrapper (no elevation needed)
+$pageUrl = "https://links.fortinet.com/forticlient/win/vpnagent"
+$bootstrapperPath = Join-Path $AlyaTemp "FortiClientVPNInstaller.exe"
 
-cmd /c $outfile
-Wait-UntilProcessEnds -processName "FortiClientVPNInstaller"
+# Write-Host "Downloading FortiClient VPN bootstrapper..." -ForegroundColor Cyan
+Invoke-WebRequestIndep -Uri $pageUrl -Method Get -OutFile $bootstrapperPath
 
-Write-Warning "Attention: Again UAC window!"
-Start-Process powershell -Verb runAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"sl `$env:TEMP; Copy-Item -Path 'FortiClientVPN.exe' -Destination '$contentRoot\FortiClientVPN.exe' -Force`"" -Wait
+if (-Not (Test-Path $bootstrapperPath))
+{
+    Write-Error "Failed to download bootstrapper from $pageUrl"
+    exit 1
+}
 
-Remove-Item -Path $outfile -Force
+# Write-Host "Bootstrapper downloaded: $([math]::Round((Get-Item $bootstrapperPath).Length / 1MB, 2)) MB" -ForegroundColor Green
+
+# Step 2: Write the elevated helper script to a temp file
+# Using a real file avoids all here-string escaping issues
+$destFile = Join-Path $contentRoot "FortiClientVPN.exe"
+$startTimeIso = (Get-Date).ToString("o")
+$scriptFile = Join-Path $AlyaTemp "FortiClientExtract.ps1"
+
+$elevatedLines = @(
+    '$bootstrapperPath = "' + $bootstrapperPath + '"'
+    '$destFile = "' + $destFile + '"'
+    '$startTime = [datetime]"' + $startTimeIso + '"'
+    '$targetFileName = "FortiClientVPN.exe"'
+    '$timeoutSeconds = 180'
+    '$pollIntervalSeconds = 2'
+    ''
+    'Write-Host "[ELEVATED] Starting bootstrapper..." -ForegroundColor Cyan'
+    'Start-Process cmd -ArgumentList "/c `"$bootstrapperPath`"" -WindowStyle Hidden'
+    'Write-Host "[ELEVATED] Bootstrapper launched. Monitoring Admin TEMP for $targetFileName..." -ForegroundColor Cyan'
+    ''
+    '$elapsed = 0'
+    '$lastSize = 0'
+    '$stableCount = 0'
+    ''
+    'while ($elapsed -lt $timeoutSeconds)'
+    '{'
+    '    $candidate = Get-ChildItem -Path $env:TEMP -Filter $targetFileName -ErrorAction SilentlyContinue |'
+    '                 Where-Object { $_.LastWriteTime -gt $startTime } |'
+    '                 Sort-Object LastWriteTime -Descending |'
+    '                 Select-Object -First 1'
+    ''
+    '    if ($candidate)'
+    '    {'
+    '        if ($candidate.Length -eq $lastSize -and $candidate.Length -gt 0)'
+    '        {'
+    '            $stableCount++'
+    '            if ($stableCount -ge 3)'
+    '            {'
+    '                $sizeMB = [math]::Round($candidate.Length / 1MB, 2)'
+    '                Write-Host "[ELEVATED] Download complete: $($candidate.FullName) ($sizeMB MB)" -ForegroundColor Green'
+    '                Write-Host "[ELEVATED] Copying to $destFile..." -ForegroundColor Cyan'
+    '                Copy-Item -Path $candidate.FullName -Destination $destFile -Force'
+    ''
+    '                Write-Host "[ELEVATED] Stopping FortiClient processes..." -ForegroundColor Cyan'
+    '                Get-Process -Name "FortiClient*" -ErrorAction SilentlyContinue | ForEach-Object {'
+    '                    Write-Host "  Killing PID $($_.Id) ($($_.Name))" -ForegroundColor Gray'
+    '                    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue'
+    '                }'
+    ''
+    '                Write-Host "[ELEVATED] Cleaning up bootstrapper..." -ForegroundColor Cyan'
+    '                Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue'
+    ''
+    '                Write-Host "[ELEVATED] Done." -ForegroundColor Green'
+    '                exit 0'
+    '            }'
+    '        }'
+    '        else'
+    '        {'
+    '            $lastSize = $candidate.Length'
+    '            $stableCount = 0'
+    '            $sizeMB = [math]::Round($candidate.Length / 1MB, 2)'
+    '            Write-Host "[ELEVATED] Installer growing: $sizeMB MB" -ForegroundColor Gray'
+    '        }'
+    '    }'
+    ''
+    '    Start-Sleep -Seconds $pollIntervalSeconds'
+    '    $elapsed += $pollIntervalSeconds'
+    ''
+    '    if ($elapsed % 10 -eq 0)'
+    '    {'
+    '        Write-Host "[ELEVATED] ...still waiting (${elapsed}s / ${timeoutSeconds}s)" -ForegroundColor Gray'
+    '    }'
+    '}'
+    ''
+    'Write-Host "[ELEVATED] TIMEOUT after ${timeoutSeconds}s" -ForegroundColor Red'
+    'Get-Process -Name "FortiClient*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue'
+    'Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue'
+    'exit 1'
+)
+
+$elevatedLines | Out-File -FilePath $scriptFile -Encoding UTF8
+
+# Step 3: Run everything elevated (single UAC prompt)
+# Write-Host "Starting elevated extraction (bootstrapper + monitor + copy)..." -ForegroundColor Cyan
+Write-Warning "A UAC prompt will appear. Please confirm it."
+
+$elevatedProcess = Start-Process powershell -Verb runAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptFile`"" -PassThru -Wait
+$exitCode = $elevatedProcess.ExitCode
+
+Remove-Item -Path $scriptFile -Force -ErrorAction SilentlyContinue
+
+# Step 4: Verify result
+if ($exitCode -ne 0 -or -Not (Test-Path $destFile))
+{
+    Write-Error "Extraction failed. Installer was not found within timeout."
+    exit 1
+}
+
+Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue
+
+
+# $finalSize = [math]::Round((Get-Item $destFile).Length / 1MB, 2)
+# Write-Host ""
+# Write-Host "========================================" -ForegroundColor Green
+# Write-Host " FortiClient VPN installer ready!" -ForegroundColor Green
+# Write-Host " Location: $destFile" -ForegroundColor Green
+# Write-Host " Size: $finalSize MB" -ForegroundColor Green
+# Write-Host "========================================" -ForegroundColor Green
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCB5Bn3XTN8NFqM
-# +tUAI0x/dOX179zZ44wcSj0SqqjoAqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB+LQ+4Iw40DzrA
+# iMkXCwHId+9Jz2N8zqnoKOlIX6R0rqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -194,23 +313,23 @@ Remove-Item -Path $outfile -Force
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPzrx02h
-# FokAKXutxs0hETkpzsM5aVwLEd8uq7uwLYIzMA0GCSqGSIb3DQEBAQUABIICAEDy
-# 1yMYY3vgGOtZQkb3jYOEfJVKy01u4Vk7saazAY54ksCd5ZlvEPDztv1mDrEvK97U
-# 9Un5tZdqFtn1XTInlCq2vwuwPSpjJL+11EF6XMqDcsnLwttoJKH+yJ380eKku7OU
-# 93Wi4Nr+ussiajAELZJbuyyMBGzO8mREAZ9nJjtvMKZ6vK8CfoRHcYXtH4C441Tk
-# 8lwwREjZsnsmZI2dZRKmHd+ekXomBGynMlDJ0ShW0M2t18EbQ+eASg3Ndw1my48z
-# MuT3fduHIDOw3ZQsHN7+N6XCz8pELsnQ9RcHexVIVEGhYJ9M+0FixuRM15W38P0d
-# /+WHuXBc7QIPv2EGgkQgxf3NtDHpDZzWIDpMh1a9SZEH8nfz4eEiTnf5iIb/a3Cp
-# M7109HUv/zHJLarZ3TjIB2YDiDvlFhTya5RMmD5RlHtnzQ2fzepY8hOhmfru0jor
-# 5VjJC+3ccdf6jygPOjoq9EtrhwDAw6CvyJ35ZmD4rEDhgA+yqcNjZoXf39l40yK+
-# a8SA8K2PiNFbOoBcqZQ56Pt7LOilOI4EabJygkuIgW2nPb73xGlAJxAZcXNRmM/q
-# hiFS4XZCm6VQRAzIpJFjLFxzRES+O+ELXZmqGg1qbaaXlzx644BZ0cslTnnjSiWC
-# gbIxLbY5u0v0tyFwzo+9Zh+bMtvg5G7kpSGGxnsboYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG1PFjR4
+# sa9MbX/uzaO3me+eLpyPgRIQ9+NXPBSeWIuTMA0GCSqGSIb3DQEBAQUABIICAG1T
+# 107gx9oEwQ1xy70IH6MMhtE+zedbAGjOPmxMfU3H3bRMLS7mrS+MGz+81rAciEbG
+# TI2AOA7vOMc5IPbhtfNp572t6PvjDtnQnK8OMpu1D2aeNfOS2enKzaxH1fsHhWIA
+# ROJyZGmDAmi1ULTFlKL6MoD2yUaXTpf7nTfQj7WLV9p6+klDNFLwQ3+m81NgbOwk
+# jOBsuRdHyr8GBAFqvaFfA+xFyDmhntwyAYz/vTOBZE/CCf1yD3mRcsuUZX/+PrfG
+# 6sI9Nn76DIN7Rnc0paqFxhZUwPuMMUBVTb6IPlnX03crTkss7UNMcfXWgi2a3Tpz
+# b9HfaWir2cHAN6I+0k8N83u6P7WQnKx1p6Ux0ttp0k97U9pay8fw69AlqedwSUaN
+# pUqBD2t5Ra8fSeVCmET3OYI7zEq/19NOLEeoeqtlY80vDhFRDMCg2S45cH9xl2mS
+# JzE+1eGEYu2PV+3OXlx0Tl75uVictBZ6eh/nfaeVn9KZfThEfFJW82DrsVU3UyGm
+# 0Gb104KHGLlGW3AeVBWwLaU2BZeFW9DdE+gnA73LkHsTi162ceug2IV/mmCQMbfi
+# PXY4zL5/hU9Cgciuf4Yx/qocVWyXJUHgjo6lRH16mHcpWnPmt/8TjYPv8qd/5cGm
+# u6OLCrFOZF1ZiWEIO76FIRzbcbWs6vL3GhSa/RRwoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCBLSG7QM/YXKwEymobX+kKQqlaPMifPMqwAdh3xx6RasgIUA6iN
-# FzY359M+JIivTV5G6raxffEYDzIwMjYwNjI2MTMyNTA0WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCPODYqQ10lNvUNqmFoZfv2Gq3Ffq4BFNOY9eFSPwOl3gIUJUgn
+# ciQYzwbqdjEW+CL4/Dtj8hcYDzIwMjYwOTA5MjA0ODE2WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -353,18 +472,18 @@ Remove-Item -Path $outfile -Force
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBK4yxjSIjEsK+BGMWrL4ZAQ0LSN4pylA7giIIFJ+XiJpJ/auX+YoZZ0lpV
-# G7g7fUYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDn2YT502I7GPzfBm590npU2J36fekz8U/0HI0egJ8zwZCIXX3EmhdZj/xR
+# aMeoikYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGASwOVfVxTqDIllURtpHIHLOR/U5dTim+QCT7Kflw0JqwJ
-# j+egtKqRmpE3S5dAJLD3naLN+97yguMoKjBubgc20nkOTPat8JqCnGbbBv6zEB7D
-# NDbT9Enpym714CLUk07o4n3fzDENGVQJGrkjibZE35BGDFCOo1sXYhb3bVQoirEN
-# drTxl88ys0IqZ6P2n4SdbfvMz5sWgMbRfAyuX8JAdqDDwxycbwBQNSrT/9e+w5Pf
-# skNOwU2eOUQ+9EOzB65+mWSHDZW6oltUy71PIY8adNj8SQortQBMLU0mnIwtVeWS
-# Wb8cZdExRwvedvu2P/QoEO3jS4wZbjAbC2BB6vA92enSWYgP81/HiTIBCwtBIWsR
-# bS6di1ZzPmEn7nkd1y267CUOYsUK2tKyXdI04ODGLC9i92NHuCieSJIJcwidRra5
-# 1fJmwrIbggy/FT5DMwUcpAAtPlOAtb/k6VqcCaec9c1NqFAlH4loRCbxqj6NS5b2
-# IQJEPL+iBNYLVDzn6h7F
+# KoZIhvcNAQEMBQAEggGANq7rOmMA/6WrQ18zsjhIhN24qwD8vYhzXouv7jpNRjOt
+# v4fYdnQd66g+zTDufnXMnDp3hjLltQzk4Rfzmq5KYE4H2GX8wSusIH8CbxNufZWe
+# i9sAdP0VVRGuG5FCQkFWIHUPJz+Cl9GHpMpo8DC9Sh4k5OQTVtRMx0zS3Mu1Sot2
+# vbiao61h3XFozovPsmL4iL/bT61b95Bs2b+B1F06WJd1Hz/5P0K8pqcj1QCD9hEP
+# Yi6ANMYWTOUfcKJ3fRXqnLrzPduw8pLG1FBe2WUqPCEPGriQMS2/7umeu++faBNk
+# LDbXukmTOwca2OocovDrZGggfz18KiQRVBQLYVKjX/a2eNv+ek+QfUoEp1a7NTLZ
+# fnXAPARIZtVx+6Np9cMnwhP/FffndMqkPoyZiKLHhbSw1CzcBqGTjX+k9qNoBOmw
+# AM2dZ/59+KKn7rQ4J2Un27UKOkPBpLZHs5gXhFt/rL/YbNfGbzRZdSoN2CoaADAM
+# QmQvzjE1s2/0oR//Rton
 # SIG # End signature block

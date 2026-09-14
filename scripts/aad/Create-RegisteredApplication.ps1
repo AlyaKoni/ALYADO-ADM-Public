@@ -97,7 +97,8 @@ Param(
     [object]$RequiredResourceAccess = $null,
     [switch]$SetRequiredResourceAccessForContacts,
     [switch]$SetRequiredResourceAccessForGuestManagement,
-    [switch]$SetExchangeRbacForUPN = $null,
+    [string]$SetExchangeRbacForUPN = $null,
+    [switch]$SetExchangeRbacForTenant,
     [string]$PublicClientRedirectUri = $null,
     [string]$SignInAudience = "AzureADMyOrg",
     [string]$IdentifierUri = $null
@@ -117,6 +118,12 @@ if (-Not $ApplicationName.StartsWith($AlyaCompanyNameShortM365))
     $ApplicationName = "$($AlyaCompanyNameShortM365)$($ApplicationName)"
 }
 
+# Checks
+if (-Not [string]::IsNullOrWhiteSpace($SetExchangeRbacForUPN) -and $SetExchangeRbacForTenant)
+{
+    throw "You cannot set both Exchange RBAC for a specific UPN and for the tenant at the same time."
+}
+
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
@@ -125,7 +132,7 @@ Install-ModuleIfNotInstalled "Az.KeyVault"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Applications"
 Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
-if ($SetExchangeRbacForUPN)
+if (-Not [string]::IsNullOrWhiteSpace($SetExchangeRbacForUPN) -or $SetExchangeRbacForTenant)
 {
     Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 }
@@ -490,7 +497,7 @@ if ($AssignKeyAuth)
     }
 }
 
-if ($SetExchangeRbacForUPN)
+if (-Not [string]::IsNullOrWhiteSpace($SetExchangeRbacForUPN) -or $SetExchangeRbacForTenant)
 {
     try {
         LoginTo-EXO
@@ -511,29 +518,71 @@ if ($SetExchangeRbacForUPN)
         $ExServPrinc = Get-ServicePrincipal -Identity $ApplicationName -ErrorAction SilentlyContinue
     }
 
-    # Checking exchange management scope
-    Write-Host "Checking exchange management scope" -ForegroundColor $CommandInfo
-    $ExManScope = Get-ManagementScope -Identity $ApplicationName -ErrorAction SilentlyContinue
-    if (-Not $ExManScope)
+    if (-Not [string]::IsNullOrWhiteSpace($SetExchangeRbacForUPN))
     {
-        Write-Warning "Exchange management scope not found. Creating the exchange management scope $ApplicationName"
-        $ExManScope = New-ManagementScope -Name $ApplicationName -RecipientRestrictionFilter "userPrincipalName -eq '$SetExchangeRbacForUPN'"
-        $ExManScope = Get-ManagementScope -Identity $ApplicationName
-    }
+        # Checking exchange management scope
+        Write-Host "Checking exchange management scope" -ForegroundColor $CommandInfo
+        $ExManScope = Get-ManagementScope -Identity $ApplicationName -ErrorAction SilentlyContinue
+        if (-Not $ExManScope)
+        {
+            Write-Warning "Exchange management scope not found. Creating the exchange management scope $ApplicationName"
+            $ExManScope = New-ManagementScope -Name $ApplicationName -RecipientRestrictionFilter "userPrincipalName -eq '$SetExchangeRbacForUPN'"
+            $ExManScope = Get-ManagementScope -Identity $ApplicationName
+        }
 
-    # Checking exchange management scope assignment
-    Write-Host "Checking exchange management scope assignment" -ForegroundColor $CommandInfo
-    $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
-    if (-Not $ExRolAss)
-    {
-        Write-Warning "Exchange management scope assignment not found. Creating the exchange management scope assignment $ApplicationName"
-        $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application Exchange Full Access" -CustomResourceScope $ApplicationName
+        # Checking exchange management scope assignment Full Access
+        Write-Host "Checking exchange management scope assignment Full Access" -ForegroundColor $CommandInfo
         $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
+        if (-Not $ExRolAss)
+        {
+            Write-Warning "Exchange management scope assignment not found. Creating the exchange management scope assignment $ApplicationName"
+            $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application Exchange Full Access" -CustomResourceScope $ApplicationName
+            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
+        }
+
+        # Checking exchange management scope assignment SMTP.SendAsApp
+        Write-Host "Checking exchange management scope assignment SMTP.SendAsApp" -ForegroundColor $CommandInfo
+        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
+        if (-Not $ExRolAss)
+        {
+            Write-Warning "Exchange management scope assignment not found. Creating the exchange management scope assignment $ApplicationName"
+            $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application SMTP.SendAsApp" -CustomResourceScope $ApplicationName
+            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
+        }
+
+        # Testing access rights
+        Write-Host "Testing access rights" -ForegroundColor $CommandInfo
+        Test-ServicePrincipalAuthorization -Resource $SetExchangeRbacForUPN -Identity $ApplicationName
     }
 
-    # Testing access rights
-    Write-Host "Testing access rights" -ForegroundColor $CommandInfo
-    Test-ServicePrincipalAuthorization -Resource $SetExchangeRbacForUPN -Identity $ApplicationName
+    if ($SetExchangeRbacForTenant)
+    {
+
+        # Checking exchange assignment Full Access
+        Write-Host "Checking exchange assignment Full Access" -ForegroundColor $CommandInfo
+        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $null }
+        if (-Not $ExRolAss)
+        {
+            Write-Warning "Exchange assignment not found. Creating the exchange assignment $ApplicationName"
+            $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application Exchange Full Access"
+            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $null }
+        }
+
+        # Checking exchange assignment SMTP.SendAsApp
+        Write-Host "Checking exchange assignment SMTP.SendAsApp" -ForegroundColor $CommandInfo
+        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $null }
+        if (-Not $ExRolAss)
+        {
+            Write-Warning "Exchange assignment not found. Creating the exchange assignment $ApplicationName"
+            $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application SMTP.SendAsApp"
+            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $null }
+        }
+
+        # Testing access rights
+        Write-Host "Testing access rights" -ForegroundColor $CommandInfo
+        Test-ServicePrincipalAuthorization -Resource $Context.Account.Id -Identity $ApplicationName
+
+    }
 
 }
 
@@ -543,8 +592,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDgkteTbIax0lCp
-# 2rl/fzWg8jRf501BZE539O6Gh9FBW6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDng6BxF1d+16JN
+# +jbRPqMiqedUun859AL0ptFVFEyw36CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -658,23 +707,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAJB4D0v
-# HwlFNDgYxwBEANHHN1749ie4XLa09BHbvU8kMA0GCSqGSIb3DQEBAQUABIICADUj
-# iR8cGaH4NOSmRwl64O1D9DrNe17ogTJq91GcDSQVpOSL1kCWvJENvAeaHVe2Prol
-# 7N1wJfkhBwHv9Yqm86gEA5EAYLcwOoH/p/RkzmXGhGfKhH794ZseJogiTIFF9swB
-# zZY8+SUIV0EoLpOLestnZbfTknasCsLol9NNmvs460s2CiG5D6uiqueznZ2RYSfq
-# WxC7O3D2lckrLXNnGwauQYFr+aC7yz+oeCDXd124T7eF87u/eBHu3fb584tzugE6
-# 12AMcHIa/YbdGcdtxYhrziMmgJSiUI50zQ1mk4Fsx48YQeeQAblY1e1n+/+CuDDP
-# j+wxL87NTfnMaG9CYtx98JnF0zMNK+/bJM85Lgvtx7S2taWTuGfPZEesAv8ZNxN2
-# 8T6mezPK3wGydVI5x7OlOvUZlZXGbVc0XU9EykTKoR4C05SAnF/+hjDQWI7agQ2K
-# NFeW/fxsAxfkKAEDdhDyOzOFArHo8UEx2WUI4ni3WBVbmU+6SI5WYWb6Kv9S7sbX
-# A8eILNLPPvEvmRM62S3o0/Lg6VNkktgyvdsEYyTVZ6nX6fYnCWwOo/Xt6EVUfpVs
-# 4M4yaYHvpeWQ69FaHlYRWqId0xGlczq7SI8226lsFOuFzd8KM3OxX1vUcJnNX6c4
-# wo9VCCxGIuNlVPZDdpA3aB+Pi5m45ThWk6jnJl/foYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEcIZml6
+# Wv6BraEDnF6uHJ+fOTePQMnsfN6PQASD1o1+MA0GCSqGSIb3DQEBAQUABIICAKRu
+# 4WeyE3KIrEgMJ6ev4pIWBe7kBDnqOyRWF2i5dq4qETWLlfZaWrf6/l3921cQ9Er4
+# od0A52KWDVqXdzeZlTrsymCySVjzwPMUsouGYxcx6XsQ9jJhBr5ASVnW2+mNbVD5
+# mm9tvNZvYhdpPyKfKb7IJg7QsxlYBXtutj2CkQTYZArAw0aHiJyAii5cZh5p/jVd
+# LhQXdbV+kJ4VOU5wEmTA9ONHhkUZgbwhXcJ1r+5A65sihxa0vI9zuu67D+75wG3v
+# CYCi/R0CtDR1aaKTcPHHbG2iRQNKBqnvDiFIXOsiZymEVGdicrJxW2oRJdKhsg/T
+# gdJOizf0SkfajQAYRH6iupk7w6AixC4gWJ9ue7ZjH/a9pe18Ufha40OmIhMywue0
+# 1p0ryw4X7hsdI58HMIsK/WHUoaZbn4f+/8GgE/kALvhPYP6Qrb/n8bwm4z+cA8X4
+# +wQ1tZPU+dmcagTc03KWjRnIVBy7sAixgCHlDAMEnT5MpCQ0hNOtRlwJjvxBQgYl
+# ioCi07Q9Ek9HQmX08ldCB6IPXI4kZ4af7jY1s0uDRGPx81VLVA0vgb0vVBeDGeHK
+# tU6eudXk+6yt5R4QEYkAQombIveWOPEpNVBquQuQR8xSTDWJPIoVwQvKH2jzeM6D
+# kA5c/zd14COX3K5RrBGIwA8yjLG/UHUT34o1oUtpoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCB6ewdWYV6F1BkZs3b4j4JboozvuDYw0YlR/qfAAyVYlAIUSo7b
-# J8pA91q3xnDpyCgdsHxibEgYDzIwMjYwODI5MTUxMjIwWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDzqGWDCcXsoU67InVDW1F+YLVrUspHe8G7czYywc7uCAIUOw/R
+# 7uK6W2JwIScdu7zHJzjF+e4YDzIwMjYwOTA5MTUwNzI3WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -817,18 +866,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDC0RMM/yDzqQrtTq+SIdfAk50vl4Kaizkl8qUKIdcGh949l+g6q9lxpmcuA
-# LTpJ3H4wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCySQJfdlc9Wy145l2Zcw2Ts3LguKZV57YJ7s0C8Tbeb7+F9HF9TAygeQ7b
+# AYp9mzwwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAT4qr5U9+ajNhejK8OjLDcHrlsnBOCfYWEKAYSPOHxPg5
-# 1KsBxmckPZH3jKbclwiLDkJylQ80WXCgQnyj3iNEPESUceGVt0+QU4AMUPuaAAGC
-# ngNfle7a4S/Dtdc5QWoaIEjDj+xrRpXYqBmNOQi1euVDgWlZXsKq5ZwwNEuXGlOH
-# MeQTO4AsneyD0HpvDiFN7x2hymqswTot9aGij1k+QuHef+8B43YUqbWTl5GJkrVU
-# 2IGJbmdmUfEp5IYGDT7vcNjkNOUeFotWTYwq7CiddLVi4zf0XOfsUrRVk8huqH46
-# Q8zE3ICMjnnroTU3FlVnPtcZnuOsFADOZhxaZWJpElkpV46ij7Tuvrf+P7nfctkr
-# KjNQYFCwhrgWlwRi6RumReMH+NXGN7txMz417KIGRU+6eUdnqtrUqxLgJ/o71v1n
-# FOUhRHMPk38IEP/vKPSL+S5dw4Xm5XuT7RPBYXd6zEBtqfflm3kE9hyJvqWgzhpM
-# yXDk0hoaEjlQymZmIYGe
+# KoZIhvcNAQEMBQAEggGAPPCRegsL5/0vLkQij9k89P33RU8nvbh4D85GaBUarSSr
+# ptIyhL56q6x+asn/f9uGFVmS3XkvWjrkDpO5B5i04HZh0EkQr3UUFc4vhnJsmn7i
+# DhFkn+4yhkzxdC2zoOESF0plfLJAxKE1D00XO6MnqUcRTibIpm8id63dFAAu0Kxx
+# WWW/T+uizVEigYkpOZ+mf6fid7X91mUkQb1YBfd19FqOXd5mLVShK4Y4WIyyM3FJ
+# DjVmlVVPtunpXsC5L7VBsf1uwCGzCgUzt1nrCuBN/S0pmHsPHgVA4xVxmHKvpNoy
+# EPvXmTztCCydQwPWN7N2IfNX41QMrB7rOwGJifPBCWvGRogMXpMYhGH+EKGVf1uk
+# 5cV0BhS0M2zS9Mo/ax0/HHB9kcpVpb+66v4RFp6t3/fqrlglYYcG48FsUviLzJ0i
+# j37BZEgB3zHSzvdsrK7FcbaisN9B13W/ynI9QTStsyGVWSDvYHVofPCPVGoxy37c
+# RIg9VSYhcDOiwZ68RWcY
 # SIG # End signature block

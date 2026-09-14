@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,24 +27,31 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    08.09.2026 Konrad Brunner       Initial Version
+
 #>
 
 <#
 .SYNOPSIS
-Downloads the latest CheckPointVPN client installer for Windows and saves it to a local directory.
+Archives a SharePoint Online site (metadata and files) into a zip file using PnP PowerShell.
 
 .DESCRIPTION
-This script retrieves the current download link for the CheckPointVPN client for Windows from the official CheckPointVPN website and downloads the MSI installer file to a designated "Content" directory under the script location. It ensures the target directory exists and automatically handles URL extraction using a regex pattern. The script depends on an external helper function Invoke-WebRequestIndep, which is assumed to be defined in the referenced configuration script 01_ConfigureEnv.ps1.
+The Archive-Site.ps1 script connects to a specified SharePoint Online site and creates a full archive of it. Site and web information as well as all list definitions and list items are downloaded via the SharePoint REST API using Invoke-PnPSPRestMethod. All files of all document libraries are downloaded recursively using Get-PnPFolderItem and Get-PnPFile. Errors are reported but do not stop the overall run. The script works temporarily in the AlyaTemp folder, converts the complete export into a zip archive and copies this zip together with the transcript of the run to the configured SharePoint archives data directory. Afterwards the AlyaTemp folder is cleaned up.
+
+.PARAMETER SiteUrl
+Specifies the URL of the SharePoint Online site which will be archived. This parameter is mandatory.
 
 .INPUTS
-None. This script does not accept pipeline input.
+None. You cannot pipe objects to this script.
 
 .OUTPUTS
-None. The script creates an installer file in the "Content" directory.
+Creates a zip file containing the complete site export and a transcript log file with the same base name in the configured SharePoint archives data directory ($AlyaData\sharepoint\Archives).
 
 .EXAMPLE
-PS> .\Download.ps1
-Downloads the latest CheckPointVPN client for Windows to the local "Content" folder located in the same directory as the script.
+PS> .\Archive-Site.ps1 -SiteUrl "https://tenant.sharepoint.com/sites/example"
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -53,83 +60,275 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
-. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory=$true)]
+    [string]$SiteUrl
+)
 
-$pageUrl = "https://www.checkpoint.com/de/quantum/remote-access-vpn/"
+# Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
+# Starting Transcript
+$transcriptFile = "$($AlyaLogs)\scripts\sharepoint\Archive-Site-$($AlyaTimeString).log"
+Start-Transcript -Path $transcriptFile | Out-Null
+
+# Checking modules
+Install-ModuleIfNotInstalled "PnP.PowerShell"
+
+# Logins
+$siteCon = LoginTo-PnP -Url $SiteUrl
+
+# Constants
+$siteName = $SiteUrl.Replace("https://", "").Replace("/", "_").TrimEnd("_")
+$tempExportDir = "$($AlyaTemp)\Archive-Site_$($siteName)_$($AlyaTimeString)"
+$tempZipFile = "$($AlyaTemp)\Archive_$($siteName)_$($AlyaTimeString).zip"
+$archiveDir = "$($AlyaData)\sharepoint\Archives"
+$archiveLogFile = "$($archiveDir)\Archive_$($siteName)_$($AlyaTimeString).log"
+
+if (-Not (Test-Path $tempExportDir))
 {
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
+    $null = New-Item -Path $tempExportDir -ItemType Directory -Force
+}
+if (-Not (Test-Path $archiveDir))
+{
+    $null = New-Item -Path $archiveDir -ItemType Directory -Force
 }
 
-$filename = & "$PSScriptRoot\..\..\..\..\scripts\misc\Download-FileWithScrapfly.ps1" -OutDir $contentRoot -PageUrl $pageUrl -FileRegex "CheckPointVPN\.msi"
-if (-Not $filename)
+# =============================================================
+# O365 stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Archive-Site | O365" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+Write-Host "Archiving site $($SiteUrl)" -ForegroundColor $CommandInfo
+Write-Host "Temporary export directory: $($tempExportDir)" -ForegroundColor $CommandInfo
+
+function Download-FolderRecursive($folderRelUrl, $parentDir)
 {
-    $installerName = "CheckPointVPN.msi"
-    Write-Warning "Problems automatically downloading $installerName. Please download manually"
-    Write-Host "We launch now a browser with the $installerName download page."
-    Write-Host " - Select 'Download for Windows'"
-    Write-Host " - Select 'Download'"
-    Write-Host "`n"
-    pause
-    
-    $profile = [Environment]::GetFolderPath("UserProfile")
-    $downloads = $profile+"\downloads"
-    $lastfilename = $null
-    $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-    if ($file)
+    try
     {
-        $lastfilename = $file.Name
+        $items = @(Get-PnPFolderItem -Connection $siteCon -FolderSiteRelativeUrl $folderRelUrl)
     }
-    $filename = $null
-    $attempts = 10
-    while ($attempts -ge 0)
+    catch
     {
-        Write-Host "Downloading $installerName file from $pageUrl"
-        Write-Warning "Please don't start any other download!"
-        try {
-            Start-Process "$pageUrl"
-            do
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Error "Error getting folder items of $($folderRelUrl), continuing" -ErrorAction Continue
+        return
+    }
+    foreach($item in $items)
+    {
+        try
+        {
+            $itemRelUrl = $item.ServerRelativeUrl
+            if ($webServerRelUrl -ne "/")
             {
-                Start-Sleep -Seconds 10
-                $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-                if ($file)
+                $itemRelUrl = $itemRelUrl.Replace($webServerRelUrl, "")
+            }
+            $itemRelUrl = $itemRelUrl.TrimStart("/")
+            $itemPath = Join-Path $parentDir $itemRelUrl.Replace("/", "\")
+            if ($item.GetType().Name -eq "Folder")
+            {
+                Write-Host "Folder: $($itemPath)"
+                $subRelUrl = $item.ServerRelativeUrl
+                if ($webServerRelUrl -ne "/")
                 {
-                    $filename = $file.Name
-                    if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
-                    if ($filename.Contains(".partial")) { $filename = $lastfilename }
-                    if ($filename.Contains(".tmp")) { $filename = $lastfilename }
+                    $subRelUrl = $subRelUrl.Replace($webServerRelUrl, "")
                 }
-            } while ($lastfilename -eq $filename)
-            $attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)"
-            Write-Host "Retrying $attempts times"
-            $attempts--
-            if ($attempts -lt 0) { throw }
-            Start-Sleep -Seconds 10
+                Download-FolderRecursive -folderRelUrl $subRelUrl.TrimStart("/") -parentDir $parentDir
+            }
+            else
+            {
+                Write-Host "File:   $($itemPath)"
+                $folderPath = Split-Path -Path $itemPath
+                if (-Not (Test-Path $folderPath))
+                {
+                    $null = New-Item -Path $folderPath -ItemType Directory -Force
+                }
+                $fileName = Split-Path -Path $itemPath -Leaf
+                Get-PnPFile -Connection $siteCon -Url $item.ServerRelativeUrl -Path $folderPath -FileName $fileName -AsFile -Force | Out-Null
+            }
+        }
+        catch
+        {
+            Write-Error $_.Exception -ErrorAction Continue
+            Write-Error "Error downloading item, continuing" -ErrorAction Continue
         }
     }
-    Start-Sleep -Seconds 3
-    if ($filename)
+}
+
+# Getting site and web information
+Write-Host "Exporting site and web information" -ForegroundColor $CommandInfo
+try
+{
+    $expSite = Invoke-PnPSPRestMethod -Connection $siteCon -Url "/_api/site"
+    $expSite | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $tempExportDir "siteDefinition.metadata") -Force
+}
+catch
+{
+    Write-Error $_.Exception -ErrorAction Continue
+    Write-Error "Error exporting site definition, continuing" -ErrorAction Continue
+}
+try
+{
+    $expWeb = Invoke-PnPSPRestMethod -Connection $siteCon -Url "/_api/web"
+    $expWeb | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $tempExportDir "webDefinition.metadata") -Force
+}
+catch
+{
+    Write-Error $_.Exception -ErrorAction Continue
+    Write-Error "Error exporting web definition, continuing" -ErrorAction Continue
+}
+
+# Getting web object for server relative url
+try
+{
+    $web = Get-PnPWeb -Connection $siteCon -Includes "ServerRelativeUrl", "RootFolder", "RootFolder.ServerRelativeUrl"
+    $webServerRelUrl = $web.ServerRelativeUrl
+}
+catch
+{
+    Write-Error $_.Exception -ErrorAction Continue
+    Write-Error "Error getting web object, continuing with root url" -ErrorAction Continue
+    $webServerRelUrl = "/"
+}
+
+# Exporting all lists
+Write-Host "Exporting lists" -ForegroundColor $CommandInfo
+try
+{
+    $lists = Get-PnPList -Connection $siteCon -Includes @("Id", "RootFolder", "RootFolder.ServerRelativeUrl")
+}
+catch
+{
+    Write-Error $_.Exception -ErrorAction Continue
+    Write-Error "Error getting lists, skipping list export" -ErrorAction Continue
+    $lists = @()
+}
+foreach($list in $lists)
+{
+    try
     {
-        $sourcePath = $downloads+"\"+$filename
-        Copy-Item -Path $sourcePath -Destination $contentRoot -Force
-        Remove-Item -Path $sourcePath -Force
+        $relUrl = $list.RootFolder.ServerRelativeUrl
+        if ($webServerRelUrl -ne "/")
+        {
+            $relUrl = $relUrl.Replace($webServerRelUrl, "")
+        }
+        $relUrl = $relUrl.TrimStart("/")
+        if ([string]::IsNullOrEmpty($relUrl))
+        {
+            $relUrl = $list.Title
+        }
+        Write-Host "Exporting list $($relUrl)"
+        $listDir = Join-Path $tempExportDir $relUrl.Replace("/", "\")
+        if (-Not (Test-Path $listDir -PathType Container))
+        {
+            $null = New-Item -Path $listDir -ItemType Directory -Force
+        }
+
+        $expList = Invoke-PnPSPRestMethod -Connection $siteCon -Url ("/_api/web/lists(guid'$($list.Id.Guid)')")
+        $expList | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $listDir "listDefinition.metadata") -Force
     }
-    else
+    catch
     {
-        throw "We were not able to download $installerName"
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Error "Error exporting list definition of $($list.Title), continuing" -ErrorAction Continue
+    }
+    try
+    {
+        $allItems = Invoke-PnPSPRestMethod -Connection $siteCon -Url ("/_api/web/lists(guid'$($list.Id.Guid)')/items")
+        $allItems | ConvertTo-JSON -Depth 3 | Set-Content -Path (Join-Path $listDir "listItems.metadata") -Force
+    }
+    catch
+    {
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Error "Error exporting list items of $($list.Title), continuing" -ErrorAction Continue
     }
 }
+
+# Downloading all files of all document libraries
+Write-Host "Downloading files of document libraries" -ForegroundColor $CommandInfo
+foreach($list in $lists)
+{
+    if ($list.BaseType -eq "DocumentLibrary" -and $list.RootFolder.ServerRelativeUrl -notlike "*_catalogs*")
+    {
+        try
+        {
+            Write-Host "Downloading library $($list.Title)" -ForegroundColor $CommandInfo
+            $relUrl = $list.RootFolder.ServerRelativeUrl
+            if ($webServerRelUrl -ne "/")
+            {
+                $relUrl = $relUrl.Replace($webServerRelUrl, "")
+            }
+            $relUrl = $relUrl.TrimStart("/")
+            if ([string]::IsNullOrEmpty($relUrl))
+            {
+                $relUrl = $list.Title
+            }
+            $libDir = Join-Path $tempExportDir $relUrl.Replace("/", "\")
+            if (-Not (Test-Path $libDir -PathType Container))
+            {
+                $null = New-Item -Path $libDir -ItemType Directory -Force
+            }
+            Download-FolderRecursive -folderRelUrl $relUrl -parentDir $tempExportDir
+        }
+        catch
+        {
+            Write-Error $_.Exception -ErrorAction Continue
+            Write-Error "Error downloading library $($list.Title), continuing" -ErrorAction Continue
+        }
+    }
+}
+
+# Creating zip archive
+Write-Host "Creating zip archive" -ForegroundColor $CommandInfo
+try
+{
+    if (Test-Path $tempZipFile)
+    {
+        Remove-Item -Path $tempZipFile -Force
+    }
+    Compress-Archive -Path "$($tempExportDir)\*" -DestinationPath $tempZipFile -CompressionLevel Optimal
+    Write-Host "Zip archive created: $($tempZipFile)" -ForegroundColor $CommandSuccess
+}
+catch
+{
+    Write-Error $_.Exception -ErrorAction Continue
+    Write-Error "Error creating zip archive" -ErrorAction Continue
+}
+
+# Cleaning up temp export directory
+Write-Host "Cleaning up temporary export directory" -ForegroundColor $CommandInfo
+if (Test-Path $tempExportDir)
+{
+    Remove-Item -Path $tempExportDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# Stopping Transcript
+Stop-Transcript
+
+# Copying zip and transcript to archives directory
+if (Test-Path $tempZipFile)
+{
+    Copy-Item -Path $tempZipFile -Destination $archiveDir -Force
+    Write-Host "Zip archive copied to $($archiveDir)" -ForegroundColor $CommandSuccess
+    Remove-Item -Path $tempZipFile -Force -ErrorAction SilentlyContinue
+}
+if (Test-Path $transcriptFile)
+{
+    Copy-Item -Path $transcriptFile -Destination $archiveLogFile -Force
+    Write-Host "Transcript copied to $($archiveLogFile)" -ForegroundColor $CommandSuccess
+}
+
+Write-Host "Archive of site $($SiteUrl) completed" -ForegroundColor $CommandSuccess
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB9b1b+s1WXKLU3
-# 8v+SbzdYSYHoNql3R/sehVN/WGROUKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCykoQH4vuj29aA
+# xlKGJCrrIYWs8xn7k6M4Keq2dLnEFaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -243,23 +442,23 @@ if (-Not $filename)
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGBXhF77
-# ZqULnx4Q/hQFDXdndcmkMUW3rbPDyVixC1C1MA0GCSqGSIb3DQEBAQUABIICAIoR
-# npWQtioWR8a+1+cBbfA6WPT1BZCUknFmPIv7S+tcDwxYM975mmGux6398CwqtCJ7
-# 7+7q/RY/3E3FRWruPcPfBp85L+RGuQgCN1BeJLNoP1mTuSF9yR3tc0egGUv0aquW
-# LyKeQfWkN1+r/mrphxQgLtrIN9xRdXSDV7iBs7gwfP+CGqT7hC4e+NlVExz0m2Jd
-# J5pkw96/NsFo4r62cTpg/5x9M7UD77sDUWyPAuQBQWfUPAa/nrytFD0j1dUez2Rg
-# ReINQ/Ebvq0SzVMR6du/VCLSDE0l6ZmYvIkrNhiCqQCUN7hET3/4YqpcTQro4T37
-# bEhKCb7W6pEYQTTWqePq0N5IKGE0qpoa7QUuuyr/zn1r0xIXQrwvs9tsiNaOHi6s
-# nbMQT7CrD0lWFs5U0Mzx1Iw44CAo9hCSyH1IqhvZqIfqx9+HUJ1am+JPrC8vhqo8
-# DWnAUml07wbLQ3Gl6uaPPG3ndNwCqfpyENsFzDVtMmAld2OLgVWHaNOBb5cQwtu1
-# HI47bKNC+Hmev1S+woSAmtwSfspB8bNhlBGcfaS+cPVN9oDbRHpKjnP4lqhkOZkX
-# vdXMbyhjwSMCTeJhGGBLA/zqG+Zg8ILcEXlBv104vdxAmK3GQHcFBLtQbWe9J/lA
-# UHvgjyRn4H/EWBIMdi0v671XK73yPl4c6P2UUCVuoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIL17no05
+# vjixUTyvoZPwuJrcQXfJrCP9uXqam5SLBXo/MA0GCSqGSIb3DQEBAQUABIICAKaf
+# 3jBB+MdtLoZDOO+T2kP+Kdre3irraTzc/YJU02fbI6Bma6AITYxqK8urp2QoXuOp
+# J+etO5Bw4m3rBaJ9pf8EzgfXiChKliJkuEEe76OSzZmZ/0F7g0FLIPkrZwRnbeHQ
+# vCyNniMJ+v/8Rr+lhOGkY5w3GriRrrUtIaQPQPmKaFL6mERHp727dkapOiJjLOPX
+# 07fymAVRIdzfE6YAF/0SdDms8kXXBoHmhMbSisCgTe2vxzb9tgiXFPOuFCRZqn44
+# 1Ogz6zNuPZ+HyMRfHhwKytkUChaoaL222rfPh/LwHbWrwX25BhgHCpncdGv1rLNP
+# 5DCcoUCOfdoRXF4KqwfmVn4yujncCkAGZfNUvX4so7dMO3Dm/fjYjMNuUqjx2SDX
+# DdSdQ4pEgvZRtyxtBaSPTw9k98+WVEFtlLJEImW7IENaZbCSljqUqzjCAvpTOmyx
+# xdhg/wx3cMTrWilM2quSr4+0bQKkBKFDBA3kzbDyH6gsga0LKPFZNFAAgPAgOekD
+# b/aMc2qshqKURjJJQR023i73C/mxKjq3kBITbaOOwxPrFuEfbgngBJ120LT6HHID
+# 3pLoBJPLPAuxD61PP8ovOBD0OFtf+dzbGoTf76LicA2ge4waEctH7oXqUNabPAOn
+# bckfmbL0vsHo5rLvURvkWutkZbK9O5oBECOlmpEuoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDScjj9cZLPTwinQ1xPKBleR3Tz/NgqKQ44lAQy2DZC3QIUInJV
-# dNb3gW/8fisDxGqCEIbdkmUYDzIwMjYwOTA5MTkyNjUwWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCnI/0sqvY86YfB6oXtIWFTztyNcBXPqBSxzyLDaIbE8gIUeMuf
+# h4NFBL3aKmdtXqXiwkGZQoEYDzIwMjYwOTA5MjE0MjE5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -402,18 +601,18 @@ if (-Not $filename)
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBRQc414sE9O3DicSe52HrNQZhsYo/58sWJqI5x/8gaTEE7bKwHXv7N1hv9
-# bIAkK4EwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCl3dh/T7f46oPDUgCd9tSbVTcFOrw3g0m4ObPOEndskqLPPZB72UnPRMsv
+# p5PdR/AwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGALuOoV2FWzNpPITG+LV4t8iPJ3uJbrL0NwvQMAvDCDCwW
-# rTFkDLIHJV+Nn2QkrR9iFS/pI04gviwdGSE51flgYAFiaj+1/KzqZfv57f/tINDU
-# Pgox2p1mQ/vW99n+d3k1gM1uaYmKf55T1ACJKgAbUw7XlOZ28WTeF2UHoLj08FRr
-# XUvM7lClAgQmufYMPNG0hntb4q3fYUfQK87W5Ep09d4qUIALulEbXXyH7Q2Qtr9+
-# 4AWgmXyuOlkLG2gPBEm8lHbY3hzDAqaR5/CiYbok4MOhCkGcz/ulkvtXqEgApov7
-# EmnoAkaCtvfUWviLSHSOgaytFs7S5blAZMQg4SF16Zh4k8z59Smkvy9HCPgSaUMl
-# AnMADhtZmo6E6+UO9DRw8g7giLhVl7mXO52Kz33h6+na/ysH7CgidqKL+vKzP0e0
-# wFkANoDz9P3sX1EVXhc5HsTSolu1dnnc12b0VtmjKhP2Tp2Bk57Xd3hHt5rVjIsg
-# 3z5GK0Q6bS5AE0u4Sfha
+# KoZIhvcNAQEMBQAEggGANZVa2EFAjxvYT0hRTbai7UHr3JWpRzDIe4E0yWUgTDIR
+# aOZlMM3JKxW77khv7E0ErnpJ9HuhYzoSbqaYpVTV06qx5NlAO7MBk+RsaWN2Bhd/
+# 3W7qmlPffngPe2MCb9Gpdd/mITIBu4vBbZ6Jy3SWJqLS0xXMEJmlQFB1W8X3HO8T
+# F19bikbwwcSd/kYv2kSE1cQ82hekHuMA3zJNDZ7+Zi8zRiT+a/m9rmsEfFrFyAca
+# FFZcVxoMmd5kFdawg/7jljPYFHnLbrLn7DbnxeSRRjHOI0Mj6sZqp9pDX3u0T0FT
+# DqKsPb/eN+KNuobLHjy9ejYMS939tu64jR70rMBz8eKfwj3nJ2jJr16rdSpfInmL
+# YtJETQt7kiqlt8/zrxcFJ3qjmac4H9bU6Nnr9SACySWUqUAnyA4U4YO7c4TPyaN0
+# GUcpE+Wj8uk8d8IyEKvgRPyASAsK2hK0XnHaox/KALSrSSnhCy1zLOPcfyDbhCOP
+# crXt+YgmAE6pU9tl+uPS
 # SIG # End signature block

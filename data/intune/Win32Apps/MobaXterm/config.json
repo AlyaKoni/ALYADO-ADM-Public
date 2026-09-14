@@ -24,13 +24,13 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "publisher": "Mobatek",
     "upgradeCode": "{745A604F-05A1-4867-8881-59888EC8B806}",
     "packageType": "PerMachine",
+    "publisher": "Mobatek",
     "productCode": "{C831C0FB-270F-4B0D-AD0C-9732A0D7DE09}",
     "productName": "MobaXterm",
-    "productVersion": "26.4.0.5512",
-    "requiresReboot": "false"
+    "requiresReboot": "false",
+    "productVersion": "26.4.0.5512"
   },
   "setupFilePath": "MobaXterm_installer_26.4.msi",
   "minimumSupportedWindowsRelease": "1607",

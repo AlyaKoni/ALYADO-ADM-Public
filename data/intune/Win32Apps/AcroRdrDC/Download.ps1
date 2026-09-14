@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+#Requires -Version 2
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,30 +27,55 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    03.09.2026 Konrad Brunner       Initial Version (Download, fully automated, no browser)
+
 #>
 
 <#
 .SYNOPSIS
-Downloads and extracts the Adobe Reader setup and update files for deployment preparation.
+Downloads the latest Adobe Acrobat Reader DC setup fully automatically and extracts the
+MSI/CAB/MSP files into the Content directory.
 
 .DESCRIPTION
-This script automates the workflow for downloading the Adobe Reader setup and optionally its update package. It prompts the user for the Adobe Reader setup and update URLs as provided by their Adobe distribution agreement, then launches a browser to begin the downloads. The script monitors the user's download folder, identifies the downloaded installation file, extracts its contents, and moves key installation files (MSI, CAB, MSP) to the appropriate content directory. It handles exceptions, retry attempts, and performs necessary file management for a clean setup preparation environment.
+This script replaces the interactive Download.ps1. It determines the current Reader DC
+version from the Chocolatey adobereader package page (which always references the latest
+official Adobe CDN installer URL), downloads the self-extracting setup directly with a
+web request, and extracts AcroRead.msi, Data1.cab and any MSP patch files into the
+Content directory - exactly as the original Download.ps1 did. No browser and no manual
+interaction is required.
 
-.PARAMETER setupDownloadUrl
-Specifies the Adobe Reader setup download URL provided by the Adobe distribution agreement.
+If the version detection fails, the fallback version is used (adjust -FallbackVersion
+when Adobe releases a new track). Alternatively, pass an explicit CDN version with
+-ForceVersion.
 
-.PARAMETER updateDownloadUrl
-Specifies the Adobe Reader update download URL provided by the Adobe distribution agreement.
+.PARAMETER Language
+Language code of the Reader installer file. Default: "MUI"
+
+.PARAMETER Architecture
+Installer architecture. "32bit" (classic Reader track) or "64bit" (x64 track). Default: "32bit"
+
+.PARAMETER FallbackVersion
+CDN version number used when the automatic version detection fails. Default: "2600121771"
+
+.PARAMETER ForceVersion
+Optional explicit CDN version number, bypasses the automatic version detection entirely.
 
 .INPUTS
 None. The script does not accept pipeline input.
 
 .OUTPUTS
-Creates or updates files in the Content directory including SetupName.txt, AcroRead.msi, Data1.cab, and any MSP patch files.
+Creates or updates files in the Content directory including SetupName.txt, AcroRead.msi,
+Data1.cab and any MSP patch files.
 
 .EXAMPLE
 PS> .\Download.ps1
-Prompts for Adobe Reader setup and update URLs, downloads the installer, extracts its contents, and prepares files for deployment.
+Downloads the latest German 32-bit Adobe Reader DC and extracts it to Content.
+
+.EXAMPLE
+PS> .\Download.ps1 -Architecture "64bit"
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -59,25 +84,13 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
-#
-# Downloading Setup Exe
-#
-
-Write-Host "`n`n"
-Write-Host "Adobe Reader download"
-Write-Host "====================="
-Write-Host "Please provide the Reader download URLs provided with your adobe distribution agreement"
-$setupDownloadUrl = Read-Host -Prompt 'setupDownloadUrl'
-$updateDownloadUrl = Read-Host -Prompt 'updateDownloadUrl'
-Write-Host "`n`n"
-Write-Host "We launch now a browser with the Adobe Reader setup download page."
-Write-Host " - Select 'Windows 10'"
-Write-Host " - Select 'All Languages (MUI)'"
-Write-Host " - Select 'Latest 32bit' <--***"
-Write-Host " - Choose 'Download now / Jetzt herunterladen'"
-Write-Host "`n"
-pause
-Write-Host "`n"
+[CmdletBinding()]
+Param(
+    [string]$Language = "MUI", #MUI, de_DE
+    [ValidateSet("32bit", "64bit")]
+    [string]$Architecture = "32bit",
+    [string]$ForceVersion = $null
+)
 
 $packageRoot = "$PSScriptRoot"
 $contentRoot = Join-Path $packageRoot "Content"
@@ -85,144 +98,169 @@ if (-Not (Test-Path $contentRoot))
 {
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
-$profile = [Environment]::GetFolderPath("UserProfile")
-$downloads = $profile+"\downloads"
-$lastfilename = $null
-$file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-if ($file)
-{
-    $lastfilename = $file.Name
-}
+
+# --- Determine the latest CDN version ---
+# The Adobe CDN directory listing itself refuses requests (403), therefore we read the
+# current installer URL from the Chocolatey adobereader package page, which always
+# contains the exact official ardownload2/ardownload3 URL of the latest release.
+$cdnVersion = $null
 $filename = $null
-$attempts = 10
-while ($attempts -ge 0)
+if (-Not [string]::IsNullOrEmpty($ForceVersion))
 {
-    Write-Host "Downloading setup file from $setupDownloadUrl"
-    Write-Warning "Please don't start any other download!"
-    try {
-        Start-Process "$setupDownloadUrl"
-        do
-        {
-            Start-Sleep -Seconds 10
-            $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-            if ($file)
-            {
-                $filename = $file.Name
-                if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
-                if ($filename.Contains(".partial")) { $filename = $lastfilename }
-                if ($filename.Contains(".tmp")) { $filename = $lastfilename }
-            }
-        } while ($lastfilename -eq $filename)
-        $attempts = -1
-    } catch {
-        Write-Host "Catched exception $($_.Exception.Message)"
-        Write-Host "Retrying $attempts times"
-        $attempts--
-        if ($attempts -lt 0) { throw }
-        Start-Sleep -Seconds 10
+    $cdnVersion = $ForceVersion
+    #Write-Host "Using forced CDN version: $cdnVersion"
+}
+else
+{
+    #Write-Host "Detecting latest Reader DC version via Chocolatey package page..."
+    try
+    {
+        $chocoReq = Invoke-WebRequest -Uri "https://community.chocolatey.org/packages/adobereader" -UseBasicParsing -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -TimeoutSec 60 -ErrorAction Stop
+        [regex]$regex = "https://ardownload.*/pub/adobe/reader/win/AcrobatDC/(\d*)/AcroRdrDC.*exe"
+        $versionMatches = $regex.Matches($chocoReq.Content, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant')
+        $cdnVersion = $versionMatches[$versionMatches.Count - 1].Groups[1].Value
+        #Write-Host "Latest CDN version found: $cdnVersion"
+    }
+    catch
+    {
+        Write-Warning "Version detection failed: $($_.Exception.Message). Using browser download."
+        $cdnVersion = $null
     }
 }
-Start-Sleep -Seconds 3
+
+if ($cdnVersion)
+{
+
+    # --- Build the direct download URL ---
+    # 32bit: .../pub/adobe/reader/win/AcrobatDC/{VERSION}/AcroRdrDC{VERSION}_{LANG}.exe
+    # 64bit: .../pub/adobe/acrobat/win/AcrobatDC/{VERSION}/AcroRdrDCx64{VERSION}_MUI.exe
+    if ($Architecture -eq "64bit")
+    {
+        $fileName = "AcroRdrDCx64${cdnVersion}_MUI.exe"
+        $downloadUrl = "https://ardownload2.adobe.com/pub/adobe/acrobat/win/AcrobatDC/${cdnVersion}/${fileName}"
+    }
+    else
+    {
+        $fileName = "AcroRdrDC${cdnVersion}_${Language}.exe"
+        $downloadUrl = "https://ardownload2.adobe.com/pub/adobe/reader/win/AcrobatDC/${cdnVersion}/${fileName}"
+    }
+
+    Write-Host "Downloading from: $downloadUrl"
+    $setupExePath = Join-Path $contentRoot $fileName
+    try
+    {
+        Invoke-WebRequest -Uri $downloadUrl -OutFile $setupExePath -UseBasicParsing -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -TimeoutSec 1800 -ErrorAction Stop
+    }
+    catch
+    {
+        throw "Failed to download Adobe Reader setup from ${downloadUrl}: $($_.Exception.Message)"
+    }
+    Write-Host "Download completed: $fileName"
+
+    # Write SetupName.txt (same as the original Download.ps1)
+    $setupTxtPath = Join-Path $contentRoot "SetupName.txt"
+    $fileName | Set-Content -Path $setupTxtPath -Encoding UTF8 -Force
+}
+else
+{
+    Write-Host "`n`n"
+    Write-Host "Adobe Reader download"
+    Write-Host "====================="
+    Write-Host "Please provide the Reader download URLs provided with your adobe distribution agreement"
+    $setupDownloadUrl = Read-Host -Prompt 'setupDownloadUrl'
+    $updateDownloadUrl = Read-Host -Prompt 'updateDownloadUrl'
+    Write-Host "`n`n"
+    Write-Host "We launch now a browser with the Adobe Reader setup download page."
+    Write-Host " - Select 'Windows 10'"
+    Write-Host " - Select 'All Languages (MUI)'"
+    Write-Host " - Select 'Latest 32bit' <--***"
+    Write-Host " - Choose 'Download now / Jetzt herunterladen'"
+    Write-Host "`n"
+    pause
+    Write-Host "`n"
+
+    $packageRoot = "$PSScriptRoot"
+    $contentRoot = Join-Path $packageRoot "Content"
+    if (-Not (Test-Path $contentRoot))
+    {
+        $null = New-Item -Path $contentRoot -ItemType Directory -Force
+    }
+    $profile = [Environment]::GetFolderPath("UserProfile")
+    $downloads = $profile+"\downloads"
+    $lastfilename = $null
+    $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
+    if ($file)
+    {
+        $lastfilename = $file.Name
+    }
+    $filename = $null
+    $attempts = 10
+    while ($attempts -ge 0)
+    {
+        Write-Host "Downloading setup file from $setupDownloadUrl"
+        Write-Warning "Please don't start any other download!"
+        try {
+            Start-Process "$setupDownloadUrl"
+            do
+            {
+                Start-Sleep -Seconds 10
+                $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
+                if ($file)
+                {
+                    $filename = $file.Name
+                    if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
+                    if ($filename.Contains(".partial")) { $filename = $lastfilename }
+                    if ($filename.Contains(".tmp")) { $filename = $lastfilename }
+                }
+            } while ($lastfilename -eq $filename)
+            $attempts = -1
+        } catch {
+            Write-Host "Catched exception $($_.Exception.Message)"
+            Write-Host "Retrying $attempts times"
+            $attempts--
+            if ($attempts -lt 0) { throw }
+            Start-Sleep -Seconds 10
+        }
+    }
+    Start-Sleep -Seconds 3
+}
+
 if ($filename)
 {
-    $setupTxtPath = (Join-Path $contentRoot "SetupName.txt")
-    $filename | Set-Content -Path $setupTxtPath -Encoding UTF8 -Force
-    $sourcePath = $downloads+"\"+$filename
-    $tmpPath = (Join-Path $contentRoot "Tmp")
-    & "$sourcePath" -sfx_o"$tmpPath" -sfx_ne
+
+    # --- Extract the self-extracting archive (same as the original Download.ps1) ---
+    $tmpPath = Join-Path $contentRoot "Tmp"
+    Write-Host "Extracting setup archive..."
+    & "$setupExePath" -sfx_o"$tmpPath" -sfx_ne
     do
     {
         Start-Sleep -Seconds 5
-        $process = Get-Process -Name $filename.Replace(".exe","") -ErrorAction SilentlyContinue
+        $process = Get-Process -Name $fileName.Replace(".exe", "") -ErrorAction SilentlyContinue
     } while ($process)
+
     Move-Item -Path (Join-Path $tmpPath "AcroRead.msi") -Destination $contentRoot -Force
     Move-Item -Path (Join-Path $tmpPath "Data1.cab") -Destination $contentRoot -Force
-    Move-Item -Path (Join-Path $tmpPath "*.msp") -Destination $contentRoot -Force
+    $mspFiles = Get-ChildItem -Path $tmpPath -Filter "*.msp" -ErrorAction SilentlyContinue
+    if ($mspFiles)
+    {
+        $mspFiles | Move-Item -Destination $contentRoot -Force
+    }
     Remove-Item -Path $tmpPath -Recurse -Force
-    Remove-Item -Path $sourcePath -Force
+    Remove-Item -Path $setupExePath -Force
+
+    Write-Host "Adobe Reader DC download and extraction completed successfully."
+    Write-Host "Content directory: $contentRoot"
 }
 else
 {
     throw "We were not able to download the reader setup"
 }
 
-#
-# Downloading Update
-#
-
-Write-Host "`n`n"
-Write-Host "At the time we wrote this script, there was no update available"
-Write-Host "Please visit $updateDownloadUrl"
-Write-Host "Call us to update this script, if an update is now available"
-Write-Host "`n`n"
-
-exit
-
-Write-Host "`n`n"
-Write-Host "We launch now a browser with the Adobe Reader update download page."
-Write-Host " - TODO"
-Write-Host " - TODO"
-Write-Host " - TODO"
-Write-Host " - TODO"
-Write-Host "`n"
-pause
-Write-Host "`n"
-$lastfilename = $null
-$file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-if ($file)
-{
-    $lastfilename = $file.Name
-}
-$filename = $null
-$attempts = 10
-while ($attempts -ge 0)
-{
-    Write-Host "Downloading setup file from $updateDownloadUrl"
-    Write-Warning "Please don't start any other download!"
-    try {
-        Start-Process "$updateDownloadUrl"
-        do
-        {
-            Start-Sleep -Seconds 10
-            $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-            if ($file)
-            {
-                $filename = $file.Name
-                if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
-                if ($filename.Contains(".partial")) { $filename = $lastfilename }
-                if ($filename.Contains(".tmp")) { $filename = $lastfilename }
-            }
-        } while ($lastfilename -eq $filename)
-        $attempts = -1
-    } catch {
-        Write-Host "Catched exception $($_.Exception.Message)"
-        Write-Host "Retrying $attempts times"
-        $attempts--
-        if ($attempts -lt 0) { throw }
-        Start-Sleep -Seconds 10
-    }
-}
-Start-Sleep -Seconds 3
-if ($filename)
-{
-    $sourcePath = $downloads+"\"+$filename
-    $patch = Get-ChildItem -Path $contentRoot -Filter "*.msp"
-    if ($patch)
-    {
-        $patch | Remove-Item -Force
-    }
-    Move-Item -Path $sourcePath -Destination $contentRoot -Force
-}
-else
-{
-    throw "We were not able to download the reader update"
-}
-
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCzxm2ZLxARTD5f
-# cH3JIIUTdy6xmHZ5R2osM0LY2gAT7KCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCnjyyTL0Gj06zS
+# xZ6bAmgQkIRHAe28CX4sys9zIzUR3aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -336,23 +374,23 @@ else
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICbqd84n
-# DzOE/V6bwEMOmp8b4YMceP8yp6mE2eodTRQcMA0GCSqGSIb3DQEBAQUABIICAFPc
-# sBFoALt1LEwoXKyQlz0E+wFbFJzOXrcT3/TnV8zjmUqueb1BxFZncOHQLi0q8kf0
-# VRWiHKaMCDdEx91Nrs0arn2ML3TlsTbReuTBY8wmoXwIKn6sLPm1U9VuTqMA3wzq
-# YUvP0j7LLQGcxRM4gfK+TB05LVTPjTPwuJmZnK1Gdptlg+c2LERn2PGhpoyu3sQA
-# yPhPmdcaTDggiZRLGGcWf0isuTDRrkSg9WbdoNopw/2XdHvDh7p3iEpBnkrUe2kx
-# qUd4YuDTLBahqfoYd9MvGMi2OeU2Xa3d9v0O9U68elL+g7mRYr2zM76mdFpIUG5y
-# 4awfhgz9yJZMcUXppArIQnl1J3MHRZSV94mM7MHlN0+zZDKinTyzaf0xuItQsrDd
-# RJfjQT2+0BKkNGBSyiS7rnFSKeodGwCh8mSSgy9L4+Tt/CfA3StCr44tZ7H17ivQ
-# WFKoshMgC7NQRwV9Whw/7DNtquhaDSETiDmr8L5+X4JFaoSAusIN51nrj5S8Tl6g
-# gxG1aS/Xm4TWCy8ixmrxhUaGqiMaA7DdsDIDs0aw6fuEPVf1a2liyykhhMB670SB
-# OJmHCZ2LZf0jJlRmcAX+ONiU2OJUIb0PY2xYugX0BhskQj4js3CqNSgzaHw358iW
-# Ng5BeHayalO4BqYvRT6f1nk8nb8Z+884OaWm0kw7oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIA2wBG/q
+# zo3HMvsGkTqrDMtqU1rheIvokJzCvewLFMPgMA0GCSqGSIb3DQEBAQUABIICAHYJ
+# NWya9hHwj21QQCRqe8E7UacAUTp2mAq+Zditunx+lTGt9LV6iBWmRhc+5REWPu0o
+# 5WU8UCH6FHVbgVaqJcyYr6GqgDrMN4/Uum0/gDX1PTSEiy19fEY2UDjLp9o1SwlO
+# 5RN3WUPUYZdmvKWjyooo7D7LNvXPhPddaaKN101kECQS2TQ9+EX62l2PRJ8GRpOl
+# f/1r5zrKuBCfQ7gF7X+gl3aCR6NeRrwBDAN2hJ6pLoCk28pFsq3lkAO1ruHOT0on
+# LagO6h771DD4jtjGwKxw+5KDKULsHgmCKEKOYRCmOGU2jPhoDf1H4Z6oSuAd4dVQ
+# QVBaFUCdPTSJmSiRBtjOOyJ3PPaI19I5Ty/k8UyuUYiKGqv8wSzH39ioVSyiyMe7
+# PsY4BQlIwNSuC2a9WYPjd9TOoP2292QPNGBrUjhHWoiLxK+tMQwrD5cgE0k3dR0e
+# vzOYA9TlQc4BQKjFMPVafu5TVraqkc4ypj3dR3VdWWFv2LfHyads8jL38gvgLLkT
+# 31Fo/zfpDC+JvNtcoi6AeMV5rQBwVr7Q6MNcETvlaIYI0ZAzL4CjoU8BiIN6VK2G
+# XBQZzs0BxChT8tIpklfImW+utWchF5VLUxaZ7vS2Yqar+ff6188oU4ylKOVdN7M1
+# XZVnEHdDA5omCLx3AXgywPdMzKOXki6XTXO6zWXgoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAhl4KUgmCbZqNRWfmHp9BkLS19+t4FiF4JDXDtr2ShdgIUfcnB
-# bol2ERUCaewaaDz7jvsaF7QYDzIwMjYwODI5MTUwNDEzWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDPZcyccsrPbjGQDvYM3C5xuK6Si56u5GG2nZt9XEXjiAIUa7jW
+# cJ5o6mkv1mbB55kWm0HXptwYDzIwMjYwOTA5MjE0MTA4WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -495,18 +533,18 @@ else
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDDR5JwK5lgCMJVDC4IJcGrJqkSDBuIE3OzRTO7Gc8wXIHzwQgiSOGCKJb2u
-# aY+8g9AwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDAxjJNtE8TGCeawxFXNPOede0SWFMWbII+Ov0V7Qb8g02rsRxvJikH3Wiid
+# oms1eUkwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAI1eCYwwDPUSyzJB5pY8hPToO8RO918HEQLZBgglDT2EK
-# mHd6SHUjYkSlpwzEvucybyWa4DJzGlMrx/oTfiAi9dCPPYe6xmRCTD6Driu7NBR3
-# rYNSEvMk0jjnzJZHuwbWrH+62Sxv0vE7a0TdPx4NUtrc0+nwQJj+N6MZFMB7LS1z
-# 3k7Erm3p9FoXb/rOQPQNT/I5cERvcw6BMil0r3vu3Vyh5kwzunDJBCgd+PRSRWt+
-# q1ZHz9JB92XllWHGlsO2QhAj5pFPZ8eX9CU3xVsjcvFm7TAywlWsX10XocAlUKyq
-# n4GhfCctCiX/BHBcaLAi7UL8OLcet0Wisuh9uQAY+S5rDCfsctf2FT1dbLDRX8VX
-# cjQef0ptoVQ6wXjwMob/iQCiV9O5UKOEkRFHUCOiPbyozZ7AkAcWYzpG6db4a4IY
-# kccvzimC1NYe9pTOIuJ6ON4H5f0N7n+4FsReRw985cvfD7fbxRwxZKyIbhh3bSSq
-# txDGvHihr4bhor1dQKrY
+# KoZIhvcNAQEMBQAEggGAtmwAyurMU92hcoWC4J0F1uy57BGVNFc5XMFW7KBDXiRQ
+# VCfx3FaJ1Wfd8NYMvFCGmn6ov6Haa1MS39oivIuwx25tTAXDTFiKlOkCJvte9Yab
+# /UPvn574rCTaZA96f2gt84IvfH5FAAsCMN4QsUInQbuk2I0A9p1MsTqfN4AywR3d
+# fQefMcvoKmLN9rmRIzjhLlg6WsyNLoF5FERd38Nyo7CLe4jOrYGVZEoxkO3p23ab
+# +w/sBhrp7IchMi+Tr6qWlXGiCarGTT+ru0wjgcpZUDcjnbXXEH33Rq/xu8urSs3V
+# WlrMSivuLwllAL9Z0Pz+0T/D/cE/0r0mGmRXKIb2XTQyXkgGe07EgbqUo99RhUbm
+# kFfg4VRV0cfn/gCbKMGJueB+l63CikCUxYxsB0fGJp/PPB1IQB14oOh1Y1ZuZeFf
+# R6uXJzPhjUaZaOx/is3EsjWSy7UlVKwWpR9rCCIZtZdANvCpVDa6oRW2qK8mXODv
+# n259Delcf48t3w6GDt7A
 # SIG # End signature block

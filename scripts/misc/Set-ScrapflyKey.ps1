@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,109 +27,74 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    08.09.2026 Konrad Brunner       Initial Version
 #>
 
-<#
-.SYNOPSIS
-Downloads the latest CheckPointVPN client installer for Windows and saves it to a local directory.
 
-.DESCRIPTION
-This script retrieves the current download link for the CheckPointVPN client for Windows from the official CheckPointVPN website and downloads the MSI installer file to a designated "Content" directory under the script location. It ensures the target directory exists and automatically handles URL extraction using a regex pattern. The script depends on an external helper function Invoke-WebRequestIndep, which is assumed to be defined in the referenced configuration script 01_ConfigureEnv.ps1.
+[CmdletBinding()]
+param(
+)
 
-.INPUTS
-None. This script does not accept pipeline input.
+# Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-.OUTPUTS
-None. The script creates an installer file in the "Content" directory.
+# Starting Transscript
+Start-Transcript -Path "$($AlyaLogs)\scripts\misc\Set-ScrapflyKey-$($AlyaTimeString).log" | Out-Null
 
-.EXAMPLE
-PS> .\Download.ps1
-Downloads the latest CheckPointVPN client for Windows to the local "Content" folder located in the same directory as the script.
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Microsoft.PowerShell.SecretManagement"
+Install-ModuleIfNotInstalled "Microsoft.PowerShell.SecretStore"
 
-.NOTES
-Copyright          : (c) Alya Consulting, 2019-2026
-Author             : Konrad Brunner
-License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
-Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
-#>
-
-. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
-
-$pageUrl = "https://www.checkpoint.com/de/quantum/remote-access-vpn/"
-
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
+# Checking store
+if (-Not (Get-SecretVault -Name "$($AlyaCompanyNameShortM365)Store" -ErrorAction SilentlyContinue))
 {
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
-}
-
-$filename = & "$PSScriptRoot\..\..\..\..\scripts\misc\Download-FileWithScrapfly.ps1" -OutDir $contentRoot -PageUrl $pageUrl -FileRegex "CheckPointVPN\.msi"
-if (-Not $filename)
-{
-    $installerName = "CheckPointVPN.msi"
-    Write-Warning "Problems automatically downloading $installerName. Please download manually"
-    Write-Host "We launch now a browser with the $installerName download page."
-    Write-Host " - Select 'Download for Windows'"
-    Write-Host " - Select 'Download'"
-    Write-Host "`n"
-    pause
-    
-    $profile = [Environment]::GetFolderPath("UserProfile")
-    $downloads = $profile+"\downloads"
-    $lastfilename = $null
-    $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-    if ($file)
+    if ((Get-SecretVault).Count -gt 0 -and (Get-SecretVault | Where-Object { $_.IsDefault -eq $true}).Count -gt 0)
     {
-        $lastfilename = $file.Name
-    }
-    $filename = $null
-    $attempts = 10
-    while ($attempts -ge 0)
-    {
-        Write-Host "Downloading $installerName file from $pageUrl"
-        Write-Warning "Please don't start any other download!"
-        try {
-            Start-Process "$pageUrl"
-            do
-            {
-                Start-Sleep -Seconds 10
-                $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-                if ($file)
-                {
-                    $filename = $file.Name
-                    if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
-                    if ($filename.Contains(".partial")) { $filename = $lastfilename }
-                    if ($filename.Contains(".tmp")) { $filename = $lastfilename }
-                }
-            } while ($lastfilename -eq $filename)
-            $attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)"
-            Write-Host "Retrying $attempts times"
-            $attempts--
-            if ($attempts -lt 0) { throw }
-            Start-Sleep -Seconds 10
-        }
-    }
-    Start-Sleep -Seconds 3
-    if ($filename)
-    {
-        $sourcePath = $downloads+"\"+$filename
-        Copy-Item -Path $sourcePath -Destination $contentRoot -Force
-        Remove-Item -Path $sourcePath -Force
+        Register-SecretVault -Name "$($AlyaCompanyNameShortM365)Store" -ModuleName "Microsoft.PowerShell.SecretStore"
     }
     else
     {
-        throw "We were not able to download $installerName"
+        Register-SecretVault -Name "$($AlyaCompanyNameShortM365)Store" -ModuleName "Microsoft.PowerShell.SecretStore" -DefaultVault
     }
+    #Unregister-SecretVault -Name "$($AlyaCompanyNameShortM365)Store"
+    Get-SecretStoreConfiguration
+    Set-SecretStoreConfiguration -Authentication None -Interaction None -Confirm:$false
+    Write-Warning "Please specify a password for the secret store $($AlyaCompanyNameShortM365)Store and save it on a secure place"
 }
+
+# Checking secret
+$scrapflyKey = Get-Secret -Name "scrapflyKey" -Vault "$($AlyaCompanyNameShortM365)Store" -ErrorAction SilentlyContinue
+if (-Not $scrapflyKey)
+{
+    Write-Host "Storing ScrapflyKey."
+}
+else
+{
+    Write-Host "Updating ScrapflyKey."
+}
+$scrapflyKey = Read-Host -Prompt "ScrapflyKey" -AsSecureString
+$null = Set-Secret -Vault "$($AlyaCompanyNameShortM365)Store" -Name "scrapflyKey" -Secret $scrapflyKey
+$ScrapflyKeyChk = Get-Secret -Name "scrapflyKey" -Vault "$($AlyaCompanyNameShortM365)Store" -ErrorAction SilentlyContinue
+if (-Not $ScrapflyKeyChk)
+{
+    Write-Error "Storing ScrapflyKey has not wroked."
+}
+else
+{
+    Write-Host "ScrapflyKey successfully stored."
+}
+
+Stop-Transcript
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB9b1b+s1WXKLU3
-# 8v+SbzdYSYHoNql3R/sehVN/WGROUKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDWg4mrB3CNjIgj
+# WezElgpkOQeHkUF8y5fLL/DOaiQ466CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -243,23 +208,23 @@ if (-Not $filename)
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGBXhF77
-# ZqULnx4Q/hQFDXdndcmkMUW3rbPDyVixC1C1MA0GCSqGSIb3DQEBAQUABIICAIoR
-# npWQtioWR8a+1+cBbfA6WPT1BZCUknFmPIv7S+tcDwxYM975mmGux6398CwqtCJ7
-# 7+7q/RY/3E3FRWruPcPfBp85L+RGuQgCN1BeJLNoP1mTuSF9yR3tc0egGUv0aquW
-# LyKeQfWkN1+r/mrphxQgLtrIN9xRdXSDV7iBs7gwfP+CGqT7hC4e+NlVExz0m2Jd
-# J5pkw96/NsFo4r62cTpg/5x9M7UD77sDUWyPAuQBQWfUPAa/nrytFD0j1dUez2Rg
-# ReINQ/Ebvq0SzVMR6du/VCLSDE0l6ZmYvIkrNhiCqQCUN7hET3/4YqpcTQro4T37
-# bEhKCb7W6pEYQTTWqePq0N5IKGE0qpoa7QUuuyr/zn1r0xIXQrwvs9tsiNaOHi6s
-# nbMQT7CrD0lWFs5U0Mzx1Iw44CAo9hCSyH1IqhvZqIfqx9+HUJ1am+JPrC8vhqo8
-# DWnAUml07wbLQ3Gl6uaPPG3ndNwCqfpyENsFzDVtMmAld2OLgVWHaNOBb5cQwtu1
-# HI47bKNC+Hmev1S+woSAmtwSfspB8bNhlBGcfaS+cPVN9oDbRHpKjnP4lqhkOZkX
-# vdXMbyhjwSMCTeJhGGBLA/zqG+Zg8ILcEXlBv104vdxAmK3GQHcFBLtQbWe9J/lA
-# UHvgjyRn4H/EWBIMdi0v671XK73yPl4c6P2UUCVuoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDGAh6xf
+# 9Bkl+rsu3yoG98LJLB99ODXcqqdXYAnrR4NiMA0GCSqGSIb3DQEBAQUABIICADzi
+# kWpUj03Jjsj3U8RZZ0+EyZCM9KLXA7hwGVjleVzO9m6lo+u6liu/LdukbMVy/GeC
+# kjXQwekABYhoVFeDCK8imHT2KuH/JkMAE53p4Ca0xrKOU/LyoOynp1l+mp/Y6t1X
+# +J1gR3nQiDszA9WvjaTeN1/u0WsWf3/mLDr4poBsIFHk4xNYvUss8S23ZnmX4fWP
+# E4UGrXGs8fN71E1B0fxc307eO0azeBgxhaCayG7wt/OTykTqob45aHyumjuLUPnR
+# TLhlWjqYTewV88siwyxpkbarQkQjUI9zhReP2eTegG/rEy/VGRcUEdidRsfl3cCS
+# 1R7XRc4fkKBng3NJ1jwDyb7JFUgn6UkXE1F4JcK2EAh21Ox+1ovTGUuedpq9iBgJ
+# eBD06w8JkKa/ypDwYVM7fHHqbVDohY0dcBf7tGfnnCkCu3+g7cVkZ7/UVmdG7pU6
+# CukgGUFTJEbNPUqy5bIDUMKKr4h8YTpcGdaZ1zLNAGUIzOGw/AD4NaRF4/9T/t/7
+# 13fCWOO5QxwS2gzEHC3oVCKBnGFAv01fwmp2bRhz+VxjrlGQRErvapYQXWMGnTWB
+# iusm41cyqAVJPalbcYXuflqWIYjo9ciWow6WDpOrGKioxYYxkgKbQKhfPqSenwd+
+# jCR4+ecBJhTrahlIY/ZoAsmh9H4IluEQhMu51fJvoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDScjj9cZLPTwinQ1xPKBleR3Tz/NgqKQ44lAQy2DZC3QIUInJV
-# dNb3gW/8fisDxGqCEIbdkmUYDzIwMjYwOTA5MTkyNjUwWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDmtCrBo83UHR9RHMp4Kr1XE6hi5zveh8Hl3rRSD5laKgIUBRzk
+# 5L02tryuSNyMfHqzirRlaFMYDzIwMjYwOTA5MjE0MjEzWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -402,18 +367,18 @@ if (-Not $filename)
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBRQc414sE9O3DicSe52HrNQZhsYo/58sWJqI5x/8gaTEE7bKwHXv7N1hv9
-# bIAkK4EwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDRfQ+tWO6xXUZP5TDWmyYY4/VsLiVGLdm5cu0h9YaTKYdSK4vkl6uVeomS
+# fovVSCgwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGALuOoV2FWzNpPITG+LV4t8iPJ3uJbrL0NwvQMAvDCDCwW
-# rTFkDLIHJV+Nn2QkrR9iFS/pI04gviwdGSE51flgYAFiaj+1/KzqZfv57f/tINDU
-# Pgox2p1mQ/vW99n+d3k1gM1uaYmKf55T1ACJKgAbUw7XlOZ28WTeF2UHoLj08FRr
-# XUvM7lClAgQmufYMPNG0hntb4q3fYUfQK87W5Ep09d4qUIALulEbXXyH7Q2Qtr9+
-# 4AWgmXyuOlkLG2gPBEm8lHbY3hzDAqaR5/CiYbok4MOhCkGcz/ulkvtXqEgApov7
-# EmnoAkaCtvfUWviLSHSOgaytFs7S5blAZMQg4SF16Zh4k8z59Smkvy9HCPgSaUMl
-# AnMADhtZmo6E6+UO9DRw8g7giLhVl7mXO52Kz33h6+na/ysH7CgidqKL+vKzP0e0
-# wFkANoDz9P3sX1EVXhc5HsTSolu1dnnc12b0VtmjKhP2Tp2Bk57Xd3hHt5rVjIsg
-# 3z5GK0Q6bS5AE0u4Sfha
+# KoZIhvcNAQEMBQAEggGAaWFlUPF0azpe0Wf5gbiNNObXzjOCcqQPSubtsq0cFLG0
+# E5APgUVsyJGqbfdi+dwKUGWpBXHSdV88Us9wnoMbmTGhMbNpfswna/GGDCMsKR22
+# RUX17zE/BgHxHled7tfsiXMrYJSt9oyQXPGdNtJ9uhYxA/ncUONMjvhaaTxKUPq6
+# jQGoEvu/kiQgOJdAcnY/WntS0hiNZrUxl9M2bdOOI1x1q3Q1hQ6DuzSAG5FAjtHx
+# rC76Vqejaye9NS+yuJU9fF/hQJJPU5QSrTwRx7qfg9YSDhOQI/0MIMgaYOpiy7HD
+# a058up7ejF5MzQY2QEF9BK3tiinMhDWWQOfDtmiec5RA3GQpkI9d+9DKpwxavYk1
+# I1dXsANABCn/3IqV2S3nBkSG2ON0BUpq7Xx7t/91rVbLTRDg6zWCcxxvLHprdcoD
+# Yk3/UwUGqKHfTAgPO26PiRI5rP3YCHUmLCJoHuJUOaRQTJ2v5saAVXkefJH31WKj
+# oa1RdCKR8oNYIv+2c3Lw
 # SIG # End signature block

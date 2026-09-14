@@ -1,7 +1,7 @@
 {
   "@odata.type": "#microsoft.graph.win32LobApp",
   "displayName": "WIN OpenSSL",
-  "description": "Installs OpenSSL 4.0.1 (64-bit)",
+  "description": "Installs OpenSSL 4.0.2 (64-bit)",
   "publisher": "OpenSSL.org",
   "largeIcon": {
     "type": "image/png",
@@ -15,7 +15,7 @@
   "developer": "Shining Light Productions",
   "notes": "",
   "roleScopeTagIds": [],
-  "fileName": "Win64OpenSSL-4_0_1.intunewin",
+  "fileName": "Win64OpenSSL-4_0_2.intunewin",
   "installCommandLine": "Install.cmd",
   "uninstallCommandLine": "Uninstall.cmd",
   "applicableArchitectures": "x64",
@@ -32,7 +32,7 @@
     "productName": "OpenSSL (64-bit)",
     "packageType": "PerUser"
   },
-  "setupFilePath": "Win64OpenSSL-4_0_1.msi",
+  "setupFilePath": "Win64OpenSSL-4_0_2.msi",
   "minimumSupportedWindowsRelease": "1607",
   "minimumSupportedOperatingSystem": {
     "v8_0": false,
@@ -53,7 +53,7 @@
       "check32BitOn64System": false,
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "4.0.1"
+      "detectionValue": "4.0.2"
     }
   ],
   "requirementRules": [],
@@ -66,7 +66,7 @@
       "check32BitOn64System": false,
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "4.0.1"
+      "comparisonValue": "4.0.2"
     }
   ],
   "installExperience": {
@@ -99,5 +99,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "4.0.1"
+  "displayVersion": "4.0.2"
 }

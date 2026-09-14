@@ -23,13 +23,13 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "publisher": "Inkscape",
     "upgradeCode": "{4D5FEDAA-84A0-48BE-BD2A-08246398361A}",
     "packageType": "PerMachine",
+    "publisher": "Inkscape",
     "productCode": "{15D8477C-2591-49DF-B5E9-A69E1CDE95AD}",
     "productName": "Inkscape",
-    "productVersion": "1.4.4",
-    "requiresReboot": "false"
+    "requiresReboot": "false",
+    "productVersion": "1.4.4"
   },
   "fileName": "inkscape-1.4.4_2026-05-05_dcaf3e7-x64.signed_xMx7DJV.intunewin",
   "setupFilePath": "inkscape-1.4.4_2026-05-05_dcaf3e7-x64.signed_xMx7DJV.msi",

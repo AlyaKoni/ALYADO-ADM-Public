@@ -45,7 +45,7 @@
       "valueName": "Version",
       "detectionType": "version",
       "operator": "greaterThanOrEqual",
-      "detectionValue": "2.4.903778"
+      "detectionValue": "2.7.1922.0"
     }
   ],
   "requirementRules": [],
@@ -58,7 +58,7 @@
       "valueName": "Version",
       "operationType": "version",
       "operator": "greaterThanOrEqual",
-      "comparisonValue": "2.4.903778"
+      "comparisonValue": "2.7.1922.0"
     }
   ],
   "installExperience": {
@@ -91,5 +91,5 @@
       "type": "retry"
     }
   ],
-  "displayVersion": "2.4.903778"
+  "displayVersion": "2.7.1922.0"
 }

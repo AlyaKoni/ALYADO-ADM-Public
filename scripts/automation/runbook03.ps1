@@ -38,6 +38,10 @@
     04.05.2026 Konrad Brunner       More robust updates
     08.07.2026 Konrad Brunner       Better app cert handling
     01.09.2026 Konrad Brunner       Better app cert removal handling
+    10.09.2026 Konrad Brunner       Robust credential handling: create once with generated KeyId, use cmdlet output, read-only polling, removal only for own RunAs cert (name or old thumbprint), verbose logging
+    10.09.2026 Konrad Brunner       Calm logging for transient Graph removal errors: INFO line with retry instead of ERROR output, full error details only after the final attempt
+    11.09.2026 Konrad Brunner       Replaced Remove-AzADAppCredential with surgical Graph removeKey REST call (the cmdlet does a blind read-modify-write over the whole keyCredentials collection which can WIPE ALL credentials on stale reads), post-removal verification with self-healing re-add
+    11.09.2026 Konrad Brunner       Pure Az approach (Graph REST removed again): previous-generation credentials are removed at the START of a run against long-converged keys only (race-free by design), current automation certificate credential preserved by thumbprint, defensive Graph token handling in the mail path
 
 #>
 
@@ -123,9 +127,142 @@ try {
     $AzAdApplication = Get-AzADApplication -Filter $Filter
     if (-Not $AzAdApplication) { throw "Application with id $($AlyaApplicationId) not found" }
 
+    $AzureCertificateName = $AlyaAutomationAccountName + $AzureCertifcateAssetName
+    # Removing previous-generation RunAs credentials (start-of-run cleanup)
+    #
+    # Deletion strategy - pure Az and race-free by design:
+    # Old credentials are removed HERE, at the START of a rotation run, long after they
+    # were created. Remove-AzADAppCredential internally rewrites the WHOLE keyCredentials
+    # collection (GET app, filter out the target KeyId, PATCH the app with the rest).
+    # Running it directly after adding a fresh credential is a race against Graph
+    # replication: a stale internal read can miss the fresh key and the PATCH then WIPES
+    # the entire collection (observed in production on 10.09.2026: the app ended up with
+    # ZERO credentials), or it rewrites the collection with stale content (zombie
+    # effects). Against long-converged keys the same call is deterministic and safe -
+    # therefore this script only ever removes PREVIOUS generations, never a credential
+    # it just created. The credential replaced by this run stays on the app until the
+    # NEXT run removes it (documented one-generation overlap).
+    #
+    # Safety guards:
+    # - The credential matching the CURRENT automation certificate (thumbprint compare)
+    #   is preserved unconditionally - it is the current-generation RunAs credential.
+    # - Only credentials with DisplayName "CN=$AzureCertificateName" are candidates.
+    #   Foreign certificates and client secrets are never touched.
+    # - If the current credential cannot be identified, NO removal happens at all.
+    Write-Output "Checking for previous-generation RunAs credentials to remove"
+    $assetThumbprintBase64 = ""
+    try { $assetThumbprintBase64 = [System.Convert]::ToBase64String($RunAsCert.GetCertHash()) } catch { Write-Output ("WARNING: could not determine automation certificate thumbprint: " + $_.Exception.Message) }
+    Write-Output ("Thumbprint (base64) of the current automation certificate: " + $assetThumbprintBase64)
+    $rawCleanup = @(Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId)
+    $cleanupList = @()
+    foreach ($rawItem in $rawCleanup) { $cleanupList += @($rawItem) }
+    Write-Output ("Credentials visible at start: " + $cleanupList.Count)
+    $preserveKeyId = $null
+    $previousGenKeyIds = @()
+    foreach ($actCert in $cleanupList) {
+        $parsedKeyId = "$($actCert.KeyId)" -as [Guid]
+        $keyIdString = "<unparsable KeyId>"
+        if ($null -ne $parsedKeyId) { $keyIdString = $parsedKeyId.ToString() }
+        $ckiString = ""
+        try {
+            if ($actCert.CustomKeyIdentifier -is [byte[]]) { $ckiString = [System.Convert]::ToBase64String($actCert.CustomKeyIdentifier) }
+            elseif ($null -ne $actCert.CustomKeyIdentifier) { $ckiString = "$($actCert.CustomKeyIdentifier)" }
+        } catch { $ckiString = "" }
+        Write-Output ("  START: KeyId=" + $keyIdString + " DisplayName=" + $actCert.DisplayName + " Type=" + $actCert.Type + " Start=" + $actCert.StartDateTime + " End=" + $actCert.EndDateTime + " Thumbprint=" + $ckiString)
+        if ($null -eq $parsedKeyId) {
+            Write-Output ("WARNING: credential with unparsable KeyId (System.Object[] case) - it will never be removed. Raw object follows:")
+            try { Write-Output ($actCert | ConvertTo-Json -Depth 5) } catch { Write-Output ($actCert | Out-String) }
+            continue
+        }
+        if ($assetThumbprintBase64 -ne "" -and $ckiString -eq $assetThumbprintBase64) {
+            $preserveKeyId = $parsedKeyId
+            Write-Output ("  -> current automation certificate credential - preserved")
+            continue
+        }
+        if ($actCert.DisplayName -eq "CN=$AzureCertificateName") {
+            $previousGenKeyIds += $keyIdString
+            Write-Output ("  -> previous-generation RunAs credential - marked for removal")
+        } else {
+            Write-Output ("  -> foreign or unknown credential - never touched")
+        }
+    }
+    if ($null -eq $preserveKeyId) {
+        Write-Output "WARNING: could not identify the current automation certificate credential by thumbprint - skipping ALL removals this run (safety first)"
+        $previousGenKeyIds = @()
+    }
+    $cleanupFailures = 0
+    foreach ($oldKeyIdString in $previousGenKeyIds) {
+        Write-Output ("Removing previous-generation certificate " + $oldKeyIdString)
+        $removed = $false
+        $maxRemoveAttempts = 3
+        for ($removeAttempt = 1; $removeAttempt -le $maxRemoveAttempts; $removeAttempt++) {
+            try {
+                Remove-AzADAppCredential -ApplicationId $AzAdApplication.AppId -KeyId ([Guid]$oldKeyIdString)
+                $removed = $true
+                Write-Output ("Removed previous-generation certificate " + $oldKeyIdString + " (attempt " + $removeAttempt + ")")
+                break
+            } catch {
+                if ($removeAttempt -lt $maxRemoveAttempts) {
+                    Write-Output ("INFO: removal of " + $oldKeyIdString + " was not accepted on attempt " + $removeAttempt + " (" + $_.Exception.Message + ") - known transient effect, retrying in 10 seconds...")
+                    Start-Sleep -Seconds 10
+                } else {
+                    Write-Output ("ERROR: removing " + $oldKeyIdString + " failed on the final attempt " + $removeAttempt + ": " + $_.Exception.Message)
+                    Write-Output ("ERROR details: " + ($_ | Out-String))
+                }
+            }
+        }
+        if (-not $removed) { $cleanupFailures++ }
+    }
+    if ($previousGenKeyIds.Count -eq 0) {
+        Write-Output "No previous-generation RunAs credential was present - nothing was removed"
+    }
+    # Cleanup verification. Safe here: the preserved credential (this session's identity)
+    # was NOT removed, so the Az session stays fully functional during verification.
+    if ($previousGenKeyIds.Count -gt 0) {
+        $stillThere = $false
+        $preserveMissingCount = 0
+        for ($verifyAttempt = 1; $verifyAttempt -le 6; $verifyAttempt++) {
+            Start-Sleep -Seconds 10
+            try {
+                $rawVerify = @(Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId)
+                $verifyList = @()
+                foreach ($rawItem in $rawVerify) { $verifyList += @($rawItem) }
+            } catch {
+                Write-Output ("ERROR: Get-AzADAppCredential failed during cleanup verification: " + $_.Exception.Message)
+                continue
+            }
+            $visibleKeyIds = @()
+            foreach ($visCred in $verifyList) {
+                $visKeyId = "$($visCred.KeyId)" -as [Guid]
+                if ($null -ne $visKeyId) { $visibleKeyIds += $visKeyId.ToString() }
+            }
+            Write-Output ("Cleanup verification attempt " + $verifyAttempt + " of 6, visible KeyIds: " + ($visibleKeyIds -join ", "))
+            if ($visibleKeyIds -contains $preserveKeyId.ToString()) {
+                $preserveMissingCount = 0
+            } else {
+                $preserveMissingCount++
+                Write-Output ("WARNING: preserved current-generation credential not visible (sighting " + $preserveMissingCount + " of 2 before abort)")
+                if ($preserveMissingCount -ge 2) {
+                    throw "FATAL: the preserved current-generation credential disappeared during cleanup - aborting before rotation to avoid locking the automation out"
+                }
+            }
+            $stillThere = $false
+            foreach ($oldKeyIdString in $previousGenKeyIds) {
+                if ($visibleKeyIds -contains $oldKeyIdString) { $stillThere = $true }
+            }
+            if (-not $stillThere) { break }
+            Write-Output "Previous-generation credential(s) still visible, waiting..."
+        }
+        if ($stillThere) {
+            Write-Output ("WARNING: previous-generation credential(s) still visible after cleanup verification (" + ($previousGenKeyIds -join ", ") + ") - the next rotation run retries the removal")
+        }
+    }
+    if ($cleanupFailures -gt 0) {
+        throw ($cleanupFailures.ToString() + " previous-generation credential(s) could not be removed, see errors above")
+    }
+
     # Create RunAs certificate
     Write-Output ("Creating new certificate")
-    $AzureCertificateName = $AlyaAutomationAccountName + $AzureCertifcateAssetName
     $SelfSignedCertNoOfMonthsUntilExpired = 6
     $SelfSignedCertPlainPassword = "-" + [Guid]::NewGuid().ToString() + "]"
     $PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".pfx")
@@ -183,71 +320,174 @@ try {
 
     # Checking application credential
     Write-Output "Checking application credential"
-    $before = @(Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId)
-    $null = New-AzADAppCredential -ApplicationId $AzAdApplication.AppId -CustomKeyIdentifier $CerThumbprint -CertValue $CerKeyValue -StartDate $CerStartDate -EndDate $CerEndDate
-    $retries = 10
-    do {
+
+    # Snapshot of the existing credentials BEFORE the new one is created.
+    # Get-AzADAppCredential can (depending on Az version) return a nested array, which
+    # leads to "Cannot convert System.Object[] to System.Guid" errors on KeyId. Therefore
+    # everything is flattened into a plain list and every KeyId is parsed defensively.
+    # Note: deliberately NOT using [Guid]::TryParse with [ref] anywhere - the ref binder
+    # fails when the referenced variable is $null (runtime error on Windows PowerShell 5.1
+    # AND pwsh 7, invisible to syntax checks). "-as [Guid]" converts safely instead.
+    $rawBefore = @(Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId)
+    $before = @()
+    foreach ($rawItem in $rawBefore) { $before += @($rawItem) }
+    Write-Output ("Credentials visible before update: " + $before.Count)
+    foreach ($oldCred in $before) {
+        $parsedOldKeyId = "$($oldCred.KeyId)" -as [Guid]
+        $oldKeyIdString = "<unparsable KeyId>"
+        if ($null -ne $parsedOldKeyId) { $oldKeyIdString = $parsedOldKeyId.ToString() }
+        $oldCkiString = ""
         try {
-            Start-Sleep -Seconds 20
-            $after = @(Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId)
-            if ($after.Count -eq ($before.Count+1))
-            {
-                break
-            }
-            else
-            {
-                Write-Output "Not able to find the provided app credential. Waiting 20 seconds..."
-            }
-        }
-        catch {
-            Write-Output $_.Exception.Message
-            Write-Output "Error updating certificate, retrying in 20 seconds..."
-        }
-        $retries--
-        if ($retries -le 0) {
-            throw "Failed to update certificate after multiple retries"
-        }
-    } while ($true)
-
-    # Removing old certificate from application
-    if ($after.Count -eq ($before.Count+1))
-    {
-        Write-Output ("Removing old certificates from application $($before.KeyId -join '|')")
-        foreach ($befCert in $before)
-        {
-            $keys = @($befCert.KeyId)
-            foreach($keyId in $keys)
-            {
-                Write-Output ("Removing old certificate $keyId/$($keys.Count)")
-                Remove-AzADAppCredential -ApplicationId $AzAdApplication.AppId -KeyId $keyId
-                Start-Sleep -Seconds 20
-            }
-        }
-    }
-    else
-    {
-        Write-Output ("No new certificate added, skipping removal of old certificates.")
+            if ($oldCred.CustomKeyIdentifier -is [byte[]]) { $oldCkiString = [System.Convert]::ToBase64String($oldCred.CustomKeyIdentifier) }
+            elseif ($null -ne $oldCred.CustomKeyIdentifier) { $oldCkiString = "$($oldCred.CustomKeyIdentifier)" }
+        } catch { $oldCkiString = "" }
+        Write-Output ("  BEFORE: KeyId=" + $oldKeyIdString + " DisplayName=" + $oldCred.DisplayName + " Type=" + $oldCred.Type + " Start=" + $oldCred.StartDateTime + " End=" + $oldCred.EndDateTime + " Thumbprint=" + $oldCkiString)
     }
 
-    $retries = 10
-    do {
-        Start-Sleep -Seconds 20
-        $after = @(Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId)
-        if ($after.Count -eq 1)
-        {
-            break
+    $newKeyId = [Guid]::NewGuid()
+    Write-Output ("Generated KeyId for the new credential: " + $newKeyId.ToString())
+    Write-Output ("Thumbprint (base64) of the new certificate: " + $CerThumbprint)
+    $creds = New-Object Microsoft.Azure.PowerShell.Cmdlets.Resources.MSGraph.Models.ApiV10.MicrosoftGraphKeyCredential
+    $creds.DisplayName = "CN=$AzureCertificateName"
+    $creds.CustomKeyIdentifier = $Cert.GetCertHash()
+    $creds.Key = $Cert.GetRawCertData()
+    $creds.KeyId = $newKeyId.ToString()
+    $creds.Type = "AsymmetricX509Cert"
+    $creds.Usage = "Verify"
+    $creds.StartDateTime = $CerStartDate
+    $creds.EndDateTime = $CerEndDate
+
+    # IMPORTANT: the credential is created EXACTLY ONCE. Never re-create it inside a retry
+    # loop: Graph replication can be delayed and blind retries produce duplicate
+    # credentials. All retries below are READ-ONLY polling.
+    $createdOutput = @()
+    $createFailed = $false
+    try {
+        Write-Output "Calling New-AzADAppCredential (single attempt)..."
+        $createdOutput = @(New-AzADAppCredential -ApplicationId $AzAdApplication.AppId -KeyCredentials $creds)
+        Write-Output ("New-AzADAppCredential returned " + $createdOutput.Count + " object(s)")
+        foreach ($createdItem in $createdOutput) {
+            Write-Output ("  OUTPUT: " + ($createdItem | Out-String))
         }
-        else
-        {
-            Write-Output "Not able to find one app credential. Waiting 20 seconds..."
+    } catch {
+        $createFailed = $true
+        Write-Output ("ERROR: New-AzADAppCredential failed: " + $_.Exception.Message)
+        Write-Output ("ERROR details: " + ($_ | Out-String))
+        try { Write-Output ("ERROR exception as json: " + ($_.Exception | ConvertTo-Json -Depth 5)) } catch { Write-Output "ERROR: could not serialize the exception" }
+        Write-Output "NOTE: the credential may still have been created server side, continuing with read-only verification"
+    }
+
+    # Determine the effective KeyId of the new credential, preferring the cmdlet output
+    $effectiveKeyId = $null
+    foreach ($createdItem in $createdOutput) {
+        try {
+            $parsedOutputKeyId = "$($createdItem.KeyId)" -as [Guid]
+            if ($null -ne $parsedOutputKeyId) {
+                $effectiveKeyId = $parsedOutputKeyId
+                Write-Output ("Effective KeyId taken from New-AzADAppCredential output: " + $effectiveKeyId.ToString())
+            } else {
+                Write-Output ("WARNING: New-AzADAppCredential output contained no parsable KeyId: " + ($createdItem | Out-String))
+            }
+        } catch {
+            Write-Output ("WARNING: could not read KeyId from New-AzADAppCredential output: " + $_.Exception.Message)
         }
-        $retries--
-        if ($retries -le 0) {
-            Write-Error "Failed to find one certificate after multiple retries" -ErrorAction Continue
-            break
+        if ($null -ne $effectiveKeyId) { break }
+    }
+
+    # Read-only polling until the new credential becomes visible. It is matched by the
+    # generated KeyId OR by the certificate thumbprint (CustomKeyIdentifier), since the
+    # service may assign its own KeyId.
+    $found = $false
+    $after = @()
+    $maxPollAttempts = 6
+    $pollIntervalSeconds = 10
+    for ($pollAttempt = 1; $pollAttempt -le $maxPollAttempts; $pollAttempt++) {
+        Start-Sleep -Seconds $pollIntervalSeconds
+        Write-Output ("Polling attempt " + $pollAttempt + " of " + $maxPollAttempts + " for the new credential...")
+        try {
+            $rawAfter = @(Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId)
+        } catch {
+            Write-Output ("ERROR: Get-AzADAppCredential failed during polling: " + $_.Exception.Message)
+            Write-Output ("ERROR details: " + ($_ | Out-String))
+            continue
         }
-    } while ($true)
-    Write-Output ("Actual certificate: $($after.KeyId -join '|')")
+        $after = @()
+        foreach ($rawItem in $rawAfter) { $after += @($rawItem) }
+        Write-Output ("  Credentials visible now: " + $after.Count)
+        foreach ($actCert in $after) {
+            $parsedKeyId = "$($actCert.KeyId)" -as [Guid]
+            $keyIdString = "<unparsable KeyId>"
+            if ($null -ne $parsedKeyId) { $keyIdString = $parsedKeyId.ToString() }
+            $ckiString = ""
+            try {
+                if ($actCert.CustomKeyIdentifier -is [byte[]]) { $ckiString = [System.Convert]::ToBase64String($actCert.CustomKeyIdentifier) }
+                elseif ($null -ne $actCert.CustomKeyIdentifier) { $ckiString = "$($actCert.CustomKeyIdentifier)" }
+            } catch { $ckiString = "" }
+            Write-Output ("  VISIBLE: KeyId=" + $keyIdString + " DisplayName=" + $actCert.DisplayName + " Type=" + $actCert.Type + " Start=" + $actCert.StartDateTime + " End=" + $actCert.EndDateTime + " Thumbprint=" + $ckiString)
+            if ($null -eq $parsedKeyId) {
+                Write-Output ("WARNING: credential entry with unparsable KeyId detected (this is the System.Object[] case). Raw object follows:")
+                try { Write-Output ($actCert | ConvertTo-Json -Depth 5) } catch { Write-Output ($actCert | Out-String) }
+                continue
+            }
+            if ($parsedKeyId -eq $newKeyId) {
+                $effectiveKeyId = $parsedKeyId
+                $found = $true
+                Write-Output ("New credential found (matched by generated KeyId " + $newKeyId.ToString() + ")")
+            } elseif ($ckiString -eq $CerThumbprint -and $actCert.DisplayName -eq "CN=$AzureCertificateName") {
+                $effectiveKeyId = $parsedKeyId
+                $found = $true
+                Write-Output ("New credential found (matched by thumbprint), effective KeyId: " + $effectiveKeyId.ToString())
+            }
+        }
+        if ($found) { break }
+        Write-Output "New credential not visible yet, waiting before next attempt..."
+    }
+
+    if (-not $found) {
+        if ($null -ne $effectiveKeyId) {
+            Write-Output ("WARNING: new credential never became visible via Get-AzADAppCredential, but the output of New-AzADAppCredential provided KeyId " + $effectiveKeyId.ToString() + " - trusting the output")
+        } elseif ($createFailed) {
+            Write-Output "ERROR: credential creation failed and nothing new became visible"
+            Write-Output ("Last visible credential KeyIds: " + (($after | ForEach-Object { "$($_.KeyId)" }) -join ", "))
+            throw "New-AzADAppCredential failed and no new credential was found. No second creation attempt is made on purpose (duplicate avoidance). See log above."
+        } else {
+            Write-Output "ERROR: New-AzADAppCredential reported no error, but the new credential never became visible and no KeyId was returned"
+            Write-Output ("Last visible credential KeyIds: " + (($after | ForEach-Object { "$($_.KeyId)" }) -join ", "))
+            throw "Created credential was not found after polling. No second creation attempt is made on purpose (duplicate avoidance). See log above."
+        }
+    } else {
+        Write-Output ("New credential verified, effective KeyId: " + $effectiveKeyId.ToString())
+    }
+
+    # Final state log. Safe here: this runbook authenticates via the system-assigned
+    # removals happened at the START of this run against long-converged keys, and the
+    # credential this session authenticates with was preserved - the Az session stays
+    # fully functional until the very end.
+    Write-Output "Final credential state:"
+    try {
+        $rawFinal = @(Get-AzADAppCredential -ApplicationId $AzAdApplication.AppId)
+        $final = @()
+        foreach ($rawItem in $rawFinal) { $final += @($rawItem) }
+        $foundNew = $false
+        foreach ($finCred in $final) {
+            $finKeyId = "$($finCred.KeyId)" -as [Guid]
+            $finKeyIdString = "<unparsable KeyId>"
+            if ($null -ne $finKeyId) { $finKeyIdString = $finKeyId.ToString() }
+            $finCki = ""
+            try {
+                if ($finCred.CustomKeyIdentifier -is [byte[]]) { $finCki = [System.Convert]::ToBase64String($finCred.CustomKeyIdentifier) }
+                elseif ($null -ne $finCred.CustomKeyIdentifier) { $finCki = "$($finCred.CustomKeyIdentifier)" }
+            } catch { $finCki = "" }
+            Write-Output ("  FINAL: KeyId=" + $finKeyIdString + " DisplayName=" + $finCred.DisplayName + " Type=" + $finCred.Type + " Start=" + $finCred.StartDateTime + " End=" + $finCred.EndDateTime + " Thumbprint=" + $finCki)
+            if ($null -ne $finKeyId -and $finKeyId -eq $effectiveKeyId) { $foundNew = $true }
+        }
+        if (-not $foundNew) {
+            Write-Output ("WARNING: new credential " + $effectiveKeyId.ToString() + " is not visible in the final list (possible replication delay)")
+        }
+    } catch {
+        Write-Output ("ERROR: final state log failed: " + $_.Exception.Message)
+    }
+    Write-Output "NOTE: the credential that was current before this run intentionally remains on the app - it is removed by the NEXT rotation run (race-free one-generation overlap by design)."
 
     Write-output "Done"
 }
@@ -263,8 +503,22 @@ catch {
 
     # Getting MSGraph Token
     Write-Output "Getting MSGraph Token"
-    $tokenSec = Get-AzAccessToken -ResourceUrl $AlyaGraphEndpoint -TenantId $AlyaTenantId -AsSecureString
-    $tokenPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenSec.Token))
+    # Defensive token handling: -AsSecureString is not available on older Az.Accounts
+    # versions (parameter binding errors observed in the Automation environment), and
+    # newer versions return a SecureString even without the switch. Handle both.
+    $tokenPlain = ""
+    $tokenType = "Bearer"
+    try {
+        $tokenObj = Get-AzAccessToken -ResourceUrl $AlyaGraphEndpoint -TenantId $AlyaTenantId
+        if ($tokenObj.Token -is [System.Security.SecureString]) {
+            $tokenPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenObj.Token))
+        } else {
+            $tokenPlain = "$($tokenObj.Token)"
+        }
+        if ($null -ne $tokenObj.Type -and "$($tokenObj.Type)" -ne "") { $tokenType = "$($tokenObj.Type)" }
+    } catch {
+        Write-Output ("ERROR: could not acquire Graph token for the error mail: " + $_.Exception.Message)
+    }
 
     # Sending email
     Write-Output "Sending email"
@@ -290,7 +544,7 @@ catch {
     $HeaderParams = @{
         'Accept'        = "application/json;odata=nometadata"
         'Content-Type'  = "application/json"
-        'Authorization' = "$($tokenSec.Type) $($tokenPlain)"
+        'Authorization' = "$($tokenType) $($tokenPlain)"
     }
     Clear-Variable -Name "tokenPlain" -Force -ErrorAction Continue
     $Result = ""
@@ -319,8 +573,8 @@ catch {
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA72O4Z51DSVD2o
-# fdbmAt/SB1I97RogT3VNiK8DrH2wp6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCREmNRpXseZJin
+# heH2fI8DxEbI9FrlvdPE8z2fqdYy86CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -387,10 +641,10 @@ catch {
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
-# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
+# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -398,17 +652,17 @@ catch {
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
-# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
-# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
-# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
-# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
-# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
-# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
-# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
-# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
-# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
-# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
+# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
+# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
+# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
+# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
+# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
+# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
+# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
+# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
+# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
+# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
+# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -418,39 +672,39 @@ catch {
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
-# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
-# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
-# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
-# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
-# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
-# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
-# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
-# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
-# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
-# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
-# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
-# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
+# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
+# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
+# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
+# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
+# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
+# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
+# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
+# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
+# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
+# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
+# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
+# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILngHedI
-# vueBbEcqNAqv7MmtmbjM7Wug2BclktGknnQHMA0GCSqGSIb3DQEBAQUABIICAGFR
-# IkQG9IrrU+iO+9uu1/63tgWZ76AVstFwlH2u4PWZ20p083P8f64SfcRN0tds4wqa
-# qiD2n9sGsL5xnZnTcBp+a6ZkY9sRQOYBwkKfAothyTxc81adakJVxRSawKECPhwn
-# hm03pOTc4ILVXswxWJaRVaRngGktJqIwAwNI74i83yktalHg5ZSlJrOaOMfMZ7iV
-# 3tOxELQN+rrPPwDqn8kToDN6FpyicnmTEErOrYvM8uv9tYEAY6R+GoBshwAR+1gY
-# jQ74WL3iCFyUOfq6hUlTEBCPIO+JSHCiSojmhgYNpdPWJ3i7kIy4f4/pWD3HTmjF
-# eWyf62qSkx571PxpfhfHpHoXU+kF+k0p2IeglAg9oD7ohQiMTpAGccYshUdNSWf+
-# +mCXtGgoJdfchWjhF23oXDMmiyvxFqmvfOYJhq5inyKjFKnQij6kMc3sFVGSSJnH
-# HKnpL/+2fH3qBAf9++jdHaQcTOcAjr6ZFu5Aae/kxq6FtktdLZMRCaJkzGLsSYdC
-# muEznWM56JnCYY69psRZQsrT8fZByShSie86da8YzZ2kCn35FfAeaNl2XltUV8pT
-# cGvQoxHCfMWBiCSLntrNjb2ERDKoArJQjn3dorlEqm5v7gdk/tuYYPTvqtUWqanl
-# b9232mvrb19lXDyl+w/RVvSlTJS6R4ws1kR/n5jboYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG9I5wFx
+# /Eu4MEfMq+9kSoRiUByV8bil6ZJpli3IbBDRMA0GCSqGSIb3DQEBAQUABIICAKM5
+# ud4pB49ZE9xF+YaUjzffavWq5Tjv4/RBhtoBXxbhhcb2M32uZzvYVM18JUkRc4r3
+# dlzRs8EhSLree6ufLikiqwG5gcDZWveerg9FIgNgzk97CjiHQkhjXJ0wRzQiTZ5O
+# 1V0aPLyk8W6EkOFNu/2SuVlSkdWMVFA7h9gi8rAWxcp0GcD574HEpuValEYm1v5A
+# R6YzRPpSQZthK2lB4ZV6S56wp0l9jkMh3ZmLFjalYTdTseFOYWOXfmc/VKUwJu8W
+# CgRs2bkYUZx1Lf38cBZMSbGg9p0UjzExTsCPzwkVzrSbRasrkZ6d9t2g41mJGTlT
+# xKHX3dlEXYvfFN3hKIljvUeZdmvlKy81QgiQBciyT4KC6/Vv4LjP3cdxE1ejeLJ/
+# 2kyakyp/pQoxR50RUp4IkXJtMWPR+eYyKdYCBNb9TA/LTfrOdrhddsQv9POTXnz8
+# 0gNzi/fcPSYkkO7N2Qkf7wZziQh/BuXn90lsULwLnpn9dJhFqWsGAEmf5pthKTCo
+# XJ2a9XoEswWTxmKHiEte+6B3YkdvjRMJtEHa3q3hv39Enb3Jn/yClnfb8pzx84pU
+# /sAQG6TwMwyqAUWSRp/UZzuJPOD2FyhTnLsY6zMSFLbMzy8Y+ZQQu6Lj4z61hDQY
+# Jl/tEPAW+6SdXsa4FoQiK3zrnFfxywV21IRDKfaKoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCpftcUv7/tR4i4J9NoAz6Q6erqdjtJUBJ30pewVho5dQIUU8gx
-# WEr14DIXWPJLT7JFKZcHb0UYDzIwMjYwOTAxMTA1MDUyWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDi4LqG8RP4P9jdTc12estv4Q6h3fe4TJieFm4Wt89BCQIUC+Co
+# Jp3Y5la/+E49RLr/Mao9GkIYDzIwMjYwOTEyMDcyODA3WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -593,18 +847,18 @@ catch {
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDABEvYMSh+r30UsU4aWQNvkXQws8st8iUCgvWrj5xtwxkYnz95nFP/3wsY0
-# xA7fuRkwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDAAdVGiESY76PegF7CPiJbC2NxQQvvljyXHIAe0bjohDU8UGjBTgr6d+pn5
+# RFqBsiIwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAowtgZoRZoiLMpR+IECF7nlkhXshQdpdU9GKCpwBSxUZy
-# e0nwZIBcFljXE7q5HgDHN9xFC24dJ9eOxpcoFTLkpPYsoUICNtIfqX+bttTvHzt7
-# iBOc7t/gTckb++i5ChphhPX+Esc+6s9K5zF5TRCPC4F6IMh+sIxNdXY9k8XSP9eO
-# z3OvAqiO3VMllI1M+wizPt92cXmujwLNRK7I/jR/0f0GVDGZgH6QN8RcrVMwV3mF
-# 3dxdpF0O1X9eR/og6GptrN2N9BoJfOCe7IL3VSbiVBWAODj3LEtnXR6kPPI24FCR
-# fObsdivLNo1kYcOhwuu9d1/FzAjOr9vEpre1SnGO5EMwMD0RetDVaGctNtpDDbun
-# S8EJ+/NWAFXTvrEZFuyxqZPmOcH1tlrkhwbrQ9c1k2KXYuI/NJ4epH990RDlIydM
-# PgmZR9vxOozBJN1IYGlUt99/XL98TUBzCmuDSNz+CAIq0b5hI0NyRHt/nV4G9sVV
-# lsWGTdT9cLlOqZBgeoTR
+# KoZIhvcNAQEMBQAEggGAkLlVL6VXxcnTuqDSmmMi0Xl+9E2nNw8yHVGNgLCo+TX0
+# f2sKg0GVMHmoOogTPPrrRwdD2TapLy4TjC6kIjgWyk8qyKKTWm086icaa0J4+6gE
+# PQytM1DHo79NH561bDf+Gn1JV9Cr5hZI655yzmwbKQO9QA4Z4WDQA0LMsXKtzjIY
+# 0GoUbapC9rR8yKRwZNtIvEoMY/fEvvkaEjZyDJQ91q4dTAlGYHBSCHDGLN+hjrLr
+# uA1FERZ7zGTLJafF5kkjsmUuMiqLBiRCTxR7RLmnSIXbBhEn+Alc+mOtSPjpbuk+
+# gzLxF7a/UAUpVfGP2iDoGCzc3D0jZ3by8tNQ4GIjGETsTwWiXZ3zcuPk+QIopxZI
+# pQDZ8ngwUqgNMCA6G8LVmcFYu9jSE2hIEX16cei4Mi6sqWP9Bf1wACy8VlDwb3rV
+# /zTSuTnd+xgc5I9X1y1js8haPDSHp3YsNndOwuPZVIO+zBhPrrQEbTMPB6lmxzpN
+# jbdqZNyO4Qq9gww6Fduo
 # SIG # End signature block

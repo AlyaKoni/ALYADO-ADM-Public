@@ -48,6 +48,7 @@
     18.10.2022 Konrad Brunner       LoginTo-MgGraph
     20.12.2022 Konrad Brunner       LoginTo-DataGateway
     22.03.2023 Konrad Brunner       Check for existing PowerShell Modules in default module path
+    03.09.2026 Konrad Brunner       Added Playwright browser automation functions
     10.04.2023 Konrad Brunner       Reuse connection in PnP Powershell
 	20.04.2023 Konrad Brunner		Added Mime Mapping function for PS7
 	14.05.2023 Konrad Brunner		Fixed package management update
@@ -66,6 +67,11 @@
     21.05.2026 Konrad Brunner       Management app authentication
     30.08.2026 Konrad Brunner       Added Make-JsonGitReady
     30.08.2026 Konrad Brunner       Make-JsonGitReady strips volatile attributes; appregistrationSummary: DateTime columns removed
+    08.09.2026 Konrad Brunner       Default module path check warns only on duplicate modules in AlyaModulePath and default paths
+    09.09.2026 Konrad Brunner       Added Write-HostOnce guard; top-level Write-Host output is printed only once per session
+    09.09.2026 Konrad Brunner       Custom configuration output suppressed via stream redirection when once-guard already set
+    11.09.2026 Konrad Brunner       Make-JsonGitReady: ConvertFrom-Json fallback for Windows PowerShell 5.1 (Azure DevOps Pipelines)
+    11.09.2026 Konrad Brunner       Make-JsonGitReady: guard against overwriting files when JSON parsing fails
 
 #>
 
@@ -95,6 +101,37 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 [CmdletBinding()]
 Param(
 )
+
+<# OUTPUT GUARD: top-level Write-Host messages are printed only once per session #>
+if (-Not (Get-Variable -Name "AlyaConfigureEnvOnceOutput" -Scope Global -ErrorAction SilentlyContinue))
+{
+    $Global:AlyaConfigureEnvOnceOutput = @{}
+}
+function Write-HostOnce()
+{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $true)]
+        [string]$Key,
+        [Parameter(Mandatory = $true)]
+        [string]$Message,
+        [Parameter()]
+        [object]$ForegroundColor = $null
+    )
+    if ($Global:AlyaConfigureEnvOnceOutput.ContainsKey($Key))
+    {
+        return
+    }
+    $Global:AlyaConfigureEnvOnceOutput[$Key] = $true
+    if ($null -ne $ForegroundColor)
+    {
+        Write-Host $Message -ForegroundColor $ForegroundColor
+    }
+    else
+    {
+        Write-Host $Message
+    }
+}
 
 <# COLORS will be overwritten by custom configuration #>
 $CommandInfo = "Cyan"
@@ -141,19 +178,34 @@ if (-Not (Test-Path $AlyaTemp))
 # Switching env if required
 if ((Test-Path $AlyaLocal\EnvSwitch.ps1))
 {
-    Write-Host "Switching environment" -ForegroundColor $MenuColor
+    Write-HostOnce -Key "SwitchingEnvironment" -Message "Switching environment" -ForegroundColor $MenuColor
     . $AlyaLocal\EnvSwitch.ps1
-    Write-Host " to $AlyaEnvSwitch" -ForegroundColor $MenuColor
+    Write-HostOnce -Key "SwitchingEnvironmentTo" -Message " to $AlyaEnvSwitch" -ForegroundColor $MenuColor
 }
 
 # Loading custom configuration
-Write-Host "Loading configuration" -ForegroundColor $CommandInfo
+$alyaCustomConfigOutputRequired = -Not $Global:AlyaConfigureEnvOnceOutput.ContainsKey("LoadingConfiguration")
+Write-HostOnce -Key "LoadingConfiguration" -Message "Loading configuration" -ForegroundColor $CommandInfo
 if ((Test-Path $PSScriptRoot\data\ConfigureEnv.ps1))
 {
-    . $PSScriptRoot\data\ConfigureEnv$AlyaEnvSwitch.ps1
+    if ($alyaCustomConfigOutputRequired)
+    {
+        . $PSScriptRoot\data\ConfigureEnv$AlyaEnvSwitch.ps1
+    }
+    else
+    {
+        <# Guard already set: suppress Write-Host output of the custom configuration (information stream), variables are still dot-sourced #>
+        . $PSScriptRoot\data\ConfigureEnv$AlyaEnvSwitch.ps1 6> $null
+    }
 }
 
 <# POWERSHELL #>
+try {
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding = [System.Text.Encoding]::UTF8
+    $OutputEncoding = [System.Text.Encoding]::UTF8
+}
+catch { }
 $ExecutionContext.SessionState.LanguageMode = "FullLanguage"
 $Global:ErrorActionPreference = "Stop"
 $Global:ProgressPreference = "SilentlyContinue"
@@ -218,7 +270,7 @@ if (-Not (Test-Path "$AlyaLogs"))
 if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Modules") -and `
      -Not $env:PSModulePath.Contains("$($AlyaTools)\WindowsPowerShell\Modules"))
 {
-    Write-Host "Adding tools\WindowsPowerShell\Modules to PSModulePath"
+    Write-HostOnce -Key "AddingToolsModulesToPSModulePath" -Message "Adding tools\WindowsPowerShell\Modules to PSModulePath"
     if (-Not $env:PSModulePath.StartsWith("$($AlyaTools)\WindowsPowerShell\Modules"))
     {
         $env:PSModulePath = "$($AlyaTools)\WindowsPowerShell\Modules$AlyaPathSep"+$env:PSModulePath
@@ -227,7 +279,7 @@ if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Modules") -and `
 if ((Test-Path "$($AlyaTools)\WindowsPowerShell\Scripts") -and `
      -Not $env:PATH.Contains("$($AlyaTools)\WindowsPowerShell\Scripts"))
 {
-    Write-Host "Adding tools\WindowsPowerShell\Scripts to Path"
+    Write-HostOnce -Key "AddingToolsScriptsToPath" -Message "Adding tools\WindowsPowerShell\Scripts to Path"
     if (-Not $env:PATH.StartsWith("$($AlyaTools)\WindowsPowerShell\Scripts"))
     {
         $env:PATH = "$($AlyaTools)\WindowsPowerShell\Scripts$AlyaPathSep"+$env:PATH
@@ -239,28 +291,45 @@ $AlyaPnpConnectionsDefined = Get-Variable -Name "AlyaPnpConnections" -Scope Glob
 if (-Not $AlyaPnpConnectionsDefined) { $Global:AlyaPnpConnections = @() }
 if ((Test-Path $AlyaLocal\ConfigureEnv.ps1))
 {
-    Write-Host "Loading local configuration" -ForegroundColor $CommandInfo
+    Write-HostOnce -Key "LoadingLocalConfiguration" -Message "Loading local configuration" -ForegroundColor $CommandInfo
     . $AlyaLocal\ConfigureEnv.ps1
 }
 if ($AlyaModulePath -ne $AlyaDefaultModulePath -and $AlyaModulePath -ne $AlyaDefaultModulePathCore)
 {
-    $modDIrs = $null
+    $modDirs = @()
     if ((Test-Path $AlyaDefaultModulePath) -and -not $Global:AlyaDefaultModulePathWarningDone)
     {
-        $modDIrs = Get-ChildItem -Path $AlyaDefaultModulePath -Directory
+        $modDirs += @(Get-ChildItem -Path $AlyaDefaultModulePath -Directory)
     }
     if ((Test-Path $AlyaDefaultModulePathCore) -and -not $Global:AlyaDefaultModulePathWarningDone)
     {
-        $modDIrs = Get-ChildItem -Path $AlyaDefaultModulePathCore -Directory
+        $modDirs += @(Get-ChildItem -Path $AlyaDefaultModulePathCore -Directory)
     }
-    if ($modDIrs -and $modDIrs.Count -gt 0)
+    $dupModules = @()
+    if ($modDirs.Count -gt 0 -and (Test-Path $AlyaModulePath))
+    {
+        $alyaModNames = @(Get-ChildItem -Path $AlyaModulePath -Directory).Name
+        foreach ($modDir in $modDirs)
+        {
+            if ($alyaModNames -contains $modDir.Name)
+            {
+                $dupModules += $modDir.Name
+            }
+        }
+    }
+    if ($dupModules.Count -gt 0)
     {
         $Global:AlyaDefaultModulePathWarningDone = $true
-        Write-Host "You have specified the variable AlyaModulePath and modules are present in the default module path:"  -ForegroundColor Red
-        Write-Host "$AlyaDefaultModulePath"  -ForegroundColor Red
-        Write-Host "$AlyaDefaultModulePathCore"  -ForegroundColor Red
+        Write-Host "You have specified the variable AlyaModulePath and the following modules exist in both, AlyaModulePath and the default module paths:"  -ForegroundColor Red
+        foreach ($dupModule in $dupModules)
+        {
+            Write-Host "  $($dupModule)"  -ForegroundColor Red
+        }
+        Write-Host "AlyaModulePath: $AlyaModulePath"  -ForegroundColor Red
+        Write-Host "DefaultModulePath: $AlyaDefaultModulePath"  -ForegroundColor Red
+        Write-Host "DefaultModulePathCore: $AlyaDefaultModulePathCore"  -ForegroundColor Red
         Write-Host "This can lead to unexpected behaviour!"  -ForegroundColor Red
-        Write-Host "We suggest you rename default module path to prevent from issues and rerun this powershell session."  -ForegroundColor Red
+        Write-Host "We suggest you remove the duplicated modules from the default module paths to prevent from issues and rerun this powershell session."  -ForegroundColor Red
     }
     if (-Not (Test-Path $AlyaModulePath))
     {
@@ -5045,6 +5114,128 @@ function Close-SeleniumBrowser()
     Get-Process -Name msedgedriver -ErrorAction SilentlyContinue | Stop-Process -ErrorAction SilentlyContinue
 }
 
+<# PLAYWRIGHT BROWSER #>
+# Zentraler Ort fuer Playwright: Das NuGet-Paket Microsoft.Playwright (.NET-Bibliothek,
+# KEIN PowerShell-Modul) und der eigene Chromium-Build liegen IMMER unter
+# $($AlyaTools)\Packages (ein einziger definierter Ort, kein System-Browser, kein
+# Chrome/Edge-Treiber-Lock wie bei Selenium). Installation analog zu Selenium:
+# Install-PackageIfNotInstalled (NuGet) + Laden der DLL.
+# Verwendung in Skripten: $pw = Get-PlaywrightPage; ...; Close-PlaywrightPage $pw
+function Get-PlaywrightBrowserRoot()
+{
+    return Join-Path "$($AlyaTools)\Packages" "ms-playwright"
+}
+
+<# PLAYWRIGHT BROWSER #>
+function Get-PlaywrightPage()
+{
+    Param(
+        [bool]$Headless = $true,
+        $playwrightVersion = $null
+    )
+    $Global:AlyaPlaywrightPage = $null
+    # Browser-Binaries zentral unter AlyaTools ablegen (vor Installation und Launch
+    # setzen, der Wert wird von Playwright bei beiden Vorgaengen ausgewertet)
+    $env:PLAYWRIGHT_BROWSERS_PATH = Get-PlaywrightBrowserRoot
+    if ($playwrightVersion)
+    {
+        Install-PackageIfNotInstalled "Microsoft.Playwright" -exactVersion $playwrightVersion
+    }
+    else
+    {
+        Install-PackageIfNotInstalled "Microsoft.Playwright"
+    }
+
+    $packageRoot = "$($AlyaTools)\Packages\Microsoft.Playwright"
+    $dllPath = $null
+    foreach ($candidate in @("$packageRoot\lib\netstandard2.0\Microsoft.Playwright.dll", "$packageRoot\lib\netstandard2.1\Microsoft.Playwright.dll", "$packageRoot\lib\net48\Microsoft.Playwright.dll"))
+    {
+        if (Test-Path $candidate)
+        {
+            $dllPath = $candidate
+            break
+        }
+    }
+    if (-Not $dllPath)
+    {
+        throw "Could not find Microsoft.Playwright.dll in $packageRoot\lib"
+    }
+
+    # Die .NET-Bibliothek erwartet den Driver (.playwright Verzeichnis mit node) neben der DLL.
+    # Im NuGet-Paket liegt der Driver im Paket-Root, die DLL aber unter lib\. Daher die DLL in
+    # den Paket-Root kopieren (analog zum offiziellen build\playwright.ps1, das die DLL neben
+    # den Driver stellt) und von dort laden.
+    $rootDll = Join-Path $packageRoot "Microsoft.Playwright.dll"
+    if (-Not (Test-Path $rootDll))
+    {
+        Copy-Item -Path $dllPath -Destination $rootDll -Force
+    }
+    $env:PLAYWRIGHT_DRIVER_SEARCH_PATH = $packageRoot
+    if (-Not ("Microsoft.Playwright.Playwright" -as [type]))
+    {
+        # Laden per Byte-Array (wie das offizielle playwright.ps1), damit die DLL-Datei nicht
+        # gelockt bleibt (sonst scheitert das Paket-Update in Install-PackageIfNotInstalled)
+        [Reflection.Assembly]::Load([System.IO.File]::ReadAllBytes($rootDll)) | Out-Null
+    }
+
+    # Eigenen Chromium-Build einmalig installieren (idempotent, kein System-Browser)
+    $browserRoot = Get-PlaywrightBrowserRoot
+    if (-Not (Get-ChildItem -Path $browserRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "chromium-*" }))
+    {
+        Write-Host "Installing Playwright Chromium browser into $browserRoot (first run only)"
+        $installExitCode = [Microsoft.Playwright.Program]::Main([string[]]@("install", "chromium"))
+        if ($installExitCode -ne 0)
+        {
+            Write-Warning "Playwright browser installation returned exit code $installExitCode"
+        }
+        if (-Not (Get-ChildItem -Path $browserRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "chromium-*" }))
+        {
+            throw "We were not able to install the Playwright Chromium browser into $browserRoot"
+        }
+    }
+
+    $playwright = [Microsoft.Playwright.Playwright]::CreateAsync().GetAwaiter().GetResult()
+    $browser = $playwright.Chromium.LaunchAsync(
+        [Microsoft.Playwright.BrowserTypeLaunchOptions]@{
+            Headless = $Headless
+            # Anti-Automation-Flag: manche Bot-Schutz-Systeme (z. B. Cloudflare Turnstile)
+            # erkennen Chromium sonst als gesteuert und loesen Challenges nicht auf
+            Args = [string[]]@("--disable-blink-features=AutomationControlled")
+        }
+    ).GetAwaiter().GetResult()
+    $context = $browser.NewContextAsync(
+        [Microsoft.Playwright.BrowserNewContextOptions]@{ AcceptDownloads = $true }
+    ).GetAwaiter().GetResult()
+    $page = $context.NewPageAsync().GetAwaiter().GetResult()
+    $Global:AlyaPlaywrightPage = @{
+        playwright = $playwright
+        browser = $browser
+        context = $context
+        page = $page
+    }
+    return $Global:AlyaPlaywrightPage
+}
+
+<# PLAYWRIGHT BROWSER #>
+function Close-PlaywrightPage()
+{
+    Param(
+        $pw = $null
+    )
+    if (-Not $pw) { $pw = $Global:AlyaPlaywrightPage }
+    if ($pw)
+    {
+        try { $null = $pw.browser.CloseAsync().GetAwaiter().GetResult() } catch { }
+        try { $pw.playwright.Dispose() } catch { }
+    }
+    $Global:AlyaPlaywrightPage = $null
+    Start-Sleep -Seconds 2
+    # Verwaiste Chromium-Prozesse des eigenen Builds aufraeumen (Pfad unter AlyaTools)
+    Get-Process -Name "chromium", "headless_shell" -ErrorAction SilentlyContinue | Where-Object {
+        try { $_.Path -and $_.Path.StartsWith((Get-PlaywrightBrowserRoot)) } catch { $false }
+    } | Stop-Process -ErrorAction SilentlyContinue
+}
+
 function Run-ScriptInRunspace()
 {
     Param(
@@ -5369,7 +5560,25 @@ function Make-JsonGitReady()
         }
         $resolvedPath = (Resolve-Path -Path $currentPath).Path
         $content = Get-Content -Path $resolvedPath -Raw -Encoding UTF8
-        $jsonObject = ConvertFrom-Json -InputObject $content -NoEnumerate -DateKind Utc
+        if ($PSVersionTable.PSVersion -ge [Version]"6.1")
+        {
+            $jsonObject = ConvertFrom-Json -InputObject $content -NoEnumerate -DateKind Utc
+        }
+        else
+        {
+            # Windows PowerShell 5.1 (e.g. Azure DevOps Pipeline): -NoEnumerate (PS >= 6.2) and
+            # -DateKind (PS >= 6.1) do not exist here. 5.1 does not enumerate top-level arrays
+            # by default (same semantics as -NoEnumerate). DateTime values are parsed as local
+            # time instead of UTC; raw DateTime values in the export files are handled by the
+            # special cases above (managedDeviceOverview.json, appregistrationSummary.json).
+            $jsonObject = ConvertFrom-Json -InputObject $content
+        }
+        if ($null -eq $jsonObject)
+        {
+            # Never overwrite the source file when parsing produced nothing (protects exports)
+            Write-Warning "Make-JsonGitReady: JSON parsing returned no object, file left unchanged: $($resolvedPath)"
+            continue
+        }
         $jsonObject = Remove-VolatileJsonKeys -Value $jsonObject
         $fileName = [System.IO.Path]::GetFileName($resolvedPath)
         if ($jsonObject -is [System.Management.Automation.PSCustomObject] -and $fileName -eq "managedDeviceOverview.json")
@@ -5429,8 +5638,8 @@ function Make-JsonGitReady()
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCXES/dtCyiLrgY
-# OFOMojOkShsd5PNABaCP6xmNEczCaaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBXoHNRwVHYSauQ
+# wAIgd0qSZLHsHWIS+XvHOQKrx3GYGqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -5497,10 +5706,10 @@ function Make-JsonGitReady()
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
-# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
+# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -5508,17 +5717,17 @@ function Make-JsonGitReady()
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
-# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
-# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
-# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
-# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
-# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
-# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
-# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
-# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
-# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
-# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
+# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
+# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
+# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
+# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
+# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
+# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
+# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
+# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
+# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
+# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
+# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -5528,39 +5737,39 @@ function Make-JsonGitReady()
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
-# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
-# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
-# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
-# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
-# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
-# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
-# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
-# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
-# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
-# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
-# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
-# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
+# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
+# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
+# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
+# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
+# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
+# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
+# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
+# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
+# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
+# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
+# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
+# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINKdUFk8
-# kwvZ1LltTWUNbRognUmgBRmPL/4U7lWqnLggMA0GCSqGSIb3DQEBAQUABIICACGk
-# qtjMKuaFHVczugLION9tILf6RhVaJFrm2w8rblNJBaTFMtwLt/xdZFrGPItmiiGs
-# qNlF5x6b2d04ErSvkcGd2I4ciVUrv262SMzeivNXiGCNpbQoZn6UE69HBNIPrMqg
-# JB9xdJkOZBuTdD5k0T1B8qaP4EZfaE4V0D8y8YiLLRZ99Plh2HvSE4wa/tVXFcn6
-# 3xnqgoxqq5oarTziz2DhhSmCb/oosYeixyJyFQORPJPqoOPx6jK/yEcNtgWuJHbt
-# Gk1VLqcwHuoJsmwSEG/eASr/boehfvlcl3YYQWV+juXRut1dSKUWXfwjwUJwvbe+
-# vO3tO6/NyOfrMfXZolTIV6+0HQuLO0avZ6ix1So9pWYGH2JHE2UDQxAJeW0nc6Ad
-# Zc7debuLrLY4phLsfrMc1nnGOfUnPeBLgR2BO+u9sCzjINIDXOEF4yGaZQG3ba5z
-# RnMHjWkAed1UhbPDnMC2iARcPBh8jPQtpcKTiz8DFF2iKd+X3dmiCYtOl8MYVsaM
-# 9d2HV7DOENWlGZTImphN9UBSdgNMMFiz/kWkM6hZHFXDzFZnAhat0DN0p7W4yc8v
-# aNKGaUn/Yf3kfNuVzwP15VWg/WIsKG5gJCrMj+/ASNj5KsFt4qSS3yuhZnHKR/Bc
-# TSU9VOK+spC71K8Rk47cfHHcuF71UJPVynZl6h/IoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEII3BNdg6
+# M/1H1hCehYFn+HNbVY9xr7vwjERz9QRqyp5zMA0GCSqGSIb3DQEBAQUABIICACsN
+# zaCApOLIhzX+u9ficne4Kx3+2LSvIAZPiJcunlbr1jsUSwLDCh3qh8dWqdjaY3ju
+# ZddOvqNd1/1LXad5kj2gNDNf1KatYIS+faAWXzfE+fZbIf05/aQbxuiAqDEm3djm
+# IuqwFaM7j8MiXX4uUez6pyUyk563SKlGqCkH+NUasylWrnemZ5kt+72BwmC42qC4
+# PUE+xQrmVoiLhdz1xU9IvOJT3Q8TOM6EeJ4OIb5xTC2+SVncAvO+62f/evtNdEcM
+# IhVdcFGM08Gh1hYjaQjuDqYAGhuas4R9OZEFyllVcaj2hVUKIzyVp+sGySJcIVDW
+# EJTGtV8HvfnvuS5QsEaTYn8+itdG3unfJYp8wSr/rAeAdtdC+RcvnncIH0ex0gqG
+# RxZhlWG6t1/sGI4YPm1/0TBpifu3sYz6j5gTuCYyt2f7f3p12fjTGoCmJ2naAluE
+# Qvh/5jGr4lkTp/vjBgNqIgSSCm4PeeXHvy0fXqWnPj81suR3QUgFK8OsAntU1tXM
+# AwQIRGXPp0ilU4str1FEfxwNg5sX+hoEcvX6WYFnS8gxApdtnfl5URWGB2ayiWEn
+# XdkYDshZtXSnS5RnWmmVNU3zT75RshkNJ68NpyC1mguRinYtsUZI8s+ZTP7bAumM
+# KE96g9dzmsd1SkS6kELS+hASJTwbOhWAIajWTpE+oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCJ2VsNFOv2Up8PhZ4iiVIlX8p2pdtBrmXg+cMXK3E4TgIUIF0u
-# UwvqQiK4HPvVI5CnHQUP9nkYDzIwMjYwODMxMTgwOTU1WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDcrFpVLyhF3vWbeReQMJDWomv5aashc8SoZvvmQsXysAIUBayG
+# HTP08XWxfZFVYqMB55KmTT4YDzIwMjYwOTEyMDcyODI5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -5703,18 +5912,18 @@ function Make-JsonGitReady()
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBc54kdv3Zl5QaNuroF/CQnXXXKa2lqGIg0TklNvya0NWITE9PSLhxTpJQj
-# D1T6o48wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDAOdP6F4uiacpd4RyLUNButjjXW8qxnKLJJcHX+OCX+ektFhogA48UAs+rU
+# 0pvdeuEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGADfldLR3IeS10nOR3B9CukZWn3+YcY80KRkOiN+xX/lq4
-# P5xR7hBRNaFK9C1VrUfHY7MdEbQGmp++wuxeVda0Hh5l8Qeb4xxJ6bExLWOf9UkL
-# 30GBHNUx9C/ajNZyg4ZFLo8Wfs1WunpZMXaFcyXx3KBxsBKaYVu9mXohHAH+YtoB
-# K/+p9W1i6Et+NHHaMTFLTdc8Y5a19qTivKjnBnixsHWuX6lUHGUHuYK760AZ8NZA
-# bl6PhYAfqXySOCxM2btIYZcKo/3jeR4IX0MTQAX8Yn3XJEeNXjl4nX2ou7cugE5h
-# eGOul0KTccC4Sd/2sVEHQbXXpOvR3w7EYjJPFzeswDsiZhQgJyV1yb1tIzWGBkLC
-# 9SZqfwmTZqStJa+VQ+YWttHf7ujyyTQ37ehGQN3+gbtMpMk92JS7qfwst3Yzjpgy
-# NILaMyV6yd25G6zBlWQRbPnNjzzTR8bbaxjcVBEiKgxPmQ29vHDx7u6jXlTsrGKI
-# xs03q6hwaFCj8nlGBasp
+# KoZIhvcNAQEMBQAEggGAyWuLKyC3EIHLWVbf3EHbKLraCe/H9PTbQJFwBUSDaVmb
+# Uy7/wgURIX3c5Dr2TyrovtAkS+RgpdyyenfWUpLZWzCm/9mAWUVUKEqwEnRk4ix4
+# PwWorx+Ll+ODQ/e4ygzrChMLfE/la3tmV8xpsH7xq/B9btTrcMwtBNAMA/nrz0Pi
+# RDdjAlBNfbiThxZV6AuFNbieJBxbGLC07RFYdytAJroDgnUAS2WMs8+8pffIpfJr
+# +rBynhxXFU12WzQ8CKJLcKqIVUXnTsZ5S0KLCHt8w3kHdMnITktfYXCBGb1by2JD
+# 7wGp2DvVyeOp5Prk8V2hBb+emiQ3wpWelmX17+C/M2Kn/U5FwusI7rq0duBzz/sF
+# eBY/5PqP4hdy5ZrnWpHMDnkJe+TRoFY7qHjR1wYvD8UTq7qR+MUEeVMCs+Kr/2qq
+# v7EG4veAh7zy/bgIFJpMFflr6+AmF/Txt2w7JIUXzaKEy5P7+9QbKX4HN6syurJp
+# 1KaqzoCMZqMbYgPmcNKh
 # SIG # End signature block

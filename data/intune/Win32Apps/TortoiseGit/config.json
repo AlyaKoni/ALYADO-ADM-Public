@@ -24,13 +24,13 @@
   "minimumNumberOfProcessors": 1,
   "minimumCpuSpeedInMHz": 1,
   "msiInformation": {
-    "productCode": "{8707B9CA-B2A7-4320-A26E-113278F773EC}",
-    "productName": "TortoiseGit 2.19.1.0 (64 bit)",
     "upgradeCode": "{F46D0E11-F71A-48A0-8A7B-FD8669B5080C}",
-    "productVersion": "2.19.1.0",
     "packageType": "PerMachine",
     "publisher": "TortoiseGit",
-    "requiresReboot": "false"
+    "productCode": "{8707B9CA-B2A7-4320-A26E-113278F773EC}",
+    "productName": "TortoiseGit 2.19.1.0 (64 bit)",
+    "requiresReboot": "false",
+    "productVersion": "2.19.1.0"
   },
   "setupFilePath": "TortoiseGit-2.19.1.0-64bit.msi",
   "minimumSupportedWindowsRelease": "1607",

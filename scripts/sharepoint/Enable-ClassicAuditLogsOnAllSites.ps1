@@ -1,4 +1,4 @@
-﻿#Requires -Version 2
+﻿#Requires -Version 7.0
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -27,24 +27,28 @@
     https://www.gnu.org/licenses/gpl-3.0.txt
 
 
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    10.09.2026 Konrad Brunner       Initial Version
+
 #>
 
 <#
 .SYNOPSIS
-Downloads the latest CheckPointVPN client installer for Windows and saves it to a local directory.
+Enables the classic Audit Log feature on all SharePoint Online site collections in the tenant.
 
 .DESCRIPTION
-This script retrieves the current download link for the CheckPointVPN client for Windows from the official CheckPointVPN website and downloads the MSI installer file to a designated "Content" directory under the script location. It ensures the target directory exists and automatically handles URL extraction using a regex pattern. The script depends on an external helper function Invoke-WebRequestIndep, which is assumed to be defined in the referenced configuration script 01_ConfigureEnv.ps1.
+The Enable-ClassicAuditLogsOnAllSites.ps1 script connects to the SharePoint Online Admin Center and iterates through all site collections. For each site, it verifies if the classic Audit Log feature is enabled and, if necessary, enables it using the PnP.PowerShell module. Logging is performed for auditing purposes, and connection retries are handled to ensure reliable execution.
 
 .INPUTS
-None. This script does not accept pipeline input.
+None. The script does not accept pipeline input.
 
 .OUTPUTS
-None. The script creates an installer file in the "Content" directory.
+None. The script writes progress and status information to the console and generates a log file under the configured logs directory.
 
 .EXAMPLE
-PS> .\Download.ps1
-Downloads the latest CheckPointVPN client for Windows to the local "Content" folder located in the same directory as the script.
+PS> .\Enable-ClassicAuditLogsOnAllSites.ps1
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -53,83 +57,79 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
-. "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+[CmdletBinding()]
+Param(
+)
 
-$pageUrl = "https://www.checkpoint.com/de/quantum/remote-access-vpn/"
+# Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
 
-$packageRoot = "$PSScriptRoot"
-$contentRoot = Join-Path $packageRoot "Content"
-if (-Not (Test-Path $contentRoot))
+# Starting Transcript
+Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Enable-ClassicAuditLogsOnAllSites-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Install-ModuleIfNotInstalled "PnP.PowerShell"
+
+# Login
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl
+
+# =============================================================
+# O365 stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Enable-ClassicAuditLogsOnAllSites | O365" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Getting site collections
+Write-Host "Getting site collections" -ForegroundColor $CommandInfo
+$retries = 10
+do
 {
-    $null = New-Item -Path $contentRoot -ItemType Directory -Force
+    try
+    {
+        $sitesToProcess = Get-PnPTenantSite -Connection $adminCon
+        break
+    }
+    catch
+    {
+        Write-Error $_.Exception -ErrorAction Continue
+        Write-Warning "Retrying $retries times"
+        Start-Sleep -Seconds 15
+        $retries--
+        if ($retries -lt 0) { throw }
+    }
+} while ($true)
+
+# Enabling Classic Audit Logs
+Write-Host "Enabling Classic Audit Logs" -ForegroundColor $CommandInfo
+foreach ($tsite in $sitesToProcess)
+{
+    if ($tsite.Template -like "Redirect*") { continue }
+
+    # Enabling Classic Audit Logs
+    $siteCon = LoginTo-PnP -Url $tsite.Url
+
+    $repFeature = Get-PnPFeature -Connection $siteCon -Scope Site | Where-Object DefinitionId -eq "7094bd89-2cfe-490a-8c7e-fbace37b4a34"
+    if ($null -eq $repFeature)
+    {
+        Write-Host "  Reporting feature not enabled, enabling it now"
+        Enable-PnPFeature -Connection $siteCon -Identity "7094bd89-2cfe-490a-8c7e-fbace37b4a34" -Scope Site
+    }
+    else {
+            Write-Host "  Reporting feature already enabled"
+    }
+
 }
 
-$filename = & "$PSScriptRoot\..\..\..\..\scripts\misc\Download-FileWithScrapfly.ps1" -OutDir $contentRoot -PageUrl $pageUrl -FileRegex "CheckPointVPN\.msi"
-if (-Not $filename)
-{
-    $installerName = "CheckPointVPN.msi"
-    Write-Warning "Problems automatically downloading $installerName. Please download manually"
-    Write-Host "We launch now a browser with the $installerName download page."
-    Write-Host " - Select 'Download for Windows'"
-    Write-Host " - Select 'Download'"
-    Write-Host "`n"
-    pause
-    
-    $profile = [Environment]::GetFolderPath("UserProfile")
-    $downloads = $profile+"\downloads"
-    $lastfilename = $null
-    $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-    if ($file)
-    {
-        $lastfilename = $file.Name
-    }
-    $filename = $null
-    $attempts = 10
-    while ($attempts -ge 0)
-    {
-        Write-Host "Downloading $installerName file from $pageUrl"
-        Write-Warning "Please don't start any other download!"
-        try {
-            Start-Process "$pageUrl"
-            do
-            {
-                Start-Sleep -Seconds 10
-                $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-                if ($file)
-                {
-                    $filename = $file.Name
-                    if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
-                    if ($filename.Contains(".partial")) { $filename = $lastfilename }
-                    if ($filename.Contains(".tmp")) { $filename = $lastfilename }
-                }
-            } while ($lastfilename -eq $filename)
-            $attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)"
-            Write-Host "Retrying $attempts times"
-            $attempts--
-            if ($attempts -lt 0) { throw }
-            Start-Sleep -Seconds 10
-        }
-    }
-    Start-Sleep -Seconds 3
-    if ($filename)
-    {
-        $sourcePath = $downloads+"\"+$filename
-        Copy-Item -Path $sourcePath -Destination $contentRoot -Force
-        Remove-Item -Path $sourcePath -Force
-    }
-    else
-    {
-        throw "We were not able to download $installerName"
-    }
-}
+# Stopping Transcript
+Stop-Transcript
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB9b1b+s1WXKLU3
-# 8v+SbzdYSYHoNql3R/sehVN/WGROUKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD3UvJouPE5lMK7
+# +HbSqn+rFw/G5Y3ovUF0WWmLRRWm8qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -243,23 +243,23 @@ if (-Not $filename)
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIGBXhF77
-# ZqULnx4Q/hQFDXdndcmkMUW3rbPDyVixC1C1MA0GCSqGSIb3DQEBAQUABIICAIoR
-# npWQtioWR8a+1+cBbfA6WPT1BZCUknFmPIv7S+tcDwxYM975mmGux6398CwqtCJ7
-# 7+7q/RY/3E3FRWruPcPfBp85L+RGuQgCN1BeJLNoP1mTuSF9yR3tc0egGUv0aquW
-# LyKeQfWkN1+r/mrphxQgLtrIN9xRdXSDV7iBs7gwfP+CGqT7hC4e+NlVExz0m2Jd
-# J5pkw96/NsFo4r62cTpg/5x9M7UD77sDUWyPAuQBQWfUPAa/nrytFD0j1dUez2Rg
-# ReINQ/Ebvq0SzVMR6du/VCLSDE0l6ZmYvIkrNhiCqQCUN7hET3/4YqpcTQro4T37
-# bEhKCb7W6pEYQTTWqePq0N5IKGE0qpoa7QUuuyr/zn1r0xIXQrwvs9tsiNaOHi6s
-# nbMQT7CrD0lWFs5U0Mzx1Iw44CAo9hCSyH1IqhvZqIfqx9+HUJ1am+JPrC8vhqo8
-# DWnAUml07wbLQ3Gl6uaPPG3ndNwCqfpyENsFzDVtMmAld2OLgVWHaNOBb5cQwtu1
-# HI47bKNC+Hmev1S+woSAmtwSfspB8bNhlBGcfaS+cPVN9oDbRHpKjnP4lqhkOZkX
-# vdXMbyhjwSMCTeJhGGBLA/zqG+Zg8ILcEXlBv104vdxAmK3GQHcFBLtQbWe9J/lA
-# UHvgjyRn4H/EWBIMdi0v671XK73yPl4c6P2UUCVuoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIC6EjVLG
+# 2j0ANFkvwyq5jH9wKUpAA7EVzTneW2R6rFSRMA0GCSqGSIb3DQEBAQUABIICACmI
+# jAsorQt1f++i5SdV+Vqe/kx395SmwJn+eA4HOfj/Ye7Q8hhgKebptmbG890014Ot
+# tFuGt//l/pu20qn29M5iaZFv9SuunBcUIIWWx/M9ZW7vjP9Yv5i67mmEKLg3/lj1
+# VL+e1E6oOpQ4Nn3b0Jle/nxs47i8CyDMTYTJgwEKyQ8LctfoUHhTyQib8b+IKWm1
+# WxgXbDqH2aYYUW4BXwxHkfR5ir8u+FrDiOkoGLXPuAgu9WBdx3mCuXZ20gw1iSiS
+# /F9O+A90oDh/x4YewkLWgXUrSLMUOfJ4uaGtw1/Gov78c6MnbOLGFQZccY5ks7gc
+# ERqvLmTVyTNAIvVGoNZacQ4xFJg9CreuvnB3zFpkZgaF09ypcr3BgFzXB3I0basv
+# zj42nM6BaCxdtAFqyf/q1U6YPZhjU38Pf03Z8ViHv7iwAyN54EbO7zbr4T8AGZWl
+# vO+aOjWlIykz+d8P5xY4xJxHWINWnPNA/jc1XM7i7Nq7SYG1g6LzaQSyXwbg4YJY
+# +MZRcCoBmjohvgXiyyrtmfP91cGuAKa7NcujdvXl/p0Zv+6P7JjNLobc6B4iTdYf
+# 4r1iQPYrhrqBGOhX/jJeaoUgVbFBLQohHiV/YOzFnVNXYrn5oxiFl4EJLcr8Qzds
+# OpxrPFjSbOtlPTLFes6ncO9LbmDQa14BX3ItpKPKoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDScjj9cZLPTwinQ1xPKBleR3Tz/NgqKQ44lAQy2DZC3QIUInJV
-# dNb3gW/8fisDxGqCEIbdkmUYDzIwMjYwOTA5MTkyNjUwWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDDGyCN8Tuc3O7oQ+TmQ+/ket5sGs6E20AMlfMbulYaSgIUV79g
+# 5pRd5gEYRID3hLrvBb5jyAwYDzIwMjYwOTEwMDgxOTQxWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -402,18 +402,18 @@ if (-Not $filename)
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBRQc414sE9O3DicSe52HrNQZhsYo/58sWJqI5x/8gaTEE7bKwHXv7N1hv9
-# bIAkK4EwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDC+XstP0JpNiJxQY4d1jSWs7NbzfPzue2IoZuEe9ZokOZh7qhQ+aP6TYUPp
+# SxcYkDcwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGALuOoV2FWzNpPITG+LV4t8iPJ3uJbrL0NwvQMAvDCDCwW
-# rTFkDLIHJV+Nn2QkrR9iFS/pI04gviwdGSE51flgYAFiaj+1/KzqZfv57f/tINDU
-# Pgox2p1mQ/vW99n+d3k1gM1uaYmKf55T1ACJKgAbUw7XlOZ28WTeF2UHoLj08FRr
-# XUvM7lClAgQmufYMPNG0hntb4q3fYUfQK87W5Ep09d4qUIALulEbXXyH7Q2Qtr9+
-# 4AWgmXyuOlkLG2gPBEm8lHbY3hzDAqaR5/CiYbok4MOhCkGcz/ulkvtXqEgApov7
-# EmnoAkaCtvfUWviLSHSOgaytFs7S5blAZMQg4SF16Zh4k8z59Smkvy9HCPgSaUMl
-# AnMADhtZmo6E6+UO9DRw8g7giLhVl7mXO52Kz33h6+na/ysH7CgidqKL+vKzP0e0
-# wFkANoDz9P3sX1EVXhc5HsTSolu1dnnc12b0VtmjKhP2Tp2Bk57Xd3hHt5rVjIsg
-# 3z5GK0Q6bS5AE0u4Sfha
+# KoZIhvcNAQEMBQAEggGAHIpVh7x7QYBJy9Q8aAuC/08QgMslYxkR/u2tMyld6gPA
+# 6KnrNcUsIn9S6WFmbCEp4aeIB2wIa05oG+UsfkBIRiRDr9Cre67uD2v8Q1JSbBgz
+# KGk4b7NFEtxPmls3crnnkQ8OadvM2xL6MiCFlDpwN+sRP8Cje0Si/TQ7H79reGYh
+# SFludNpST91IH5CXE4ggsR7OBQgoknuCpe03qMTIp6aNIKTRklaj8VjvLcJ+IXN9
+# nMX2dYSpfhdLFcj4kieF61PiwGzYOu1j0QcND1usRUuEp9BmAt4iMbdp92Ws8l41
+# QQd9qJdkMrhQ30Mjj8B12lJ67Tw4Qq8MT4K3ozlMQaPbE+aQ/zzQ95DzlswFrIbJ
+# pp9L1T6MTGSWoT6Pq/S39BIQSKvhaU+IaOhzBWJCndc6e69clPKMMmPtBF6C0zhV
+# TOGG88lCWywac25gkoJzCvRoHb+ipC3GbuDpxPUYizhrHA08TrOEhSPtEchezvZn
+# IsmGzlL6RY+a+zU1JOvo
 # SIG # End signature block
