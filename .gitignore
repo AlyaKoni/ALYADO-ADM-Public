@@ -342,7 +342,5 @@ ASALocalRun/
 
 desktop.ini
 
-/tags
-
 # ctags index file
-tags
+/tags
