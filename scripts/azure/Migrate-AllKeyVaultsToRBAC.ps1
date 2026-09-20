@@ -31,6 +31,11 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     12.02.2026 Konrad Brunner       Initial Version
+    15.09.2026 Konrad Brunner       Fixed role permission evaluation for Az.Resources 10
+    16.09.2026 Konrad Brunner       Fixed parameter set error of Get-AzRoleAssignment with Az.Resources 10 (ExpandPrincipalGroups is only allowed with ObjectId)
+    16.09.2026 Konrad Brunner       Support service principal logins (management app) when checking own key vault access
+    16.09.2026 Konrad Brunner       Skip access policies of principals that no longer exist and surface New-AzRoleAssignment errors instead of swallowing them
+    16.09.2026 Konrad Brunner       Detect own permissions inherited from management group scopes when checking key vault access
 
 #>
 
@@ -192,73 +197,100 @@ $roles = $allRoles | Where-Object { $_.Name -like "Key Vault*" } | Sort-Object {
 $roles.Name
 
 # Functions
+function Get-RolePermissionEntry($role)
+{
+    $permissionsProperty = $role.PSObject.Properties["Permissions"]
+    if ($null -ne $permissionsProperty -and $null -ne $permissionsProperty.Value)
+    {
+        return @($permissionsProperty.Value)
+    }
+
+    return @($role)
+}
+
+function Get-RolePermissionValue($role, $propertyName)
+{
+    $values = @()
+    foreach($permissionEntry in (Get-RolePermissionEntry -role $role))
+    {
+        $property = $permissionEntry.PSObject.Properties[$propertyName]
+        if ($null -ne $property -and $null -ne $property.Value)
+        {
+            foreach($value in $property.Value)
+            {
+                if ($values -notcontains $value)
+                {
+                    $values += $value
+                }
+            }
+        }
+    }
+
+    return $values
+}
+
+function Test-RoleAllowsPermission($role, $permission, $dataAction = $false)
+{
+    $allowedPropertyName = $dataAction ? "DataActions" : "Actions"
+    $deniedPropertyName = $dataAction ? "NotDataActions" : "NotActions"
+
+    foreach($permissionEntry in (Get-RolePermissionEntry -role $role))
+    {
+        $allowed = $false
+        $allowedProperty = $permissionEntry.PSObject.Properties[$allowedPropertyName]
+        if ($null -ne $allowedProperty -and $null -ne $allowedProperty.Value)
+        {
+            foreach($allowedPermission in $allowedProperty.Value)
+            {
+                if ($permission -like $allowedPermission)
+                {
+                    $allowed = $true
+                    break
+                }
+            }
+        }
+        if (-Not $allowed)
+        {
+            continue
+        }
+
+        $denied = $false
+        $deniedProperty = $permissionEntry.PSObject.Properties[$deniedPropertyName]
+        if ($null -ne $deniedProperty -and $null -ne $deniedProperty.Value)
+        {
+            foreach($deniedPermission in $deniedProperty.Value)
+            {
+                if ($permission -like $deniedPermission)
+                {
+                    $denied = $true
+                    break
+                }
+            }
+        }
+        if (-Not $denied)
+        {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Is-RoleContainedInRole($checkRole, $containedInRole)
 {
-    #Write-Host "          Checking if role $($checkRole.Name) is contained in role $($containedInRole.Name)"
-    # foreach($action in $checkRole.Actions) {
-    #     $fnd = $false
-    #     foreach($cAction in $containedInRole.Actions) {
-    #         if ($action -like "$cAction")
-    #         {
-    #             $fnd = $true
-    #             break
-    #         }
-    #     }
-    #     foreach($cAction in $containedInRole.DataActions) {
-    #         if ($action -like "$cAction")
-    #         {
-    #             $fnd = $true
-    #             break
-    #         }
-    #     }
-    #     if (-Not $fnd) {
-    #         return $false
-    #     }
-    # }
-    foreach($action in $checkRole.DataActions) {
-        $fnd = $false
-        foreach($cAction in $containedInRole.DataActions) {
-            if ($action -like "$cAction")
-            {
-                $fnd = $true
-                break
-            }
-        }
-        # foreach($cAction in $containedInRole.Actions) {
-        #     if ($action -like "$cAction")
-        #     {
-        #         $fnd = $true
-        #         break
-        #     }
-        # }
-        if (-Not $fnd) {
+    if ((Get-RolePermissionValue -role $containedInRole -propertyName "NotDataActions").Count -gt 0)
+    {
+        return $false
+    }
+
+    foreach($action in (Get-RolePermissionValue -role $checkRole -propertyName "DataActions"))
+    {
+        if (-Not (Test-RoleAllowsPermission -role $containedInRole -permission $action -dataAction $true))
+        {
             return $false
         }
     }
-    # foreach($action in $checkRole.NotActions) {
-    #     foreach($cAction in $containedInRole.NotActions) {
-    #         if ($action -like "$cAction")
-    #         {
-    #             $fnd = $true
-    #             break
-    #         }
-    #     }
-    #     if (-Not $fnd) {
-    #         return $false
-    #     }
-    # }
-    foreach($action in $checkRole.NotDataActions) {
-        foreach($cAction in $containedInRole.NotDataActions) {
-            if ($action -like "$cAction")
-            {
-                $fnd = $true
-                break
-            }
-        }
-        if (-Not $fnd) {
-            return $false
-        }
-    }
+
     return $true
 }
 
@@ -269,36 +301,7 @@ function Find-RoleByPermissions($allKvRoles, $allPerms)
     {
         $allFnd = $true
         foreach($perm in $allPerms) {
-            $cont = $false
-            # foreach($action in $role.Actions) {
-            #     if ($perm -like "$action")
-            #     {
-            #         $cont = $true
-            #         break
-            #     }
-            # }
-            foreach($action in $role.DataActions) {
-                if ($perm -like "$action")
-                {
-                    $cont = $true
-                    break
-                }
-            }
-            # foreach($action in $role.NotActions) {
-            #     if ($perm -like "$action")
-            #     {
-            #         $cont = $false
-            #         break
-            #     }
-            # }
-            foreach($action in $role.NotDataActions) {
-                if ($perm -like "$action")
-                {
-                    $cont = $false
-                    break
-                }
-            }
-            if (-Not $cont) {
+            if (-Not (Test-RoleAllowsPermission -role $role -permission $perm -dataAction $true)) {
                 $allFnd = $false
                 break
             }
@@ -321,16 +324,32 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
     $null = Set-AzContext -Subscription $sub.Id
     $Context = Get-AzContext
 
+    # Resolving the management group ancestry of the subscription. Management group scopes are logical
+    # ancestors of everything below them, but not string prefixes of their resource ids. Therefore,
+    # assignments inherited from management groups need the extra matching in the scope filter below.
+    $mgAncestorScopes = @()
+    try {
+        $ancestryResponse = Invoke-AzRestMethod -Method Get -Path "/subscriptions/$($sub.Id)/providers/Microsoft.Management/managementGroups?api-version=2023-04-01"
+        if ($ancestryResponse.StatusCode -eq 200) {
+            $mgAncestorScopes = @(($ancestryResponse.Content | ConvertFrom-Json).value | ForEach-Object { $_.id.TrimEnd("/") })
+        }
+        else {
+            Write-Warning "  Can't resolve management group ancestry (status $($ancestryResponse.StatusCode)), assignments inherited from management groups will not be detected!"
+        }
+    }
+    catch {
+        Write-Warning "  Can't resolve management group ancestry ($($_.Exception.Message)), assignments inherited from management groups will not be detected!"
+    }
+
     $KeyVaults = Get-AzKeyVault
     foreach ($KeyVault in $KeyVaults)
     {
         $KeyVaultName = $KeyVault.VaultName
-        if (-Not [string]::IsNullOrEmpty($processOnlyKeyVaultWithName) -and $processOnlyKeyVaultWithName -ne $KeyVaultName)
+        if (-Not [string]::IsNullOrEmpty($processOnlyKeyVaultsWithName) -and $processOnlyKeyVaultsWithName -ne $KeyVaultName)
         {
             continue
         }
 
-        Write-Host "Checking key vault $KeyVaultName" -ForegroundColor $CommandInfo
         Write-Host "Checking key vault $KeyVaultName" -ForegroundColor $CommandInfo
         $KeyVault = Get-AzKeyVault -VaultName $KeyVault.VaultName -ResourceGroupName $KeyVault.ResourceGroupName
         if ($KeyVault.EnableRbacAuthorization)
@@ -341,24 +360,41 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
         {
             # Checking own key vault access
             Write-Host "Checking own key vault access" -ForegroundColor $CommandInfo
-            $user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
-            $RoleAssignments = Get-AzRoleAssignment -ObjectId $user.Id -ResourceGroupName $KeyVault.ResourceGroupName -ResourceName $KeyVault.VaultName -ResourceType "Microsoft.KeyVault/vaults"
+            $user = Get-CurrentAzAdPrincipal
+            # Note: ExpandPrincipalGroups is only supported for user principals (service principals fail with
+            # "ExpandPrincipalGroups is only supported for a User principal"), therefore it is only used for users.
+            $expandPrincipalGroups = $null -ne $user.PSObject.Properties["UserPrincipalName"]
+            # Note: Since Az.Resources 10, ExpandPrincipalGroups is only allowed in the pure ObjectId parameter set.
+            # Therefore, all assignments of the principal are fetched and filtered by scope (including inherited scopes) locally.
+            $allUserAssignments = $expandPrincipalGroups ? @(Get-AzRoleAssignment -ObjectId $user.Id -ExpandPrincipalGroups) : @(Get-AzRoleAssignment -ObjectId $user.Id)
+            $RoleAssignments = @($allUserAssignments | Where-Object {
+                $normalizedScope = $_.Scope.TrimEnd("/")
+                $KeyVault.ResourceId.Equals($_.Scope, [System.StringComparison]::OrdinalIgnoreCase) -or $KeyVault.ResourceId.StartsWith("$normalizedScope/", [System.StringComparison]::OrdinalIgnoreCase) -or ($mgAncestorScopes -contains $normalizedScope)
+            })
             $fndAss = $false
             $fndKv = $false
             foreach($RoleAssignment in $RoleAssignments)
             {
-                $role = $allRoles | Where-Object { $_.Id -eq $RoleAssignment.RoleDefinitionId }
-                foreach($perm in $role.Actions) {
-                    if ("Microsoft.Authorization/roleAssignments/write" -like $perm) {
+                $roleDefinitionId = ($RoleAssignment.RoleDefinitionId -split "/")[-1]
+                $role = $allRoles | Where-Object { ($_.Id -split "/")[-1] -eq $roleDefinitionId }
+                if ($null -ne $role)
+                {
+                    if (Test-RoleAllowsPermission -role $role -permission "Microsoft.Authorization/roleAssignments/write") {
                         $fndAss = $true
                     }
-                    if ("Microsoft.KeyVault/vaults/write" -like $perm) {
+                    if (Test-RoleAllowsPermission -role $role -permission "Microsoft.KeyVault/vaults/write") {
                         $fndKv = $true
                     }
                 }
             }   
             if (-Not $fndAss -or -Not $fndKv) {
-                Write-Warning "  No permissions to set role assignments or update key vaults, skipping migration of this key vault!"
+                if (-Not $dryRun) {
+                    Write-Error "  No permissions to set role assignments or update key vaults, skipping migration of this key vault!"
+                    exit 1
+                }
+                else {
+                    Write-Warning "  No permissions to set role assignments or update key vaults, skipping migration of this key vault!"
+                }
             }
 
             Write-Host "  Migrating to RBAC authorization..."
@@ -368,6 +404,7 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
             {
                 #$AccessPolicy = $KeyVault.AccessPolicies[0]
                 $prcplId = $AccessPolicy.ObjectId
+                $isApplicationId = $false
                 if ($null -ne $AccessPolicy.ApplicationId)
                 {
                     if ($null -ne $prcplId)
@@ -375,6 +412,36 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
                         throw "Not yet implemented handling of access policies with both object id and application id set! ObjectId: $($AccessPolicy.ObjectId) ApplicationId: $($AccessPolicy.ApplicationId)"
                     }
                     $prcplId = $AccessPolicy.ApplicationId
+                    $isApplicationId = $true
+                }
+                # Checking that the principal still exists in the tenant. Stale access policies of deleted
+                # principals can't be migrated, New-AzRoleAssignment would fail with PrincipalNotFound.
+                $prcpl = $null
+                if ($isApplicationId)
+                {
+                    $prcpl = Get-AzAdServicePrincipal -ApplicationId $prcplId -ErrorAction SilentlyContinue
+                    if ($null -ne $prcpl)
+                    {
+                        # Use the real object id of the service principal for the role assignments below
+                        $prcplId = $prcpl.Id
+                    }
+                }
+                else
+                {
+                    $prcpl = Get-AzAdUser -ObjectId $prcplId -ErrorAction SilentlyContinue
+                    if ($null -eq $prcpl)
+                    {
+                        $prcpl = Get-AzAdServicePrincipal -ObjectId $prcplId -ErrorAction SilentlyContinue
+                    }
+                    if ($null -eq $prcpl)
+                    {
+                        $prcpl = Get-AzAdGroup -ObjectId $prcplId -ErrorAction SilentlyContinue
+                    }
+                }
+                if ($null -eq $prcpl)
+                {
+                    Write-Warning "      Access policy for object id $($prcplId) points to a principal that no longer exists in the tenant, skipping!"
+                    continue
                 }
                 Write-Host "      Access policy for object id $($prcplId) with permissions to"
                 Write-Host "          keys: $($AccessPolicy.PermissionsToKeys -join ",")"
@@ -554,16 +621,30 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
                     Write-Host "            Role assignment not found, creating..." -ForegroundColor $CommandWarning
                     if (-Not $dryRun -and $fndAss -and $fndKv) {
                         $Retries = 0;
+                        $lastError = $null
                         While ($null -eq $RoleAssignment -and $Retries -le 6)
                         {
-                            $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName $migRole.Name -ObjectId $prcplId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue
-                            Start-Sleep -s 10
-                            $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName $migRole.Name -ObjectId $prcplId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
+                            try {
+                                $RoleAssignment = New-AzRoleAssignment -RoleDefinitionName $migRole.Name -ObjectId $prcplId -scope $KeyVault.ResourceId -ErrorAction Stop
+                            }
+                            catch {
+                                # Surface the real error instead of swallowing it. Non-retryable errors abort
+                                # immediately, transient errors (e.g. propagation delays) are retried below.
+                                $lastError = $_.Exception.Message
+                                if ($lastError -match "PrincipalNotFound|AuthorizationFailed|InvalidPrincipalId|PrincipalTypeNotSupported") {
+                                    throw "Was not able to set role assignment '$($migRole.Name)' for object $prcplId on scope $($KeyVault.ResourceId): $($lastError)"
+                                }
+                                Write-Host "              Attempt $($Retries + 1) failed: $($lastError)" -ForegroundColor $CommandWarning
+                            }
+                            if ($null -eq $RoleAssignment) {
+                                Start-Sleep -s 10
+                                $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName $migRole.Name -ObjectId $prcplId -scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
+                            }
                             $Retries++;
                         }
                         if ($Retries -gt 6)
                         {
-                            throw "Was not able to set role assigment '$($migRole.Name)' for app $($AutomationAccount.Identity.PrincipalId) on scope $($KeyVault.ResourceId)"
+                            throw "Was not able to set role assignment '$($migRole.Name)' for object $prcplId on scope $($KeyVault.ResourceId). Last error: $($lastError)"
                         }
                     }
                 }
@@ -572,7 +653,7 @@ foreach ($AlyaSubscriptionName in (([string]::IsNullOrEmpty($subscriptionName) ?
 
             Write-Host "  Migration completed, enabling RBAC authorization on key vault."
             if (-Not $dryRun -and $fndAss -and $fndKv) {
-                Update-AzKeyVault -ResourceGroupName $KeyVault.ResourceGroupName -Name $KeyVaultName -DisableRbacAuthorization $false $false
+                Update-AzKeyVault -ResourceGroupName $KeyVault.ResourceGroupName -VaultName $KeyVaultName -DisableRbacAuthorization $false
             }
         }
     }

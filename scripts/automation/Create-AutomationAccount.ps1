@@ -33,6 +33,7 @@
     14.11.2019 Konrad Brunner       Initial Version
     31.05.2023 Konrad Brunner       Fixes and enhancements
     06.02.2026 Konrad Brunner       Added powershell documentation
+    16.09.2026 Konrad Brunner       Use Get-CurrentAzAdPrincipal to support service principal logins
 
 #>
 
@@ -247,7 +248,7 @@ if (-Not $KeyVault)
 
 # Setting own key vault access
 Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
-$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+$user = Get-CurrentAzAdPrincipal
 if ($KeyVault.EnableRbacAuthorization)
 {
     $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ObjectId $user.Id -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
@@ -683,7 +684,7 @@ try {
     {
         $mgrp = Select-Item -list $mgrps -message "Please select the root mangement group"
     }
-    $user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+    $user = Get-CurrentAzAdPrincipal
 
     $RoleAssignment = Get-AzRoleAssignment -ObjectId $user.Id -Scope $mgrp.Id -RoleDefinitionName "Management Group Contributor" -ErrorAction Continue | Where-Object { $_.Scope -eq $mgrp.Id }
     $Retries = 0;

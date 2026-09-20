@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     16.11.2022 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    15.09.2026 Konrad Brunner       Updated custom role format for Az.Resources 10
 
 #>
 
@@ -115,14 +116,18 @@ if (-Not $Role)
   "Name": "$($AlyaCompanyNameShortM365)StartVMOnConnect",
   "IsCustom": true,
   "Description": "Start VM on connect with AVD (Custom)",
-  "Actions": [
-    "Microsoft.Compute/virtualMachines/start/action",
-    "Microsoft.Compute/virtualMachines/read",
-    "Microsoft.Compute/virtualMachines/instanceView/read"
+  "Permissions": [
+    {
+      "Actions": [
+        "Microsoft.Compute/virtualMachines/start/action",
+        "Microsoft.Compute/virtualMachines/read",
+        "Microsoft.Compute/virtualMachines/instanceView/read"
+      ],
+      "NotActions": [],
+      "DataActions": [],
+      "NotDataActions": []
+    }
   ],
-  "NotActions": [],
-  "DataActions": [],
-  "NotDataActions": [],
   "AssignableScopes": [
     "$scope"
   ]

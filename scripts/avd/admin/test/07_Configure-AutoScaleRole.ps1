@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     20.05.2022 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    15.09.2026 Konrad Brunner       Updated custom role format for Az.Resources 10
 
 #>
 
@@ -103,24 +104,28 @@ if (-Not $Role)
   "Name": "$($AlyaCompanyNameShortM365)AutoscaleTest",
   "IsCustom": true,
   "Description": "Role to allow avd autoscaling hostpools.",
-  "Actions": [
-    "Microsoft.Insights/eventtypes/values/read",
-    "Microsoft.Compute/virtualMachines/deallocate/action",
-    "Microsoft.Compute/virtualMachines/restart/action",
-    "Microsoft.Compute/virtualMachines/powerOff/action",
-    "Microsoft.Compute/virtualMachines/start/action",
-    "Microsoft.Compute/virtualMachines/read",
-    "Microsoft.DesktopVirtualization/hostpools/read",
-    "Microsoft.DesktopVirtualization/hostpools/write",
-    "Microsoft.DesktopVirtualization/hostpools/sessionhosts/read",
-    "Microsoft.DesktopVirtualization/hostpools/sessionhosts/write",
-    "Microsoft.DesktopVirtualization/hostpools/sessionhosts/usersessions/delete",
-    "Microsoft.DesktopVirtualization/hostpools/sessionhosts/usersessions/read",
-    "Microsoft.DesktopVirtualization/hostpools/sessionhosts/usersessions/sendMessage/action"
+  "Permissions": [
+    {
+      "Actions": [
+        "Microsoft.Insights/eventtypes/values/read",
+        "Microsoft.Compute/virtualMachines/deallocate/action",
+        "Microsoft.Compute/virtualMachines/restart/action",
+        "Microsoft.Compute/virtualMachines/powerOff/action",
+        "Microsoft.Compute/virtualMachines/start/action",
+        "Microsoft.Compute/virtualMachines/read",
+        "Microsoft.DesktopVirtualization/hostpools/read",
+        "Microsoft.DesktopVirtualization/hostpools/write",
+        "Microsoft.DesktopVirtualization/hostpools/sessionhosts/read",
+        "Microsoft.DesktopVirtualization/hostpools/sessionhosts/write",
+        "Microsoft.DesktopVirtualization/hostpools/sessionhosts/usersessions/delete",
+        "Microsoft.DesktopVirtualization/hostpools/sessionhosts/usersessions/read",
+        "Microsoft.DesktopVirtualization/hostpools/sessionhosts/usersessions/sendMessage/action"
+      ],
+      "NotActions": [],
+      "DataActions": [],
+      "NotDataActions": []
+    }
   ],
-  "NotActions": [],
-  "DataActions": [],
-  "NotDataActions": [],
   "AssignableScopes": [
     "$scope"
   ]

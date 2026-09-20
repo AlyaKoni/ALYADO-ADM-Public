@@ -34,6 +34,8 @@
 
     First run Create-AzureCommunicationEmailService.ps1. Then this script.
     06.02.2026 Konrad Brunner       Added powershell documentation
+    15.09.2026 Konrad Brunner       Updated custom role format for Az.Resources 10
+    16.09.2026 Konrad Brunner       Use Get-CurrentAzAdPrincipal to support service principal logins
 
 #>
 
@@ -166,7 +168,7 @@ if (-Not $KeyVault)
 
 # Setting own key vault access
 Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
-$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+$user = Get-CurrentAzAdPrincipal
 if ($KeyVault.EnableRbacAuthorization)
 {
     $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ObjectId $user.Id -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }
@@ -202,16 +204,20 @@ if ($ConnectCommunicationEmailService)
     "Name": "$($AlyaCompanyNameShortM365)CommunicationServiceSmtp",
     "IsCustom": true,
     "Description": "Role to allow smtp email sending over azure communication services.",
-    "Actions": [
-    "Microsoft.Communication/CommunicationServices/Read",
-    "Microsoft.Communication/CommunicationServices/Write",
-    "Microsoft.Communication/EmailServices/write"
+    "Permissions": [
+        {
+            "Actions": [
+                "Microsoft.Communication/CommunicationServices/Read",
+                "Microsoft.Communication/CommunicationServices/Write",
+                "Microsoft.Communication/EmailServices/write"
+            ],
+            "NotActions": [],
+            "DataActions": [],
+            "NotDataActions": []
+        }
     ],
-    "NotActions": [],
-    "DataActions": [],
-    "NotDataActions": [],
     "AssignableScopes": [
-    "$scope"
+        "$scope"
     ]
 }
 "@

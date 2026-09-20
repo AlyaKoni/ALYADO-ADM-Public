@@ -34,6 +34,7 @@
     16.09.2024 Konrad Brunner       Rework with Graph
     06.02.2026 Konrad Brunner       Added powershell documentation
     08.07.2026 Konrad Brunner       New ForAutomationAccount parameter to support Azure Automation runbook execution
+    16.09.2026 Konrad Brunner       Use Get-CurrentAzAdPrincipal to support service principal logins
 
 #>
 
@@ -134,7 +135,7 @@ if (-Not $KeyVault)
 
 # Setting own key vault access
 Write-Host "Setting own key vault access" -ForegroundColor $CommandInfo
-$user = Get-AzAdUser -UserPrincipalName $Context.Account.Id
+$user = Get-CurrentAzAdPrincipal
 if ($KeyVault.EnableRbacAuthorization)
 {
     $RoleAssignment = Get-AzRoleAssignment -RoleDefinitionName "Key Vault Administrator" -ObjectId $user.Id -Scope $KeyVault.ResourceId -ErrorAction SilentlyContinue | Where-Object { $_.Scope -eq $KeyVault.ResourceId }

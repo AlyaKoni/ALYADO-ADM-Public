@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     16.11.2022 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    16.09.2026 Konrad Brunner       Use Get-CurrentAzAdPrincipal to support service principal logins
 
 #>
 
@@ -123,7 +124,7 @@ foreach($group in $groups)
 
 # Checking role assignment Virtual Machine Administrator Login
 Write-Host "Checking role assignment Virtual Machine Administrator Login" -ForegroundColor $CommandInfo
-$obj = Get-AzADUser -UserPrincipalName $Context.Account.Id
+$obj = Get-CurrentAzAdPrincipal
 $ra = Get-AzRoleAssignment -ResourceGroupName $ResourceGroupName -RoleDefinitionName "Virtual Machine Administrator Login" -ObjectId $obj.Id -ErrorAction SilentlyContinue
 if (-Not $ra)
 {

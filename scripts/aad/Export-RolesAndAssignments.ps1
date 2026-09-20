@@ -33,6 +33,7 @@
     02.02.2021 Konrad Brunner       Initial Version
     27.11.2023 Konrad Brunner       Switch to Graph
     06.02.2026 Konrad Brunner       Added powershell documentation
+    15.09.2026 Konrad Brunner       Updated role permissions for Az.Resources 10
 
 #>
 
@@ -176,14 +177,17 @@ $iamRoleDefsCusts = $iamRoleDefs | Where-Object { $_.IsCustom -eq $true }
 foreach($iamRoleDefsCust in $iamRoleDefsCusts)
 {
     Write-Host "Custom role $($iamRoleDefsCust.Name):" -ForegroundColor $CommandSuccess
-    Write-Host "Actions" -ForegroundColor $MenuColor
-    $iamRoleDefsCust.Actions
-    Write-Host "DataActions" -ForegroundColor $MenuColor
-    $iamRoleDefsCust.DataActions
-    Write-Host "NotActions" -ForegroundColor $MenuColor
-    $iamRoleDefsCust.NotActions
-    Write-Host "NotDataActions" -ForegroundColor $MenuColor
-    $iamRoleDefsCust.NotDataActions
+    foreach($iamRolePermission in $iamRoleDefsCust.Permissions)
+    {
+        Write-Host "Actions" -ForegroundColor $MenuColor
+        $iamRolePermission.Actions
+        Write-Host "DataActions" -ForegroundColor $MenuColor
+        $iamRolePermission.DataActions
+        Write-Host "NotActions" -ForegroundColor $MenuColor
+        $iamRolePermission.NotActions
+        Write-Host "NotDataActions" -ForegroundColor $MenuColor
+        $iamRolePermission.NotDataActions
+    }
 }
 
 # Getting all management groups

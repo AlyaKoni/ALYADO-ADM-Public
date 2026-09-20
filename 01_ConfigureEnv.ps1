@@ -72,6 +72,7 @@
     09.09.2026 Konrad Brunner       Custom configuration output suppressed via stream redirection when once-guard already set
     11.09.2026 Konrad Brunner       Make-JsonGitReady: ConvertFrom-Json fallback for Windows PowerShell 5.1 (Azure DevOps Pipelines)
     11.09.2026 Konrad Brunner       Make-JsonGitReady: guard against overwriting files when JSON parsing fails
+    16.09.2026 Konrad Brunner       Added Get-CurrentAzAdPrincipal for user and service principal logins
 
 #>
 
@@ -2777,6 +2778,32 @@ function LoginTo-Az(
     }
 }
 #LoginTo-Az -SubscriptionName $AlyaSubscriptionName
+
+function Get-CurrentAzAdPrincipal()
+{
+    # Resolves the account of the current Az context to its Entra ID principal.
+    # Interactive user logins resolve to the user object, management app / service
+    # principal logins resolve to the service principal (Get-AzAdUser returns $null for those).
+    $actContext = Get-AzContext
+    if (-Not $actContext -or -Not $actContext.Account)
+    {
+        throw "Can't get Az context! Not logged in?"
+    }
+    $principal = Get-AzAdUser -UserPrincipalName $actContext.Account.Id -ErrorAction SilentlyContinue
+    if (-Not $principal)
+    {
+        $principal = Get-AzAdUser -Mail $actContext.Account.Id -ErrorAction SilentlyContinue
+    }
+    if (-Not $principal)
+    {
+        $principal = Get-AzAdServicePrincipal -ApplicationId $actContext.Account.Id -ErrorAction SilentlyContinue
+    }
+    if (-Not $principal)
+    {
+        throw "Can't resolve the logged in account '$($actContext.Account.Id)' to an Entra ID user or service principal!"
+    }
+    return $principal
+}
 
 function LogoutAllFrom-MgGraph()
 {
