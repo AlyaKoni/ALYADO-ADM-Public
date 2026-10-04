@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     24.10.2021 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    01.10.2026 Konrad Brunner       Switched from AzureADPreview to Microsoft Graph
 
 #>
 
@@ -64,14 +65,14 @@ Param(
 
 . $PSScriptRoot\00_Configuration.ps1
 
-Connect-AzureAD
+Connect-MgGraph -Scopes "Group.ReadWrite.All"
 
 Write-Host "Checking o365 groups"
 foreach($migMap in $migMapping)
 {
     $groupName = $migMap.m365Group
     Write-Host "Group '$($groupName)'"
-    $exGrp = Get-AzureADMSGroup -SearchString $groupName
+    $exGrp = Get-MgGroup -Filter "displayName eq '$($groupName)'" -ConsistencyLevel eventual
     if ($exGrp.Count -gt 1)
     {
         foreach($grp in $exGrp)
@@ -86,12 +87,12 @@ foreach($migMap in $migMapping)
     if ($exGrp)
     {
         Write-Host "   - Group already exists! Updating."
-        $null = Set-AzureADMSGroup -Id $exGrp.Id -Description $secGroup.Description -DisplayName $groupName -MailNickname $groupName -Visibility $migMap.access
+        $null = Update-MgGroup -GroupId $exGrp.Id -Description $secGroup.Description -DisplayName $groupName -MailNickname $groupName -Visibility $migMap.access
     }
     else
     {
         Write-Host "   - Group doesn't exists! Creating."
-        $exGrp = New-AzureADMSGroup -DisplayName $groupName -Description $secGroup.Description -MailEnabled $true -MailNickname $groupName -SecurityEnabled $True -GroupTypes "Unified" -Visibility $migMap.access
+        $exGrp = New-MgGroup -DisplayName $groupName -Description $secGroup.Description -MailEnabled $true -MailNickname $groupName -SecurityEnabled $True -GroupTypes @("Unified") -Visibility $migMap.access
     }
 }
 

@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     11.06.2021 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    01.10.2026 Konrad Brunner       Removed AzureADPreview and MSOnline, Graph token via Az
 
 #>
 
@@ -77,12 +78,9 @@ Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
 Install-ModuleIfNotInstalled "Microsoft.Online.SharePoint.PowerShell"
-Install-ModuleIfNotInstalled "AzureAdPreview"
 
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
-LoginTo-Msol
 try {
     LoginTo-EXO
 }
@@ -198,7 +196,8 @@ foreach ($Group in $Groups)
     if ($Obsolete)
     {
         Write-Host "  Checking Planner"
-        $token = Get-AdalAccessToken
+        $tokenSec = Get-AzAccessToken -ResourceUrl $AlyaGraphEndpoint -TenantId $AlyaTenantId -AsSecureString
+        $token = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenSec.Token))
         $uri = "$AlyaGraphEndpoint/Beta/groups/$($Grp.ExternalDirectoryObjectId)/planner/plans"
         $apps = $null
         try

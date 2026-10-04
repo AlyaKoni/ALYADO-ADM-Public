@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     27.06.2022 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    01.10.2026 Konrad Brunner       Switched from AzureADPreview to Microsoft Graph
 
 #>
 
@@ -82,11 +83,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Copy-AppsBetweenConditiona
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
     
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.ConditionalAccess")
 
 # =============================================================
 # Azure stuff
@@ -106,19 +108,19 @@ if (-Not $Context)
 
 # Getting from conditional access policy
 Write-Host "Getting from conditional access policy" -ForegroundColor $CommandInfo
-$policyFrom = Get-AzureADMSConditionalAccessPolicy | Where-Object { $_.displayName -eq $condAccessRuleNameFrom }
+$policyFrom = Get-MgIdentityConditionalAccessPolicy | Where-Object { $_.displayName -eq $condAccessRuleNameFrom }
 if (-Not $policyFrom.Conditions.Applications)
 {
-    $policyFrom.Conditions.Applications = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessApplicationCondition
+    $policyFrom.Conditions.Applications = New-Object -TypeName Microsoft.Graph.PowerShell.Models.MicrosoftGraphConditionalAccessApplications
 }
 
 # Getting to conditional access policy
 Write-Host "Getting to conditional access policy" -ForegroundColor $CommandInfo
-$policyTo = Get-AzureADMSConditionalAccessPolicy | Where-Object { $_.displayName -eq $condAccessRuleNameTo }
+$policyTo = Get-MgIdentityConditionalAccessPolicy | Where-Object { $_.displayName -eq $condAccessRuleNameTo }
 
 # Copying apps
 Write-Host "Copying apps from $($condAccessRuleNameFrom) to $($condAccessRuleNameTo)" -ForegroundColor $CommandInfo
-Set-AzureADMSConditionalAccessPolicy -PolicyId $policyTo.id -Conditions $policyFrom.Conditions
+Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyTo.id -Conditions $policyFrom.Conditions
 
 # Stopping Transcript
 Stop-Transcript

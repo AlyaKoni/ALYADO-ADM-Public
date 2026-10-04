@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     21.09.2022 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    01.10.2026 Konrad Brunner       Switched from AzureADPreview to Microsoft Graph
 
 #>
 
@@ -40,7 +41,7 @@
 Copies an existing Azure AD Conditional Access policy to a new or existing policy.
 
 .DESCRIPTION
-The Copy-ConditionalAccessPolicy.ps1 script creates or updates an Azure AD Conditional Access policy by replicating the configuration from a specified source policy to a destination policy. It reads environment configuration, ensures required modules are installed, logs into Azure and Azure AD, and then uses Microsoft Graph API and AzureADPreview commands to query and manage conditional access policies. If the destination policy already exists, its settings are updated; otherwise, a new policy is created with the source configuration.
+The Copy-ConditionalAccessPolicy.ps1 script creates or updates an Azure AD Conditional Access policy by replicating the configuration from a specified source policy to a destination policy. It reads environment configuration, ensures required modules are installed, logs into Azure and Microsoft Graph, and then uses Microsoft Graph commands to query and manage conditional access policies. If the destination policy already exists, its settings are updated; otherwise, a new policy is created with the source configuration.
 
 .PARAMETER srcCondAccessRuleName
 Specifies the display name of the source Conditional Access policy to copy.
@@ -82,11 +83,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Copy-ConditionalAccessPoli
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
     
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.ConditionalAccess")
 
 # =============================================================
 # Azure stuff
@@ -112,7 +114,7 @@ if (-Not $srcPolicyId)
 {
 	throw "Policy $srcCondAccessRuleName not found"
 }
-$srcPolicy = Get-AzureADMSConditionalAccessPolicy -PolicyId $srcPolicyId
+$srcPolicy = Get-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $srcPolicyId
 
 # Checking destination conditional access policy
 Write-Host "Checking destination conditional access policy" -ForegroundColor $CommandInfo
@@ -120,14 +122,14 @@ $dstPolicyId = ($policies.value | Where-Object { $_.displayName -eq $dstCondAcce
 if (-Not $dstPolicyId)
 {
     Write-Warning "  Does not exist. Creating it now"
-    New-AzureADMSConditionalAccessPolicy -DisplayName $dstCondAccessRuleName `
+    New-MgIdentityConditionalAccessPolicy -DisplayName $dstCondAccessRuleName -State $srcPolicy.State `
         -Conditions $srcPolicy.Conditions -GrantControls $srcPolicy.GrantControls -SessionControls $srcPolicy.SessionControls
 }
 else
 {
     Write-Host "  Updating"
-    $dstPolicy = Get-AzureADMSConditionalAccessPolicy -PolicyId $dstPolicyId
-    Set-AzureADMSConditionalAccessPolicy -PolicyId $dstPolicyId -DisplayName $dstCondAccessRuleName `
+    $dstPolicy = Get-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $dstPolicyId
+    Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $dstPolicyId -DisplayName $dstCondAccessRuleName `
         -Conditions $srcPolicy.Conditions -GrantControls $srcPolicy.GrantControls -SessionControls $srcPolicy.SessionControls
 }
 

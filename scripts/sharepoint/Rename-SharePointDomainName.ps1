@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     22.06.2021 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    01.10.2026 Konrad Brunner       Switched from AzureADPreview to Microsoft Graph
 
 #>
 
@@ -87,12 +88,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Rename-SharePointDomainN
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
 Install-ModuleIfNotInstalled "Microsoft.Online.Sharepoint.PowerShell"
     
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Domain.ReadWrite.All")
 LoginTo-SPO
 
 # =============================================================
@@ -126,12 +128,12 @@ if ($exists)
 
 # Checking existing domains
 Write-Host "Checking existing domains" -ForegroundColor $CommandInfo
-$existingDomain = Get-AzureADDomain | Where-Object { $_.Name -eq $newDomainName }
+$existingDomain = Get-MgDomain | Where-Object { $_.Id -eq $newDomainName }
 if (-Not $existingDomain)
 {
     Write-Warning "Domain $($newDomainName) does not exists, adding it now"
-    New-AzureADDomain -Name $newDomainName
-    $existingDomain = Get-AzureADDomain | Where-Object { $_.Name -eq $newDomainName }
+    New-MgDomain -Id $newDomainName
+    $existingDomain = Get-MgDomain | Where-Object { $_.Id -eq $newDomainName }
 }
 #Defaults ?
 #IsDefault                     : False
@@ -141,11 +143,11 @@ if (-Not $existingDomain)
 if (-Not $existingDomain.IsVerified)
 {
     Write-Warning "Domain $($newDomainName) not yet verified, verifying it now"
-    $verCodes = Get-AzureADDomainVerificationDnsRecord -Name $newDomainName
+    $verCodes = Get-MgDomainVerificationDnsRecord -DomainId $newDomainName
     Write-Warning "Please add one of the following records to your dns"
     $verCodes | Format-List
     pause
-    Confirm-AzureADDomain -Name $newDomainName
+    Confirm-MgDomain -DomainId $newDomainName
 }
 
 # Changing domain name

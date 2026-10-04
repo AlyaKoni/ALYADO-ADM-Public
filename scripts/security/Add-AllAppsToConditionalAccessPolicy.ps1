@@ -34,6 +34,7 @@
     16.09.2022 Konrad Brunner       More stable error handling
     20.09.2022 Konrad Brunner       New handling by parsing error message
     06.02.2026 Konrad Brunner       Added powershell documentation
+    01.10.2026 Konrad Brunner       Switched from AzureADPreview to Microsoft Graph
 
 #>
 
@@ -42,7 +43,7 @@
 Adds all Azure AD applications to a specified Conditional Access policy while excluding specified applications.
 
 .DESCRIPTION
-The Add-AllAppsToConditionalAccessPolicy.ps1 script retrieves all registered applications from the Azure AD tenant and adds them to the IncludeApplications list of a specified Conditional Access policy. Optionally, certain application IDs can be excluded from the policy. The script handles unsupported first-party applications, manages transient errors such as throttling, and verifies the policy update through retries and structured error handling. It also ensures the necessary Azure and AzureAD modules are installed and that proper authentication to Azure services is established before performing operations.
+The Add-AllAppsToConditionalAccessPolicy.ps1 script retrieves all registered applications from the Azure AD tenant and adds them to the IncludeApplications list of a specified Conditional Access policy. Optionally, certain application IDs can be excluded from the policy. The script handles unsupported first-party applications, manages transient errors such as throttling, and verifies the policy update through retries and structured error handling. It also ensures the necessary Azure and Microsoft Graph modules are installed and that proper authentication to Azure services is established before performing operations.
 
 .PARAMETER condAccessRuleName
 The name of the Conditional Access policy to which all applications should be added.
@@ -84,11 +85,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Add-AllAppsToConditionalAc
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
     
 # Logins
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Policy.ReadWrite.ConditionalAccess")
 
 # =============================================================
 # Azure stuff
@@ -125,18 +127,18 @@ if (-Not $policyId)
 {
 	throw "Policy $condAccessRuleName not found"
 }
-$policy = Get-AzureADMSConditionalAccessPolicy -PolicyId $policyId
+$policy = Get-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policyId
 if (-Not $policy.Conditions)
 {
 	throw "Not yet implemented: empty `$policy.Conditions"
 }
 if (-Not $policy.Conditions.Applications)
 {
-    $policy.Conditions.Applications = New-Object -TypeName Microsoft.Open.MSGraph.Model.ConditionalAccessApplicationCondition
+    $policy.Conditions.Applications = New-Object -TypeName Microsoft.Graph.PowerShell.Models.MicrosoftGraphConditionalAccessApplications
     $policy.Conditions.Applications.IncludeApplications = @('none')
     $policy.Conditions.Applications.ExcludeApplications = @()
-    Set-AzureADMSConditionalAccessPolicy -PolicyId $policy.id -Conditions $policy.Conditions
-    $policy = Get-AzureADMSConditionalAccessPolicy -PolicyId $policy.id
+    Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policy.id -Conditions $policy.Conditions
+    $policy = Get-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policy.id
 }
 
 # Setting excluded apps
@@ -163,12 +165,12 @@ while ($true)
         try
         {
             Write-Host "  Saving ExcludeApplications"
-            Set-AzureADMSConditionalAccessPolicy -PolicyId $policy.id -Conditions $policy.Conditions
+            Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policy.id -Conditions $policy.Conditions
             break
         }
         catch
         {
-            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*" -or $_.Exception.ToString() -like "*HttpStatusCode: 503*")
+            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*" -or $_.Exception.ToString() -like "*HttpStatusCode: 503*" -or $_.Exception.ToString() -like "*status code*429*" -or $_.Exception.ToString() -like "*status code*503*")
             {
                 $retries = $retries - 1
                 Write-Host "  TooManyRequests, retrying." -ForegroundColor $CommandError
@@ -181,7 +183,7 @@ while ($true)
             }
             else
             {
-                if ($_.Exception.ToString() -like "*HttpStatusCode: InternalServerError*")
+                if ($_.Exception.ToString() -like "*HttpStatusCode: InternalServerError*" -or $_.Exception.ToString() -like "*status code*500*")
                 {
                     $retries = $retries - 1
                     Write-Host "  InternalServerError, retrying." -ForegroundColor $CommandError
@@ -250,12 +252,12 @@ while ($true)
         try
         {
             Write-Host "  Saving IncludeApplications"
-            Set-AzureADMSConditionalAccessPolicy -PolicyId $policy.id -Conditions $policy.Conditions
+            Update-MgIdentityConditionalAccessPolicy -ConditionalAccessPolicyId $policy.id -Conditions $policy.Conditions
             break
         }
         catch
         {
-            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*" -or $_.Exception.ToString() -like "*HttpStatusCode: 503*")
+            if ($_.Exception.ToString() -like "*HttpStatusCode: 429*" -or $_.Exception.ToString() -like "*HttpStatusCode: 503*" -or $_.Exception.ToString() -like "*status code*429*" -or $_.Exception.ToString() -like "*status code*503*")
             {
                 $retries = $retries - 1
                 Write-Host "  TooManyRequests, retrying." -ForegroundColor $CommandError
@@ -268,7 +270,7 @@ while ($true)
             }
             else
             {
-                if ($_.Exception.ToString() -like "*HttpStatusCode: InternalServerError*")
+                if ($_.Exception.ToString() -like "*HttpStatusCode: InternalServerError*" -or $_.Exception.ToString() -like "*status code*500*")
                 {
                     $retries = $retries - 1
                     Write-Host "  InternalServerError, retrying." -ForegroundColor $CommandError

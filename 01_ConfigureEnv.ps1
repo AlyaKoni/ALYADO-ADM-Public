@@ -73,6 +73,8 @@
     11.09.2026 Konrad Brunner       Make-JsonGitReady: ConvertFrom-Json fallback for Windows PowerShell 5.1 (Azure DevOps Pipelines)
     11.09.2026 Konrad Brunner       Make-JsonGitReady: guard against overwriting files when JSON parsing fails
     16.09.2026 Konrad Brunner       Added Get-CurrentAzAdPrincipal for user and service principal logins
+    20.09.2026 Konrad Brunner       Added IsolatedScope and IsolatedProcess functions for module isolation
+    20.09.2026 Konrad Brunner       LoginTo-Teams: app login parameter compatibility, ClientId/ApplicationId resolved via reflection
 
 #>
 
@@ -3389,25 +3391,50 @@ function LoginTo-Teams(
     else
     {
         if (-Not [string]::IsNullOrEmpty($ClientId)) {
-            if ([string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
-                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
-                    Connect-MicrosoftTeams -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
-                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
-                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
-                    Connect-MicrosoftTeams -ClientId $ClientId -Certificate $cert -TenantId $AlyaTenantId -NoWelcome
-                } else {
-                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+            # Connect-MicrosoftTeams compatibility: the current modules (7.x and 8.0 ConfigAPI)
+            # only know -ApplicationId (and no -NoWelcome/-Environment), newer module versions
+            # may know -ClientId. Resolve the parameter names via reflection (verified
+            # 2026-09-20 against MicrosoftTeams 7.9.0 and 8.0.0: ApplicationId, Certificate,
+            # CertificateThumbprint, TenantId and TeamsEnvironmentName exist, ClientId,
+            # NoWelcome and Environment do not).
+            $connectParams = @((Get-Command Connect-MicrosoftTeams).ParameterSets | ForEach-Object { $_.Parameters | ForEach-Object { $_.Name } } | Sort-Object -Unique)
+            $appIdParamName = "ApplicationId"
+            if ($connectParams -contains "ClientId")
+            {
+                $appIdParamName = "ClientId"
+            }
+            $connectArguments = @{
+                $appIdParamName = $ClientId
+                TenantId = $AlyaTenantId
+            }
+            if ($connectParams -contains "NoWelcome")
+            {
+                $connectArguments["NoWelcome"] = $true
+            }
+            if (-Not [string]::IsNullOrEmpty($AlyaTeamsEnvironment))
+            {
+                if ($connectParams -contains "TeamsEnvironmentName")
+                {
+                    $connectArguments["TeamsEnvironmentName"] = $AlyaTeamsEnvironment
                 }
-            } else {
-                if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
-                    Connect-MicrosoftTeams -Environment $AlyaTeamsEnvironment -ClientId $ClientId -CertificateThumbprint $ClientCertificateThumbprint -TenantId $AlyaTenantId -NoWelcome
-                } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
-                    $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
-                    Connect-MicrosoftTeams -Environment $AlyaTeamsEnvironment -ClientId $ClientId -Certificate $cert -TenantId $AlyaTenantId -NoWelcome
-                } else {
-                    throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+                elseif ($connectParams -contains "Environment")
+                {
+                    $connectArguments["Environment"] = $AlyaTeamsEnvironment
+                }
+                else
+                {
+                    throw "Connect-MicrosoftTeams does not support a teams environment parameter"
                 }
             }
+            if (-Not [string]::IsNullOrEmpty($ClientCertificateThumbprint)) {
+                $connectArguments["CertificateThumbprint"] = $ClientCertificateThumbprint
+            } elseif (-Not [string]::IsNullOrEmpty($ClientCertificateFile) -and $ClientCertificatePassword) {
+                $cert = New-Object -TypeName System.Security.Cryptography.X509Certificates.X509Certificate2 -ArgumentList @($ClientCertificateFile, $ClientCertificatePassword)
+                $connectArguments["Certificate"] = $cert
+            } else {
+                throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
+            }
+            $null = Connect-MicrosoftTeams @connectArguments
         } else {
             if ([string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
                 Connect-MicrosoftTeams -DisableWAM:(!$AlyaWamEnabled)
@@ -5263,50 +5290,7 @@ function Close-PlaywrightPage()
     } | Stop-Process -ErrorAction SilentlyContinue
 }
 
-function Run-ScriptInRunspace()
-{
-    Param(
-        $scriptPath = $null
-    )
-    Write-Host "Run-ScriptInRunspace: $scriptPath" -ForegroundColor $CommandInfo
-    $ps = $null
-    try {
-        $ps = [powershell]::Create()
-        [void]$ps.AddCommand($scriptPath).Invoke()
-        Write-Host "Results" -ForegroundColor $CommandInfo
-        Write-Host "  Debug" -ForegroundColor $CommandInfo
-        if ($ps.Streams.Debug)
-        {
-            Write-Debug $ps.Streams.Debug
-        }
-        Write-Host "  Verbose" -ForegroundColor $CommandInfo
-        if ($ps.Streams.Verbose)
-        {
-            Write-Verbose $ps.Streams.Verbose
-        }
-        Write-Host "  Information" -ForegroundColor $CommandInfo
-        if ($ps.Streams.Information)
-        {
-            Write-Host $ps.Streams.Information
-        }
-        Write-Host "  Error" -ForegroundColor $CommandInfo
-        if ($ps.Streams.Error)
-        {
-            Write-Error $ps.Streams.Error
-        }
-        Write-Host "  Warning" -ForegroundColor $CommandInfo
-        if ($ps.Streams.Warning)
-        {
-            foreach($record in $ps.Streams.Warning) {
-                Write-Warning $ps.Streams.Warning
-            }
-        }
-    }
-    catch {
-        if ($null -ne $ps) { $ps.Runspace.Close() }
-    }
-}
-#Run-ScriptInRunspace "$AlyaScripts\tenant\Set-AdHocSubscriptionsDisabled.ps1"
+<# ALYA STRING FUNCTIONS #>
 
 # Alya String Functions
 function Replace-AlyaString($str)
@@ -5422,6 +5406,8 @@ function Replace-AlyaStrings($obj, $depth)
         }
     }
 }
+
+<# JSON CLEANING #>
 
 # Deterministically normalizes exported JSON files for git:
 # recursive removal of volatile attributes ($VolatileKeys), recursive canonical key sorting
@@ -5662,11 +5648,634 @@ function Make-JsonGitReady()
     }
 }
 
+<# ISOLATED SCOPES AND PROCESSES #>
+
+function Run-ScriptInRunspace()
+{
+    Param(
+        $scriptPath = $null
+    )
+    Write-Host "Run-ScriptInRunspace: $scriptPath" -ForegroundColor $CommandInfo
+    $ps = $null
+    try {
+        $ps = [powershell]::Create()
+        [void]$ps.AddCommand($scriptPath).Invoke()
+        Write-Host "Results" -ForegroundColor $CommandInfo
+        Write-Host "  Debug" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Debug)
+        {
+            Write-Debug $ps.Streams.Debug
+        }
+        Write-Host "  Verbose" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Verbose)
+        {
+            Write-Verbose $ps.Streams.Verbose
+        }
+        Write-Host "  Information" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Information)
+        {
+            Write-Host $ps.Streams.Information
+        }
+        Write-Host "  Error" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Error)
+        {
+            Write-Error $ps.Streams.Error
+        }
+        Write-Host "  Warning" -ForegroundColor $CommandInfo
+        if ($ps.Streams.Warning)
+        {
+            foreach($record in $ps.Streams.Warning) {
+                Write-Warning $ps.Streams.Warning
+            }
+        }
+    }
+    catch {
+        if ($null -ne $ps) { $ps.Runspace.Close() }
+    }
+}
+#Run-ScriptInRunspace "$AlyaScripts\tenant\Set-AdHocSubscriptionsDisabled.ps1"
+
+# Alya Isolation Functions
+# Two helper groups to work around module/DLL conflicts (e.g. ExchangeOnlineManagement,
+# MicrosoftTeams and Microsoft.Graph loaded in one script):
+# - IsolatedScope:   separate runspace in the current process. Isolates modules, cmdlets,
+#                    format files, variables and logins on PowerShell session level.
+#                    Arguments are passed as live objects, results should be plain data
+#                    (string, int, bool, hashtable, array, PSCustomObject). Do NOT return
+#                    module specific objects (Teams/Graph/EXO types) to the caller, their
+#                    types are unknown in the caller runspace.
+# - IsolatedProcess: separate pwsh child process. Full isolation including assemblies.
+#                    Arguments and results are exchanged as JSON (plain data only, no
+#                    script blocks, no binary content). Interactive logins do NOT work in
+#                    process mode (stdin is used by the protocol), use certificate or
+#                    management app logins there.
+# Each isolated unit loads this file (01_ConfigureEnv.ps1), so all Alya functions and
+# configuration variables are available inside. Each unit writes its own log next to the
+# parent transcript, the name is derived from the -ParentTranscriptPath parameter:
+# <ParentBaseName>-<Name>-<Timestamp>.log
+# Note: scopes are stateless between invocations (except modules, login and log). Pass all
+# needed values via -Arguments on every invocation. In process mode the bodies run
+# dot-sourced in the child process (needed so 01_ConfigureEnv.ps1 definitions persist),
+# so assignments there technically survive until Stop-IsolatedProcess - do not rely on it.
+
+if (-Not (Test-Path variable:global:AlyaIsolatedScopes))
+{
+    $global:AlyaIsolatedScopes = @{}
+}
+if (-Not (Test-Path variable:global:AlyaIsolatedProcesses))
+{
+    $global:AlyaIsolatedProcesses = @{}
+}
+if (-Not (Test-Path variable:global:AlyaIsolatedProcessMarker))
+{
+    $global:AlyaIsolatedProcessMarker = "##ALYAISOLATED##"
+}
+
+function Get-IsolatedTranscriptPath(
+    [string] [Parameter(Mandatory = $true)] $name,
+    [string] [Parameter(Mandatory = $false)] $parentTranscriptPath = $null
+)
+{
+    # Derives the isolated unit log path from the parent transcript path:
+    # <dir>\<base>-<timestamp>.log -> <dir>\<base>-<name>-<timestamp>.log
+    # Note: repo scripts hardcode "\" separators even on Linux. PowerShell provider
+    # cmdlets (Split-Path/Join-Path) handle that cross-platform, .NET path APIs
+    # (System.IO.Path) do NOT split on "\" on Linux - so use the provider cmdlets here.
+    if ([string]::IsNullOrEmpty($parentTranscriptPath))
+    {
+        return $null
+    }
+    $dir = Split-Path -Path $parentTranscriptPath -Parent
+    if ([string]::IsNullOrEmpty($dir))
+    {
+        $dir = "."
+    }
+    $leaf = Split-Path -Path $parentTranscriptPath -Leaf
+    $file = [System.IO.Path]::GetFileNameWithoutExtension($leaf)
+    $timestampMatch = [regex]::Match($file, "^(?<base>.+)-(?<timestamp>\d{14,17})$")
+    if ($timestampMatch.Success)
+    {
+        $newFile = "$($timestampMatch.Groups["base"].Value)-$($name)-$($timestampMatch.Groups["timestamp"].Value)"
+    }
+    else
+    {
+        $newFile = "$($file)-$($name)"
+    }
+    # Mirror the separator style of the resolved parent directory instead of Join-Path:
+    # Join-Path is bound to the current OS ("D:\..." fails on Linux and vice versa)
+    $separator = [string][System.IO.Path]::DirectorySeparatorChar
+    if ($dir.Contains("/") -and -Not $dir.Contains("\"))
+    {
+        $separator = "/"
+    }
+    return "$($dir)$($separator)$($newFile).log"
+}
+
+function Write-IsolatedStreams(
+    [System.Management.Automation.PowerShell] [Parameter(Mandatory = $true)] $ps,
+    [System.IO.StreamWriter] [Parameter(Mandatory = $false)] $logWriter = $null
+)
+{
+    # Mirrors the output streams of an isolated runspace to the caller console
+    # (and therefore to the parent transcript) and to the isolated unit log file
+    foreach ($record in $ps.Streams.Information.ReadAll())
+    {
+        $text = [string]$record.MessageData
+        Write-Host $text
+        if ($null -ne $logWriter)
+        {
+            $logWriter.WriteLine($text)
+        }
+    }
+    foreach ($record in $ps.Streams.Verbose.ReadAll())
+    {
+        Write-Verbose $record.Message
+        if ($null -ne $logWriter)
+        {
+            $logWriter.WriteLine("VERBOSE: $($record.Message)")
+        }
+    }
+    foreach ($record in $ps.Streams.Debug.ReadAll())
+    {
+        Write-Debug $record.Message
+        if ($null -ne $logWriter)
+        {
+            $logWriter.WriteLine("DEBUG: $($record.Message)")
+        }
+    }
+    foreach ($record in $ps.Streams.Warning.ReadAll())
+    {
+        Write-Warning $record.Message
+        if ($null -ne $logWriter)
+        {
+            $logWriter.WriteLine("WARNING: $($record.Message)")
+        }
+    }
+    foreach ($record in $ps.Streams.Error.ReadAll())
+    {
+        $text = $record.ToString()
+        Write-Error $text
+        if ($null -ne $logWriter)
+        {
+            $logWriter.WriteLine("ERROR: $($text)")
+        }
+    }
+}
+
+function Invoke-IsolatedPipeline(
+    [System.Management.Automation.PowerShell] [Parameter(Mandatory = $true)] $ps,
+    [System.IO.StreamWriter] [Parameter(Mandatory = $false)] $logWriter = $null
+)
+{
+    # Invokes a prepared PowerShell pipeline and mirrors all streams while running
+    $asyncResult = $ps.BeginInvoke()
+    while (-Not $asyncResult.IsCompleted)
+    {
+        Write-IsolatedStreams -Ps $ps -LogWriter $logWriter
+        Start-Sleep -Milliseconds 200
+    }
+    $output = $null
+    try
+    {
+        $output = $ps.EndInvoke($asyncResult)
+    }
+    catch
+    {
+        Write-IsolatedStreams -Ps $ps -LogWriter $logWriter
+        throw
+    }
+    Write-IsolatedStreams -Ps $ps -LogWriter $logWriter
+    return $output
+}
+
+function Start-IsolatedScope(
+    [string] [Parameter(Mandatory = $true)] $name,
+    [string[]] [Parameter(Mandatory = $false)] $modules = @(),
+    [ScriptBlock] [Parameter(Mandatory = $false)] $login = $null,
+    [ScriptBlock] [Parameter(Mandatory = $false)] $logout = $null,
+    [string] [Parameter(Mandatory = $false)] $parentTranscriptPath = $null
+)
+{
+    # Opens a new isolated runspace, loads 01_ConfigureEnv.ps1, installs the given
+    # modules and runs the login script block inside it
+    if ($global:AlyaIsolatedScopes.ContainsKey($name))
+    {
+        throw "Isolated scope '$($name)' already exists. Call Stop-IsolatedScope first."
+    }
+    $configureEnvPath = $PSCommandPath
+    $transcriptPath = Get-IsolatedTranscriptPath -Name $name -ParentTranscriptPath $parentTranscriptPath
+    Write-Host "Starting isolated scope '$($name)' (runspace)" -ForegroundColor $CommandInfo
+    $logWriter = $null
+    if (-Not [string]::IsNullOrEmpty($transcriptPath))
+    {
+        $logWriter = [System.IO.StreamWriter]::new($transcriptPath, $false, [System.Text.UTF8Encoding]::new($true))
+        $logWriter.AutoFlush = $true
+        $logWriter.WriteLine("**********************")
+        $logWriter.WriteLine("Alya isolated scope log start")
+        $logWriter.WriteLine("Scope: $($name)")
+        $logWriter.WriteLine("Start time: $((Get-Date).ToString("yyyyMMddHHmmss"))")
+        $logWriter.WriteLine("Parent transcript: $($parentTranscriptPath)")
+        $logWriter.WriteLine("Machine: $([System.Environment]::MachineName)")
+        $logWriter.WriteLine("**********************")
+    }
+    $runspace = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace()
+    $runspace.Name = "AlyaIsolatedScope-$($name)"
+    $runspace.ApartmentState = [System.Threading.ApartmentState]::STA
+    $runspace.ThreadOptions = [System.Management.Automation.Runspaces.PSThreadOptions]::ReuseThread
+    $runspace.Open()
+    $bootstrap = {
+        param($configureEnvPath, $modules, $loginText)
+        $ErrorActionPreference = "Continue"
+        . $configureEnvPath
+        foreach ($moduleName in $modules)
+        {
+            Install-ModuleIfNotInstalled $moduleName
+        }
+        if (-Not [string]::IsNullOrEmpty($loginText))
+        {
+            & ([ScriptBlock]::Create($loginText))
+        }
+    }
+    $loginText = $null
+    if ($null -ne $login)
+    {
+        $loginText = $login.ToString()
+    }
+    $ps = [System.Management.Automation.PowerShell]::Create()
+    try
+    {
+        $ps.Runspace = $runspace
+        $null = $ps.AddScript($bootstrap.ToString()).AddArgument($configureEnvPath).AddArgument($modules).AddArgument($loginText)
+        $null = Invoke-IsolatedPipeline -Ps $ps -LogWriter $logWriter
+        $ps.Dispose()
+    }
+    catch
+    {
+        $ps.Dispose()
+        try
+        {
+            $runspace.Close()
+        }
+        catch
+        {
+            # Runspace already closed
+        }
+        $runspace.Dispose()
+        if ($null -ne $logWriter)
+        {
+            $logWriter.Dispose()
+        }
+        Write-Error "Start of isolated scope '$($name)' failed: $($_.Exception.Message)"
+        throw
+    }
+    $global:AlyaIsolatedScopes[$name] = @{
+        Runspace = $runspace
+        TranscriptPath = $transcriptPath
+        LogWriter = $logWriter
+        Logout = $logout
+    }
+}
+
+function Invoke-IsolatedScope(
+    [string] [Parameter(Mandatory = $true)] $name,
+    [ScriptBlock] [Parameter(Mandatory = $true)] $scriptBlock,
+    [Hashtable] [Parameter(Mandatory = $false)] $arguments = @{}
+)
+{
+    # Runs a script block inside the isolated runspace. The entries of -Arguments are
+    # available as variables inside the script block. The script block is rebound to the
+    # isolated runspace, so it only sees the isolated session state (01_ConfigureEnv.ps1
+    # variables, modules and the given arguments), never the caller variables.
+    # Only plain data should be returned (see header comment above).
+    if (-Not $global:AlyaIsolatedScopes.ContainsKey($name))
+    {
+        throw "Isolated scope '$($name)' not found. Call Start-IsolatedScope first."
+    }
+    $scope = $global:AlyaIsolatedScopes[$name]
+    foreach ($key in $arguments.Keys)
+    {
+        $scope.Runspace.SessionStateProxy.SetVariable($key, $arguments[$key])
+    }
+    $ps = [System.Management.Automation.PowerShell]::Create()
+    try
+    {
+        $ps.Runspace = $scope.Runspace
+        $null = $ps.AddScript('param($bodyText) & ([ScriptBlock]::Create($bodyText))').AddArgument($scriptBlock.ToString())
+        $output = Invoke-IsolatedPipeline -Ps $ps -LogWriter $scope.LogWriter
+        return $output
+    }
+    finally
+    {
+        $ps.Dispose()
+    }
+}
+
+function Stop-IsolatedScope(
+    [string] [Parameter(Mandatory = $false)] $name = $null
+)
+{
+    # Stops one isolated scope (or all, if no name is given): runs the logout script
+    # block, closes the log file and disposes the runspace
+    $names = @($name)
+    if ([string]::IsNullOrEmpty($name))
+    {
+        $names = @($global:AlyaIsolatedScopes.Keys)
+    }
+    foreach ($scopeName in $names)
+    {
+        if (-Not $global:AlyaIsolatedScopes.ContainsKey($scopeName))
+        {
+            continue
+        }
+        $scope = $global:AlyaIsolatedScopes[$scopeName]
+        Write-Host "Stopping isolated scope '$($scopeName)'" -ForegroundColor $CommandInfo
+        try
+        {
+            if ($null -ne $scope.Logout)
+            {
+                $null = Invoke-IsolatedScope -Name $scopeName -ScriptBlock $scope.Logout
+            }
+        }
+        catch
+        {
+            Write-Warning "Logout of isolated scope '$($scopeName)' failed: $($_.Exception.Message)"
+        }
+        if ($null -ne $scope.LogWriter)
+        {
+            $scope.LogWriter.WriteLine("**********************")
+            $scope.LogWriter.WriteLine("Alya isolated scope log end")
+            $scope.LogWriter.WriteLine("End time: $((Get-Date).ToString("yyyyMMddHHmmss"))")
+            $scope.LogWriter.WriteLine("**********************")
+            $scope.LogWriter.Dispose()
+        }
+        try
+        {
+            $scope.Runspace.Close()
+        }
+        catch
+        {
+            # Runspace already closed
+        }
+        $scope.Runspace.Dispose()
+        $global:AlyaIsolatedScopes.Remove($scopeName)
+    }
+}
+
+function Start-IsolatedProcess(
+    [string] [Parameter(Mandatory = $true)] $name,
+    [string[]] [Parameter(Mandatory = $false)] $modules = @(),
+    [ScriptBlock] [Parameter(Mandatory = $false)] $login = $null,
+    [ScriptBlock] [Parameter(Mandatory = $false)] $logout = $null,
+    [string] [Parameter(Mandatory = $false)] $parentTranscriptPath = $null
+)
+{
+    # Opens a new isolated pwsh child process and initializes it (01_ConfigureEnv.ps1,
+    # transcript, modules, login). Only plain data can be exchanged (JSON protocol),
+    # interactive logins do not work in this mode (stdin is used by the protocol).
+    if ($global:AlyaIsolatedProcesses.ContainsKey($name))
+    {
+        throw "Isolated process '$($name)' already exists. Call Stop-IsolatedProcess first."
+    }
+    $configureEnvPath = $PSCommandPath
+    $transcriptPath = Get-IsolatedTranscriptPath -Name $name -ParentTranscriptPath $parentTranscriptPath
+    Write-Host "Starting isolated process '$($name)' (pwsh child process)" -ForegroundColor $CommandInfo
+    $pwshPath = (Get-Process -Id $PID).Path
+    $bootstrap = @'
+$ErrorActionPreference = "Continue"
+$alyaMarker = "##ALYAISOLATED##"
+$global:alyaIsoTranscriptStarted = $false
+try
+{
+    [Console]::SetIn([System.IO.StreamReader]::new([Console]::OpenStandardInput(), [System.Text.UTF8Encoding]::new($false)))
+}
+catch { }
+$alyaOut = [System.IO.StreamWriter]::new([Console]::OpenStandardOutput(), [System.Text.UTF8Encoding]::new($false))
+$alyaOut.AutoFlush = $true
+try
+{
+    [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    [Console]::SetOut($alyaOut)
+}
+catch { }
+while ($true)
+{
+    $alyaLine = [Console]::In.ReadLine()
+    if ($null -eq $alyaLine) { break }
+    if ([string]::IsNullOrWhiteSpace($alyaLine)) { continue }
+    $alyaRequest = $null
+    try { $alyaRequest = $alyaLine | ConvertFrom-Json -AsHashtable } catch { continue }
+    if ($null -eq $alyaRequest) { continue }
+    if ($alyaRequest.ContainsKey("Quit") -and $alyaRequest["Quit"]) { break }
+    $alyaResponse = $null
+    try
+    {
+        if ($alyaRequest.ContainsKey("Arguments") -and $null -ne $alyaRequest["Arguments"])
+        {
+            foreach ($alyaKey in $alyaRequest["Arguments"].Keys)
+            {
+                Set-Variable -Name $alyaKey -Value $alyaRequest["Arguments"][$alyaKey] -Scope Global -Force
+            }
+        }
+        $alyaResult = . ([ScriptBlock]::Create($alyaRequest["Body"]))
+        $alyaResultJson = $null
+        $alyaWarning = $null
+        if ($null -ne $alyaResult)
+        {
+            try
+            {
+                $alyaResultJson = ($alyaResult | ConvertTo-Json -Depth 10 -Compress)
+            }
+            catch
+            {
+                $alyaWarning = "Result could not be JSON serialized: $($_.Exception.Message)"
+            }
+        }
+        $alyaResponse = @{
+            Success = $true
+            Result = $alyaResultJson
+            Warning = $alyaWarning
+        }
+    }
+    catch
+    {
+        $alyaErrorText = $_.Exception.ToString()
+        if (-Not [string]::IsNullOrEmpty($_.ScriptStackTrace))
+        {
+            $alyaErrorText = "$($alyaErrorText)`nScriptStackTrace: $($_.ScriptStackTrace)"
+        }
+        $alyaResponse = @{
+            Success = $false
+            Error = $alyaErrorText
+        }
+    }
+    $alyaResponseJson = $alyaResponse | ConvertTo-Json -Depth 3 -Compress
+    $alyaOut.WriteLine("$($alyaMarker)$($alyaResponseJson)")
+}
+if ($global:alyaIsoTranscriptStarted)
+{
+    try { $null = Stop-Transcript } catch { }
+}
+'@
+    $encodedCommand = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($bootstrap))
+    $processInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $processInfo.FileName = $pwshPath
+    $processInfo.ArgumentList.Add("-NoProfile")
+    $processInfo.ArgumentList.Add("-NonInteractive")
+    $processInfo.ArgumentList.Add("-EncodedCommand")
+    $processInfo.ArgumentList.Add($encodedCommand)
+    $processInfo.UseShellExecute = $false
+    $processInfo.RedirectStandardInput = $true
+    $processInfo.RedirectStandardOutput = $true
+    $processInfo.RedirectStandardError = $false
+    $processInfo.StandardOutputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $processInfo.StandardInputEncoding = [System.Text.UTF8Encoding]::new($false)
+    $process = [System.Diagnostics.Process]::Start($processInfo)
+    $process.StandardInput.AutoFlush = $true
+    $global:AlyaIsolatedProcesses[$name] = @{
+        Process = $process
+        TranscriptPath = $transcriptPath
+        Logout = $logout
+    }
+    $initLines = [System.Collections.Generic.List[string]]::new()
+    $initLines.Add(". `"$($configureEnvPath)`"")
+    if (-Not [string]::IsNullOrEmpty($transcriptPath))
+    {
+        $initLines.Add("Start-Transcript -Path `"$($transcriptPath)`" | Out-Null")
+        $initLines.Add("`$global:alyaIsoTranscriptStarted = `$true")
+    }
+    foreach ($moduleName in $modules)
+    {
+        $initLines.Add("Install-ModuleIfNotInstalled `"$($moduleName)`"")
+    }
+    if ($null -ne $login)
+    {
+        $initLines.Add($login.ToString())
+    }
+    $initBody = [string]::Join("`n", $initLines)
+    try
+    {
+        $null = Invoke-IsolatedProcess -Name $name -ScriptBlock ([ScriptBlock]::Create($initBody))
+    }
+    catch
+    {
+        Stop-IsolatedProcess -Name $name
+        Write-Error "Start of isolated process '$($name)' failed: $($_.Exception.Message)"
+        throw
+    }
+}
+
+function Invoke-IsolatedProcess(
+    [string] [Parameter(Mandatory = $true)] $name,
+    [ScriptBlock] [Parameter(Mandatory = $true)] $scriptBlock,
+    [Hashtable] [Parameter(Mandatory = $false)] $arguments = @{}
+)
+{
+    # Runs a script block inside the isolated child process. The entries of -Arguments
+    # are available as variables inside the script block (JSON serialized, plain data
+    # only). The result is JSON deserialized data (PSCustomObject/array/string/number/
+    # bool), no live objects. Write-Host output of the child is mirrored to the caller.
+    if (-Not $global:AlyaIsolatedProcesses.ContainsKey($name))
+    {
+        throw "Isolated process '$($name)' not found. Call Start-IsolatedProcess first."
+    }
+    $entry = $global:AlyaIsolatedProcesses[$name]
+    $process = $entry.Process
+    if ($process.HasExited)
+    {
+        throw "Isolated process '$($name)' has exited unexpectedly (exit code $($process.ExitCode))."
+    }
+    $request = @{
+        Body = $scriptBlock.ToString()
+        Arguments = $arguments
+    } | ConvertTo-Json -Depth 10 -Compress
+    $process.StandardInput.WriteLine($request)
+    $envelope = $null
+    while ($true)
+    {
+        $line = $process.StandardOutput.ReadLine()
+        if ($null -eq $line)
+        {
+            throw "Isolated process '$($name)' ended the conversation unexpectedly."
+        }
+        if ($line.StartsWith($global:AlyaIsolatedProcessMarker))
+        {
+            $envelope = $line.Substring($global:AlyaIsolatedProcessMarker.Length) | ConvertFrom-Json -AsHashtable
+            break
+        }
+        Write-Host $line
+    }
+    if ($envelope.ContainsKey("Warning") -and -Not [string]::IsNullOrEmpty($envelope["Warning"]))
+    {
+        Write-Warning $envelope["Warning"]
+    }
+    if (-Not $envelope["Success"])
+    {
+        $errorText = $envelope["Error"]
+        Write-Error $errorText
+        throw "Isolated process '$($name)' reported an error: $($errorText)"
+    }
+    $resultJson = $envelope["Result"]
+    if ([string]::IsNullOrEmpty($resultJson))
+    {
+        return $null
+    }
+    return $resultJson | ConvertFrom-Json
+}
+
+function Stop-IsolatedProcess(
+    [string] [Parameter(Mandatory = $false)] $name = $null
+)
+{
+    # Stops one isolated process (or all, if no name is given): runs the logout script
+    # block, sends the quit request and disposes the process
+    $names = @($name)
+    if ([string]::IsNullOrEmpty($name))
+    {
+        $names = @($global:AlyaIsolatedProcesses.Keys)
+    }
+    foreach ($processName in $names)
+    {
+        if (-Not $global:AlyaIsolatedProcesses.ContainsKey($processName))
+        {
+            continue
+        }
+        $entry = $global:AlyaIsolatedProcesses[$processName]
+        $process = $entry.Process
+        Write-Host "Stopping isolated process '$($processName)'" -ForegroundColor $CommandInfo
+        try
+        {
+            if ($null -ne $entry.Logout -and -Not $process.HasExited)
+            {
+                $null = Invoke-IsolatedProcess -Name $processName -ScriptBlock $entry.Logout
+            }
+            if (-Not $process.HasExited)
+            {
+                $quitRequest = @{ Quit = $true } | ConvertTo-Json -Compress
+                $process.StandardInput.WriteLine($quitRequest)
+                if (-Not $process.WaitForExit(30000))
+                {
+                    Write-Warning "Isolated process '$($processName)' did not exit in time, killing it"
+                    $process.Kill()
+                    $null = $process.WaitForExit(5000)
+                }
+            }
+        }
+        catch
+        {
+            Write-Warning "Error while stopping isolated process '$($processName)': $($_.Exception.Message)"
+        }
+        try { $process.StandardInput.Close() } catch { }
+        try { $process.StandardOutput.Close() } catch { }
+        $process.Dispose()
+        $global:AlyaIsolatedProcesses.Remove($processName)
+    }
+}
+
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBXoHNRwVHYSauQ
-# wAIgd0qSZLHsHWIS+XvHOQKrx3GYGqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCxpHVuotxLcJFa
+# NGmr/5fXtBo0fAw8y5PnFyeQpPKsr6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -5733,10 +6342,10 @@ function Make-JsonGitReady()
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -5744,17 +6353,17 @@ function Make-JsonGitReady()
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -5764,39 +6373,39 @@ function Make-JsonGitReady()
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEII3BNdg6
-# M/1H1hCehYFn+HNbVY9xr7vwjERz9QRqyp5zMA0GCSqGSIb3DQEBAQUABIICACsN
-# zaCApOLIhzX+u9ficne4Kx3+2LSvIAZPiJcunlbr1jsUSwLDCh3qh8dWqdjaY3ju
-# ZddOvqNd1/1LXad5kj2gNDNf1KatYIS+faAWXzfE+fZbIf05/aQbxuiAqDEm3djm
-# IuqwFaM7j8MiXX4uUez6pyUyk563SKlGqCkH+NUasylWrnemZ5kt+72BwmC42qC4
-# PUE+xQrmVoiLhdz1xU9IvOJT3Q8TOM6EeJ4OIb5xTC2+SVncAvO+62f/evtNdEcM
-# IhVdcFGM08Gh1hYjaQjuDqYAGhuas4R9OZEFyllVcaj2hVUKIzyVp+sGySJcIVDW
-# EJTGtV8HvfnvuS5QsEaTYn8+itdG3unfJYp8wSr/rAeAdtdC+RcvnncIH0ex0gqG
-# RxZhlWG6t1/sGI4YPm1/0TBpifu3sYz6j5gTuCYyt2f7f3p12fjTGoCmJ2naAluE
-# Qvh/5jGr4lkTp/vjBgNqIgSSCm4PeeXHvy0fXqWnPj81suR3QUgFK8OsAntU1tXM
-# AwQIRGXPp0ilU4str1FEfxwNg5sX+hoEcvX6WYFnS8gxApdtnfl5URWGB2ayiWEn
-# XdkYDshZtXSnS5RnWmmVNU3zT75RshkNJ68NpyC1mguRinYtsUZI8s+ZTP7bAumM
-# KE96g9dzmsd1SkS6kELS+hASJTwbOhWAIajWTpE+oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEdy4s0K
+# xaU8XeIMPQcttcr31MzQ6bbFtyC/Js8mAOz+MA0GCSqGSIb3DQEBAQUABIICAKPS
+# eUNqzuWjlsF+9aVzwctlSCCJXxsoMHlcumPh1WBz1ZTJK4BsifprBJTJjx8qaDIk
+# Xgs+Kb2CfO4e4z/ht0nNfJHksD4Al9cVUsWlBeD7TmZtrhkxNQVOCb1aCqgy7p+E
+# YcHCUR7OwLQBBwIex7k61Ue/LwkCwhqnjBBUoq8vbuAP8IBr2WKgIlO90ZgunkZj
+# e1rgtlQmzVRZUFOFDRAY5dXzveLHO0n1Z1zvDXxuW5D8sKGicg9YDXElKFNk6cpt
+# mYItVrC6lqCHYQY18QrV736KCbmPnOSSXY76of+tzy4GnMUh0yaJdRgCw4CFOLKO
+# qC0zTcDeMBy7t86xcmmO88l3Fn6ROjC6R07O5NOVcoHNXmaA4dyc4keG8/VmeAqL
+# sz1zNq21HHT8DVun8SRppF/whbnUuHFO++mop61j40COSKO2qyqJ8gXyy9+yKJlm
+# PQk5G7jGBqq79vPeGaCyj4HrQVDDcZo5pmeUtWyQeWcn/URnClKjCWlLedn36SI6
+# W8JxiXkh6wF08rrEOqUwFJv1exz6O9+DoJ0giR0ZfS32Zt86+GrqS26k+E4KygUy
+# L+I/nhNjQ1KIGAFGKtFhhR0AdTjwjMUH+j5e9KeTQGd4tL5S1H6UR3GE7BYSUzLp
+# WicApRpXhEqFYdLBAGY174IgMC6G2lMNWuJ+tiM7oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDcrFpVLyhF3vWbeReQMJDWomv5aashc8SoZvvmQsXysAIUBayG
-# HTP08XWxfZFVYqMB55KmTT4YDzIwMjYwOTEyMDcyODI5WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCANfDYu4ec6ZrhPK7E2/rYw/ZwBXwxIWwzigjCz+sDH+AIUKCar
+# Ahya5XEQ0KfE+16lqPla1lgYDzIwMjYwOTIwMTUyMDI2WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -5939,18 +6548,18 @@ function Make-JsonGitReady()
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAOdP6F4uiacpd4RyLUNButjjXW8qxnKLJJcHX+OCX+ektFhogA48UAs+rU
-# 0pvdeuEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBuWSw3OUiHWfCt9AagRG9chWlNn70aPr0PCZAI2QkBUJhkg3ZSogwHezKL
+# opZ1PwYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAyWuLKyC3EIHLWVbf3EHbKLraCe/H9PTbQJFwBUSDaVmb
-# Uy7/wgURIX3c5Dr2TyrovtAkS+RgpdyyenfWUpLZWzCm/9mAWUVUKEqwEnRk4ix4
-# PwWorx+Ll+ODQ/e4ygzrChMLfE/la3tmV8xpsH7xq/B9btTrcMwtBNAMA/nrz0Pi
-# RDdjAlBNfbiThxZV6AuFNbieJBxbGLC07RFYdytAJroDgnUAS2WMs8+8pffIpfJr
-# +rBynhxXFU12WzQ8CKJLcKqIVUXnTsZ5S0KLCHt8w3kHdMnITktfYXCBGb1by2JD
-# 7wGp2DvVyeOp5Prk8V2hBb+emiQ3wpWelmX17+C/M2Kn/U5FwusI7rq0duBzz/sF
-# eBY/5PqP4hdy5ZrnWpHMDnkJe+TRoFY7qHjR1wYvD8UTq7qR+MUEeVMCs+Kr/2qq
-# v7EG4veAh7zy/bgIFJpMFflr6+AmF/Txt2w7JIUXzaKEy5P7+9QbKX4HN6syurJp
-# 1KaqzoCMZqMbYgPmcNKh
+# KoZIhvcNAQEMBQAEggGAemAYIFzF2cojaUoFmSAUvF555XHYbgtZW8b/BCKAfRRi
+# iwq8EnaEho6wX79xniLttFuAkC5JBu5IarmNH/Lu1Kbcc9c30uSmY+bsMdROFUfd
+# WEwpBZ5xuATgYwy+RRuGMBr8lBK+FR6viOrxhVC/vibMbi+HuyeMJCMc4yhc0l67
+# pxbr7EEInuA2DWvZ0cTKdKKwK1xQKCarBCpuooZbGyQZEKMuNrI8wdaiuAmkrd+V
+# S6soHYI+6bnkS3Zda6U+sfLUqFFmTnjDibUs5QpVwDrRMpBa6OJLP9jD+qA7+CJo
+# GMbEBTRd5nixe9bOXXYa1b+R/hFuQpPw8ClKwXOl6wYJa4AqM45wUFNP0e7azqcY
+# rLh9BSKN5vtabshNw5Qv3HpucQdwgmcti3KKKibWOmXCCwByr0NiQdBDwvUuTq2a
+# vNtV/JpBWFllbP03AKQ7cidgY2TCXli2zCQvDluaFYQFZMrO1FqJ1A9J9E8vLwJx
+# VU5AeskqFUMfY9/22WIQ
 # SIG # End signature block

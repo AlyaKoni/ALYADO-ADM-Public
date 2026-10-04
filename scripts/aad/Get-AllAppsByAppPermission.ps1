@@ -35,6 +35,7 @@
 
     Source from: https://github.com/microsoft/AzureADGraphApps/blob/main/Get-AzureADGraphApps.ps1
     06.02.2026 Konrad Brunner       Added powershell documentation
+    01.10.2026 Konrad Brunner       Switched from AzureADPreview to Microsoft Graph
 
 #>
 
@@ -79,12 +80,13 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Get-AllAppsByAppPermission-$($A
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureAdPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Applications"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-Ad
+LoginTo-MgGraph -Scopes @("Application.Read.All")
 
 # =============================================================
 # Azure stuff
@@ -105,11 +107,13 @@ $script:NonMSAppsApplication = @{}
 # Function to add an object to the cache
 function CacheObject($Object) {
     if ($Object) {
-        if (-not $script:ObjectByObjectClassId.ContainsKey($Object.ObjectType)) {
-            $script:ObjectByObjectClassId[$Object.ObjectType] = @{}
+        $objectClass = $Object.OdataType -replace "^#microsoft\.graph\.", ""
+        if ($objectClass -eq "servicePrincipal") { $objectClass = "ServicePrincipal" }
+        if (-not $script:ObjectByObjectClassId.ContainsKey($objectClass)) {
+            $script:ObjectByObjectClassId[$objectClass] = @{}
         }
-        $script:ObjectByObjectClassId[$Object.ObjectType][$Object.ObjectId] = $Object
-        $script:ObjectByObjectId[$Object.ObjectId] = $Object
+        $script:ObjectByObjectClassId[$objectClass][$Object.Id] = $Object
+        $script:ObjectByObjectId[$Object.Id] = $Object
     }
 }
 
@@ -118,7 +122,7 @@ function GetObjectByObjectId($ObjectId) {
     if (-not $script:ObjectByObjectId.ContainsKey($ObjectId)) {
         Write-Verbose ("Querying Azure AD for object '{0}'" -f $ObjectId)
         try {
-            $object = Get-AzureADObjectByObjectId -ObjectId $ObjectId
+            $object = Get-MgServicePrincipal -ServicePrincipalId $ObjectId
             CacheObject -Object $object
         } catch { 
             Write-Verbose "Object not found."
@@ -129,7 +133,7 @@ function GetObjectByObjectId($ObjectId) {
    
 # Get all ServicePrincipal objects and add to the cache
 Write-Host "Retrieving Service Principal objects. Please wait..." -ForegroundColor $CommandInfo
-$servicePrincipals = Get-AzureADServicePrincipal -All $true 
+$servicePrincipals = Get-MgServicePrincipal -All 
     
 $Oauth2PermGrants = @()
 
@@ -137,10 +141,10 @@ $count = 0
 foreach ($sp in $servicePrincipals)
 {
     CacheObject -Object $sp
-    $spPermGrants = Get-AzureADServicePrincipalOAuth2PermissionGrant -ObjectId $sp.ObjectId -All $true
+    $spPermGrants = Get-MgServicePrincipalOauth2PermissionGrant -ServicePrincipalId $sp.Id -All
     $Oauth2PermGrants += $spPermGrants
     $count++
-    Write-Host "Service Principal $($sp.ObjectId)"
+    Write-Host "Service Principal $($sp.Id)"
 
     if($sp.AppId -eq $permissionAppId)
     {
@@ -152,18 +156,20 @@ foreach ($sp in $servicePrincipals)
 Write-Host "Checking Delegated Permission Grants..." -ForegroundColor $CommandInfo
 foreach ($grant in $Oauth2PermGrants)
 {
-    if ($grant.ResourceId -eq $aadAppSp.ObjectId -and $grant.Scope) 
+    if ($grant.ResourceId -eq $aadAppSp.Id -and $grant.Scope) 
     {
         $grant.Scope.Split(" ") | Where-Object { $_ } | ForEach-Object {
             $scope = $_
             $client = GetObjectByObjectId -ObjectId $grant.ClientId
-            $ownerUPN = (Get-AzureADServicePrincipalOwner -ObjectId $client.ObjectId -Top 1).UserPrincipalName
+            $ownerUPN = $null
+            $ownerObj = @(Get-MgServicePrincipalOwner -ServicePrincipalId $client.Id -Top 1) | Select-Object -First 1
+            if ($ownerObj -and $ownerObj.AdditionalProperties) { $ownerUPN = $ownerObj.AdditionalProperties["userPrincipalName"] }
 
             Write-Host "Checking Delegate Permissions - $($client.DisplayName)"
 
             # Determine if the object comes from the Microsoft Services tenant, and flag it if true
             $MicrosoftRegisteredClientApp = $false
-            if ($client.AppOwnerTenantId -eq "f8cdef31-a31e-4b4a-93e4-5f571e91255a" -or $client.AppOwnerTenantId -eq "72f988bf-86f1-41af-91ab-2d7cd011db47") {
+            if ($client.AppOwnerOrganizationId -eq "f8cdef31-a31e-4b4a-93e4-5f571e91255a" -or $client.AppOwnerOrganizationId -eq "72f988bf-86f1-41af-91ab-2d7cd011db47") {
                 $MicrosoftRegisteredClientApp = $true
             }
 
@@ -202,16 +208,18 @@ $script:ObjectByObjectClassId['ServicePrincipal'].GetEnumerator() | ForEach-Obje
     $sp = $_.Value
     Write-Host "Checking Application Permissions - $($sp.DisplayName)"
 
-    Get-AzureADServiceAppRoleAssignedTo -ObjectId $sp.ObjectId  -All $true `
-    | Where-Object { $_.PrincipalType -eq "ServicePrincipal" -and $_.ResourceId -eq $aadAppSp.ObjectId} | ForEach-Object {
+    Get-MgServicePrincipalAppRoleAssignedTo -ServicePrincipalId $sp.Id -All `
+    | Where-Object { $_.PrincipalType -eq "ServicePrincipal" -and $_.ResourceId -eq $aadAppSp.Id} | ForEach-Object {
         $assignment = $_
             
         $client = GetObjectByObjectId -ObjectId $assignment.PrincipalId
             
-        $ownerUPN = (Get-AzureADServicePrincipalOwner -ObjectId $client.ObjectId -Top 1).UserPrincipalName
+        $ownerUPN = $null
+        $ownerObj = @(Get-MgServicePrincipalOwner -ServicePrincipalId $client.Id -Top 1) | Select-Object -First 1
+        if ($ownerObj -and $ownerObj.AdditionalProperties) { $ownerUPN = $ownerObj.AdditionalProperties["userPrincipalName"] }
         # Determine if the object comes from the Microsoft Services tenant, and flag it if true
         $MicrosoftRegisteredClientApp = $false
-        if ($client.AppOwnerTenantId -eq "f8cdef31-a31e-4b4a-93e4-5f571e91255a" -or $client.AppOwnerTenantId -eq "72f988bf-86f1-41af-91ab-2d7cd011db47") {
+        if ($client.AppOwnerOrganizationId -eq "f8cdef31-a31e-4b4a-93e4-5f571e91255a" -or $client.AppOwnerOrganizationId -eq "72f988bf-86f1-41af-91ab-2d7cd011db47") {
             $MicrosoftRegisteredClientApp = $true
         }
 

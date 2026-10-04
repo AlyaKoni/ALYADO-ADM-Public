@@ -34,6 +34,7 @@
     25.02.2020 Konrad Brunner       Changes for a project
     06.02.2026 Konrad Brunner       Added powershell documentation
     16.09.2026 Konrad Brunner       Use Get-CurrentAzAdPrincipal to support service principal logins
+    01.10.2026 Konrad Brunner       Switched from MSOnline to Microsoft Graph
 
 #>
 
@@ -79,12 +80,15 @@ Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
 Install-ModuleIfNotInstalled "Az.KeyVault"
-Install-ModuleIfNotInstalled "MSOnline"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Groups"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.DirectoryManagement"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-MSOL
+LoginTo-MgGraph -Scopes @("User.ReadWrite.All", "Group.ReadWrite.All", "RoleManagement.ReadWrite.Directory")
 
 # =============================================================
 # O365 stuff
@@ -97,22 +101,22 @@ Write-Host "=====================================================`n" -Foreground
 Write-Host "Checking Exchange service account" -ForegroundColor $CommandInfo
 $CompName = Make-PascalCase($AlyaCompanyNameShort)
 $ExchUserName = "$($CompName)ExchangeServiceUser@$($AlyaTenantName)"
-$ExchUser = Get-MsolUser -UserPrincipalName $ExchUserName -ErrorAction SilentlyContinue
+$ExchUser = Get-MgUser -UserId $ExchUserName -ErrorAction SilentlyContinue
 if (-Not $ExchUser)
 {
     Write-Warning "Exchange service account not found. Creating the Exchange service account $ExchUserName"
     $ExchUserPasswordForRunAsAccount = "$" + [Guid]::NewGuid().ToString() + "!"
-    $ExchUser = New-MsolUser -UserPrincipalName $ExchUserName -DisplayName "$($CompName) Exchange Service User" -FirstName "$($CompName) Exchange" -LastName "Service User" -UsageLocation "CH" -PasswordNeverExpires $true -Password $ExchUserPasswordForRunAsAccount -ForceChangePassword $False
+    $ExchUser = New-MgUser -UserPrincipalName $ExchUserName -DisplayName "$($CompName) Exchange Service User" -GivenName "$($CompName) Exchange" -Surname "Service User" -UsageLocation "CH" -MailNickname "$($CompName)ExchangeServiceUser" -AccountEnabled $true -PasswordProfile @{ Password = $ExchUserPasswordForRunAsAccount; ForceChangePasswordNextSignIn = $false } -PasswordPolicies "DisablePasswordExpiration"
 }
-Set-MsolUser -UserPrincipalName $ExchUserName -PasswordNeverExpires $true
+Update-MgUser -UserId $ExchUserName -PasswordPolicies "DisablePasswordExpiration"
 
 Write-Host "Checking Exchange service account role membership" -ForegroundColor $CommandInfo
-$ExchangeRole = Get-MsolRole | Where-Object { $_.Name -eq "Exchange Administrator" }
-$RoleMember = Get-MsolRoleMember -RoleObjectId $ExchangeRole.ObjectId -All | Where-Object { $_.ObjectId -eq $ExchUser.ObjectId }
+$ExchangeRole = Get-MgDirectoryRole | Where-Object { $_.DisplayName -eq "Exchange Administrator" }
+$RoleMember = Get-MgDirectoryRoleMember -DirectoryRoleId $ExchangeRole.Id -All | Where-Object { $_.Id -eq $ExchUser.Id }
 if (-Not $RoleMember)
 {
     Write-Warning "Exchange service account role membership not found. Creating the Exchange service account role membership"
-    $RoleMember = Add-MsolRoleMember -RoleObjectId $ExchangeRole.ObjectId -RoleMemberObjectId $ExchUser.ObjectId
+    $RoleMember = New-MgDirectoryRoleMemberByRef -DirectoryRoleId $ExchangeRole.Id -OdataId "$($AlyaGraphEndpoint)/v1.0/directoryObjects/$($ExchUser.Id)" -PassThru
 }
 
 Write-Host "Disable MFA for Exchange service account" -ForegroundColor $CommandInfo
@@ -128,17 +132,17 @@ else
 {
     $NoMfaGroupName = $AlyaMfaDisabledGroupName
 }
-$NoMfaGroup = Get-MsolGroup -SearchString $NoMfaGroupName
+$NoMfaGroup = Get-MgGroup -Filter "displayName eq '$($NoMfaGroupName)'" -ConsistencyLevel eventual | Select-Object -First 1
 if (-Not $NoMfaGroup)
 {
     Write-Warning "No MFA group not found. Creating the No MFA group"
-    $NoMfaGroup = New-MsolGroup -DisplayName $NoMfaGroupName -Description "MFA is disabled for members in this group"
+    $NoMfaGroup = New-MgGroup -DisplayName $NoMfaGroupName -Description "MFA is disabled for members in this group" -MailEnabled $false -MailNickname $NoMfaGroupName -SecurityEnabled $true
 }
-$GroupMember = Get-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -All | Where-Object { $_.ObjectId -eq $ExchUser.ObjectId }
+$GroupMember = Get-MgGroupMember -GroupId $NoMfaGroup.Id -All | Where-Object { $_.Id -eq $ExchUser.Id }
 if (-Not $GroupMember)
 {
     Write-Warning "Exchange service account group membership not found. Creating the NoMfa group membership"
-    $GroupMember = Add-MsolGroupMember -GroupObjectId $NoMfaGroup.ObjectId -GroupMemberObjectId $ExchUser.ObjectId
+    $GroupMember = New-MgGroupMember -GroupId $NoMfaGroup.Id -DirectoryObjectId $ExchUser.Id
 }
 
 # =============================================================

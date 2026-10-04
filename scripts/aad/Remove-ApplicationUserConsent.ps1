@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     03.11.2022 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    01.10.2026 Konrad Brunner       Switched from AzureADPreview to Microsoft Graph
 
 #>
 
@@ -84,12 +85,15 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Remove-ApplicationUserConsent-$
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
 Install-ModuleIfNotInstalled "Az.Resources"
-Install-ModuleIfNotInstalled "AzureADPreview"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Applications"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
-LoginTo-AD
+LoginTo-MgGraph -Scopes @("Application.Read.All", "User.Read.All", "DelegatedPermissionGrant.ReadWrite.All")
 
 # =============================================================
 # Azure stuff
@@ -103,7 +107,7 @@ Write-Host "Getting ServicePrincipal" -ForegroundColor $CommandInfo
 $App = $null
 if ($ServicePrincipalName)
 {
-    $App = Get-AzureADServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalName)'"
+    $App = Get-MgServicePrincipal -Filter "DisplayName eq '$($ServicePrincipalName)'" -ConsistencyLevel eventual
     if (-Not $App)
     {
         throw "ServicePrincipal with name '$($ServicePrincipalName)' not found"
@@ -111,7 +115,7 @@ if ($ServicePrincipalName)
 }
 if ($ServicePrincipalId)
 {
-    $App = Get-AzureADServicePrincipal -Filter "AppId eq '$($ServicePrincipalId)'"
+    $App = Get-MgServicePrincipal -Filter "AppId eq '$($ServicePrincipalId)'" -ConsistencyLevel eventual
     if (-Not $App)
     {
         throw "ServicePrincipal with id '$($ServicePrincipalId)' not found"
@@ -126,7 +130,7 @@ Write-Host "Getting User" -ForegroundColor $CommandInfo
 $User = $null
 if ($UserUpn)
 {
-    $User = Get-AzureADUser -ObjectId $UserUpn
+    $User = Get-MgUser -UserId $UserUpn
     if (-Not $User)
     {
         throw "User with name '$($UserUpn)' not found"
@@ -134,11 +138,11 @@ if ($UserUpn)
 }
 
 Write-Host "Getting Grants" -ForegroundColor $CommandInfo
-$grants = Get-AzureADOAuth2PermissionGrant -All $true | Where-Object { $_.clientId -eq $App.ObjectId -and $_.PrincipalId -eq $User.ObjectId }
+$grants = @(Get-MgOauth2PermissionGrant -All | Where-Object { $_.ClientId -eq $App.Id -and $_.PrincipalId -eq $User.Id })
 $grants | Format-List
 
 Write-Host "Deleting Grants" -ForegroundColor $CommandInfo
-$grants | Remove-AzureADOAuth2PermissionGrant
+$grants | ForEach-Object { Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId $_.Id }
 
 # Stopping Transcript
 Stop-Transcript
