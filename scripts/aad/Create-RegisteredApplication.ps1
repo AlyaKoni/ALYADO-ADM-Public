@@ -531,24 +531,49 @@ if (-Not [string]::IsNullOrWhiteSpace($SetExchangeRbacForUPN) -or $SetExchangeRb
             $ExManScope = Get-ManagementScope -Identity $ApplicationName
         }
 
+        # # Checking exchange management ROLE GROUP
+        # $RoleGroupName = "RoleGroup-$ApplicationName"
+        # Write-Host "Checking Role Group: $RoleGroupName" -ForegroundColor $CommandInfo
+        # $RoleGroup = Get-RoleGroup -Identity $RoleGroupName -ErrorAction SilentlyContinue
+        # if (-Not $RoleGroup)
+        # {
+        #     Write-Warning "Role Group not found. Creating Role Group tied to scope $ApplicationName"
+        #     $RoleGroup = New-RoleGroup -Name $RoleGroupName `
+        #                                -Roles @("Application Exchange Full Access", "Application SMTP.SendAsApp") `
+        #                                -CustomRecipientWriteScope $ApplicationName
+        # }
+
+        # # Checking exchange management ROLE GROUP membership
+        # Write-Host "Checking exchange management ROLE GROUP membership" -ForegroundColor $CommandInfo
+        # $IsMember = Get-RoleGroupMember -Identity $RoleGroupName | Where-Object { ($_.Name -eq $ExServPrinc.AppId) -or ($_.DisplayName -eq $ApplicationName) }
+        # if (-Not $IsMember)
+        # {
+        #     Write-Warning "Adding Service Principal to Role Group..."
+        #     # Wir fügen den Service Principal über seine AppId hinzu
+        #     Add-RoleGroupMember -Identity $RoleGroupName -Member $ExServPrinc.AppId | Out-Null
+        # }
+
+        # Add-RecipientPermission -Identity $SetExchangeRbacForUPN -Trustee $MgApplication.Id -AccessRights SendAs -Confirm:$false
+        # Add-MailboxPermission -Identity $SetExchangeRbacForUPN -User $MgApplication.Id -AccessRights FullAccess -InheritanceType All -Automapping $false
+
         # Checking exchange management scope assignment Full Access
         Write-Host "Checking exchange management scope assignment Full Access" -ForegroundColor $CommandInfo
-        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
+        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $MgApplication.AppId -and $_.CustomResourceScope -eq $ApplicationName }
         if (-Not $ExRolAss)
         {
             Write-Warning "Exchange management scope assignment not found. Creating the exchange management scope assignment $ApplicationName"
-            $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application Exchange Full Access" -CustomResourceScope $ApplicationName
-            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
+            $ExRolAss = New-ManagementRoleAssignment -App $MgApplication.AppId -Role "Application Exchange Full Access" -CustomResourceScope $ApplicationName
+            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $MgApplication.AppId -and $_.CustomResourceScope -eq $ApplicationName }
         }
 
         # Checking exchange management scope assignment SMTP.SendAsApp
         Write-Host "Checking exchange management scope assignment SMTP.SendAsApp" -ForegroundColor $CommandInfo
-        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
+        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $MgApplication.AppId -and $_.CustomResourceScope -eq $ApplicationName }
         if (-Not $ExRolAss)
         {
             Write-Warning "Exchange management scope assignment not found. Creating the exchange management scope assignment $ApplicationName"
-            $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application SMTP.SendAsApp" -CustomResourceScope $ApplicationName
-            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $ApplicationName }
+            $ExRolAss = New-ManagementRoleAssignment -App $MgApplication.AppId -Role "Application SMTP.SendAsApp" -CustomResourceScope $ApplicationName
+            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $MgApplication.AppId -and $_.CustomResourceScope -eq $ApplicationName }
         }
 
         # Testing access rights
@@ -559,24 +584,45 @@ if (-Not [string]::IsNullOrWhiteSpace($SetExchangeRbacForUPN) -or $SetExchangeRb
     if ($SetExchangeRbacForTenant)
     {
 
+        # # Checking exchange management ROLE GROUP
+        # $RoleGroupName = "RoleGroup-$ApplicationName"
+        # Write-Host "Checking Role Group: $RoleGroupName" -ForegroundColor $CommandInfo
+        # $RoleGroup = Get-RoleGroup -Identity $RoleGroupName -ErrorAction SilentlyContinue
+        # if (-Not $RoleGroup)
+        # {
+        #     Write-Warning "Role Group not found. Creating Role Group tied to scope $ApplicationName"
+        #     $RoleGroup = New-RoleGroup -Name $RoleGroupName `
+        #                                -Roles @("Application Exchange Full Access", "Application SMTP.SendAsApp")
+        # }
+
+        # # Checking exchange management ROLE GROUP membership
+        # Write-Host "Checking exchange management ROLE GROUP membership" -ForegroundColor $CommandInfo
+        # $IsMember = Get-RoleGroupMember -Identity $RoleGroupName | Where-Object { ($_.Name -eq $ExServPrinc.AppId) -or ($_.DisplayName -eq $ApplicationName) }
+        # if (-Not $IsMember)
+        # {
+        #     Write-Warning "Adding Service Principal to Role Group..."
+        #     # Wir fügen den Service Principal über seine AppId hinzu
+        #     Add-RoleGroupMember -Identity $RoleGroupName -Member $ExServPrinc.AppId | Out-Null
+        # }
+
         # Checking exchange assignment Full Access
         Write-Host "Checking exchange assignment Full Access" -ForegroundColor $CommandInfo
-        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $null }
+        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $MgApplication.AppId -and $_.CustomResourceScope -eq $null }
         if (-Not $ExRolAss)
         {
             Write-Warning "Exchange assignment not found. Creating the exchange assignment $ApplicationName"
-            $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application Exchange Full Access"
-            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $null }
+            $ExRolAss = New-ManagementRoleAssignment -App $MgApplication.AppId -Role "Application Exchange Full Access"
+            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application Exchange Full Access" -and $_.App -eq $MgApplication.AppId -and $_.CustomResourceScope -eq $null }
         }
 
         # Checking exchange assignment SMTP.SendAsApp
         Write-Host "Checking exchange assignment SMTP.SendAsApp" -ForegroundColor $CommandInfo
-        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $null }
+        $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $MgApplication.AppId -and $_.CustomResourceScope -eq $null }
         if (-Not $ExRolAss)
         {
             Write-Warning "Exchange assignment not found. Creating the exchange assignment $ApplicationName"
-            $ExRolAss = New-ManagementRoleAssignment -App $ExServPrinc.id -Role "Application SMTP.SendAsApp"
-            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $ExServPrinc.id -and $_.CustomResourceScope -eq $null }
+            $ExRolAss = New-ManagementRoleAssignment -App $MgApplication.AppId -Role "Application SMTP.SendAsApp"
+            $ExRolAss = Get-ManagementRoleAssignment | Where-Object { $_.Role -eq "Application SMTP.SendAsApp" -and $_.App -eq $MgApplication.AppId -and $_.CustomResourceScope -eq $null }
         }
 
         # Testing access rights
@@ -593,8 +639,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDng6BxF1d+16JN
-# +jbRPqMiqedUun859AL0ptFVFEyw36CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAj72wjkWsGuHeL
+# p6uUcEq36GnGJHFG3rmain8p6fzxK6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -708,23 +754,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEcIZml6
-# Wv6BraEDnF6uHJ+fOTePQMnsfN6PQASD1o1+MA0GCSqGSIb3DQEBAQUABIICAKRu
-# 4WeyE3KIrEgMJ6ev4pIWBe7kBDnqOyRWF2i5dq4qETWLlfZaWrf6/l3921cQ9Er4
-# od0A52KWDVqXdzeZlTrsymCySVjzwPMUsouGYxcx6XsQ9jJhBr5ASVnW2+mNbVD5
-# mm9tvNZvYhdpPyKfKb7IJg7QsxlYBXtutj2CkQTYZArAw0aHiJyAii5cZh5p/jVd
-# LhQXdbV+kJ4VOU5wEmTA9ONHhkUZgbwhXcJ1r+5A65sihxa0vI9zuu67D+75wG3v
-# CYCi/R0CtDR1aaKTcPHHbG2iRQNKBqnvDiFIXOsiZymEVGdicrJxW2oRJdKhsg/T
-# gdJOizf0SkfajQAYRH6iupk7w6AixC4gWJ9ue7ZjH/a9pe18Ufha40OmIhMywue0
-# 1p0ryw4X7hsdI58HMIsK/WHUoaZbn4f+/8GgE/kALvhPYP6Qrb/n8bwm4z+cA8X4
-# +wQ1tZPU+dmcagTc03KWjRnIVBy7sAixgCHlDAMEnT5MpCQ0hNOtRlwJjvxBQgYl
-# ioCi07Q9Ek9HQmX08ldCB6IPXI4kZ4af7jY1s0uDRGPx81VLVA0vgb0vVBeDGeHK
-# tU6eudXk+6yt5R4QEYkAQombIveWOPEpNVBquQuQR8xSTDWJPIoVwQvKH2jzeM6D
-# kA5c/zd14COX3K5RrBGIwA8yjLG/UHUT34o1oUtpoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMqYIRHt
+# /19VyXAUct47C2hQN6BJF2tHtUd7cZSabp4NMA0GCSqGSIb3DQEBAQUABIICAICD
+# 32yFtX+RHclf2idqGoxi4XW9CmPg7qqMtw8r4Q/D8Tws7OBslfi+lhIkDGec73wY
+# nVWgphrrUvZaWwjNuyuv3Ku40kBdSCgc+SWw4uJVrng9DN3cJcVKVZJMfwyNLMEj
+# Edi3HDoHiMqP6Ie8j4H476YI4H2DKj8OKCsrBqCBHBbG82C0/7C0Bl+gRbHj/dHv
+# JnvZ9/hnif6YCRX0SrAR6pC+lXXyG1+K9AEdFS0bsKoZzC4MUpS7GM2oo+3QcWpi
+# a30dM6eFY8qD3AtatAY1Z8P4yg4n+BPFDdP60QMJC/jOw0IZyhBj62nPvp9b0kRN
+# syArFOq7AbutSCG05D4H4c8V54268xQJWbPC5XDpk08/V43sorie8kGdNtjGJlNK
+# Dp1g1UA2vNQJaTO4Z90FzmXJYrw1LdPVMppBW8UhWeccs5DMv1u6xeVPkWH4lX69
+# NmT4RDdKIID4jytzWUGs71loCm6GPbkXPbUu7mcedbgNCB+HplOYiVhcIxYKr1kf
+# 6wnMGQ8V2CDja2eljtT+iDBHogmEUc+XbO54Xb5kjXwYe4SEXizTxAfWK3l3FwnH
+# U6s5PSo2MAOwF5a5F9Y0CGhmvbFXltPzot+sCtTjY3L4C5Ie9m/dbI/9/G+Wlstp
+# aojf7HK2rrJfMU3kyddc9uJGTkU3t+BrG0PFcpm8oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDzqGWDCcXsoU67InVDW1F+YLVrUspHe8G7czYywc7uCAIUOw/R
-# 7uK6W2JwIScdu7zHJzjF+e4YDzIwMjYwOTA5MTUwNzI3WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAA4DDD040+/UQGWqe0c3H+QgoZ6yzXchFCNe0BG5mjJgIUSS5f
+# YbErLGKAD2by01b/k0gm6PQYDzIwMjYxMDEwMDgzODEzWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -867,18 +913,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDCySQJfdlc9Wy145l2Zcw2Ts3LguKZV57YJ7s0C8Tbeb7+F9HF9TAygeQ7b
-# AYp9mzwwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDAPx+VJfzKlczdA0jc4f0NUGCby0BZEUTWA3PPob1nfFHrOmkPkYol1edAC
+# +NUjOwAwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAPPCRegsL5/0vLkQij9k89P33RU8nvbh4D85GaBUarSSr
-# ptIyhL56q6x+asn/f9uGFVmS3XkvWjrkDpO5B5i04HZh0EkQr3UUFc4vhnJsmn7i
-# DhFkn+4yhkzxdC2zoOESF0plfLJAxKE1D00XO6MnqUcRTibIpm8id63dFAAu0Kxx
-# WWW/T+uizVEigYkpOZ+mf6fid7X91mUkQb1YBfd19FqOXd5mLVShK4Y4WIyyM3FJ
-# DjVmlVVPtunpXsC5L7VBsf1uwCGzCgUzt1nrCuBN/S0pmHsPHgVA4xVxmHKvpNoy
-# EPvXmTztCCydQwPWN7N2IfNX41QMrB7rOwGJifPBCWvGRogMXpMYhGH+EKGVf1uk
-# 5cV0BhS0M2zS9Mo/ax0/HHB9kcpVpb+66v4RFp6t3/fqrlglYYcG48FsUviLzJ0i
-# j37BZEgB3zHSzvdsrK7FcbaisN9B13W/ynI9QTStsyGVWSDvYHVofPCPVGoxy37c
-# RIg9VSYhcDOiwZ68RWcY
+# KoZIhvcNAQEMBQAEggGAdIqwuMGRcJDPWQzotKaCMMQUHWQdWZ+KNSK5hEbpUh0o
+# dgszlOP89iPkc2ZlOs94ubzhCm+jyCGVO7iaNhLCu2PCksDTo8yo6BN1Cpe0DNDz
+# CdWU3czkaa40bbdql0GNiT2JdEHbQCYzeN3D8mnQnIbNe/rOwiKIV7PA0Y1M9poW
+# Ouf48w7P9NRhR2klUtqGuTDb5zmOFGeVvd3DPaXcPpQadz9863CUBoejyMWepJ+r
+# 09l3esVmgjPVLb/kHJinoJ5kfQTIzxqzZSstxbV2tQyWckESJgPWbb86OVBUVwac
+# XifCs4fa14340VEykAEuj0urUEirxLvPzBf6SVdyWqcMxmeiXxjwJFQ2Ipr3YbHr
+# Y2rZ1NOvog3krL3dqT+u41wPLu/pqzOieOPpIwWqzlu4elFjvbgOa8eywP9OQtPI
+# SPL0F8pvDnWUkQ9N2QeaGoG7V5+BE0dKOcw+r0saGxJcTLXUHcYF6QjXtjSRI/6B
+# /WJruTaZlzZnQt3leWXE
 # SIG # End signature block

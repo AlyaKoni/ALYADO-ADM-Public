@@ -1533,21 +1533,6 @@
         ]
     },
     {
-        "@odata.type": "#microsoft.graph.windowsDefenderAdvancedThreatProtectionConfiguration",
-        "advancedThreatProtectionOnboardingBlob": null,
-        "advancedThreatProtectionOnboardingFilename":  null,
-        "advancedThreatProtectionOffboardingBlob": null,
-        "advancedThreatProtectionOffboardingFilename": null,
-        "advancedThreatProtectionAutoPopulateOnboardingBlob": false,
-        "allowSampleSharing": false,
-        "description": "Configures Windows Defender ATP on windows Devices",
-        "displayName": "WIN Defender ATP",
-        "enableExpeditedTelemetryReporting": false,
-        "roleScopeTagIds": [
-            "0"
-        ]
-    },
-    {
         "@odata.type": "#microsoft.graph.windows10DeviceFirmwareConfigurationInterface",
         "bootFromBuiltInNetworkAdapters": "disabled",
         "bootFromExternalMedia": "disabled",
