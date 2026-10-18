@@ -1,0 +1,91 @@
+{
+  "@odata.type": "#microsoft.graph.win32LobApp",
+  "displayName": "WIN ZoomWorkplace",
+  "description": "Installs Zoom Workplace (x64)",
+  "publisher": "Zoom Communications, Inc.",
+  "largeIcon": null,
+  "isFeatured": false,
+  "privacyInformationUrl": "https://www.zoom.us/en/privacy/",
+  "informationUrl": "https://www.zoom.us/",
+  "owner": "",
+  "developer": "Zoom Communications, Inc.",
+  "notes": "",
+  "roleScopeTagIds": [],
+  "installCommandLine": "Install.cmd",
+  "uninstallCommandLine": "Uninstall.cmd",
+  "applicableArchitectures": "x64",
+  "minimumFreeDiskSpaceInMB": 500,
+  "minimumMemoryInMB": 100,
+  "minimumNumberOfProcessors": 1,
+  "minimumCpuSpeedInMHz": 1,
+  "msiInformation": {},
+  "fileName": "ZoomInstallerFull.intunewin",
+  "setupFilePath": "ZoomInstallerFull.msi",
+  "minimumSupportedWindowsRelease": "1607",
+  "minimumSupportedOperatingSystem": {
+    "v8_0": false,
+    "v8_1": false,
+    "v10_0": false,
+    "v10_1607": true,
+    "v10_1703": false,
+    "v10_1709": false,
+    "v10_1803": false,
+    "v10_1809": false,
+    "v10_1903": false
+  },
+  "detectionRules": [
+    {
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemDetection",
+      "path": "%ProgramFiles%\\Zoom\\bin",
+      "fileOrFolderName": "Zoom.exe",
+      "check32BitOn64System": false,
+      "detectionType": "version",
+      "operator": "greaterThanOrEqual",
+      "detectionValue": "7.2.1.48556"
+    }
+  ],
+  "requirementRules": [],
+  "rules": [
+    {
+      "@odata.type": "#microsoft.graph.win32LobAppFileSystemRule",
+      "ruleType": "detection",
+      "path": "%ProgramFiles%\\Zoom\\bin",
+      "fileOrFolderName": "Zoom.exe",
+      "check32BitOn64System": false,
+      "operationType": "version",
+      "operator": "greaterThanOrEqual",
+      "comparisonValue": "7.2.1.48556"
+    }
+  ],
+  "installExperience": {
+    "runAsAccount": "system",
+    "deviceRestartBehavior": "suppress"
+  },
+  "returnCodes": [
+    {
+      "returnCode": -1,
+      "type": "failed"
+    },
+    {
+      "returnCode": 0,
+      "type": "success"
+    },
+    {
+      "returnCode": 1707,
+      "type": "success"
+    },
+    {
+      "returnCode": 3010,
+      "type": "softReboot"
+    },
+    {
+      "returnCode": 1641,
+      "type": "hardReboot"
+    },
+    {
+      "returnCode": 1618,
+      "type": "retry"
+    }
+  ],
+  "displayVersion": "7.2.1.48556"
+}

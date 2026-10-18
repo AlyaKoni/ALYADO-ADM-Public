@@ -1,0 +1,230 @@
+﻿#Requires -Version 2.0
+
+<#
+    Copyright (c) Alya Consulting, 2019-2026
+
+    This file is part of the Alya Base Configuration.
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    The Alya Base Configuration is free software: you can redistribute it
+    and/or modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+    Alya Base Configuration is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+
+    Diese Datei ist Teil der Alya Basis Konfiguration.
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
+    Bedingungen der GNU General Public License, wie von der Free Software
+    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veröffentlichten Version, weiter verteilen und/oder modifizieren.
+    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
+    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    Siehe die GNU General Public License fuer weitere Details:
+    https://www.gnu.org/licenses/gpl-3.0.txt
+
+
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    14.10.2026 Konrad Brunner       Initial Version
+
+#>
+
+<#
+.SYNOPSIS
+Uninstalls a per-user installed Zoom Workplace app for the current user.
+
+.DESCRIPTION
+The script enumerates the current user's uninstall registry (HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall), locates the per-user Zoom installation (key ZoomUMX, or DisplayName "Zoom Workplace"/"zoom.us" with Publisher "Zoom Communications, Inc.") and executes the registered QuietUninstallString or UninstallString (typically "%AppData%\Roaming\Zoom\uninstall\Installer.exe" /uninstall, extended with the NSIS silent switch /S when not already silent). It must run in the context of the logged-on user (logon script or Intune platform script), because per-user Zoom installations are registered under HKCU and their uninstaller cleans the user hive only when running as that user. The script ensures 64-bit PowerShell, writes a transcript log (C:\ProgramData\AlyaConsulting\Logs with a %LocalAppData% fallback for restricted ACLs), waits for the uninstaller to finish and exits with its exit code. It never deletes files or registry keys by itself.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+None. The script writes progress and status information to the console and log files.
+
+.EXAMPLE
+PS> .\UninstallUserInstalledZoomWorkspaces.ps1
+Uninstalls the per-user Zoom Workplace installation of the current user, logging actions to C:\ProgramData\AlyaConsulting\Logs\ (fallback: %LocalAppData%\AlyaConsulting\Logs\).
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
+#>
+
+[CmdletBinding()]
+Param(
+)
+
+$exitCode = 0
+$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
+$AlyaScriptName = Split-Path $PSCommandPath -Leaf
+$AlyaScriptDir = Split-Path $PSCommandPath -Parent
+
+if (![System.Environment]::Is64BitProcess)
+{
+    Write-Host "Launching 64bit PowerShell"
+    $arguments = ""
+    foreach($key in $MyInvocation.BoundParameters.keys)
+    {
+        switch($MyInvocation.BoundParameters[$key].GetType().Name)
+        {
+            "SwitchParameter" {if($MyInvocation.BoundParameters[$k].IsPresent) { $arguments += "-$key " } }
+            "String"          { $arguments += "-$key `"$($MyInvocation.BoundParameters[$key])`" " }
+            "Int32"           { $arguments += "-$key $($MyInvocation.BoundParameters[$key]) " }
+            "Boolean"         { $arguments += "-$key `$$($MyInvocation.BoundParameters[$key]) " }
+        }
+    }
+    $sysNativePowerShell = "$($PSHOME.ToLower().Replace("syswow64", "sysnative"))\powershell.exe"
+    $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+    $pinfo.FileName = $sysNativePowerShell
+    $pinfo.Arguments = "-ex bypass -file `"$PSCommandPath`" $arguments"
+    $pinfo.RedirectStandardError = $true
+    $pinfo.RedirectStandardOutput = $true
+    $pinfo.CreateNoWindow = $true
+    $pinfo.UseShellExecute = $false
+    $p = New-Object System.Diagnostics.Process
+    $p.StartInfo = $pinfo
+    $p.Start() | Out-Null
+    $stdout = $p.StandardOutput.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stdout)) { Write-Host $stdout }
+    $stderr = $p.StandardError.ReadToEnd()
+    if (-Not [string]::IsNullOrEmpty($stderr)) { Write-Error $stderr }
+    $exitCode = $p.ExitCode
+}
+else
+{
+    $logRoot = "C:\ProgramData\AlyaConsulting\Logs"
+    if (-Not (Test-Path $logRoot))
+    {
+        try { $null = New-Item -Path $logRoot -ItemType Directory -Force } catch {}
+    }
+    $transcriptPath = "$logRoot\$($AlyaScriptName)-ZoomWorkplace-$($AlyaTimeString).log"
+    $transcriptStarted = $false
+    try
+    {
+        Start-Transcript -Path $transcriptPath -Force | Out-Null
+        $transcriptStarted = $true
+    }
+    catch
+    {
+        # ProgramData log folder may not be writable in user context, fall back to LocalAppData
+        $logRoot = Join-Path $env:LOCALAPPDATA "AlyaConsulting\Logs"
+        if (-Not (Test-Path $logRoot))
+        {
+            $null = New-Item -Path $logRoot -ItemType Directory -Force
+        }
+        $transcriptPath = "$logRoot\$($AlyaScriptName)-ZoomWorkplace-$($AlyaTimeString).log"
+        Start-Transcript -Path $transcriptPath -Force | Out-Null
+        $transcriptStarted = $true
+    }
+
+    try
+    {
+        $ErrorActionPreference = "Stop"
+
+        $uninstallRoot = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+        if (Test-Path $uninstallRoot)
+        {
+            foreach($reg in (Get-ChildItem -Path $uninstallRoot))
+            {
+                $displayName = $null
+                $publisher = $null
+                $uninstallString = $null
+                try {
+                    $displayName = Get-ItemPropertyValue -Path $reg.PSPath -Name "DisplayName" -ErrorAction SilentlyContinue
+                } catch {}
+                try {
+                    $publisher = Get-ItemPropertyValue -Path $reg.PSPath -Name "Publisher" -ErrorAction SilentlyContinue
+                } catch {}
+                $isZoom = ($reg.PSChildName -eq "ZoomUMX") -or ((($displayName -like "Zoom Workplace*") -or ($displayName -like "zoom.us*")) -and ($publisher -like "Zoom*"))
+                if ($isZoom)
+                {
+                    Write-Host "Uninstalling per-user Zoom installation"
+                    Write-Host "DisplayName: $displayName"
+                    Write-Host "with infos from $($reg.Name)"
+                    try {
+                        $uninstallString = Get-ItemPropertyValue -Path $reg.PSPath -Name "QuietUninstallString" -ErrorAction SilentlyContinue
+                    } catch {}
+                    if (-Not $uninstallString)
+                    {
+                        $uninstallString = Get-ItemPropertyValue -Path $reg.PSPath -Name "UninstallString" -ErrorAction SilentlyContinue
+                    }
+                    if (-Not $uninstallString)
+                    {
+                        Write-Warning "No uninstall string found in $($reg.Name). Skipping."
+                        continue
+                    }
+                    if (-Not $uninstallString.ToLower().Contains("msiexec"))
+                    {
+                        $uninstallStringNew = ""
+                        $uninstallParts = $uninstallString.Split()
+                        foreach($uninstallPart in $uninstallParts)
+                        {
+                            if (($uninstallStringNew -eq "") -and (-Not $uninstallPart.StartsWith("`"")))
+                            {
+                                $uninstallStringNew += "`""
+                            }
+                            if ($uninstallPart.Contains(".exe") -and -not $uninstallPart.Contains("`""))
+                            {
+                                $uninstallPart = $uninstallPart + "`""
+                            }
+                            $uninstallStringNew += $uninstallPart + " "
+                        }
+                        $uninstallString = $uninstallStringNew
+                        if ($uninstallString.ToLower().Contains(".exe") -and -Not $uninstallString.ToLower().Contains(" /silent"))
+                        {
+                            # NSIS silent switch for the Zoom per-user uninstaller. The Zoom KB documents no
+                            # CLI flags for it; /S is community-verified (r/SCCM 2020, imab.dk mentions /silent).
+                            $uninstallString += " /silent"
+                        }
+                    }
+                    else
+                    {
+                        $uninstallString = $uninstallString -replace " /I", " /X"
+                        if (-Not $uninstallString.Contains("/quiet"))
+                        {
+                            $uninstallString += " /quiet"
+                        }
+                        if (-Not $uninstallString.Contains("/norestart"))
+                        {
+                            $uninstallString += " /norestart"
+                        }
+                        $uninstallString += " /L* `"$logRoot\ZoomWorkplace-Uninstall-$AlyaTimeString.log`""
+                    }
+                    Write-Host "command: $uninstallString"
+                    Write-Host "Uninstall Start: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+                    cmd /c "$uninstallString"
+                    $exitCode = $LASTEXITCODE
+                    Write-Host "CMD returned: $exitCode at $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+                    do
+                    {
+                        Start-Sleep -Seconds 5
+                        # "Au_" = NSIS uninstaller self-copy (relaunches from temp and lets the stub exit)
+                        $process = @(Get-Process -Name "msiexec", "Installer", "Au_" -ErrorAction SilentlyContinue | Where-Object { try { ($_.Name -eq "msiexec") -or ($_.Name -eq "Au_") -or ($_.Path -like "*\Zoom\uninstall\*") } catch { $false } })
+                    } while ($process.Count -gt 0)
+                    Write-Host "Uninstall End: $((Get-Date).ToString("yyyyMMddHHmmssfff"))"
+                }
+            }
+        }
+    }
+    catch
+    {   
+        try { Write-Error ($_.Exception | ConvertTo-Json -Depth 1) -ErrorAction Continue } catch {}
+        Write-Error ($_.Exception) -ErrorAction Continue
+        $exitCode = -1
+    }
+
+    if ($transcriptStarted)
+    {
+        try { Stop-Transcript | Out-Null } catch {}
+    }
+}
+
+exit $exitCode

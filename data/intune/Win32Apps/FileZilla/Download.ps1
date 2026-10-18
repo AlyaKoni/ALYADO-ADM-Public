@@ -68,7 +68,13 @@ if (-Not (Test-Path $contentRoot))
     $null = New-Item -Path $contentRoot -ItemType Directory -Force
 }
 
-$filename = & "$PSScriptRoot\..\..\..\..\scripts\misc\Download-FileWithScrapfly.ps1" -OutDir $contentRoot -PageUrl $pageUrl
+try {
+    $filename = & "$PSScriptRoot\..\..\..\..\scripts\misc\Download-FileWithScrapfly.ps1" -OutDir $contentRoot -PageUrl $pageUrl
+} catch {
+    Write-Warning "Failed to download the file automatically."
+    Write-Warning $_.Exception.Message
+    $filename = $null
+}
 if (-Not $filename)
 {
     $installerName = "FileZilla_win64-setup.exe"

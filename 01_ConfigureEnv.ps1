@@ -75,6 +75,10 @@
     16.09.2026 Konrad Brunner       Added Get-CurrentAzAdPrincipal for user and service principal logins
     20.09.2026 Konrad Brunner       Added IsolatedScope and IsolatedProcess functions for module isolation
     20.09.2026 Konrad Brunner       LoginTo-Teams: app login parameter compatibility, ClientId/ApplicationId resolved via reflection
+    15.10.2026 Konrad Brunner       Get-PlaywrightPage Unix-Fix: PLAYWRIGHT_DRIVER_SEARCH_PATH mit normalisierten
+                                    Pfadtrennern setzen + Executable-Bits des gebuendelten node wiederherstellen
+                                    (Expand-Archive entfernt sie; ohne Fix: "missing required assets" bzw.
+                                    "Permission denied")
 
 #>
 
@@ -5201,6 +5205,15 @@ function Get-PlaywrightPage()
     }
 
     $packageRoot = "$($AlyaTools)\Packages\Microsoft.Playwright"
+    if ($AlyaIsPsUnix)
+    {
+        # .NET-APIs und der Playwright-Driver behandeln '\' auf Unix nicht als
+        # Separator - Pfad fuer Env-Variablen (PLAYWRIGHT_DRIVER_SEARCH_PATH)
+        # und .NET-Nutzung normalisieren. Join-Path normalisiert zwar ebenfalls,
+        # der Pfad wird hier aber auch direkt als String weitergegeben.
+        # Windows: '\' ist der native Separator, keine Aenderung noetig.
+        $packageRoot = $packageRoot -replace '\\', '/'
+    }
     $dllPath = $null
     foreach ($candidate in @("$packageRoot\lib\netstandard2.0\Microsoft.Playwright.dll", "$packageRoot\lib\netstandard2.1\Microsoft.Playwright.dll", "$packageRoot\lib\net48\Microsoft.Playwright.dll"))
     {
@@ -5230,6 +5243,18 @@ function Get-PlaywrightPage()
         # Laden per Byte-Array (wie das offizielle playwright.ps1), damit die DLL-Datei nicht
         # gelockt bleibt (sonst scheitert das Paket-Update in Install-PackageIfNotInstalled)
         [Reflection.Assembly]::Load([System.IO.File]::ReadAllBytes($rootDll)) | Out-Null
+    }
+
+    if ($AlyaIsPsUnix)
+    {
+        # Expand-Archive entfernt die Unix-Executable-Bits - der gebuendelte
+        # node muss ausfuehrbar sein, sonst scheitert der Driver-Start mit
+        # "Permission denied". Betrifft jeden Lauf (Launch startet node als
+        # Transport), nicht nur die Browser-Erstinstallation.
+        foreach ($nodeBinary in @(Get-ChildItem -Path (Join-Path $packageRoot ".playwright/node") -Recurse -File -ErrorAction SilentlyContinue))
+        {
+            try { [System.IO.File]::SetUnixFileMode($nodeBinary.FullName, 493) } catch { }
+        }
     }
 
     # Eigenen Chromium-Build einmalig installieren (idempotent, kein System-Browser)

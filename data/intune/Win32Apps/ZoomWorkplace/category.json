@@ -1,0 +1,5 @@
+﻿{
+    "@odata.type": "#microsoft.graph.mobileAppCategory",
+    "id": "ed899483-3019-425e-a470-28e901b9790e",
+    "displayName": "Productivity"
+}

@@ -41,6 +41,17 @@
     09.09.2026 Konrad Brunner       Fix SPA-Renderrace: negativ gerankte Kandidaten (Report/Agreement)
                                     werden nie geklickt; Scan-Retries (3x 8 s) auch wenn nur solche
                                     Junk-Kandidaten gefunden wurden
+    15.10.2026 Konrad Brunner       Automatische Netzwerkverkehr-Analyse: loest ein Button-Klick weder
+                                    Download noch Navigation aus, werden die XHR/Fetch-Aufrufe der Seite
+                                    aus den CDP-Network-Events ueber die Scrapfly-Scrape-API (asp=true)
+                                    wiederholt und ihre JSON-Antworten generisch nach Installer-URLs
+                                    durchsucht; abgeleitete signierte URLs werden vor jedem Kaskaden-
+                                    Versuch frisch aufgeloest. Neuer Kaskaden-Versuch 2/4: lokaler
+                                    Playwright-Browser (Parameter UseLocalBrowserDownload); native
+                                    Playwright-Initialisierungsausgaben werden eingefangen und
+                                    respektieren den Silent-Modus
+                                    (Anlass: Barco ClickShare - data.barco.com blockt Datacenter-IPs und
+                                    Nicht-Browser-Clients, der Klick-Ablauf loest dort nichts aus)
 
 #>
 
@@ -68,11 +79,20 @@
 #      (Redirect auf eine Folgeseite, z. B. ein Support-Portal), wird
 #      die neue Seite geladen und erneut gescannt (Schritte 3-4),
 #      insgesamt bis zu MaxPageHops Seitenwechsel.
+#      Loest ein Klick weder Download noch Navigation aus (typisch: das
+#      Seiten-JS holt die Download-URL von einer Hersteller-API, die den
+#      Cloud-Browser blockt), werden die XHR/Fetch-Aufrufe aus dem
+#      Netzwerkverkehr ueber die Scrape-API (asp=true) wiederholt und
+#      ihre JSON-Antworten nach Installer-URLs durchsucht.
 #   5. Download-Kaskade (jeder Versuch wird gecatcht, protokolliert und
 #      ausgewertet, bevor der naechste Weg probiert wird):
 #        a) Direkt mit Invoke-WebRequest (inkl. Cookies aus dem Browser)
-#        b) Ueber den Browser via Network.loadNetworkResource + IO.read-Stream
-#        c) Ueber die Scrapfly-Downloads-API (Browser-Download ausloesen,
+#        b) Ueber einen lokalen Playwright-Browser (echter Chromium auf
+#           diesem Rechner: Browser-Fingerprint + lokale Internetleitung;
+#           Parameter UseLocalBrowserDownload, Default $true)
+#        c) Ueber den Cloud-Browser via Network.loadNetworkResource +
+#           IO.read-Stream
+#        d) Ueber die Scrapfly-Downloads-API (Browser-Download ausloesen,
 #           warten bis abgeschlossen, via ScrapiumBrowser.getDownloads holen;
 #           begrenzt auf 500 MB pro Datei, siehe
 #           https://scrapfly.io/docs/cloud-browser-api/file-downloads)
@@ -101,6 +121,30 @@
 #
 # Parameter MaxPageHops (Default 3): maximale Anzahl Redirects/Folgeseiten,
 # denen das Skript nach Button-Klicks folgt, bevor es abbricht.
+#
+# Automatische Hersteller-API-Erkennung (kein Parameter noetig): Loest ein
+# Button-Klick weder einen Download noch eine Navigation aus, liegt das
+# typischerweise daran, dass das Seiten-JS die echte Download-URL erst bei
+# Klick von einer Hersteller-API holt und diese API den Cloud-Browser blockt
+# (Bot-Schutz/Datacenter-IPs, z. B. Barco data.barco.com). Das Skript wertet
+# in diesem Fall die XHR/Fetch-Aufrufe aus den CDP-Network-Events aus,
+# wiederholt die Kandidaten (blockierte/fehlgeschlagene zuerst, maximal 5,
+# Tracking-Endpunkte werden uebersprungen) ueber die Scrapfly-Scrape-API mit
+# asp=true und durchsucht die JSON-Antworten generisch nach Installer-URLs
+# (Dateiendung gemaess InstallerExtensions; FileRegex wird beruecksichtigt).
+# Eine so abgeleitete (oft signierte, kurzlebige) URL wird vor jedem
+# weiteren Kaskaden-Versuch frisch aufgeloest.
+# Die Scrape-API kann KEINE grossen Binaerdateien uebertragen (Content kommt
+# als String im JSON, Binaeres wird verstummelt) - sie dient ausschliesslich
+# als URL-Resolver; die Datei kommt ueber die Download-Kaskade.
+#
+# Parameter UseLocalBrowserDownload (Default $true): Kaskaden-Versuch 2/4 -
+# Download ueber einen lokalen Playwright-Browser (echter Chromium auf diesem
+# Rechner; zentrale Funktionen Get-PlaywrightPage/Close-PlaywrightPage aus
+# 01_ConfigureEnv.ps1). Hilft, wenn das Ziel Datacenter-IPs oder Nicht-
+# Browser-Clients (TLS-Fingerprinting) blockt: der Request kommt aus einem
+# echten Browser ueber die lokale Internetleitung. Der Erstlauf installiert
+# das Microsoft.Playwright-Paket und Chromium (einmalig, mehrere Minuten).
 
 [CmdletBinding()]
 param(
@@ -123,6 +167,8 @@ param(
     [string[]]$ButtonRegex = @(),
     [Parameter(Mandatory = $false)]
     [string]$FileRegex = "",
+    [Parameter(Mandatory = $false)]
+    [bool]$UseLocalBrowserDownload = $true,
     [Parameter(Mandatory = $false)]
     [int]$MaxPageHops = 3,
     [Parameter(Mandatory = $false)]
@@ -177,6 +223,7 @@ Start-Transcript -Path (Join-Path $logDir "Download-FileWithScrapfly-$($AlyaTime
 $script:nextId = 10
 $script:ActiveFileRegex = ""
 $script:fileRegexRejectedUrls = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+$script:AutoResolvedApiUrl = $null
 
 # Empfangszustand fuer den CDP-WebSocket-Reader.
 # WICHTIG: Ein laufendes ReceiveAsync darf NIEMALS per CancellationToken
@@ -215,6 +262,10 @@ $script:ForbiddenExtensionRegex = "\.(" + ($script:ForbiddenExtensions -join "|"
 # Standard-Regex, falls keine uebergeben wurden
 $script:DefaultLinkRegex = $script:InstallerExtensionRegex
 $script:DefaultButtonRegex = "^download"
+
+# Tracking-/Analytics-Endpunkte, die bei der Netzwerkverkehr-Analyse nie
+# ueber die Scrape-API wiederholt werden
+$script:TrackingUrlBlockRegex = "(?i)(google-?analytics|googletagmanager|doubleclick|facebook\.com/tr|connect\.facebook|hotjar|clarity\.ms|linkedin\.com/px|newrelic|datadog|sentry|segment\.(io|com)|mixpanel|amplitude|matomo|piwik|/rum|helix-rum)"
 
 # =============================================================
 # Scrapfly key stuff
@@ -1153,9 +1204,15 @@ function Invoke-DirectDownload {
         TooSmall = $false
         Error = ""
     }
-    Write-Host "Versuch 1/3: Direkter Download mit Invoke-WebRequest: $Url" -ForegroundColor $CommandInfo
+    Write-Host "Versuch 1/4: Direkter Download mit Invoke-WebRequest: $Url" -ForegroundColor $CommandInfo
     try {
-        $webSession = Get-BrowserWebSession -WebSocket $WebSocket -EventSink $EventSink
+        if ($null -ne $WebSocket) {
+            $webSession = Get-BrowserWebSession -WebSocket $WebSocket -EventSink $EventSink
+        }
+        else {
+            # Ohne Cloud-Browser-Session aufgerufen: keine Browser-Cookies verfuegbar
+            $webSession = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
+        }
         $requestHeaders = @{
             "Referer" = $Referer
             "Accept" = "*/*"
@@ -1213,7 +1270,7 @@ function Invoke-CdpResourceDownload {
         TooSmall = $false
         Error = ""
     }
-    Write-Host "Versuch 2/3: Download ueber CDP (Network.loadNetworkResource + IO-Stream): $Url" -ForegroundColor $CommandInfo
+    Write-Host "Versuch 3/4: Download ueber CDP (Network.loadNetworkResource + IO-Stream): $Url" -ForegroundColor $CommandInfo
     try {
         $frameTree = Invoke-Cdp -WebSocket $WebSocket -Method "Page.getFrameTree" -Params $null -SessionId $SessionId -TimeoutSeconds 30 -EventSink $EventSink
         $frameId = [string]$frameTree.frameTree.frame.id
@@ -1260,7 +1317,7 @@ function Invoke-BrowserFileDownload {
         TooSmall = $false
         Error = ""
     }
-    Write-Host "Versuch 3/3: Browser-Download ueber die Scrapfly-Downloads-API" -ForegroundColor $CommandInfo
+    Write-Host "Versuch 4/4: Browser-Download ueber die Scrapfly-Downloads-API" -ForegroundColor $CommandInfo
     $downloadGuid = $KnownGuid
     $suggestedName = $NameHint
     $extraTargetId = $null
@@ -1485,6 +1542,345 @@ function Invoke-BrowserFileDownload {
         if (-Not [string]::IsNullOrEmpty($extraTargetId)) {
             try { $null = Invoke-Cdp -WebSocket $WebSocket -Method "Target.closeTarget" -Params @{ targetId = $extraTargetId } -SessionId "" -TimeoutSeconds 15 -EventSink $EventSink } catch { }
         }
+    }
+}
+
+# ------------------------------------------------------------------
+# API-basierte URL-Aufloesung und lokaler Browser-Download
+# ------------------------------------------------------------------
+
+function Resolve-DownloadUrlViaScrapeApi {
+    param(
+        [string]$ApiUrl,
+        [string]$JsonProperty = "",
+        [string]$Key,
+        [string]$CountryCode
+    )
+    # Loest die echte Download-URL ueber die Scrapfly-Scrape-API (asp=true) auf:
+    # ruft eine JSON-Hersteller-API auf und extrahiert die Download-URL aus
+    # der Antwort. Mit JsonProperty wird exakt diese Property ausgelesen;
+    # ohne JsonProperty wird der JSON-Baum generisch nach Installer-URLs
+    # durchsucht (Get-InstallerUrlFromJson, bei mehreren Treffern gewinnt
+    # die hoechste Version). Die Scrape-API mit asp=true kommt durch
+    # Cloudflare-Sperren, die sowohl Datacenter-IPs (Cloud-Browser, Server-
+    # Clients) als auch Nicht-Browser-Clients (Invoke-WebRequest) abweisen.
+    # Die Scrape-API selbst kann KEINE grossen Binaerdateien uebertragen
+    # (Content kommt als String im JSON, Binaeres wird verstummelt) - sie
+    # dient hier ausschliesslich als URL-Resolver; die Datei wird danach
+    # ueber die Download-Kaskade geholt.
+    $scrapeUrl = 'https://api.scrapfly.io/scrape?apikey=' + $Key + '&asp=true&country=' + [uri]::EscapeDataString($CountryCode) + '&url=' + [uri]::EscapeDataString($ApiUrl)
+    $response = Invoke-RestMethod -Method Get -Uri $scrapeUrl -TimeoutSec 240
+    $result = $null
+    if ($response.PSObject.Properties["result"]) { $result = $response.result }
+    if ($null -eq $result) { throw "Scrape-API-Antwort ohne result-Property (API: '$ApiUrl')" }
+    $statusCode = $null
+    if ($result.PSObject.Properties["status_code"]) { $statusCode = [string]$result.status_code }
+    $content = $null
+    if ($result.PSObject.Properties["content"]) { $content = [string]$result.content }
+    if ([string]::IsNullOrWhiteSpace($content)) {
+        $scrapeError = $null
+        if ($result.PSObject.Properties["error"]) { $scrapeError = [string]$result.error }
+        throw "Scrape-API lieferte keinen Content fuer '$ApiUrl' (status_code: $statusCode, error: $scrapeError)"
+    }
+    if (-Not [string]::IsNullOrWhiteSpace($statusCode) -and $statusCode -ne "200") {
+        throw "Ziel-API '$ApiUrl' lieferte Status $statusCode (via Scrape-API)"
+    }
+    $json = $null
+    try {
+        $json = $content | ConvertFrom-Json
+    }
+    catch {
+        $preview = $content
+        if ($preview.Length -gt 300) { $preview = $preview.Substring(0, 300) }
+        throw "API-Antwort ist kein gueltiges JSON (Antwort: '$preview')"
+    }
+    if ($json -is [string] -and -Not [string]::IsNullOrWhiteSpace($json)) {
+        return $json
+    }
+    $urlValue = $null
+    if (-Not [string]::IsNullOrWhiteSpace($JsonProperty)) {
+        $matchedProperties = @($json.PSObject.Properties | Where-Object { $_.Name -ieq $JsonProperty })
+        if ($matchedProperties.Count -gt 0) { $urlValue = [string]$matchedProperties[0].Value }
+    }
+    else {
+        # Generische Extraktion: alle Installer-URLs aus dem JSON-Baum sammeln
+        $installerUrls = @(Get-InstallerUrlFromJson -Json $json)
+        if ($installerUrls.Count -eq 1) {
+            $urlValue = [string]$installerUrls[0]
+        }
+        elseif ($installerUrls.Count -gt 1) {
+            $urlValue = Select-HighestVersionUrl -Urls $installerUrls
+        }
+    }
+    if ([string]::IsNullOrWhiteSpace($urlValue)) {
+        $preview = $content
+        if ($preview.Length -gt 300) { $preview = $preview.Substring(0, 300) }
+        $modeHint = $(if ([string]::IsNullOrWhiteSpace($JsonProperty)) { "keine Installer-URL im JSON gefunden" } else { "Property '$JsonProperty' nicht gefunden" })
+        throw "Download-URL konnte nicht extrahiert werden ($modeHint; Antwort: '$preview')"
+    }
+    return $urlValue
+}
+
+function Get-InstallerUrlFromJson {
+    param(
+        $Json,
+        [int]$Depth = 0
+    )
+    # Durchsucht ein geparstes JSON-Objekt rekursiv nach Strings, die auf
+    # eine Installer-Datei zeigen (http/https-URL, deren Dateiname eine
+    # Installationspaket-Endung traegt). FileRegex wird wie beim Download-
+    # Event-Scan beruecksichtigt ($script:ActiveFileRegex).
+    $results = [System.Collections.Generic.List[string]]::new()
+    if ($null -eq $Json -or $Depth -gt 12) { return $results.ToArray() }
+    if ($Json -is [string]) {
+        $stringValue = [string]$Json
+        if ($stringValue -match "^https?://") {
+            $derivedName = Get-FileNameFromUrl -Url $stringValue
+            if (-Not [string]::IsNullOrWhiteSpace($derivedName) -and (Test-InstallerExtension -Name $derivedName)) {
+                if ([string]::IsNullOrWhiteSpace($script:ActiveFileRegex) -or $derivedName -match $script:ActiveFileRegex -or $stringValue -match $script:ActiveFileRegex) {
+                    $results.Add($stringValue)
+                }
+            }
+        }
+        return $results.ToArray()
+    }
+    if ($Json -is [System.Collections.IEnumerable]) {
+        foreach ($item in $Json) {
+            foreach ($subUrl in @(Get-InstallerUrlFromJson -Json $item -Depth ($Depth + 1))) {
+                if (-Not $results.Contains($subUrl)) { $results.Add($subUrl) }
+            }
+        }
+        return $results.ToArray()
+    }
+    foreach ($jsonProperty in $Json.PSObject.Properties) {
+        foreach ($subUrl in @(Get-InstallerUrlFromJson -Json $jsonProperty.Value -Depth ($Depth + 1))) {
+            if (-Not $results.Contains($subUrl)) { $results.Add($subUrl) }
+        }
+    }
+    return $results.ToArray()
+}
+
+function Get-ApiCallCandidatesFromEvents {
+    param(
+        $Events,
+        [int]$MaxCandidates = 5
+    )
+    # Ermittelt XHR/Fetch-Aufrufe aus den CDP-Network-Events (z. B. die
+    # Hersteller-API, die ein Download-Button per Seiten-JS aufruft).
+    # Blockierte/fehlgeschlagene Aufrufe (Bot-Schutz gegen den Cloud-Browser)
+    # kommen zuerst, dann JSON-Antworten, dann der Rest. Tracking-Endpunkte
+    # werden uebersprungen, Duplikate per URL entfernt, maximal MaxCandidates.
+    $requestsByRequestId = @{}
+    $requestOrder = [System.Collections.Generic.List[string]]::new()
+    foreach ($msg in $Events) {
+        $method = [string](Get-EventPropertyValue -Object $msg -Name "method")
+        $params = Get-EventPropertyValue -Object $msg -Name "params"
+        if ([string]::IsNullOrEmpty($method) -or $null -eq $params) { continue }
+        if ($method -eq "Network.requestWillBeSent") {
+            $requestType = [string](Get-EventPropertyValue -Object $params -Name "type")
+            if ($requestType -ne "XHR" -and $requestType -ne "Fetch") { continue }
+            $request = Get-EventPropertyValue -Object $params -Name "request"
+            if ($null -eq $request) { continue }
+            $requestUrl = [string](Get-EventPropertyValue -Object $request -Name "url")
+            $requestId = [string](Get-EventPropertyValue -Object $params -Name "requestId")
+            if ([string]::IsNullOrWhiteSpace($requestUrl) -or [string]::IsNullOrWhiteSpace($requestId)) { continue }
+            if ($requestUrl -match "scrapfly\.io") { continue }
+            if (-Not $requestsByRequestId.ContainsKey($requestId)) {
+                $requestsByRequestId[$requestId] = [pscustomobject]@{
+                    Url = $requestUrl
+                    Status = 0
+                    Failed = $false
+                    MimeType = ""
+                }
+                $requestOrder.Add($requestId)
+            }
+        }
+        elseif ($method -eq "Network.responseReceived") {
+            $requestId = [string](Get-EventPropertyValue -Object $params -Name "requestId")
+            if ([string]::IsNullOrWhiteSpace($requestId) -or -Not $requestsByRequestId.ContainsKey($requestId)) { continue }
+            $resp = Get-EventPropertyValue -Object $params -Name "response"
+            if ($null -eq $resp) { continue }
+            $status = Get-EventPropertyValue -Object $resp -Name "status"
+            if ($null -ne $status) { $requestsByRequestId[$requestId].Status = [int]$status }
+            $mimeType = Get-EventPropertyValue -Object $resp -Name "mimeType"
+            if ($null -ne $mimeType) { $requestsByRequestId[$requestId].MimeType = [string]$mimeType }
+        }
+        elseif ($method -eq "Network.loadingFailed") {
+            $requestId = [string](Get-EventPropertyValue -Object $params -Name "requestId")
+            if ([string]::IsNullOrWhiteSpace($requestId) -or -Not $requestsByRequestId.ContainsKey($requestId)) { continue }
+            $requestsByRequestId[$requestId].Failed = $true
+        }
+    }
+    $seenUrls = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $uniqueCandidates = [System.Collections.Generic.List[object]]::new()
+    foreach ($requestId in $requestOrder) {
+        $entry = $requestsByRequestId[$requestId]
+        if (-Not $seenUrls.Add([string]$entry.Url)) { continue }
+        if ($entry.Url -notmatch "^https?://") { continue }
+        if ($entry.Url -match $script:TrackingUrlBlockRegex) { continue }
+        $uniqueCandidates.Add($entry)
+    }
+    $blockedCandidates = @($uniqueCandidates | Where-Object { $_.Failed -or $_.Status -ge 400 })
+    $jsonCandidates = @($uniqueCandidates | Where-Object { -Not ($_.Failed -or $_.Status -ge 400) -and $_.MimeType -match "json" })
+    $otherCandidates = @($uniqueCandidates | Where-Object { -Not ($_.Failed -or $_.Status -ge 400) -and $_.MimeType -notmatch "json" })
+    $sortedCandidates = @($blockedCandidates + $jsonCandidates + $otherCandidates)
+    if ($sortedCandidates.Count -gt $MaxCandidates) {
+        $sortedCandidates = @($sortedCandidates[0..($MaxCandidates - 1)])
+    }
+    return $sortedCandidates
+}
+
+function Get-FreshAutoResolvedUrl {
+    param(
+        [string]$FallbackUrl
+    )
+    # Fuer ueber eine Hersteller-API abgeleitete Download-URLs
+    # ($script:AutoResolvedApiUrl): vor jedem weiteren Download-Versuch
+    # frisch aufloesen, da signierte URLs oft nur wenige Minuten gueltig
+    # sind. Schlaegt die erneute Aufloesung fehl, wird die zuletzt
+    # bekannte URL verwendet.
+    if ([string]::IsNullOrWhiteSpace($script:AutoResolvedApiUrl)) { return $FallbackUrl }
+    try {
+        $freshUrl = Resolve-DownloadUrlViaScrapeApi -ApiUrl $script:AutoResolvedApiUrl -Key $ApiKey -CountryCode $Country
+        if (-Not [string]::IsNullOrWhiteSpace($freshUrl)) {
+            Write-Host "Download-URL fuer den naechsten Versuch frisch aufgeloest"
+            return $freshUrl
+        }
+    }
+    catch {
+        Write-Host "Warnung: erneute Aufloesung fehlgeschlagen, verwende die zuletzt bekannte URL: $($_.Exception.Message)" -ForegroundColor $CommandWarning
+    }
+    return $FallbackUrl
+}
+
+function Invoke-LocalBrowserDownload {
+    param(
+        [string]$Url,
+        [string]$NameHint,
+        [string]$TmpPath,
+        [int]$TimeoutSeconds,
+        [int]$EventWaitSeconds = 90,
+        [scriptblock]$UrlResolver = $null
+    )
+    # Versuch: Download ueber einen lokalen Playwright-Browser (echter Chromium
+    # auf diesem Rechner; zentrale Funktionen Get-PlaywrightPage/Close-PlaywrightPage
+    # aus 01_ConfigureEnv.ps1, AcceptDownloads ist dort bereits aktiv).
+    # Registriert das Warten auf das Download-Event, BEVOR die Navigation
+    # ausgeloest wird (sonst koennen schnelle Downloads verpasst werden).
+    # Hilft, wenn das Ziel TLS-Fingerprints von Nicht-Browser-Clients blockt:
+    # der Request kommt aus einem echten Browser ueber die lokale (i. d. R.
+    # Geschaefts-)Leitung.
+    $attemptResult = [pscustomobject]@{
+        Success = $false
+        FileName = $null
+        TmpPath = $TmpPath
+        TooSmall = $false
+        Error = ""
+    }
+    Write-Host "Versuch 2/4: Download ueber lokalen Playwright-Browser: $Url" -ForegroundColor $CommandInfo
+    $pw = $null
+    $initOut = $null
+    $initErr = $null
+    try {
+        # Die Playwright-Initialisierung (Paket-/Browser-Installation, Driver-
+        # CLI) schreibt native Ausgaben direkt auf Console.Out/Error statt
+        # ueber Write-Host - sie wuerden den Silent-Modus unterlaufen.
+        # Deshalb waehrend der Initialisierung einfangen und kontrolliert
+        # wieder ausgeben (Silent unterdrueckt sie, das Transcript nicht).
+        $initOut = [System.IO.StringWriter]::new()
+        $initErr = [System.IO.StringWriter]::new()
+        $originalOut = [Console]::Out
+        $originalErr = [Console]::Error
+        try {
+            [Console]::SetOut($initOut)
+            [Console]::SetError($initErr)
+            $pw = Get-PlaywrightPage -Headless $true
+        }
+        finally {
+            [Console]::SetOut($originalOut)
+            [Console]::SetError($originalErr)
+        }
+        $initMessages = ([string]$initOut.ToString() + [string]$initErr.ToString()).Trim()
+        if (-Not [string]::IsNullOrWhiteSpace($initMessages)) {
+            Write-Host "Playwright-Initialisierung: $initMessages"
+        }
+        $page = $pw.page
+        if ($null -ne $UrlResolver) {
+            # Signierte URLs sind oft nur wenige Minuten gueltig und die
+            # Playwright-Erstinstallation kann dauern - URL deshalb JETZT
+            # (nach der Browser-Initialisierung) frisch aufloesen.
+            try {
+                $freshUrl = [string](& $UrlResolver)
+                if (-Not [string]::IsNullOrWhiteSpace($freshUrl)) {
+                    $Url = $freshUrl
+                    Write-Host "Browser-Versuch mit frisch aufgeloester URL"
+                }
+            }
+            catch {
+                Write-Host "Warnung: frische Aufloesung fuer den Browser-Versuch fehlgeschlagen, verwende die urspruengliche URL: $($_.Exception.Message)" -ForegroundColor $CommandWarning
+            }
+        }
+        $waitOptions = [Microsoft.Playwright.PageWaitForDownloadOptions]::new()
+        # Kurzes Timeout fuer das Download-Event: liefert das Ziel eine
+        # HTML-Challenge-/Fehlerseite statt eines Downloads, blockiert ein
+        # langes Timeout den Versuch sinnlos (das Event feuert unmittelbar
+        # nach dem Navigationsstart). Fuer die Uebertragung selbst gilt
+        # anschliessend TimeoutSeconds.
+        $waitOptions.Timeout = [float]($EventWaitSeconds * 1000)
+        # 1) Warten auf das Download-Event registrieren (Task bleibt pending),
+        # 2) dann die Navigation ausloesen.
+        $waitTask = $page.WaitForDownloadAsync($waitOptions)
+        $gotoTask = $page.GotoAsync($Url)
+        # Die Navigation auf eine Download-URL endet nie mit einem geladenen
+        # Dokument - GotoAsync-Fehler werden beobachtet, aber nicht ausgewertet.
+        $null = $gotoTask.ContinueWith([Action[System.Threading.Tasks.Task]]{
+            param($observedTask)
+            if ($observedTask.IsFaulted) { $null = $observedTask.Exception }
+        })
+        $download = $waitTask.GetAwaiter().GetResult()
+        $saveTask = $download.SaveAsAsync($TmpPath)
+        if (-Not $saveTask.Wait([TimeSpan]::FromSeconds($TimeoutSeconds))) {
+            $attemptResult.Error = "Timeout ($TimeoutSeconds s) beim Speichern des Browser-Downloads"
+            Write-Host $attemptResult.Error -ForegroundColor $CommandWarning
+            if (Test-Path -Path $TmpPath) { try { Remove-Item -Path $TmpPath -Force } catch { } }
+            return $attemptResult
+        }
+        $downloadFailure = $download.FailureAsync().GetAwaiter().GetResult()
+        if (-Not [string]::IsNullOrWhiteSpace($downloadFailure)) {
+            $attemptResult.Error = "Browser-Download fehlgeschlagen: $downloadFailure"
+            Write-Host $attemptResult.Error -ForegroundColor $CommandWarning
+            if (Test-Path -Path $TmpPath) { try { Remove-Item -Path $TmpPath -Force } catch { } }
+            return $attemptResult
+        }
+        $effectiveHint = $NameHint
+        $browserSuggestedName = $download.SuggestedFilename
+        if (-Not [string]::IsNullOrWhiteSpace($browserSuggestedName)) { $effectiveHint = $browserSuggestedName }
+        $testResult = Test-DownloadedFile -Path $TmpPath -NameHint $effectiveHint -Url $Url -ContentType $null
+        $attemptResult.Success = $testResult.Success
+        $attemptResult.FileName = $testResult.FileName
+        $attemptResult.TooSmall = $testResult.TooSmall
+        $attemptResult.Error = $testResult.Reason
+        if ($testResult.Success) {
+            Write-Host "Lokaler Browser-Download erfolgreich: $($testResult.FileName) ($([Math]::Round((Get-Item -Path $TmpPath).Length / 1MB, 1)) MB)"
+        }
+        return $attemptResult
+    }
+    catch {
+        $attemptResult.Error = $_.Exception.Message
+        Write-Host "Lokaler Browser-Download fehlgeschlagen: $($_.Exception.Message)" -ForegroundColor $CommandWarning
+        if ($null -ne $initOut -and $null -ne $initErr) {
+            $initMessages = ([string]$initOut.ToString() + [string]$initErr.ToString()).Trim()
+            if (-Not [string]::IsNullOrWhiteSpace($initMessages)) {
+                Write-Host "Playwright-Initialisierung: $initMessages"
+            }
+        }
+        if (Test-Path -Path $TmpPath) {
+            try { Remove-Item -Path $TmpPath -Force } catch { }
+        }
+        return $attemptResult
+    }
+    finally {
+        Close-PlaywrightPage $pw
     }
 }
 
@@ -1793,7 +2189,39 @@ try {
         }
 
         if (-Not $navigated) {
-            throw "Kein Button-Kandidat auf der Seite '$currentLocation' hat einen Download oder eine Navigation ausgeloest."
+            # Der Klick hat weder Download noch Navigation ausgeloest.
+            # Typische Ursache: Das Seiten-JS holt die echte Download-URL von
+            # einer Hersteller-API, die den Cloud-Browser blockt (Bot-Schutz/
+            # Datacenter-IPs) - der Klick laeuft dann still ins Leere. Die
+            # XHR/Fetch-Aufrufe aus den CDP-Network-Events werden deshalb
+            # ueber die Scrape-API (asp=true) wiederholt und ihre JSON-
+            # Antworten generisch nach Installer-URLs durchsucht.
+            $apiCandidates = @(Get-ApiCallCandidatesFromEvents -Events $eventSink)
+            if ($apiCandidates.Count -gt 0) {
+                Write-Host "Pruefe $($apiCandidates.Count) XHR/Fetch-Aufruf(e) aus dem Netzwerkverkehr..." -ForegroundColor $CommandInfo
+                foreach ($apiCandidate in $apiCandidates) {
+                    $candidateApiUrl = [string]$apiCandidate.Url
+                    $candidateStatus = $(if ($apiCandidate.Failed) { "fehlgeschlagen" } else { [string]$apiCandidate.Status })
+                    Write-Host "Wiederhole API-Aufruf via Scrape-API (asp=true): $candidateApiUrl (Status im Browser: $candidateStatus)"
+                    try {
+                        $resolvedUrl = Resolve-DownloadUrlViaScrapeApi -ApiUrl $candidateApiUrl -Key $ApiKey -CountryCode $Country
+                        if (-Not [string]::IsNullOrWhiteSpace($resolvedUrl)) {
+                            $downloadUrl = $resolvedUrl
+                            $suggestedName = Get-FileNameFromUrl -Url $downloadUrl
+                            $script:AutoResolvedApiUrl = $candidateApiUrl
+                            Write-Host "Download-URL aus der API-Antwort abgeleitet: $downloadUrl" -ForegroundColor $CommandInfo
+                            break
+                        }
+                    }
+                    catch {
+                        Write-Host "  Aus diesem Aufruf keine Download-URL ableitbar: $($_.Exception.Message)" -ForegroundColor $CommandWarning
+                    }
+                }
+            }
+            if ([string]::IsNullOrWhiteSpace($downloadUrl)) {
+                throw "Kein Button-Kandidat auf der Seite '$currentLocation' hat einen Download oder eine Navigation ausgeloest. Auch die Netzwerkverkehr-Analyse der XHR/Fetch-Aufrufe ergab keine Download-URL."
+            }
+            break
         }
         if ($hop -ge $MaxPageHops) {
             throw "Maximale Anzahl Seitenwechsel erreicht (MaxPageHops=$MaxPageHops), ohne einen Download auszuloesen. Letzte Seite: '$currentLocation'."
@@ -1871,24 +2299,46 @@ try {
     # --- Schritt 8: Download-Kaskade ---
     $attemptResults = @()
     $tmpPath = Join-Path $tmpRoot "download.part"
+    $successResult = $null
 
+    # Versuch 1/4: Direkt-Download mit Invoke-WebRequest (inkl. Browser-Cookies)
     $directResult = Invoke-DirectDownload -WebSocket $webSocket -Url $downloadUrl -NameHint $suggestedName -TmpPath $tmpPath -Referer $PageUrl -TimeoutSeconds $FileTimeoutSeconds -EventSink $eventSink
     $attemptResults += $directResult
-    if (-Not $directResult.Success) {
-        if ($directResult.TooSmall) { $sawTooSmallFile = $true }
-        $cdpResult = Invoke-CdpResourceDownload -WebSocket $webSocket -SessionId $sessionId -Url $downloadUrl -NameHint $suggestedName -TmpPath $tmpPath -EventSink $eventSink
-        $attemptResults += $cdpResult
-        if (-Not $cdpResult.Success) {
-            if ($cdpResult.TooSmall) { $sawTooSmallFile = $true }
-            $browserResult = Invoke-BrowserFileDownload -WebSocket $webSocket -SessionId $sessionId -Url $downloadUrl -NameHint $suggestedName -TmpPath $tmpPath -EventSink $eventSink -KnownGuid $knownGuid -ButtonIndex $downloadButtonIndex -EventWaitSeconds $DownloadEventWaitSeconds -TimeoutSeconds $FileTimeoutSeconds
-            $attemptResults += $browserResult
-            if (-Not $browserResult.Success) {
-                if ($browserResult.TooSmall) { $sawTooSmallFile = $true }
-            }
+    if ($directResult.TooSmall) { $sawTooSmallFile = $true }
+    if ($directResult.Success) { $successResult = $directResult }
+
+    # Versuch 2/4: Lokaler Playwright-Browser (echter Browser-Fingerprint +
+    # lokale Internetleitung; hilft gegen Datacenter-IP-Blocks und TLS-
+    # Fingerprinting). Falls die URL ueber eine Hersteller-API abgeleitet
+    # wurde, wird sie nach der Browser-Initialisierung frisch aufgeloest.
+    if ($null -eq $successResult -and $UseLocalBrowserDownload) {
+        $localResolverBlock = $null
+        if (-Not [string]::IsNullOrWhiteSpace($script:AutoResolvedApiUrl)) {
+            $localResolverBlock = { Resolve-DownloadUrlViaScrapeApi -ApiUrl $script:AutoResolvedApiUrl -Key $ApiKey -CountryCode $Country }
         }
+        $localBrowserResult = Invoke-LocalBrowserDownload -Url $downloadUrl -NameHint $suggestedName -TmpPath $tmpPath -TimeoutSeconds $FileTimeoutSeconds -EventWaitSeconds $DownloadEventWaitSeconds -UrlResolver $localResolverBlock
+        $attemptResults += $localBrowserResult
+        if ($localBrowserResult.TooSmall) { $sawTooSmallFile = $true }
+        if ($localBrowserResult.Success) { $successResult = $localBrowserResult }
     }
 
-    $successResult = $attemptResults | Where-Object { $_.Success } | Select-Object -First 1
+    # Versuch 3/4: CDP-Netzwerk-Stream (mit frisch aufgeloester URL)
+    if ($null -eq $successResult) {
+        $cdpUrl = Get-FreshAutoResolvedUrl -FallbackUrl $downloadUrl
+        $cdpResult = Invoke-CdpResourceDownload -WebSocket $webSocket -SessionId $sessionId -Url $cdpUrl -NameHint $suggestedName -TmpPath $tmpPath -EventSink $eventSink
+        $attemptResults += $cdpResult
+        if ($cdpResult.TooSmall) { $sawTooSmallFile = $true }
+        if ($cdpResult.Success) { $successResult = $cdpResult }
+    }
+
+    # Versuch 4/4: Scrapfly-Downloads-API (mit frisch aufgeloester URL)
+    if ($null -eq $successResult) {
+        $browserDownloadUrl = Get-FreshAutoResolvedUrl -FallbackUrl $downloadUrl
+        $browserResult = Invoke-BrowserFileDownload -WebSocket $webSocket -SessionId $sessionId -Url $browserDownloadUrl -NameHint $suggestedName -TmpPath $tmpPath -EventSink $eventSink -KnownGuid $knownGuid -ButtonIndex $downloadButtonIndex -EventWaitSeconds $DownloadEventWaitSeconds -TimeoutSeconds $FileTimeoutSeconds
+        $attemptResults += $browserResult
+        if ($browserResult.TooSmall) { $sawTooSmallFile = $true }
+        if ($browserResult.Success) { $successResult = $browserResult }
+    }
     if (-Not $successResult) {
         $attemptErrors = ($attemptResults | ForEach-Object { $_.Error } | Where-Object { $_ }) -join " | "
         if ($sawTooSmallFile) {
