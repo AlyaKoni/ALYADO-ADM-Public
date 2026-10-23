@@ -69,7 +69,6 @@ param(
 `$AlyaTimeString = (Get-Date).ToString("yyyyMMddHHmmssfff")
 Start-Transcript -Path "$progDataLogs\SyncTeamsMeetingBackgroundsOnLogon.ps1-`$(`$AlyaTimeString).log" -IncludeInvocationHeader -Force
 `$ErrorActionPreference = 'Stop'
-Set-StrictMode -Version Latest
 
 function Write-Log {
     param([string]`$Message)

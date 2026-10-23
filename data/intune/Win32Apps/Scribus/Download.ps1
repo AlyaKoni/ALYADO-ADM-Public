@@ -116,16 +116,43 @@ catch
 }
 
 # Weg 2 (Scrapfly): nur nötig, wenn der direkte Download blockiert wird
-# (z. B. Cloudflare-Sperre für Datacenter-IPs). Der Residential-Proxy-Pool
-# passiert den Cloudflare-Check von SourceForge, der Datacenter-Pool bleibt
-# auf der Challenge-Seite stehen (verifiziert 15.10.2026). Der Link auf
-# 'latest/download' liefert immer das stabile Standard-Release; der
-# Dateiname wird nach dem Download gegen windows-x64 verifiziert.
+# (z. B. Cloudflare-Sperre für Datacenter-IPs). Ablauf (verifiziert 20.10.2026,
+# serverseitiger Testdownload 118.6 MB erfolgreich):
+# - PageUrl ist die mirror_choices-Seite ("Problems Downloading?") zur per RSS
+#   ermittelten Datei; der Residential-Pool passiert deren Cloudflare-Check
+#   (der Datacenter-Pool bleibt auf der Challenge-Seite stehen, verifiziert
+#   15.10.2026).
+# - Der DOM-Link zeigt auf downloads.sourceforge.net (CF-gefrontet, selbst mithttps://source
+#   Browser-Cookies aus Datacenter-IPs nicht ladbar). Erst der KLICK auf
+#   'direct link' löst im Browser den Redirect auf den konkreten Mirror-Host
+#   aus (z. B. altushost-swe.dl.sourceforge.net); dessen signierte URL greift
+#   das Skript per downloadWillBegin-Event ab und kann sie dann direkt laden.
+#   Deshalb wird der Link-Scan per Sentinel-Regex übersprungen und der
+#   Button-Click-Flow erzwungen.
+# - Die Countdown-Seite (.../download) taugt NICHT als PageUrl: Ihr
+#   Auto-Download feuert im Cloud-Browser nie (Consent-Gating, verifiziert
+#   per CDP-Volldump 20.10.2026).
 if (-Not $filename)
 {
     try
     {
-        $filename = & "$PSScriptRoot\..\..\..\..\scripts\misc\Download-FileWithScrapfly.ps1" -OutDir $contentRoot -PageUrl "https://sourceforge.net/projects/scribus/files/" -LinkRegex "latest/download" -ProxyPool "public_residential_pool"
+        # mirror_choices-URL aus dem RSS-Download-Link ableiten
+        $mirrorPageUrl = $null
+        if ($newUrl -match "^https://sourceforge\.net/projects/([^/]+)/files/(.+)/download$")
+        {
+            $mirrorPageUrl = "https://sourceforge.net/settings/mirror_choices?projectname=$($Matches[1])&filename=$($Matches[2])&selected=unlimited"
+        }
+        if (-Not $mirrorPageUrl)
+        {
+            throw "Could not derive the SourceForge mirror_choices URL from '$newUrl'."
+        }
+        # FileRegex gegen den in Weg 1 aufgelösten Installer-Namen
+        $fileRegexValue = ""
+        if ($resolvedName)
+        {
+            $fileRegexValue = [regex]::Escape($resolvedName)
+        }
+        $filename = & "$PSScriptRoot\..\..\..\..\scripts\misc\Download-FileWithScrapfly.ps1" -OutDir $contentRoot -PageUrl $mirrorPageUrl -LinkRegex "NEVERMATCHALYA" -ButtonRegex "direct link" -FileRegex $fileRegexValue -ProxyPool "public_residential_pool"
         if ($filename -and ($filename -notmatch "windows-x64\.exe$"))
         {
             Remove-Item -Path (Join-Path $contentRoot $filename) -Force -ErrorAction SilentlyContinue
@@ -141,19 +168,69 @@ if (-Not $filename)
 }
 if (-Not $filename)
 {
-    $manualHint = ""
-    if ($newUrl)
+    $installerName = "Scribus.exe"
+    $pageUrl = "https://sourceforge.net/projects/scribus/files/latest/download"
+    Write-Warning "Problems automatically downloading $installerName. Please download manually"
+    Write-Host "We launch now a browser with the $installerName download page."
+    Write-Host " - Wait for the download to start and complete"
+    Write-Host "`n"
+    pause
+    
+    $profile = [Environment]::GetFolderPath("UserProfile")
+    $downloads = $profile+"\downloads"
+    $lastfilename = $null
+    $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
+    if ($file)
     {
-        $manualHint = " Manual fallback: Download $newUrl in a browser and save the file as '$resolvedName' into '$contentRoot'."
+        $lastfilename = $file.Name
     }
-    throw "Failed to download the Scribus installer automatically.$manualHint"
+    $filename = $null
+    $attempts = 10
+    while ($attempts -ge 0)
+    {
+        Write-Host "Downloading $installerName file from $pageUrl"
+        Write-Warning "Please don't start any other download!"
+        try {
+            Start-Process "$pageUrl"
+            do
+            {
+                Start-Sleep -Seconds 10
+                $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
+                if ($file)
+                {
+                    $filename = $file.Name
+                    if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
+                    if ($filename.Contains(".partial")) { $filename = $lastfilename }
+                    if ($filename.Contains(".tmp")) { $filename = $lastfilename }
+                }
+            } while ($lastfilename -eq $filename)
+            $attempts = -1
+        } catch {
+            Write-Host "Catched exception $($_.Exception.Message)"
+            Write-Host "Retrying $attempts times"
+            $attempts--
+            if ($attempts -lt 0) { throw }
+            Start-Sleep -Seconds 10
+        }
+    }
+    Start-Sleep -Seconds 3
+    if ($filename)
+    {
+        $sourcePath = $downloads+"\"+$filename
+        Copy-Item -Path $sourcePath -Destination $contentRoot -Force
+        Remove-Item -Path $sourcePath -Force
+    }
+    else
+    {
+        throw "We were not able to download $installerName"
+    }
 }
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCABqItBAa/DukoL
-# ZQbA0p4ns/joNFE2VXTBYDdU/8EEaKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCXyKUQVbhOeWwn
+# N1T77rEommbKTbvpbh+pUeZ7aKdeY6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -220,10 +297,10 @@ if (-Not $filename)
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -231,17 +308,17 @@ if (-Not $filename)
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -251,39 +328,39 @@ if (-Not $filename)
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPs7Jefp
-# QGY5YR4b3JxXq3CqxsJwaLV/4KJYoBf1XP8sMA0GCSqGSIb3DQEBAQUABIICAKwG
-# BHYy/EzLqTJrbE0rx2/kam4/xGojkJ75oFcatQmGCY4kvBDRbbSCPmDXi9KLzoTv
-# qcZIMbVVdLqgeU3elK5WlF+4moiBUSqBtiAIel2lMVfsZyNh+MMouHBNerQnBoak
-# W1TV3BxkMF60pjRm2SUGgX6WjS41k1urLT9IeBr+Cq7F8pmHfpv5U3SVskWwOo6k
-# aDkqa6z3GfSAzoP1ZO2zTY6fBoHlnKqTCYBZeylZytLj0Rx0zcrsaj2svvVOny0h
-# 66NLJRn7MI5h6b5Mm6Zssvq2QaH7mKx8xEdqyZEbM8X0zwCtB7mSWulRbun9hrZI
-# W9Y74zkR+rBJJnjgMqr/KOOoQG0Lt/yCfe82oF57oT6xZ5/avmqKRILZkVqBf9Ud
-# VlnJkyFUcO4V84jFCywlvxjDREhl9da5h4iGXEhYkN/t2tpH+HUPhOy4z7dkODVd
-# H8QLZxTlfvHMFD6cuJcHGQPdJASbFFO6WFoXjY5gk1T9TcItju5JxuC+mG4TYUMk
-# E2dmEUCQeaOshjsL1Hu+IBcmft9g7RUxQJ9giecYOYLgjBmk6/8kwMSuJ3jfbN5q
-# XSUQu82P9Jba64XGlByZrH0HW6E9hRoud2Iq5j2ndJqsrPCQeGDDnwCmonX0BHTd
-# wkZ/M4Dco9+uJa9v1WGu3fdQnOuUIj4piijk+kHnoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILswdLYA
+# AVE/mmssLbelM2FCAI9x5BUGmMkzybYTRB4DMA0GCSqGSIb3DQEBAQUABIICAECj
+# SNtHb2OtwOPtmdbEcB/Efw8wN/G1RSOM/ykbEUjgpzL2giRFdrpotKLp4u8OP3PG
+# TFDdQgfCCVvzpTFo9Zo3PxRVx27VpMFX/Serzl02Hus0RLlde0QyDdpZBJA5qKCJ
+# Ku6LPogFdxvcqxs7u+z6q9tRRXQeWHvCWFCDqpNtI7vhReijUVyqQreXYLufo5E3
+# g6dZJOKTMiJ3fznLJjQ3c5Kh0kvm/d1anXRtgliJse4iA59FkUqhbp0Jp9c/1yC5
+# 7g983pw9r6n0ncgNCmYFn+tFRpLrkG9dqTPBmoeZ7Rb5C+R14RaY3q3zoMZdnIiG
+# yWqQv6ZOrXXQDzE5EDSWeRezxlBWQYauvekdPRbFvQqFPHtpkPbzQj2JO+xoC4U5
+# wOqGDQGURmQV8eBcZYWU5BDNAMUpNCtnBtViUUBeQdLU+0zZtozTN04OU0pXG1KH
+# vUggX9SqSa2NDn/hEJMz7MfPdrJPg+ssSE3uO5hIGyr3kTlTRE6/22sllb9sJ/Da
+# cirpS43xtASYctltwiAxxozs76P8oZbabJCHPNq96PvHaxmUreN/2s8dignJtRIW
+# 5woJeeNLXXxs7BUjEd2SIzChzF5SKWu5DLXaTcUgJJtKiUqY+VkjKSAoUQWGH/oK
+# +m/m/bVbyE6eTqw2w63MQG0Br5q28KEHDkPS2N59oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCC2rf6JgXSbqs1rOFVQcsnZiSCDrDHlt7yyrCPKSBYYEwIUIFqm
-# 4sMpysos3U7XBAKc2GYk85cYDzIwMjYxMDE1MTg0MDQzWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDPjwsRPAUUYv2PvhFHEc/D0qYox4/a0VUYXu2qINZmUQIUAkO1
+# N3Vt2FrZuEOEV8lwBME6FXQYDzIwMjYxMDIwMTQzMzA5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -426,18 +503,18 @@ if (-Not $filename)
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDDkIqJxtHUCstHN873Xp5q3pOmgDI5gF16GpiRPaSTemXPLtqmRUbKx5zzS
-# D5idcsYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDASAw2IZoTii1CT8ALQFlq1HKe5iCdvxMGeTh14sNNWUWL8jKDmHP1+mIK8
+# dteGTmswgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAZ4A3pQqlV6xAGtEXqCC2ZUZysYo8AnEsz0qEOgCAJiB8
-# EVNnXudWb1lLQn3AP6kl+aPmNlkcYzZyhOmGDUP+L8b4MKanvaAATx/9jMz7w7Sa
-# 0kur4gQ+Q7GgJSpk7tbRGVountJKKew/+1DV+XH1TyxAVxMmR5+v56alle2DnAVu
-# CquOeclFNHZQP7UUoR3mXnOFEVZaAEpHimBlMy6FLChaJWg/ZoQGLeLUxCx/eq6Q
-# hNLk9kqbS+186+kbFtYU3GHPhfBqGL4+JfYdrAY9jGz34KSwK0kShigG49njzxtm
-# 6u46UQHZa5mKOcDy3jmL/TrqIQqMXrzJnL0fguRNlelxLDioz9hKPxutzZIdFQAz
-# nmZD4sCjOmbM/XDqEKV4MNntq2d14nx5RInq3Rbj9C998HPigx3zcvx9sLc6Okka
-# TJP1g136zVUJ+KeRiq41H3ginenNmqPl110gcodhfwz7bxh4afCVENsKoCyuG6R2
-# pc6CaMP7iBeDw5dEKLa0
+# KoZIhvcNAQEMBQAEggGAYPrBNnTqp9oObrIt3jwGLNhyMis94rAioevORZjrAGl6
+# DXq3PhXPrE2m9ZH+iQkXocTMuYn+fgphbyxR6it63bKR6exH0j3NBvyMPXy4gXqY
+# 9LWnkOyN6FuYfDIYnQ+vbKH6MSPmUS7g8ux9Ie+FwKq7OcH2J9vCVlKTzrjtDlHc
+# t+GhBMrSdpztT4ewfD01A7eoN56ARGXrKgH2v82T+ugyBIBAaolaZ4uVQFfoT/6p
+# rC1/SDrOZFZbSXNq/bHoBCUYgaViaJ2M6yVvjM3hunsc6EDg/q3w5NxgOlSAMVC3
+# aG3QZ/BRsC9hzkolwRKzA+jsQojOnzfkfiUvHdrzya4YNBAClj7452Ujd1OMNdb1
+# iWt9Fo173sH1Uq/29Soa5hk0hu3jCHyyTFfXf1IjNyzY+GToGAWRtkgNSN/rEwt7
+# M5rQPgem1nfw23D56vfYnxyvByWU1TYOc9rq2IrZbPuH06MOIdq3gSS4ItltSz0o
+# fv7nsJN66nzqJlGnZ252
 # SIG # End signature block

@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     10.08.2023 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    19.10.2026 Konrad Brunner       Platform-dependent Close-ExcelPackage; column width heuristic replaces -AutoSize
 
 #>
 
@@ -249,20 +250,64 @@ foreach($item in $errorsRight)
 }
 
 $outputFile = "$AlyaData\client\Diff-Directories-$($AlyaTimeString).xlsx"
-$excel = $onlyLeftDirs | Export-Excel -Path $outputFile -WorksheetName "onlyLeftDirs" -AutoSize -ClearSheet -PassThru
+# Column width heuristic (-AutoSize/AutoFitColumns do not work on Linux:
+# System.Drawing.Common is blocked on non-Windows since .NET 7)
+# Note: PSScriptAnalyzer PSUseShouldProcessForStateChangingFunctions is accepted
+# for this in-memory formatting helper (no external state change)
+function Set-AutoColumnWidth($ws)
+{
+    if (($null -eq $ws) -Or ($null -eq $ws.Dimension))
+    {
+        return
+    }
+    foreach ($col in 1..$ws.Dimension.End.Column)
+    {
+        $max = 0
+        foreach ($cell in $ws.Cells[$ws.Dimension.Address])
+        {
+            if ($cell.Start.Column -eq $col)
+            {
+                $t = if ($cell.Text) { $cell.Text } elseif ($cell.Value) { [string]$cell.Value } else { "" }
+                if ($t.Length -gt $max)
+                {
+                    $max = $t.Length
+                }
+            }
+        }
+        Set-ExcelColumn -Worksheet $ws -Column $col -Width ([Math]::Min([Math]::Max($max + 2, 8), 60))
+    }
+}
+
+$excel = $onlyLeftDirs | Export-Excel -Path $outputFile -WorksheetName "onlyLeftDirs" -ClearSheet -PassThru
+Set-AutoColumnWidth $excel.Workbook.Worksheets["onlyLeftDirs"]
 Close-ExcelPackage $excel
-$excel = $onlyRightDirs | Export-Excel -Path $outputFile -WorksheetName "onlyRightDirs" -AutoSize -ClearSheet -PassThru
+$excel = $onlyRightDirs | Export-Excel -Path $outputFile -WorksheetName "onlyRightDirs" -ClearSheet -PassThru
+Set-AutoColumnWidth $excel.Workbook.Worksheets["onlyRightDirs"]
 Close-ExcelPackage $excel
-$excel = $onlyLeftFiles | Export-Excel -Path $outputFile -WorksheetName "onlyLeftFiles" -AutoSize -ClearSheet -PassThru
+$excel = $onlyLeftFiles | Export-Excel -Path $outputFile -WorksheetName "onlyLeftFiles" -ClearSheet -PassThru
+Set-AutoColumnWidth $excel.Workbook.Worksheets["onlyLeftFiles"]
 Close-ExcelPackage $excel
-$excel = $onlyRightFiles | Export-Excel -Path $outputFile -WorksheetName "onlyRightFiles" -AutoSize -ClearSheet -PassThru
+$excel = $onlyRightFiles | Export-Excel -Path $outputFile -WorksheetName "onlyRightFiles" -ClearSheet -PassThru
+Set-AutoColumnWidth $excel.Workbook.Worksheets["onlyRightFiles"]
 Close-ExcelPackage $excel
-$excel = $diffSize | Export-Excel -Path $outputFile -WorksheetName "diffSize" -TableName "diffSize" -AutoSize -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru
+$excel = $diffSize | Export-Excel -Path $outputFile -WorksheetName "diffSize" -TableName "diffSize" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru
+Set-AutoColumnWidth $excel.Workbook.Worksheets["diffSize"]
 Close-ExcelPackage $excel
-$excel = $diffDate | Export-Excel -Path $outputFile -WorksheetName "diffDate" -TableName "diffDate" -AutoSize -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru
+$excel = $diffDate | Export-Excel -Path $outputFile -WorksheetName "diffDate" -TableName "diffDate" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru
+Set-AutoColumnWidth $excel.Workbook.Worksheets["diffDate"]
 Close-ExcelPackage $excel
-$excel = $diffProps | Export-Excel -Path $outputFile -WorksheetName "diffProps" -TableName "diffProps" -AutoSize -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru
-Close-ExcelPackage $excel -Show
+$excel = $diffProps | Export-Excel -Path $outputFile -WorksheetName "diffProps" -TableName "diffProps" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru
+Set-AutoColumnWidth $excel.Workbook.Worksheets["diffProps"]
+# -Show uses Start-Process on the xlsx file: works on Windows only,
+# on Linux/macOS it fails with Permission denied (file is already saved before)
+if (($PSVersionTable.PSVersion.Major -lt 6) -Or $IsWindows)
+{
+    Close-ExcelPackage $excel -Show
+}
+else
+{
+    Close-ExcelPackage $excel
+}
 
 Report stored in $outputFile
 
@@ -282,8 +327,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDdAhQ271YhfY6p
-# jUJA+kSAAhvXNp/jduv315txcSoCCqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBpdydXYsQ3JnIe
+# ZyZA/33oCzaTp8LppIQdTNgceHIEo6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -350,10 +395,10 @@ Stop-Transcript
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -361,17 +406,17 @@ Stop-Transcript
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -381,39 +426,39 @@ Stop-Transcript
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKuPb4WR
-# 3dONfu3uh+5za2kZyDzBCMeznw3mQG7+UddbMA0GCSqGSIb3DQEBAQUABIICAAcn
-# 2tiBLmiYTMdBni26WzqVm1TLZm/3ZyV6QeRvRSD0bxDrQDXagHm3K+aNOgc2Ig4o
-# opB7vk8OprjB0+9/dHXuDm7yRkN0zz+xzQDlb/zvxXPeEIdQ5Liigpu/YVTaAvD4
-# Gy0fP3SUqAVscHx5s6oj9wdB4FWS/6LCGdhRl3W3fbO9c+3f0xTTb96Qe0hQJ4sX
-# fi8UOT/fCMNJD3J/2kjc8Mu9KTXxC2CZmKlTIi7GM7OPUkGIBQAAUjOCkkewNmtM
-# JXNv1zkSq3Uk2+gXvlEWfKX8Opt1zXK46dFQIP3m+YA9zzyf1oZ+j64F9/YvstY+
-# fJzKzQGNy7ryoNgbHXL55IS8r/STwRkCy8SUepmPb61HGKkUexi3YpyhNCEaEui6
-# ISex4aMKlbywLUpdXQRo4sFi/Urdb+sLFz3+LXZrt79RyRCtdld3pk0ssWXlQTFh
-# dbwg3r86SCubxqQFQTlWenaQKHuN4KeMvuCMI8pxh5+BXSFFJmAhsfEeyytqo42g
-# BFnnuM3fsOrfc6QEqe04EZmyxqXT/NTYiUu0/OhvN9Z7unggvvegFxAai25pt2VZ
-# DarUKEGreJlfuK+/FtSdySc96wkQ3hMX+eDE77VLPadxER9obLMY8PfDRXbOsLz8
-# zRTwFiY3SI2Wea5qFA2pLFGg5Ybkvo3KeK9+4L+0oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDPki6uS
+# VtBUJU8kcewKDU2/OBKlLWhcaDc1yqQAppe9MA0GCSqGSIb3DQEBAQUABIICAEa4
+# vs705B6LjFRsmYhHrVZUdiuEwQRQU2QjwL9h/YZXg+ulGJwMKKe8WQCfHbd5jRbg
+# gyqUIPHaHNaMOCIHr0zGatMDPvk/iKUqlVWhRf1hJRm9hm5PFSxscZIKsXHZjUY8
+# r09f9aouB03ZOuFtWXDIpDxbnRStkhkfwg3crVJcxsXHWqpKkMSazpzuNcQlH0Tj
+# dJC/MWjIu9lQKZl+8zjh743ma9w3gr+Yyag5qdP7GByDqi2lS9BKx/fbE4Sni4CE
+# roVe7CHF8ndqzkOscqmkJaeb/e0fBbsI0Uxk2veaRSP9tL+Szpj8fBpy+OPrA3jg
+# Ua+SpGeq4mOm1uNiGzWlze0ZEnYGJbTeTKAJskEoEQCEfUquyyxTMSXPIUY1He8T
+# nzwEZgpFl9OsOXhsAna+RvBoe2NIQ3ZR7A9+N5AKF0OnTYYm3Y6skCK1ryenJMt4
+# vEGFF+zivk2eYNza7OcVpodehbOxG9WSvFjBQ3IY5lz3ivOodJCffHFi4hlkdp9N
+# F6Hl8WTR9nJ2O55yP51Z0u9BM4od3YHmrQH2oJr3II76LGYTSpMjH8GCAYRWR7R8
+# ii6wRI0Jgtgwlm+ZUD7p+Ud3eqoinBELwgE5UKCtGX5M71OfAvvfvocHeea56woE
+# 4cM15WDMJj/4YyVTDFIjddcLdxjkVyVmw4KFrJ0foYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCA6nkU0P7P+SS0ys34DPl2WpYUvnCotqTgeuU6fv2nLCQIUGJuD
-# IXSXmFjmRnDPlbC8NQU+m7YYDzIwMjYwODI5MTUyMDQ0WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDnyhA1xXX7OpOv1uqsGniQoJ2smVUBUYUfpUN+bjMBjQIUWT0V
+# kf5X1enOQHWIcbq5CoZ0pnQYDzIwMjYxMDIwMTMzMjExWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -556,18 +601,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBJqD7HCBaNjNLKMF1swZOEDAJg+g5d2+B22ubAhGiHQgtC4/iNfXoDoEwl
-# TAYjPmcwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDs4w42olYoGYW4yAUaLbe5xyKLujU3/doZV/muhsNkt/n9SEFpO5+rSFKN
+# mw/A3TQwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAcVeatASL1SW7sXPib9kK+jjWTGN/2op7nMGDRjlOFdOz
-# LSg5tvaYEzrrS5SLwiIDt24tUWkngf5lnH5isW3BSamoDP+Cya8z560z7i5t3woD
-# 2u0x0PyKTe4vNr3nXNh/egfo0H6PLTbaLGQrkRPhK9zKF4dGhznH5MGRU+dY31DV
-# McV51WboOSoKKtN2U+IYehfD7elYI36mqP/Pd5AJr2olLAufwYinMb8ADsflQw7b
-# tJ3YtUrpD4s23q/tuAs6yBUwOjKFvT2G2dP9vvhUlfA5KmY/R+r45NJe+rznk73e
-# sMKdCXTjSt4kKNXNJLhN3Vc+ln6maceSsKNOBRareKeOn700ftqWWvSBhgYmXQDD
-# ev0dRDzNgV8T51rRCXpyHOE3vDfEIdgK92CoEuzbaaD16k+8BKioYAJykdgDck1l
-# anImnmweFG1XIlKXK2GijMX32FnNOyvGEP3iJtddWIPqTDwp93m37M+f6k36uU15
-# tpuatItNu6tPYWyjY4Nu
+# KoZIhvcNAQEMBQAEggGATKcMIfM32XO06lc3x5HlTJgQsMXoY4gnNnxvW0zfLfeg
+# 1TeOndCkbG2dvNSq2POfhGOIrdMMkXHqRbwc/pleZLnQYHN6U9SAkJudYl0ideco
+# xEY9r/tbM2afsUGJoP7iSp51wyQAkBaDYG71zSiw8C9OslMWA2mIHGLA9/D5VvjV
+# hvN1qKbLRFuSa7mz7gKsiMJycabg4PNcymLJcymoFwDhnmDuSO+uOaDQDwQnQYS0
+# 7AMPtTlyTSRbfKRkI4E2PJEnSByrtisWcjevGFY5v3KEGFGRdzsdoaEusqQy7Qs4
+# i2HqEdLdjdDve2y0uzIKrW8ZAdVX2mPcfDq6taMPs13l1SEc3Rh4eANu9ojYgtVx
+# oCPiMEV9ElDF6W7Mvb6X/5YlgPrtDCv4FN+NwvypD1nyjTvh8vHdHbEhKwexfLjN
+# P2XPZgEjJRS/gXBNwYzNzwXq1q2j5Xo0+nylUrqQaHrfWNN92zxNGh5HJVPAS7RE
+# Av0biwY0+dFDd2ZK19Vw
 # SIG # End signature block

@@ -33,7 +33,7 @@
 Determines whether a specified file requirement needs to be applied based on its version information.
 
 .DESCRIPTION
-The RequirementDetection.ps1 script checks whether a specific file exists at a given path and compares its version to a required version. If the file is missing or has an equal or newer version, it indicates that no requirement is necessary. If the file version is older than the required version, it indicates that the requirement is needed. The script also handles path substitutions between Program Files and Program Files (x86) directories for cross-platform compatibility on 64-bit systems.
+The RequirementDetection.ps1 script checks whether the 64-bit target file exists at a given path and compares its version to a required version. If the file exists with an equal or newer version, it indicates that no requirement is necessary. If the file version is older than the required version, it indicates that the requirement is needed. If the 64-bit file is missing, the script additionally checks for a legacy 32-bit Adobe Acrobat Reader DC installation (any version) under Program Files (x86); if found, the requirement is needed so that the 64-bit package gets installed and migrates the device.
 
 .INPUTS
 None. All values are hardcoded placeholders within the script.
@@ -56,17 +56,6 @@ try
     $fileDir = [Environment]::ExpandEnvironmentVariables("##FILEPATH##")
     $fileName = "##FILENAME##"
 	$filePath = "$fileDir\$fileName"
-    if (-Not (Test-Path $filePath))
-	{
-		if ($filePath.StartsWith("$($env:ProgramFiles)\"))
-		{
-			$filePath = $filePath.Replace("$($env:ProgramFiles)\", "$(${env:ProgramFiles(x86)})\")
-		}
-		if ($filePath.StartsWith("$(${env:ProgramFiles(x86)})\"))
-		{
-			$filePath = $filePath.Replace("$(${env:ProgramFiles(x86)})\", "$($env:ProgramFiles)\")
-		}
-	}
     if (Test-Path $filePath)
     {
         $file = Get-Item -Path $filePath
@@ -83,7 +72,17 @@ try
     }
     else
     {
-        Write-Host "Not required"
+        # Migration check: a 32-bit Adobe Acrobat Reader DC installation (any version) makes
+        # the 64-bit package required; its installer removes the 32-bit version automatically
+        $legacy32BitFile = "$(${env:ProgramFiles(x86)})\Adobe\Acrobat Reader DC\Reader\AcroRd32.exe"
+        if (Test-Path $legacy32BitFile)
+        {
+            Write-Host "Required"
+        }
+        else
+        {
+            Write-Host "Not required"
+        }
     }
 } catch {
     Write-Host "$($_.Exception.GetType().Name): $($_.Exception.Message)"
@@ -93,8 +92,8 @@ try
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDb8mDRJRN+43vT
-# F+Q65OoHJiMBnhswwkNaszyZj/sz3aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB1jha6J6sLe24f
+# I6Qu9bMtP1A7sOXPDliWiR4GsExQzKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -161,10 +160,10 @@ try
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -172,17 +171,17 @@ try
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -192,39 +191,39 @@ try
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILL+a3xk
-# uogUyYV6U8TL2PqBQCE6yYW19MJlYpLOw4zHMA0GCSqGSIb3DQEBAQUABIICAJiw
-# nOFvEA1RyCusDOypwfgH7YrD7zQ/nwQxl6p8XVd39krZOXkUt0nrU8f2/hbls2ka
-# BMo8W9rMO3mgzr0bBVJQFVfNJC4T3JqgnoaQ4TmO5N2uyzXr6qlRrIxdR0fx6kvs
-# 3f6BKLJhVghPLQIGwAH28K7bNQ7I2/0BlLDg0fvf4V3srA7PrbeR/EBvky62D4+y
-# Jj913x1pN6uijamHb0D8TDDEH4tQbt8z2eJxf9xBcatBRjPdkvdq4pdlB/03CdQY
-# gCBzRj3VwGTsl5olcSqOkpjBRhuuRXgAfDgXU5TxEaUd5pNgNmvJ6/sn2YCzxDPU
-# u9zGc8xxWaVR+l/UcdJNes/LLqnTibnnf4h/9i7iGFzXJrvGP5Z59fKQmFyIMi0g
-# m1HvkCqXuSkpkVtv3w1PzOavfo4lXPeQbOJhZONA+Jn3mgSp05S36UW7Y6xQN2rk
-# NyUixVWAkYPAfgkqmaDZW/3KFSNlFV66z9+D2vfL4ZGlmW9KZh/HOy1++xMQVlr4
-# liWMiTvDM2n5DwPefZHNisU94Z8DlJ4yDXqdAEK0KhquT2nPOW95+fTjUTR3Jd7R
-# lN8iah4tIhYOp/Yw2Pz9O4Sd1zg0eCrwN18ag34/+15R0EuKeug96ZFNr0HB4zt8
-# Ld4Oo5VNQQeV0k+PigJE8tKE0vJ18NGhRE92sMRcoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPfQSeS1
+# WYMJzNIc0DcqlbrYl7bPcr3b8Bmtn4BFIUlRMA0GCSqGSIb3DQEBAQUABIICAIQI
+# 042ZHavfzxLx0UY7veCCMW/EOdPcaLlUb1THIxqlDjEU6Uj9zLDMnx4Fb31dK5Kd
+# 9JSHq6o3xzAeXu1Y0Ra8YnplKIx4pnH9ZHX9KzpKsjXBxp8SqgGskI1AfwWPH6Se
+# j1eSt0Uu1XCg18NBm7+Zr/VEPtAbOGxDsboDyvJd1dyuuHnwBS/5nVnm2mTSbkfi
+# 4shwzquhsSLJYkiDf5JyFtlOzDScGNV/Aqorsyp4VjSn1a5AmlumZA9G8tL1Gsr6
+# hYgXQfCA+CvYxe0mawgJrM/yd/s4OrcnI1ilcb2sl23hLQ4rGK6kkCxRx48EIlGI
+# vebkzmAAB8GNeb52uP0X78bisWdi6vceZVKIrKcLO1tOIzVpcvM2QA7+jn7g8J3g
+# cAmIska4h+iUKsVURFYIsl8T15pCGcE4qUO16FjYMNL59JysF8Av05IT7YI0ulHh
+# BXHIvef1Pi8vkgDzJdapcCrIwCZwNjJ39RIUzC8xl9VcLZp5702kJaVOyI+bsl0X
+# auzjq4wIf8IblfL6Dq88rQ8U9F0DzeXHIZvVLuVABGx9QCgYiQG+2WRhrB1+zl/8
+# 5JtnbF6Z3yHuf7ZY/a2fGyrydEetPxor2GLfTX28OEygyjHc6203d8O/MN2jpvgk
+# nBLYg9J1oDJ9zDme1ufGtxkRXw25fI/tCo/tdE4YoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDhbWKjs1mBaZPB/QATo3/JyYp7cX049DgtR8gRxHkRXQIUMRYn
-# uE3rAkJEsRhT308wbfgRFyYYDzIwMjYwODI5MTUwNDE2WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCBVBwYl8G0dHt1JOuzeAuc5rbl1jYNn5l/2NdQ8mJaLqQIUU4Wc
+# IJ3QrkpE6usnsG+D8a+HWS4YDzIwMjYxMDE5MTgzMTI3WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -367,18 +366,18 @@ try
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDDPazC9LHepVutxe4ePPWgae8LAdsNwW935eytwembYTfgGHBkL0pZtKdaI
-# 9pyMCI4wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDB5xay26LOjKSN+fJLIizUnvsNdr3CVKZzg4lMdvesyRQuXkvXxt63Y/9Hg
+# eAc4jJIwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAJL98p/KijEmnmb6vW3zypu3nACmmtkey5XT5w4q7hglh
-# VYfXi+jK+SaA+Cbqm5UubnH3DgpS+gEdqAaule8t+++4//bCTqq9OWWMWmuSOvrt
-# 96PNR3h8ULQQplx658D8qQIsYIqIziDLJplPRt6Srt7KI30CBEvHr33HKhYnRDjr
-# 3EktLLhgOv5host/ZVCUgHqwggK1VqSTQOJ7agw96mk9UtoKpnorPJcIvbVXAOMg
-# QwDjEa1XTDsJRddreBofaWwJ1Hd1ylRv9rGmx500WZ+6NwHJJaWD/owalcln/VeZ
-# +ndbbrWeXqIlNTLfsh7ovwGIF1z2j8tgTm6fG2YcekwVmesU5n/6TDgRCXfuj6jB
-# 2YUiyGCgbq5An4Vw5ooePxczaJdKy1BysLZGn60hgxGt6WzqxdhdJkrAmHHVkvhT
-# 2y/s/y4SpynkPUN4DJAiPnFXkBUKrG31PgD+kEIwUbDjkRpYUfwsxoOORhzByzkg
-# YbADnMfnbFHY2+jq9mwf
+# KoZIhvcNAQEMBQAEggGAhjlmHqEBMNLPVRN+ihPdn0dKi2w0leLnhlgSyLzXyD/O
+# 1W9JSDAvVrAhlhMUz/gWsSff43+W9fb7n75FAaeXXODIenJSl8gpllcCB/TpfutJ
+# 45ozXzCdV6Sp3oNKsLHeRRFIRJZUT+r9+DdavBB+j36xVWhkj1TTuls59HD6qP0U
+# d4qnTei/wEM5QDdKRtkDoJt8/OR31tHUL6B9Fo61mLOHDMlmwSHeAxtl364HsSaM
+# RKyC+zWrlfePt/QyMZXEDwElikor/EZlu1riEXcdt/Y08INWAP24rGQVoSS7eQyx
+# NCPyP2aaXdwyuUdw0ibZO8jNYhz1lkELsZT+FA38XRodoS4TE0utACoX+hELBBe4
+# N4G9Bqah0YDTA0SSJVDJ6T8YQfAXbc8di56ZAsUYtyxj/9S1naMI9CTe7Vz316RH
+# O6/cqhXM/7saQk1al+1+35KkWEvxoRdep18BGF+ENjFabk1bS6hWVT+jN6GMieIe
+# U32YgltHPEhVVUzkLeAl
 # SIG # End signature block

@@ -38,10 +38,10 @@
 
 <#
 .SYNOPSIS
-Disables the permission allowing guest users to read other users' information in Microsoft 365 by updating the tenant authorization policy using Microsoft Graph.
+Disables the permission allowing member users to read other users' information in Microsoft 365 by updating the tenant authorization policy using Microsoft Graph.
 
 .DESCRIPTION
-The Set-ReadOthersDisabled.ps1 script ensures that guest users in a Microsoft 365 tenant are not permitted to read information about other users. It uses Microsoft Graph Beta modules to retrieve and update the authorization policy. The script starts by loading environment configurations, checks for the required modules, and connects to Microsoft Graph with the necessary permissions. It then verifies the current state of the "AllowedToReadOtherUsers" property and disables it if enabled. It logs all actions for auditing purposes.
+The Set-ReadOthersDisabled.ps1 script ensures that member users in a Microsoft 365 tenant are not permitted to read information about other users. It uses Microsoft Graph Beta modules to retrieve and update the authorization policy. The script starts by loading environment configurations, checks for the required modules, and connects to Microsoft Graph with the necessary permissions. It then verifies the current state of the "AllowedToReadOtherUsers" property and disables it if enabled. It logs all actions for auditing purposes.
 
 .INPUTS
 None. The script does not take any pipeline input.
@@ -51,7 +51,7 @@ The script outputs progress and status information to the console and creates a 
 
 .EXAMPLE
 PS> .\Set-ReadOthersDisabled.ps1
-Runs the script to disable guest users from reading other users' information in the tenant.
+Runs the script to disable member users from reading other users' information in the tenant.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -86,12 +86,12 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-ReadOthersDisabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking permission to read others for guests
-Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
+# Checking permission to read others for members
+Write-Host "Checking permission to read others for members" -ForegroundColor $CommandInfo
 $policy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
 if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers -eq $true)
 {
-    Write-Warning "Read others for guests was enabled. Disabling it now"
+    Write-Warning "Read others for members was enabled. Disabling it now"
     $RolePermissions = @{}
     $RolePermissions["allowedToReadOtherUsers"] = $false
     Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
@@ -104,8 +104,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCeP/z/ZKTnZPgl
-# 5z2LRJBnwwjiv3J2YImQatJDxmDsy6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDGEeCeFa1ieYqm
+# bjq+3rRGmL8bSlKL0hjQDeHjMLNJk6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -219,23 +219,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIF73GZiy
-# QzeGwUPFo0WNh9RPSS36vGLvm+3XZQIzmSIfMA0GCSqGSIb3DQEBAQUABIICAFuZ
-# lCEJaMcVAfeArH7UQ1M6HxB60eJCahN5ill/7cL54GPa4YQuKZwMcKFc2GO2GHBb
-# j0uPHA2B/a8SNegJLos6pukJhoFzPcrIbe3+/qFSAwar2MtJsmT7AG8l1zxv8nM0
-# ZnS5b52/8c/1RANKGPbQHOVHnJ9GqiwBapHtJ3E2Ps5KWYbSOiMxarP9/rWm5Q/Y
-# 2GRVTEiYAx5dtaqPJWZhUeEUi8hIaiswTMaiA6VgeKg1baTZMW+6xuVTxKsm+ZPO
-# RDXx7OKmv8YEfWVX2s1fPzkQW0hlXFDR2clMFKm0wiSQyQB7pmodTtJePRsIFjx9
-# BAKA60a0cwZzB/eglfGxJ8GdgzaB/GSOFpwjQVI2g7UyVbK6VFabEKl7t3dT8VRk
-# tPt2CzISEqih0OQQVcSVYZvMlp87A4tNxVcGR6HJ0tU0nJ2aNAwwf8g61/ZOFRLl
-# SODem7s2Tqv/AkF/ECWFpdAMGpEFBA06A2ziP4V0/RKZ4NZ87DmNn4oYkyuhDmD1
-# GEf5ELiCbUfW+GUBtJfb7Pxb9oN5Ei7s9L+r18mMrXrS1xdWl6t6eyKjqlY3pd3W
-# vZtLc/X2P2/lF+GsKZR4fcO3dFgOO0/F1Gij4WmwNj0RBcp2jnV5iBlpS6mfy+wK
-# 2JVFuo/QEplnEBIx5targV6GXnrk1G50z5HwF+rAoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAKjJHI/
+# k7JTtYp3cZZdXQXoNUwyemzp1Fg9sFfLR7FnMA0GCSqGSIb3DQEBAQUABIICALZw
+# nnX3oqiTbdZ+05+sPx5rFGgigC4IdukpTLT/UlkB6+z0ppMe+R5eV2P0Aecv+Wg6
+# /9ok1XvG73XOBvhrLjsmgzZzjerPppL8+8QcDoSN/UfQ74XwQ1Hamo6lcbx7mjWm
+# l2We1FjWGwJse20e9KAFTPTtV+/7xKwUkRW6+crG2kdnW2HqyAALVd4Nmd/xxEvY
+# K8DY2BWFvqREp29YtDY+Ch0Nd7/K/d0vs/5DpxaHNbs4oxMeBWLXeJypU/mea513
+# rFgRYJalZ4L0hseQ5lV1NVfJx8rczMurH2k3X5Nw8m+dULWaxCh2GHtS0/vN716+
+# SNV8+NqStYbogcmFpEvlXYUp2zlxJ251KkUlm4T/zeEmyrPZ3MRugM7EA5Fci+pf
+# j+3sEF1AFDwOpu6u8vbtqhJo1WwW7rmdP/7vYQJCT4Hxh1FldSqPVCcqpKbXn9FD
+# L2t/r0R8pKEr7KxEaYCcqkvEMb2NVO1Zx7RncovZlM9jmYov90sSHvNMses6OAm8
+# kjO5aI4W+i652LcrriGvBRxZoRTOzoe0pl77qpmUCVDw4h4M2sfV1hkBVd6NIEZE
+# ssCCTvoOC0w2JRY5sWIuZWlShWvvPlQ3VX3ctV6KwpuEJirTR9ALoAZdBvrX7j4T
+# UpblfwGgEn1PlM4zbNKX/qZdyG8N3bZ2t5tVhmLIoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAAQ45ABi1BaNYSZcfqggAeY5z8cBswfCYJFBmeccTwkgIUD/QL
-# CtDkwbBiwiDD5ty/3Exz4FwYDzIwMjYwODI5MTUzODQwWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCatDGypAyr+eDJE0EcO7SZRorht3TdaJGG0zkA+cDY+QIUeA9y
+# T0HWTOXqsmJlJ0cT8/rXINIYDzIwMjYxMDIzMTAxOTQ3WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -378,18 +378,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAFVwz3bi6Sq6Tk2QQcpSGJtwa/QjtdCh5NbkR93BFVNuFKx1+myzvtyLEG
-# yMAKAOEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDAhYDG0/8PTNbeGGMWxIgGlSQwSVlZOI8qyMgNVcvWf2y15tmxk7RuDlHlQ
+# cosK05gwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAeC1TyrmWVAKwu56hzhA7f3cIVP/wHp8uDjfx5lGoEhuD
-# y7ltw7f6Yn8VrL/YYngBTt3BAgnAt8Ne91wG3cN1GCFLKQghQVZYj+/baUbQ7BHJ
-# qTjlcCo77uNzWVxoHu7ssKyrqTUCV3DL/fH3yzLcli3GojowSVQ/rcbvKl2KRTu0
-# ysB07wd+bK95HYVniYK++5nIxzcNE8V4hrDUZFPOp3DaxIU0k//eNpU4WNQGCj7I
-# mSjmctteLmLpo5jG8lORKd0mRjpDv10ihdR4KQG2rjzaZFZuQyFVp4P/06ZI6kJd
-# XbpQp90OJghA6FnkbXcuIuv+gqL+OPaCzcCtQx5gLuIPVFs1LM/D8uvMycnxSRD2
-# fzIhimKLeMG3ChZcddNkM2QUtdvWXuo0C+kRwSDz1NJgSd6de4YsKkjzYfK2JLYg
-# dKg97QMOn3B+QfWFwODJf6U5FzHHurPxi3ozjw8nQbfiJ9fAREwNIPFmxTZefdBn
-# NX0cN3Ix1jjFhdiC9bvz
+# KoZIhvcNAQEMBQAEggGAXU7vMKzL7EsfZPKwzi6a7RNhhryeLQlZvjqECq0k7PTO
+# k9M/7/QdSMbBgkPpT4tsTLJA5J2thyEURT1O/MaImM9GXgksfuH9jCjuPlk3Xo2D
+# rQcBFzf9mWG1meYDlmss0Ie8ogpNCcor1yASXZPYmFkbFDiEQNkDtZxHGsUy2fhc
+# Iz+YOq5iDMbA18oaDyFECCSg85SkWCJ11v5sxDibdyM91CHaSdUcAjkhHhpWmJcg
+# wJr0rE4DCTz0L6ct/8JpJNTIgtl6zhYg/mefqm8on7OvmlNtIZOdYGw5h60KhiHY
+# eYn3x6qqQLN86HS0pvCfRUGrGxK1baQhwdYFlUMyx8GcIWPy1IaChugmgl+Kf9PM
+# OGjQmxpxwvNqtjEhb+FJdYAIVEhIC1nLGp71Ggn9R3b0LK1vkMVWA6fwRe0nzprB
+# c7cy9HQJx66o9egsBR/4YYZ6eGPoTv581KKI5U6nyndBSQiAbvFyxjWd8JHCAZWx
+# uG+SoeMZlrvShgl+yJ7q
 # SIG # End signature block

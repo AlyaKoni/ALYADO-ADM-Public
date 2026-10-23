@@ -35,6 +35,8 @@
     05.08.2023 Konrad Brunner       Added role admins and browser param
     06.02.2026 Konrad Brunner       Added powershell documentation
     14.07.2026 Konrad Brunner       Better app catalog site url handling
+    22.10.2026 Konrad Brunner       Interactive parameter (default true); non-interactive app catalog url check polls automatically
+    22.10.2026 Konrad Brunner       Add-PnPApp Path parameter converted via ConvertTo-PlatformPath
 
 #>
 
@@ -53,6 +55,9 @@ Specifies the path to a custom hub site configuration file. If not provided, a d
 
 .PARAMETER seleniumBrowser
 Provides an optional Selenium browser object to automate browser-based actions. If not supplied, a new browser instance may be created or a global instance reused.
+
+.PARAMETER interactive
+Controls whether the script may interact with the user. With $true (default) the script behaves as before. With $false, the app catalog URL check throws.
 
 .INPUTS
 None. The script does not accept pipeline input.
@@ -77,7 +82,8 @@ Param(
     [Parameter(Mandatory=$false)]
     [string]$hubSitesConfigurationFile = $null,
     [Parameter(Mandatory=$false)]
-    [object]$seleniumBrowser = $null
+    [object]$seleniumBrowser = $null,
+    [bool]$interactive = $true
     )
 
 # Reading configuration
@@ -127,7 +133,10 @@ else
     {
         Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
         Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
-        pause
+        if ($interactive)
+        {
+            pause
+        }
         $hubSitesConfigurationFile = "$AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1"
     }
 }
@@ -177,22 +186,30 @@ if (-Not $site)
 }
 do {
     $appCatalogUrl = Get-PnPTenantAppCatalogUrl -Connection $adminCon -ErrorAction SilentlyContinue
-    $appCatalogUrlApi = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
-    if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or [string]::IsNullOrWhiteSpace($appCatalogUrlApi) -or
-        $appCatalogUrl -ne $catalogSiteUrl -or $appCatalogUrlApi -ne $catalogSiteUrl)
+    if ([string]::IsNullOrWhiteSpace($appCatalogUrl))
+    {
+        $appCatalogUrl = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
+    }
+    if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or $appCatalogUrl -ne $catalogSiteUrl)
     {
         Write-Warning "appCatalogUrl: $appCatalogUrl"
-        Write-Warning "appCatalogUrlApi: $appCatalogUrlApi"
+        Write-Warning "catalogSiteUrl: $catalogSiteUrl"
         Write-Warning "App Catalog URL not found or not correct!"
         Write-Warning "Please create app catalog site with the script Configure-AppCatalogSite.ps1 if not yet done."
         Write-Warning "If you have created the app catalog recently, it can take some time until the URL is available."
     }
     else
     {
-        Write-Host "App Catalog URL is correct now."
         break
     }
-    Read-Host "Press Enter to check again or Ctrl+C to stop waiting"
+    if ($interactive)
+    {
+        Read-Host "Press Enter to check again or Ctrl+C to stop waiting"
+    }
+    else
+    {
+        throw "App Catalog URL not found or not correct and interactive mode is disabled."
+    }
 } while ($true)
 
 # Checking ADM hub site
@@ -386,7 +403,7 @@ $appSiteCon = LoginTo-PnP -Url $appCatalogUrl
 
 # Deploying app package
 Write-Host "Deploying app package" -ForegroundColor $CommandInfo
-$app = Add-PnPApp -Connection $appSiteCon -Path "$AlyaTemp\LearningPathways\customlearning.sppkg" -Scope "Tenant" -Overwrite -Publish
+$app = Add-PnPApp -Connection $appSiteCon -Path (ConvertTo-PlatformPath "$AlyaTemp\LearningPathways\customlearning.sppkg") -Scope "Tenant" -Overwrite -Publish
 $appId = $app.Id
 $retries = 20
 $app = $null
@@ -539,12 +556,15 @@ Set-PnPHomePage -Connection $siteCon -RootFolderRelativeUrl "SitePages/CustomLea
 
 # Launching custom configuration
 Write-Host "Launching custom configuration" -ForegroundColor $CommandInfo
-Write-Host "  $($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
+$adminPage = "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
+Write-Host "  $adminPage"
 if (-Not $browser) {
-    Start-Process "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
+    Start-Process $adminPage
 } else {
-    $browser.Url =  "$($AlyaSharePointUrl)/sites/$learningPathwaysSiteName/SitePages/CustomLearningAdmin.aspx"
+    $browser.Url =  $adminPage
 }
+
+return $adminPage
 
 # Stopping Transcript
 Stop-Transcript
@@ -552,8 +572,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCMsrC7Tdvrv5V5
-# a4f3qIUT3ku/ZNFA6+Haz+RuayBxkqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBaBgTzD4Kru2+L
+# rueva6xzReuhekB+DoyFZAK5xol3R6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -667,23 +687,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPpvZvZ5
-# tce4woabuMIh/wqIh5RBDbV/tSd6TyVMo+0rMA0GCSqGSIb3DQEBAQUABIICAGvy
-# Vhk7hM+4zIqqHkl/2PgwNY+NudGF613CuHHG12+7M2wcEPOUPoQCgDl9J+nKwri4
-# ZkhI9/8t6AJH0/QCBiBpZ7czTc8fg5PR+Aqtrb/ZmZDNcyv1uiSYigTiTkeULPWs
-# Tz6N+Z3UOv+vTCVVWbaEQmnYFrOci45LWGElu//pkWuN5lmXAcKGepKG7rDEsed2
-# zy3bQZjYF3jSdGGxtMoxbueb8D9GTbHI5zvvDwcUHcd/q86jmLXYmavFFvwVKv8e
-# x8EZjAbnOPw0F1CJ8fOgD0qk3TPSUM4nBwydmLHLVn0Ruex3eiLYNsF7a9MhVtwa
-# RkR6OH2qNhESPhD+4AqHRECZcw7tCAzUMrNgMGKCjSKzfiRupj43jVnUmK1G9P1V
-# MJ+jPK2qh5Eh1kaIRSPNqtP78EByky0bCkhXLHHe58TWB/Oe0HqnoaZK+qM5f9Fr
-# KbcAplJA3m1IJi5ImscMpOid3d2pgr5jJ5scKVSzH9mifDrwHEfhpIveUnepH7pa
-# ovOuC+05B6/gBsIZRbjeFu2omMwZ6dpKrYS8/sUO5expqDjT9oeJPTshbP4lp7Cv
-# nD6JkbIlet1trk8UcyXa/9R29YWzMSEN/yJL8LJgp0bM/hwM3pmMeXbzoWs24AQH
-# SfAEhFjrIKO4BzEBpX0haQel2WEYHv4VkoatUtmToYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIBtSwfcP
+# Qr/KL3BCXqdcr2X6YO+LUZHW2QGLP23ZpQkhMA0GCSqGSIb3DQEBAQUABIICABcE
+# jTB1b1cLL9s7Jjgn4QKzCz84SRzek1Gh1ui4O0VTpgoDPNRPZ/kh72Xy4LR/EMcH
+# JuhunVCi4WGWa88A4uxIP5EzTvf69zMOTK/FbzGVeboZ8pXBGBom2uHYzFHo5j7h
+# rFDjmXmX8KBAZxD0y1MtQR1N1L10cFdGs6zuMAldnBbyX64tduzi9jSP+RCxreRt
+# c4e1ap9LsehK6pMvr5HoMKOa9Qst6+CWDWc+fbPAE1rwOtXbB5ZNCrSZ4JssVYNo
+# 9SiLLkfIoQmxYlsHTRCqJgPMgNAZxYtnpeHNyz75/NIMob8gqgQTze/8I4ue1X2z
+# 0PZBkG6pA5Qarkps/Hk4LRfnojwdte24TefEKw3GpY4O4SlZg5b4KZj+8zk2yRGK
+# KszTSQYshdMTDtj0ndl7bQL+v340o1q+UKBbzucOuEicokfcizIiRFleKjCqf0eI
+# /Y/h2gFSWksyst/qe8ZmRON906vl1zivXEbDhuQ5D9VqE2/0ZEKctb3HOap4ViP1
+# fX1D4+N95ARDqZL+4M1T6yFLcw0UQcKxq52KW00sPxa+ZNyK46PxCAPdD2J2VTt5
+# EyQvYJqmKdVjfM+jtmEzWkvSeYGXZqW7r+HgWCF9CyZm60K2J7CzDe5DpRwj0hKs
+# 65Cbub8TqlQOzgtVHcKY5Jd4Q/+vt6/CIwRX8yaLoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCDPTD7giqT4o4EmWjyYajC7MjYHgHF/yPB8hRNug9oVwIUXL3J
-# yMQLKWNikimMR5nyYd1YK/wYDzIwMjYwODI5MTUzMzA0WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDN035+lSZHntfz5LaESzFne/WPFQ6rpG5zhJ2206eHagIUGXTD
+# mlcqt777G8Pmy0LMOrVD1IkYDzIwMjYxMDIzMTAxOTM1WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -826,18 +846,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAwrQE2DQSyZuZzMMbX3b7N81bwR/ksA4ddSL1CezxtouCJyBNB+20Js0uT
-# AkDg9RIwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBmsdYguHtMCEhSE8mGT6ooO0QIZc3GX3dndmWIFQxk1ZfJhNTgr6MVM6rh
+# +wikFDowgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAfIK1u80VvTsZUxanVY/aw6HkADvjEk2oBmN6uz3Rkhqf
-# ZEC5/SB1+wxfrwxGRcUCiJwXrzzF/iDqROf8o31IanrOIuFQ54H/iDG3cE8zq6zI
-# 87CwT353h5FcWUu8tW1bt1Em+8FBjxM0ldO0a+btJM2f7jpLktm5MbDrhebsVYZq
-# 7lwpIj8JvFMGDXx2LX7leOiPQXSMcNW6Xnv7QzCRppwCeLcxr6xMoZIj4T7ZBufB
-# upfNwDe4muajwTOvfrEdHBCza9abbPNA8153m2QY0m3HNphgxdzvTUQtxmryRoLo
-# PauF+UWC0TOZyqD+iYmw+zG+9MGQ6neqPN2mcqvLasj6DobQdZv+ilEVLVPnbtUH
-# Gy+V4UzL+C4KKIxXnyf3Z8F1IPG8klqVjPGhl/JOPhB+dmjUdXOs9n3HSme1uFyh
-# Dru8AobuliVeljnlc7Eaaqvo+dTMFA7jUBjTgct1AVu+S/+OQx+MJqwp/ymr61jp
-# T7o9obYhD3oDe7ra4dz7
+# KoZIhvcNAQEMBQAEggGAlJquxQVhuf2ZXoxwML+aXZ59DTgpGFmcZOYt8nzpYjLo
+# sgKVVOu2iKDLnk04sa3xSd7F+GyB4e0VjRhW80l0LkOXBg3zxZ5LLDAY8Q/HOwEa
+# 9WXi18iIqgwERpLTwpQPd2qAomPDmWfB29aWX57QooRejPNHmfUTQ40iSwRpGfoz
+# 8mtyAwS5dArD4SkOrxRxthk+yDdqqOc3NGJ2gFk8UdEvdTHOYlg9zyPC0rwBNNN2
+# YWwyZHhQaw6Qcv87fb8E2jpB6YRgvTLJ+Ftzj7TAEIfWgkzE8B4z+ZHvtyl5COeS
+# oGJQASvnVxN7pYp/Z/DTQhzjNk2tajUE7SBXzktHj8LCxhe1zomh7FEa2O09Z9Gp
+# aTk/jhMoB5SO2PH2/dJWpfI6UDYx/wLz2CF/6lK9Jlzi8o8ye10ebuemsiiKqfWY
+# ojTiY+l6KnOIAKf6zlnyrm8O02AjeY7zbV+fGdprYGbXKBeFvuhSButLkWofKdOJ
+# qb2fIFCFuNPcGYAmanDM
 # SIG # End signature block

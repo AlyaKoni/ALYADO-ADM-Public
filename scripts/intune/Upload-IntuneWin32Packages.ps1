@@ -36,6 +36,8 @@
     21.09.2023 Konrad Brunner       Version check
     12.12.2023 Konrad Brunner       Removed $filter odata query, was throwing bad request
     06.02.2026 Konrad Brunner       Added powershell documentation
+    19.10.2026 Konrad Brunner       Skip _* directories (shared resources like _Shared are not apps)
+    20.10.2026 Konrad Brunner       EXE version detection: FileVersionRaw 0.0.0.0 counts as not found (missing PE version resource, e.g. VLC NSIS stub) so the file name regex applies; file name match requires at least two components before the [Version] cast; version gate before the detection write: missing, unparseable or 0.0.0.0 versions abort the upload with an exception (decision Koni 20.10.2026)
 
 #>
 
@@ -433,7 +435,7 @@ foreach($packageDir in $packages)
     if ($ContinueAtAppWithName -and $packageDir.Name -eq $ContinueAtAppWithName) { $continue = $false }
     if ($ContinueAtAppWithName -and $continue) { continue }
     if ($UploadOnlyAppWithName -and $packageDir.Name -ne $UploadOnlyAppWithName) { continue }
-    if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*") { continue }
+    if ($packageDir.Name -like "*unused*" -or $packageDir.Name -like "*donotuse*" -or $packageDir.Name -like "_*") { continue }
 
     [system.gc]::Collect()
     Write-Host "Uploading package $($packageDir.Name)" -ForegroundColor $CommandInfo
@@ -557,7 +559,10 @@ foreach($packageDir in $packages)
                 }
 
                 $version = $null
-                if ($toInstall.VersionInfo.FileVersionRaw)
+                # 0.0.0.0 is the degenerate FileVersionRaw value when the EXE has no PE version
+                # resource at all (e.g. VLC NSIS stubs) - treat it as not found so the cascade
+                # falls through to the file name regex instead of uploading a broken version.
+                if ($toInstall.VersionInfo.FileVersionRaw -and $toInstall.VersionInfo.FileVersionRaw -ne [Version]"0.0.0.0")
                 {
                     $version = $toInstall.VersionInfo.FileVersionRaw
                     Write-Host "    got version from file versionRaw: $version"
@@ -594,9 +599,22 @@ foreach($packageDir in $packages)
                         }
                     }
                     Write-Host "    got version from file name: $versionStr"
-                    if (-Not [string]::IsNullOrEmpty($versionStr))
+                    if (-Not [string]::IsNullOrEmpty($versionStr) -and $versionStr -match "^\d+\.\d+")
                     {
-                        $version = [Version]$versionStr
+                        try
+                        {
+                            $version = [Version]$versionStr
+                        }
+                        catch
+                        {
+                            Write-Warning "File name version part '$versionStr' is not parseable as a version - ignored"
+                        }
+                    }
+                    elseif (-Not [string]::IsNullOrEmpty($versionStr))
+                    {
+                        # Single-component matches (e.g. "64" out of "SomeTool-win64.exe") are not
+                        # versions; [Version] requires at least two components and would throw.
+                        Write-Warning "File name version part '$versionStr' has less than two components - ignored"
                     }
                 }
             }
@@ -605,6 +623,26 @@ foreach($packageDir in $packages)
                 Write-Warning "No version found. Please make sure the config.json has appropriate rules!"
             }
         }
+    }
+
+    # Version gate (decision Koni 20.10.2026): a missing, unparseable or all-zero version
+    # aborts the upload with a clear exception instead of writing broken detection rules
+    # (0.0.0.0 detection is always true, so updates would never roll out).
+    $parsedVersion = $null
+    if ($null -ne $version)
+    {
+        try
+        {
+            $parsedVersion = [Version]"$version"
+        }
+        catch
+        {
+            $parsedVersion = $null
+        }
+    }
+    if ($null -eq $parsedVersion -or $parsedVersion -eq [Version]"0.0.0.0")
+    {
+        throw "Upload aborted for '$($packageDir.Name)': no valid version could be derived (raw value: '$version'). The version must not be empty, unparseable or 0.0.0.0 - provide version.json/PrepareVersion.ps1 or a versioned installer file name."
     }
 
     if ($version)
@@ -824,8 +862,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCL/FrX4SRpcWvP
-# /DpPAd9M2EZjckOxMoqwE+HZBpofMKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBFa8T1iHMzmlZO
+# XVtXYU9qvF8bXmJVZyzINDEDwLSKR6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -892,10 +930,10 @@ Stop-Transcript
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -903,17 +941,17 @@ Stop-Transcript
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -923,39 +961,39 @@ Stop-Transcript
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOS6Ygu2
-# 0ohH45VOQOr51zM44I14XjbI5X/mQXHh3pFXMA0GCSqGSIb3DQEBAQUABIICAAvY
-# 1b3DvEhynU8H0kyFiDrL7HvlArZTbb+/oF+kQ6hTRs4bBWEF7O8O/9bME+9xkyK+
-# BG+J6DzksIPdBkFeJAebyBPS7dOB/g0IQqR+VE8MoCV83pj7dxIxMz2+YijAdNzE
-# r62LnmxRVSnnM0OBC1lK5wW268cIWu1fSky22yKfCnVLexC8XRk9LQYpkgNpIIy/
-# n6ownU50lvbr4XuPncyEdPryyuqec6eLRudcEo8+TeimulEKm+q8eePwa5y5EgXL
-# y9HW+ct4/h/kLA63ekLLpibfI6s/CwIjY3C5bhrumv9c8L9pZAzu2fXCv2H/HcBh
-# Vy9Ij5omAe97y8Qbrt+V65kKM6y4nuknOCM0T1yejgO7r1z3A2d8j835N8hom/NU
-# pqWAwZ3loxoSC2BBo57sB+dIVQTMHwFastjtmVovBY9khaWaQd1DtCzUMzU4+OFJ
-# LVULpJaRgL05ASbzkujLSuGi6e2a3EE5W4RLFUkNokN4ADtXypMQicAZYCNZgHvj
-# zYxDMvDqm/gXz6ZAR56ukJ1Ty8C3Qo5tyNh0vs55DSFY7+Tfu++wdEjK1FbRNv3M
-# v6o96NGlRWrNiE30JEIJuIbjJHA6JYeVUt8d3FmlcqOKXmVTsufaFxUDlXKsJjW+
-# n68gSMttePTnrczomtIp1dI6yrCSBn7crDkFQn4ooYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDvrHoAq
+# pM6rS4zoEWrCNmOu+OkWuHCIkKJguaWkkcy4MA0GCSqGSIb3DQEBAQUABIICAD1M
+# fxRYTE0n6cmoCHwdyXEUZ+haqC9fndQDr6+kicYB77mkqkNk1w42sZkcOwSPudCw
+# T62af4Lvz2WNmiQRuBWqHN7C9QepN2sdRPMM0wPjPsC3GrLBdYd5SeiPB0VXGZXN
+# dkmbpS8JJTzddCRP3qcuChz0a1LgOTz+NGppP7qZj3vSEGniaJW0BjacHMK+gXGf
+# 5TaWQ0OWLp2WhhVKm2Flt30qIFYQX6zQdAJV7jnu+nPK0GVhriQuc/aMTWUGCsKO
+# ZBrKnTnN8dSK9EyUOy2jf5dzNUn3vVYzjQak3WY8QJN19/HetdqeYwnlStXZrcXB
+# staPpphzdiw7JsEJCa/lHO9n8O7HqOxK8550uWE4ND3VNdtDauVXS7eezk/C8q6S
+# EB7NafELOoyHhBrrqKtOhmrSRqXmqEY/X3ve7A41yc8J5oN4u1NC4MeTkXTBNqBZ
+# wkvN7XAgyLnWssp7D2mrF/gplwj6l9V848NaOqvDHzSz4NFmIU2YF0U7olO9MwIu
+# TylhdaWyhQ9o6CTCuAK98jeinoLPvxqKdyBv0LtxLAvAU5X9xbmwD3W1IWcxzAPS
+# 8477gnz4UwqjlXNMPOfm4j8S5QtEPVBbiku7uVCOopwcSzjINDJYVtG7d7QR01mf
+# XSjv3Db+SnrKm8JqwbYmVFYxczeyUcwtLAR7LxFBoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCBJmJRk0s7n4BPITzDFqbvOzFSu9V0RaqhtAw9mVdct4gIUAKBj
-# n3uocY785nCRgJUbsclSuL4YDzIwMjYwODI5MTUyNTQ4WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCBkMVwH0W7K4wGffnuAe2EZltBBXoLWQfXDyo6HHfLpNQIUHp+l
+# Ofq3zRk0s6GZVqraxW1HLrUYDzIwMjYxMDIwMTc1MTUwWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -1098,18 +1136,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDDiZoZbWpqr0ZnxuMDPCycwvTuffp4RJzv2jDI5j0Dl4vm8aGxHcvRktfj4
-# IzOhctAwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCn01j8SB83WNRnvjA+MWPY+gfvaCQr/f3i1qYn2QXhgKesBFej6WywUE5o
+# 0PPkbz8wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAuthTZIPdX2Oc7i3Ftmo21E5B6cq8OeElptkj747Dmurj
-# tRrwe05uFmgVQaGoei8HDnQQcHG8s+YWK3bHfDX126su9015rda4BFNXwspsJ4+V
-# mbF+fOEe3aZcQ4uZ5C1hPsa2cqaEc2jEGZVIr0OzploIE+1OEjEvZuWN8Px5wfiF
-# S5hmEJxm9B3y0vDQhfjJS+6OrpXWYAqOETsxleg8tK7LsVu0MtzjlNZTixP1wYFl
-# yoxoGfjCxg1KN1JIhyS2Q9sM84OsyBkpZF5nuBH/a7+7Sope6gLbJfb/6ISRgvpf
-# EfakU1PGztMyt69fstD7SGtoBiAM9XYoih+5VhK6oFgcJ5DsvDRXE3pfz+iUELuq
-# L/a9fjR4n+agDclEmLwiBdzoT1OSx4NQlKmKex/zxv+PTIn8oweUeLpv8dOdQgk8
-# G/VG2fjiRdKVAzQoMGXm1UjTiewyqlLgO3APpVtLDxPE6HEijBJIWJYEHzt4jQKH
-# gStk47k9p7EMwLNtPlxW
+# KoZIhvcNAQEMBQAEggGAH3AhKvVWG/+B2x4685RQI1KpPsZm4z3/1wle0ad1s2Dg
+# KoCJnfA0n6e++tEpPTTq54wQmHurq7z6NAzRxHMGcoze9Lwx3xN1Fo6QpDU0ww/5
+# /BId9bWVQdvRybJYkd+bQEfyrLRzgO5BEklK9ebggFn6kxWfZ4wl+xcat83rOzo1
+# fHFSD3B1EfijyASulZXSYsNPoDZyjkI76AOk0KIBDh1TLaiy6eVPv9PzWu+JFo2N
+# bm74GanExe/8JlUfEsLGHJ9eGt6aTixAADcmKVnSjj8Yk/56C4GBQOpHV6vZNEew
+# ttxt3CmyM4p+KPWG9qjfA2OJQN/1CEDwWRpDOY2zy2B5z7yAZVgGUF2IQuvIN+Z7
+# CTWspdJnuWuo9UXEMtbSYEd2jS6CnnQEZwutVPdP9gKj/DnSh2qfJSuZsYQfbQ7w
+# hS6mEWY0GrhJ6LgOf9wo9Pux7DYgqnYiDQ0NoX4Q8NRlWnTMtB0/mOYjjDxoEFPY
+# dxYqvdKyg8EBZJzcUI/B
 # SIG # End signature block

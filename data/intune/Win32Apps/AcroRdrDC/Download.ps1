@@ -31,51 +31,43 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     03.09.2026 Konrad Brunner       Initial Version (Download, fully automated, no browser)
+    19.10.2026 Konrad Brunner       Switched to the 64-bit unified installer: EXE-only download following the other EXE apps (no extraction, no SetupName.txt, no browser fallback; -ForceVersion to override)
 
 #>
 
 <#
 .SYNOPSIS
-Downloads the latest Adobe Acrobat Reader DC setup fully automatically and extracts the
-MSI/CAB/MSP files into the Content directory.
+Downloads the latest Adobe Acrobat Reader 64-bit unified installer EXE fully automatically.
 
 .DESCRIPTION
-This script replaces the interactive Download.ps1. It determines the current Reader DC
-version from the Chocolatey adobereader package page (which always references the latest
-official Adobe CDN installer URL), downloads the self-extracting setup directly with a
-web request, and extracts AcroRead.msi, Data1.cab and any MSP patch files into the
-Content directory - exactly as the original Download.ps1 did. No browser and no manual
+This script determines the current Reader DC version from the Chocolatey adobereader package
+page (which always references the latest official Adobe CDN installer URL), builds the
+download URL of the 64-bit unified installer (AcroRdrDCx64<version>_MUI.exe) and downloads
+the EXE directly into the Content directory. Following the pattern of the other EXE apps,
+the EXE is NOT extracted and no SetupName.txt is written; the version determination happens
+in PrepareVersion.ps1 based on the EXE file name in Content. No browser and no manual
 interaction is required.
 
-If the version detection fails, the fallback version is used (adjust -FallbackVersion
-when Adobe releases a new track). Alternatively, pass an explicit CDN version with
--ForceVersion.
-
-.PARAMETER Language
-Language code of the Reader installer file. Default: "MUI"
-
-.PARAMETER Architecture
-Installer architecture. "32bit" (classic Reader track) or "64bit" (x64 track). Default: "32bit"
-
-.PARAMETER FallbackVersion
-CDN version number used when the automatic version detection fails. Default: "2600121771"
+If the version detection fails, the script throws. In that case, pass an explicit CDN
+version with -ForceVersion.
 
 .PARAMETER ForceVersion
-Optional explicit CDN version number, bypasses the automatic version detection entirely.
+Optional explicit CDN version number (e.g. "2600222031"), bypasses the automatic version
+detection entirely.
 
 .INPUTS
 None. The script does not accept pipeline input.
 
 .OUTPUTS
-Creates or updates files in the Content directory including SetupName.txt, AcroRead.msi,
-Data1.cab and any MSP patch files.
+Creates or updates the unified installer EXE in the Content directory.
 
 .EXAMPLE
 PS> .\Download.ps1
-Downloads the latest German 32-bit Adobe Reader DC and extracts it to Content.
+Downloads the latest 64-bit Adobe Reader DC unified installer (EXE) to Content.
 
 .EXAMPLE
-PS> .\Download.ps1 -Architecture "64bit"
+PS> .\Download.ps1 -ForceVersion "2600222031"
+Downloads the specified version of the 64-bit unified installer to Content.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -86,9 +78,6 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [string]$Language = "MUI", #MUI, de_DE
-    [ValidateSet("32bit", "64bit")]
-    [string]$Architecture = "32bit",
     [string]$ForceVersion = $null
 )
 
@@ -104,7 +93,6 @@ if (-Not (Test-Path $contentRoot))
 # current installer URL from the Chocolatey adobereader package page, which always
 # contains the exact official ardownload2/ardownload3 URL of the latest release.
 $cdnVersion = $null
-$filename = $null
 if (-Not [string]::IsNullOrEmpty($ForceVersion))
 {
     $cdnVersion = $ForceVersion
@@ -123,144 +111,38 @@ else
     }
     catch
     {
-        Write-Warning "Version detection failed: $($_.Exception.Message). Using browser download."
         $cdnVersion = $null
+        Write-Warning "Version detection failed: $($_.Exception.Message)"
     }
 }
-
-if ($cdnVersion)
+if ([string]::IsNullOrEmpty($cdnVersion))
 {
-
-    # --- Build the direct download URL ---
-    # 32bit: .../pub/adobe/reader/win/AcrobatDC/{VERSION}/AcroRdrDC{VERSION}_{LANG}.exe
-    # 64bit: .../pub/adobe/acrobat/win/AcrobatDC/{VERSION}/AcroRdrDCx64{VERSION}_MUI.exe
-    if ($Architecture -eq "64bit")
-    {
-        $fileName = "AcroRdrDCx64${cdnVersion}_MUI.exe"
-        $downloadUrl = "https://ardownload2.adobe.com/pub/adobe/acrobat/win/AcrobatDC/${cdnVersion}/${fileName}"
-    }
-    else
-    {
-        $fileName = "AcroRdrDC${cdnVersion}_${Language}.exe"
-        $downloadUrl = "https://ardownload2.adobe.com/pub/adobe/reader/win/AcrobatDC/${cdnVersion}/${fileName}"
-    }
-
-    Write-Host "Downloading from: $downloadUrl"
-    $setupExePath = Join-Path $contentRoot $fileName
-    try
-    {
-        Invoke-WebRequest -Uri $downloadUrl -OutFile $setupExePath -UseBasicParsing -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -TimeoutSec 1800 -ErrorAction Stop
-    }
-    catch
-    {
-        throw "Failed to download Adobe Reader setup from ${downloadUrl}: $($_.Exception.Message)"
-    }
-    Write-Host "Download completed: $fileName"
-
-    # Write SetupName.txt (same as the original Download.ps1)
-    $setupTxtPath = Join-Path $contentRoot "SetupName.txt"
-    $fileName | Set-Content -Path $setupTxtPath -Encoding UTF8 -Force
+    throw "We were not able to determine the current Reader DC CDN version. Rerun with -ForceVersion <cdnVersion> (e.g. -ForceVersion `"2600222031`") if needed."
 }
-else
+
+# --- Build the direct download URL and download ---
+# 64bit: .../pub/adobe/acrobat/win/AcrobatDC/{VERSION}/AcroRdrDCx64{VERSION}_MUI.exe
+$fileName = "AcroRdrDCx64${cdnVersion}_MUI.exe"
+$downloadUrl = "https://ardownload2.adobe.com/pub/adobe/acrobat/win/AcrobatDC/${cdnVersion}/${fileName}"
+
+Write-Host "Downloading from: $downloadUrl"
+$setupExePath = Join-Path $contentRoot $fileName
+try
 {
-    Write-Host "`n`n"
-    Write-Host "Adobe Reader download"
-    Write-Host "====================="
-    Write-Host "Please provide the Reader download URLs provided with your adobe distribution agreement"
-    $setupDownloadUrl = Read-Host -Prompt 'setupDownloadUrl'
-    $updateDownloadUrl = Read-Host -Prompt 'updateDownloadUrl'
-    Write-Host "`n`n"
-    Write-Host "We launch now a browser with the Adobe Reader setup download page."
-    Write-Host " - Select 'Windows 10'"
-    Write-Host " - Select 'All Languages (MUI)'"
-    Write-Host " - Select 'Latest 32bit' <--***"
-    Write-Host " - Choose 'Download now / Jetzt herunterladen'"
-    Write-Host "`n"
-    pause
-    Write-Host "`n"
-
-    $packageRoot = "$PSScriptRoot"
-    $contentRoot = Join-Path $packageRoot "Content"
-    if (-Not (Test-Path $contentRoot))
-    {
-        $null = New-Item -Path $contentRoot -ItemType Directory -Force
-    }
-    $profile = [Environment]::GetFolderPath("UserProfile")
-    $downloads = $profile+"\downloads"
-    $lastfilename = $null
-    $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-    if ($file)
-    {
-        $lastfilename = $file.Name
-    }
-    $filename = $null
-    $attempts = 10
-    while ($attempts -ge 0)
-    {
-        Write-Host "Downloading setup file from $setupDownloadUrl"
-        Write-Warning "Please don't start any other download!"
-        try {
-            Start-Process "$setupDownloadUrl"
-            do
-            {
-                Start-Sleep -Seconds 10
-                $file = Get-ChildItem -path $downloads | Sort-Object LastWriteTime | Select-Object -last 1
-                if ($file)
-                {
-                    $filename = $file.Name
-                    if ($filename.Contains(".crdownload")) { $filename = $lastfilename }
-                    if ($filename.Contains(".partial")) { $filename = $lastfilename }
-                    if ($filename.Contains(".tmp")) { $filename = $lastfilename }
-                }
-            } while ($lastfilename -eq $filename)
-            $attempts = -1
-        } catch {
-            Write-Host "Catched exception $($_.Exception.Message)"
-            Write-Host "Retrying $attempts times"
-            $attempts--
-            if ($attempts -lt 0) { throw }
-            Start-Sleep -Seconds 10
-        }
-    }
-    Start-Sleep -Seconds 3
+    Invoke-WebRequest -Uri $downloadUrl -OutFile $setupExePath -UseBasicParsing -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" -TimeoutSec 1800 -ErrorAction Stop
 }
-
-if ($filename)
+catch
 {
-
-    # --- Extract the self-extracting archive (same as the original Download.ps1) ---
-    $tmpPath = Join-Path $contentRoot "Tmp"
-    Write-Host "Extracting setup archive..."
-    & "$setupExePath" -sfx_o"$tmpPath" -sfx_ne
-    do
-    {
-        Start-Sleep -Seconds 5
-        $process = Get-Process -Name $fileName.Replace(".exe", "") -ErrorAction SilentlyContinue
-    } while ($process)
-
-    Move-Item -Path (Join-Path $tmpPath "AcroRead.msi") -Destination $contentRoot -Force
-    Move-Item -Path (Join-Path $tmpPath "Data1.cab") -Destination $contentRoot -Force
-    $mspFiles = Get-ChildItem -Path $tmpPath -Filter "*.msp" -ErrorAction SilentlyContinue
-    if ($mspFiles)
-    {
-        $mspFiles | Move-Item -Destination $contentRoot -Force
-    }
-    Remove-Item -Path $tmpPath -Recurse -Force
-    Remove-Item -Path $setupExePath -Force
-
-    Write-Host "Adobe Reader DC download and extraction completed successfully."
-    Write-Host "Content directory: $contentRoot"
+    throw "Failed to download Adobe Reader setup from ${downloadUrl}: $($_.Exception.Message)"
 }
-else
-{
-    throw "We were not able to download the reader setup"
-}
+Write-Host "Download completed: $fileName"
+Write-Host "Content directory: $contentRoot"
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCnjyyTL0Gj06zS
-# xZ6bAmgQkIRHAe28CX4sys9zIzUR3aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBMpbOnN2bbYB76
+# nbPY+i5W7CHzP3pGRCwSxEB0kM1Uc6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -327,10 +209,10 @@ else
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -338,17 +220,17 @@ else
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -358,39 +240,39 @@ else
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIA2wBG/q
-# zo3HMvsGkTqrDMtqU1rheIvokJzCvewLFMPgMA0GCSqGSIb3DQEBAQUABIICAHYJ
-# NWya9hHwj21QQCRqe8E7UacAUTp2mAq+Zditunx+lTGt9LV6iBWmRhc+5REWPu0o
-# 5WU8UCH6FHVbgVaqJcyYr6GqgDrMN4/Uum0/gDX1PTSEiy19fEY2UDjLp9o1SwlO
-# 5RN3WUPUYZdmvKWjyooo7D7LNvXPhPddaaKN101kECQS2TQ9+EX62l2PRJ8GRpOl
-# f/1r5zrKuBCfQ7gF7X+gl3aCR6NeRrwBDAN2hJ6pLoCk28pFsq3lkAO1ruHOT0on
-# LagO6h771DD4jtjGwKxw+5KDKULsHgmCKEKOYRCmOGU2jPhoDf1H4Z6oSuAd4dVQ
-# QVBaFUCdPTSJmSiRBtjOOyJ3PPaI19I5Ty/k8UyuUYiKGqv8wSzH39ioVSyiyMe7
-# PsY4BQlIwNSuC2a9WYPjd9TOoP2292QPNGBrUjhHWoiLxK+tMQwrD5cgE0k3dR0e
-# vzOYA9TlQc4BQKjFMPVafu5TVraqkc4ypj3dR3VdWWFv2LfHyads8jL38gvgLLkT
-# 31Fo/zfpDC+JvNtcoi6AeMV5rQBwVr7Q6MNcETvlaIYI0ZAzL4CjoU8BiIN6VK2G
-# XBQZzs0BxChT8tIpklfImW+utWchF5VLUxaZ7vS2Yqar+ff6188oU4ylKOVdN7M1
-# XZVnEHdDA5omCLx3AXgywPdMzKOXki6XTXO6zWXgoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIJ69HNnB
+# javm/N73WacBwCx5SnobTAXAWd1OzS79zpd0MA0GCSqGSIb3DQEBAQUABIICAHQg
+# lGPP4uLDQhjhZjeelftGayDGK8nueTiDCxxQNC9GYjzr/oY//N5otFYtvEDIArep
+# xqWG43MY1eKnXIKKLMBdJZSvaOdNgo9INuR7ol98B351ROTfRLuPAOGMkI/FwTsS
+# +uU8cntkhfmBgRTUSEAD0NcQ1th+Q4wZdHLZ0ccoTDYJ5dQ9d2bb45jiIsZ8i85c
+# 1jJ26NyU69tEkv87LtKcNEiSVJEHqQk5fD3oYrQ3EjEO7x/uXEzYACYHzegRq5xn
+# I3SMoDm+2PCk81M/DFs6vHX/MtYbWqLnf4meOsDumeRyBztKDDXhtnRW174JJUdl
+# sMwJV56o0f/Kum3UnH+O0iVIN2jfMPI+ZUPd/o8VTBb387MXwcLlgDpaF5YjB4gU
+# 3DEjllsy6s4mI12iLvObXO7UTvFeRPdkOCu3IS48ZQEM68AzmN7aChMzkKblqKDD
+# Sg++Xg+VTolX0WsFDo43Rs98ULzb2tZo2//P6ScmxnwDe6YykHms0kmt7LGumRql
+# HzshkAvmWJ2QJggWGKGL3llYUNdqzfSXrcoo5njbOm6mzswRa+iL+JGny73MuV2j
+# DdsLeB/V41+qkp1clmNHUrbQDHxkzJCvljLIwOXAPWf5LKQtNXMiawcqAFa7prGj
+# MNgSCPs0eAcbuY6D7yh4l4mVbiGfPckKroloVCDfoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDPZcyccsrPbjGQDvYM3C5xuK6Si56u5GG2nZt9XEXjiAIUa7jW
-# cJ5o6mkv1mbB55kWm0HXptwYDzIwMjYwOTA5MjE0MTA4WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCC518yGIPDlfrtLLSPZ5if53KwwdG5PySZmyEW5UdmimwIUYp+1
+# tpZWXFZ6yAJdC68lH76AsnIYDzIwMjYxMDE5MTgzMTIxWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -533,18 +415,18 @@ else
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAxjJNtE8TGCeawxFXNPOede0SWFMWbII+Ov0V7Qb8g02rsRxvJikH3Wiid
-# oms1eUkwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBl12fgZY24i0xNaWBL3N2b5WEvy630rFgc+6U0UyNSAEfiNVfZziBhDO/w
+# 3e8etmgwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAtmwAyurMU92hcoWC4J0F1uy57BGVNFc5XMFW7KBDXiRQ
-# VCfx3FaJ1Wfd8NYMvFCGmn6ov6Haa1MS39oivIuwx25tTAXDTFiKlOkCJvte9Yab
-# /UPvn574rCTaZA96f2gt84IvfH5FAAsCMN4QsUInQbuk2I0A9p1MsTqfN4AywR3d
-# fQefMcvoKmLN9rmRIzjhLlg6WsyNLoF5FERd38Nyo7CLe4jOrYGVZEoxkO3p23ab
-# +w/sBhrp7IchMi+Tr6qWlXGiCarGTT+ru0wjgcpZUDcjnbXXEH33Rq/xu8urSs3V
-# WlrMSivuLwllAL9Z0Pz+0T/D/cE/0r0mGmRXKIb2XTQyXkgGe07EgbqUo99RhUbm
-# kFfg4VRV0cfn/gCbKMGJueB+l63CikCUxYxsB0fGJp/PPB1IQB14oOh1Y1ZuZeFf
-# R6uXJzPhjUaZaOx/is3EsjWSy7UlVKwWpR9rCCIZtZdANvCpVDa6oRW2qK8mXODv
-# n259Delcf48t3w6GDt7A
+# KoZIhvcNAQEMBQAEggGAi6Lz6ERoVK3j7ys1yiqQSQtvQqEDO+V74sRzbKWv+4MI
+# Sc4ab4jCSMWhEx3UKn0nCaCIUCTjg5VhhACyaWROkEmVNUPh200jXbCo/GbytyvG
+# Yrfvh3QqtpxE91fSwFpcn54so5vN+f069DN/KC7OODeZ2o+Jb0PYRVCAktHRzYka
+# pBkEUDEDR4pZBlEKx4FLEDe3twsenOvEUBCkIykY5mvb42jqX3rGhwTy/LJ93CoG
+# BspfNbqnSI86MzLSYyZAZsYfKFki1Ztlk+9WELFPg4j3cNAMaF5MesBrxz30Fpym
+# bJX+qdQS4LuwGgxIRWbHdJhHs01GQKTgAwpcb28jMoHtwxloZC29w908d25s2qNY
+# XHrPo5De381mS2WIJHcaQI21ute8ugQSxs8iOQvkwsbk1zNFyZkm1kMwGWjOZQIh
+# 2MLxNOCZ53o2H9RbhZIdsVaha1/XbwpfG+hpEeAObseO3c1jo9AmD0ql+Bp8Y8Qn
+# ZZcS3Jg+BgrIyJp9LZOs
 # SIG # End signature block

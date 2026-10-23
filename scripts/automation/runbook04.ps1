@@ -36,6 +36,7 @@
     31.07.2024 Konrad Brunner       Implemented WeekDay and Week in month
     31.10.2024 Konrad Brunner       Better cert update handling
     28.07.2025 Konrad Brunner       Implemented REBOOTTIME
+    19.10.2026 Konrad Brunner       Fixed token conversion on Linux (PtrToStringBSTR instead of PtrToStringAuto)
 
 	timeTag examples:
 	05:00
@@ -45,6 +46,7 @@
 	07:30[1]
 	07:30(1,2,3,4,5);06:30[1] (separate multiple times with ;)
     06.02.2026 Konrad Brunner       Added powershell documentation
+    21.10.2026 Konrad Brunner       Fixed tag time parsing anchored to run time date (UTC sandbox date broke actions near midnight)
 
 #>
 
@@ -254,7 +256,7 @@ try {
 								else {
 									$startTimeTag = $startTimeTagValue
 								}
-								try { $startTime = [DateTime]::parseexact($startTimeTag, "HH:mm", $null).AddDays($dayOffset) }
+								try { $startTime = $runTime.Date + [DateTime]::parseexact($startTimeTag, "HH:mm", $null).TimeOfDay }
 								catch { $startTime = $null }
 								Write-Output "- startTime parsed: $($startTime)"
 								Write-Output "- startTimeWds parsed: $($startTimeWds)"
@@ -286,7 +288,7 @@ try {
 								else {
 									$rebootTimeTag = $rebootTimeTagValue
 								}
-								try { $rebootTime = [DateTime]::parseexact($rebootTimeTag, "HH:mm", $null).AddDays($dayOffset) }
+								try { $rebootTime = $runTime.Date + [DateTime]::parseexact($rebootTimeTag, "HH:mm", $null).TimeOfDay }
 								catch { $rebootTime = $null }
 								Write-Output "- rebootTime parsed: $($rebootTime)"
 								Write-Output "- rebootTimeWds parsed: $($rebootTimeWds)"
@@ -318,7 +320,7 @@ try {
 								else {
 									$stopTimeTag = $stopTimeTagValue
 								}
-								try { $stopTime = [DateTime]::parseexact($stopTimeTag, "HH:mm", $null).AddDays($dayOffset) }
+								try { $stopTime = $runTime.Date + [DateTime]::parseexact($stopTimeTag, "HH:mm", $null).TimeOfDay }
 								catch { $stopTime = $null }
 								Write-Output "- stopTime parsed: $($stopTime)"
 								Write-Output "- stopTimeWds parsed: $($stopTimeWds)"
@@ -563,7 +565,7 @@ catch {
 	# Getting MSGraph Token
 	Write-Output "Getting MSGraph Token"
 	$tokenSec = Get-AzAccessToken -ResourceUrl $AlyaGraphEndpoint -TenantId $AlyaTenantId -AsSecureString
-	$tokenPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenSec.Token))
+	$tokenPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenSec.Token))
 
 	# Sending email
 	Write-Output "Sending email"
@@ -618,8 +620,8 @@ catch {
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBfNBLL3CCvZH1o
-# irI88kgDQuxPZUjPz/30AvSMu3+bkKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCD9oC4gGlFb214a
+# RtxvBwKhxAtBeldXu8kRMSzYe1SDB6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -733,23 +735,23 @@ catch {
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPML7ucK
-# 6EgOHvuTMIdfLK6eCRaczNiqJouEXPjHyhrZMA0GCSqGSIb3DQEBAQUABIICAJj2
-# gvK12fUFoSz9dzmmhFURkGEJLePWZ27BlFFZwvMa6vaU8GoFAiZeC3fpm4GQd2rc
-# fGIjKuPljzU4+w/kgM09Ie+oPrnBm2YedfbnCdAsL3K0SeTXytPISX04GOUwD/9n
-# WDjjgmB0uHQf64Uis40sc0w5FxYIeBu9e0wfOkBc1Uude+sltONATy5iSQCUUlY6
-# 1fXetRCvhxErBWdjwouMDadKSAWrnMqr0YRh7vbj8rEbXuuEsjdlp79yNVhhkOLC
-# i9FGvym+zwKWxbbSMXNmsrUS+p9Us+7KMPXHKo5gTdjJCmzC4SzEYpitos4j8WMo
-# oF2XHvBmz4Zf6tWMnIAUlJiYYjzyX79SwUkqOrzXBsEEouD86NtGZzOczsfWb/KR
-# 72Jm5ekeRKyQ9OwcMaS2Gh68rgtOzJIJKtxefGrsyg2wehVSVgg52/+ICDTMgF/I
-# 2+hCUBOD5TArmrI2k6kHhB+x0KaGNpAidFvn0R1z1+JkKwN5aY5npX9JNY0tk5K0
-# tELghhRLuhwevlqzskXKKJ6ZEhpk121PnEuK8Ry+IbmQYW7mHCGaBpMvEyYaN94c
-# mMOetVwMgMLRRFiXCWaqrvH/CdsMjMdLOlmUDBqqNvCTKco8JGOUkK35aRRIcQAP
-# llUClQY/523Y8008IGPguoCgW2dbUdCwGDiiBa+LoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEhpERI7
+# MyNBLNr0UXera+2aGQrJxon1ovnMg5WslYdTMA0GCSqGSIb3DQEBAQUABIICAKLT
+# SQTGl62QlTq3RkqOVSpoMmwPGghR8crKfS2cl6OKc/3G0S86zMzmTPDruUhhkOGX
+# lBXWtQPVOtxhdMmkWdPgBbfbeDXhNSQtr3vb+I9m8jU84OQxmLwS0dWfyf9Dvxvp
+# SLw8opSI36mUg8ONsdh+3bHACysWOHcVsj0Z2YQxkDkHeMhYkchj42jnAFoo8CPo
+# eInewGk1vGW9K8BgsPNeumzdfNv5KzJkj77d46L5Qla3nN1kMzPagfDIJElnAxb1
+# xX08YNfLi6Nn3y0B2AsDOZ7T5hpdTvxqCZbPlVnCydwyAzkjg/nlzZfML5Pa9zvf
+# XZtiz8rtOhgKFbEQPUYj1vKmmm3/P2mZb0URsmtR1CNyVqQ3w4t31fqL4EiHpAtB
+# n9lf6tZUQMaufTDclgbLWzebBY8NQAUm2y4TioozCOHVqjmavddJOkxJ5rZhpmtE
+# gUJhUwIDowEpZs8dyvElr9uiNOkfrYJWYGmnB3t2Im6L5QNBAMLZ4l964s97cvfN
+# Z2DD++xu3eMvITbvSLtzwiDvSWwJvFmpE/PJamFsjTV+YnZD6cnNYVfE2OG7M2XH
+# MmCvYrz5583smxzTROcLulhNMxiC+EFBIOiWCDN3muzJcLEbfTs8EllKc32PWtjJ
+# intDH6VpYR68PUV5BRp18vNG8Ek4LGtUAzBeTr8qoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDSj0DuTvvsmDnWORZXsrQ+Dsj3ldJVsgKLGrCvhXfADwIUa8Hp
-# hmCYur2+/oFCiFF3FizO3XgYDzIwMjYwNzA4MTYxNjQ3WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAh8sygK2Hi+CJcUhNxyp/XlYWxP8lwBnqqIzK/Yhgs3gIUX9/9
+# RWZ8eC0YTTMwQA38I07Tr6gYDzIwMjYxMDIzMTAxODU5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -892,18 +894,18 @@ catch {
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAHz65Vd5BVNjp2/10asEM/l8dlHaT/i2z9cAxB4g5T74Tfl8NY/Mcvs16B
-# aOEeJ9UwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDD81tERPaUuLN2J2eZPYwzPZLOK6hw02Gjv5bj7RrVwGNg3k/c3LuvMApLW
+# 2j1DpCIwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAIUXRAC86wkYy7canxqpOgBfU2EHByWkBz9E91OUMATID
-# 0nNAdBmOmClFWmLqkPT5IAU+DhB0zCvCGDb2K8vnR0kXucouJ6O1V6qTIzC+huy9
-# OaslLvMBEQ/qjgNbqJvYmcOV7/kwQC9FG9Xjy9GTlxRCv4Y40w79Dapx0SzTkqUu
-# D7jPLEW4yz8aXpsVqJs9slMwY1u6N0epqXOk31vgUWhxdeajqkP74fTz2VxmemHX
-# FQOeTXe5wxP/qZD8K2+OmtPa1/pghxuQwTxgpDMRtFVD/D6OrSCGktSeCc3I8PZU
-# CF/1m5cyGyerRB069NNueKDV5gokKsJT+seVflJkHU9uRFSnm1RhZMEY/5PPXeyR
-# 3H77rnpBfNqsAO6SbXbpmk0vPjHUpSkEzU3c02Pi1DMxGFZvsnnDskNx0OWFshrC
-# ggdL+Cha+zIR2PYw5i42lMBUnOIUsTDh29NLgxnkmTfMHZ4njPGg5huCWbtip3Bb
-# o6T74ZN1g0hMoi4vK9G5
+# KoZIhvcNAQEMBQAEggGAZx9MyqqRbXz32s2D2Td5zr8QJXH7X4K7uUL1gBS4pkch
+# 3HXdKu+9zDoKmv7wEa3y4x++UCaFcNiNSxT8AGFjF3RbNJ1zShJnKVqCZOnRiJzu
+# DoAI+q6/ApZLSaSKdN0e/5p+OttDGifZoXJq3iAZV7OCtr7aj1HLxAt+BHilPP6V
+# IAQOlv6WLRlctVuND3O4HV08GbB4m1N+LsARKXPpiABKZh5Dsi3QaSGujVdqPudj
+# e64J5yNlyR1jRBH4rLIDVItnZoiSiQ2zMWL2kdTEILQ1aDDhwQeS0jQWhogKZivy
+# F3IHgn1eSpZmsaYarY21FUkqGkGD1Kqi0lT99HZdaev/aUiYrdvJZ9wsh6WWQxaP
+# jrDMIH7ANxbwbUm7A6Vk79xKWN3iGotkPbZnMijc/lWNK1I4GfnCRs/dOpcCl7PS
+# ndliwR5DVcfnI2Fp8eOqnd09xxS+A2kfzmaqpjhUeAx1bKLOIObushjns5BFCKwn
+# BuRwPDi5QXg6mYVItQXn
 # SIG # End signature block

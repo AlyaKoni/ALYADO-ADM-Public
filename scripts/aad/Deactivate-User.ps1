@@ -1,0 +1,797 @@
+﻿#Requires -Version 7.0
+
+<#
+    Copyright (c) Alya Consulting, 2019-2026
+
+    This file is part of the Alya Base Configuration.
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    The Alya Base Configuration is free software: you can redistribute it
+    and/or modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.
+    Alya Base Configuration is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
+    Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
+
+    Diese Datei ist Teil der Alya Basis Konfiguration.
+    https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration
+    Die Alya Basis Konfiguration ist eine Freie Software: Sie können sie unter den
+    Bedingungen der GNU General Public License, wie von der Free Software
+    Foundation, Version 3 der Lizenz oder (nach Ihrer Wahl) jeder neueren
+    veröffentlichten Version, weiter verteilen und/oder modifizieren.
+    Die Alya Basis Konfiguration wird in der Hoffnung, dass sie nützlich sein wird,
+    aber OHNE JEDE GEWÄHRLEISTUNG, bereitgestellt; sogar ohne die implizite
+    Gewährleistung der MARKTFÄHIGKEIT oder EIGNUNG FUER EINEN BESTIMMTEN ZWECK.
+    Siehe die GNU General Public License fuer weitere Details:
+    https://www.gnu.org/licenses/gpl-3.0.txt
+
+
+    History:
+    Date       Author               Description
+    ---------- -------------------- ----------------------------
+    16.10.2026 Konrad Brunner       Initial Version
+
+#>
+
+<#
+.SYNOPSIS
+Deactivates a user: renames the display name, resets the password, blocks sign-in, converts the mailbox to a shared mailbox, cleans up mail settings, moves the OneDrive data into the executing user's OneDrive, removes the user from all license groups and removes all directly assigned licenses.
+
+.DESCRIPTION
+The Deactivate-User.ps1 script performs a complete offboarding of the given user. All work is grouped by PowerShell module:
+
+1. Microsoft Graph (identity): appends " [Deactivated]" to the display name, resets the password to a random GUID value (never stored or displayed anywhere) and blocks the sign-in.
+2. Exchange Online (mailbox): converts the mailbox into a shared mailbox, removes any existing autoresponder, any existing forwarding and all inbox rules, hides the mailbox from the address book, removes the user from all distribution groups (if requested), grants Full Access to all given delegation UPNs and finally sets the new autoresponder text (if given) and the new forwarding with a local copy (if given).
+3. OneDrive (PnP): creates a folder "LeaversOneDriveData/<GivenName><Surname>" in the OneDrive of the EXECUTING user and moves all OneDrive data of the deactivated user into it, preserving the folder structure. Shortcut items (links to shared content, ProgId "AddToOneDrive.MountPoint") are skipped and never followed - only the user's own files are moved. Note: this section requires a delegated (interactive) login, the executing user is determined from the Microsoft Graph context.
+4. Microsoft Graph (groups): removes the user from all groups that contain "-LIC-" in their display name.
+5. Microsoft Graph (licenses, ALWAYS the very last step): removes all directly assigned licenses. Group based licenses disappear automatically after the -LIC- group removal, the script waits for that propagation.
+
+The script stops on the first failing step. It is safe to run multiple times: every step checks the current state first and is skipped without error when it is already done.
+
+.PARAMETER userUpn
+The user principal name of the user to deactivate. Mandatory.
+
+.PARAMETER autoresponderText
+Optional. If set, this text is configured as internal and external autoresponder message after all existing mail settings were cleaned up.
+
+.PARAMETER forwardTo
+Optional. If set, all incoming mails are forwarded to this address while a local copy is kept (DeliverToMailboxAndForward). A missing "smtp:" prefix is added automatically.
+
+.PARAMETER removeFromDistributionGroups
+Optional, default $false. If $true, the user is removed from all distribution groups of the tenant.
+
+.PARAMETER delegationUpns
+Optional. Array of user principal names that get Full Access permission on the mailbox.
+
+.INPUTS
+None. The script does not accept pipeline input.
+
+.OUTPUTS
+None. The script performs actions and writes output to the console and to a transcript log file.
+
+.EXAMPLE
+PS> .\Deactivate-User.ps1 -userUpn "user@domain.com" -autoresponderText "This user has left the company." -forwardTo "hr@domain.com" -removeFromDistributionGroups:$true -delegationUpns "boss@domain.com","hr@domain.com"
+
+.NOTES
+Copyright          : (c) Alya Consulting, 2019-2026
+Author             : Konrad Brunner
+License            : GNU General Public License v3.0 or later (https://www.gnu.org/licenses/gpl-3.0.txt)
+Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
+#>
+
+[CmdletBinding()]
+Param(
+    [Parameter(Mandatory = $true)]
+    [ValidateNotNull()]
+    [string]$userUpn,
+    [Parameter(Mandatory = $false)]
+    [string]$autoresponderText = $null,
+    [Parameter(Mandatory = $false)]
+    [string]$forwardTo = $null,
+    [Parameter(Mandatory = $false)]
+    [bool]$removeFromDistributionGroups = $false,
+    [Parameter(Mandatory = $false)]
+    [string[]]$delegationUpns = @()
+)
+
+# Normalizing the array parameter (supports a single comma separated token for pwsh -File mode)
+$delegationUpns = @($delegationUpns | ForEach-Object { $_ -split "," } | ForEach-Object { $_.Trim() } | Where-Object { -Not [string]::IsNullOrEmpty($_) })
+
+# Reading configuration
+. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
+
+# Every failing step has to stop the script
+$ErrorActionPreference = "Stop"
+
+# Starting Transcript
+Start-Transcript -Path "$($AlyaLogs)\scripts\aad\Deactivate-User-$($AlyaTimeString).log" | Out-Null
+
+# Checking modules
+Write-Host "Checking modules" -ForegroundColor $CommandInfo
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users.Actions"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Groups"
+Install-ModuleIfNotInstalled "ExchangeOnlineManagement"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
+
+# Logging in
+Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes @("Directory.ReadWrite.All","UserAuthenticationMethod.ReadWrite.All","GroupMember.ReadWrite.All")
+
+# =============================================================
+# Azure stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "AAD | Deactivate-User | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Getting the user
+Write-Host "Getting user '$userUpn'" -ForegroundColor $CommandInfo
+$user = Get-MgBetaUser -UserId $userUpn -Property Id,UserPrincipalName,DisplayName,GivenName,Surname,Mail,AccountEnabled,AssignedLicenses
+if (-Not $user)
+{
+    throw "User '$userUpn' not found!"
+}
+Write-Host "  Found user '$($user.DisplayName)' ($($user.Id))"
+
+# Renaming the user (idempotent)
+Write-Host "Renaming the user" -ForegroundColor $CommandInfo
+if ($user.DisplayName -like "*Deactivated]*")
+{
+    Write-Host "  Display name already ends with ' [Deactivated]' - skipping"
+}
+else
+{
+    $newDisplayName = "$($user.DisplayName) [Deactivated]"
+    Write-Host "  Setting display name to '$newDisplayName'"
+    Update-MgBetaUser -UserId $user.Id -DisplayName $newDisplayName
+}
+
+# Resetting the password (random GUID value, never stored or displayed anywhere)
+if ($user.AccountEnabled)
+{
+    Write-Host "Resetting the password" -ForegroundColor $CommandInfo
+    $newPassword = [guid]::NewGuid().ToString() + [guid]::NewGuid().ToString().Substring(0, 6) + "aA1!"
+    $mthd = Get-MgBetaUserAuthenticationPasswordMethod -UserId $userUpn
+    Reset-MgBetaUserAuthenticationMethodPassword -UserId $userUpn -AuthenticationMethodId $mthd.id -NewPassword $newPassword
+    $passwordProfile = @{
+        ForceChangePasswordNextSignIn = $true
+    }
+    Update-MgBetaUser -UserId $user.Id -PasswordProfile $passwordProfile
+    $newPassword = $null
+    $passwordProfile = $null
+    Write-Host "  Password has been reset"
+}
+
+# Blocking the sign-in (idempotent)
+Write-Host "Blocking the sign-in" -ForegroundColor $CommandInfo
+if ($user.AccountEnabled)
+{
+    Update-MgBetaUser -UserId $user.Id -AccountEnabled:$false
+    Write-Host "  Sign-in has been blocked"
+}
+else
+{
+    Write-Host "  Sign-in is already blocked - skipping"
+}
+
+# =============================================================
+# Exchange stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "Exchange | Deactivate-User | EXCHANGE" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+Write-Host "  Connecting to Exchange Online" -ForegroundColor $CommandInfo
+$exoCommands = @("Get-Mailbox","Set-Mailbox","Set-MailboxAutoReplyConfiguration","Get-InboxRule","Remove-InboxRule","Get-MailboxPermission","Add-MailboxPermission","Get-DistributionGroup","Get-DistributionGroupMember","Remove-DistributionGroupMember")
+try {
+    LoginTo-EXO -commandsToLoad $exoCommands
+}
+catch {
+    Write-Error $_.Exception -ErrorAction Continue
+    LogoutFrom-EXOandIPPS
+    LoginTo-EXO -commandsToLoad $exoCommands
+}
+
+# Getting the mailbox
+Write-Host "Getting the mailbox" -ForegroundColor $CommandInfo
+$mailboxes = @(Get-Mailbox -Identity $userUpn -ErrorAction SilentlyContinue)
+if ($mailboxes.Count -eq 0)
+{
+    throw "Mailbox for user '$userUpn' not found!"
+}
+$mailbox = $mailboxes[0]
+Write-Host "  Found mailbox '$($mailbox.PrimarySmtpAddress)' (type: $($mailbox.RecipientTypeDetails))"
+
+# Converting the mailbox to a shared mailbox (idempotent)
+Write-Host "Converting the mailbox to a shared mailbox" -ForegroundColor $CommandInfo
+if ($mailbox.RecipientTypeDetails -eq "SharedMailbox")
+{
+    Write-Host "  Mailbox is already a shared mailbox - skipping"
+}
+else
+{
+    Set-Mailbox -Identity $userUpn -Type Shared | Out-Null
+    $mailboxes = @(Get-Mailbox -Identity $userUpn -ErrorAction SilentlyContinue)
+    $mailbox = $mailboxes[0]
+    Write-Host "  Mailbox converted (type: $($mailbox.RecipientTypeDetails))"
+}
+
+# Removing the existing autoresponder (idempotent)
+Write-Host "Removing the existing autoresponder" -ForegroundColor $CommandInfo
+Set-MailboxAutoReplyConfiguration -Identity $userUpn -AutoReplyState Disabled | Out-Null
+
+# Removing existing forwardings (idempotent)
+Write-Host "Removing existing forwardings" -ForegroundColor $CommandInfo
+if ($mailbox.ForwardingSmtpAddress -or $mailbox.ForwardingAddress -or $mailbox.DeliverToMailboxAndForward)
+{
+    Set-Mailbox -Identity $userUpn -ForwardingAddress $null -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false | Out-Null
+    Write-Host "  Existing forwardings removed"
+}
+else
+{
+    Write-Host "  No forwarding configured - skipping"
+}
+
+# Removing all inbox rules (idempotent)
+Write-Host "Removing all inbox rules" -ForegroundColor $CommandInfo
+$inboxRules = @(Get-InboxRule -Mailbox $userUpn -ErrorAction SilentlyContinue)
+if ($inboxRules.Count -eq 0)
+{
+    Write-Host "  No inbox rules found - skipping"
+}
+foreach ($inboxRule in $inboxRules)
+{
+    Write-Host "  Removing rule '$($inboxRule.Name)'"
+    Remove-InboxRule -Identity $inboxRule.Identity -Mailbox $userUpn -Confirm:$false -Force | Out-Null
+}
+
+# Hiding the mailbox from the address book (idempotent)
+Write-Host "Hiding the mailbox from the address book" -ForegroundColor $CommandInfo
+if ($mailbox.HiddenFromAddressListsEnabled)
+{
+    Write-Host "  Mailbox is already hidden - skipping"
+}
+else
+{
+    Set-Mailbox -Identity $userUpn -HiddenFromAddressListsEnabled $true | Out-Null
+    Write-Host "  Mailbox hidden from address book"
+}
+
+# Removing the user from all distribution groups (idempotent)
+if ($removeFromDistributionGroups)
+{
+    Write-Host "Removing the user from all distribution groups" -ForegroundColor $CommandInfo
+    $distributionGroups = @(Get-DistributionGroup -ResultSize Unlimited)
+    $removedFromGroups = 0
+    foreach ($distributionGroup in $distributionGroups)
+    {
+        $members = @(Get-DistributionGroupMember -Identity $distributionGroup.Identity -ResultSize Unlimited -ErrorAction SilentlyContinue | Where-Object { ($_.ExternalDirectoryObjectId -eq $user.Id) -or ($_.PrimarySmtpAddress -eq $mailbox.PrimarySmtpAddress) })
+        if ($members.Count -gt 0)
+        {
+            Write-Host "  Removing from distribution group '$($distributionGroup.DisplayName)'"
+            Remove-DistributionGroupMember -Identity $distributionGroup.Identity -Member $mailbox.PrimarySmtpAddress -Confirm:$false -BypassSecurityGroupManagerCheck | Out-Null
+            $removedFromGroups++
+        }
+    }
+    Write-Host "  Removed from $removedFromGroups distribution group(s)"
+}
+else
+{
+    Write-Host "Skipping the distribution group removal (removeFromDistributionGroups is false)"
+}
+
+# Granting Full Access to the delegation UPNs (idempotent)
+if ($delegationUpns.Count -gt 0)
+{
+    Write-Host "Granting Full Access to the delegation UPNs" -ForegroundColor $CommandInfo
+    foreach ($delegationUpn in $delegationUpns)
+    {
+        $existingPermissions = @(Get-MailboxPermission -Identity $userUpn -User $delegationUpn -ErrorAction SilentlyContinue | Where-Object { $_.AccessRights -contains "FullAccess" })
+        if ($existingPermissions.Count -gt 0)
+        {
+            Write-Host "  '$delegationUpn' already has Full Access - skipping"
+        }
+        else
+        {
+            Write-Host "  Granting Full Access to '$delegationUpn'"
+            $null = Add-MailboxPermission -Identity $userUpn -User $delegationUpn -AccessRights FullAccess -InheritanceType All
+        }
+    }
+}
+else
+{
+    Write-Host "No delegation UPNs given - skipping the Full Access grants"
+}
+
+# Setting the new autoresponder
+if (-Not [string]::IsNullOrEmpty($autoresponderText))
+{
+    Write-Host "Setting the autoresponder (internal and external)" -ForegroundColor $CommandInfo
+    Set-MailboxAutoReplyConfiguration -Identity $userUpn -AutoReplyState Enabled -ExternalAudience All -InternalMessage $autoresponderText -ExternalMessage $autoresponderText | Out-Null
+}
+else
+{
+    Write-Host "No autoresponderText given - the autoresponder stays disabled"
+}
+
+# Setting the new forwarding (keeping a local copy)
+if (-Not [string]::IsNullOrEmpty($forwardTo))
+{
+    Write-Host "Setting the forwarding to '$forwardTo' (keeping a local copy)" -ForegroundColor $CommandInfo
+    $forwardingAddress = $forwardTo
+    if ($forwardingAddress -notlike "smtp:*")
+    {
+        $forwardingAddress = "smtp:$forwardingAddress"
+    }
+    Set-Mailbox -Identity $userUpn -ForwardingSmtpAddress $forwardingAddress -DeliverToMailboxAndForward $true | Out-Null
+}
+else
+{
+    Write-Host "No forwardTo given - no forwarding will be configured"
+}
+
+# =============================================================
+# OneDrive stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "OneDrive | Deactivate-User | PNP" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# The OneDrive of the executing user is the move target, therefore a delegated
+# (interactive) login is required for this section
+$mgContext = Get-MgContext
+$executorUpn = $mgContext.Account
+if ([string]::IsNullOrEmpty($executorUpn))
+{
+    throw "The OneDrive of the executing user is required as move target, but the current Microsoft Graph connection has no user account (app-only login). Please run this script with a delegated user login!"
+}
+if ($executorUpn -eq $userUpn)
+{
+    throw "The executing user '$executorUpn' is the user to deactivate - the OneDrive data cannot be moved into its own OneDrive!"
+}
+Write-Host "Executing user is '$executorUpn'" -ForegroundColor $CommandInfo
+
+# Resolving the OneDrive sites of both users
+Write-Host "Resolving the OneDrive sites" -ForegroundColor $CommandInfo
+$adminCon = LoginTo-PnP -Url $AlyaSharePointAdminUrl -TenantAdminUrl $AlyaSharePointAdminUrl
+$leaverMySite = "$((Get-PnPUserProfileProperty -Connection $adminCon -Account $userUpn).PersonalUrl)"
+$executorMySite = "$((Get-PnPUserProfileProperty -Connection $adminCon -Account $executorUpn).PersonalUrl)"
+if ($leaverMySite -notlike "*/personal/*")
+{
+    Write-Warning "User '$userUpn' does not have a provisioned OneDrive site - there is nothing to move, skipping the OneDrive section"
+}
+else
+{
+    if ($executorMySite -notlike "*/personal/*")
+    {
+        throw "The executing user '$executorUpn' does not have a provisioned OneDrive site - cannot move the leaver data!"
+    }
+    Write-Host "  Leaver OneDrive:   $leaverMySite"
+    Write-Host "  Executor OneDrive: $executorMySite"
+
+    # Building the target folder name "<GivenName><Surname>"
+    $leaverFolderName = "$($user.GivenName)$($user.Surname)"
+    if ([string]::IsNullOrWhiteSpace($leaverFolderName))
+    {
+        $leaverFolderName = "$($user.DisplayName)"
+    }
+    $leaverFolderName = ($leaverFolderName -replace '[\\/:*?"<>|#%]', "").Trim()
+    if ([string]::IsNullOrWhiteSpace($leaverFolderName))
+    {
+        throw "Cannot build a valid target folder name for the user '$userUpn'!"
+    }
+
+    # Creating the target folder structure (idempotent)
+    Write-Host "Creating the target folder 'LeaversOneDriveData/$leaverFolderName'" -ForegroundColor $CommandInfo
+    $targetCon = LoginTo-PnP -Url $executorMySite
+    if (-Not (Get-PnPFolder -Url "Documents/LeaversOneDriveData" -Connection $targetCon -ErrorAction SilentlyContinue))
+    {
+        $null = Add-PnPFolder -Name "LeaversOneDriveData" -Folder "Documents" -Connection $targetCon
+    }
+    if (-Not (Get-PnPFolder -Url "Documents/LeaversOneDriveData/$leaverFolderName" -Connection $targetCon -ErrorAction SilentlyContinue))
+    {
+        $null = Add-PnPFolder -Name $leaverFolderName -Folder "Documents/LeaversOneDriveData" -Connection $targetCon
+    }
+    $executorSitePath = ([System.Uri]::new($executorMySite.TrimEnd("/"), [System.UriKind]::Absolute)).AbsolutePath.TrimEnd("/")
+    $moveTargetUrl = "$executorSitePath/Documents/LeaversOneDriveData/$leaverFolderName"
+
+    # Collecting all shortcut items of the leaver OneDrive (links to shared
+    # content). They are identified by the ProgId "AddToOneDrive.MountPoint"
+    # and are never followed or moved - only the user's own files are moved.
+    Write-Host "Collecting shortcut items (they will be skipped)" -ForegroundColor $CommandInfo
+    $sourceCon = LoginTo-PnP -Url $leaverMySite
+    $shortcutCaml = "<View><Query><Where><Eq><FieldRef Name='ProgId'/><Value Type='Text'>AddToOneDrive.MountPoint</Value></Eq></Where></Query><ViewFields><FieldRef Name='FileLeafRef'/><FieldRef Name='FileRef'/></ViewFields><RowLimit Paged='True'>1000</RowLimit></View>"
+    $shortcutItems = @(Get-PnPListItem -List "Documents" -Query $shortcutCaml -Connection $sourceCon)
+    $shortcutNames = @($shortcutItems | ForEach-Object { "$($_.FieldValues['FileLeafRef'])" })
+    Write-Host "  Found $($shortcutNames.Count) shortcut item(s)"
+
+    # Moving all own data of the leaver OneDrive (preserving the folder
+    # structure, folders are moved as a whole including their content)
+    Write-Host "Moving the OneDrive data to '$moveTargetUrl'" -ForegroundColor $CommandInfo
+    $rootItems = @(Get-PnPFolderItem -FolderSiteRelativeUrl "Documents" -Connection $sourceCon)
+    $movedCount = 0
+    foreach ($rootItem in $rootItems)
+    {
+        if ($rootItem.Name -in $shortcutNames)
+        {
+            Write-Host "  Skipping shortcut '$($rootItem.Name)' (link to shared content)"
+            continue
+        }
+        Write-Host "  Moving '$($rootItem.Name)'"
+        $null = Move-PnPFile -SourceUrl "Documents/$($rootItem.Name)" -TargetUrl $moveTargetUrl -Overwrite -AllowSchemaMismatch -AllowSmallerVersionLimitOnDestination -Connection $sourceCon -Force
+        $movedCount++
+    }
+    Write-Host "  Moved $movedCount item(s) into the executor's OneDrive"
+}
+
+# =============================================================
+# Azure stuff
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "AAD | Deactivate-User | Graph" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Removing the user from all license groups (-LIC-) (idempotent)
+Write-Host "Removing the user from all '-LIC-' groups" -ForegroundColor $CommandInfo
+$licenseGroups = @(Get-MgBetaUserMemberOfAsGroup -UserId $user.Id -All | Where-Object { $_.DisplayName -like "*-LIC-*" })
+if ($licenseGroups.Count -eq 0)
+{
+    Write-Host "  The user is not a member of any '-LIC-' group - skipping"
+}
+foreach ($licenseGroup in $licenseGroups)
+{
+    Write-Host "  Removing from group '$($licenseGroup.DisplayName)'"
+    Remove-MgBetaGroupMemberByRef -GroupId $licenseGroup.Id -DirectoryObjectId $user.Id
+}
+
+# =============================================================
+# Azure stuff (licenses, ALWAYS the very last step)
+# =============================================================
+
+Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
+Write-Host "AAD | Deactivate-User | Graph | Licenses (last step)" -ForegroundColor $CommandInfo
+Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Removing all directly assigned licenses (idempotent). Group based licenses
+# from the removed -LIC- groups disappear automatically, but that can take a
+# moment - therefore the removal is retried until no license is left.
+Write-Host "Removing all directly assigned licenses" -ForegroundColor $CommandInfo
+$licenseRetryCount = 0
+$maxLicenseRetries = 12
+while ($true)
+{
+    $licenseUser = Get-MgBetaUser -UserId $user.Id -Property Id,UserPrincipalName,AssignedLicenses
+    $assignedSkuIds = @($licenseUser.AssignedLicenses | ForEach-Object { $_.SkuId.ToString() } | Sort-Object -Unique)
+    if ($assignedSkuIds.Count -eq 0)
+    {
+        Write-Host "  No licenses assigned anymore - done"
+        break
+    }
+    try
+    {
+        Write-Host "  Removing $($assignedSkuIds.Count) license(s)"
+        Set-MgBetaUserLicense -UserId $user.Id -AddLicenses @() -RemoveLicenses $assignedSkuIds | Out-Null
+        Start-Sleep -Seconds 5
+        $licenseUser = Get-MgBetaUser -UserId $user.Id -Property Id,UserPrincipalName,AssignedLicenses
+        $remainingSkuIds = @($licenseUser.AssignedLicenses | ForEach-Object { $_.SkuId.ToString() })
+        if ($remainingSkuIds.Count -eq 0)
+        {
+            Write-Host "  All licenses have been removed"
+            break
+        }
+        throw "There are still $($remainingSkuIds.Count) license(s) assigned (possibly waiting for the group license propagation)"
+    }
+    catch
+    {
+        $licenseRetryCount++
+        if ($licenseRetryCount -gt $maxLicenseRetries)
+        {
+            throw
+        }
+        Write-Warning "License removal not finished yet ($licenseRetryCount/$maxLicenseRetries): $($_.Exception.Message). Retrying in 10 seconds..."
+        Start-Sleep -Seconds 10
+    }
+}
+
+# Stopping Transcript
+Stop-Transcript
+
+# SIG # Begin signature block
+# MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
+# BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBGDJ0dU72eXw+V
+# DBrVVG9p6Uz76imjavUK6zxvuAJtYqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
+# Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
+# YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
+# BhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExKTAnBgNVBAMTIEdsb2Jh
+# bFNpZ24gQ29kZSBTaWduaW5nIFJvb3QgUjQ1MIICIjANBgkqhkiG9w0BAQEFAAOC
+# Ag8AMIICCgKCAgEAti3FMN166KuQPQNysDpLmRZhsuX/pWcdNxzlfuyTg6qE9aND
+# m5hFirhjV12bAIgEJen4aJJLgthLyUoD86h/ao+KYSe9oUTQ/fU/IsKjT5GNswWy
+# KIKRXftZiAULlwbCmPgspzMk7lA6QczwoLB7HU3SqFg4lunf+RuRu4sQLNLHQx2i
+# CXShgK975jMKDFlrjrz0q1qXe3+uVfuE8ID+hEzX4rq9xHWhb71hEHREspgH4nSr
+# /2jcbCY+6R/l4ASHrTDTDI0DfFW4FnBcJHggJetnZ4iruk40mGtwEd44ytS+ocCc
+# 4d8eAgHYO+FnQ4S2z/x0ty+Eo7+6CTc9Z2yxRVwZYatBg/WsHet3DUZHc86/vZWV
+# 7Z0riBD++ljop1fhs8+oWukHJZsSxJ6Acj2T3IyU3ztE5iaA/NLDA/CMDNJF1i7n
+# j5ie5gTuQm5nfkIWcWLnBPlgxmShtpyBIU4rxm1olIbGmXRzZzF6kfLUjHlufKa7
+# fkZvTcWFEivPmiJECKiFN84HYVcGFxIkwMQxc6GYNVdHfhA6RdktpFGQmKmgBzfE
+# ZRqqHGsWd/enl+w/GTCZbzH76kCy59LE+snQ8FB2dFn6jW0XMr746X4D9OeHdZrU
+# SpEshQMTAitCgPKJajbPyEygzp74y42tFqfT3tWbGKfGkjrxgmPxLg4kZN8CAwEA
+# AaOCAXcwggFzMA4GA1UdDwEB/wQEAwIBhjATBgNVHSUEDDAKBggrBgEFBQcDAzAP
+# BgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQfAL9GgAr8eDm3pbRD2VZQu86WOzAf
+# BgNVHSMEGDAWgBSP8Et/qC5FJK5NUPpjmove4t0bvDB6BggrBgEFBQcBAQRuMGww
+# LQYIKwYBBQUHMAGGIWh0dHA6Ly9vY3NwLmdsb2JhbHNpZ24uY29tL3Jvb3RyMzA7
+# BggrBgEFBQcwAoYvaHR0cDovL3NlY3VyZS5nbG9iYWxzaWduLmNvbS9jYWNlcnQv
+# cm9vdC1yMy5jcnQwNgYDVR0fBC8wLTAroCmgJ4YlaHR0cDovL2NybC5nbG9iYWxz
+# aWduLmNvbS9yb290LXIzLmNybDBHBgNVHSAEQDA+MDwGBFUdIAAwNDAyBggrBgEF
+# BQcCARYmaHR0cHM6Ly93d3cuZ2xvYmFsc2lnbi5jb20vcmVwb3NpdG9yeS8wDQYJ
+# KoZIhvcNAQEMBQADggEBAKz3zBWLMHmoHQsoiBkJ1xx//oa9e1ozbg1nDnti2eEY
+# XLC9E10dI645UHY3qkT9XwEjWYZWTMytvGQTFDCkIKjgP+icctx+89gMI7qoLao8
+# 9uyfhzEHZfU5p1GCdeHyL5f20eFlloNk/qEdUfu1JJv10ndpvIUsXPpYd9Gup7EL
+# 4tZ3u6m0NEqpbz308w2VXeb5ekWwJRcxLtv3D2jmgx+p9+XUnZiM02FLL8Mofnre
+# kw60faAKbZLEtGY/fadY7qz37MMIAas4/AocqcWXsojICQIZ9lyaGvFNbDDUswar
+# AGBIDXirzxetkpNiIHd1bL3IMrTcTevZ38GQlim9wX8wggboMIIE0KADAgECAhB3
+# vQ4Ft1kLth1HYVMeP3XtMA0GCSqGSIb3DQEBCwUAMFMxCzAJBgNVBAYTAkJFMRkw
+# FwYDVQQKExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIENv
+# ZGUgU2lnbmluZyBSb290IFI0NTAeFw0yMDA3MjgwMDAwMDBaFw0zMDA3MjgwMDAw
+# MDBaMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMTIw
+# MAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29kZVNpZ25pbmcgQ0EgMjAy
+# MDCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAMsg75ceuQEyQ6BbqYoj
+# /SBerjgSi8os1P9B2BpV1BlTt/2jF+d6OVzA984Ro/ml7QH6tbqT76+T3PjisxlM
+# g7BKRFAEeIQQaqTWlpCOgfh8qy+1o1cz0lh7lA5tD6WRJiqzg09ysYp7ZJLQ8LRV
+# X5YLEeWatSyyEc8lG31RK5gfSaNf+BOeNbgDAtqkEy+FSu/EL3AOwdTMMxLsvUCV
+# 0xHK5s2zBZzIU+tS13hMUQGSgt4T8weOdLqEgJ/SpBUO6K/r94n233Hw0b6nskEz
+# IHXMsdXtHQcZxOsmd/KrbReTSam35sOQnMa47MzJe5pexcUkk2NvfhCLYc+YVaMk
+# oog28vmfvpMusgafJsAMAVYS4bKKnw4e3JiLLs/a4ok0ph8moKiueG3soYgVPMLq
+# 7rfYrWGlr3A2onmO3A1zwPHkLKuU7FgGOTZI1jta6CLOdA6vLPEV2tG0leis1Ult
+# 5a/dm2tjIF2OfjuyQ9hiOpTlzbSYszcZJBJyc6sEsAnchebUIgTvQCodLm3HadNu
+# twFsDeCXpxbmJouI9wNEhl9iZ0y1pzeoVdwDNoxuz202JvEOj7A9ccDhMqeC5LYy
+# AjIwfLWTyCH9PIjmaWP47nXJi8Kr77o6/elev7YR8b7wPcoyPm593g9+m5XEEofn
+# GrhO7izB36Fl6CSDySrC/blTAgMBAAGjggGtMIIBqTAOBgNVHQ8BAf8EBAMCAYYw
+# EwYDVR0lBAwwCgYIKwYBBQUHAwMwEgYDVR0TAQH/BAgwBgEB/wIBADAdBgNVHQ4E
+# FgQUJZ3Q/FkJhmPF7POxEztXHAOSNhEwHwYDVR0jBBgwFoAUHwC/RoAK/Hg5t6W0
+# Q9lWULvOljswgZMGCCsGAQUFBwEBBIGGMIGDMDkGCCsGAQUFBzABhi1odHRwOi8v
+# b2NzcC5nbG9iYWxzaWduLmNvbS9jb2Rlc2lnbmluZ3Jvb3RyNDUwRgYIKwYBBQUH
+# MAKGOmh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0L2NvZGVzaWdu
+# aW5ncm9vdHI0NS5jcnQwQQYDVR0fBDowODA2oDSgMoYwaHR0cDovL2NybC5nbG9i
+# YWxzaWduLmNvbS9jb2Rlc2lnbmluZ3Jvb3RyNDUuY3JsMFUGA1UdIAROMEwwQQYJ
+# KwYBBAGgMgECMDQwMgYIKwYBBQUHAgEWJmh0dHBzOi8vd3d3Lmdsb2JhbHNpZ24u
+# Y29tL3JlcG9zaXRvcnkvMAcGBWeBDAEDMA0GCSqGSIb3DQEBCwUAA4ICAQAldaAJ
+# yTm6t6E5iS8Yn6vW6x1L6JR8DQdomxyd73G2F2prAk+zP4ZFh8xlm0zjWAYCImbV
+# YQLFY4/UovG2XiULd5bpzXFAM4gp7O7zom28TbU+BkvJczPKCBQtPUzosLp1pnQt
+# pFg6bBNJ+KUVChSWhbFqaDQlQq+WVvQQ+iR98StywRbha+vmqZjHPlr00Bid/XSX
+# hndGKj0jfShziq7vKxuav2xTpxSePIdxwF6OyPvTKpIz6ldNXgdeysEYrIEtGiH6
+# bs+XYXvfcXo6ymP31TBENzL+u0OF3Lr8psozGSt3bdvLBfB+X3Uuora/Nao2Y8nO
+# ZNm9/Lws80lWAMgSK8YnuzevV+/Ezx4pxPTiLc4qYc9X7fUKQOL1GNYe6ZAvytOH
+# X5OKSBoRHeU3hZ8uZmKaXoFOlaxVV0PcU4slfjxhD4oLuvU/pteO9wRWXiG7n9dq
+# cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
+# xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
+# qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
+# NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
+# Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
+# AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
+# FAYDVQQHEw1PYmVyZW50ZmVsZGVuMRQwEgYDVQQJEwtQZnJ1bmR3ZWcgMzEsMCoG
+# A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
+# BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
+# hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
+# AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
+# TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
+# L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
+# Ly9vY3NwLmdsb2JhbHNpZ24uY29tL2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMDBV
+# BgNVHSAETjBMMEEGCSsGAQQBoDIBAjA0MDIGCCsGAQUFBwIBFiZodHRwczovL3d3
+# dy5nbG9iYWxzaWduLmNvbS9yZXBvc2l0b3J5LzAHBgVngQwBAzAJBgNVHRMEAjAA
+# MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
+# Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
+# b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
+# EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIVFDCqP
+# C5Dzv2OCsBquVzcMvGKi8L3VzmkiDC0H9yhIMA0GCSqGSIb3DQEBAQUABIICABYp
+# +2mA8pQm18/YlgvODFgccwoEbAhLkHVBTc33gTLZkIcC3s2WjTEoSwgGy5T1tD7s
+# qIDzEAmLRyuTIf/c+mcP5g0wQMlHAdaosQ5TVPqi8vco5f5QBRA2277y6s9aycMx
+# kN+/WgIX3TL6AaQmawLf85/alNY7zKpyXfsEbWW8lWmFvkpO9EBdmXnHuInkv1Iv
+# WX0EwuCbRpIFbPoKPb/S3O0EZ5U2pjaF/5IVtwv1eyKM7XJCzDWROpuzxdMLXWIL
+# bLBxmReROKNPzm8g6WKxjQz00UBnUxXxYHb1SFQucGc/nBQTPYLyglpeZBWHHi1q
+# vtbGFqESoINXGTttFdi3IMa9Q9eA+0245MwhFwS6yKwmQ/MXgNrXA7mMTcOPVEkj
+# /rmXA3uJ5uwP1Ms4twK7sOsI+dCZUXEW5wRMq05NG7wDlXMxqvBXNdXjcoNYKYZM
+# p5ht/aO+zoDvz1+Jy6weW7yBoRQDYcCze0Jiu+pp2XIwcP6Un038RlKxYNZBTdeD
+# /AyK+qG12gan0Y83iOJebFHr62uKPRoLEFn9qCb6V7EYtIMBrksofow/CQ8Bmn6d
+# XB4uxoLOCdt65WOZtsIy/LWEyaN+g+Mifgx7IAWqhIJrQ7+A1tJO3CVarw8JYve/
+# 7K5rXFHkBW77kDfBRR4+Nf0PosmpN50JCnzjgWZLoYId7TCCHekGCisGAQQBgjcD
+# AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
+# geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
+# SAFlAwQCAQUABCDAAcPNMTRJfeMVJq4gN4odSc/RL8I2q+CMkSr/smstbAIUcsHl
+# BH57onJ0tvFNyBHr6axqa4oYDzIwMjYxMDE3MTczNjI3WjADAgEBoF2kWzBZMQsw
+# CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
+# R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
+# BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
+# A1UEBhMCQkUxGTAXBgNVBAoTEEdsb2JhbFNpZ24gbnYtc2ExNDAyBgNVBAMTK0ds
+# b2JhbFNpZ24gT2ZmbGluZSBSNDUgVGltZXN0YW1waW5nIENBIDIwMjUwHhcNMjUx
+# MDE1MDcyNTA0WhcNMzcwMTEwMDAwMDAwWjBZMQswCQYDVQQGEwJCRTEZMBcGA1UE
+# ChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMmR2xvYmFsc2lnbiBSNDUgVFNB
+# IGZvciBDb2RlU2lnbiAyMDI1MTAwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGK
+# AoIBgQDRSo2hjYZASCijCQSc2RMQPPKojE/xf4Uija2JnsJ7Snl2gDoxKjQ9HcU6
+# rVD8pgy1sBKdVxtLLFhY3gzY/PA2iwIs6ZzCnxshtjShsN1RyzRrzc4Fq+0xQx6q
+# ADUMn96mqHE/0ok53DPbmpBkkUDytGM79nQfw9WVymYgA+TkbA0/QOmPNNJIZ6Cj
+# X0t3wJfhL0caiXthBBMEWKxT5v2U7ZRbCq/DVDXA9oX1iFVBVaBpx57MLL00nyHu
+# x0InYS7Rr54M3tNhm7+0maxpyTFa51uY1PHtTJMup/l3RGooQ5YweCH2hDoUNwKO
+# C7QkFbklhPdq27EXkueg8qLOnRDmVO1r+B1yMAbl6QuV0L+OPB1SKBAPpmIFklmJ
+# 0SoibbUqxsTzejjdI+ywQLUcXilogwKWsJ46h6wjlU5AVqT7FEBYzWCTt6hf7SLQ
+# bPGs02Ba8oaaNfo0SL+aApN94luEB/wuE1lgptrckLzbQlCp56OgkAJYpqYuui+T
+# fueCIU0CAwEAAaOCAcYwggHCMA4GA1UdDwEB/wQEAwIHgDAWBgNVHSUBAf8EDDAK
+# BggrBgEFBQcDCDAMBgNVHRMBAf8EAjAAMB0GA1UdDgQWBBQy+tPhB2gnkGsI0j8d
+# PIxlNigGGTAfBgNVHSMEGDAWgBR3AjsBMQ8edHfDSMjDB2NViKU7ojCBpQYIKwYB
+# BQUHAQEEgZgwgZUwQgYIKwYBBQUHMAGGNmh0dHA6Ly9vY3NwLmdsb2JhbHNpZ24u
+# Y29tL2dzb2ZmbGluZXI0NXRpbWVzdGFtcGNhMjAyNTBPBggrBgEFBQcwAoZDaHR0
+# cDovL3NlY3VyZS5nbG9iYWxzaWduLmNvbS9jYWNlcnQvZ3NvZmZsaW5lcjQ1dGlt
+# ZXN0YW1wY2EyMDI1LmNydDBKBgNVHR8EQzBBMD+gPaA7hjlodHRwOi8vY3JsLmds
+# b2JhbHNpZ24uY29tL2dzb2ZmbGluZXI0NXRpbWVzdGFtcGNhMjAyNS5jcmwwVgYD
+# VR0gBE8wTTAIBgZngQwBBAIwQQYJKwYBBAGgMgEeMDQwMgYIKwYBBQUHAgEWJmh0
+# dHBzOi8vd3d3Lmdsb2JhbHNpZ24uY29tL3JlcG9zaXRvcnkvMA0GCSqGSIb3DQEB
+# DAUAA4ICAQCOrnCmj0eGkYpuniz6/WFm91s6KjnhkMKYlbcftgpMBtlhysVniEOf
+# BvhcvoFQw4AOHG9NRVvZpkBnag5Dt1HM3Jg21gRVCBwFyP1ET8IDxoflYx5OD4SC
+# NLHs6vCg6rFkNT81v9Zy8u0xXy3WboN5iK/SbTmLGqCrAGJihLLrfIhvddwVrdBy
+# iHteLxgjugT6JQogCSoBF2JqmH0ZBCl515btbTuWZLrQUs5vvl2o98Mdju9yyJRW
+# LzPVcUkRk9d8xBBi638FBOAuo3fcyThGcne7wUOa+TghhwIHbZ3pxTYpgo5cCxEZ
+# sH8EXwiTUTwHf0qesssg/2XdcGH7s0AR4TyOJ2QnAayYOAM/XOBxNzURQg4mhMdP
+# L/F8VCMKj3koJaVcx2akh0B82le/aBU8q2Oa++OwOwiHF5e+f9m+yhyYbwGSogWI
+# V3hgRl+VyKrch8gv35FHr/cVz8n0/CPGRXGiYJZ7P1wOOgYdkMD2iDKVYQby5Ix/
+# xCB0/lSKLnqEoFezfmnCJbGgACVswMsxhJEUjtxEcQc9afalne+IOts0v/yCRikJ
+# snmVbS0x50Dk2OH+VCiU9s/XyzgfC7WzrtQ5diIdc2Ksi3JMTJm4a0LiEIZWitD5
+# +6PokOkQ8+35TsHOwUhs87I/yyJjlIZpAV4Of1/JN8bWVB3Edm4WzjCCBqAwggSI
+# oAMCAQICEQCD2oY3t58MhAyUe4QKUngfMA0GCSqGSIb3DQEBDAUAMFMxCzAJBgNV
+# BAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9i
+# YWxTaWduIFRpbWVzdGFtcGluZyBSb290IFI0NTAeFw0yNTA3MTYwMzA1MDRaFw00
+# MTA3MTYwMDAwMDBaMF4xCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9iYWxTaWdu
+# IG52LXNhMTQwMgYDVQQDEytHbG9iYWxTaWduIE9mZmxpbmUgUjQ1IFRpbWVzdGFt
+# cGluZyBDQSAyMDI1MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEApHcW
+# +O19i+LdAoZFYzS+5X+WYvnWoFqXAfir1hynhUTdH4RW1Db+yOmrQ275jlsQ6bzo
+# Z3nN0CMncZX4E0Qhpp6Qvx27+flpfzeMQacD7VciWUiF3TLiu7wT2bBCSENUn3hf
+# GMG4PJvYFvO5o4DA1iNvHhG4oSzctodoJfb4c8EjVahCw/NLizB3ra+NWe2gZBSa
+# ZKraMxFt676yqx7RcQnjbF4R0OLGovsZt23vU69A5BdoPxdA9zu9rM+qTBsPDVUJ
+# exYwEVU0GY7BJ5mUWWniyAPHW0Wv4Azk5t7I0XUIjA3+2OGkr0dVBXVBDyEeGBVr
+# YXEdhfVLwuh6HBGJFdIrEY5KoGlpoT+4BBQe4XCH5sv15Uo+M72VKWjPA5Ex3nfF
+# JC4P5FW1SR6olCSaIrtnZzc+zgmpSyiD+GcE2udQRQHbDi74enXgazk0+ktpHZ1Z
+# 8oTvSaSIREovXSLbH3KC8uFIkXucl7XPH7ZGIrmF9eF4zuoo5FIUnsvV60kLqFDz
+# Pk+UbLmgZDUCPlFFBBehaaNvixEymx9ON2KXev+MfK6OZChqGbrOC2wvvAFHyKlT
+# ZbVHdqNiu0u5a2T1C9dSTRny1/hxLwcxL9BWPzQLwhsiyXqUzM7uD0lD9+PYMaxU
+# YgoVSxqb4xvPCiVqLNabI+WtjEzYfQ0P+6tBTFsCAwEAAaOCAWIwggFeMA4GA1Ud
+# DwEB/wQEAwIBhjATBgNVHSUEDDAKBggrBgEFBQcDCDASBgNVHRMBAf8ECDAGAQH/
+# AgEAMB0GA1UdDgQWBBR3AjsBMQ8edHfDSMjDB2NViKU7ojAfBgNVHSMEGDAWgBRG
+# shx34XsV8KU5oXDe0cQu6m2y3jCBjgYIKwYBBQUHAQEEgYEwfzA3BggrBgEFBQcw
+# AYYraHR0cDovL29jc3AuZ2xvYmFsc2lnbi5jb20vdGltZXN0YW1wcm9vdHI0NTBE
+# BggrBgEFBQcwAoY4aHR0cDovL3NlY3VyZS5nbG9iYWxzaWduLmNvbS9jYWNlcnQv
+# dGltZXN0YW1wcm9vdHI0NS5jcnQwPwYDVR0fBDgwNjA0oDKgMIYuaHR0cDovL2Ny
+# bC5nbG9iYWxzaWduLmNvbS90aW1lc3RhbXByb290cjQ1LmNybDARBgNVHSAECjAI
+# MAYGBFUdIAAwDQYJKoZIhvcNAQEMBQADggIBADKj7n7RbuRmMZZYXqlMPRJoR6X1
+# n//quXGLVfOpFoR9Ya05L94w0ywBjelyGGf+nAB+CZFQ7gUOd2a2bpfpW8Xw5ArM
+# +YjPEf8AtC4E6Yr105U1YNjlTSERoWJKc1hkSN5m4dpsYteFykzFQVwX50hYKH3y
+# Z6Vcu6Ha0EA5ofzLpi2jK2jbRDCXbFNLi5mO1xKRdB2AzAF0f5C00b4H3d5sCOB8
+# njTvAwaTMGEMeTkLWM4Z9Y+3UOtOpo1QuxXbDpXVkLXraG25iL1VtvjxEAy4534n
+# UINB9whORicJJSTLba6fOK2f/1QGWEdewWLHAzE+N5oH0QoNRALpJ5JjIfeInvO+
+# sQdBidnPuLKJ95HTj7XyMvJhFZjtbHJGlEWx4UgKcuNKLDLXWALfwQDN2Dey3kTf
+# d4yw4nQdk1PctLLK3F4L2nnLv94BMkpY+Rfl53oOEN4yTvtwCYP+VDuZrktc7Nac
+# oTVxZnKGkv8a1akckdOwQZC+i8Ay1VyzMAX/Tb4+r3c65B7cpAtq3OoUijXUJgvZ
+# xci6TX78smL2TYy2tWn+8G4krnXvy2ELR2XYnKEOS4MVmrSCsjM5nxSrghE10VDX
+# QbEfa93lhikfFoIuINKzWDLqvu8ZucmxEufxpHjNnnRVXX/Zv5KQq8pu/MQoOz6D
+# C74n5+O5bSwvT5sgMIIGozCCBIugAwIBAgIQeEqqgXNmnJAJVOQhyUfrwDANBgkq
+# hkiG9w0BAQwFADBMMSAwHgYDVQQLExdHbG9iYWxTaWduIFJvb3QgQ0EgLSBSNjET
+# MBEGA1UEChMKR2xvYmFsU2lnbjETMBEGA1UEAxMKR2xvYmFsU2lnbjAeFw0yMDEy
+# MDkwMDAwMDBaFw0zNDEyMTAwMDAwMDBaMFMxCzAJBgNVBAYTAkJFMRkwFwYDVQQK
+# ExBHbG9iYWxTaWduIG52LXNhMSkwJwYDVQQDEyBHbG9iYWxTaWduIFRpbWVzdGFt
+# cGluZyBSb290IFI0NTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBALp0
+# M+wn3BI4IRvF02Eo1lq8T9+LzJGEQyRXvGQhvDscHz1PjK0Ht/PF1wLpERSCmqq0
+# lHI7cQ0a72hrhXmOr2bqWJgNusF8edL/zbNvMUXQBXQEAHJqJ364Nz86iO2Xg/Wr
+# NU0Pn1k79S/fWcV8pTJ2YJbI7e74BH4ZUXKov0RBerx7HjsAm7y64Ja/kP6Nm8Ny
+# iwAS+CA6YDj3wcyFivuHeS6hKyDmy6CFkSO2xCgHVCje7BAxT4ryzRQfHt1VHOoo
+# MUz5IWqozfOWZ/oBQZvNDwtof7ve8UPqF+Ww3HAis2k2WXRrxuWJKnzlC4Fdqz+P
+# uNF2cvN8oqnil0G/zIxF/mHJ9mwHCwAE6BUjT4IqLfbvw/oRNkih0f16OTo0XaMs
+# Dpt3UCA0QN2xAzGtX+lih3OWA2H3lLDZXGxP5xTF4fF7DSOczXCMHWreSi2LKrvb
+# QhQFB6r7FNwx0/YfbMu+aGZEcE1tF/lx6wVzjpGSdetoXB72RGEYKWLdF2aI7Ci6
+# SW/bPnf+uTEfdRwYoqZHvdjuSIU7/bPiDz8qmMaa+oJvsaWlhh1aOvqkbHQPd1Jh
+# an+HKd45m4vus0VgMCSXFRIqhTCTJqyWpi3ocG0LqTKtLJsoCnZC8lVhUZiU3u32
+# xRdvPBUQsA6tsN7FFvRl0cwvWlYIz5nE8FWRwix5AgMBAAGjggF4MIIBdDAOBgNV
+# HQ8BAf8EBAMCAYYwEwYDVR0lBAwwCgYIKwYBBQUHAwgwDwYDVR0TAQH/BAUwAwEB
+# /zAdBgNVHQ4EFgQURrIcd+F7FfClOaFw3tHELuptst4wHwYDVR0jBBgwFoAUrmwF
+# o5MT4qLn4tcc1sfwf8hnU6AwewYIKwYBBQUHAQEEbzBtMC4GCCsGAQUFBzABhiJo
+# dHRwOi8vb2NzcDIuZ2xvYmFsc2lnbi5jb20vcm9vdHI2MDsGCCsGAQUFBzAChi9o
+# dHRwOi8vc2VjdXJlLmdsb2JhbHNpZ24uY29tL2NhY2VydC9yb290LXI2LmNydDA2
+# BgNVHR8ELzAtMCugKaAnhiVodHRwOi8vY3JsLmdsb2JhbHNpZ24uY29tL3Jvb3Qt
+# cjYuY3JsMEcGA1UdIARAMD4wPAYEVR0gADA0MDIGCCsGAQUFBwIBFiZodHRwczov
+# L3d3dy5nbG9iYWxzaWduLmNvbS9yZXBvc2l0b3J5LzANBgkqhkiG9w0BAQwFAAOC
+# AgEAi0i6Nlc8csXadfnvMvWGvdwSKOOILk82XyaZ7A8BIRCWkjjGcGtt867UDr0l
+# 74Z/4omNlaV+KUQDTaqYqPG33OopYyHc7c2ICssQaWF5KUIMI7zpxe9SHi8zN9VP
+# ZnpmqUdUM7HdFvLYZHGjMZTlb/ZNS+KEbNDJJWdPyEvQzksF1j37fUH6irHAIeB+
+# CLDZZCv56vLHCvTPLgw0YO5su5LwP/F7UhJod1mB9RwupDqMOQMN7eXMr2ZIeWPV
+# Sbj/S9IlT0hOkzuTd7CaSGy2oB2zdJ5fvSIEO3w3DYW1w5q73ZxaA420DZ9MdjTV
+# ha1Fe7Wfuy6Ju6zIv5JjSMY/yheqDbwAEV+L6ONDhIpDNM39O8Cie9sfuGfIjBXe
+# P6Z/xyjvoW9vskHPAiLrAfhLyNJ2byXfXtpoaD17RATCQW5JO6eYVgTt0SYrBJTb
+# 5O1mjj2AnaSkVXlQXuP4Gh/AFm+QFTyKpkihDHu6KuCxqYcFRpvtJVU9N2mY7UaZ
+# mIVHCh5i2/2c5cFDQo69z2/2jJH9guSf7K3jlVUF80kvbTT3/2fumUC705qAQkDa
+# I4lgH4NxkrXp5soK+d3HbLJYQZxmjZsqbx9vVwRDXINdO2mc3jn6hE0183sbbYvx
+# bwPBKVLilL97VIvfQHoLcAJ3Py+IBwIAddKvxtYiMhmjO+gwggWDMIIDa6ADAgEC
+# Ag5F5rsDgzPDhWVI5v9FUTANBgkqhkiG9w0BAQwFADBMMSAwHgYDVQQLExdHbG9i
+# YWxTaWduIFJvb3QgQ0EgLSBSNjETMBEGA1UEChMKR2xvYmFsU2lnbjETMBEGA1UE
+# AxMKR2xvYmFsU2lnbjAeFw0xNDEyMTAwMDAwMDBaFw0zNDEyMTAwMDAwMDBaMEwx
+# IDAeBgNVBAsTF0dsb2JhbFNpZ24gUm9vdCBDQSAtIFI2MRMwEQYDVQQKEwpHbG9i
+# YWxTaWduMRMwEQYDVQQDEwpHbG9iYWxTaWduMIICIjANBgkqhkiG9w0BAQEFAAOC
+# Ag8AMIICCgKCAgEAlQfoc8pm+ewUyns89w0I8bRFCyyCtEjG61s8roO4QZIzFKRv
+# f+kqzMawiGvFtonRxrL/FM5RFCHsSt0bWsbWh+5NOhUG7WRmC5KAykTec5RO86eJ
+# f094YwjIElBtQmYvTbl5KE1SGooagLcZgQ5+xIq8ZEwhHENo1z08isWyZtWQmrcx
+# BsW+4m0yBqYe+bnrqqO4v76CY1DQ8BiJ3+QPefXqoh8q0nAue+e8k7ttU+JIfIwQ
+# Bzj/ZrJ3YX7g6ow8qrSk9vOVShIHbf2MsonP0KBhd8hYdLDUIzr3XTrKotudCd5d
+# RC2Q8YHNV5L6frxQBGM032uTGL5rNrI55KwkNrfw77YcE1eTtt6y+OKFt3OiuDWq
+# RfLgnTahb1SK8XJWbi6IxVFCRBWU7qPFOJabTk5aC0fzBjZJdzC8cTflpuwhCHX8
+# 5mEWP3fV2ZGXhAps1AJNdMAU7f05+4PyXhShBLAL6f7uj+FuC7IIs2FmCWqxBjpl
+# llnA8DX9ydoojRoRh3CBCqiadR2eOoYFAJ7bgNYl+dwFnidZTHY5W+r5paHYgw/R
+# /98wEfmFzzNI9cptZBQselhP00sIScWVZBpjDnk99bOMylitnEJFeW4OhxlcVLFl
+# tr+Mm9wT6Q1vuC7cZ27JixG1hBSKABlwg3mRl5HUGie/Nx4yB9gUYzwoTK8CAwEA
+# AaNjMGEwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYE
+# FK5sBaOTE+Ki5+LXHNbH8H/IZ1OgMB8GA1UdIwQYMBaAFK5sBaOTE+Ki5+LXHNbH
+# 8H/IZ1OgMA0GCSqGSIb3DQEBDAUAA4ICAQCDJe3o0f2VUs2ewASgkWnmXNCE3tyt
+# ok/oR3jWZZipW6g8h3wCitFutxZz5l/AVJjVdL7BzeIRka0jGD3d4XJElrSVXsB7
+# jpl4FkMTVlezorM7tXfcQHKso+ubNT6xCCGh58RDN3kyvrXnnCxMvEMpmY4w06wh
+# 4OMd+tgHM3ZUACIquU0gLnBo2uVT/INc053y/0QMRGby0uO9RgAabQK6JV2NoTFR
+# 3VRGHE3bmZbvGhwEXKYV73jgef5d2z6qTFX9mhWpb+Gm+99wMOnD7kJG7cKTBYn6
+# fWN7P9BxgXwA6JiuDng0wyX7rwqfIGvdOxOPEoziQRpIenOgd2nHtlx/gsge/lgb
+# KCuobK1ebcAF0nu364D+JTf+AptorEJdw+71zNzwUHXSNmmc5nsE324GabbeCglI
+# WYfrexRgemSqaUPvkcdM7BjdbO9TLYyZ4V7ycj7PVMi9Z+ykD0xF/9O5MCMHTI8Q
+# v4aW2ZlatJlXHKTMuxWJU7osBQ/kxJ4ZsRg01Uyduu33H68klQR4qAO77oHl2l98
+# i0qhkHQlp7M+S8gsVr3HyO844lyS8Hn3nIS6dC1hASB+ftHyTwdZX4stQ1LrRgyU
+# 4fVmR3l31VRbH60kN8tFWk6gREjI2LCZxRWECfbWSUnAZbjmGnFuoKjxguhFPmzW
+# AtcKZ4MFWsmkEDGCA2EwggNdAgEBMHMwXjELMAkGA1UEBhMCQkUxGTAXBgNVBAoT
+# EEdsb2JhbFNpZ24gbnYtc2ExNDAyBgNVBAMTK0dsb2JhbFNpZ24gT2ZmbGluZSBS
+# NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
+# SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
+# DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
+# BDEyBDBoVk3uHgN/ghLCIGQkwNTArUTdURSCOMkVj4za3DK5IN6LRWvcnO7+7+co
+# A4HlhbswgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
+# ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
+# IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
+# KoZIhvcNAQEMBQAEggGAE1YjSUzzNZAIxBn14BkyOhOt/GoVdt91nT5U0/7xQOUA
+# bUeJZwZar3t43ZkASNeVXYy8x1jHtZqt7RnGe3uPyV2FahoY0HnB7FuzItbpY5bf
+# xRMmX1E3qgO8IbHVodNqnGxHMQrxeSMcqtDBEZ8JV07GcSjKrdqxEZroOViyXYBk
+# //LTuA+12x61DKkFpfSItVuInWXOAC98J7Lhn+rq/+kWt/1K2qo7p/ZX7R0VHXHN
+# GWtdgR8XtHufeBMN5gihPat8V8PlunarkptrmE4dBP3zCgp3p3rELEk96t++BgTn
+# x5xsAQJUlwxSlJAISrBsxDxnWQWZ0a7tyBixq90o6/dcZ5UOGxZh1Womp1H4MNNy
+# QBfNI6+lKegmasIFKeQi+aGcWzwILvm/h8/Lqq3O0ryE16UvGFN6M+ZMo0hadn+Q
+# Fw1f+MkIWVVI63rcg11ESemUhaqyVh5444WA5KW5qBsITt4KPKqdLJgcgjYsf3H7
+# z26jtuVstuuNsZW2UJOK
+# SIG # End signature block

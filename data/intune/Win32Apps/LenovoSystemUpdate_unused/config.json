@@ -93,6 +93,14 @@
     {
       "returnCode": 1618,
       "type": "retry"
+    },
+    {
+      "returnCode": -2018,
+      "type": "retry"
+    },
+    {
+      "returnCode": -2019,
+      "type": "retry"
     }
   ]
 }

@@ -32,6 +32,8 @@
     ---------- -------------------- ----------------------------
     01.02.2025 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    19.10.2026 Konrad Brunner       Use local file from AlyaLogoUrlQuad if present, always draw on bgColor background
+    20.10.2026 Konrad Brunner       Cross-platform image conversion: ImageMagick on Linux/macOS (System.Drawing is Windows-only since .NET 7)
 
 #>
 
@@ -104,15 +106,33 @@ $ppicPath = "$AlyaData\azure\publicStorage\logos\UserProfile.png"
 $ppic = Get-Item -Path $ppicPath -ErrorAction SilentlyContinue
 if (-Not $ppic)
 {
-    $pics = Get-ChildItem -Path "$AlyaData\azure\publicStorage\logos\*.*" -Include "*.png","*.jpg","*.jpeg"
-    $qpics = $pics | Where-Object { $_.Name -like "*Quad*"}
-    if ($qpics.Count -gt 0)
+    $qpic = $null
+    # Check the configured quad logo first: extract the file name from
+    # $AlyaLogoUrlQuad and use the local file in the logos folder, if present
+    if (-Not [string]::IsNullOrWhiteSpace($AlyaLogoUrlQuad) -and $AlyaLogoUrlQuad -ne "PleaseSpecify")
     {
-        $qpic = Select-Item -list $qpics -message "Pleas eselect the profile picture to be used" -outputMode Single
+        $logoFileName = [System.IO.Path]::GetFileName(($AlyaLogoUrlQuad -split "[?#]")[0])
+        if (-Not [string]::IsNullOrWhiteSpace($logoFileName))
+        {
+            $qpic = Get-Item -Path "$AlyaData\azure\publicStorage\logos\$logoFileName" -ErrorAction SilentlyContinue
+            if ($qpic)
+            {
+                Write-Host "  Using configured logo '$logoFileName' from the logos folder" -ForegroundColor $CommandInfo
+            }
+        }
     }
     if (-Not $qpic)
     {
-        $qpic = Select-Item -list $pics -message "Pleas eselect the profile picture to be used" -outputMode Single
+        $pics = Get-ChildItem -Path "$AlyaData\azure\publicStorage\logos\*.*" -Include "*.png","*.jpg","*.jpeg"
+        $qpics = $pics | Where-Object { $_.Name -like "*Quad*"}
+        if ($qpics.Count -gt 0)
+        {
+            $qpic = Select-Item -list $qpics -message "Pleas eselect the profile picture to be used" -outputMode Single
+        }
+        if (-Not $qpic)
+        {
+            $qpic = Select-Item -list $pics -message "Pleas eselect the profile picture to be used" -outputMode Single
+        }
     }
     if (-Not $qpic)
     {
@@ -120,33 +140,83 @@ if (-Not $ppic)
     }
 
     Write-Host "  Converting image" -ForegroundColor $CommandInfo
-    $img = [System.Drawing.Image]::FromFile($qpic.FullName)
     [int32]$new_width = 648
     [int32]$new_height = 648
-    $stream = New-Object -TypeName System.IO.MemoryStream
-    $format = [System.Drawing.Imaging.ImageFormat]::Png
-    if ($img.Width -gt $new_width -or $img.Height -gt $new_height)
+    if (($PSVersionTable.PSVersion.Major -lt 6) -Or $IsWindows)
     {
-        $sw = $new_width / $img.Width
-        $sh = $new_height / $img.Height
-        $s = [System.Math]::Min($sw,$sh)
-        $new_width = $img.Width * $s
-        $new_height = $img.Height * $s
-        $img2 = New-Object System.Drawing.Bitmap($new_width, $new_height)
+        $img = [System.Drawing.Image]::FromFile($qpic.FullName)
+        $stream = New-Object -TypeName System.IO.MemoryStream
+        $format = [System.Drawing.Imaging.ImageFormat]::Png
+        if ($img.Width -gt $new_width -or $img.Height -gt $new_height)
+        {
+            $sw = $new_width / $img.Width
+            $sh = $new_height / $img.Height
+            $s = [System.Math]::Min($sw,$sh)
+            $new_width = $img.Width * $s
+            $new_height = $img.Height * $s
+        }
+        # Always draw onto a background filled with $bgColor (default White), so the
+        # generated profile picture never keeps transparent areas
+        $img2 = New-Object System.Drawing.Bitmap([int]$new_width, [int]$new_height)
         $graphic = [System.Drawing.Graphics]::FromImage($img2)
         $graphic.Clear([System.Drawing.Color]::$bgColor)
         $graphic.CompositingMode = [System.Drawing.Drawing2D.CompositingMode]::SourceOver
         $graphic.DrawImage($img, 0, 0, $new_width, $new_height)
         $img2.Save($stream, $format)
         $stream.Seek(0, [System.IO.SeekOrigin]::Begin) | Out-Null
+        $binary = $stream.ToArray()
+        [System.IO.File]::WriteAllBytes($ppicPath, $binary)
     }
     else
     {
-        $img.Save($stream, $format)
-        $stream.Seek(0, [System.IO.SeekOrigin]::Begin) | Out-Null
+        # System.Drawing.Common is blocked on non-Windows since .NET 7
+        # (PInvokeGdiPlus type initializer fails): use ImageMagick instead.
+        # Same semantics as the Windows path: pictures larger than 648x648 are
+        # scaled down proportionally to fit, smaller ones are stretched to
+        # exactly 648x648, always flattened onto the $bgColor background.
+        $has_magick = [bool](Get-Command "magick" -ErrorAction SilentlyContinue)
+        $has_convert = [bool](Get-Command "convert" -ErrorAction SilentlyContinue)
+        $has_identify = [bool](Get-Command "identify" -ErrorAction SilentlyContinue)
+        if (-Not $has_magick -And (-Not $has_convert -Or -Not $has_identify))
+        {
+            throw "Image conversion on Linux/macOS requires ImageMagick ('magick' or 'convert'+'identify'). Install ImageMagick or provide the UserProfile.png created on a Windows machine."
+        }
+        # Normalize the manually concatenated path (backslashes) for external calls
+        $ppic_path_local = $ppicPath.Replace("\", "/")
+        if ($has_magick)
+        {
+            $img_info = & magick identify -format "%w %h" $qpic.FullName
+        }
+        else
+        {
+            $img_info = & identify -format "%w %h" $qpic.FullName
+        }
+        $img_size = "$img_info".Trim() -split "\s+"
+        [int32]$img_width = $img_size[0]
+        [int32]$img_height = $img_size[1]
+        if ($img_width -gt $new_width -or $img_height -gt $new_height)
+        {
+            # Scale down proportionally to fit 648x648
+            $resize_arg = "$($new_width)x$($new_height)"
+        }
+        else
+        {
+            # Stretch to exactly 648x648 (same as DrawImage on the Windows path)
+            $resize_arg = "$($new_width)x$($new_height)!"
+        }
+        if ($has_magick)
+        {
+            & magick $qpic.FullName -resize $resize_arg -background $bgColor -flatten "PNG:$ppic_path_local"
+        }
+        else
+        {
+            & convert $qpic.FullName -resize $resize_arg -background $bgColor -flatten "PNG:$ppic_path_local"
+        }
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw "ImageMagick conversion failed with exit code $LASTEXITCODE"
+        }
     }
-    $binary = $stream.ToArray()
-    [System.IO.File]::WriteAllBytes($ppicPath, $binary)
 }
 
 Write-Host "Gettting users" -ForegroundColor $CommandInfo
@@ -171,8 +241,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDwxo4ibvqcjUOv
-# P4+qR75lJr9doZHhRXzWMRsywOcSZqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCzZozvbvCR6E/l
+# +FyVvrjoSt6C1EvO/YwhJO9O99aV+aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -239,10 +309,10 @@ Stop-Transcript
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -250,17 +320,17 @@ Stop-Transcript
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -270,39 +340,39 @@ Stop-Transcript
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOTGB1uv
-# M1z1I5Dg+fL7iT4YjdFQi01Bo25HMYLat2ILMA0GCSqGSIb3DQEBAQUABIICABeV
-# XZ3fCbuk57QWqcnPexvkRJQUyWuVc5Ni2n0IiFNkB/fJs/Zmqlz8fVRAaKKGpw3g
-# IcCezpRTy2xJUxb20LZfXqhaC0e0/z1nVDan9ZSy9Qar7UROUHeeek1f7MeIG/E6
-# idarbyEPYcXWG2S4zU0d03DQAoz5EZ3aOEIPGMgTHAI7hPUowiI4CgGYGc4XgXCW
-# yyzC7yzSwak6iGsrhtXow2fooaApUl9QRQNV3p7e2HfjBpO/xwtR2/Q3bJT0mHlX
-# sfbmH0XdFutBDvlaH52z6GuussZacCijxJhXfJDYTlGc0YncAc2EtDTHL+fE/Bs6
-# 9JTbqILsVMoOtLiuQxQNPTJ3MR3d2vOgd3CsTdgrjyc1B54oYapKIYIDo8dDoATO
-# hI5yG2Z5feNfnAhSVw0PDX/o8cCf5tFWo/Fvg1hTX1g9DQP9gu6GJjl6qRpR2+os
-# WAQFhAE10APyjFp9hg8GKhPlvIjvs3hlYTXC8iVifrVM/E9AdfHGOPWiaaxq0Ocg
-# lZ/ygWgimY1Tu3rp28VAzueiLBjkYsnBGAtPVKeKL2s+sHKVjy3jJaQ+Nh9AlT5g
-# iPZtFylQq49ON6vvusnlaQqdbli4m1YClL7Cr7aLtoDr3dRsdeq+YhS30Lob4ey6
-# arv3X8KOjd7597q7EoosSE2qI1KTKWGc2SxEQM33oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIIYZcOIE
+# lYdYSDn9k+q2blvZzGKHBLke3eLG2E8I6fmjMA0GCSqGSIb3DQEBAQUABIICADQe
+# XM7ktlX6no4d82THyvpDW/9O9tFUL44+unRT7tlx2DJDVGRvxlCduq77yfhz5xar
+# 1KIqZ7gT7W/lRDrZAhVLf0w00SXEMDqfwqVCW1J7zQC4kuOnD88aOtb+gG+oAkjE
+# BL0UantgcTXgyHdDGrU1YFmW357ej+WZSX26sW4dMKyIa/YoZgcO1eTJ+M+tEwox
+# UjmlZA4Y5bTFmRlCLCW1JH18x0tfhqyBqiS7YfQ0JXeU98Jl+5FzKHdfBtAJ29JY
+# B0OM76D1KuGcf78prosQ5gjQvfDr4Kh2GchQf8/lMQYX+uHf995t7bNF35IIR5Ix
+# w2VlCjcJJkj3rUWrcLpbosg01c4E9SAw7humWnbyn/fnh3SFvQOWAnH0DKYRu//e
+# BNPPJxPfhqFHGYSwNCHoY81Vp2wv4QasCQNw1SOUo8OaCmp6iQ//Z+4TeaWmMRqn
+# UL4L2v5Fjyqh3YGV0xl2kNwC91qIILwNj8BDxhsJCTWwHp7gHAN2pGSLOkcPhrwR
+# VbC+PtyUjOOn9jj83SiI5SCPOL+p9F9VWoAbEGeYY/6kEJJao1l93ktYkunwgaID
+# Yg6cVMDpDfnmQy5s0ItNTESEoQM0WjTrTb/BxY3Guz8QWRXpqc11/7hcakiDoeQ9
+# fghlj7fNA2vCTrobbyEGJnQQIwK0L8GdQwAJKWUYoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDXQfZqKnv8Xi2sOOYftkcVcOf7dYsDDxzSMqgGiVa86QIUVoCN
-# Fq44Zv8Pat9VDi/0MyUcmCsYDzIwMjYwODI5MTUxNDEyWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDjrOzMubw3/lJDp9MEqWjA2gAdkk3Zp/woTmrllS0fAwIUBRPI
+# GV7DIPyWGV3DTISnZasGq/UYDzIwMjYxMDIwMTMyOTQ5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -445,18 +515,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDC3ioMOSc2xk4HZRBLIjwRnARhhFcsmEUMJxpAfhSKzFr/Zq3+DM3jgZnzf
-# GPucuQowgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCKtpWMLO/DubrsRpdFBzsGgbgqQPmDumBiNF+e4jx2SXrWlC3VQzIpnPaD
+# Yndp9kgwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAIB7b2lqkmLCF90ejS5d3rnGPp/lvpu1ay3Mdtc4u+1SM
-# bBD8lcVTac7v2yoiEEd4TImeu1wsYDPffLwSb7admUbIGZimWMa5rk9ITwc5iTrU
-# gVSkHDsjoHv+PtL5QsQcjmY64SvF97WHbMNug29tROpZXirtOl/K+C5GLb8VijDC
-# tdtrKkvQ/1kQc4Pv1RS22qLskEo4iXmjzOGQOrtfrp3akhThL9Ad6paVKt+kZ1Ym
-# pyvm/1tcFSzmfrOo38rPaYGGjIbX+rmkaLw/qPYn0IwtvAA8Dw3tsT3ee5Jj2qkQ
-# f5TeB+/TaJdaYwatwxIcdkpJ1easolzWjx8myUYItV32xTjTGXAFW8c+dTBAb8kq
-# kEibDO1uE13LWpCGe9L2vEHNbah4vgvGufRZTAJU2bLUgjdMz/sh0pgJ57d8k3aE
-# b/GmxNbH7CykQdl/69y+v58Pzomgo0RtR/dnzM4jFZMuMmTFReQU3c0XMtWZy5GY
-# 50sWGzm5kE82qc417uYQ
+# KoZIhvcNAQEMBQAEggGA0NzvRqDcqkiWYv2z59uvIj0qR7veMUNeGVG+hpERrsgF
+# KlVVVyYGwJu8xVPMCO06fO3ozi7D//lNvSt88Guu1aRGvY7UKmldjMVDDy8AhitJ
+# I+kEwJWAlpqsuEyvKHhjJmlVtT0pylNh3gxja9lUqJD3KhHEzf8SkTyhD+O19pPW
+# 25kRVQ2tCreJfNkXExCd1OjAHvU+e2tQSBVKTe1TZSX0Fu1cp4AGtKdASEP+Zw/G
+# yUmhIsePExjigjztjUT7S84MMAon8GCCaA9zhnB0ga9zeRwKertwaMAdQONp6KCU
+# lawsiO0eQDYNfN+BHHxnmdAkvKLKMNRaoG5g7HeFHTDd64mIJQMmOLwggEuUk4HE
+# Z8zT99Q1JO/e6Vvixpi/Oa+tI+JI9EVDWmJdOkEHIhtS89IYVJluLicLqhuaI+KN
+# 5vDJ2qU3aTKEvjhAUyTCpYRFqkXkdw3tuVWCAIsAMhKkOcpJEYZhoemnrWBIgNac
+# ym9wLWLvmZ0Hrh5Lt4S7
 # SIG # End signature block

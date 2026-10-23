@@ -1,4 +1,4 @@
-﻿#Requires -Version 2.0
+﻿#Requires -Version 5.1
 
 <#
     Copyright (c) Alya Consulting, 2019-2026
@@ -10,7 +10,7 @@
     published by the Free Software Foundation, either version 3 of the
     License, or (at your option) any later version.
     Alya Base Configuration is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of 
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General
     Public License for more details: https://www.gnu.org/licenses/gpl-3.0.txt
 
@@ -30,27 +30,28 @@
     History:
     Date       Author               Description
     ---------- -------------------- ----------------------------
-    28.06.2022 Konrad Brunner       Initial Version
-    06.02.2026 Konrad Brunner       Added powershell documentation
+    19.10.2026 Konrad Brunner       Initial version (ported from the SFX extraction in AcroRdrDC/Download.ps1)
+    19.10.2026 Konrad Brunner       job.exitcode wird vor exit geschrieben (Fallback fuer den Worker, falls der Prozess-ExitCode nicht lesbar ist)
 
 #>
 
 <#
 .SYNOPSIS
-Configures and enforces Azure AD authorization policy settings within a tenant using Microsoft Graph.
+UAC worker job: extracts the Adobe Acrobat Reader self-extracting setup (requires elevation via manifest) into the job output.
 
 .DESCRIPTION
-The Set-AuthorizationPolicy.ps1 script connects to Microsoft Graph and performs a series of checks on the tenant's authorization policy. It ensures that guest user restrictions and sign-up settings comply with predefined security standards. The script verifies and updates policy parameters such as GuestUserRoleId, AllowedToSignUpEmailBasedSubscriptions, and AllowEmailVerifiedUsersToJoinOrganization. Logging and module verification are handled automatically for auditing and reliability.
+This job is executed by the elevated Alya UAC worker (never directly). Write-scope contract: the job reads its sources from $InputDir and writes results EXCLUSIVELY into $OutputDir - arguments carry names and options only, never destination paths. The job runs the Adobe Reader SFX setup with the silent extraction switches (-sfx_o / -sfx_ne) targeting $OutputDir\Extracted and waits for the extraction process to finish. Expected output for the client: folder Extracted\ inside $OutputDir containing AcroRead.msi, Data1.cab and any *.msp patch files - the client moves what it needs into the package Content and deletes the output folder afterwards. Currently without consumer (AcroRdrDC was switched to the 64bit unified installer EXE which is kept unextracted); kept as library job.
 
 .INPUTS
-None. The script does not take any input parameters.
+Input files: the Adobe Reader SFX setup EXE (copied into $InputDir by Run-UacWorkerJob -InputFiles).
+Job arguments (via ArgumentsFile/job.json): SourceFileName (SFX file name in $InputDir), ProcessName (default: source file name without extension), TimeoutSeconds (default 900).
 
 .OUTPUTS
-JSON-formatted output representing the current Azure AD authorization policy after updates.
+$OutputDir\Extracted\ (AcroRead.msi, Data1.cab, *.msp) on success. Status to stdout (captured into job.log). Exit 0 on success, 1 on failure/timeout.
 
 .EXAMPLE
-PS> .\Set-AuthorizationPolicy.ps1
-Executes the script to verify and adjust Azure AD authorization policies to align with organizational security requirements.
+PS> .\Extract-AcroRdrArchive.ps1 -InputDir <input\guid> -OutputDir <output\guid> -ArgumentsFile <input\guid\job.json>
+Internal call pattern by the UAC worker.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -61,62 +62,108 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
+    [string]$InputDir = "",
+    [string]$OutputDir = "",
+    [string]$ArgumentsFile = ""
 )
 
-# Reading configuration
-. $PSScriptRoot\..\..\01_ConfigureEnv.ps1
-
-# Starting Transcript
-Start-Transcript -Path "$($AlyaLogs)\scripts\tenant\Set-AuthorizationPolicy.ps1-$($AlyaTimeString).log" | Out-Null
-
-# Checking modules
-Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
-Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
-
-# Logins
-LoginTo-MgGraph -Scopes @("Policy.Read.All","Policy.ReadWrite.Authorization")
-
-# =============================================================
-# Azure stuff
-# =============================================================
-
-Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "Tenant | Set-AuthorizationPolicy.ps1 | Azure" -ForegroundColor $CommandInfo
-Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
-
-# Checking authorization policy
-Write-Host "Checking authorization policy" -ForegroundColor $CommandInfo
-$policy = Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" }
-
-if ($policy.GuestUserRoleId -ne "2af84b1e-32c8-42b7-82bc-daa82404023b")
+# Reading job arguments (pure data, from job.json)
+$jobArguments = @{}
+if (-Not [string]::IsNullOrWhiteSpace($ArgumentsFile) -and (Test-Path $ArgumentsFile))
 {
-    Write-Warning "GuestUserRoleId changed to 'Restricted access' 2af84b1e-32c8-42b7-82bc-daa82404023b"
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -GuestUserRoleId "2af84b1e-32c8-42b7-82bc-daa82404023b"
+    try
+    {
+        $jobJson = Get-Content -Path $ArgumentsFile -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($null -ne $jobJson -and $jobJson.PSObject.Properties["Arguments"] -and $null -ne $jobJson.Arguments)
+        {
+            foreach ($property in $jobJson.Arguments.PSObject.Properties)
+            {
+                $jobArguments[$property.Name] = "$($property.Value)"
+            }
+        }
+    }
+    catch
+    {
+        Write-Warning "Could not parse arguments file: $($_.Exception.Message)"
+    }
 }
 
-if ($policy.AllowedToSignUpEmailBasedSubscriptions)
+Write-Host "[JOB] Extract-AcroRdrArchive: InputDir: $($InputDir) | OutputDir: $($OutputDir)"
+
+# Names only (never paths): sanitized to plain file names, resolved inside $InputDir/$OutputDir
+$sourceFileName = ""
+if ($jobArguments.ContainsKey("SourceFileName")) { $sourceFileName = [System.IO.Path]::GetFileName("$($jobArguments["SourceFileName"])") }
+$processName = ""
+if ($jobArguments.ContainsKey("ProcessName")) { $processName = "$($jobArguments["ProcessName"])" }
+$timeoutSeconds = 900
+if ($jobArguments.ContainsKey("TimeoutSeconds") -and "$($jobArguments["TimeoutSeconds"])" -match "^\d+$") { $timeoutSeconds = [int]"$($jobArguments["TimeoutSeconds"])" }
+if ([string]::IsNullOrWhiteSpace($processName) -and -Not [string]::IsNullOrWhiteSpace($sourceFileName))
 {
-    Write-Warning "Disabling AllowedToSignUpEmailBasedSubscriptions"
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowedToSignUpEmailBasedSubscriptions:$false
+    $processName = [System.IO.Path]::GetFileNameWithoutExtension($sourceFileName)
 }
 
-if ($policy.AllowEmailVerifiedUsersToJoinOrganization)
+$sourcePath = Join-Path $InputDir $sourceFileName
+$exitCode = 1
+if ([string]::IsNullOrWhiteSpace($sourceFileName) -or -Not (Test-Path $sourcePath))
 {
-    Write-Warning "Disabling AllowEmailVerifiedUsersToJoinOrganization"
-    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -AllowEmailVerifiedUsersToJoinOrganization:$false
+    Write-Warning "[JOB] Setup EXE not found in input directory: $sourcePath"
+}
+elseif ([string]::IsNullOrWhiteSpace($OutputDir))
+{
+    Write-Warning "[JOB] OutputDir is missing"
+}
+else
+{
+    $extractDir = Join-Path $OutputDir "Extracted"
+    $null = New-Item -Path $extractDir -ItemType Directory -Force
+    Write-Host "[JOB] Extracting $sourcePath to $extractDir"
+    & $sourcePath -sfx_o"$extractDir" -sfx_ne
+    $elapsed = 0
+    $process = $null
+    do
+    {
+        Start-Sleep -Seconds 5
+        $elapsed += 5
+        $process = Get-Process -Name $processName -ErrorAction SilentlyContinue
+    } while ($process -and ($elapsed -lt $timeoutSeconds))
+
+    if ($process)
+    {
+        Write-Warning "[JOB] TIMEOUT after $($timeoutSeconds)s - extraction process still running, terminating it"
+        Stop-Process -Name $processName -Force -ErrorAction SilentlyContinue
+    }
+    elseif (Test-Path (Join-Path $extractDir "AcroRead.msi"))
+    {
+        Write-Host "[JOB] Extraction complete: AcroRead.msi found in $extractDir"
+        Write-Host "[JOB] Done. Please pick up Extracted\ (AcroRead.msi, Data1.cab, *.msp) from the output directory."
+        $exitCode = 0
+    }
+    else
+    {
+        Write-Warning "[JOB] Extraction finished but AcroRead.msi was not found in $extractDir"
+    }
 }
 
-Get-MgBetaPolicyAuthorizationPolicy | Where-Object { $_.Id -eq "authorizationPolicy" } | ConvertTo-Json -Depth 5
+# Declare the exit code to the bus (fallback when the process exit code cannot be read)
+if (-Not [string]::IsNullOrWhiteSpace($OutputDir))
+{
+    try
+    {
+        Set-Content -Path (Join-Path $OutputDir "job.exitcode") -Value "$exitCode" -Encoding UTF8 -Force
+    }
+    catch
+    {
+        Write-Warning "[JOB] Could not write job.exitcode: $($_.Exception.Message)"
+    }
+}
 
-# Stopping Transcript
-Stop-Transcript
+exit $exitCode
 
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCA3NnMv7UOCDZVs
-# ftNWy0FxA21kfD1opM0BnEfXbj+KaqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAT5D/DOuZ+R7Yx
+# EETytj2IyorQzNyNcMmvSQK9lEesiqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -183,10 +230,10 @@ Stop-Transcript
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -194,17 +241,17 @@ Stop-Transcript
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -214,39 +261,39 @@ Stop-Transcript
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINGMK5cl
-# zTB0UyS4hV5fQsQqVwxsmMT5c+B8AUwMJ6FJMA0GCSqGSIb3DQEBAQUABIICAL61
-# HLitfTTMcIG7/aYlpL34AaBJlLA+6dg64aAzGQsEAeIaM8y6f7NZnQA/UStZDCR1
-# VqxO+m9pNKuOWC+Q4z+gvFqI7CNTwd2QYZJMdARTJaxaGagY4WY5Fx/Dzc5Qro2/
-# 1PUuuHpgP4a5o+w0nihp6nlwUx/rSKsfUq6rw8OLX08mkjNuNVv66Bh88qA0y2nq
-# CoEu1bwv2R9v/ztIXVHmLepme3uKMV+FCvHbbhW9v+c1U0b8nQBOnTdiskDZS9mh
-# MRJ81d60yRRTBjZmG68hmSCOLp+O8RvWQsR6Bnq1jQOc6/i6F4qpK39/nry048Ws
-# Tc/QCBPOOYfpHwuePi4IJVmCWfHaOEcRfa91I8dgqy9ASv+rjDCalE+eIWFLwBuk
-# xUkHrSgOiuGQAKe9TAmUsihoM9W33ddp/n9UY4jzzeumoc5IU6xq5PGsTwQ3zWj7
-# jmA5f50XzVO3Vs98N0tjXHvGQfmI7OxLUXhaG8/TwHpx2fiE64E6EspXZrp8TOFL
-# Ymv+9Q8nC2pchOPJHaetr2bZC/YUr25KL9HLI1u2bKfXvFIFpIr+1Dlx3e2PA/LR
-# D/83oX3mEKTi2rpoCXCVpunJwtVHdftF7ovNiiBOLU/2XAM64EgB8de2jxtoIqAQ
-# La7yQy7/e9qsxi+inw5XDaNM6/Vt4TiCJpEKceVJoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILGXXbMv
+# kYNKJyXB8Wtxhv7HgSDaiv4O23Rw87tBv1HRMA0GCSqGSIb3DQEBAQUABIICABtD
+# iX4r/IdyUQ9AlhTqBspiuqF+FLvKNI0MCfaa9c4IgVQX8nDaXbAjTLXqzK0Bb6/U
+# X/ARG7IJDmNctA8JZVFT9bMn4O9aDoPPX0zkO80GP9Zk55dJJgj5QHal+DIdXTP7
+# +rC9uDRacIDtBnKGRpbXXhkjNC+h8PnNh2VmxYjogTJsLksBVz7gb9n2VOABzX8l
+# B2lLqDzQK3Fb0IX48nax0jhhFtWPjQFBFan6lmFo9AqNarQPgkSLAjsut76BHhT0
+# av7cBIHpnG4Ckw97wVM4Jto/oXJD/E4fXwRaA4tt2ngfHygaNetoO1T8AX1MluXF
+# 2UayplJNf8dkWC1YxbtQtRWWDJcC/ENEqNsBChJpyPwB6iVAFe8mhX+Upf0gHTGT
+# 3hrbLXMezBwPFmZqTPZq0XVfGRTnTy2+7pr9ynO8p55cZd+xGx4tMz2XgOIxQ/zc
+# o57y7nRqF7fdtZtomi2rwUwqw6hxNb9IOmLt+Ed73GNEtKXcptC1q+DuG+iOrdK/
+# Xy4Deu4Bgmyizuq1xy2iOtGmVCDPx4Mk3fzdqEA1xl0ACB+jJZY81vYYb7NtuEN3
+# 2vFex4zI8Q1wnJxMmjhG+A4J1ClcMehuGrDhBW0eAVXdmWRNlzuAQ+l+3KIO4mGC
+# bqv2GE3Avd4DKyxxiM5TSzm3PjpJxhU4UVZYYKveoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCD6nA8pjtxMDEPzR9H4wwBgdm5LGiModRqWOQnkQpHEuAIUVdn1
-# qQRL0lGM6FgZzg4hMiOFa9wYDzIwMjYwODI5MTUzNzQyWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDzALij2NWinqk4+OcfPqt2scYOzKoQxzkexD7fP0+bdgIUc16X
+# lGnD5JPT/ykxEmb5RNymlQMYDzIwMjYxMDIwMTMzNTI3WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -389,18 +436,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDCqAY+e3iip9/1ltakrDuc4zoTYnK0wbQkkoQZn+lGdWEEKxnFDeck3C98+
-# rIPz014wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDxcatF6eCARLC5tiK8QBiOBfdHfTRDoGlzGO/EzJVQJ2CxQQ5Nm2ovhqio
+# 7hI8RvAwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAthtsuzQZTJG94RXD4AoxZFcJggogr/cZktspvHr/KH28
-# O2dAVqZ7Hanfl6O+C5xzeoYXqZepcPVq6ZhyQBDw5TKcc6AGX4ymPSrKMTacUYdr
-# jaKWDRgGoj4QAkys3fIXnuwd5vLNFQv+9PpMqJhDz7RAadDvWso/f6nSf2fO1l00
-# OBcrCulxTZ5nFvlssJt0jt/7qzU+uDHBj+S3j7lWS1O1FeWJMtTA3LIj3r3FGpkq
-# Kx8y9wc0FFO/ri+1+KiGbb0Us700HQ6+85uqbj1GkAtBmh6z3EIHQxicPEWK4RSI
-# eKocDqX2hd+j1uTOFf8GGeYuXbI+Q4nI6I22gI5xVD67bh8Wwgrh2puRDU0NoWb6
-# c7d9oSk752v6k7P7Rlfi2j30+LWc6HU5Ln67xjK8LsUYqsLYnVmvR78PqRGrM9ye
-# +neYKEguKXOwjacK7PluXjEi3FOypRxcJChcEJi32zXcRMylOyLqb3LIktR6WPRZ
-# O3nnsPvXHs/iq454dg6q
+# KoZIhvcNAQEMBQAEggGAsabdSlkIig7GkD4YYdJ59pVOUqcDM8kf9YHWbu2+RuZP
+# Hkpe9E05hYz2DxInk1G9iZE77JVG2GJ5cXNeRfa4uQI1jFZEB7ssC2iFYLz0fq+W
+# CgweMhHjdMoszqisKarKVIUKRANnzfcGpiXYlzPRLcwJlm19V8mzSZXvVXSkZ6kP
+# n6h/c8/SRv7FaN2sk+hiRBvp0GZBAe0zVJISHuL/QcLsRUKN93N92ENf0EESGxvU
+# 8bYwHE1de/+T2RMVTl+H6NP1o3Q3Z3nMd3qeiCE9V+qccWE/fVwUk9WMfaHLXZTc
+# S9vXEqvnZNhpFkkH08wAzCU3EOAwC6tUMQC0FoyoAobnbqUX9PZ2biM01TtDMOyF
+# WkgF5fGXPyOjfXWXK0VXMVBuJ7u96gmuQl1DcgBe5Gt98ityud3lpe9PyHDNt/D7
+# Qs29jkaT2b6hCXYwKwWkzNKalBnEG3JMHJIdAE4EqLsx8ODNxmxmt+qyRrf781tJ
+# /OHyMRdMd4eJmvrh4U0M
 # SIG # End signature block

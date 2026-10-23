@@ -52,6 +52,14 @@
                                     respektieren den Silent-Modus
                                     (Anlass: Barco ClickShare - data.barco.com blockt Datacenter-IPs und
                                     Nicht-Browser-Clients, der Klick-Ablauf loest dort nichts aus)
+    20.10.2026 Konrad Brunner       Auto-Download-Erfassung ohne Klick: downloadWillBegin-Events werden
+                                    nach dem Seitenladen (Sofortcheck) und in den Fehlerpfaden vor den
+                                    Abbruch-Throws ausgewertet (Parameter AutoDownloadWaitSeconds,
+                                    Default 20 s; 0 deaktiviert). Behandelt Seiten, die den Download
+                                    automatisch per JS-Countdown starten und weder Link- noch Button-
+                                    Treffer liefern (Anlass: SourceForge-Countdown-Seite, Scribus -
+                                    Residential-Pool passiert Cloudflare, aber der Standard-Scan
+                                    findet nichts, waehrend der Countdown-Download bereits laeuft)
 
 #>
 
@@ -84,6 +92,13 @@
 #      Cloud-Browser blockt), werden die XHR/Fetch-Aufrufe aus dem
 #      Netzwerkverkehr ueber die Scrape-API (asp=true) wiederholt und
 #      ihre JSON-Antworten nach Installer-URLs durchsucht.
+#   4b) Seiten, die den Download OHNE Klick automatisch starten (z. B.
+#      SourceForge mit JS-Countdown): downloadWillBegin-Events werden
+#      bereits nach dem Seitenladen (Sofortcheck des EventSinks) und in
+#      den Fehlerpfaden vor den Abbruch-Throws ausgewertet; aktives
+#      Warten bis AutoDownloadWaitSeconds (Default 20 s, 0 deaktiviert).
+#      Ein abgegriffener Auto-Download wird wie ein Klick-Download
+#      behandelt (Browser-Download abbrechen, URL geht in die Kaskade).
 #   5. Download-Kaskade (jeder Versuch wird gecatcht, protokolliert und
 #      ausgewertet, bevor der naechste Weg probiert wird):
 #        a) Direkt mit Invoke-WebRequest (inkl. Cookies aus dem Browser)
@@ -145,6 +160,13 @@
 # Browser-Clients (TLS-Fingerprinting) blockt: der Request kommt aus einem
 # echten Browser ueber die lokale Internetleitung. Der Erstlauf installiert
 # das Microsoft.Playwright-Paket und Chromium (einmalig, mehrere Minuten).
+#
+# Parameter AutoDownloadWaitSeconds (Default 20): Wartezeit fuer automatisch
+# gestartete Downloads ohne Klick (z. B. SourceForge-JS-Countdown). Nach dem
+# Seitenladen wird der EventSink sofort geprueft; findet auch der Link-/
+# Button-Scan nichts, wartet das Skript in den Fehlerpfaden bis zu dieser
+# Anzahl Sekunden auf ein downloadWillBegin-Event, bevor es abbricht.
+# 0 deaktiviert die Auto-Download-Erfassung.
 
 [CmdletBinding()]
 param(
@@ -179,6 +201,8 @@ param(
     [int]$PageLoadWaitSeconds = 120,
     [Parameter(Mandatory = $false)]
     [int]$DownloadEventWaitSeconds = 90,
+    [Parameter(Mandatory = $false)]
+    [int]$AutoDownloadWaitSeconds = 20,
     [Parameter(Mandatory = $false)]
     [int]$FileTimeoutSeconds = 1800,
     [Parameter(Mandatory = $false)]
@@ -812,6 +836,63 @@ function Find-DownloadCandidateInEvents {
         if ($best.Priority -eq 0) { break }
     }
     return $best
+}
+
+function Wait-AutoDownloadCandidate {
+    param(
+        $WebSocket,
+        $Events,
+        [int]$StartIndex = 0,
+        [int]$WaitSeconds = 20
+    )
+    # Download-Events, die OHNE Klick ausgeloest wurden (z. B. SourceForge-
+    # JS-Countdown): erst Sofortcheck des EventSinks, dann (WaitSeconds > 0)
+    # aktives Warten auf neue CDP-Events mit StopCondition.
+    $autoCandidate = Find-DownloadCandidateInEvents -Events $Events -StartIndex $StartIndex
+    if ($autoCandidate -and -Not [string]::IsNullOrEmpty($autoCandidate.Guid)) {
+        return $autoCandidate
+    }
+    if ($WaitSeconds -le 0) {
+        return $autoCandidate
+    }
+    Write-Host "Warte bis zu $WaitSeconds s auf einen automatisch gestarteten Download (z. B. JS-Countdown)..."
+    $null = Watch-CdpEvents -WebSocket $WebSocket -Seconds $WaitSeconds -EventSink $Events -StopCondition {
+        $watchCandidate = Find-DownloadCandidateInEvents -Events $Events -StartIndex $StartIndex
+        ($null -ne $watchCandidate -and -Not [string]::IsNullOrEmpty($watchCandidate.Guid))
+    }
+    return Find-DownloadCandidateInEvents -Events $Events -StartIndex $StartIndex
+}
+
+function Invoke-AutoDownloadCapture {
+    param(
+        $WebSocket,
+        $Candidate,
+        $EventSink,
+        [string]$Label = "Automatisch gestarteter Download abgegriffen"
+    )
+    # Spiegelt das Klick-Handling: URL/Name uebernehmen und den Browser-
+    # Download sofort abbrechen (die Datei wird ueber die Kaskade geholt).
+    Write-Host "$Label (Quelle: $($Candidate.Source)): $($Candidate.Url)"
+    $capturedName = $null
+    if (-Not [string]::IsNullOrWhiteSpace($Candidate.SuggestedFilename)) {
+        $capturedName = [string]$Candidate.SuggestedFilename
+    }
+    $capturedKnownGuid = ""
+    if (-Not [string]::IsNullOrEmpty($Candidate.Guid)) {
+        try {
+            $null = Invoke-Cdp -WebSocket $WebSocket -Method "Browser.cancelDownload" -Params @{ guid = [string]$Candidate.Guid } -SessionId "" -TimeoutSeconds 30 -EventSink $EventSink
+            Write-Host "Browser-Download abgebrochen (Guid: $($Candidate.Guid))"
+        }
+        catch {
+            Write-Host "Warnung: Browser-Download konnte nicht abgebrochen werden: $($_.Exception.Message)" -ForegroundColor $CommandWarning
+            $capturedKnownGuid = [string]$Candidate.Guid
+        }
+    }
+    return [PSCustomObject]@{
+        Url       = [string]$Candidate.Url
+        Name      = $capturedName
+        KnownGuid = $capturedKnownGuid
+    }
 }
 
 function Find-DownloadProgressInEvents {
@@ -2024,7 +2105,24 @@ try {
     $jsLocationNoFragment = "(function(){return location.href.split('#')[0];})()"
     $currentLocation = $PageUrl
     $hop = 0
+
+    # --- Schritt 4b: Automatisch gestartete Downloads (ohne Klick) ---
+    # Z. B. SourceForge: Ein JS-Countdown loest den Download wenige Sekunden
+    # nach dem Seitenladen aus. Solche downloadWillBegin-Events liegen ggf.
+    # schon jetzt im EventSink (Events werden bei jeder CDP-Abfrage drained).
+    # Sofortcheck ohne aktives Warten; gewartet wird erst in den Fehlerpfaden.
+    if ($AutoDownloadWaitSeconds -gt 0) {
+        $autoCandidate = Wait-AutoDownloadCandidate -WebSocket $webSocket -Events $eventSink -StartIndex 0 -WaitSeconds 0
+        if ($autoCandidate) {
+            $captured = Invoke-AutoDownloadCapture -WebSocket $webSocket -Candidate $autoCandidate -EventSink $eventSink
+            $downloadUrl = $captured.Url
+            if ($captured.Name) { $suggestedName = $captured.Name }
+            if ($captured.KnownGuid) { $knownGuid = $captured.KnownGuid }
+        }
+    }
+
     while ($true) {
+        if ($downloadUrl) { break }
         $hopLabel = $(if ($hop -eq 0) { "Startseite" } else { "Hop $hop" })
         Write-Host "--- Suche auf $hopLabel ($currentLocation) ---" -ForegroundColor $CommandInfo
 
@@ -2073,6 +2171,15 @@ try {
         # 5b) Mit ButtonRegex nach Download-Buttons suchen (Ranking statt DOM-Reihenfolge)
         Write-Host "Keine direkten Download-Links gefunden, suche Download-Buttons..." -ForegroundColor $CommandInfo
         if ($buttons.Count -eq 0) {
+            # Letzte Chance: ein automatisch gestarteter Download (z. B. JS-Countdown)
+            $autoCandidate = Wait-AutoDownloadCandidate -WebSocket $webSocket -Events $eventSink -StartIndex 0 -WaitSeconds $AutoDownloadWaitSeconds
+            if ($autoCandidate) {
+                $captured = Invoke-AutoDownloadCapture -WebSocket $webSocket -Candidate $autoCandidate -EventSink $eventSink
+                $downloadUrl = $captured.Url
+                if ($captured.Name) { $suggestedName = $captured.Name }
+                if ($captured.KnownGuid) { $knownGuid = $captured.KnownGuid }
+                break
+            }
             if ($hop -eq 0) {
                 throw "Weder Download-Link (LinkRegex) noch Download-Button (ButtonRegex) auf der Seite '$PageUrl' gefunden."
             }
@@ -2091,6 +2198,15 @@ try {
             Write-Host "Button-Kandidat: [$($rankedButton.Index)] <$($rankedButton.Tag)> '$($rankedButton.Text)' (Score $($rankedButton.Score))$hrefInfo$junkInfo"
         }
         if ($clickableButtons.Count -eq 0) {
+            # Letzte Chance: ein automatisch gestarteter Download (z. B. JS-Countdown)
+            $autoCandidate = Wait-AutoDownloadCandidate -WebSocket $webSocket -Events $eventSink -StartIndex 0 -WaitSeconds $AutoDownloadWaitSeconds
+            if ($autoCandidate) {
+                $captured = Invoke-AutoDownloadCapture -WebSocket $webSocket -Candidate $autoCandidate -EventSink $eventSink
+                $downloadUrl = $captured.Url
+                if ($captured.Name) { $suggestedName = $captured.Name }
+                if ($captured.KnownGuid) { $knownGuid = $captured.KnownGuid }
+                break
+            }
             throw "Auf der Seite '$currentLocation' wurden nur unbrauchbare Button-Kandidaten gefunden (Report-/Agreement-Links o. ae., alle mit negativem Ranking). Die Seite ist moeglicherweise nicht vollstaendig gerendert, oder der gewuenschte Button passt nicht auf ButtonRegex ('$($ButtonRegex -join ', ')')."
         }
         $rankedIndexes = @($clickableButtons | ForEach-Object { [int]$_.Index })
@@ -2219,6 +2335,15 @@ try {
                 }
             }
             if ([string]::IsNullOrWhiteSpace($downloadUrl)) {
+                # Letzte Chance: ein automatisch gestarteter Download (z. B. JS-Countdown)
+                $autoCandidate = Wait-AutoDownloadCandidate -WebSocket $webSocket -Events $eventSink -StartIndex 0 -WaitSeconds $AutoDownloadWaitSeconds
+                if ($autoCandidate) {
+                    $captured = Invoke-AutoDownloadCapture -WebSocket $webSocket -Candidate $autoCandidate -EventSink $eventSink
+                    $downloadUrl = $captured.Url
+                    if ($captured.Name) { $suggestedName = $captured.Name }
+                    if ($captured.KnownGuid) { $knownGuid = $captured.KnownGuid }
+                    break
+                }
                 throw "Kein Button-Kandidat auf der Seite '$currentLocation' hat einen Download oder eine Navigation ausgeloest. Auch die Netzwerkverkehr-Analyse der XHR/Fetch-Aufrufe ergab keine Download-URL."
             }
             break
@@ -2390,8 +2515,8 @@ return $filename
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBcriIh89lWjQBH
-# qlmSMEEmZjs4c+z5JA2j5vGVoXOD96CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBzwRJJIbBND0bQ
+# 1Lur9EJY+PQStrHfJFI+AdXzW+g14qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -2458,10 +2583,10 @@ return $filename
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -2469,17 +2594,17 @@ return $filename
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -2489,39 +2614,39 @@ return $filename
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIP0inwcS
-# 3QGgaJeNBxcYTWg1I6Vt6+Un6ifxxvuWprs9MA0GCSqGSIb3DQEBAQUABIICAKiY
-# 948ZLOSWfW9TQTrpc/TkpxzzlbHyNPUdeO6YfTiDShv8T5Pc15cwG3gWpnGQQcWU
-# R99DquxhzWxZjE+bIz2hxVZQFfa7lwKRZKPKPDsw8wGy8/koErj3EByyfktGySo6
-# GnmhrMipce+WTymzhqrJ7/nndcrfunu7vPlrh1D+ttwyRnQrft0g52qjJRlBsPPT
-# f+h0xFGqwdqMd6FFrI8HoKUiY8BlamXcvQtLeaBSKHWE7tsWOiTLLEd/QRQsewUG
-# ToA9zc/k4rtpRVbjQ8D9+hXYGuiv2NQ25QNBBpHKxv20EYfaJquzu/9V0KTpz7fa
-# I2f9oYxf0IM0T4cQExKFlWXWRjzz/MnqcIvScr1+5nDjK/Mtq/uEFhPkMeM2HSVQ
-# QUvsCEoUHrqvqpp92tymUgfxEhT+ildk+p5ihFUHa4vymoS2lDRoydqrCdXiF7un
-# 0o46LjDOuqXbocfjoufKXsVLzjQ5CFMrhRj9desNRJgeQg5stBSDxlfwhKhZZLYJ
-# RQ0pJEO1Ag0XdU+dBLppD+NXjatT3aTh8eKkaL+QXf1lH7tqQqE8lMZfH7ZOw151
-# zRMCl65BownoRUFJDUhWkImNAF5EPWguHWFQ9xLIfX2EWrCT6aEfh6ERZx7horwk
-# teKV/ijmqh4pe8dDD13/ejrBvpFP9767/aCe2YasoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIM2VZUyb
+# GLMRmXRZUD/NuOlVerMkTU+Rq124RF+ebxX5MA0GCSqGSIb3DQEBAQUABIICAGV9
+# 9CSwvkcfcngZYX6czbGiXoeDqCdPXWY/huFhe1zOcPuxK5GyM4LZ1pV7oBUiK03D
+# Pv/XUh60siW1kDA/RNNcm496c3nZnMdE3nQt6v74CEv5oWC2dkLIlcAN6EBjPOFW
+# elEoZt9IweMhxqQkR49YyKlZmuAkZVyU0PA6x9xHHSOhngPMOsNUCl96B5AexJsG
+# e3vs4j+o84Ev1O0eqJT1Mr5HvsNLiaG7pydDjddsVegTXXuj/eLOZFwl9dwwzGTZ
+# up1d0THPnzKYxHhNN1LrzxpaIf+X3sSJmMbNJrhS2yCjwiRsjnFg5TtsuDl88YiZ
+# nIFvl2CQmJCE6TWWHojfmlKM9TqYXiXVlwtQflCGFDbH2sFSdqiuE8ImB3F2gBBR
+# UlCQkKZUHYZ7if4Pbkd2QrIZijQbdkxjnbwrYEdkXNTWciRV4ULIUZiT1E4cwxqL
+# k2FGRoTqovZtEP39HaXlqoMC7U3bs77+U+Q9imIyiSsCbtODsBPI+Bt8Df/PRIaG
+# 9R7zWfwFJPH6rQz2AJiYpwv3T+vgBlNHl3BW6dpy3Jz0G0j7iUZyFth8P66rgNRf
+# rYKz/4kK5s6vY4YxZYSKCkSj5t5+hFBiIyzbkFOBDpS3Cp3pII0AeP9MZZmI7Gqa
+# liFkzDYIntU1i5//GglcHYSroRsyJNyLOPLc1W+VoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAkxdZVCKeOCMsXxM/TkGL0KNpXDHx5wt64xunfLyEwZAIUCSpC
-# /SyljMnogcxKq5QaJXNq1swYDzIwMjYwOTA5MTgwNjAyWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCAEVPkbWBxDH8LeFXyQmI6a6c0+DBVjYNXYLFQRAYkoyAIUbF/Y
+# DsLBtUAAJ9TvwDpxyYcRXU8YDzIwMjYxMDIwMTMzNTUwWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -2664,18 +2789,18 @@ return $filename
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDD8bt6s/Mb5tARyPcLXC2hMORyZiN47nOfSYk4+2tLEE1xgGXyCeNLZPNPl
-# +ltlLN0wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDTBBSEs+pmlaxGuaqv383VYCNFIhHufdsCyB4D9G2N5k05bAtJ76mXQqJE
+# Q/tnIyYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAvesMT7Gpn6fRPvI3wMnss2m0wbiKj0YMIchC0tCWAOgo
-# /yBFMuF7q/iipUHpmbjbn87AK2k38xlqM9KolJawxdKzcepRLk0tDCBv/Amx+H7x
-# 3mHvN2lvEbn5ec9CVj9rSY6oV358kKl1dvs9Hs6WFZ1ybUsIzuvjA2rfc6suha1H
-# Z1jZUZm7xvvq2z8ooOEVLLkBZpfmU1G7U/VEQxbNmubfsPwZ69Kr0pszs1jbavR1
-# DXfseruvf7R4erRZ8eCVuM+af4aKa/CFC67TsknHdZLjB0tihfmWMDFCYko3gI/C
-# WHsKkCpMC5c+H18/f9eOV/UNhrCk0V1/eqcN78dBNXp677ULDwtanihn0++4a8uW
-# +9m5V7we96LqnQgZxRy343Thi7xQL/AvcLFOn+bT38FhK/YI/tnGcQZ+I79fTeKv
-# v5VXH/ddHDeU98tqkgHjOmCOwmzC6aiU4wUNXzhWaift3hBiKfKFObP37yy+aGvB
-# 2V8JmwSxfJoW0bqcWC9X
+# KoZIhvcNAQEMBQAEggGAVCEHkr/WhPL43chnNSrE2tk9f3R/c1y/IJ9g6ssXHlKP
+# kQ1w1Uy1vpdnooDfq+Ic4RACjgIMlONajzQdOwYQCq2CBt5lDzPDM3lCLeOhVyYY
+# f/SC5WvFVO9rIkY/z44/kfyX1j2cKMd6S9VfIEfkn7GSQBshxavLNz7OPfGkf911
+# MOLDbsUfRAQ0YvrYQEdfALxLUUTzaorbNe0+6eZdQELDD5LzF5Czde1NrkzgKlBk
+# CXzZKnCP9KWisHdMo8Q3jXDodoZf6nWHJav4KnjlP9HM+SPf0EfD3av8XDAFoYYw
+# Qtjcscg4JO7flHp33OX5NHYjil8YxqbOVIrc0l6WKeEQTaM8TaEQOBGDeGLH2e5H
+# ycJ4LVzvEPgWAlthH9BLRPrJ8V+ljrOkBsVbCMiQ+XhZ0lbF1Qs9fCBNv3gnjcB0
+# QPlAiYnnCOkO5iQ1NUI6A9DsLhBUKw3ft2s2ZIXgky3+NtfJ7nsgzjbE6zmFamTW
+# edYdZ+3+R+oMJW/mDtvw
 # SIG # End signature block

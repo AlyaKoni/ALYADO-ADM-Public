@@ -33,6 +33,7 @@
     07.11.2023 Konrad Brunner       Initial Version
     19.03.2025 Konrad Brunner       New param configureAllowedKeys
     06.02.2026 Konrad Brunner       Added powershell documentation
+    18.10.2026 Konrad Brunner       Fixed group checks, added MFA group nesting
 
 #>
 
@@ -334,7 +335,7 @@ if (-Not $minimalConfig)
         State = "enabled"
     }
     $dirty = $false
-    if ($SoftwareOathAMC.State -ne "enabled") {
+    if ($HardwareOathAMC.State -ne "enabled") {
         Write-Warning "  HardwareOath policy wasn't enabled. Enabling it now."
         $dirty = $true
     } else {
@@ -348,54 +349,54 @@ if (-Not $minimalConfig)
 }
 
 # Checking sms policy
-if (-Not $minimalConfig -and $unsecureConfig)
-{
-    Write-Host "Checking sms policy" -ForegroundColor $CommandInfo
-    $params = @{
-        "@odata.type" = "#microsoft.graph.smsAuthenticationMethodConfiguration"
-        State = "enabled"
-    }
-    $dirty = $false
-    if ($SmsAMC.State -ne "enabled") {
-        Write-Warning "  sms policy wasn't enabled. Enabling it now."
-        $dirty = $true
-    } else {
-        Write-Host "  sms policy was already enabled."
-    }
-    if ($dirty) {
-        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-            -AuthenticationMethodConfigurationId $SmsAMC.Id `
-            -BodyParameter $params
-    }
+$state = "enabled"
+if ($minimalConfig -or -not $unsecureConfig) {
+    $state = "disabled"
+}
+Write-Host "Checking sms policy" -ForegroundColor $CommandInfo
+$params = @{
+    "@odata.type" = "#microsoft.graph.smsAuthenticationMethodConfiguration"
+    State = $state
+}
+$dirty = $false
+if ($SmsAMC.State -ne $state) {
+    Write-Warning "  sms policy wasn't $($state). Updating it now."
+    $dirty = $true
+} else {
+    Write-Host "  sms policy was already $($state)."
+}
+if ($dirty) {
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+        -AuthenticationMethodConfigurationId $SmsAMC.Id `
+        -BodyParameter $params
 }
 
 # Checking voice policy
 Write-Host "Checking voice policy" -ForegroundColor $CommandInfo
-if (-Not $minimalConfig -and $unsecureConfig)
-{
-    $params = @{
-        "@odata.type" = "#microsoft.graph.voiceAuthenticationMethodConfiguration"
-        State = "enabled"
-        IsOfficePhoneAllowed = $true
-    }
-    $dirty = $false
-    if ($VoiceAMC.State -ne "enabled") {
-        Write-Warning "  voice policy wasn't enabled. Enabling it now."
-        $dirty = $true
-    } else {
-        Write-Host "  voice policy was already enabled."
-    }
+$params = @{
+    "@odata.type" = "#microsoft.graph.voiceAuthenticationMethodConfiguration"
+    State = $state
+    IsOfficePhoneAllowed = $true
+}
+$dirty = $false
+if ($VoiceAMC.State -ne $state) {
+    Write-Warning "  voice policy wasn't $($state). Updating it now."
+    $dirty = $true
+} else {
+    Write-Host "  voice policy was already $($state)."
+}
+if ($state -eq "enabled") {
     if ($VoiceAMC.AdditionalProperties.isOfficePhoneAllowed -ne $true) {
         Write-Warning "  voice policy setting isOfficePhoneAllowed wasn't enabled. Enabling it now."
         $dirty = $true
     } else {
         Write-Host "  voice policy setting isOfficePhoneAllowed was already enabled."
     }
-    if ($dirty) {
-        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-            -AuthenticationMethodConfigurationId $VoiceAMC.Id `
-            -BodyParameter $params
-    }
+}
+if ($dirty) {
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+        -AuthenticationMethodConfigurationId $VoiceAMC.Id `
+        -BodyParameter $params
 }
 
 # Checking SystemCredentialPreferences exludes non mfa groups
@@ -404,43 +405,63 @@ if ($conditionalAccessEnabled)
     Write-Host "Checking SystemCredentialPreferences" -ForegroundColor $CommandInfo
     if ($authenticationMethodPolicy.SystemCredentialPreferences.State -ne "disabled") {
         $exlMfaDefaultsGroup = $null
+        $mfaDisabledGroup = $null
         if ($null -ne $AlyaNoMfaDefaultsGroupName -and $AlyaNoMfaDefaultsGroupName -ne "PleaseSpecify") {
-            $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'"
+            $exlMfaDefaultsGroup = @(Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'") | Select-Object -First 1
             if (-Not $exlMfaDefaultsGroup)
             {
-                $exGrp = New-MgBetaGroup -Description "Users of this group do not get security defaults" -DisplayName $AlyaNoMfaDefaultsGroupName -GroupTypes @() -MailNickname $AlyaNoMfaDefaultsGroupName -MailEnabled:$false -SecurityEnabled:$true
-                $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'"
+                $exlMfaDefaultsGroup = New-MgBetaGroup -Description "Users of this group do not get security defaults" -DisplayName $AlyaNoMfaDefaultsGroupName -GroupTypes @() -MailNickname $AlyaNoMfaDefaultsGroupName -MailEnabled:$false -SecurityEnabled:$true
                 if (-Not $exlMfaDefaultsGroup)
                 {
-                    throw "Group `$AlyaNoMfaDefaultsGroupName='$AlyaNoMfaDefaultsGroupName' not found!"
+                    throw "Group `$AlyaNoMfaDefaultsGroupName='$AlyaNoMfaDefaultsGroupName' could not be created!"
                 }
             }
-        } else {
-            if ($null -ne $AlyaMfaDisabledGroupName -and $AlyaMfaDisabledGroupName -ne "PleaseSpecify") {
-                $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaMfaDisabledGroupName'"
-                if (-Not $exlMfaDefaultsGroup)
+        }
+        if ($null -ne $AlyaMfaDisabledGroupName -and $AlyaMfaDisabledGroupName -ne "PleaseSpecify") {
+            $mfaDisabledGroup = @(Get-MgBetaGroup -Filter "displayName eq '$AlyaMfaDisabledGroupName'") | Select-Object -First 1
+            if (-Not $mfaDisabledGroup)
+            {
+                $mfaDisabledGroup = New-MgBetaGroup -Description "Users of this group do not get MFA prompts" -DisplayName $AlyaMfaDisabledGroupName -GroupTypes @() -MailNickname $AlyaMfaDisabledGroupName -MailEnabled:$false -SecurityEnabled:$true
+                if (-Not $mfaDisabledGroup)
                 {
-                    $exGrp = New-MgBetaGroup -Description "Users of this group do not get MFA prompts" -DisplayName $AlyaMfaDisabledGroupName -GroupTypes @() -MailNickname $AlyaMfaDisabledGroupName -MailEnabled:$false -SecurityEnabled:$true
-                    $exlMfaDefaultsGroup = Get-MgBetaGroup -Filter "displayName eq '$AlyaNoMfaDefaultsGroupName'"
-                    if (-Not $exlMfaDefaultsGroup)
-                    {
-                        throw "Group `$AlyaNoMfaDefaultsGroupName='$AlyaNoMfaDefaultsGroupName' not found!"
-                    }
+                    throw "Group `$AlyaMfaDisabledGroupName='$AlyaMfaDisabledGroupName' could not be created!"
                 }
-            } else {
-                Write-Warning "No group to exlude!"
             }
         }
-        $params = @{
-            SystemCredentialPreferences = @{
-                ExcludeTargets = @(@{
-                    "@odata.type" = "#microsoft.graph.featureTarget"
-                    Id = $exlMfaDefaultsGroup.Id
-                    TargetType = "group"
-                })
+        if ($null -ne $exlMfaDefaultsGroup -and $null -ne $mfaDisabledGroup)
+        {
+            $isMember = @(Get-MgBetaGroupMember -GroupId $exlMfaDefaultsGroup.Id -All) | Where-Object { $_.Id -eq $mfaDisabledGroup.Id }
+            if (-Not $isMember)
+            {
+                Write-Host "  Adding group '$($mfaDisabledGroup.DisplayName)' as member to group '$($exlMfaDefaultsGroup.DisplayName)'" -ForegroundColor $CommandInfo
+                $null = New-MgBetaGroupMember -GroupId $exlMfaDefaultsGroup.Id -DirectoryObjectId $mfaDisabledGroup.Id
+            }
+            else
+            {
+                Write-Host "  Group '$($mfaDisabledGroup.DisplayName)' is already a member of group '$($exlMfaDefaultsGroup.DisplayName)'" -ForegroundColor $CommandInfo
             }
         }
-        Update-MgBetaPolicyAuthenticationMethodPolicy -BodyParameter $params
+        if ($null -eq $exlMfaDefaultsGroup)
+        {
+            $exlMfaDefaultsGroup = $mfaDisabledGroup
+        }
+        if ($null -ne $exlMfaDefaultsGroup)
+        {
+            $params = @{
+                SystemCredentialPreferences = @{
+                    ExcludeTargets = @(@{
+                        "@odata.type" = "#microsoft.graph.featureTarget"
+                        Id = $exlMfaDefaultsGroup.Id
+                        TargetType = "group"
+                    })
+                }
+            }
+            Update-MgBetaPolicyAuthenticationMethodPolicy -BodyParameter $params
+        }
+        else
+        {
+            Write-Warning "No group to exlude!"
+        }
     }
 
 }
@@ -482,8 +503,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC1UTEcQJvxsS57
-# hQwDBkTnNt2Aa6fia7zHLIKQ2ufJAKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAyvVUYdWHNLQpR
+# wX+IummjitFLVi3Ixl8GaE3+uBhA56CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -597,23 +618,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIM2SdQZ4
-# +/3liUHJPD2PD9bLFlV3FngGd3atkvh8GKq3MA0GCSqGSIb3DQEBAQUABIICADxW
-# +J5GIzK97BfgZc1E4IK0LauOVQKzLrjdnro7+uQcEsr2H/VlKtmoVrYAv6WWoCR5
-# v0wD5431HalvmBXw1CL8u002RlFIWtaGY6H35Fqm34TKDxyvx8amkkFwCDG6XOxs
-# LJxmteVGxEvzqSrPE5rGi9oQ4MOW0t9ijZNpMGvfa6CmgX1mDbZNcywcJi3/QV0X
-# gxAsHKVtzgl3XI2I+dOZ4Wb7ZD+HfAD7UXXCyMNDSh2BPGhyV81PA3zXwNzqQsXH
-# Tr91NH9nyt6x1zn3cTOvkfkSuLNe4Vt9Fkv4smigdaTiE3c5aRgiEnZXbsYDIRkW
-# vpr7W/CAJ2AZqqZ18v7in1EZ3etV/kK/yyJ5Yk1Q6zTvgtx7OTzdcswkhugn+BjV
-# eTlzPUtJqFO0Haofy81upDADWtdPDnkIZXTTfSCZ7s8UXBKzVxfnzmXdxqXMQ2lH
-# eoEEp1r8LuLsXTtBtm84VbOQC8NrpkmxgQUdDNnhqncJtizhcT0FvVrG1o2fxR7C
-# cQPbcayLcuicfBI+ZMPkaKT/hqMDjK14vM18D9839NJeySJZS8sZkAEiqyICQUcG
-# CS0OFwB2xORCEK/3sMkAYDsqZq2iUXvpmyBrI+1AithcUY1K6qN1VH9J3HLeyaOI
-# AawMnltYOb7Ygpu1IEYVVc0u+VjsBC9VZW1+uoZMoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHlIdGYu
+# LzSQMxJI1QTWjUjIy6Ft3f89wSMIeSlmXFoEMA0GCSqGSIb3DQEBAQUABIICAGrz
+# fwnphsaHiK90BtxxGDLOsBAzI1Ngcrji4vM8Ct8qjgJ68zT2JNZetUoVvnrNx6jT
+# c+bhtOr4p2JlXh+2ZMTHZfayWWuLTr4jfsqnSZLYLKJbGnuUnOLs0s00kq0M3OmE
+# J9zMlYN7LmJ8o4JTpR58izYxht1TXqz6Qw3ZmUWoNJrVM3qaLT6UmHAWChO+igsq
+# uklrosSUWCH8nQLCJuvdRX5XilLjgqg8Qln5EGoNi74qw83j60gNcpgB8jbeiXD+
+# BjCfMy2mhT9Ocx/g9s41q8s+k90ycc/ySuE//tg+CnGN3ABlTpyFRojQPb+QM7hY
+# lAbYAVIUU9pgyv0UGho9xDJiflkQJpte2P3qsRaaYSVGIkctiXZlCg5oC7PIM4cU
+# 5mTPJcvyYpbdiK+SnZwZjA16WZntHKD6AZBZ+gO2RGsYA6hsj9p6robgGpf1/uco
+# LV8hUQAGWC9jFrN8R7dQ4uv3sU/bNTrzStv/c7i1ngbrGEW3NAkTeTgw8a4kUj0+
+# JqiZAzR/j7W74bOQsgC6wl0EtUqEXaAdQwPbnkDHd/AiR1EacX2rBkSC4w1euoHT
+# +PsktvWN08gFxZtXayYb0cmAvxznGZQ69ZMJ6FWNCHO9hln/BwPVlK1FtRaQlpX2
+# 9UrxuK5sQUlNcS55iJc7hfkKQqYBZkt22ZcGFE+woYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDmlMGZjEtm8CtXxJ+A6U0mEJjXqMOpVuand/psTH+AhwIUGa2t
-# A/amnk5oissQLRtEyI2PZhQYDzIwMjYwODI5MTUzMDUzWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCDLxmbWSPqhtUl0Zo3n+uXhhaRnT1tJgyj+2nxnoD09AIUU1eG
+# TE0SbOTuiE/JU0He7bdVSm8YDzIwMjYxMDIzMTAxOTE4WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -756,18 +777,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAMxJdIEpknW7gXCpQlpWLv6fNJDZfb1j0yyGoaxD/xnilqxIkxuRI2L4UM
-# W75Zf3QwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCU7biUIUKHdmOxzmTdeFwxItyHwDa8mbia2A/+gBWzP6cS51TS3Bc/mVXt
+# sdcOKWUwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAET7ZrY655TxxeZttbVPrkt6BI2HPKThUX3sVW42WC+eA
-# 2oCETxP67eRsarfwfIjJlC15gOJrUuxQ4xRUwz6GzkR3A8o2ymlV1ZWDl33P2qka
-# 4/MDUJP39YO7iAhRChN/qpsnRUjrhiUOG4hujvVJgGFIWP04h69k1NrbkGTC4Q6C
-# ISc2SVuEs3v3FAJpzi3kXLF7vfSAARXzSZK7bxcq0uRxRxelRjyvpDpk7a+4kb/l
-# piSb9kDZgdqXIDAqvQkDIH8hgIGBWLFxpg57yUlrjHqVWW4BPXjdKvGvX8xSydik
-# FTytZ6tKYTnkSao7tspvakfu2EZyALKSFyjZNvoTtOP2r8Ze6YxSjxobK85IcVmJ
-# 892USzMnb8+XCmovKKOGC06OGle0Hi4ZGzpfLxbRxaROMqtREM/40A8S5PhYodFw
-# 7CyRv3Wrip/0NRQLhZnRb/Y1NT3nLyVwccwcgHWLGPl8DFWmGvqIJ+ufTgWCsFtM
-# LNZBxewf+9yMrJq8VSKa
+# KoZIhvcNAQEMBQAEggGAktucdnT6x6hGJt/Ere6PrHZ92O4zlcFoc819MG+81LIE
+# cQMSzVtq+1zzufqWBjaXUuzRBcTTk5LDkERrVQnSemDLRk2SF3FryQAmZP7hw2bz
+# F4KEwNW5vpQi9GP4M2JEoATGtQ/QrLT0zOb27YA30kmrPdm0wLWB4qNJMdTXEY8X
+# sAM0uTfHgagWM74DQu/yQEJNFfbYXO9+xJu8kf9KkAhWfBuIcpq6SSnZEzsCJF93
+# UrImCGZYEQ6V2xijeqs2lY+HoM4JQf9wf2FZGPhc24ivUgG1eiXR1CIIFxBxdoC/
+# GyKZmGj9P5X4ro3ZEylpuZDNN/R+DT1/awLAPU74Tzd70LPFKjQPX+JD9JhPYn3s
+# Q/ULFm8uVIBjTWq1ORyWbB+qL5eHafYpBA2ydFmo1SvTaj1MnvHvT5bDnhGO//L+
+# 5hCSEJRLlK5kTju2VlV3/Uj0EJiz/F58gHo9VDCeAwXUX9bMXrhob3b83FO46sjj
+# 2I/MAH4hC+NCqKJs04WN
 # SIG # End signature block

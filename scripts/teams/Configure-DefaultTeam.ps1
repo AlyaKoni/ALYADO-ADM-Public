@@ -36,6 +36,7 @@
     05.08.2023 Konrad Brunner       Added browser param
     08.07.2025 Konrad Brunner       Added CompanyName param
     06.02.2026 Konrad Brunner       Added powershell documentation
+    23.10.2026 Konrad Brunner       Added interactive param
 
 #>
 
@@ -55,6 +56,9 @@ Provides a Selenium browser object for automating browser actions. If not provid
 .PARAMETER CompanyName
 Defines the company name to be used in naming and branding the default team. If not provided, the default company name from configuration is used.
 
+.PARAMETER interactive
+Specifies whether the script is allowed to stop and wait for a manual action. Default is $true, which keeps the previous behaviour. When set to $false, every interactive pause is skipped so the script runs unattended. Functional waits for Microsoft Graph propagation are not affected. Note: when the script is called via pwsh -File, bind bool parameters in colon form, for example -interactive:$false.
+
 .INPUTS
 None. The script does not accept pipeline input.
 
@@ -63,6 +67,9 @@ String. Returns the SharePoint folder URL associated with the created or updated
 
 .EXAMPLE
 PS> .\Configure-DefaultTeam.ps1 -assignedGroups $true -CompanyName "Alya" -seleniumBrowser $browser
+
+.EXAMPLE
+PS> .\Configure-DefaultTeam.ps1 -interactive:$false
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -77,7 +84,9 @@ Param(
     [bool]$assignedGroups = $false,
     [Parameter(Mandatory=$false)]
     [object]$seleniumBrowser = $null,
-    [string]$CompanyName = $null
+    [string]$CompanyName = $null,
+    [Parameter(Mandatory=$false)]
+    [bool]$interactive = $true
     )
 
 # Reading configuration
@@ -440,7 +449,7 @@ if (-Not $msgs -or $msgs.Count -eq 0)
     } else {
         $browser.Url =  "$teamLink"
     }
-    pause
+    if ($interactive) { pause }
 }
 
 # Getting SharePoint url
@@ -456,8 +465,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAasUTKC6sAFg+0
-# iasotnhjl0fJyBrF3g/YGCBYm7qovqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAxvXJyZBYT+Vmq
+# hn5xDDSxJpboaxrlXddYBw8XxXhRsKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -571,23 +580,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAadYA2g
-# IKg2JLCpeWMo7krlsH545H8OuHQBWPuOX0n6MA0GCSqGSIb3DQEBAQUABIICACUa
-# cN4UiRFv1ZLzOuH2mDR8sL51NscTYUFNOG8ymVCSFaiGM1IKWGQTNLPkYer/XCUs
-# GsZoyzgVHxGGXryR2VPTrLnnGusy+sATYmdIaKoM58rsqxcQKJ4AS1H71jIDzyYx
-# l6+uKG4swSpc8Bic+PXNJxx7HzCrdrqxk97UDgMsigziLaYwY/x1FESdWvKh+csQ
-# aGZ3xJXPK3zUmo+gPK3I1Liq4Bp1VDX9q4O7HVaZgg9C5aNGzxc5EwM5eKAnCh9t
-# FX5TvyDePfZEi9vN4QFh2rKUAh2BIo95xSqFqcqzZuATDDMlHus0CWMn2uEJwCbE
-# leD9U8XUjUqPc9Y6IfOUBNHHmoVl0ETsOGd8tqUeXjOkSjZoZknUT6NvQGZwiRH/
-# BdYmSiR5gwrPkta2mJZReNzbzhR757dI3nzgRfjPkF6qcAzaW+D948Of25MxF2/F
-# x5KYhu05uXL3xhCtBvFv2UIZVvTj4c8eQM0Pmh5GnPfjFCd2rGlujxchRzP9ebZw
-# oIonVfWoAi4HAEqW0OU+F+QNawn4rZLiUR2x/u865qP6i+HEkR2UkoJhXO3Fh/bU
-# nzcgWYDSRd0tMtl48r6ApRQRU5ZwJD4DM/u1tozIebDYmwKb7cFeH2BNJbD27CRL
-# 7ZaFo8T1Dr5OBkfmvaxDY2Stmer1Kh88V/H/oYU/oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICcF6fWz
+# kIAlwuuqoYlW26IcyrG+90Ct7jxuRTKyXrLlMA0GCSqGSIb3DQEBAQUABIICAHl8
+# HzmaUsYW1Mr/2a2aCGqtv34DpWoZTmjyMmoB+pDq2agKk8YdYsoad/NCD0mYtPY7
+# lYHnufn3LjPRYVx1WlxTG7esw77ClWMwxlk90WjeuRuWc07N+Q/9tDg1svci73ef
+# hb1gLrF4mkNw04ab5klxptVqGg2esMJwXIw25bRBC32nYbEPuxUFHfex1kdRshQF
+# 6AXYhZbok/tdS+AHorCXpnbWFSr0UAPrR/0vtmG4GenLhzBhLAhMJRLLPKSnZUUf
+# Ub0pkYGf3gP+EkNTXB1ZRnVwGnLUAy6y4WVtXINCkMsM9Qz7HUTjwobCC02kGmDM
+# EWJT5dDGPnVGSyfILvhX8SqI6XvdhS3dLSqTeEbpiqGLbm+AxshFhoJ57UTBZvH7
+# w+hP4PPGUUhUHWp4EUsASR09qG2zdj8TDj2J/9i6KGF6zSNBebU4Qq8nXbSkjk99
+# Drzh9kpkyaeec9rpL2PElaLhjx5ZGu+r5Vbldsq5E7OMM2GU7WliJPjEF+xoIrG1
+# +5pwC5bt2AqA6CDMZcHaBqT15ogHRdyXuks66xPC5ZikwlkA5Kj9oaMWD/1FCcXq
+# n/Qh6jEADdJwgs/vyNMeo9OruuaIWwxl6mjKdP+BYK7kJafYrTxL87ooflOqw9LP
+# M3qTbCOUMijkaSxS8utg4M+WP2biW7fAK6f6M0XjoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCh5fHdSe+tPSrMKNeyWrjJph9o/13IFzTS4T01sZwEigIUXCzB
-# AzxD5kTK3WeOM23cgtkbVqMYDzIwMjYwODI5MTUzNjE5WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCIu360vQ1gWZBgTxCAnYU/XsyxDQwdvQvCYudngWy6jQIUPvuc
+# SOmD7z/9uVZ10gM1zZhioUsYDzIwMjYxMDIzMTg1NDI5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -730,18 +739,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDC96Lxjt+iR/5IIzWdEdpyanj46gxhVLycTQiVTYY47me9aTJIajTptIv0k
-# q3zITxswgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDAsSNM51tn9XPS50Qa2IOH+CQKRvUlAavaCzsvjoNJswUrJr+akctQCgX5A
+# tnzWWOMwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAwG+AgZ2fo9PDs/Lh9GDFnz4wAtOjq+Z0dIdp5J9hZfoe
-# V2/rZGU1Zd5wbp8vX1vB7YHxVEiBiw1YOjy4qvYq05u4o9wQfs/0H2+Z+Gr5sP5R
-# XvyCuPEXqSduk0XpEVryBpo9CgyJgF04XxdWJ/f//TJpgBh8JLZOwXT9LXX5UgFt
-# JiTBX35+WDVHFdwkqW9bnxgc9qWU3o2ciKALLlz5F5HuEmYI/1kQFa9qSQB+5Ep4
-# Y8vstrNJLtclLZuRHvwtDvNoxmBsWUiVW4o7AIi3qqLffSkOoT6fEz082FcFOB7K
-# MmgV9q3K+8VCtMWl4eh+jIqNDXc1uZ+ynlKUFJCgyCK99guTPh04s+Rgdgg9jb9z
-# pwyIadQGlwvsKhGABm1c1F+c2aD3uieae8yAf27u4eQiN8a3apnhLIhiSUUSuuRp
-# 0iDG5v3ZeU5+uXijVpHWyY2I22zsRTpQgegmldY0jjnflgkGuxEfFcEmcvAqaWMO
-# VZIRcfRLckdlMlBnLdFO
+# KoZIhvcNAQEMBQAEggGAj7/7Oz7c8GjvfiY77TFIXQr7TM87rsRhdp3hUMoxaUIr
+# SDCg8yW5jw3FIJvpELfwqmN9bWvim5FiHHXb6IkmBDmZ2/tEBdVZpQ3g7hmka+gF
+# AeZKR3xPpmEAw8T1AUoDWlaq9VudIMmzBxfLS5U2jukwyIEt7i1P1YDd2vufGxID
+# c0WiC1XFkgIgvnN9YMPdvm1vFOsz1NNCzi0gmHRwUm3XqqcDn+URqDD5J60SS/3o
+# j186qxea3gWmgfe9z7NAn/fo1/JVouaj0PiQiZIJlrG1O+JeLEWk3zSBlUZCa68i
+# sugY5AvVoznaTlQvaehdfhbafNt/G/RnvXZypB6BngMJ3NONGqSHk+lGmN9aP56C
+# cqCAfDE0TSqIPGed6gDsqZKuwOXxzEIr2muRCuWXxqMNdcEji8YIGV0R1uB4bzwV
+# 6zi8ubtyAq4W9tODy31cGOT7CNHyxsZSotYZJWY7ulLPh3KbCDTTWLOvXBRSkbRd
+# CVN5GeAicJuBQ18Oc6Fb
 # SIG # End signature block

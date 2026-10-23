@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     27.01.2026 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    22.10.2026 Konrad Brunner       Add-PnPFile Path parameter converted via ConvertTo-PlatformPath
 
 #>
 
@@ -249,7 +250,7 @@ $homeSite = Get-PnPHomeSite -Connection $adminCon -ErrorAction SilentlyContinue
 if (-Not $homeSite)
 {
     Write-Host "Registering root site as home site" -ForegroundColor $CommandInfo
-    Set-PnPHomeSite -Connection $adminCon -HomeSiteUrl $AlyaSharePointUrl -VivaConnectionsDefaultStart:$false
+    Set-PnPHomeSite -Connection $adminCon -HomeSiteUrl $AlyaSharePointUrl -VivaConnectionsDefaultStart:$false -Force
 }
 $homeSite = Get-PnPHomeSite -Connection $adminCon
 if (-Not $homeSite)
@@ -269,7 +270,7 @@ Set-PnPWeb -Connection $siteCon -NavAudienceTargetingEnabled:$true
 Write-Host "Uploading global navigation logo" -ForegroundColor $CommandInfo
 $ext = Split-Path -Path $AlyaLogoUrlFavicon -Extension
 Invoke-WebRequestIndep -Method GET -Uri $AlyaLogoUrlFavicon -OutFile "$AlyaTemp\GlobalNavigationLogo$ext" -UseBasicParsing
-Add-PnPFile -Connection $siteCon -Path "$AlyaTemp\GlobalNavigationLogo$ext" -Folder "SiteAssets"
+Add-PnPFile -Connection $siteCon -Path (ConvertTo-PlatformPath "$AlyaTemp\GlobalNavigationLogo$ext") -Folder "SiteAssets"
 
 # Enable global navigation
 Write-Host "Enable global navigation" -ForegroundColor $CommandInfo
@@ -328,8 +329,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCCM+zh6INzBIrn
-# ZjL/tlSI5eTOhpLudu4HfxpkCZOdX6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDRlexaJsjDWGpZ
+# NSrnrxQj4zOZWcW8j5B6Uu6o4vBmEaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -443,23 +444,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILZnL0xF
-# CU4BZyvzPjIEsDT3mLHqd2yQO7GxKC2/chHGMA0GCSqGSIb3DQEBAQUABIICABd2
-# y7cYcixjPjprul1xxdJxJbfPM8RDEez42TrxA4LRw/6Qi0YbknXC+tv5QE4nuoH0
-# LPdR1WVxqaw5NnuK/ea4N0gbXnVWEIj2QAQiO4nwySohAN2APtjwQH/fcEbs2izU
-# 94lp5nX0xCs58dUGPVqR4hRi4mKpywJftzDwVJzWGmJDkiQp/aJt3MlpBJoPcpwh
-# 2vNwqWfAsLmHbfHveSNhOyiTXbsbYk2MQCiOTb0JfuUqK6keqtvnD4xE8DwWlDwl
-# qS0vEQSeTJBHGS7wQ19CWcbjck8Ha89ee5FNJAbjk1PTwNdSJCiA+SeGcYgm1Npk
-# F6EWzoBR+t+cfvpGoItdowwOZwqrUuwtAgSkdnr/mj3nk2krmRsrALY7qMabh94Q
-# 3eOKdXRo42WmcpJmmqiYmk8Ug7G6xXmjRmhx90FIPfr+v2w89oblMBvRGdWOIvXp
-# alcd0T4h8NimQfb9As85ltUdO0YZqfFYoUmu+8no9mxBZm6khbY0fQ5KB9vDxU9l
-# GfLEPQPt4h8+VFuLF52/HWdGwNsumGmS1PSyMg7Qg/2UtY4lf+MHvIgYz+aOUgRH
-# YYm5On3xGQArRHHzbaQmFpulIdvcgz3Kkrg+nFtsgscaQ0pyCrJAlmJRkqhdJgJ6
-# GfeByNoklQqWcKnlMkL0Eb4x70SOn38kCA9/7ZfYoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEII7hkzmC
+# yiffAbebEdj03TnSVZkK+U6OvAh3aCtTHz5TMA0GCSqGSIb3DQEBAQUABIICALBi
+# xd0+1jyssSnjkJlSumCErga5kwdZqKUrTrsWYUJrCkdZ5oc/9cI4tfR2czQYWtKK
+# BLxYwvA86dO+kWuXcpp6etOnJJCo3/AHNNDDFfLife1m/2Dn1Q4Gq/h6tFyez+F4
+# rTf9wK9k6KIK/dExFbspejkTBNlJMnPdkLy7uW1RtDQZm/ZWZvYs3jeHwpCYnSFY
+# 6KZ+0j5k5B0WwfK2z73054GxRzSIQjdQvY0TQ7UZIwKe1XooqrH5qvSH/6KYQzkU
+# 46os4GRWv9BEYuY2G8ugOMrkVn8kqmQ0/OICbWi1F0iEmrPTadWYMsj7iptqXDyj
+# Vy6dFF/1v3n3drWswp8/sK24ut1YjNjBux5eQEbYP3/RtWwR32UDS1EkyB6w5PIn
+# MHQBPED1Z3b9TpjoWN8Ag0hrdAxj673+9HNcVreHmpef+4D5JGbZW6yP+wzDrKAU
+# oSerQWd9qeIT3U2nFVnrNrqY8E4/jh/mlM1i10dwL8nYaqQIGmbMM3hS6UPYz4r1
+# kiF0H8qBRwgz+pJQyHHCAmMarQmY32tRmAqt7vxMU4RPXfmlCr+y/I03tkALfdjK
+# i2teDL/G3y268hJC/bIYn6A/bKqvmucqNqAPncM6YMugVnd/ZQTb7K+n/OGlhEMO
+# 0+tgQEy8LNzyXY2v4Dg0teR4vruTeDmNACD0EbFeoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCBmB0UK/GXWx1HOlx0XR69geJX6fXFwXcihWQhYqGSkLwIUYVu2
-# SMCVqP4ZR4M5BGI9iPMNrmQYDzIwMjYwODI5MTUzMzEwWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDZL9SrKlOU/e4vrHcQrLFq0bgMtQJk5OOrmGRuzaovIwIUUTTi
+# PUiEkWRSEVwLjvMfh11kxgkYDzIwMjYxMDIzMTAxOTQwWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -602,18 +603,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDArppeT4SEaDtyVMtZR0Uj44F5WMhcIVs+vjvIWut/JZxapwkb5q6h5A6pb
-# 0skLq0YwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCh4uyRBeflXd5CmV9QLKAn4AVUpAcLUWcYopoNfUHxZM8nVkYf4nzGWDci
+# ibDnxSYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAVHiQwxvA2X3l5nI7b1tTIfO6U66ZN2dd1cn1kfIxRTPz
-# HEpALX4vxFKRKYd5Vvj0QRrAxeNH7kbqQLATwRJXvHgdZdXLraCP6rMALgzwYzbg
-# buiMoQUBa3VT7S6UlYkYxAYxQolUIvclMFMIvbYMDcYuc7uV1c2Myz+a9tezw/k/
-# MBXQg1yfzAIjqZ4kR0RIW58KlMIbd09AWzkPJyXTim3Xy18CCadFcZEn4xhHReCY
-# pWTCbRFrNuRf6jNDkX1Dvjo1IIZSYYoCMjmy+Wj64Jk8LeiZgSTBqa8/Rml8vl6Q
-# 3gObly8GgQ8FwZDgB+ySJzd18EAICSFzbU+vu5pnYQHObaDNpszBeDGAwRX3kfKw
-# zDWe6E8Ycry+MkLeNPXU+HM3hCYUi1jEWPZUYT+djjS0KORHZlYonrZtzzbcl1K1
-# rZSKHOsUKPjzCSk4coo+TeHZJftOMnZOV9V5xeS6qPx5LAM2eH56oAoJ9N9BtlDK
-# P4fl+BFm80Sai/tseTpw
+# KoZIhvcNAQEMBQAEggGAKivyL0wmmJjGM3sZsWkDgwc/V+YqbXoYxpoC0HkHHpXs
+# 08NpV7I5CvbY9iM21GPtuHW5KVT7spWcDT54PgmRbf8pMiz5BB2otxLzBZ8gktgx
+# 4aXDrQyLHMzLTVAwDBTGMpePxpPktzdue85nrHhvp3Z2jQ7uuY5bX7R7e/0mTUYR
+# /Qp6SNg1Lfy1HocBQyWSaTu/QV6tDfDcgAWOWyWaw5e3CmRd9QhsjPI7EkTLsdlU
+# lW51eL8Chh33rQ964gFqjgU2aar4KTHr9rwKOpHdZLgfn5Z9Pt9MSIQrjB5f7eHK
+# kW0lPbT3oVzDgolVE0SN5vO5Bktpb1gDJffcU4PJhRiLDGl9nHRjRJyoXr216T6Z
+# njOnvWDNBVyZqvKv7A35EF8cIEZKvFbo6K0phBwBSEUncGaVyHp8GoLuKt8jyLrp
+# 6p0DV1D+vOeN+RflE6Z4AAxDahbCJW5ra23uAJya/GJM1Qlnd8G8Xxwe4Afxl1mC
+# HwozticmYWC8TaATfOLY
 # SIG # End signature block

@@ -88,97 +88,24 @@ if (-Not (Test-Path $bootstrapperPath))
 
 # Write-Host "Bootstrapper downloaded: $([math]::Round((Get-Item $bootstrapperPath).Length / 1MB, 2)) MB" -ForegroundColor Green
 
-# Step 2: Write the elevated helper script to a temp file
-# Using a real file avoids all here-string escaping issues
+# Step 2+3: Elevated extraction via the Alya UAC worker (single UAC prompt per build run)
+# Write-scope contract: the job writes only into its output directory; we pick the installer up from there.
 $destFile = Join-Path $contentRoot "FortiClientVPN.exe"
-$startTimeIso = (Get-Date).ToString("o")
-$scriptFile = Join-Path $AlyaTemp "FortiClientExtract.ps1"
-
-$elevatedLines = @(
-    '$bootstrapperPath = "' + $bootstrapperPath + '"'
-    '$destFile = "' + $destFile + '"'
-    '$startTime = [datetime]"' + $startTimeIso + '"'
-    '$targetFileName = "FortiClientVPN.exe"'
-    '$timeoutSeconds = 180'
-    '$pollIntervalSeconds = 2'
-    ''
-    'Write-Host "[ELEVATED] Starting bootstrapper..." -ForegroundColor Cyan'
-    'Start-Process cmd -ArgumentList "/c `"$bootstrapperPath`"" -WindowStyle Hidden'
-    'Write-Host "[ELEVATED] Bootstrapper launched. Monitoring Admin TEMP for $targetFileName..." -ForegroundColor Cyan'
-    ''
-    '$elapsed = 0'
-    '$lastSize = 0'
-    '$stableCount = 0'
-    ''
-    'while ($elapsed -lt $timeoutSeconds)'
-    '{'
-    '    $candidate = Get-ChildItem -Path $env:TEMP -Filter $targetFileName -ErrorAction SilentlyContinue |'
-    '                 Where-Object { $_.LastWriteTime -gt $startTime } |'
-    '                 Sort-Object LastWriteTime -Descending |'
-    '                 Select-Object -First 1'
-    ''
-    '    if ($candidate)'
-    '    {'
-    '        if ($candidate.Length -eq $lastSize -and $candidate.Length -gt 0)'
-    '        {'
-    '            $stableCount++'
-    '            if ($stableCount -ge 3)'
-    '            {'
-    '                $sizeMB = [math]::Round($candidate.Length / 1MB, 2)'
-    '                Write-Host "[ELEVATED] Download complete: $($candidate.FullName) ($sizeMB MB)" -ForegroundColor Green'
-    '                Write-Host "[ELEVATED] Copying to $destFile..." -ForegroundColor Cyan'
-    '                Copy-Item -Path $candidate.FullName -Destination $destFile -Force'
-    ''
-    '                Write-Host "[ELEVATED] Stopping FortiClient processes..." -ForegroundColor Cyan'
-    '                Get-Process -Name "FortiClient*" -ErrorAction SilentlyContinue | ForEach-Object {'
-    '                    Write-Host "  Killing PID $($_.Id) ($($_.Name))" -ForegroundColor Gray'
-    '                    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue'
-    '                }'
-    ''
-    '                Write-Host "[ELEVATED] Cleaning up bootstrapper..." -ForegroundColor Cyan'
-    '                Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue'
-    ''
-    '                Write-Host "[ELEVATED] Done." -ForegroundColor Green'
-    '                exit 0'
-    '            }'
-    '        }'
-    '        else'
-    '        {'
-    '            $lastSize = $candidate.Length'
-    '            $stableCount = 0'
-    '            $sizeMB = [math]::Round($candidate.Length / 1MB, 2)'
-    '            Write-Host "[ELEVATED] Installer growing: $sizeMB MB" -ForegroundColor Gray'
-    '        }'
-    '    }'
-    ''
-    '    Start-Sleep -Seconds $pollIntervalSeconds'
-    '    $elapsed += $pollIntervalSeconds'
-    ''
-    '    if ($elapsed % 10 -eq 0)'
-    '    {'
-    '        Write-Host "[ELEVATED] ...still waiting (${elapsed}s / ${timeoutSeconds}s)" -ForegroundColor Gray'
-    '    }'
-    '}'
-    ''
-    'Write-Host "[ELEVATED] TIMEOUT after ${timeoutSeconds}s" -ForegroundColor Red'
-    'Get-Process -Name "FortiClient*" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue'
-    'Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue'
-    'exit 1'
-)
-
-$elevatedLines | Out-File -FilePath $scriptFile -Encoding UTF8
-
-# Step 3: Run everything elevated (single UAC prompt)
-# Write-Host "Starting elevated extraction (bootstrapper + monitor + copy)..." -ForegroundColor Cyan
-Write-Warning "A UAC prompt will appear. Please confirm it."
-
-$elevatedProcess = Start-Process powershell -Verb runAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptFile`"" -PassThru -Wait
-$exitCode = $elevatedProcess.ExitCode
-
-Remove-Item -Path $scriptFile -Force -ErrorAction SilentlyContinue
+$uacResult = & "$AlyaScripts\intune\UacWorker\Run-UacWorkerJob.ps1" -Name "Extract-FortiClientInstaller" -InputFiles @($bootstrapperPath) -Arguments @{
+    SourceFileName = [System.IO.Path]::GetFileName($bootstrapperPath)
+    TargetFileName = "FortiClientVPN.exe"
+    TimeoutSeconds = 180
+} -TimeoutSec 600
+if (-Not $uacResult.Success)
+{
+    Write-Error "Elevated extraction failed (ExitCode $($uacResult.ExitCode), Validation $($uacResult.Validation)). Log: $($uacResult.LogFile)"
+    exit 1
+}
+Move-Item -Path (Join-Path $uacResult.OutputDir "FortiClientVPN.exe") -Destination $destFile -Force
+Remove-Item -Path $uacResult.OutputDir -Recurse -Force -ErrorAction SilentlyContinue
 
 # Step 4: Verify result
-if ($exitCode -ne 0 -or -Not (Test-Path $destFile))
+if (-Not $uacResult.Success -or -Not (Test-Path $destFile))
 {
     Write-Error "Extraction failed. Installer was not found within timeout."
     exit 1
@@ -198,8 +125,8 @@ Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB+LQ+4Iw40DzrA
-# iMkXCwHId+9Jz2N8zqnoKOlIX6R0rqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAvZASVzwD5ZOh9
+# +c2GnpTCOCSy85QlnyNuTVMZMjBEuKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -266,10 +193,10 @@ Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -277,17 +204,17 @@ Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -297,39 +224,39 @@ Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIG1PFjR4
-# sa9MbX/uzaO3me+eLpyPgRIQ9+NXPBSeWIuTMA0GCSqGSIb3DQEBAQUABIICAG1T
-# 107gx9oEwQ1xy70IH6MMhtE+zedbAGjOPmxMfU3H3bRMLS7mrS+MGz+81rAciEbG
-# TI2AOA7vOMc5IPbhtfNp572t6PvjDtnQnK8OMpu1D2aeNfOS2enKzaxH1fsHhWIA
-# ROJyZGmDAmi1ULTFlKL6MoD2yUaXTpf7nTfQj7WLV9p6+klDNFLwQ3+m81NgbOwk
-# jOBsuRdHyr8GBAFqvaFfA+xFyDmhntwyAYz/vTOBZE/CCf1yD3mRcsuUZX/+PrfG
-# 6sI9Nn76DIN7Rnc0paqFxhZUwPuMMUBVTb6IPlnX03crTkss7UNMcfXWgi2a3Tpz
-# b9HfaWir2cHAN6I+0k8N83u6P7WQnKx1p6Ux0ttp0k97U9pay8fw69AlqedwSUaN
-# pUqBD2t5Ra8fSeVCmET3OYI7zEq/19NOLEeoeqtlY80vDhFRDMCg2S45cH9xl2mS
-# JzE+1eGEYu2PV+3OXlx0Tl75uVictBZ6eh/nfaeVn9KZfThEfFJW82DrsVU3UyGm
-# 0Gb104KHGLlGW3AeVBWwLaU2BZeFW9DdE+gnA73LkHsTi162ceug2IV/mmCQMbfi
-# PXY4zL5/hU9Cgciuf4Yx/qocVWyXJUHgjo6lRH16mHcpWnPmt/8TjYPv8qd/5cGm
-# u6OLCrFOZF1ZiWEIO76FIRzbcbWs6vL3GhSa/RRwoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINk/RNOh
+# /SIKOzJq80rugQiPjKkBAdsP0NG3/yX9cWW+MA0GCSqGSIb3DQEBAQUABIICAGuF
+# FGn9esIAQSSP5x1kHTlanPVHpIb/0iGXq2HedgjVcJ/DKd73AFB7SYz/8BM0ivrx
+# Cmh3PA5ooPmmpNshls8hybRGV0h7QMYaG+/4iiI9vHFtdnuPYbaBKewbCEju0UNb
+# uNhDRvhYNqBxLQY7EWK7sxdsmMZ8b3MdZt3bbM+G/hGeIPgHpPxpPF2LifTsQoJQ
+# mnO+zsG+9C3BSRoTozRgwQc7XVu0aBwN8YsK/0J3OBlzPQTdE8bAR3x0Ptu5GCGd
+# HBb9IWuDKDtvsroboJFng9W4FPyJ2G0JodbQWUhqsmmtpAcUAPGGx/RMOtqkimmx
+# Rgc3q8wCXdal+DwwPIWVSMnGYgMCLRRgU9Ij5Nt8b/Rf7YeYqxwmYTQZdp+zbO3a
+# LpDE/JFPYThsHTqHTzOWcXt6evZwi/mVV7adHc7HPnYHyE2O2VHBwTn/I4Pd/tYe
+# Xx0opk1NpuYSUCiaTWwKPPLqjR7zEfB8+PaROynTQs/EQrpVpC1zujjVBToi3yhi
+# ty5zEkG41/Rq3oo/5zkNqTl2zrAnaJYfXa5cvTdxGvzH+iQe3n64vmChrlAEvSBt
+# zIrz8Ie8vJ9gjsSKwBLJtnAyxqQ3yHQSG+nY4IRmAQfCIDbBemxbKRbkYWmgWDHV
+# DhpO2348kWa/mN6tmGy27tTDOcHbvF+MX25RFvxfoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCPODYqQ10lNvUNqmFoZfv2Gq3Ffq4BFNOY9eFSPwOl3gIUJUgn
-# ciQYzwbqdjEW+CL4/Dtj8hcYDzIwMjYwOTA5MjA0ODE2WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCBA8GCCb4l4OcB/IsD9dL48IswgCLdHUEA4RRRkPieRSQIULR7C
+# IUXtqnM3hkviochzSHbBy/0YDzIwMjYxMDE5MTgzMTMxWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -472,18 +399,18 @@ Remove-Item -Path $bootstrapperPath -Force -ErrorAction SilentlyContinue
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDDn2YT502I7GPzfBm590npU2J36fekz8U/0HI0egJ8zwZCIXX3EmhdZj/xR
-# aMeoikYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDBIlt0EBJ6MWPtBzhxNr3v00TIkfopd5aKvAMuVJc3k4c9St+moLlVkPvYC
+# 1w9+HVAwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGANq7rOmMA/6WrQ18zsjhIhN24qwD8vYhzXouv7jpNRjOt
-# v4fYdnQd66g+zTDufnXMnDp3hjLltQzk4Rfzmq5KYE4H2GX8wSusIH8CbxNufZWe
-# i9sAdP0VVRGuG5FCQkFWIHUPJz+Cl9GHpMpo8DC9Sh4k5OQTVtRMx0zS3Mu1Sot2
-# vbiao61h3XFozovPsmL4iL/bT61b95Bs2b+B1F06WJd1Hz/5P0K8pqcj1QCD9hEP
-# Yi6ANMYWTOUfcKJ3fRXqnLrzPduw8pLG1FBe2WUqPCEPGriQMS2/7umeu++faBNk
-# LDbXukmTOwca2OocovDrZGggfz18KiQRVBQLYVKjX/a2eNv+ek+QfUoEp1a7NTLZ
-# fnXAPARIZtVx+6Np9cMnwhP/FffndMqkPoyZiKLHhbSw1CzcBqGTjX+k9qNoBOmw
-# AM2dZ/59+KKn7rQ4J2Un27UKOkPBpLZHs5gXhFt/rL/YbNfGbzRZdSoN2CoaADAM
-# QmQvzjE1s2/0oR//Rton
+# KoZIhvcNAQEMBQAEggGAb/1Q4eeBD1Ch8fDNiyWFHd1j1UBPtc+gn3I/uZCLJxp8
+# xffz/l7BSFw1kIgK0/XzK3/x4JtVedjitO7XcU7QqEJh9N9esGzI0U/gwta4Na5l
+# sPbn76JF7b64cGzxw74XH0LnfmBGSF9q50ZUcdHL724Gryky/zgqXAcgsebM0XL8
+# BIL0k2SsSUa7uIQqsGkhMIyvEDvbh5Gsp9hr4zYPb+ZFpJF2rM4+l1kcOtR4Txa+
+# 6FT1bqftlB+e7cg986/axdS8EzCdIULnDukSnlr3SF9JYuQQ//3DEP7dKX1yRUys
+# EkDTYMzuLmPGnEfl2Yo0U20CgDxXTeDbflpp9jdECB3pgzwfi56rLPYmyAFM6/Yd
+# f7KVs87xXI1rlszYXazSp3ZsmEFuopfmP5dVBuJ73yPULGCFrvDHMx9RcrqvEO/x
+# nxdEsZ7g3ROJ78JMv2TzAAYKre9SjLRm5mx0PBrUzhJxFOgko3Xk1KI9AikWt3Ww
+# qj8oNTtdd94o+AIfV+Pf
 # SIG # End signature block

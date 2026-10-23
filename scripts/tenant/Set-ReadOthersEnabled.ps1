@@ -38,10 +38,10 @@
 
 <#
 .SYNOPSIS
-Enables the "Read Other Users" permission for guests within the Microsoft 365 authorization policy.
+Enables the "Read Other Users" permission for members within the Microsoft 365 authorization policy.
 
 .DESCRIPTION
-The Set-ReadOthersEnabled.ps1 script checks the current Microsoft 365 authorization policy to determine whether guests are allowed to read other users. If this permission is disabled, the script enables it. It ensures necessary Microsoft Graph modules are installed, initializes logging, and connects to Microsoft Graph using appropriate scopes. The script outputs the updated policy configuration upon completion.
+The Set-ReadOthersEnabled.ps1 script checks the current Microsoft 365 authorization policy to determine whether members are allowed to read other users. If this permission is disabled, the script enables it. It ensures necessary Microsoft Graph modules are installed, initializes logging, and connects to Microsoft Graph using appropriate scopes. The script outputs the updated policy configuration upon completion.
 
 .INPUTS
 None. The script does not take pipeline input.
@@ -51,7 +51,7 @@ Displays status messages and updated authorization policy information in JSON fo
 
 .EXAMPLE
 PS> .\Set-ReadOthersEnabled.ps1
-This example runs the script, checks the current configuration, and enables the "Read Other Users" permission for guests if it is disabled.
+This example runs the script, checks the current configuration, and enables the "Read Other Users" permission for members if it is disabled.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -86,12 +86,12 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-ReadOthersEnabled | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Checking permission to read others for guests
-Write-Host "Checking permission to read others for guests" -ForegroundColor $CommandInfo
+# Checking permission to read others for members
+Write-Host "Checking permission to read others for members" -ForegroundColor $CommandInfo
 $policy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
 if ($policy.DefaultUserRolePermissions.AllowedToReadOtherUsers -eq $false)
 {
-    Write-Warning "Read others for guests was disabled. Enabling it now"
+    Write-Warning "Read others for members was disabled. Enabling it now"
     $RolePermissions = @{}
     $RolePermissions["allowedToReadOtherUsers"] = $true
     Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -DefaultUserRolePermissions $RolePermissions
@@ -104,8 +104,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAbhj3l1E7Zprm1
-# jJBPXaW5VsEb0Yn5AbOxkEyEHPcMx6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBdFbhuAOau5tSz
+# YX6HcHHSerO6rFcaYn72gQsrLX/z8aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -219,23 +219,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIPJZY3fy
-# iFxV2p1OyLUb+80s4QZbZ2oAaGHEcIYbhr2YMA0GCSqGSIb3DQEBAQUABIICAEtA
-# JeoENzo9hzbw1g0qMjo1XW9FLXtMKBZJjkTx0Mk80hVLZYqVm0R8Bm9RWtd1czj5
-# +/qf/mdbniT4jOlr4tuK6iDKso3Q+xkKW7OBrWehxb1zGBjAxdMwhyt0pq+2EQM9
-# dZfqZgmfgzidq+ypsfTO6QYJSfneLRtE6JeQPTqrdF/Ye/aD07Y+RQma6L8kNi4E
-# FO5bxQsDK8id3jOPdEevVN3Q2zegv5LDRhWdaBOC8Om8AXAP7kmIy1diQemWhYhI
-# 81dRpMmAdoyi0vq4Azej8bY79zpHP86XFB4RK/GEoci8VTvuma2vOv7A6TLv4GB7
-# qP4Z79XCtJ/Q2s1v5tLqceW+cJfIq0WSgQl6LI1h25YzL4CDHNGsaD3Uaxm/xILK
-# FJp1FwSb4WOzNefMd9F9JOoUDtP6c9aBOLlTVRVpBFDjxUOxm5Owd1RCdkRticZy
-# 5Y4NI1+EAR6C0ptcfiD0mVB7XmTT4Z9CtnjDfNb6Y/2x5gjeRdlKNNCyL4lN2E7b
-# RUDHnOIFdUVXMTSwThcUQG23p7hpxidXUlpHqgP8RfUvedBSg5Yfh4q+iafHWnTG
-# 6DMVKghtgrAVBnk3YTqHKn9A5vtymfIkzTg6XI9altHNPuOcwnvhs/x9Femtw0al
-# dEx2IjFVUATaM3xmncxb2Lll0y6u3UeAYpCfkJ66oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILuOksoN
+# ucBFSbpHZs8/d38326SPITj87OznOnrprDORMA0GCSqGSIb3DQEBAQUABIICAFmQ
+# NFeZq/UVgHWARjBNyO7tbZjjNeEabeJoOuZ/gD/HxipXCvG8xAXTTNOGTgWR8r/f
+# zRTQCxpbsjNj1+ZjVE6cYbHbhjk5xaxxBE476qulOGZJXcYAnVub2irgdB9sYg6t
+# gKJYKr9RR0UFMKGgwmmufQlIbmzF5xdKrES6sIw75pvqxJ5I9Y74K7XnxYpG1Br4
+# MSC5mgobzlzpezVUwpaTl/KDWhPdF7xs06n8A4YD/Y1NMrg9Wl8dcK0XpQEh1ctM
+# uugZe7RqKF/soskhylIW/QzCcCJ/n/35zAoVqCHYZRK9VGG3s+dNbeoAC4LD/PNd
+# QdQGuLnoiyRUjUYxqm8zA0V+z8SSGu9ENfpizGB4dJNNPnB2pxEwJjJC5NbFz3jc
+# H72Rx+iPszLURgK2pv1t0iqxDEbiqBO1WkdCX83ByAvv/LfQhWIOqzUQcTdS+to6
+# eVLsP3PeV2sCsWuwlIF8/JDev1Lfsn6rShGOJgIvjeUWM4D4IC8NM/+IJouu9oPm
+# wcZWJ6uXbOZFsKxmEy73AmZYHLekR7SmhvOA4g1GihUp+2hEw2TY2+naxf6GqS0w
+# LRzoAWyrK1dIzhZHkgTaAQhR9xVJtOgDt+Bk+JU9lDqJJPjFMw/tmsnF8axIg1lf
+# dLHrTZgfATCMJeYiccdykcSNsa/ellMlKZvvw/4ioYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAm2lvFXmlRP6BUP12nbrQEqBTzlqImRCQZP/NYrqtIcgIUW06X
-# I9kwcsu0ESnR9IAueyZAu4AYDzIwMjYwODI5MTUzODQzWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCYm6LzwjVhqYUMCFUGIgnpmy6Ifw3/PgusBUfj6VsYvAIUBagC
+# VshBiW/1S7JQGJzNWBgtrgYYDzIwMjYxMDIzMTAxOTQ5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -378,18 +378,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAqF+SSFGxquIs7kUsb75VTiCHEwJBpfjR+9h/fajFykURHZPstNLbPrP4u
-# KH4uExAwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDvxIaBhTvkUN+JbHlOqGHtfu0pzqU7wexWzgTqDTP3bBx53dYb9t0dK2i/
+# 6MukmJQwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAOCME/R4Y0E9cfvsHas7S5IZq5OwYoltjt/5dwtScICg8
-# Yqp2+ceaVOeYOVLewpoRsj/EjxCb0IUehBiHIGyZuCT/UzsRnNFtjhTYjABqNXtm
-# 1Eu6g1mi9/FMPJpiE4KqHxD+gdgBign5cGtEOZ7GomPO91hEX4pa7Z71kk59MKFO
-# 72u+Wr43NJqoLxOSa8DDs6VzdnuLhYxVakm2N/5+z243pb/IWZ6Xqt4C4uhxZP60
-# Rwyo0BSL0y+t//STMrbHJpfY3aPho2OGCg9ofv6LcjbtADnDoDjXIyp43oIpz70j
-# geXDP92DemGYfjq63CVpQWYFyrp3SkFfPZlpwjzFmgOhH3WfI0ZSeYatQkwanQXd
-# NAnQ/Y5EwCsDcNqna1G1veamiGaTh6p3mQix4Oe5/IioU8v7imenZ4AkWjC7q26K
-# lLfWCPRQEgtWu3T5sHw66T0BGQ5aG2odz23KfD04OURAOLS4gS7/uPO6pKYo7cNM
-# TrWVF0XEDLE+YY0TFPd9
+# KoZIhvcNAQEMBQAEggGAJHZwj49IF2pxjlMJuDq1heT8gOEGP6LJcOin6v66SkP4
+# DAYvEOe4MOKdPUFo7o68aB5Zo5p+rJL2YMggzO8VhHFhB1A5+l35m4BORMp1euOQ
+# PQgSp3OfXW7trVlwpyjp+0s1cpzceFU4gA3nHTCzIRuVVi2/HAK8+to87VCxu/u5
+# qw0q150u1OFB2rOeIL9SboNi+3pIuSqwqma3e/nV9CrbUWbcXcwaZByZmurxbihY
+# HZNhHpoB9kLvIBQayMRDJrxjSUpFEhWBlNbFrCNVYJnQ4TJMzhzQRNfTt0Ivio5z
+# ySgD+HW5pxQNWZTuuVouDalbyilxk3e9F7Qk5+rbx5IV/GsJXVCLlPo84xOLOb/W
+# E/aZOytUpZdqJt0JprorRHiQKHsr0BW0aH2PM96vB1/IAcvoHP+TgijnqHqzm6mt
+# FqsB4IhZzYuw43zLZvY+bLbjZXDKinI6UMyvbuh6E5Qb3LzMB7bRj8weyblXewXG
+# PpdHZrlEMQtMuTwP2P+K
 # SIG # End signature block

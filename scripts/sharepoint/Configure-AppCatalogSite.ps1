@@ -37,6 +37,7 @@
     26.10.2025 Konrad Brunner       Multi-Geo support
     06.02.2026 Konrad Brunner       Added powershell documentation
     14.07.2026 Konrad Brunner       Better app catalog site url handling
+    22.10.2026 Konrad Brunner       Interactive parameter (default true); non-interactive app catalog url check polls automatically
 
 #>
 
@@ -59,6 +60,9 @@ Optional parameter specifying the Multi-Geo SharePoint Admin URL. If not provide
 .PARAMETER localesToHandle
 Specifies a list of locales to process for localization considerations. Defaults to "en-us" and "de-de".
 
+.PARAMETER interactive
+Controls whether the script may interact with the user. With $true (default) the script behaves as before. With $false, the app catalog URL check breaks.
+
 .INPUTS
 None. You cannot pipe input to this script.
 
@@ -67,6 +71,9 @@ None. The script writes progress and status information to the host and logs det
 
 .EXAMPLE
 PS> .\Configure-AppCatalogSite.ps1 -siteLocale "en-US" -hubSitesConfigurationFile "C:\Configs\HubSites.ps1" -multiGeoAdminUrl "https://contoso-admin.sharepoint.com" -localesToHandle @("en-us","fr-fr")
+
+.EXAMPLE
+PS> .\Configure-AppCatalogSite.ps1 -siteLocale "de-CH" -Interactive $false
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -81,7 +88,8 @@ Param(
     [string]$hubSitesConfigurationFile = $null,
     [Parameter(Mandatory=$false)]
     [string]$multiGeoAdminUrl = $null,
-    [string[]]$localesToHandle = @("en-us","de-de")
+    [string[]]$localesToHandle = @("en-us","de-de"),
+    [bool]$interactive = $true
 )
 
 # Reading configuration
@@ -140,7 +148,10 @@ else
     {
         Write-Host "Using hub site configuration from: $($PSScriptRoot)\HubSitesConfigurationTemplate-$($siteLocale).ps1"
         Write-Warning "We suggest to copy the HubSitesConfigurationTemplate-$($siteLocale).ps1 to your data\sharepoint directory"
-        pause
+        if ($interactive)
+        {
+            pause
+        }
         $hubSitesConfigurationFile = "$AlyaScripts\sharepoint\HubSitesConfigurationTemplate-$siteLocale.ps1"
     }
 }
@@ -361,22 +372,30 @@ if (-Not $site)
 do {
     Set-PnPTenantAppCatalogUrl -Connection $adminCon -Url $catalogSiteUrl
     $appCatalogUrl = Get-PnPTenantAppCatalogUrl -Connection $adminCon -ErrorAction SilentlyContinue
-    $appCatalogUrlApi = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
-    if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or [string]::IsNullOrWhiteSpace($appCatalogUrlApi) -or
-        $appCatalogUrl -ne $catalogSiteUrl -or $appCatalogUrlApi -ne $catalogSiteUrl)
+    if ([string]::IsNullOrWhiteSpace($appCatalogUrl))
+    {
+        $appCatalogUrl = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
+    }
+    if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or $appCatalogUrl -ne $catalogSiteUrl)
     {
         Write-Warning "appCatalogUrl: $appCatalogUrl"
-        Write-Warning "appCatalogUrlApi: $appCatalogUrlApi"
+        Write-Warning "catalogSiteUrl: $catalogSiteUrl"
         Write-Warning "App Catalog URL not found or not correct!"
         Write-Warning "Please create app catalog site with the script Configure-AppCatalogSite.ps1 if not yet done."
         Write-Warning "If you have created the app catalog recently, it can take some time until the URL is available."
     }
     else
     {
-        Write-Host "App Catalog URL is correct now."
         break
     }
-    Read-Host "Press Enter to check again or Ctrl+C to stop waiting"
+    if ($interactive)
+    {
+        Read-Host "Press Enter to check again or Ctrl+C to stop waiting"
+    }
+    else
+    {
+        break
+    }
 } while ($true)
 
 # Stopping Transcript
@@ -385,8 +404,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAGreWaA4RpE2nM
-# cNFdRX86BkF3WrnbS8bVQjDkdrQ6paCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBbRFt882/oFdHP
+# XkDPI5DbcNb5Q4VrOLDOCmvroUwc2aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -500,23 +519,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEICTmoJz4
-# QgprVvcUgIJH5wMn0W/LFCNi8pMmTUW+HVEcMA0GCSqGSIb3DQEBAQUABIICAIfA
-# rISXth2Ohml5eNz3JBGDMjDM/W5i4p3+3aCCjG38VxUFmpRgtzANuJMWsHiyzvbH
-# rCdgWZI9D7EZRcsQuffLAHcHbAzeIla1Jev2IDo8EvNWPAzXuE7cqPjGmV5rPb++
-# 8j+6zua3OUEu7hdBIVzWGX6JrJf2M8riREccXL96ZEAoW5VyvwaYuyvTzJVmBSbd
-# p5rQ1Vj1kJkFWfI+CwqZ7dOcS+ko/A+aLkyOY7a49foxg5Pd6yJcLE97mv7jL82m
-# 8Ib+CpIwutIRsoBfAdNd2GKl+ZSlWFwHp57xUlYMnaMTUW9HZBxoisIkIzq/Fw+b
-# R98FRXp7dJb6flsDn5Go5eGq2FiLfrsbGC9JTKFhaSq/iDAoKjBm2UuFcmmGZxsi
-# TnTQoRF62Gie5uLSIg/ObyRtvWejhG13xBaJg+sXqHHn42SfENWqSkEOwInCrwB7
-# OnOR3PxqAuGvDMU3TkcE4lhE+ANoWnx9zn1vBn2L3nfuUwDutD9JendPfgm8jMZ/
-# RLCkTNqZCFDJ/S3C3p9H1ctTHNzsMogPZC3XCtGmPadG1sTDWQK7Bry1Tew7gQNc
-# tQCXTCojAD81hvBiuxLSD6FCYtc0SHiA56/WB/HqyhcUtdSMrtJxNgVRv8oRM0vE
-# ln2MuHzadE/p36UxyKO1hAyk2SUVXDR5h4RHlFwnoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIKDf4XIi
+# lv2gpgcbUYT68wdQ4RMs8mgOyxe514fFz2ccMA0GCSqGSIb3DQEBAQUABIICAMb6
+# do4PCefv+HOUkZ2Df3u2xLzaIWhNks8KiApJ3/edluZSP357R/Yyb35qKuabnu3k
+# FU1WDsoNfM713+Bze+g0r4i129ewnAM0N4Pvx1DmjmX/1kBZL64y7TgVniZ71dlf
+# pZu1+xxpobp/j+Yi9j81UPfee9XItdySRlCgvZ0sjYFNC0BxfTMpmcbOKvCL5PEr
+# cpSskKuaRUcwKaZjMNVsELfwUqGIOPUXMKPJRFnLu5k0wn/91Dd2HyexbHV3hPZG
+# bZDjexzskZiasVEkmhngn6fKQCzR5nLLU/PwxAlS88FECVXcYPsELT/BhBtJvcNS
+# 15iClTu3ThrXvb1/hqDwHk6qI7oDls2PAWwMsoijsW/FfgkOUul2uEB+niCRSJ9R
+# KHI9EHjAcx/Gln5N38g/4jZRxN8bHUb47KqW56MQicn3Ct9WSlgg4zcRXnKN7Pzl
+# /DT76BLGNOhPyBpwJYNfEkuhi9vKK+bHTl4cGt+v4OjalH8Tq65Bhvk6kYGtnaWc
+# mLxikal5HC4sn68nk29hEGWmSjDmgGmCDgpCL7AZnP+rmIcpjb0TKhOQaYUNd9Fl
+# HvkXbDjZNGuq1poTrFtQVIAkDDX2pc06stUpW0GK4BC2pd0WdXsEYFVdLVmyq35M
+# prazvsqncPMlyZf8mIHi8dh2vQzVAH+G31hg/eZXoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAIeTjbh1ZrXURT/Jo/chRe5R1TxEm03T1532HzwOSK0AIUVRVw
-# hYQiK8jjoxrvkyWRL1gMZxYYDzIwMjYwODI5MTUzMjQ5WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCC2/h3Jfk9weSqig1vvNMcp2+2umtuU80qCY9qetCHaLQIUP1Vo
+# pnsOOr8tAbn+72aSlAvyGzIYDzIwMjYxMDIzMTAxOTI5WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -659,18 +678,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDAKtPePTAGMXuD+NCv67dGn+zON7UD4rL6+C9fKSdOIpAV3+MElmh6FGHif
-# xurLZ1MwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDAaXjDkMOmtbnlFDwNJ0k/x7dPvwna2exIEgQ4IZM5f+qmsQKg+XDWK+QVA
+# Rs4JfM0wgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAAbSbYEgo+oMngh2SHKLpO1nNIZ/xO8+xcjd0VtFNovyX
-# RwtCLAS2rWMnOwXVz5aPaXPKscE5FFqy9woO7diqgCezcK+vC0FOGGOFj6aTk6SW
-# Y9aTlHQ70Qc8XkQBT/9PjId5JMvTZc81WlX0Zwa8dMCIst0h0jRVU4FACph1654A
-# phpF8zR1J1NXGZIL4u0y+llE5/WdDJigfaDjHDEjUhwVrQ1O31l3fgQ/2z1Ri/h1
-# YzNS7Ad7KlG72SoEMnTIVosJgyX8yV7qm/UteKOIKFz1gC1YZTxbLq4eOFqMe4Vw
-# jVZQfzL+DAwx/uAziDdLFkRG7YWVAKE4IU4cgpwOsKr9uzG5kb8bHIKLqg2++S50
-# CHrq4r+uGBQyTMn0bVnWGL5BSoVghsckYYAZzPy3e5YnArvEVpcmpNy6cNPQGITJ
-# xvby8lmW13TEYA9Q8T9VUI+E98/rz1fKxqq3kB3C7uIzjn59XzviVX6S099Yssbn
-# TrCC/BNr3y5T+M7x1dET
+# KoZIhvcNAQEMBQAEggGAhTaNIbMg0UCeR5C1KVnR9qw3USzY4gqxFgkYl0XypT8U
+# byz2bSB7NTG0y3ucvpA+0svqKuApi0fWWo846wWn1ZbMmHQzTs3UMgooZJYTmiZs
+# w2677fDs1GpmN+XN6sY0qSPp5LBGaoV1o87JyFc0A4XHaUwPDmfMqHx4R0v80ZWD
+# VhpS8Vdti6nqz1hjS2YioD3uxUVKhOIL+tyAk1h7OJqqyXmHKGgLlHjglSqv9QvJ
+# SXfPTG3bS/WXoMbOuH88lgURj7Bh2L9fNNsDXldTsk3cme5ZBudnLUhDmyALMclv
+# p7QZKDBGYWCb/oFSiiX8CKYe0ahxKmEfOR2ZN7Fbzw83XqUaY7P01gCRdY9kj2Rs
+# pZY/42TL+7MHy+vg2igFHEmul68Zmn0joBF6iqhM8rjlHAwj4F1UnFiVCxiDjFDP
+# Um9XCOquG6WnstKKQ1a+m+0G1DCcDYESCD53cggUL3D26gYWC06CJrLuIJ8CAOVu
+# pKSA8h1DEwDRTRhihFmH
 # SIG # End signature block

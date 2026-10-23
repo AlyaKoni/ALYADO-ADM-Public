@@ -79,6 +79,16 @@
                                     Pfadtrennern setzen + Executable-Bits des gebuendelten node wiederherstellen
                                     (Expand-Archive entfernt sie; ohne Fix: "missing required assets" bzw.
                                     "Permission denied")
+    18.10.2026 Konrad Brunner       DeviceLogin option for LoginTo-Az, LoginTo-MgGraph, LoginTo-Entra, LoginTo-Teams,
+                                    LoginTo-EXO and LoginTo-PowerApps; device parameter name resolved via reflection
+                                    (Get-DeviceLoginParameter) because modules name it differently
+    18.10.2026 Konrad Brunner       ReloginTo-PnP: DeviceLogin passthrough added, Thumbprint parameter binding fixed
+                                    (was -Thumbprint, LoginTo-PnP parameter is -ClientCertificateThumbprint)
+    18.10.2026 Konrad Brunner       LoginTo-MgGraph: Set-MgGraphOption -EnableLoginByWAM resolved via reflection
+    19.10.2026 Konrad Brunner       Get-PlaywrightPage: Chromium-Install immer ausfuehren (idempotent) statt chromium-*-Existenz-Check - nach Playwright-Paket-Updates fehlte die neue Revision (chromium_headless_shell-1243, Scribus-Build); Post-Check auf chromium* erweitert
+                                    (Get-Command parameter check) and called only on Windows when the parameter
+                                    exists (WAM is Windows-only; removes binding error noise on Linux/macOS)
+    22.10.2026 Konrad Brunner       Added ConvertTo-PlatformPath for platform specific path separator normalization
 
 #>
 
@@ -114,6 +124,15 @@ if (-Not (Get-Variable -Name "AlyaConfigureEnvOnceOutput" -Scope Global -ErrorAc
 {
     $Global:AlyaConfigureEnvOnceOutput = @{}
 }
+<# STRICTMODE GUARD: Globale Variablen initialisieren, bevor sie erstmals gelesen werden. Unter Set-StrictMode -Version Latest wirft der lesende Zugriff auf eine nie gesetzte Variable ("cannot be retrieved because it has not been set"), z. B. $Global:AlyaMgContext in LoginTo-MgGraph. Muster analog OUTPUT GUARD oben: Get-Variable prueft die Existenz, ohne StrictMode auszuloesen; eine bereits gesetzte Variable (z. B. bei erneutem Dot-Source) bleibt erhalten. #>
+if (-Not (Get-Variable -Name "AlyaMgContext" -Scope Global -ErrorAction SilentlyContinue)) { $Global:AlyaMgContext = $null }
+if (-Not (Get-Variable -Name "AlyaPnpAdminConnection" -Scope Global -ErrorAction SilentlyContinue)) { $Global:AlyaPnpAdminConnection = $null }
+if (-Not (Get-Variable -Name "AlyaStroreCreds" -Scope Global -ErrorAction SilentlyContinue)) { $Global:AlyaStroreCreds = $null }
+if (-Not (Get-Variable -Name "AlyaConsoleBufferSize" -Scope Global -ErrorAction SilentlyContinue)) { $Global:AlyaConsoleBufferSize = $null }
+if (-Not (Get-Variable -Name "AlyaConsoleWindowsSize" -Scope Global -ErrorAction SilentlyContinue)) { $Global:AlyaConsoleWindowsSize = $null }
+if (-Not (Get-Variable -Name "AlyaDefaultModulePathWarningDone" -Scope Global -ErrorAction SilentlyContinue)) { $Global:AlyaDefaultModulePathWarningDone = $false }
+if (-Not (Get-Variable -Name "AlyaSeleniumBrowser" -Scope Global -ErrorAction SilentlyContinue)) { $Global:AlyaSeleniumBrowser = $null }
+if (-Not (Get-Variable -Name "AlyaPlaywrightPage" -Scope Global -ErrorAction SilentlyContinue)) { $Global:AlyaPlaywrightPage = $null }
 function Write-HostOnce()
 {
     [CmdletBinding()]
@@ -1933,9 +1952,9 @@ function Install-ModuleIfNotInstalled (
     [bool]$doNotLoadModules = $false
 )
 {
-    if ($AlyaModuleVersionOverwrite.Name -contains $moduleName)
+    if (@($AlyaModuleVersionOverwrite).Count -gt 0 -and $AlyaModuleVersionOverwrite.Name -contains $moduleName)
     {
-        $exactVersion = ($AlyaModuleVersionOverwrite | Where-Object { $_.name -eq $moduleName}).Version
+        $exactVersion = @($AlyaModuleVersionOverwrite | Where-Object { $_.name -eq $moduleName })[0].Version
     }
     if (-Not (Is-InternetConnected))
     {
@@ -2007,7 +2026,8 @@ function Install-ModuleIfNotInstalled (
         Install-ModuleIfNotInstalled "PowerShellGet"
         throw "PowerShellGet updated! Please restart your powershell session"
     }
-    if ((Get-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue).Version -lt '2.8.5.201')
+    $nugetProvider = Get-PackageProvider -Name NuGet -Force -ErrorAction SilentlyContinue
+    if (-Not $nugetProvider -or $nugetProvider.Version -lt '2.8.5.201')
     {
         Write-Warning "Installing nuget"
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force
@@ -2098,8 +2118,11 @@ function Install-ModuleIfNotInstalled (
         if (-Not $versionCheck) {
             Write-Warning "Module '$moduleName' does not looks like a module from Powershell Gallery"
             $module = Get-Module -Name $moduleName -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
-            $requestedVersion = $module.Version
-            $requestedVersionFullname = $module.Version
+            if ($null -ne $module)
+            {
+                $requestedVersion = $module.Version
+                $requestedVersionFullname = $module.Version
+            }
             $moduleNotOnline = $true
         }
         else {
@@ -2557,6 +2580,25 @@ function Refresh-DevOpsOidcToken {
 }
 
 <# LOGIN FUNCTIONS #>
+function Get-DeviceLoginParameter(
+    [string] [Parameter(Mandatory = $true)] $CmdletName)
+{
+    # Resolves the device code parameter name of a login cmdlet via reflection.
+    # Module versions name the parameter differently (Connect-AzAccount and
+    # Connect-MicrosoftTeams: -UseDeviceAuthentication, Connect-MgGraph:
+    # -UseDeviceCode, Connect-ExchangeOnline: -Device, Connect-Entra and
+    # Add-PowerAppsAccount: -DeviceCode). Returns $null when the cmdlet is not
+    # available or does not support device code login.
+    $cmd = Get-Command -Name $CmdletName -ErrorAction SilentlyContinue
+    if (-Not $cmd) { return $null }
+    $paramNames = @($cmd.ParameterSets | ForEach-Object { $_.Parameters | ForEach-Object { $_.Name } } | Sort-Object -Unique)
+    foreach ($candidate in @("DeviceCode", "UseDeviceCode", "UseDeviceAuthentication", "Device"))
+    {
+        if ($paramNames -contains $candidate) { return $candidate }
+    }
+    return $null
+}
+
 function LogoutAllFrom-Az()
 {
     Clear-AzContext -Scope Process -Force -ErrorAction SilentlyContinue
@@ -2598,7 +2640,7 @@ function Get-CustomersContext(
             $context = Get-AzContext | Where-Object { $_.Name -like "*$TenantId*" }
         }
     }
-    if ($context -and $context.Count -gt 1) { $context = $context[0] }
+    if (@($context).Count -gt 1) { $context = $context[0] }
     return $context
 }
 function LogoutFrom-Az(
@@ -2624,7 +2666,8 @@ function LoginTo-Az(
     [string] [Parameter(Mandatory = $false)] $SubscriptionName = $null,
     [string] [Parameter(Mandatory = $false)] $SubscriptionId = $null,
     [string] [Parameter(Mandatory = $false)] $AuthScope = $null,
-    [string] [Parameter(Mandatory = $false)] $TenantId = $null)
+    [string] [Parameter(Mandatory = $false)] $TenantId = $null,
+    [bool] [Parameter(Mandatory = $false)] $DeviceLogin = $false)
 {
     Write-Host "Login to Az" -ForegroundColor $CommandInfo
     if (-Not $TenantId) { $TenantId = $AlyaTenantId }
@@ -2665,7 +2708,7 @@ function LoginTo-Az(
             if ($AlyaContext)
             {
                 Write-Host "  checking existing az context"
-                if ($AlyaContext.Count -gt 1)
+                if (@($AlyaContext).Count -gt 1)
                 {
                     $AlyaContext = Select-Item -message "Please select an existing context" -list $AlyaContext
                 }
@@ -2723,6 +2766,18 @@ function LoginTo-Az(
                 $params["CertificatePath"] = $env:AlyaManagementCrt
                 $params["CertificatePassword"] = (ConvertTo-SecureString -String $env:AlyaManagementPwd -AsPlainText -Force)
                 $params["ApplicationId"] = $env:AlyaManagementApp
+            }
+            elseif ($DeviceLogin)
+            {
+                $deviceParamName = Get-DeviceLoginParameter -CmdletName "Connect-AzAccount"
+                if ($deviceParamName)
+                {
+                    $params[$deviceParamName] = $true
+                }
+                else
+                {
+                    Write-Warning "Connect-AzAccount does not support device code login on this module version"
+                }
             }
             Connect-AzAccount @params | Out-Null
             $AlyaContext = Get-CustomersContext -TenantId $TenantId -SubscriptionName $SubscriptionName -SubscriptionId $SubscriptionId
@@ -2827,7 +2882,8 @@ function LoginTo-MgGraph(
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
-    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null,
+    [bool] [Parameter(Mandatory = $false)] $DeviceLogin = $false
 )
 {
     if (Test-Path "$($env:TEMP)\$AlyaTenantId-Actual.env")
@@ -2868,7 +2924,14 @@ function LoginTo-MgGraph(
         Write-Host "Login to Graph" -ForegroundColor $CommandInfo
     }
 
-    try { Set-MgGraphOption -EnableLoginByWAM $AlyaWamEnabled -ErrorAction SilentlyContinue | Out-Null } catch {}
+    try
+    {
+        $wamOptionCmd = Get-Command Set-MgGraphOption -ErrorAction SilentlyContinue
+        if ($IsWindows -and $null -ne $wamOptionCmd -and $wamOptionCmd.Parameters.ContainsKey("EnableLoginByWAM"))
+        {
+            Set-MgGraphOption -EnableLoginByWAM $AlyaWamEnabled -ErrorAction SilentlyContinue | Out-Null
+        }
+    } catch {}
 
     if ($AlyaIsDevOpsPipeline)
     {
@@ -2956,11 +3019,24 @@ function LoginTo-MgGraph(
                     throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                 }
             } else {
-                if ($null -ne $AlyaGraphAppId) {
-                    Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
-                } else {
-                    Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                $mgConnectParams = @{
+                    Environment = $AlyaGraphEnvironment
+                    Scopes      = $Scopes
+                    TenantId    = $AlyaTenantId
+                    NoWelcome   = $true
                 }
+                if ($null -ne $AlyaGraphAppId) {
+                    $mgConnectParams["ClientId"] = $AlyaGraphAppId
+                }
+                if ($DeviceLogin) {
+                    $deviceParamName = Get-DeviceLoginParameter -CmdletName "Connect-MgGraph"
+                    if ($deviceParamName) {
+                        $mgConnectParams[$deviceParamName] = $true
+                    } else {
+                        Write-Warning "Connect-MgGraph does not support device code login on this module version"
+                    }
+                }
+                Connect-MGGraph @mgConnectParams
             }
 
             $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
@@ -2979,11 +3055,24 @@ function LoginTo-MgGraph(
                         throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                     }
                 } else {
-                    if ($null -ne $AlyaGraphAppId) {
-                        Connect-MGGraph -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
-                    } else {
-                        Connect-MGGraph -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                    $mgConnectParams = @{
+                        Environment = $AlyaGraphEnvironment
+                        Scopes      = $Scopes
+                        TenantId    = $AlyaTenantId
+                        NoWelcome   = $true
                     }
+                    if ($null -ne $AlyaGraphAppId) {
+                        $mgConnectParams["ClientId"] = $AlyaGraphAppId
+                    }
+                    if ($DeviceLogin) {
+                        $deviceParamName = Get-DeviceLoginParameter -CmdletName "Connect-MgGraph"
+                        if ($deviceParamName) {
+                            $mgConnectParams[$deviceParamName] = $true
+                        } else {
+                            Write-Warning "Connect-MgGraph does not support device code login on this module version"
+                        }
+                    }
+                    Connect-MGGraph @mgConnectParams
                 }
                 $mgContext = Get-MgContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
                 $Global:AlyaMgContext = $mgContext
@@ -3028,7 +3117,8 @@ function LoginTo-Entra(
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
-    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null,
+    [bool] [Parameter(Mandatory = $false)] $DeviceLogin = $false
 )
 {
     if (Test-Path "$($env:TEMP)\$AlyaTenantId-Actual.env")
@@ -3102,11 +3192,24 @@ function LoginTo-Entra(
                     throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                 }
             } else {
-                if ($null -ne $AlyaGraphAppId) {
-                    Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
-                } else {
-                    Connect-Entra -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                $entraConnectParams = @{
+                    Environment = $AlyaGraphEnvironment
+                    Scopes      = $Scopes
+                    TenantId    = $AlyaTenantId
+                    NoWelcome   = $true
                 }
+                if ($null -ne $AlyaGraphAppId) {
+                    $entraConnectParams["ClientId"] = $AlyaGraphAppId
+                }
+                if ($DeviceLogin) {
+                    $deviceParamName = Get-DeviceLoginParameter -CmdletName "Connect-Entra"
+                    if ($deviceParamName) {
+                        $entraConnectParams[$deviceParamName] = $true
+                    } else {
+                        Write-Warning "Connect-Entra does not support device code login on this module version"
+                    }
+                }
+                Connect-Entra @entraConnectParams
             }
 
             $mgContext = Get-EntraContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
@@ -3125,11 +3228,24 @@ function LoginTo-Entra(
                         throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                     }
                 } else {
-                    if ($null -ne $AlyaGraphAppId) {
-                        Connect-Entra -Environment $AlyaGraphEnvironment -ClientId $AlyaGraphAppId -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
-                    } else {
-                        Connect-Entra -Environment $AlyaGraphEnvironment -Scopes $Scopes -TenantId $AlyaTenantId -NoWelcome
+                    $entraConnectParams = @{
+                        Environment = $AlyaGraphEnvironment
+                        Scopes      = $Scopes
+                        TenantId    = $AlyaTenantId
+                        NoWelcome   = $true
                     }
+                    if ($null -ne $AlyaGraphAppId) {
+                        $entraConnectParams["ClientId"] = $AlyaGraphAppId
+                    }
+                    if ($DeviceLogin) {
+                        $deviceParamName = Get-DeviceLoginParameter -CmdletName "Connect-Entra"
+                        if ($deviceParamName) {
+                            $entraConnectParams[$deviceParamName] = $true
+                        } else {
+                            Write-Warning "Connect-Entra does not support device code login on this module version"
+                        }
+                    }
+                    Connect-Entra @entraConnectParams
                 }
                 $mgContext = Get-EntraContext | Where-Object { $_.TenantId -eq $AlyaTenantId } -ErrorAction SilentlyContinue
                 $Global:AlyaMgContext = $mgContext
@@ -3337,7 +3453,8 @@ function LoginTo-Teams(
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
-    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null,
+    [bool] [Parameter(Mandatory = $false)] $DeviceLogin = $false
 )
 {
     if (Test-Path "$($env:TEMP)\$AlyaTenantId-Actual.env")
@@ -3440,11 +3557,21 @@ function LoginTo-Teams(
             }
             $null = Connect-MicrosoftTeams @connectArguments
         } else {
-            if ([string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
-                Connect-MicrosoftTeams -DisableWAM:(!$AlyaWamEnabled)
-            } else {
-                Connect-MicrosoftTeams -DisableWAM:(!$AlyaWamEnabled) -TeamsEnvironmentName $AlyaTeamsEnvironment
+            $teamsConnectParams = @{
+                DisableWAM = (-Not $AlyaWamEnabled)
             }
+            if (-Not [string]::IsNullOrEmpty($AlyaTeamsEnvironment)) {
+                $teamsConnectParams["TeamsEnvironmentName"] = $AlyaTeamsEnvironment
+            }
+            if ($DeviceLogin) {
+                $deviceParamName = Get-DeviceLoginParameter -CmdletName "Connect-MicrosoftTeams"
+                if ($deviceParamName) {
+                    $teamsConnectParams[$deviceParamName] = $true
+                } else {
+                    Write-Warning "Connect-MicrosoftTeams does not support device code login on this module version"
+                }
+            }
+            Connect-MicrosoftTeams @teamsConnectParams
         }
     }
 
@@ -3461,7 +3588,8 @@ function LoginTo-EXO(
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
-    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null,
+    [bool] [Parameter(Mandatory = $false)] $DeviceLogin = $false
 )
 {
     if (Test-Path "$($env:TEMP)\$AlyaTenantId-Actual.env")
@@ -3517,7 +3645,22 @@ function LoginTo-EXO(
                     throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                 }
             } else {
-                Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM:(!$AlyaWamEnabled) -CommandName $commandsToLoad
+                $exoConnectParams = @{
+                    ExchangeEnvironmentName = $AlyaExchangeEnvironment
+                    ShowBanner              = $false
+                    ShowProgress            = $true
+                    DisableWAM              = (-Not $AlyaWamEnabled)
+                    CommandName             = $commandsToLoad
+                }
+                if ($DeviceLogin) {
+                    $deviceParamName = Get-DeviceLoginParameter -CmdletName "Connect-ExchangeOnline"
+                    if ($deviceParamName) {
+                        $exoConnectParams[$deviceParamName] = $true
+                    } else {
+                        Write-Warning "Connect-ExchangeOnline does not support device code login on this module version"
+                    }
+                }
+                Connect-ExchangeOnline @exoConnectParams
             }
         }
         else
@@ -3532,7 +3675,21 @@ function LoginTo-EXO(
                     throw "For client authentication, either ClientCertificateThumbprint or ClientCertificateFile with ClientCertificatePassword must be provided."
                 }
             } else {
-                Connect-ExchangeOnline -ExchangeEnvironmentName $AlyaExchangeEnvironment -ShowBanner:$false -ShowProgress $true -DisableWAM:(!$AlyaWamEnabled)
+                $exoConnectParams = @{
+                    ExchangeEnvironmentName = $AlyaExchangeEnvironment
+                    ShowBanner              = $false
+                    ShowProgress            = $true
+                    DisableWAM              = (-Not $AlyaWamEnabled)
+                }
+                if ($DeviceLogin) {
+                    $deviceParamName = Get-DeviceLoginParameter -CmdletName "Connect-ExchangeOnline"
+                    if ($deviceParamName) {
+                        $exoConnectParams[$deviceParamName] = $true
+                    } else {
+                        Write-Warning "Connect-ExchangeOnline does not support device code login on this module version"
+                    }
+                }
+                Connect-ExchangeOnline @exoConnectParams
             }
         }
     }
@@ -3698,6 +3855,7 @@ function LoginTo-SPO(
     [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
 )
 {
+    Import-Module Microsoft.Online.SharePoint.PowerShell -DisableNameChecking
     if (Test-Path "$($env:TEMP)\$AlyaTenantId-Actual.env")
     {
         $envVars = Get-Content "$($env:TEMP)\$AlyaTenantId-Actual.env" | ConvertFrom-Json -AsHashtable
@@ -3769,10 +3927,11 @@ function ReloginTo-PnP(
     [string] [Parameter(Mandatory = $false)] $ClientId = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateThumbprint = $null,
     [string] [Parameter(Mandatory = $false)] $ClientCertificateFile = $null,
-    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null
+    [SecureString] [Parameter(Mandatory = $false)] $ClientCertificatePassword = $null,
+    [bool] [Parameter(Mandatory = $false)] $DeviceLogin = $false
     )
 {
-    return LoginTo-PnP -Url $Url -ClientId $ClientId -Thumbprint $ClientCertificateThumbprint -ClientCertificateFile $ClientCertificateFile -ClientCertificatePassword $ClientCertificatePassword -Relogin $true
+    return LoginTo-PnP -Url $Url -ClientId $ClientId -ClientCertificateThumbprint $ClientCertificateThumbprint -ClientCertificateFile $ClientCertificateFile -ClientCertificatePassword $ClientCertificatePassword -Relogin $true -DeviceLogin $DeviceLogin
 }
 
 function LogoutAllFrom-PnP()
@@ -4060,14 +4219,24 @@ function LoginTo-PnP(
     return $AlyaConnection
 }
 
-function LoginTo-PowerApps()
+function LoginTo-PowerApps(
+    [bool] [Parameter(Mandatory = $false)] $DeviceLogin = $false)
 {
     Write-Host "Login to PowerApps" -ForegroundColor $CommandInfo
     $AlyaPowerAppsEnv = $null
     try { $AlyaPowerAppsEnv = Get-PowerAppEnvironment -ErrorAction SilentlyContinue } catch [System.Management.Automation.MethodInvocationException] {}
     if (-Not $AlyaPowerAppsEnv)
     {
-        Add-PowerAppsAccount -UseSystemBrowser $true
+        $paConnectParams = @{ UseSystemBrowser = $true }
+        if ($DeviceLogin) {
+            $deviceParamName = Get-DeviceLoginParameter -CmdletName "Add-PowerAppsAccount"
+            if ($deviceParamName) {
+                $paConnectParams = @{ $deviceParamName = $true }
+            } else {
+                Write-Warning "Add-PowerAppsAccount does not support device code login on this module version"
+            }
+        }
+        Add-PowerAppsAccount @paConnectParams
          #`
             # -AudienceOverride:  "https://service.powerapps.com/" `
             # -AuthBaseUriOverride: "https://login.microsoftonline.com" `
@@ -5257,20 +5426,23 @@ function Get-PlaywrightPage()
         }
     }
 
-    # Eigenen Chromium-Build einmalig installieren (idempotent, kein System-Browser)
+    # Eigenen Chromium-Build installieren/aktualisieren (idempotent, kein System-Browser).
+    # Playwright "install" prueft die vom geladenen Paket erwartete Browser-Revision und
+    # laedt nur Fehlendes - daher IMMER ausfuehren: Nach einem Paket-Update fehlt sonst die
+    # neue Revision, weil alte chromium-*-Verzeichnisse den frueheren Existenz-Check
+    # bestanden (Hintergrund 19.10.2026, Scribus-Build: "Executable doesn't exist at
+    # ...\chromium_headless_shell-1243\..."; das alte Pattern chromium-* matcht die
+    # chromium_headless_shell-*-Verzeichnisse wegen des Unterstrichs zudem nie).
     $browserRoot = Get-PlaywrightBrowserRoot
-    if (-Not (Get-ChildItem -Path $browserRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "chromium-*" }))
+    Write-Host "Ensuring Playwright Chromium browser in $browserRoot (idempotent)"
+    $installExitCode = [Microsoft.Playwright.Program]::Main([string[]]@("install", "chromium"))
+    if ($installExitCode -ne 0)
     {
-        Write-Host "Installing Playwright Chromium browser into $browserRoot (first run only)"
-        $installExitCode = [Microsoft.Playwright.Program]::Main([string[]]@("install", "chromium"))
-        if ($installExitCode -ne 0)
-        {
-            Write-Warning "Playwright browser installation returned exit code $installExitCode"
-        }
-        if (-Not (Get-ChildItem -Path $browserRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "chromium-*" }))
-        {
-            throw "We were not able to install the Playwright Chromium browser into $browserRoot"
-        }
+        Write-Warning "Playwright browser installation returned exit code $installExitCode"
+    }
+    if (-Not (Get-ChildItem -Path $browserRoot -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -like "chromium*" }))
+    {
+        throw "We were not able to install the Playwright Chromium browser into $browserRoot"
     }
 
     $playwright = [Microsoft.Playwright.Playwright]::CreateAsync().GetAwaiter().GetResult()
@@ -5796,6 +5968,22 @@ function Get-IsolatedTranscriptPath(
     return "$($dir)$($separator)$($newFile).log"
 }
 
+function ConvertTo-PlatformPath(
+    [string] [Parameter(Mandatory = $true)] $path
+)
+{
+    # Normalizes the path separators platform specific: "/" on Linux/macOS,
+    # "\" on Windows. Repo scripts and variables hardcode "\" separators even
+    # on Linux (e.g. "$($AlyaLogs)\scripts\..."); .NET path APIs
+    # (System.IO.Path) do NOT split on "\" on Unix, so normalize such paths
+    # before using them with .NET APIs.
+    if ($AlyaIsPsUnix)
+    {
+        return $path.Replace("\", "/")
+    }
+    return $path.Replace("/", "\")
+}
+
 function Write-IsolatedStreams(
     [System.Management.Automation.PowerShell] [Parameter(Mandatory = $true)] $ps,
     [System.IO.StreamWriter] [Parameter(Mandatory = $false)] $logWriter = $null
@@ -6299,8 +6487,8 @@ function Stop-IsolatedProcess(
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCzTyFPlwWLLGuR
-# IZaE4dcHovLMHSg+As/ns3Ah+iL/UqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCC3j0NV6AETSBM5
+# N3gQ8dbPoYDX7cmwFldd8U5UGaDHWqCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -6414,23 +6602,23 @@ function Stop-IsolatedProcess(
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOe8RfO1
-# 5klJcPCe37UPSSBD5IpC4CN/aLXMD3VwAobMMA0GCSqGSIb3DQEBAQUABIICAB9j
-# JQ0HCk87ujiHo7WjtEN6XaitkD7bpN9sz57P+ZWVJ39seApbutfqjJC79/fFsHE1
-# a5lET/jkh6U2paTJZoh+JbwBSToKjweckwFfLgKazA4S9A000+GlApM/OykcatPj
-# 8pnYNo2rrC+YwzHV7OBBN5dAtvQYpoH0P69zdIOBo60TUKEM/WYHG06l5nOsE3RW
-# SKsoeLX6x6hQuOVl0b99b9F1XzpiJ8fbChTcaDGrrCf6KcyqG9IMgq2NqE4TzeAf
-# O3pGoaMxXE40wDzcJuosssug4wClDe553esN8lyZZQ8xtwnpi0xIXoEabsfNmDQA
-# 90ptPTFBJ9Olq/GcKF5fComnK42F8SUGgn09zT0Zr+cJ0hQV9hJ/R3h7+Czzpy32
-# lwUpMJHzJmIylLOVw6YaK9sv/aO/VRqvk6RKxJKCwnflCr3UDCPL/aUcNf0pTDtJ
-# AR5CmgU/zDmtV6JIVj/arTDvqs+SMArNTzj6jQcpMzqN73nZKcqvAcCKxsDPWfjp
-# H6ugtyOEy3wylChzukLECyfMHzzsw0IYGaIxsw9H4iHe5TrnJ0+n+MhcMudg96MQ
-# 5F9mlh6W2xTArRgd0hizihW2DbuZAfeFymzjRRMK56xWRM74fxgA4bfCdHsBBiwY
-# dvc6eAL7VOR8WwPkVOtQQF7QidChZCLHHsZZxrkLoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIO7AWX4F
+# FRwFAnB+Z9OLPTRUpRE1PvlZvSkSXODFOLdwMA0GCSqGSIb3DQEBAQUABIICADTH
+# BOxKGkQfVyraIyaO28U+z/5YJtIYeiKjZiZKHxlF3RTntG2X0gsvzsc8Z/JlHKj4
+# StppVNXne49Lw+AXU7dh086Rl/AuNYt60lLYnrpy3VYyFWlB9zbV6a1ITQM+S8uM
+# CFd4Ku78TrgTh8RnMICNuTbJqlEJGMtCN/fXRnswdXAqpR3TdmoM3lqrh37nc7UD
+# 0iu5AnIom5rYyZym2cpj9EJnTiXIF52tWmCOiOdPRu/95fTenH/qTSxroDLq9q92
+# FKo0sL8aULxo3Uk6PSewpvR1RJWVS7w/eaFyvqaeQdqbrLqSWFyw62ZjN30MBmNm
+# UcdPufo6DXWjOQiMuNMiN8GNRLI5Knc52oUZD6QTCp61tadzfRM6uKDh+k3eopbM
+# AEMBuzVR65w7sd7ne8/njHrOI4nc7BCCo/MM1Y0iw/ZqOIAvnrF6XKy5qbrULPnK
+# 0DwYM2QvqSlrucSLEqiSOQWzPP3Ohw9v1/hQbn4rSCJVQCoyZgIpOPVPCj6c+1zi
+# Ta8wcJqHqN9gcBQdRZT0hoB43yaO938iJJ06JWPwu4woXq3mM7HL6Uq0qgAvGP2u
+# chdY8ih9tulzwrd5athpQDNZuVr9ZkWUdTCeV6HmCFwpuMvH6+3ZwHXjlNWPGXP9
+# 22dXImcsM+r59Vadw4m9sWQIpGp+iHA6vELwPPCNoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCA0Js3s0zouAClEGiXUWdc9GlP0WRxjHioJ/uBMuO0EvAIUEa4/
-# y0ugm5STxgZmpV4XEpIXl1IYDzIwMjYxMDEwMDg0MTEyWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCArb2eICDeuyDAYGYyGPirbfpPwTKXTmJEbhFEiBqjSFwIUd6c1
+# e5b059CWxxb5g0ufzUXoVSgYDzIwMjYxMDIzMTAyMDAwWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -6573,18 +6761,18 @@ function Stop-IsolatedProcess(
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDCxCb/e9osXxN2qQPtBGhYvKcVOUHm1NIkLg1Vni0ge9uOVsi/KL2mOETMV
-# le4RBoMwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDD+93cx6khvAopKVtMlQ+psPAF8Y559ZkZAh4FdpkooKmNaby7aQb5e8uxh
+# P8d2ptYwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAuy3VxQzITd3NLlghTDx0crJAZNsd3jE5WqiCs3sRNUSC
-# v1SSeu0nErw82QYN/IQemoH3aKKGgQ4YbYc3CRqDqIoYRUgcD99HnEpl38dknppf
-# pnsvf2pomMfafLuBXmdUzvaKZJ4ieuvlfBb9Wc6qaD3f8LQmhAwLpt0uByD5mnRf
-# oBYF1/30kDE68SvFt1caiccbGYAs7GHnUhilxce7OpudlFo0Nciw4h/POE8cp8DY
-# q3wZab2a7B+9J4CHA9OX67XXJyIMKMyZZ1EY3+CnEiPRbYH5L2iqLWipjf1TrNNs
-# SMti6rY7FYIoR++EFIjYG7kHKdCzTPw5lmpCzyQ2AwiGT9ypiQBr2YR2MfyJQ9pc
-# UxKjlbTTP2CwUSiQ8udBqFMeYOecWqRrVXXA/xY7aRv0DskNxOt6Z+SKsUSOi9mA
-# MV6Hu19IqyZo5N4GOLuHlZEzRaQMcrZwVMsH+iN2bBMFNCiXtslHOzA6R0uM29P6
-# vbJOiWIeew1zf/MumbQi
+# KoZIhvcNAQEMBQAEggGAxaBKbF/McgQEa6s97gYQi6A1iDBBNIpJ7wgZ3uID+9YI
+# Tea/BokBOjWQaaxoIK+OF1qDXoPQhhZzwtIAZvrKUo8212NisenVZm/Og+9p5s30
+# ZyolrxOuUakVMQVzywcCR49/SeM27oBJhTJOO6uKg2SC9VUtchQ6r8lHpHbNjJgg
+# oKgOPk/oTdzc2s+bypiA97ANuwNCU/IrFDd9LbjXDYIPG57o+PMWYkWB8D+5aiQg
+# 7qa3TSPqXwoVIPlgtn2LHy5nIVixce/FrQ1DhuQUlYhv4dXAFmQ9aCjndjq1T1fG
+# 4+eIVZHbq42lakyLJrc7gcBFqAGTMGYyCMlYMtUtD+iTvKnYPggpTi1KOpTXE3nZ
+# 1Z3uC1GjvjgreyKyaHI0HVH1yU8/PGDydjQFao6HhciIYwZaPpsRUh8IP1VQRJwN
+# cvPpbZMnItzd5G98iZao5GuQRSP6gbpMUpPwSPCwYgjgtcSWsgtkWR1kTCgOTqks
+# 8+gxjq6eclaChijUaA1k
 # SIG # End signature block

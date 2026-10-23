@@ -34,6 +34,7 @@
     26.10.2025 Konrad Brunner       Multi-Geo support
     06.02.2026 Konrad Brunner       Added powershell documentation
     14.07.2026 Konrad Brunner       Better app catalog site url handling
+    22.10.2026 Konrad Brunner       Interactive parameter (default true); non-interactive app catalog url check polls automatically
 
 #>
 
@@ -49,6 +50,9 @@ Optional Selenium browser object to be used for automated browser actions. If no
 
 .PARAMETER multiGeoAdminUrl
 Optional URL for the SharePoint Admin Center in a multi-geo tenant environment. If not provided, the script uses the default admin URL defined in the environment configuration.
+
+.PARAMETER interactive
+Controls whether the script may interact with the user. With $true (default) the script behaves as before. With $false, the app catalog URL check throws.
 
 .INPUTS
 None. The script does not accept pipeline input.
@@ -73,7 +77,8 @@ Param(
     [Parameter(Mandatory=$false)]
     [string]$multiGeoAdminUrl = $null,
     [Parameter(Mandatory=$false)]
-    [string]$siteLocale = "de-CH"
+    [string]$siteLocale = "de-CH",
+    [bool]$interactive = $true
     )
 
 # Reading configuration
@@ -144,22 +149,30 @@ if (-Not $site)
 }
 do {
     $appCatalogUrl = Get-PnPTenantAppCatalogUrl -Connection $adminCon -ErrorAction SilentlyContinue
-    $appCatalogUrlApi = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
-    if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or [string]::IsNullOrWhiteSpace($appCatalogUrlApi) -or
-        $appCatalogUrl -ne $catalogSiteUrl -or $appCatalogUrlApi -ne $catalogSiteUrl)
+    if ([string]::IsNullOrWhiteSpace($appCatalogUrl))
+    {
+        $appCatalogUrl = (Invoke-PnPSPRestMethod -Connection $adminCon -Method Get -Url "$($AlyaSharePointUrl)/_api/SP_TenantSettings_Current" -ErrorAction SilentlyContinue).CorporateCatalogUrl
+    }
+    if ([string]::IsNullOrWhiteSpace($appCatalogUrl) -or $appCatalogUrl -ne $catalogSiteUrl)
     {
         Write-Warning "appCatalogUrl: $appCatalogUrl"
-        Write-Warning "appCatalogUrlApi: $appCatalogUrlApi"
+        Write-Warning "catalogSiteUrl: $catalogSiteUrl"
         Write-Warning "App Catalog URL not found or not correct!"
         Write-Warning "Please create app catalog site with the script Configure-AppCatalogSite.ps1 if not yet done."
         Write-Warning "If you have created the app catalog recently, it can take some time until the URL is available."
     }
     else
     {
-        Write-Host "App Catalog URL is correct now."
         break
     }
-    Read-Host "Press Enter to check again or Ctrl+C to stop waiting"
+    if ($interactive)
+    {
+        Read-Host "Press Enter to check again or Ctrl+C to stop waiting"
+    }
+    else
+    {
+        throw "App Catalog URL not found or not correct and interactive mode is disabled."
+    }
 } while ($true)
 
 # Downloading app package
@@ -197,7 +210,7 @@ $appSiteCon = LoginTo-PnP -Url $appCatalogUrl
 
 # Deploying app package
 Write-Host "Deploying app package" -ForegroundColor $CommandInfo
-$app = Add-PnPApp -Connection $appSiteCon -Path "$AlyaTemp\PnPSearchWebParts\pnp-modern-search-parts-v4.sppkg" -Scope "Tenant" -Overwrite -Publish
+$app = Add-PnPApp -Connection $appSiteCon -Path (ConvertTo-PlatformPath "$AlyaTemp\PnPSearchWebParts\pnp-modern-search-parts-v4.sppkg") -Scope "Tenant" -Overwrite -Publish
 $appId = $app.Id
 $retries = 20
 $app = $null
@@ -218,6 +231,7 @@ if (-Not $app -or -Not $app.Deployed)
 
 # Approving web part permission requests
 Write-Host "Approving web part permission requests" -ForegroundColor $CommandInfo
+$approveUrl = $null
 try {
     $requests = Get-PnPTenantServicePrincipalPermissionRequests -Connection $adminCon
     foreach ($request in $requests)
@@ -232,13 +246,16 @@ try {
 }
 catch {
     Write-Warning "Please approve access requests"
-    Write-Host "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement" -ForegroundColor $CommandSuccess
+    $approveUrl = "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
+    Write-Host $approveUrl -ForegroundColor $CommandSuccess
     if (-Not $browser) {
-        Start-Process "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
+        Start-Process $approveUrl
     } else {
-        $browser.Url =  "$multiGeoAdminUrl/_layouts/15/online/AdminHome.aspx#/webApiPermissionManagement"
+        $browser.Url =  $approveUrl
     }
 }
+
+return $approveUrl
 
 # Stopping Transcript
 Stop-Transcript
@@ -246,8 +263,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAV82Z/QId8Ee9s
-# khAf3wJHfljfmAJp7lRgpAgA0ELE3qCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDCSA5KKzmjYQGx
+# 7oTyPI6ck4seg2iadZPTPG7ANOpDAKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -361,23 +378,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHdtBMAq
-# +POTTazucPh4jvXuu2HGRWgp9YAyuN48SOO4MA0GCSqGSIb3DQEBAQUABIICABVf
-# tZH+lJXCMmSMPDw5B0FBA3Ydnw0rwXZm5qBiGNdMlsXYiX8ae3LbAjZd9YrNk9zV
-# 7YOeG8xz7HN7nrlLInFQFyfQXiGYMOtO+tfr3DuR+dkgHIQt4T9fDOPxk1nrI1+Y
-# COFl35O7NrinNcUh74MV9eLJG9UeiIQ/kSUEsSLVbR57fxvOlc9oA9itkU+kwayM
-# K+zaXDUCnuJvX0BlJLv7C9TruuhjTZw8jz1jdt1scpAXzgSc59Y1jsyo7E5233qv
-# MTmZD3sti9lKRhLBuz9M+7vcWZpNNcjiECwATtHfBA8FbLFFb8KMvPHeYZsTMRox
-# H8Uo4GpZQVYONr4+N0Dj8yMwevVcmCaW96Nc+Sva3Uk2X5d23Q29BJ0ZGlElZmT4
-# 2vbGvEjFRAoKnx/lVjaUJGXYq+ziVyHllrMe1cNWC302KihO1dDHSSKgY5qro/2D
-# tVeszC6HXDQ3HfcpR46YWBxxm+lJWnFQKdzBEmN5xJUwD25e38Sd0ew8SlSVwBXn
-# N2c57x7KenMFEQtxYYgnK/gNXUXaAe/ktR5sm6BbQwLYSzzJ9F9W3yBILfDRFZyr
-# Vq/qifjwxdqprtqOaCZiQBL7Jx5GJdvzxMqCgHTA9Tg5sBbmMJWFCg4a9MYjIT4d
-# 5ECOzlV1TnNz8A+dLIpz6aUyL4O/xG1QiQlR50WkoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIMygWFeF
+# cILAEn/7/jo5xjBBA8/khc2eNKXvE5zKmcTBMA0GCSqGSIb3DQEBAQUABIICAClT
+# 2MdScZho480h4fVQNDrRJCB+f5iO3Gow4D34sTvyDlS161n4XKuLEEoPJep1QWj5
+# FIoV6hxuvCwvtY49rtJhMG2YgsXibi4wFTmYV16wNy+7JvGakR2sm24vrf5S/Xvh
+# yh/XhvhUODUHMZvy855k//Snc9PB21TXm+rXbVYhTFGiojytfwYOS5EQ7yaWYewe
+# w1bDY2ScBl4Ximxd370KoBVy0mNGZtx2C3bDenFG81tCD641kYIH5SIQj80nW19r
+# 605FyoYOAAcVrZxvIghFj/mS+PC9DNMqWITF4+kRVO4IDhdGza998gt7eoSdyLnL
+# K4e+mKrrNB2jYKDpVwJmFkOjig9y28NFkuz2rAWvSAT0YM7cf8NnyP8E+bIu39k9
+# NcoRZzXIsQpGQkXQ4fzfiR1uMXqF4vGjy1WezaZTHEtOzGHrxNoVY+aVHJsXtFTi
+# 88wPd76RvWxSJCK2zdBd2X6Pyz/o6Wc0PN57ga+kydYiL3wrX2Rg4I3cybWZXJfV
+# f0HYnyIKebgMsy+90CJEjxOPJxuA14UGquzkyZzF2H49TnOJKEBgHKF/4Oa3ePNy
+# INGcMZbCHkSivUnhkFlC939St8fsgtcYkxQJHkKm9Cb9dshrSBfVI9gC0fMDEodu
+# 6f5RZYrX0PU57oqVWkCsyAihFZjn1GfCMhNklJE/oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCD0wy00iD/7vG240PbZn2vll3hCsqR40t1DaC6ldS1VEAIUJfv/
-# fmxzzRQL6mPw3M/Ut+yTyG8YDzIwMjYwODI5MTUzMzA3WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCyd0fmsCWbKk+fZXmR3K9LKC3BBN/zDy/3y0AKiM+JvgIUc2fE
+# 2NDP/vM6RrYi318uZmiiGhYYDzIwMjYxMDIzMTAxOTM4WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -520,18 +537,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDD72rxBBfoH2045hkWeV1tt7B1cawhNTB23tTK8QaZWzRBT0N1ojkT40tfO
-# cfCsdIMwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDD6aeU9NY+SxL0aOn+JRg6jB1tSfZCSvsPjmQJmGEv75SqgRVPWmH1k1cS5
+# pGdMe4EwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGACCXq5/sCg584ldnqfe+jestFyFa1ENZpy/OYxzyIWOeA
-# GfuFb+gwmzMXifut0fkBIpmrNj8pXz1vy01SCACXI9wDNvRiETMbZo0jRdcVq2sk
-# l//++cufWTN39gWVD+gv8muOEyb4KS4+QW53XgZMfcyfA5j0fQPiOelFxxY7MJ6l
-# K71ksO+eub2ZV05FmiIUNLKjL6eol82tuaobP12RjSnzV1IoUhiiJyldmOXylNNx
-# Xnr7WNHp0vdc5JDrjP8WJyY9koJbIT+FNxX35uDf8j93/LIIwrKsi/KxlxaKDM6S
-# 8Y+EhydZ8UR55Q2WZJjDYZYcxYLE+x+49jreDyFaHh53/zDH2QKU2+J5FML2K1FE
-# 3tMz9ORkRK/t2tJC8gkCRkKPfIgkmzpoXKYggZ/2uecxmeBLJuLn2v5i8eKIeyiI
-# 2qDpwOu/Q/eWcZ6jqLwUBIi4cKxdVCDHvMLe1QUka1f9bQH9R5mRDUo0xKNOtGq1
-# IcyDSzT9XTtkYGqUlaU1
+# KoZIhvcNAQEMBQAEggGAu7DOn8Vq89cIi6s+YIET0rXKMeDaZzd+J50INY/5xuUw
+# KcNTw0etVuGuIiMAzDc+yuK7wPvsMzzx+DhOAqiPNICGhow8sDOAOoPQNVXma8nQ
+# 41NhlJ+0GsvzC9EP4woN67LSRGpwSAW6ICiY4IGnK4k1VM34ZPJFo3e+gEWqGNCo
+# zf6TAAGIvZviCntmawocckbE21m7RqJ7i/8XimgijvJJrGHwPgOornPZSmfT66J/
+# PNZtGkVhboEJlT/EFJRwppJBmdkANPgYMTc7KMuAVObSGXS+pf5lDd1hyHFAjjLv
+# tP/+p1QA4nae5DDJzoPvmtIOY+Rwip2ceCMR3wZIqXr2Pl8wJC09evbJeb+JQkEU
+# ow5ALuwQH4ilp0fbskuXRPl1lOcxP26WNnEvaHldR5yQl6FfplUmeOtal0nTjrjt
+# SHvOkBSw3ofWRIoNcQAJBVeaeI6Qz/QqlRtKIuiqE+rmx/bntA9VPlYpIY0NS+1/
+# sN0fG68oIs1ug8GA9QBQ
 # SIG # End signature block
