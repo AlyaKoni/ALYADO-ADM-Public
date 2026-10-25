@@ -33,6 +33,7 @@
     06.01.2026 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
     19.10.2026 Konrad Brunner       Fixed cmdlet name Update-EntraBetaUserAuthenticationRequirement
+    24.10.2026 Konrad Brunner       Added security defaults check with warning
 
 #>
 
@@ -41,7 +42,7 @@
 Disables per-user multi-factor authentication (MFA) for all users in Microsoft Entra ID.
 
 .DESCRIPTION
-The Disable-AllEntraPerUserMfa.ps1 script connects to Microsoft Entra ID, retrieves all user accounts, and disables per-user MFA settings where enabled. The script ensures required modules are installed, logs in with the necessary scopes, and records all actions in a transcript log. It is intended for administrative use as part of the Alya Base Configuration for maintaining a consistent MFA policy environment.
+The Disable-AllEntraPerUserMfa.ps1 script connects to Microsoft Entra ID, retrieves all user accounts, and disables per-user MFA settings where enabled. The script ensures required modules are installed, logs in with the necessary scopes, and records all actions in a transcript log. It is intended for administrative use as part of the Alya Base Configuration for maintaining a consistent MFA policy environment. Before making any change, the script reads the security defaults policy and warns if security defaults are disabled, because disabling per-user MFA without security defaults may leave users without MFA enforcement (conditional access is then expected to cover MFA).
 
 .INPUTS
 None
@@ -72,10 +73,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Disable-AllEntraPerUserMfa
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Entra.Beta"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Entra -Scopes @("Directory.Read.All","Policy.ReadWrite.AuthenticationMethod")
+LoginTo-MgGraph -Scopes @("Policy.Read.All")
 
 # =============================================================
 # Azure stuff
@@ -84,6 +87,14 @@ LoginTo-Entra -Scopes @("Directory.Read.All","Policy.ReadWrite.AuthenticationMet
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "MFA | Disable-AllEntraPerUserMfa | ENTRA" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Checking security defaults
+Write-Host "Checking security defaults" -ForegroundColor $CommandInfo
+$sdPolicy = Invoke-MgGraphRequest -Method "Get" -Uri "/beta/policies/identitySecurityDefaultsEnforcementPolicy"
+if (-Not $sdPolicy.isEnabled)
+{
+    Write-Warning "Security defaults are disabled. Disabling per-user MFA may leave users without MFA enforcement, ensure conditional access policies cover MFA"
+}
 
 Write-Host "Getting users" -ForegroundColor $CommandInfo
 $users = Get-EntraUser -All -Select Id, UserPrincipalName, DisplayName

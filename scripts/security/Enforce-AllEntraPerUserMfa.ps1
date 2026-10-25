@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     19.10.2026 Konrad Brunner       Initial Version
     19.10.2026 Konrad Brunner       Fixed cmdlet name Update-EntraBetaUserAuthenticationRequirement
+    24.10.2026 Konrad Brunner       Added security defaults check with warning
 
 #>
 
@@ -40,7 +41,7 @@
 Enforces per-user multi-factor authentication (MFA) for all users in Microsoft Entra ID, except the breaking glass admin.
 
 .DESCRIPTION
-The Enforce-AllEntraPerUserMfa.ps1 script is the counterpart of Disable-AllEntraPerUserMfa.ps1. It connects to Microsoft Entra ID, retrieves all user accounts, and sets the per-user MFA state to "enforced" wherever it is not already enforced. The breaking glass admin ($AlyaBreakingGlassUserName from ConfigureEnv.ps1) is explicitly excluded: for this account the per-user MFA state is set to "disabled", so that emergency access is never blocked by per-user MFA. If the breaking glass admin is not specified or not found in the tenant, the script throws before any change is made, to avoid locking out the emergency account. The script is idempotent and records all actions in a transcript log.
+The Enforce-AllEntraPerUserMfa.ps1 script is the counterpart of Disable-AllEntraPerUserMfa.ps1. It connects to Microsoft Entra ID, retrieves all user accounts, and sets the per-user MFA state to "enforced" wherever it is not already enforced. The breaking glass admin ($AlyaBreakingGlassUserName from ConfigureEnv.ps1) is explicitly excluded: for this account the per-user MFA state is set to "disabled", so that emergency access is never blocked by per-user MFA. If the breaking glass admin is not specified or not found in the tenant, the script throws before any change is made, to avoid locking out the emergency account. The script is idempotent and records all actions in a transcript log. Before making any change, the script reads the security defaults policy and warns if security defaults are enabled, because per-user MFA states are ignored by Microsoft Entra ID while security defaults are active.
 
 .INPUTS
 None
@@ -71,10 +72,12 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\security\Enforce-AllEntraPerUserMfa
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Microsoft.Entra.Beta"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
 LoginTo-Entra -Scopes @("Directory.Read.All","Policy.ReadWrite.AuthenticationMethod")
+LoginTo-MgGraph -Scopes @("Policy.Read.All")
 
 # =============================================================
 # Azure stuff
@@ -83,6 +86,14 @@ LoginTo-Entra -Scopes @("Directory.Read.All","Policy.ReadWrite.AuthenticationMet
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
 Write-Host "MFA | Enforce-AllEntraPerUserMfa | ENTRA" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
+
+# Checking security defaults
+Write-Host "Checking security defaults" -ForegroundColor $CommandInfo
+$sdPolicy = Invoke-MgGraphRequest -Method "Get" -Uri "/beta/policies/identitySecurityDefaultsEnforcementPolicy"
+if ($sdPolicy.isEnabled)
+{
+    Write-Warning "Security defaults are enabled. Per-user MFA states are ignored by Microsoft Entra ID while security defaults are active"
+}
 
 Write-Host "Getting users" -ForegroundColor $CommandInfo
 $users = Get-EntraUser -All -Select Id, UserPrincipalName, DisplayName
