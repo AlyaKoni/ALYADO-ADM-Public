@@ -145,7 +145,7 @@ $modules = @(
 	"Az.MarketplaceOrdering",
 	"Az.Media",
 	"Az.Migrate",
-	"Az.Az.Mission",
+	"Az.Mission",
 	"Az.Monitor",
 	"Az.MonitoringSolutions",
 	"Az.MySql",

@@ -88,13 +88,14 @@ Write-Host "Tenant | Set-UserConsentForRiskyAppsDisabled | O365" -ForegroundColo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 $authorizationPolicy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
-if ($authorizationPolicy.AllowUserConsentForRiskyApps)
+if ($null -eq $authorizationPolicy.AllowUserConsentForRiskyApps -or `
+    $authorizationPolicy.AllowUserConsentForRiskyApps -eq $true)
 {
     Write-Warning "AllowUserConsentForRiskyApps was enabled. Disabling it."
     $param = @{
         AllowUserConsentForRiskyApps = $false
     }
-    Update-MgBetaPolicyAuthorizationPolicy -BodyParameter $param
+    Update-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy" -BodyParameter $param
 }
 else
 {

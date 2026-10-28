@@ -89,6 +89,9 @@
                                     (Get-Command parameter check) and called only on Windows when the parameter
                                     exists (WAM is Windows-only; removes binding error noise on Linux/macOS)
     22.10.2026 Konrad Brunner       Added ConvertTo-PlatformPath for platform specific path separator normalization
+    26.10.2026 Konrad Brunner       Profile files (Microsoft.VSCode_profile.ps1/Microsoft.PowerShell_profile.ps1):
+                                    environment settings are only appended if not already present,
+                                    existing profile content is no longer overwritten
 
 #>
 
@@ -385,26 +388,41 @@ if (-Not $env:PATH.Contains("$($AlyaScriptPath)"))
     $env:PATH = "$($AlyaScriptPath)$AlyaPathSep$($env:PATH)"
 }
 
+<# PROFILES #>
 if ($AlyaIsPsUnix) { 
     $vsCodeProfileDir = Join-Path ([Environment]::GetFolderPath("UserProfile")) ".config/powershell"
 } else {
     $vsCodeProfileDir = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell"
 }
 $vsCodeProfileFile = Join-Path $vsCodeProfileDir "Microsoft.VSCode_profile.ps1"
-try
+$powershellProfileFile = Join-Path $vsCodeProfileDir "Microsoft.PowerShell_profile.ps1"
+$alyaProfileLines = @(
+    "`$Env:PSModulePath = `"$($AlyaModulePath)$AlyaPathSep`$(`$Env:PSModulePath)`"",
+    "`$Env:Path = `"$($AlyaScriptPath)$AlyaPathSep`$(`$Env:Path)`""
+)
+foreach ($alyaProfileFile in @($vsCodeProfileFile, $powershellProfileFile))
 {
-    if (-Not (Test-Path $vsCodeProfileDir))
+    try
     {
-        New-Item -Path $vsCodeProfileDir -ItemType Directory -Force
+        if (-Not (Test-Path $vsCodeProfileDir))
+        {
+            New-Item -Path $vsCodeProfileDir -ItemType Directory -Force
+        }
+        $alyaExistingProfileContent = @()
+        if (Test-Path -Path $alyaProfileFile)
+        {
+            $alyaExistingProfileContent = @(Get-Content -Path $alyaProfileFile)
+        }
+        $alyaMissingProfileLines = @($alyaProfileLines | Where-Object { $alyaExistingProfileContent -NotContains $_ })
+        if ($alyaMissingProfileLines.Count -gt 0)
+        {
+            Add-Content -Path $alyaProfileFile -Value $alyaMissingProfileLines
+        }
     }
-    @"
-`$Env:PSModulePath = "$($AlyaModulePath)$AlyaPathSep`$(`$Env:PSModulePath)"
-`$Env:Path = "$($AlyaScriptPath)$AlyaPathSep`$(`$Env:Path)"
-"@ | Set-Content -Path $vsCodeProfileFile -Force
-}
-catch
-{
-    Write-Warning $_.Exception.Message
+    catch
+    {
+        Write-Warning $_.Exception.Message
+    }
 }
 
 <# CLIENT SETTINGS #>

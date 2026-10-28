@@ -87,7 +87,6 @@ Write-Host "=====================================================`n" -Foreground
 
 $uri = "$AlyaGraphEndpoint/beta/organization/$AlyaTenantId"
 $org = (Invoke-AzRestMethod -Uri $uri -Method GET).Content | ConvertFrom-Json
-$org | Format-List
 
 $tokenSec = Get-AzAccessToken -ResourceUrl $AlyaGraphEndpoint -TenantId $AlyaTenantId -AsSecureString
 $tokenPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringBSTR([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($tokenSec.Token))
@@ -97,8 +96,13 @@ $headers = @{
     "Authorization" = "Bearer $tokenPlain"
 }
 Clear-Variable -Name "tokenPlain" -Force -ErrorAction Continue
-$uri = "$AlyaGraphEndpoint/beta/organization('$AlyaTenantId')/branding"
+$uri = "$AlyaGraphEndpoint/beta/organization/$AlyaTenantId/branding/localizations/default"
 $branding = Invoke-RestMethod -Uri $uri -Method GET -UseBasicParsing -Headers $headers
+
+[PSCustomObject]@{
+    Branding = $branding
+    Organization = $org
+}
 
 # Stopping Transcript
 Stop-Transcript

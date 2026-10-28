@@ -305,47 +305,41 @@ if ($dirty) {
 }
 
 # Checking SoftwareOath policy
-if (-Not $minimalConfig)
-{
-    Write-Host "Checking SoftwareOath policy" -ForegroundColor $CommandInfo
-    $params = @{
-        "@odata.type" = "#microsoft.graph.softwareOathAuthenticationMethodConfiguration"
-        State = "enabled"
-    }
-    $dirty = $false
-    if ($SoftwareOathAMC.State -ne "enabled") {
-        Write-Warning "  SoftwareOath policy wasn't enabled. Enabling it now."
-        $dirty = $true
-    } else {
-        Write-Host "  SoftwareOath policy was already enabled."
-    }
-    if ($dirty) {
-        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-            -AuthenticationMethodConfigurationId $SoftwareOathAMC.Id `
-            -BodyParameter $params
-    }
+Write-Host "Checking SoftwareOath policy" -ForegroundColor $CommandInfo
+$params = @{
+    "@odata.type" = "#microsoft.graph.softwareOathAuthenticationMethodConfiguration"
+    State = "enabled"
+}
+$dirty = $false
+if ($SoftwareOathAMC.State -ne "enabled") {
+    Write-Warning "  SoftwareOath policy wasn't enabled. Enabling it now."
+    $dirty = $true
+} else {
+    Write-Host "  SoftwareOath policy was already enabled."
+}
+if ($dirty) {
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+        -AuthenticationMethodConfigurationId $SoftwareOathAMC.Id `
+        -BodyParameter $params
 }
 
 # Checking HardwareOath policy
-if (-Not $minimalConfig)
-{
-    Write-Host "Checking HardwareOath policy" -ForegroundColor $CommandInfo
-    $params = @{
-        "@odata.type" = "#microsoft.graph.hardwareOathAuthenticationMethodConfiguration"
-        State = "enabled"
-    }
-    $dirty = $false
-    if ($HardwareOathAMC.State -ne "enabled") {
-        Write-Warning "  HardwareOath policy wasn't enabled. Enabling it now."
-        $dirty = $true
-    } else {
-        Write-Host "  HardwareOath policy was already enabled."
-    }
-    if ($dirty) {
-        Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
-            -AuthenticationMethodConfigurationId $HardwareOathAMC.Id `
-            -BodyParameter $params
-    }
+Write-Host "Checking HardwareOath policy" -ForegroundColor $CommandInfo
+$params = @{
+    "@odata.type" = "#microsoft.graph.hardwareOathAuthenticationMethodConfiguration"
+    State = "enabled"
+}
+$dirty = $false
+if ($HardwareOathAMC.State -ne "enabled") {
+    Write-Warning "  HardwareOath policy wasn't enabled. Enabling it now."
+    $dirty = $true
+} else {
+    Write-Host "  HardwareOath policy was already enabled."
+}
+if ($dirty) {
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+        -AuthenticationMethodConfigurationId $HardwareOathAMC.Id `
+        -BodyParameter $params
 }
 
 # Checking sms policy

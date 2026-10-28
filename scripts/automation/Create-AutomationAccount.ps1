@@ -34,6 +34,7 @@
     31.05.2023 Konrad Brunner       Fixes and enhancements
     06.02.2026 Konrad Brunner       Added powershell documentation
     16.09.2026 Konrad Brunner       Use Get-CurrentAzAdPrincipal to support service principal logins
+    27.10.2026 Konrad Brunner       Certificate creation via OpenSSL on Unix platforms
 
 #>
 
@@ -290,11 +291,62 @@ if (-Not $AzureKeyVaultCertificate)
 	$SelfSignedCertPlainPassword = "-"+[Guid]::NewGuid().ToString()+"]"
 	$PfxCertPathForRunAsAccount = Join-Path $env:TEMP ($AzureCertificateName + ".pfx")
 	$CerPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
+	if ($AlyaIsPsUnix)
+	{
+		$KeyPath = Join-Path $env:TEMP ($AzureCertificateName + ".key")
+		$CerCertPath = Join-Path $env:TEMP ($AzureCertificateName + ".cer")
+		try
+		{
+			# OpenSSL works with days for -days.
+			# This makes the runtime match AddMonths($SelfSignedCertNoOfMonthsUntilExpired) as closely as possible.
+			$NotBefore = (Get-Date).AddDays(-1)
+			$NotAfter = (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
+			$ValidDays = [Math]::Ceiling(($NotAfter - $NotBefore).TotalDays)
+
+			# Create private key and self-signed certificate
+			& openssl req `
+				-x509 `
+				-newkey rsa:2048 `
+				-keyout $KeyPath `
+				-out $CerCertPath `
+				-sha256 `
+				-days $ValidDays `
+				-nodes `
+				-subj "/CN=$AzureCertificateName"
+
+			if ($LASTEXITCODE -ne 0)
+			{
+				throw "Failed to create self-signed certificate using OpenSSL"
+			}
+
+			# Export certificate and private key as PFX/PKCS#12
+			& openssl pkcs12 `
+				-export `
+				-out $PfxCertPathForRunAsAccount `
+				-inkey $KeyPath `
+				-in $CerCertPath `
+				-name $AzureCertificateName `
+				-passout "pass:$SelfSignedCertPlainPassword"
+
+			if ($LASTEXITCODE -ne 0)
+			{
+				throw "Failed to export certificate to PFX using OpenSSL"
+			}
+		}
+		finally
+		{
+			Remove-Item $KeyPath -Force -ErrorAction SilentlyContinue
+			Remove-Item $CerCertPath -Force -ErrorAction SilentlyContinue
+		}
+	}
+	else
+	{
+		$Cert = New-SelfSignedCertificate -Subject "CN=$AzureCertificateName" -CertStoreLocation Cert:\CurrentUser\My `
+							-KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
+							-NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired) -HashAlgorithm SHA256
+		Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
+	}
 	Clear-Variable -Name "SelfSignedCertPlainPassword" -Force -ErrorAction SilentlyContinue
-	$Cert = New-SelfSignedCertificate -Subject "CN=$AzureCertificateName" -CertStoreLocation Cert:\CurrentUser\My `
-						-KeyExportPolicy Exportable -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
-						-NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired) -HashAlgorithm SHA256
-	Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
 	$AzureKeyVaultCertificate = Import-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword
 	$AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $AzureCertificateName
     Remove-Item -Path $PfxCertPathForRunAsAccount -Force -ErrorAction SilentlyContinue | Out-Null

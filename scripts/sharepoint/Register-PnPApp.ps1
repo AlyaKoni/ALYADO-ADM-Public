@@ -124,7 +124,8 @@ $GraphPerms = @(
     @{Id="c5ddf11b-c114-4886-8558-8a4e557cd52b";Type="Scope"},
     @{Id="5f8c59db-677d-491f-a6b8-5f174b11ec1d";Type="Scope"},
     @{Id="88d21fd4-8e5a-4c32-b5e2-4a1c95f34f72";Type="Scope"},
-    @{Id="2219042f-cab5-40cc-b0d2-16b1540b4c5f";Type="Scope"}
+    @{Id="2219042f-cab5-40cc-b0d2-16b1540b4c5f";Type="Scope"},
+    @{Id="aa07f155-3612-49b8-a147-6c590df35536";Type="Scope"}
 )
 $SpApp = Get-MgBetaServicePrincipal -Filter "DisplayName eq 'Office 365 SharePoint Online'" -Property "*"
 $SpPerms = @(
@@ -140,7 +141,8 @@ $SpPerms = @(
     @{Id="56680e0d-d2a3-4ae1-80d8-3c4f2100e3d0";Type="Scope"},
     @{Id="dd2c8d78-58e1-46d7-82dd-34d411282686";Type="Scope"},
     @{Id="2cfdc887-d7b4-4798-9b33-3d98d6b95dd2";Type="Scope"},
-    @{Id="82866913-39a9-4be7-8091-f4fa781088ae";Type="Scope"}
+    @{Id="82866913-39a9-4be7-8091-f4fa781088ae";Type="Scope"},
+    @{Id="aef0f52b-5892-4590-ae2c-d3f7928bd577";Type="Scope"}
 )
 
 # Launching creation script

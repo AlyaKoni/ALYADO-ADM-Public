@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     11.09.2025 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    27.10.2026 Konrad Brunner       Root and client certificate creation via OpenSSL on Unix platforms
 
 #>
 
@@ -193,6 +194,8 @@ else
 Write-Output "Checking Root Certificate in key vault"
 $RootCertificateSecretName = "VpnGatewayRootCertificate"
 $AzureKeyVaultCertificate = Get-AzKeyVaultCertificate -VaultName $KeyVaultName -Name $RootCertificateSecretName -ErrorAction SilentlyContinue
+$RootCertKeyPath = $null
+$RootCertSrlPath = $null
 if (-not $AzureKeyVaultCertificate)
 {
 
@@ -203,12 +206,60 @@ if (-not $AzureKeyVaultCertificate)
     $PfxCertPathForRunAsAccount = Join-Path $CertFileLocation "RootCert.pfx"
     $PfxCertPathForRunAsAccountCer = Join-Path $CertFileLocation "RootCert.cer"
     $CerPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
-    $Cert = New-SelfSignedCertificate -Subject "CN=$($VirtualNetworkGatewayName)Root" -Type "Custom" `
-        -KeyExportPolicy "Exportable" -KeySpec "Signature" -KeyUsage "CertSign" -KeyUsageProperty "Sign" -KeyLength 2048 `
-        -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
-        -CertStoreLocation Cert:\CurrentUser\My -HashAlgorithm SHA256 `
-        -NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
-    Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
+    if ($AlyaIsPsUnix)
+    {
+        $RootCertKeyPath = Join-Path $env:TEMP ($VirtualNetworkGatewayName + "Root.key")
+        $RootCertSrlPath = Join-Path $env:TEMP ($VirtualNetworkGatewayName + "Root.srl")
+        # OpenSSL works with days for -days.
+        # This makes the runtime match AddMonths($SelfSignedCertNoOfMonthsUntilExpired) as closely as possible.
+        $NotBefore = (Get-Date).AddDays(-1)
+        $NotAfter = (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
+        $ValidDays = [Math]::Ceiling(($NotAfter - $NotBefore).TotalDays)
+
+        # Create root certificate (CA) and private key
+        # The private key is cleaned up after the client certificate loop (needed for signing)
+        & openssl req `
+            -x509 `
+            -newkey rsa:2048 `
+            -keyout $RootCertKeyPath `
+            -out $PfxCertPathForRunAsAccountCer `
+            -sha256 `
+            -days $ValidDays `
+            -nodes `
+            -subj "/CN=$($VirtualNetworkGatewayName)Root" `
+            -addext "basicConstraints=critical,CA:TRUE" `
+            -addext "keyUsage=critical,keyCertSign"
+
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw "Failed to create self-signed root certificate using OpenSSL"
+        }
+
+        # Export certificate and private key as PFX/PKCS#12
+        & openssl pkcs12 `
+            -export `
+            -out $PfxCertPathForRunAsAccount `
+            -inkey $RootCertKeyPath `
+            -in $PfxCertPathForRunAsAccountCer `
+            -name "$($VirtualNetworkGatewayName)Root" `
+            -passout "pass:$SelfSignedCertPlainPassword"
+
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw "Failed to export root certificate to PFX using OpenSSL"
+        }
+
+        $Cert = [System.Security.Cryptography.X509Certificates.X509Certificate2]::CreateFromPemFile($PfxCertPathForRunAsAccountCer, $RootCertKeyPath)
+    }
+    else
+    {
+        $Cert = New-SelfSignedCertificate -Subject "CN=$($VirtualNetworkGatewayName)Root" -Type "Custom" `
+            -KeyExportPolicy "Exportable" -KeySpec "Signature" -KeyUsage "CertSign" -KeyUsageProperty "Sign" -KeyLength 2048 `
+            -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
+            -CertStoreLocation Cert:\CurrentUser\My -HashAlgorithm SHA256 `
+            -NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
+        Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $Cert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
+    }
     $base64certificate = @"
 -----BEGIN CERTIFICATE-----
 $([System.Convert]::ToBase64String($Cert.Export('Cert'), [System.Base64FormattingOptions]::InsertLineBreaks))
@@ -244,14 +295,94 @@ for ($i=1; $i -lt ($NumCerts+1); $i++)
         $SelfSignedCertPlainPassword = "C"+[Guid]::NewGuid().ToString()+"C"
         $PfxCertPathForRunAsAccount = Join-Path $CertFileLocation "ClientCert$i.pfx"
         $CerPassword = ConvertTo-SecureString $SelfSignedCertPlainPassword -AsPlainText -Force
-        $CCert = New-SelfSignedCertificate -Subject "CN=$($VirtualNetworkGatewayName)Client$i" -Type "Custom" `
-            -Signer $Cert -DnsName "$($VirtualNetworkGatewayName)Client$i" `
-            -KeyExportPolicy "Exportable" -KeySpec "Signature" -KeyLength 2048 `
-            -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
-            -CertStoreLocation Cert:\CurrentUser\My -HashAlgorithm SHA256 `
-            -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.2') `
-            -NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
-        Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $CCert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
+        if ($AlyaIsPsUnix)
+        {
+            $ClientCertKeyPath = Join-Path $env:TEMP ($VirtualNetworkGatewayName + "Client$i.key")
+            $ClientCertCsrPath = Join-Path $env:TEMP ($VirtualNetworkGatewayName + "Client$i.csr")
+            $ClientCertCerPath = Join-Path $env:TEMP ($VirtualNetworkGatewayName + "Client$i.cer")
+            $ClientCertExtPath = Join-Path $env:TEMP ($VirtualNetworkGatewayName + "Client$i.ext")
+            try
+            {
+                # OpenSSL works with days for -days.
+                # This makes the runtime match AddMonths($SelfSignedCertNoOfMonthsUntilExpired) as closely as possible.
+                $NotBefore = (Get-Date).AddDays(-1)
+                $NotAfter = (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
+                $ValidDays = [Math]::Ceiling(($NotAfter - $NotBefore).TotalDays)
+
+                # Extensions for the client certificate (client authentication, analogous to TextExtension and DnsName)
+                Set-Content -Path $ClientCertExtPath -Value @(
+                    "basicConstraints=critical,CA:FALSE",
+                    "keyUsage=critical,digitalSignature,keyEncipherment",
+                    "extendedKeyUsage=clientAuth",
+                    "subjectAltName=DNS:$($VirtualNetworkGatewayName)Client$i"
+                )
+
+                # Create certificate request and private key
+                & openssl req `
+                    -new `
+                    -newkey rsa:2048 `
+                    -nodes `
+                    -keyout $ClientCertKeyPath `
+                    -out $ClientCertCsrPath `
+                    -subj "/CN=$($VirtualNetworkGatewayName)Client$i"
+
+                if ($LASTEXITCODE -ne 0)
+                {
+                    throw "Failed to create client certificate request using OpenSSL"
+                }
+
+                # Sign client certificate with the root certificate
+                & openssl x509 `
+                    -req `
+                    -in $ClientCertCsrPath `
+                    -CA $PfxCertPathForRunAsAccountCer `
+                    -CAkey $RootCertKeyPath `
+                    -CAserial $RootCertSrlPath `
+                    -CAcreateserial `
+                    -out $ClientCertCerPath `
+                    -days $ValidDays `
+                    -sha256 `
+                    -extfile $ClientCertExtPath
+
+                if ($LASTEXITCODE -ne 0)
+                {
+                    throw "Failed to sign client certificate using OpenSSL"
+                }
+
+                # Export certificate and private key as PFX/PKCS#12 (including root certificate)
+                & openssl pkcs12 `
+                    -export `
+                    -out $PfxCertPathForRunAsAccount `
+                    -inkey $ClientCertKeyPath `
+                    -in $ClientCertCerPath `
+                    -certfile $PfxCertPathForRunAsAccountCer `
+                    -name "$($VirtualNetworkGatewayName)Client$i" `
+                    -passout "pass:$SelfSignedCertPlainPassword"
+
+                if ($LASTEXITCODE -ne 0)
+                {
+                    throw "Failed to export client certificate to PFX using OpenSSL"
+                }
+            }
+            finally
+            {
+                Remove-Item $ClientCertKeyPath -Force -ErrorAction SilentlyContinue
+                Remove-Item $ClientCertCsrPath -Force -ErrorAction SilentlyContinue
+                Remove-Item $ClientCertCerPath -Force -ErrorAction SilentlyContinue
+                Remove-Item $ClientCertExtPath -Force -ErrorAction SilentlyContinue
+            }
+        }
+        else
+        {
+            $CCert = New-SelfSignedCertificate -Subject "CN=$($VirtualNetworkGatewayName)Client$i" -Type "Custom" `
+                -Signer $Cert -DnsName "$($VirtualNetworkGatewayName)Client$i" `
+                -KeyExportPolicy "Exportable" -KeySpec "Signature" -KeyLength 2048 `
+                -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" `
+                -CertStoreLocation Cert:\CurrentUser\My -HashAlgorithm SHA256 `
+                -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.2') `
+                -NotBefore (Get-Date).AddDays(-1) -NotAfter (Get-Date).AddMonths($SelfSignedCertNoOfMonthsUntilExpired)
+            Export-PfxCertificate -Cert ("Cert:\CurrentUser\My\" + $CCert.Thumbprint) -FilePath $PfxCertPathForRunAsAccount -Password $CerPassword -Force | Write-Verbose
+        }
 
         # Updating Client Certificate in key vault 
         Write-Output "Updating Client Certificate in key vault"
@@ -263,6 +394,13 @@ for ($i=1; $i -lt ($NumCerts+1); $i++)
         $AzureKeyVaultSecret = Set-AzKeyVaultSecret -VaultName $KeyVaultName -Name "$($ClientCertSecretName)Pwd" -SecretValue $CerPassword
     }
     #TODO Update
+}
+
+# Cleaning up root certificate private key files (Unix only, only needed to sign the client certificates)
+if ($AlyaIsPsUnix -and $RootCertKeyPath)
+{
+    Remove-Item $RootCertKeyPath -Force -ErrorAction SilentlyContinue
+    Remove-Item $RootCertSrlPath -Force -ErrorAction SilentlyContinue
 }
 
 # Checking VPN client profile 

@@ -274,7 +274,16 @@ Add-PnPFile -Connection $siteCon -Path (ConvertTo-PlatformPath "$AlyaTemp\Global
 
 # Enable global navigation
 Write-Host "Enable global navigation" -ForegroundColor $CommandInfo
-Invoke-PnPSPRestMethod -Connection $siteCon -Url "$AlyaSharePointUrl/_api/navigationSettings/EnableGlobalNavigation" -Method POST -ContentType "application/json;odata=verbose" -Content "{ `"isEnabled`": true }"
+$globalNavEnabled = Invoke-PnPSPRestMethod -Connection $siteCon -Url "$AlyaSharePointUrl/_api/navigation/GlobalNavEnabled" -Method GET -ContentType "application/json;odata=verbose"
+$currentResourcesNav = Invoke-PnPSPRestMethod -Connection $siteCon -Url "$AlyaSharePointUrl/_api/navigation/CurrentResourcesNav" -Method GET -ContentType "application/json;odata=verbose"
+if (-Not $globalNavEnabled.value)
+{
+    Invoke-PnPSPRestMethod -Connection $siteCon -Url "$AlyaSharePointUrl/_api/navigationSettings/EnableGlobalNavigation" -Method POST -ContentType "application/json;odata=verbose" -Content "{ `"isEnabled`": true }"
+}
+else
+{
+    Write-Host "Global navigation was already enabled"
+}
 
 # Setting global navigation logo
 Write-Host "Setting global navigation logo" -ForegroundColor $CommandInfo
@@ -305,7 +314,8 @@ if (-Not $navTop)
     Write-Host ("Adding nav node SharePoint" -f $title, "$($AlyaSharePointUrl)/sites/$($hubSiteI.url)")
     $navTop = Add-PnPNavigationNode -Connection $siteCon -Location "TopNavigationBar" -Title "SharePoint"
 }
-$topNavs = Get-PnPNavigationNode -Connection $siteCon -Id $navTop.Id
+$navTop = Get-PnPNavigationNode -Connection $siteCon -Id $navTop.Id
+$topNavs = $navTop.Children
 foreach($hubSiteI in ($hubSites | Sort-Object -Property title))
 {
     #$hubSiteI = $hubSites[0]

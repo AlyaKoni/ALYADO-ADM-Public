@@ -33,6 +33,7 @@
     06.03.2020 Konrad Brunner       Initial Version
     23.04.2023 Konrad Brunner       Switched to Graph
     06.02.2026 Konrad Brunner       Added powershell documentation
+    26.10.2026 Konrad Brunner       Switched to PnP (setting does not work via Graph)
 
 #>
 
@@ -41,7 +42,7 @@
 Enables the requirement that invited external users must accept invitations using the same email address in SharePoint Online.
 
 .DESCRIPTION
-The Enable-EmailAccountMatch.ps1 script connects to Microsoft Graph with the appropriate permissions and updates SharePoint tenant settings to ensure that invited external users are required to accept invitations using the same email address. It logs its activities, verifies necessary modules, and maintains a transcript for record keeping.
+The Enable-EmailAccountMatch.ps1 script connects to SharePoint Online with PnP PowerShell and updates the tenant setting RequireAcceptingAccountMatchInvitedAccount to ensure that invited external users are required to accept invitations using the same email address. Setting and reading this property does not work via Microsoft Graph, therefore PnP PowerShell is used. The script logs its activities, verifies necessary modules, and maintains a transcript for record keeping.
 
 .INPUTS
 None. The script does not accept pipeline input.
@@ -51,7 +52,7 @@ None. The script produces console output and a log file recording all operations
 
 .EXAMPLE
 PS> .\Enable-EmailAccountMatch.ps1
-Runs the script to enable the “require account match invited email” setting in SharePoint Online using the Microsoft Graph API.
+Runs the script to enable the “require account match invited email” setting in SharePoint Online using PnP PowerShell.
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -72,33 +73,36 @@ Start-Transcript -Path "$($AlyaLogs)\scripts\sharepoint\Enable-EmailAccountMatch
 
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
-Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "PnP.PowerShell"
 
 # Logging in
-LoginTo-MgGraph -Scopes "SharePointTenantSettings.ReadWrite.All"
+$conPnPAdmin = LoginTo-PnP -Url $AlyaSharePointAdminUrl
 
 # =============================================================
 # O365 stuff
 # =============================================================
 
 Write-Host "`n`n=====================================================" -ForegroundColor $CommandInfo
-Write-Host "SharePoint | Enable-EmailAccountMatch | Graph" -ForegroundColor $CommandInfo
+Write-Host "SharePoint | Enable-EmailAccountMatch | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Enabling require account match invited email
+# Setting and reading isRequireAcceptingUserToMatchInvitedUserEnabled does not work via Graph, so we use PnP PowerShell
 Write-Host "Enabling require account match invited email" -ForegroundColor $CommandInfo
-$setting = Invoke-MgGraphRequest -Method "Get" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings"
+$tenant = Get-PnPTenant -Connection $conPnPAdmin
 
-if ($setting.isRequireAcceptingUserToMatchInvitedUserEnabled -ne $true){
-    Write-Warning "Require account match was set to '$($setting.isRequireAcceptingUserToMatchInvitedUserEnabled)', setting to '$true'"
-    $newSettings = @{
-        "isRequireAcceptingUserToMatchInvitedUserEnabled" = $true
-    }
-    Invoke-MgGraphRequest -Method "Patch" -Uri "$AlyaGraphEndpoint/beta/admin/sharepoint/settings" -Body ($newSettings | ConvertTo-Json)
+if ($tenant.RequireAcceptingAccountMatchInvitedAccount -ne $true){
+    Write-Warning "Require account match was set to '$($tenant.RequireAcceptingAccountMatchInvitedAccount)', setting to '$true'"
+    # Set the value via the existing PnP admin connection
+    Set-PnPTenant -RequireAcceptingAccountMatchInvitedAccount $true -Connection $conPnPAdmin
 }
 else {
-    Write-host "Require account match was alreadyset to '$true'"
+    Write-Host "Require account match was already set to '$true'"
 }
+
+# Verification
+$check = Get-PnPTenant -Connection $conPnPAdmin
+Write-Host "New status in SharePoint backend: $($check.RequireAcceptingAccountMatchInvitedAccount)" -ForegroundColor Green
 
 # Stopping Transcript
 Stop-Transcript

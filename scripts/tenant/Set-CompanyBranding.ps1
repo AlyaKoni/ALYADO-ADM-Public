@@ -36,6 +36,7 @@
     06.02.2026 Konrad Brunner       Added powershell documentation
     18.10.2026 Konrad Brunner       Ensured TEMP is set (null on Linux)
     18.10.2026 Konrad Brunner       Removed final pause (automated setup)
+    26.10.2026 Konrad Brunner       Create default branding via Graph PATCH (Accept-Language: 0)
 
 #>
 
@@ -138,17 +139,33 @@ try
     $branding = Get-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId
 } catch
 {
-    #TODO fix this
-    Write-Warning "Branding does not exists, creating"
-    Write-Warning "Please create default branding on the following page"
-    Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
-    if (-Not $browser) {
-        Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
-    } else {
-        $browser.Url =  "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+    try
+    {
+        # Creating default branding via Graph: header "Accept-Language: 0" addresses the default branding object
+        Write-Warning "Branding does not exist, creating default branding via Graph"
+        $brandingPayload = @{
+            backgroundColor  = $AlyaAzureBrandingBackgroundColor
+            signInPageText   = $AlyaAzureBrandingSignInPageTextDefault
+            usernameHintText = $AlyaAzureBrandingUsernameHintTextDefault
+        } | ConvertTo-Json
+        Invoke-MgGraphRequest -Method PATCH -Uri "$AlyaGraphEndpoint/beta/organization/$AlyaTenantId/branding" `
+            -Headers @{ "Accept-Language" = "0" } `
+            -Body $brandingPayload |
+            Out-Null
+        $branding = Get-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId
+    } catch
+    {
+        Write-Warning "Creating default branding via Graph failed: $($_.Exception.Message)"
+        Write-Warning "Please create default branding on the following page"
+        Write-Warning "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        if (-Not $browser) {
+            Start-Process "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        } else {
+            $browser.Url =  "https://portal.azure.com/#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/LoginTenantBranding"
+        }
+        pause
+        $branding = Get-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId
     }
-    pause
-    $branding = Get-MgBetaOrganizationBranding -OrganizationId $AlyaTenantId
 }
 
 # Setting azure branding
@@ -245,6 +262,7 @@ else
         Set-MgBetaOrganizationBrandingLocalizationBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
         Set-MgBetaOrganizationBrandingLocalizationBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
         Set-MgBetaOrganizationBrandingLocalizationBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
+        Set-MgBetaOrganizationBrandingLocalizationBackgroundImage -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "0"
     }
     catch
     {
@@ -284,6 +302,7 @@ else
         Set-MgBetaOrganizationBrandingLocalizationSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
         Set-MgBetaOrganizationBrandingLocalizationSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
         Set-MgBetaOrganizationBrandingLocalizationSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "0"
     }
     catch
     {
@@ -323,6 +342,7 @@ else
         Set-MgBetaOrganizationBrandingLocalizationSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
         Set-MgBetaOrganizationBrandingLocalizationSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
         Set-MgBetaOrganizationBrandingLocalizationSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
+        Set-MgBetaOrganizationBrandingLocalizationSquareLogoDark -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "0"
     }
     catch
     {
@@ -362,6 +382,7 @@ else
         Set-MgBetaOrganizationBrandingLocalizationBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
         Set-MgBetaOrganizationBrandingLocalizationBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
         Set-MgBetaOrganizationBrandingLocalizationBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
+        Set-MgBetaOrganizationBrandingLocalizationBannerLogo -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "0"
     }
     catch
     {
@@ -401,6 +422,7 @@ else
         Set-MgBetaOrganizationBrandingLocalizationFavicon -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "de-de"
         Set-MgBetaOrganizationBrandingLocalizationFavicon -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "fr-FR"
         Set-MgBetaOrganizationBrandingLocalizationFavicon -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "it-IT"
+        Set-MgBetaOrganizationBrandingLocalizationFavicon -OrganizationId $AlyaTenantId -InFile $uplFile -OrganizationalBrandingLocalizationId "0"
     }
     catch
     {
