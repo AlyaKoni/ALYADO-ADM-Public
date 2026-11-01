@@ -34,6 +34,8 @@
     19.03.2025 Konrad Brunner       New param configureAllowedKeys
     06.02.2026 Konrad Brunner       Added powershell documentation
     18.10.2026 Konrad Brunner       Fixed group checks, added MFA group nesting
+    30.10.2026 Konrad Brunner       Added isAttestationEnforced parameter
+    31.10.2026 Konrad Brunner       Added secure passkey profile for fido2, profile targeting
 
 #>
 
@@ -42,7 +44,7 @@
 Configures authentication method policies in Azure AD using Microsoft Graph.
 
 .DESCRIPTION
-The Set-AuthenticationMethods.ps1 script automates the configuration and enforcement of authentication method policies in Azure Active Directory. It verifies and ensures the correct setup of policies for authentication methods such as FIDO2, Microsoft Authenticator, Email, Temporary Access Pass, OATH, SMS, and Voice. It also checks and updates system credential preferences and authentication strength policies as required. The script uses Microsoft Graph Beta modules and requires appropriate permissions to make the necessary modifications.
+The Set-AuthenticationMethods.ps1 script automates the configuration and enforcement of authentication method policies in Azure Active Directory. It verifies and ensures the correct setup of policies for authentication methods such as FIDO2, Microsoft Authenticator, Email, Temporary Access Pass, OATH, SMS, and Voice. It also checks and updates system credential preferences and authentication strength policies as required. When the group name AlyaKeyAuthEnabledGroupName is configured, an additional FIDO2 passkey profile named "Secure passkey profile" (device-bound passkeys only, attestation enforcement always enabled) is created or updated and exclusively assigned to that group via include targets, while the "all_users" include target is restricted to the default passkey profile. Key restrictions are applied to both passkey profiles when configureAllowedKeys is used. The script uses Microsoft Graph Beta modules and requires appropriate permissions to make the necessary modifications.
 
 .PARAMETER minimalConfig
 Determines whether to apply only a minimal configuration. When set to true, only essential authentication methods are configured.
@@ -55,6 +57,9 @@ Specifies whether conditional access is enabled. When true, system credential pr
 
 .PARAMETER configureAllowedKeys
 Indicates if allowed key restrictions for FIDO2 devices should be configured. When true, key restrictions are enforced with allowed keys; otherwise, restrictions are disabled.
+
+.PARAMETER isAttestationEnforced
+Specifies whether attestation is enforced for FIDO2 devices. When true, attestation is required; otherwise, it is not enforced.
 
 .INPUTS
 None. The script does not accept pipeline input.
@@ -77,7 +82,9 @@ Param(
     [bool]$minimalConfig = $true,
     [bool]$unsecureConfig = $false,
     [bool]$conditionalAccessEnabled = $true,
-    [bool]$configureAllowedKeys = $false
+    [bool]$configureAllowedKeys = $false,
+    [bool]$isAttestationEnforced = $false,
+    [bool]$allowPasskeySync = $false
 )
 
 # Reading configuration
@@ -105,15 +112,39 @@ Write-Host "Tenant | Set-AuthenticationMethods | Graph" -ForegroundColor $Comman
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
 # Checking configuration
-if ($null -eq $AlyaKeyAuthEnabledKeys -or $AlyaKeyAuthEnabledKeys -eq "PleaseSpecify")
+if ($configureAllowedKeys)
 {
-    $AlyaKeyAuthEnabledKeys = @("d8522d9f-575b-4866-88a9-ba99fa02f35b")
+    if ($null -eq $AlyaKeyAuthEnabledKeys -or $AlyaKeyAuthEnabledKeys -eq "PleaseSpecify")
+    {
+        $AlyaKeyAuthEnabledKeys = @("d8522d9f-575b-4866-88a9-ba99fa02f35b")
+    }
+    $windowsHelloKeys = @("08987058-cadc-4b81-b6e1-30de50dcbe96","9ddd1817-af5a-4672-a2b9-3e3dd95000a9","6028b017-b1d4-4c02-b4b3-afcdafc96bb2")
+    # 08987058-cadc-4b81-b6e1-30de50dcbe96   Windows Hello Hardware
+    # 9ddd1817-af5a-4672-a2b9-3e3dd95000a9   Windows Hello VBS Hardware
+    # 6028b017-b1d4-4c02-b4b3-afcdafc96bb2   Windows Hello Software
+    foreach ($key in $windowsHelloKeys) {
+        if ($AlyaKeyAuthEnabledKeys -notcontains $key) {
+            Write-Host "  fido2 aaGuid $key for Windows Hello was missing in AlyaKeyAuthEnabledKeys. Added now."
+            $AlyaKeyAuthEnabledKeys += $key
+        }
+    }
+    $authenticatorKeys = @("de1e552d-db1d-4423-a619-566b625cdc84","90a3ccdf-635c-4729-a248-9b709135078f")
+    # de1e552d-db1d-4423-a619-566b625cdc84   Microsoft Authenticator for Android
+    # 90a3ccdf-635c-4729-a248-9b709135078f   Microsoft Authenticator for iOS
+    foreach ($key in $authenticatorKeys) {
+        if ($AlyaKeyAuthEnabledKeys -notcontains $key) {
+            Write-Host "  fido2 aaGuid $key for Microsoft Authenticator was missing in AlyaKeyAuthEnabledKeys. Added now."
+            $AlyaKeyAuthEnabledKeys += $key
+        }
+    }
 }
 
 # Getting AuthenticationMethodPolicy
 Write-Host "Getting AuthenticationMethodPolicy" -ForegroundColor $CommandInfo
 $authenticationMethodPolicy = Get-MgBetaPolicyAuthenticationMethodPolicy
 $Fido2AMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "Fido2" }
+$defaultPasskeyProfileId = $Fido2AMC.AdditionalProperties.defaultPasskeyProfile
+$defaultPasskeyProfile = $Fido2AMC.AdditionalProperties.passkeyProfiles | Where-Object { $_.id -eq $defaultPasskeyProfileId }
 $MicrosoftAuthenticatorAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "MicrosoftAuthenticator" }
 $SmsAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "Sms" }
 $TemporaryAccessPassAMC = $authenticationMethodPolicy.AuthenticationMethodConfigurations | Where-Object { $_.Id -eq "TemporaryAccessPass" }
@@ -173,80 +204,381 @@ if ($dirty) {
 
 # Checking fido2 policy
 Write-Host "Checking fido2 policy" -ForegroundColor $CommandInfo
-$params = @{
-    "@odata.type" = "#microsoft.graph.fido2AuthenticationMethodConfiguration"
-    State = "enabled"
-    IsAttestationEnforced = $true
-    IsSelfServiceRegistrationAllowed = $true
-    KeyRestrictions = @{
-        "@odata.type" = "#microsoft.graph.fido2KeyRestrictions"
-        IsEnforced = $true
-        EnforcementType = "allow"
-        AaGuids = $AlyaKeyAuthEnabledKeys
-    }
-}
-$dirty = $false
-if ($Fido2AMC.State -ne "enabled") {
-    Write-Warning "  fido2 policy wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  fido2 policy was already enabled."
-}
-if ($Fido2AMC.AdditionalProperties.isAttestationEnforced -ne $true) {
-    Write-Warning "  fido2 policy configuration isAttestationEnforced wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  fido2 policy configuration isAttestationEnforced was already enabled."
-}
-if ($Fido2AMC.AdditionalProperties.isSelfServiceRegistrationAllowed -ne $true) {
-    Write-Warning "  fido2 policy configuration isSelfServiceRegistrationAllowed wasn't enabled. Enabling it now."
-    $dirty = $true
-} else {
-    Write-Host "  fido2 policy configuration isSelfServiceRegistrationAllowed was already enabled."
-}
-foreach($key in $AlyaKeyAuthEnabledKeys)
+$passkeyProfiles = @($Fido2AMC.AdditionalProperties.passkeyProfiles)
+$defaultPasskeyProfileId = $Fido2AMC.AdditionalProperties.defaultPasskeyProfile
+$defaultPasskeyProfile = $passkeyProfiles |
+    Where-Object { $_.id -eq $defaultPasskeyProfileId } |
+    Select-Object -First 1
+
+if (-not $defaultPasskeyProfile)
 {
-    if ($Fido2AMC.AdditionalProperties.keyRestrictions.aaGuids -notcontains $key) {
-        Write-Warning "  fido2 aaGuid $key was missing in aaGuids. Added now."
-        $dirty = $true
-    }
+    throw "Default FIDO2 passkey profile '$defaultPasskeyProfileId' was not found."
 }
-foreach($key in $Fido2AMC.AdditionalProperties.keyRestrictions.aaGuids)
+$passkeyTypes = "deviceBound"
+if ($allowPasskeySync)
 {
-    $params.KeyRestrictions.AaGuids = $Fido2AMC.AdditionalProperties.keyRestrictions.aaGuids
-    if ($params.KeyRestrictions.AaGuids -notcontains $key) {
-        $params.KeyRestrictions.AaGuids += $key
-    }
+    $passkeyTypes = "deviceBound,synced"
 }
+$attestationEnforcement = "disabled"
+if ($isAttestationEnforced)
+{
+    $attestationEnforcement = "registrationOnly"
+}
+$desiredAaGuids = @()
 if ($configureAllowedKeys)
 {
-    if ($Fido2AMC.AdditionalProperties.keyRestrictions.isEnforced -ne $true) {
-        Write-Warning "  fido2 policy configuration keyRestrictions.isEnforced wasn't enabled. Enabling it now."
-        $dirty = $true
-    } else {
-        Write-Host "  fido2 policy configuration keyRestrictions.isEnforced was already enabled."
+    $desiredAaGuids = @(
+        $AlyaKeyAuthEnabledKeys |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            ForEach-Object { $_.ToString().ToLowerInvariant() } |
+            Sort-Object -Unique
+    )
+}
+$updatedDefaultPasskeyProfile = @{
+    "@odata.type"          = "#microsoft.graph.passkeyProfile"
+    Id                     = $defaultPasskeyProfile.id
+    Name                   = $defaultPasskeyProfile.name
+    PasskeyTypes           = $passkeyTypes
+    AttestationEnforcement = $attestationEnforcement
+    KeyRestrictions        = @{
+        "@odata.type"   = "#microsoft.graph.fido2KeyRestrictions"
+        IsEnforced      = $configureAllowedKeys
+        EnforcementType = "allow"
+        AaGuids         = $desiredAaGuids
     }
-    if ($Fido2AMC.AdditionalProperties.keyRestrictions.enforcementType -ne "allow") {
-        Write-Warning "  fido2 policy configuration keyRestrictions.enforcementType wasn't allowed. Allowing it now."
-        $dirty = $true
-    } else {
-        Write-Host "  fido2 policy configuration keyRestrictions.enforcementType was already allowed."
+}
+$securePasskeyProfileName = "Secure passkey profile"
+$configureSecurePasskeyProfile = ($null -ne $AlyaKeyAuthEnabledGroupName -and $AlyaKeyAuthEnabledGroupName -ne "PleaseSpecify")
+$securePasskeyProfile = $null
+$securePasskeyProfileId = $null
+$updatedSecurePasskeyProfile = $null
+$keyAuthGroup = $null
+if ($configureSecurePasskeyProfile)
+{
+    $securePasskeyProfile = $passkeyProfiles |
+        Where-Object { $_.name -eq $securePasskeyProfileName } |
+        Select-Object -First 1
+    $securePasskeyProfileId = [guid]::NewGuid().ToString()
+    if ($securePasskeyProfile)
+    {
+        $securePasskeyProfileId = $securePasskeyProfile.id
     }
+    $updatedSecurePasskeyProfile = @{
+        "@odata.type"          = "#microsoft.graph.passkeyProfile"
+        Id                     = $securePasskeyProfileId
+        Name                   = $securePasskeyProfileName
+        PasskeyTypes           = "deviceBound"
+        AttestationEnforcement = "registrationOnly"
+        KeyRestrictions        = @{
+            "@odata.type"   = "#microsoft.graph.fido2KeyRestrictions"
+            IsEnforced      = $configureAllowedKeys
+            EnforcementType = "allow"
+            AaGuids         = $desiredAaGuids
+        }
+    }
+    # Getting key auth group for the secure passkey profile target
+    $keyAuthGroup = @(Get-MgBetaGroup -Filter "displayName eq '$AlyaKeyAuthEnabledGroupName'") | Select-Object -First 1
+    if (-Not $keyAuthGroup)
+    {
+        throw "Group $AlyaKeyAuthEnabledGroupName not found!"
+    }
+}
+$updatedPasskeyProfiles = @()
+foreach ($passkeyProfile in $passkeyProfiles)
+{
+    if ($passkeyProfile.id -eq $defaultPasskeyProfileId)
+    {
+        $updatedPasskeyProfiles += $updatedDefaultPasskeyProfile
+    }
+    elseif ($null -ne $securePasskeyProfile -and $passkeyProfile.id -eq $securePasskeyProfile.id)
+    {
+        $updatedPasskeyProfiles += $updatedSecurePasskeyProfile
+    }
+    else
+    {
+        $updatedPasskeyProfiles += $passkeyProfile
+    }
+}
+if ($null -ne $updatedSecurePasskeyProfile -and -not $securePasskeyProfile)
+{
+    $updatedPasskeyProfiles += $updatedSecurePasskeyProfile
+}
+# Building fido2 include targets: all_users gets the default passkey profile only,
+# the key auth group gets the secure passkey profile only, all other targets are kept
+$includeTargets = @($Fido2AMC.AdditionalProperties.includeTargets | Where-Object { $null -ne $_ })
+$updatedIncludeTargets = @()
+$allUsersIncludeTarget = $null
+$allUsersAllowedProfiles = @()
+$keyAuthGroupIncludeTarget = $null
+$keyAuthGroupAllowedProfiles = @()
+foreach ($includeTarget in $includeTargets)
+{
+    $allowedPasskeyProfiles = @()
+    if ($includeTarget.PSObject.Properties.Name -contains "allowedPasskeyProfiles")
+    {
+        $allowedPasskeyProfiles = @($includeTarget.allowedPasskeyProfiles)
+    }
+    if ($includeTarget.id -eq "all_users")
+    {
+        $allUsersIncludeTarget = $includeTarget
+        $allUsersAllowedProfiles = $allowedPasskeyProfiles
+        $updatedIncludeTargets += @{
+            TargetType             = "group"
+            Id                     = "all_users"
+            IsRegistrationRequired = $includeTarget.isRegistrationRequired
+            AllowedPasskeyProfiles = @($defaultPasskeyProfileId)
+        }
+    }
+    elseif ($configureSecurePasskeyProfile -and $includeTarget.id -eq $keyAuthGroup.Id)
+    {
+        $keyAuthGroupIncludeTarget = $includeTarget
+        $keyAuthGroupAllowedProfiles = $allowedPasskeyProfiles
+        $updatedIncludeTargets += @{
+            TargetType             = "group"
+            Id                     = $includeTarget.id
+            IsRegistrationRequired = $includeTarget.isRegistrationRequired
+            AllowedPasskeyProfiles = @($securePasskeyProfileId)
+        }
+    }
+    else
+    {
+        $updatedIncludeTargets += $includeTarget
+    }
+}
+if (-not $allUsersIncludeTarget)
+{
+    $updatedIncludeTargets += @{
+        TargetType             = "group"
+        Id                     = "all_users"
+        IsRegistrationRequired = $false
+        AllowedPasskeyProfiles = @($defaultPasskeyProfileId)
+    }
+}
+if ($configureSecurePasskeyProfile -and -not $keyAuthGroupIncludeTarget)
+{
+    $updatedIncludeTargets += @{
+        TargetType             = "group"
+        Id                     = $keyAuthGroup.Id
+        IsRegistrationRequired = $false
+        AllowedPasskeyProfiles = @($securePasskeyProfileId)
+    }
+}
+$params = @{
+    "@odata.type"                    = "#microsoft.graph.fido2AuthenticationMethodConfiguration"
+    State                            = "enabled"
+    IsSelfServiceRegistrationAllowed = $true
+    PasskeyProfiles                  = $updatedPasskeyProfiles
+    IncludeTargets                   = $updatedIncludeTargets
+}
+$dirty = $false
+if ($Fido2AMC.State -ne "enabled")
+{
+    Write-Warning "  fido2 policy wasn't enabled. Enabling it now."
+    $dirty = $true
 }
 else
 {
-    if ($Fido2AMC.AdditionalProperties.keyRestrictions.isEnforced -ne $false) {
-        Write-Warning "  fido2 policy configuration keyRestrictions.isEnforced wasn't disabled. Disabling it now."
+    Write-Host "  fido2 policy was already enabled."
+}
+if ($Fido2AMC.AdditionalProperties.isSelfServiceRegistrationAllowed -ne $true)
+{
+    Write-Warning "  fido2 policy configuration isSelfServiceRegistrationAllowed wasn't enabled. Enabling it now."
+    $dirty = $true
+}
+else
+{
+    Write-Host "  fido2 policy configuration isSelfServiceRegistrationAllowed was already enabled."
+}
+if ($defaultPasskeyProfile.attestationEnforcement -ne $attestationEnforcement)
+{
+    Write-Warning "  fido2 policy configuration attestationEnforcement wasn't set to $attestationEnforcement. Setting it now."
+    $dirty = $true
+}
+else
+{
+    Write-Host "  fido2 policy configuration attestationEnforcement was already set to $attestationEnforcement."
+}
+$currentPasskeyTypes = @()
+if ($null -ne $defaultPasskeyProfile.passkeyTypes)
+{
+    $currentPasskeyTypes = @(
+        $defaultPasskeyProfile.passkeyTypes.ToString() -split "," |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { $_ } |
+            Sort-Object -Unique
+    )
+}
+$desiredPasskeyTypes = @(
+    $passkeyTypes -split "," |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { $_ } | Sort-Object -Unique
+)
+
+if (Compare-Object -ReferenceObject $currentPasskeyTypes -DifferenceObject $desiredPasskeyTypes)
+{
+    Write-Warning "  fido2 policy configuration passkeyTypes wasn't set to $passkeyTypes. Setting it now."
+    $dirty = $true
+}
+else
+{
+    Write-Host "  fido2 policy configuration passkeyTypes was already set to $passkeyTypes."
+}
+$currentKeyRestrictions = $defaultPasskeyProfile.keyRestrictions
+if ($currentKeyRestrictions.isEnforced -ne $configureAllowedKeys)
+{
+    Write-Warning "  fido2 policy configuration keyRestrictions.isEnforced wasn't set to $configureAllowedKeys. Setting it now."
+    $dirty = $true
+}
+else
+{
+    Write-Host "  fido2 policy configuration keyRestrictions.isEnforced was already set to $configureAllowedKeys."
+}
+if ($configureAllowedKeys)
+{
+    if ($currentKeyRestrictions.enforcementType -ne "allow")
+    {
+        Write-Warning "  fido2 policy configuration keyRestrictions.enforcementType wasn't set to allow. Setting it now."
         $dirty = $true
-        $params.KeyRestrictions.IsEnforced = $false
     }
-    if ($params.KeyRestrictions.IsEnforced -ne $false) {
+    else
+    {
+        Write-Host "  fido2 policy configuration keyRestrictions.enforcementType was already set to allow."
+    }
+    $currentAaGuids = @(
+        $currentKeyRestrictions.aaGuids |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+            ForEach-Object { $_.ToString().ToLowerInvariant() } |
+            Sort-Object -Unique
+    )
+
+    $aaGuidDifferences = Compare-Object `
+        -ReferenceObject $currentAaGuids `
+        -DifferenceObject $desiredAaGuids
+
+    if ($aaGuidDifferences)
+    {
+        foreach ($difference in $aaGuidDifferences)
+        {
+            if ($difference.SideIndicator -eq "=>")
+            {
+                Write-Warning "  fido2 aaGuid $($difference.InputObject) was missing in the current passkey profile. Adding it now."
+            }
+            else
+            {
+                Write-Warning "  fido2 aaGuid $($difference.InputObject) is not configured in AlyaKeyAuthEnabledKeys. Removing it now."
+            }
+        }
+
         $dirty = $true
-        $params.KeyRestrictions.IsEnforced = $false
+    }
+    else
+    {
+        Write-Host "  fido2 policy configuration aaGuids was already configured correctly."
     }
 }
-if ($dirty) {
-    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration  `
+if ($configureSecurePasskeyProfile)
+{
+    if (-not $securePasskeyProfile)
+    {
+        Write-Warning "  fido2 passkey profile '$securePasskeyProfileName' was missing. Adding it now."
+        $dirty = $true
+    }
+    else
+    {
+        Write-Host "  fido2 passkey profile '$securePasskeyProfileName' was already existing."
+        if ($securePasskeyProfile.attestationEnforcement -ne "registrationOnly")
+        {
+            Write-Warning "  fido2 secure passkey profile attestationEnforcement wasn't set to registrationOnly. Setting it now."
+            $dirty = $true
+        }
+        else
+        {
+            Write-Host "  fido2 secure passkey profile attestationEnforcement was already set to registrationOnly."
+        }
+        $currentSecurePasskeyTypes = @()
+        if ($null -ne $securePasskeyProfile.passkeyTypes)
+        {
+            $currentSecurePasskeyTypes = @(
+                $securePasskeyProfile.passkeyTypes.ToString() -split "," |
+                    ForEach-Object { $_.Trim() } |
+                    Where-Object { $_ } |
+                    Sort-Object -Unique
+            )
+        }
+        if (Compare-Object -ReferenceObject $currentSecurePasskeyTypes -DifferenceObject @("deviceBound"))
+        {
+            Write-Warning "  fido2 secure passkey profile passkeyTypes wasn't set to deviceBound. Setting it now."
+            $dirty = $true
+        }
+        else
+        {
+            Write-Host "  fido2 secure passkey profile passkeyTypes was already set to deviceBound."
+        }
+        $currentSecureKeyRestrictions = $securePasskeyProfile.keyRestrictions
+        if ($currentSecureKeyRestrictions.isEnforced -ne $configureAllowedKeys)
+        {
+            Write-Warning "  fido2 secure passkey profile keyRestrictions.isEnforced wasn't set to $configureAllowedKeys. Setting it now."
+            $dirty = $true
+        }
+        else
+        {
+            Write-Host "  fido2 secure passkey profile keyRestrictions.isEnforced was already set to $configureAllowedKeys."
+        }
+        if ($configureAllowedKeys)
+        {
+            $currentSecureAaGuids = @(
+                $currentSecureKeyRestrictions.aaGuids |
+                    Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                    ForEach-Object { $_.ToString().ToLowerInvariant() } |
+                    Sort-Object -Unique
+            )
+            if (Compare-Object -ReferenceObject $currentSecureAaGuids -DifferenceObject $desiredAaGuids)
+            {
+                Write-Warning "  fido2 secure passkey profile aaGuids weren't configured correctly. Setting them now."
+                $dirty = $true
+            }
+            else
+            {
+                Write-Host "  fido2 secure passkey profile aaGuids was already configured correctly."
+            }
+        }
+    }
+}
+# Checking fido2 include targets
+if (-not $allUsersIncludeTarget)
+{
+    Write-Warning "  fido2 include target 'all_users' was missing. Adding it now."
+    $dirty = $true
+}
+elseif (Compare-Object -ReferenceObject @($allUsersAllowedProfiles) -DifferenceObject @($defaultPasskeyProfileId))
+{
+    Write-Warning "  fido2 include target 'all_users' wasn't restricted to the default passkey profile. Setting it now."
+    $dirty = $true
+}
+else
+{
+    Write-Host "  fido2 include target 'all_users' was already restricted to the default passkey profile."
+}
+if ($configureSecurePasskeyProfile)
+{
+    if (-not $keyAuthGroupIncludeTarget)
+    {
+        Write-Warning "  fido2 include target for group '$AlyaKeyAuthEnabledGroupName' was missing. Adding it now."
+        $dirty = $true
+    }
+    elseif (Compare-Object -ReferenceObject @($keyAuthGroupAllowedProfiles) -DifferenceObject @($securePasskeyProfileId))
+    {
+        Write-Warning "  fido2 include target for group '$AlyaKeyAuthEnabledGroupName' wasn't restricted to the secure passkey profile. Setting it now."
+        $dirty = $true
+    }
+    else
+    {
+        Write-Host "  fido2 include target for group '$AlyaKeyAuthEnabledGroupName' was already restricted to the secure passkey profile."
+    }
+}
+if ($dirty)
+{
+    Update-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration `
         -AuthenticationMethodConfigurationId $Fido2AMC.Id `
         -BodyParameter $params
 }
@@ -497,8 +829,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCAyvVUYdWHNLQpR
-# wX+IummjitFLVi3Ixl8GaE3+uBhA56CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCRZi/A8cEmLomY
+# VOIN3EVt5EorAeXC/G80VNBtZ0lsiaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -612,23 +944,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHlIdGYu
-# LzSQMxJI1QTWjUjIy6Ft3f89wSMIeSlmXFoEMA0GCSqGSIb3DQEBAQUABIICAGrz
-# fwnphsaHiK90BtxxGDLOsBAzI1Ngcrji4vM8Ct8qjgJ68zT2JNZetUoVvnrNx6jT
-# c+bhtOr4p2JlXh+2ZMTHZfayWWuLTr4jfsqnSZLYLKJbGnuUnOLs0s00kq0M3OmE
-# J9zMlYN7LmJ8o4JTpR58izYxht1TXqz6Qw3ZmUWoNJrVM3qaLT6UmHAWChO+igsq
-# uklrosSUWCH8nQLCJuvdRX5XilLjgqg8Qln5EGoNi74qw83j60gNcpgB8jbeiXD+
-# BjCfMy2mhT9Ocx/g9s41q8s+k90ycc/ySuE//tg+CnGN3ABlTpyFRojQPb+QM7hY
-# lAbYAVIUU9pgyv0UGho9xDJiflkQJpte2P3qsRaaYSVGIkctiXZlCg5oC7PIM4cU
-# 5mTPJcvyYpbdiK+SnZwZjA16WZntHKD6AZBZ+gO2RGsYA6hsj9p6robgGpf1/uco
-# LV8hUQAGWC9jFrN8R7dQ4uv3sU/bNTrzStv/c7i1ngbrGEW3NAkTeTgw8a4kUj0+
-# JqiZAzR/j7W74bOQsgC6wl0EtUqEXaAdQwPbnkDHd/AiR1EacX2rBkSC4w1euoHT
-# +PsktvWN08gFxZtXayYb0cmAvxznGZQ69ZMJ6FWNCHO9hln/BwPVlK1FtRaQlpX2
-# 9UrxuK5sQUlNcS55iJc7hfkKQqYBZkt22ZcGFE+woYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIF8aDhcH
+# 9Tm+IOUqk6GQbBNUqIsGC3cdcrL1tewBrtAXMA0GCSqGSIb3DQEBAQUABIICAMUj
+# gjWZbtWcxrD+VmpseksUkpY/oD/7G66zIcaYUAeRAmIPqbSw9yMCmGjTlUl4QYIJ
+# ZVaTjHChixVWd/74rbgUp8tjKH8uENZFoyiaJDZR8ktT5nQYi1rNqyNGeZbIOlzh
+# qKkguvkc2N6nHpHibF/JEXsd44NxrcFC3yluf/cEE7BUDOrn75NasFmQSbnfHOkm
+# U3i4vtBuOahO2CwW8nI+eWD4VGvQkRlev4Kn1ZkVnsh30PA/l1rCHpw5Ily2wGFa
+# tfA4enKZHnx+EfVn5KYmmZk7rd4oW3GU8sP1477OSLOmk9Wt9l2GcqZQ8osuEYmD
+# x+mWYeyncBkxsEq+Ewjdkj0T2sQmnFIbrqFtFEoVpeZ9ml0EaD/kZiJYDIEVCXQy
+# o40Vzjml/EWDO9cPm3qIWRQH9D7HwXDILWohsf9o9FH3f6oNTtbkqWLbPFpxVnm0
+# d+RdKvAPG6Q9E4cvDH/qBEy7KV20KHDIhstPHYXVChVmHRgR6p5pQ74GbNjSGeep
+# q1Bp5giFixUmvNgqReHhIvg8bl5p2jS4cY3tYyzwk7/HC+cnQyRWD3HHoY7ryOIm
+# MOJhQk0eWe+IDVD+ujJluelROpEz+xmMHM6uDtXo9lxxeqFXcJHDADIQHmYfplsV
+# oJn5y41nOcGxf6db3n2Et0SE5StnaWNq64UR6zpmoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCDLxmbWSPqhtUl0Zo3n+uXhhaRnT1tJgyj+2nxnoD09AIUU1eG
-# TE0SbOTuiE/JU0He7bdVSm8YDzIwMjYxMDIzMTAxOTE4WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCBmV7WBTqGBNIHsm6/pnfIe6LT7OFQN2E3iTVsmJqjb/AIUbHC8
+# lquCjKiDHzZAuKb+XsKxJZoYDzIwMjYxMDMwMTMxNjQyWjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -771,18 +1103,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDCU7biUIUKHdmOxzmTdeFwxItyHwDa8mbia2A/+gBWzP6cS51TS3Bc/mVXt
-# sdcOKWUwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDFKoiOwSDNqoRBZDQ+3Sq3kFWVRHtXcnaE7o8W2ZfW7UHyxT09WIm5mziX
+# wu9TWYcwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAktucdnT6x6hGJt/Ere6PrHZ92O4zlcFoc819MG+81LIE
-# cQMSzVtq+1zzufqWBjaXUuzRBcTTk5LDkERrVQnSemDLRk2SF3FryQAmZP7hw2bz
-# F4KEwNW5vpQi9GP4M2JEoATGtQ/QrLT0zOb27YA30kmrPdm0wLWB4qNJMdTXEY8X
-# sAM0uTfHgagWM74DQu/yQEJNFfbYXO9+xJu8kf9KkAhWfBuIcpq6SSnZEzsCJF93
-# UrImCGZYEQ6V2xijeqs2lY+HoM4JQf9wf2FZGPhc24ivUgG1eiXR1CIIFxBxdoC/
-# GyKZmGj9P5X4ro3ZEylpuZDNN/R+DT1/awLAPU74Tzd70LPFKjQPX+JD9JhPYn3s
-# Q/ULFm8uVIBjTWq1ORyWbB+qL5eHafYpBA2ydFmo1SvTaj1MnvHvT5bDnhGO//L+
-# 5hCSEJRLlK5kTju2VlV3/Uj0EJiz/F58gHo9VDCeAwXUX9bMXrhob3b83FO46sjj
-# 2I/MAH4hC+NCqKJs04WN
+# KoZIhvcNAQEMBQAEggGAcw8aqrxVrk5dwXGQmzUJuGFoIj8uT+OaHmroG1co+1BY
+# Qq+a1k0NUj9Rg6lOfRBU/OEI2s92Wau0Fx9q14aM/o3WHDALpWUbvdwqNviOutuN
+# C+MOD5A4q622G0ZE4DwOFqZ14/Zbe4msOEAgEDgmFofgV19WPhGLaVghLkzpcIvP
+# D6XtkU9m7ikLEadgPzlcyelAlRfIpkbJIc3gd6w5Whzz6+35zotJDMydwW9jPE+U
+# 3l9le6n2HSve5p2C/sw1E+fiH6oJ5lLRJFat3Uc6O4PtcmB6YLjwog3LpKM0aD+r
+# clNtRRAsh/Hjbt84DEBfoWYPhyqkj0LIQhYiIXVIcvj6KzvFm7og5iPXMdKc63l9
+# CqZLdwUjbKVt2ZGqNbKKqkHQeb96IHLvL7beGXkyScrFn3RoWAJHccGAtbo6xPXh
+# 4SaTsrA6dCcD9qGAomF3lAEeKE7DpSrNwJ3K+t9xmkjiT/o5+XT/mWsXnTcXpRwN
+# 0H3CQrLEFbRNK6HIi5KC
 # SIG # End signature block
