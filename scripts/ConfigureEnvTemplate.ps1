@@ -116,7 +116,7 @@ $AlyaB2BCompStart = "PleaseSpecify" #Example:"["
 $AlyaB2BCompEnd = "PleaseSpecify" #Example:"]"
 $AlyaLicenseType = "PleaseSpecify" #Example:"BusinessPremium" #"BusinessBasic","BusinessStandard","BusinessPremium","EnterpriseOE1","EnterpriseOE3","EnterpriseOE5","EnterpriseME3orOE3EMSorA3","EnterpriseME5orOE5EMS"
 $AlyaAddLicenses = @() #"M365DefenderP1","SMIME","MsLegacyStore"
-$AlyaPasswordResetEnabled = $AlyaLicenseType -in @("BusinessPremium","EnterpriseME3orOE3EMSorA3","EnterpriseME5orOE5EMS")
+$AlyaPasswordResetEnabled = $AlyaLicenseType -in @("BusinessStandard","BusinessPremium","EnterpriseME3orOE3EMSorA3","EnterpriseME5orOE5EMS")
 $AlyaVMLicenseTypeClient = "PleaseSpecify" #Example:"None" #Windows_Client=HybridBenefit, None=PAYG
 $AlyaVMLicenseTypeServer = "PleaseSpecify" #Example:"None" #Windows_Server=HybridBenefit, None=PAYG
 $AlyaServerOuProd = $null #Example:"OU=PROD,OU=Avd,OU=SERVERS,OU=CLOUD,DC=ALYACONSULTING,DC=LOCAL"
