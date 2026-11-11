@@ -65,11 +65,15 @@ if (-Not (Test-Path $contentRoot))
 }
 Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $pageUrl -Outfile "$contentRoot\$fileName"
 
-$versionUrl = "https://www.teamviewer.com/de/download/macos/"
+$versionUrl = "https://www.teamviewer.com/de/download/portal/macos/"
 $req = Invoke-WebRequestIndep -Uri $versionUrl -UseBasicParsing -Method Get
-[regex]$regex = "data-dl-version-label>([^<]*)"
+[regex]$regex = "Aktuelle Version.*?([0-9]+\.[0-9]+\.[0-9]+)"
 $version = [regex]::Match($req.Content, $regex, [Text.RegularExpressions.RegexOptions]'IgnoreCase, CultureInvariant').Groups[1].Value
-Rename-Item -Path "$contentRoot\$fileName" -NewName "TeamViewerQS $Version.dmg"
+if ([string]::IsNullOrWhiteSpace($version))
+{
+    throw "Not able to get actual version"
+}
+Rename-Item -Path "$contentRoot\$fileName" -NewName "TeamViewerQS_$Version.dmg"
 
 # SIG # Begin signature block
 # MIIpYwYJKoZIhvcNAQcCoIIpVDCCKVACAQExDzANBglghkgBZQMEAgEFADB5Bgor

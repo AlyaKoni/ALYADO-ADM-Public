@@ -33,6 +33,7 @@
     19.03.2024 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
     19.10.2026 Konrad Brunner       Skip _* directories (shared resources like _Shared are not apps)
+    05.11.2026 Konrad Brunner       Added OverwriteSameVersionPackages parameter (analog to Upload-IntuneWin32Packages.ps1)
 
 #>
 
@@ -57,6 +58,9 @@ Specifies the folder containing the macOS application packages to process. Defau
 
 .PARAMETER AskForSameVersionPackages
 Determines whether the script should prompt when the same package version already exists. Defaults to $true.  
+
+.PARAMETER OverwriteSameVersionPackages
+Indicates whether to automatically overwrite packages of the same version without prompting. Defaults to $false.  
 
 .PARAMETER ShowProgressBar
 Displays a progress bar during file upload. Defaults to $false.  
@@ -83,6 +87,7 @@ Param(
     [string]$ContinueAtAppWithName = $null,
     [string]$AppsPath = "MACApps",
     [bool]$AskForSameVersionPackages = $true,
+    [bool]$OverwriteSameVersionPackages = $false,
     [bool]$ShowProgressBar = $false
 )
 
@@ -176,17 +181,24 @@ function UploadPackage($packageInfo, $app, $appConfig, $bytes)
         Write-Host "    Looks like this version has already been uploaded!" -ForegroundColor $CommandWarning
         Write-Host "      Existing version: $($detectVersion)" -ForegroundColor $CommandWarning
         Write-Host "      Version to upload: $($version)" -ForegroundColor $CommandWarning
-        if ($AskForSameVersionPackages -eq $false)
+        if ($OverwriteSameVersionPackages -eq $true)
         {
-            $doUpload = $false
+            $doUpload = $true
         }
         else
         {
-            $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
-            $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
-            $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
-            $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
-            if ($resp -eq 0) { $doUpload = $false }
+            if ($AskForSameVersionPackages -eq $false)
+            {
+                $doUpload = $false
+            }
+            else
+            {
+                $yes = New-Object System.Management.Automation.Host.ChoiceDescription "&Yes","Upload anyway."
+                $no = New-Object System.Management.Automation.Host.ChoiceDescription "&No","Don't upload."
+                $options = [System.Management.Automation.Host.ChoiceDescription[]]($no, $yes)
+                $resp = $host.UI.PromptForChoice("Question", "Uploading anyway?", $options, 0)
+                if ($resp -eq 0) { $doUpload = $false }
+            }
         }
     }
 
@@ -592,8 +604,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDQ1/2X/Brjm8bJ
-# 7W3uZMdmUPEFdHom6o1NS/3cDJ2L/aCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDPxMpoIG7AjF1F
+# iOACPimG7HOuugANHjaE1SL7d+cfXaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -707,23 +719,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEINiI6YXz
-# R5/+eYx24peQWanWwijk2G/w5vhWK27or8lhMA0GCSqGSIb3DQEBAQUABIICAIhb
-# xMi3kORmxC6GfyJDC+to+rcQ6KWyetTuALBTRQcnEbXoN+hziwZ78M2AaRm0xUMz
-# /Nw+uDVuEcf9Mae2G+uWvdkiW1B+CxlBT833dE9DrG1dr9+eh05IaFSAnhagK4Aw
-# RVblXaN0Kl6SYGrCNm41LeCqJ0tlkO7Qp3pLOhrT3v4OXbWCzXHsWjCPDwGCIBzJ
-# vwxy7SRSCr7JvK5eSoHzjUfq3ZtEc+pLrjRXQXTjCHmYhcnfcOtJ+kiO+liE9ZGI
-# 7z9CptHDJULVsOtNvVLXl+sWlWMbPjCYpApYYd4VTANhk1bKGAWRtoLsMzj5sdhU
-# DcX8EZSDkJmSMzR4iEkNqgQjlPgP2pZUNkIXM/99OBqcPH4nY0kGfCiM/MbX0GFb
-# Xa4bln3yvoMigNj8XPYbF62Yg37PUZ8P/2RJjNeuC9Tc1/UKxQEGCMgzUyDQScXc
-# 0eCq9p2HKshoKqIaNj75T3GmWbAj6nNv9xnu/1WKuL6Hc4uVkN24scikl3Ztxpkj
-# QvSB5TryL3olbbUiXxtB/kRRzYmRsRKqkzscQx2GynOhXJc6vO40OnzcdnP4S9tb
-# vsYdZxCJlEWVNVre0dr0kEc5kLZwMVhauB58MZ42Y/VOHVRP/qK+9hYM4eBnpiwx
-# qnbsIit9YEPU6iowaLAkZydlqxoe8DA6SByAnsP0oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEFi/bbq
+# WKlHSMuQk8G0m46tsjYX4aAGVW0Lbx3ShqjnMA0GCSqGSIb3DQEBAQUABIICAFYB
+# yfPBPolNybJH2Jn4sTJJjvChCW6GwzhgxpUx+v7Ibf94hsHFEYDYRdwPFREyulfu
+# oxkrvsj6t3L9dUnyuwunp/P/wBeXVCIbwPopaWIxA/odOMLmADbgVzA7Pk5HNCoV
+# j3vobuR9y/OnMY6k//49j+hR1WHQ9Ed+Ys7/WWqYwSbAQ+H43ie4Jk4kFY4KjG3G
+# 6drB8VxWQt1t9wNBbvtwgcvDGQha+glQmo/kX+nSZZLq3MsQK19HiUSaqN+2kSWu
+# 2ps4wG8KGsZedJt4TBaU/TeNmErbheaDwSqFPenRLAvmALcp1PMQ+SWKGKrW7nXD
+# aqTALqMflkvPGOtIWL1QZseNUC+V3RtblqmZWuSd7jUWQIDgQhjRKNgrKFPrHHVk
+# Zn7gflZ38fhEpJl+m8Agrbsx4PQQ0NdWbNMqVrK0UsSbnk59qn9jSvcxUFGTpGZT
+# Fv8AqtneaZayQzQZS+J4aMxRL3NjXgiooyc4BURx8+RTTNLtZheh1WLSShon0jfd
+# S9bu5t7WwmT0jEs0rewSPbEjzXt+h5+M7vJ+KkDfGHJp3AtplXgny9UmI2nE59Nf
+# ZJdPN7q96ua7iFOwQjiIIRhCFiJvxbYTQK9AGk1EN0RwCX6g65lqLktU01M7sQMH
+# h5cTPsw5EbCx0fJbazPS3DfDGJXNZd7orTUIm2G3oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCDa64naoVtjXdS1DmMI8kHzvNTKS/Aq7lyOYoufYzbAAIUGDPI
-# dAjsIf0BUYHtpUx19uQCgpEYDzIwMjYxMDE5MTEwMjExWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCUp0PaQMKBLqWNeLOHVltsNpupRcygjAzaxJhhEhe17AIUKWpr
+# uYa1vqQYcri4gz8w19MVgpIYDzIwMjYxMTA4MjA0ODQ3WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -866,18 +878,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBZWQzEGgI4EuNOpEwX4O85TZIz+Q4miuyso+QIkaZ2tJ9SKqOM6oD5un/3
-# 8ADyzUswgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCu7NytjQOlXDL5Mq3SSerTVkCTXWXa/mgqtoSIZyyCT6CA3VBIQEdn66pH
+# QGmvFlQwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAy5blawTlvanItQwmCBliohLvRan7jvxb9XBXrvgbUt1r
-# 56HKKq+GrTovbqlZacQb7l8ZUKsMbc1zfLNcfho3ocl4CJF1yNRdxT0qrZrqOQlW
-# rjTJbfH0tHTdpCuWF1WmU9YmRI1yQkPA72lNXgmMZeSUJe/a8IN5rlbrFc3MZsOM
-# V+nkHBfJSiK7oXH4201sOjHjZ+sb/WWed8URpi8DZlsOF3LAROzpUH8PjqxDMwCj
-# h8hAH11L2H+ZnrGZBXd+ccOcBSv4iUAPoq4jg6oVBxVORRyxcohTTatYxpiKX6Ct
-# fJ1CT0019N4emCDZBo+IDEaogrU+SErLClHobX8qNvKXUfSBbsW1PB9csCehNIhr
-# JV5pd6yncSyLnz2MWYeWL1thnyfL49ywwuLNivc2ST5En9X6MZnN48DDNBVaY2H+
-# hbihjU2xKqV8mjHs9q1GHjaufofS6O3DCcnQtk/1AN4PMb+Wu5UeezR2qLczTMqK
-# N2hurX0ygCiIc746nmdb
+# KoZIhvcNAQEMBQAEggGAIeUZWZey+PvxhoTRUgI8pYBh5hktO4KV7fZ5lZdD18wP
+# 9wKMcoFsOl+D3fcy/8cGTq2h079BdL8yH33IwUIGz2C4UUlJGQDhCOMsH4IfMYRR
+# OHCVhmOlNG//0j/0BUov9N+032250MV/wefkQnO7gaOoGR1Rp2HVG5YCe7/ubmTQ
+# 6wKroTiAAd48N0RqvZGUKUMnlpJinykhS8OkRbTLm//v4MnR5my1UKsI3tdT2zTG
+# s5tdb7GwhHKiJnpoEEb3QV8JmtEsflhOFNRvCzqj52EFAsqdsy1qfojazIPfqO5O
+# tB4jp7CjS4OFcMpc7nQZbM8lYMKI0mhOSquzBXWGCbby8HBAhcCQE4rb44NsCPUZ
+# kMJLUVthQxIqAyJUP7bm6y2WpK7VZMSkKBvO5lY/dtbODydpbP5ZlPVYRlrbXmgh
+# ObJteaTGiUaZEERytyYhXZ+DuqSdpRpSMTOf+/lkHibGj2eHk3MxEaD0THvCcIp/
+# 2vpgOewMlS27GyYWNT4G
 # SIG # End signature block

@@ -54,6 +54,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+. "$PSScriptRoot\..\..\..\..\scripts\intune\Register-MacAppPackagingHelpers.ps1"
 
 $pageUrl = "https://www.videolan.org/vlc/download-macosx.html"
 $volName = "VLC media player"
@@ -74,13 +75,13 @@ Invoke-WebRequestIndep -UseBasicParsing -Method Get -UserAgent "Wget" -Uri $newU
 <#
 osascript -e 'id of app "VLC"'
 
-hdiutil attach -nobrowse -readonly "$contentRoot/$fileName"
+Mount-DmgImage -Path "$contentRoot/$fileName" -NoBrowse $true -ReadOnly $true
 $volume = "/Volumes/$volName"
 file "$volume/$appName.app/Contents/Info.plist"
 cp "$volume/$appName.app/Contents/Info.plist" /tmp/tmpPlistFile.plist
 plutil -convert xml1 /tmp/tmpPlistFile.plist
 $plistCont = Get-Content -Path /tmp/tmpPlistFile.plist -Encoding utf8 -Raw
-hdiutil detach $volume
+Dismount-DmgImage -Path $volume
 rm /tmp/tmpPlistFile.plist
 #>
 

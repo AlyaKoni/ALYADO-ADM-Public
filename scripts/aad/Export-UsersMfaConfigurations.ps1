@@ -33,6 +33,7 @@
     14.11.2023 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
     19.10.2026 Konrad Brunner       Platform-dependent Close-ExcelPackage (-Show on Windows only)
+    06.11.2026 Konrad Brunner       Graceful degradation for tenants without Entra ID Premium license
 
 #>
 
@@ -42,6 +43,7 @@ Exports the Multi-Factor Authentication (MFA) configuration details of all Azure
 
 .DESCRIPTION
 The Export-UsersMfaConfigurations.ps1 script connects to Microsoft Graph, retrieves a list of all Azure Active Directory users, and collects detailed information about their MFA registration, authentication methods, and sign-in preferences. The gathered data is then exported to an Excel file for reporting and analysis purposes. The script ensures that all required modules are installed, handles authentication, and logs its operations.
+Some data sources (authentication method user registration details report, sign-in preferences) require an Entra ID Premium P1/P2 license. On tenants without premium license, these calls are skipped gracefully: the Excel export is still created with all license-free information per user, premium-only columns stay empty and the column MfaPremiumDataAvailable marks whether premium data was collected. Premium tenants keep the full detail level.
 
 .PARAMETER outputFile
 Specifies the path to the output Excel file where the MFA configuration data will be saved. If not provided, the default file path is "$AlyaData\aad\UsersMfaConfigurations.xlsx".
@@ -180,7 +182,31 @@ $methodNamesAuthentication = @(
 )
 
 $users = Get-MgBetaUser -Property "*" -All
-$regDets = Get-MgBetaReportAuthenticationMethodUserRegistrationDetail
+
+# The registration details report (and the per user sign-in preferences) require an
+# Entra ID Premium P1/P2 license. A missing premium license is detected upfront, so
+# the export still succeeds on free tenants with all information that is available
+# without premium. Premium tenants keep the full detail level as before.
+$premiumAvailable = $true
+$signInPrefErrorLogged = $false
+$authMethodsAvailable = $true
+$regDets = $null
+try
+{
+    $regDets = Get-MgBetaReportAuthenticationMethodUserRegistrationDetail -ErrorAction Stop
+}
+catch
+{
+    if ($_.Exception.Message -match "RequestFromNonPremiumTenantOrB2CTenant" -or $_.Exception.Message -match "premium license")
+    {
+        $premiumAvailable = $false
+        Write-Warning "Tenant has no Entra ID Premium license: the authentication method user registration details report and the sign-in preferences are skipped (Graph 403 Authentication_RequestFromNonPremiumTenantOrB2CTenant). All license-free information per user is still exported; premium-only columns stay empty (see column MfaPremiumDataAvailable)."
+    }
+    else
+    {
+        throw
+    }
+}
 
 $psusers = @()
 foreach($user in $users)
@@ -192,14 +218,16 @@ foreach($user in $users)
     foreach($prop in $propNames)
     {
         $psProp = $allProps | Where-Object { $_.Name -eq $prop }
-        if (-Not $psProp)
-        {
-            Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ""
-            continue
-        }
         if ($prop -eq "Authentication")
         {
-            $regDet = $regDets | Where-Object { $_.Id -eq $user.Id -or $_.UserPrincipalName -eq $user.UserPrincipalName }
+            # Collects all MFA related data per user. Runs independently of the presence
+            # of the Authentication property, so tenants without premium license still
+            # get every bit of information that is available license-free.
+            $regDet = $null
+            if ($regDets)
+            {
+                $regDet = $regDets | Where-Object { $_.Id -eq $user.Id -or $_.UserPrincipalName -eq $user.UserPrincipalName }
+            }
             foreach($propName in $propNamesRegistrationDetails)
             {
                 $name = $propName
@@ -210,17 +238,53 @@ foreach($user in $users)
                     $propName = "UserPreferredMethodForSecondaryAuthentication"
                 }
                 $value = $null
-                if ($regDet -and $regDet.$propName) { $value = $regDet.$propName }
-                if ($propName -eq "MethodsRegistered") { $value = $regDet.$propName -join "," }
-                if ($propName -eq "SystemPreferredAuthenticationMethods") { $value = $regDet.$propName -join "," }
+                if ($regDet)
+                {
+                    if ($regDet.$propName) { $value = $regDet.$propName }
+                    if ($propName -eq "MethodsRegistered") { $value = $regDet.$propName -join "," }
+                    if ($propName -eq "SystemPreferredAuthenticationMethods") { $value = $regDet.$propName -join "," }
+                }
                 Add-Member -InputObject $psuser -MemberType NoteProperty -Name $name -Value $value
             }
-            $signInPref = Get-MsGraphObject -Uri "https://graph.microsoft.com/beta/users/$($user.Id)/authentication/signInPreferences"
+            # Sign-in preferences require Entra ID Premium P1/P2 as well
+            $signInPref = $null
+            if ($premiumAvailable)
+            {
+                try
+                {
+                    $signInPref = Get-MsGraphObject -Uri "https://graph.microsoft.com/beta/users/$($user.Id)/authentication/signInPreferences"
+                }
+                catch
+                {
+                    $signInPref = $null
+                    if (-Not $signInPrefErrorLogged)
+                    {
+                        $signInPrefErrorLogged = $true
+                        Write-Warning "Sign-in preferences are not available ($($_.Exception.Message)). They require Entra ID Premium; the corresponding columns stay empty."
+                    }
+                }
+            }
             foreach($propName in $propNamesAuthenticationPrefs)
             {
-                Add-Member -InputObject $psuser -MemberType NoteProperty -Name $propName -Value $signInPref[$propName]
+                # Guarded for StrictMode: $signInPref is $null without premium license
+                $prefValue = $null
+                if ($signInPref) { $prefValue = $signInPref[$propName] }
+                Add-Member -InputObject $psuser -MemberType NoteProperty -Name $propName -Value $prefValue
             }
-            $methods = Get-MgBetaUserAuthenticationMethod -UserId $user.Id
+            $methods = @()
+            if ($authMethodsAvailable)
+            {
+                try
+                {
+                    $methods = Get-MgBetaUserAuthenticationMethod -UserId $user.Id
+                }
+                catch
+                {
+                    $methods = @()
+                    $authMethodsAvailable = $false
+                    Write-Warning "Authentication methods are not available ($($_.Exception.Message)). The method columns stay empty for all remaining users."
+                }
+            }
             foreach($method in $methods)
             {
                 $mName = $method.AdditionalProperties."@odata.type".Replace("#microsoft.graph.","")
@@ -255,6 +319,12 @@ foreach($user in $users)
                     Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prmethodName -Value $null
                 }
             }
+            Add-Member -InputObject $psuser -MemberType NoteProperty -Name "MfaPremiumDataAvailable" -Value $premiumAvailable
+        }
+        if (-Not $psProp)
+        {
+            Add-Member -InputObject $psuser -MemberType NoteProperty -Name $prop -Value ""
+            continue
         }
         switch ($psProp.TypeNameOfValue)
         {
@@ -331,6 +401,14 @@ foreach($user in $users)
     $psusers += $psuser
 }
 
+if (-Not $premiumAvailable)
+{
+    Write-Host "No Entra ID Premium license detected: registration details, sign-in preferences" -ForegroundColor $CommandWarning
+    Write-Host "and premium-only data are skipped; the affected columns stay empty." -ForegroundColor $CommandWarning
+    Write-Host "Column MfaPremiumDataAvailable marks whether premium data was collected." -ForegroundColor $CommandWarning
+    Write-Host "The export file $outputFile is still created with all license-free information." -ForegroundColor $CommandInfo
+}
+
 do
 {
     try
@@ -338,6 +416,7 @@ do
         $propNames += $propNamesRegistrationDetails
         $propNames += $propNamesAuthenticationPrefs
         $propNames += $methodNamesAuthentication
+        $propNames += "MfaPremiumDataAvailable"
         $excel = $psusers | Select-Object -Property $propNames | Export-Excel -Path $outputFile -WorksheetName "Users" -TableName "Users" -BoldTopRow -AutoFilter -FreezeTopRowFirstColumn -ClearSheet -PassThru
         #$ws = $excel.Workbook.Worksheets['Users']
         #Set-Format -Worksheet $ws -Range "A:BZ" -
@@ -372,8 +451,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBedr4osOMDfyhp
-# xuMoEwodErMCEtRW874NE/ShBWhEt6CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCALF1kXTrkh0QO+
+# zrKYYeMvLwBqwfnwtSpQF+wk0eNzIKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -487,23 +566,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIHhefOyw
-# HbYhFVMzOu61KoYp6J8XtdYuZSD+JrHA7HaoMA0GCSqGSIb3DQEBAQUABIICAG5Q
-# 4JnQqeMrYcq12Vk42ZvwxO1YlGQztdiIbwCizMIBLBWDRZfcxiF8Hchoq8nMa8O9
-# 7x1DKL2ev+ztm8GhIPhJyP4D1HcpxJnDMoCpqNemcJcpO5GPB/Btj0mYHg68s9NA
-# Y936h6poE5x4+VgtmNBcscNTrIZZtbD9dUqc7PFbGt2d0kEuZRefU8X6+3c8A+hJ
-# MzOTWbaZFjZQnSG4NG8ckpCvJIW351P4WUpKQTvIJK7GiwRyR+s2fwSRPGm0iMH3
-# yojOy4ZjFeBIow+3KZWZztPGwkr7qQr1mx+1y+yi0CRuEKJqgQ9hS2kSt2QEcG+F
-# OhUvCahbfXJPuMGkf9TIrBCzflXW9dqy0wYkL7CadL2v0xJdyo2eGJA70/pMszcT
-# pTavOjkpkUXVESmdItRDIYa5use7kDcjeviYj1vIT14+CEKShMiXJXAq0qr0Wvac
-# Br9DkNm7RMoId2Q4UnjpoP/nx+sisxU9zM79HnCH6sYPK8lBFhVQrVr7s2FreBwG
-# wBVG3+bFtyz/cGKIXog63ubKk8fNCG+RiiXxuAV+EL964zhDw6niIsluNLTpLGKe
-# aCkMz00p4Km3KWZyEHoaYEXK1rMkJUyaumt95La49mfSHClfJ4CzEzihtBncLvl4
-# +rqrMjo2YCLI5WTwRh2sNhRilOhavh/GvO9fWaGwoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILv+8KzW
+# 3S7b+Y4pgnF7aKUAhLUIhrUgISmnMlW5bMgzMA0GCSqGSIb3DQEBAQUABIICABUi
+# 8EaspeVNh0etbhvmj2L6AOrvyrNZlya6/nTTcj+hPS3tY1cLeFqC4mU/xmQaj3O4
+# Q15HWQkFhhhWIcnYSdVNLwwvigSXMnG9AQSW35fwRZzM0hO/p6iO98/tRu+1aHGi
+# qDn5pmh7KZIe7OAQvJh+qHaQRD2lp8uov6d9ruv9pijkXO9S5kWU4FS0LPeYJ/z6
+# s3NS2nS4tU8Xc3NwR7OUpvCvmceGMFj6/QTyRfdyV0AUEFFh6SMNVLmCM34carmW
+# kuvpcGh4nT/IoxZTdexfzSkdznVhz8OfykS+kS2gf4IlxpRb7ksQbbSm/CotiXcC
+# v8oJnd3dZY9vHW1KDkjYzGwkJOd+7KHl0Ur+c/3R7Bh8pK3+iljbzlpvv9DeSYHP
+# rWQgeSFcTd/KCBT2qf9iHdnQuohPAqA5l3BkfGi8srTdgGS6BrQ7SRzwue3rlKF1
+# r8EoJ70bXdHlMny/ikpsxzK2Dmp2/DvSUtwMcTnL218k9c6pEhRU3A1muiuGPKTh
+# 7ZpCygkfQtwzsQlecM1Ag2p1+bX3vl2WkykmZfqeseVY5aurdT3FP13Ys9PIM1hS
+# jUe+ZT+xhoRfuV6JFM/79/FxZc2+iF7vNzPkYrXcr+myHgBJbSEVMdlOiCfkXaXB
+# OyT9oIV9UF334mgAY4scYOslEKjhDDtkZqdERFu0oYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCBzgzNGi70q94E/toQOJLYeTktS1TEpFOQrP6+c9LUevAIUJUTM
-# TXKm1XCJUsXqsmF8itcMcgYYDzIwMjYxMDIwMTMyOTIyWjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDnlVhx/hgVUfPXHjdwZYhqQdnSGMqcrl/4+VIwHkIsUAIUVNJN
+# EgptvAk1B4Nrz8tvqNc9vSAYDzIwMjYxMTA4MjA0ODI0WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -646,18 +725,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBa/huTcBSO0QnKFcsvu2IHj07Z1tUEJloAev/dM6yzHO2xFADVpxN8C/sW
-# 1gi28wkwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCEz6sdiGjFZoWI9xI24es19SB1ODVQySKmv8rEI83lZJ4OmyK0lGk8DFAt
+# 6h4vUQswgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGApT7QM8WLlRh12BToGUS/Z2YWYaCfKbWIY8K+cx+cT0jK
-# //xUFRCdXF7ZU5x+37OXFBIHyWP6/QJsZZ100WCaBdgYHP2Zwjeun4tDGAz+Cj4a
-# 1YXy2Ouu5tojg5zm3bFqnWm8AY/PZbCvNkTcugZnzCl5riQ1F1O+8EEbP4WYIHL2
-# GGQ5BDA7Emfhu4kzzM6HTXlBYzpMDSH0W3Kqm7HMVYGpw3QXDIjgfQ9WgPTlA+67
-# DgmEO/aggY80h3IMtzVpFwxIdmNt2Hc4CVkbKjHvnBkJ4ksZ4mNLSunhxpVLgrJE
-# VJdLLuZnIKmg24n7YQGo5R5hzXk9dYIvom/AlwP70gXlnHrDXApnnbBgnrHMF+yg
-# JvUT5JOMhfjPOs/QyAQsiU+Kz1RpPTwRzQcothT71RCT/xVd/J/9ABw19G7ue4t5
-# lwUexnVDA9zfL962C72n3C0N1EdQ9QrYMhUjFnj0XBvZmMnxLSiB6pqROVUKIF6F
-# W4Vvo8kGnx91SYwVt6vv
+# KoZIhvcNAQEMBQAEggGAREznCMZavbpYL4CDxpbovHTPbGTNz/Ljba51RWlGSAUw
+# cy4Exn+nJeUd7QmbyZ3jbiviabfSbGAJfXUG1jv8CvZpbTOwe1thrY4NE89Hl0gL
+# yQwU5tCnpdRwGyMkHaUYtEeFnbn2+b8q2lZwf8fXyyEQM0u3mFip9x7LqGTLeG5d
+# zKCn2TOzBWaCmwJkRzF9Y3GZzf69G8Z09Vrd08F7tSB49iSxoY9BLY8LD+QmBGtp
+# ZnT+27DdmgliKNG8BwyiyY7UGSgCVPAPIUDBfR1TdkUbBW9xRCYW2RW2dOr6tP1l
+# g3wpQalxAh5ENNMhzOu0Di1D40UgJjFhKZETr+GNqOt8SkucSBic7OowdDoUjNoc
+# XLGf3kphywhxl73ZrhmP91MD53WkQaapPYFkyd+9ITGtMcTqGIwApPc77tj4EUVo
+# M0U0zYjlgcnPiJBgwgtyI2bxIvLeFnEOX3J8ioVwG8kRIB5Vda0+yPsjTpY318Mc
+# poAeEx/yguYW0xZ4NRhG
 # SIG # End signature block

@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     30.10.2026 Konrad Brunner       Initial Version
+    07.11.2026 Konrad Brunner       Added exports: full policy, registration campaign, authentication strengths
 
 #>
 
@@ -39,7 +40,7 @@
 Exports the Entra ID Authentication Methods Policy to JSON files for backup or documentation purposes.
 
 .DESCRIPTION
-The Export-AuthenticationMethods.ps1 script retrieves the tenant wide authentication methods policy from Entra ID using the Microsoft Graph API (GET /policies/authenticationMethodsPolicy, beta). It ensures the required Azure modules are installed, establishes an authenticated connection to Azure, and stores the exported files in the configured data directory. The complete policy is exported as one JSON file, and additionally each authentication method configuration (e.g. Fido2, MicrosoftAuthenticator, Sms, TemporaryAccessPass, Voice, Email, HardwareOath, SoftwareOath) is exported as a separate JSON file. The script also maintains a transcript log for auditing purposes.
+The Export-AuthenticationMethods.ps1 script retrieves the tenant wide authentication methods policy from Entra ID using the Microsoft Graph API (GET /policies/authenticationMethodsPolicy, beta). It ensures the required Azure modules are installed, establishes an authenticated connection to Azure, and stores the exported files in the configured data directory. The complete policy is exported as one JSON file, and additionally each authentication method configuration (e.g. Fido2, MicrosoftAuthenticator, Sms, TemporaryAccessPass, Voice, Email, HardwareOath, SoftwareOath) is exported as a separate JSON file. Additionally the registration enforcement (including the registration campaign) and all authentication strength policies (including combination configurations of custom strengths) are exported as separate JSON files. The script also maintains a transcript log for auditing purposes.
 
 .PARAMETER ExportGitFriendly
 Determines whether the exported JSON files should be normalized for git storage (via Make-JsonGitReady). Default is false.
@@ -48,7 +49,7 @@ Determines whether the exported JSON files should be normalized for git storage 
 None. The script does not accept any pipeline input.
 
 .OUTPUTS
-Generates JSON files representing the Entra ID Authentication Methods Policy and its authentication method configurations and saves them under the configured data directory path.
+Generates JSON files representing the Entra ID Authentication Methods Policy, its authentication method configurations, the registration enforcement and the authentication strength policies and saves them under the configured data directory path.
 Produces a transcript log file in the logs directory.
 
 .EXAMPLE
@@ -116,6 +117,56 @@ foreach ($configuration in $configurations)
     }
 }
 
+# Exporting the complete authentication methods policy (settings)
+Write-Host "Exporting the complete authentication methods policy" -ForegroundColor $CommandInfo
+$policyFilePath = MakeFsCompatiblePath("$AlyaData\security\authenticationMethodsPolicies\AuthenticationMethodsPolicy.json")
+$authenticationMethodPolicies | ConvertTo-Json -Depth 10 | Set-Content -Path $policyFilePath -Encoding $AlyaUtf8Encoding -Force
+$GitReadyFiles += $policyFilePath
+
+# Exporting the registration enforcement (registration campaign)
+Write-Host "Exporting the registration enforcement (registration campaign)" -ForegroundColor $CommandInfo
+if ($null -ne $authenticationMethodPolicies.RegistrationEnforcement)
+{
+    $registrationEnforcementFilePath = MakeFsCompatiblePath("$AlyaData\security\authenticationMethodsPolicies\RegistrationEnforcement.json")
+    $authenticationMethodPolicies.RegistrationEnforcement | ConvertTo-Json -Depth 10 | Set-Content -Path $registrationEnforcementFilePath -Encoding $AlyaUtf8Encoding -Force
+    $GitReadyFiles += $registrationEnforcementFilePath
+}
+else
+{
+    Write-Host "  No registration enforcement settings found" -ForegroundColor Yellow
+}
+
+# Exporting authentication strength policies
+Write-Host "Getting AuthenticationStrengthPolicies" -ForegroundColor $CommandInfo
+$authenticationStrengthPolicies = @(Get-MgBetaPolicyAuthenticationStrengthPolicy -All)
+Write-Host "Exporting $($authenticationStrengthPolicies.Count) authentication strength policy/policies" -ForegroundColor $CommandInfo
+if (-Not (Test-Path "$AlyaData\security\authenticationStrengths"))
+{
+    New-Item -Path "$AlyaData\security\authenticationStrengths" -ItemType Directory -Force | Out-Null
+}
+foreach ($strengthPolicy in $authenticationStrengthPolicies)
+{
+    try {
+        $strengthObject = $strengthPolicy | ConvertTo-Json -Depth 10 | ConvertFrom-Json
+        $combinationConfigurations = @()
+        try {
+            $combinationConfigurations = @(Get-MgBetaPolicyAuthenticationStrengthPolicyCombinationConfiguration -AuthenticationStrengthPolicyId $strengthPolicy.Id -All -ErrorAction Stop)
+        }
+        catch {
+        }
+        if ($combinationConfigurations.Count -gt 0)
+        {
+            $strengthObject | Add-Member -MemberType NoteProperty -Name "combinationConfigurations" -Value $combinationConfigurations -Force
+        }
+        $strengthFilePath = MakeFsCompatiblePath("$AlyaData\security\authenticationStrengths\$($strengthPolicy.DisplayName).json")
+        $strengthObject | ConvertTo-Json -Depth 10 | Set-Content -Path $strengthFilePath -Encoding $AlyaUtf8Encoding -Force
+        $GitReadyFiles += $strengthFilePath
+    }
+    catch {
+        Write-Warning "Not able to export the authentication strength policy '$($strengthPolicy.DisplayName)': $($_.Exception.Message)"
+    }
+}
+
 # Make JSON git-ready if requested
 if ($ExportGitFriendly -eq $true -and $GitReadyFiles.Count -gt 0)
 {
@@ -129,8 +180,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCWCiXvja74p6A6
-# 4iEYgD9n/k4yskm9u6QAoxVsIp8AMKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCkweiCg0MG2ilx
+# dkehsNJUhcWJp4YxpXw3fF713Z9BbKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -197,10 +248,10 @@ Stop-Transcript
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -208,17 +259,17 @@ Stop-Transcript
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -228,39 +279,39 @@ Stop-Transcript
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIAyaTfvH
-# qcnpmOqfdVZx0m4fGXEI9wiaqLwQ/6V3wpkFMA0GCSqGSIb3DQEBAQUABIICAAtW
-# P2Gzdq/q1oLJpOWrpOAstwCTD4J3y9mxDcDNirv1rN4H5gdRmTwTxoYhduIBu8Es
-# x3rFcT/9RaJU0BEutFvsMKOFtGCIoukPul36T+/sQN40zsC4LP/Znt2KfdQlRST9
-# rUH9iYwXEfClNMZikvu6o+dsos1La2hAYPvcOJXXWWJ2HG6oAWMDGHRF0tQGBSy3
-# a9zGg/pgytOhLIEwEASk0bjOcclwF3U7vfLvzmsYLClyTooA1RWyUCJI07gQZZjh
-# UcjYsGniBUy36CEEI2LFK0sF7pfepn2a02Vx1URMuF3+6EX6Aihp9sfjd5t8/FSN
-# SQ+VTjqv5UL+xzAFQzjmTdcwyXoWe2WHnRKak4bTCMnseE5JFNGJ/jYAmR6O+z0H
-# yFX/DsjolcPjzkaLV16/0nLEHF+mJJ56pCaeKbFiEndRxtYxa9GaSUoHwMiiUse7
-# sN5gjjcopfH7gjKck5MHYXjtyERaY2RDDaMoOzjgpolzkVAnvjQHAP+YaIpcrTom
-# xuZ1J1GWqFo4VUr7HZ1AzAAFjs4OjmJgHgeiYiMrdJ0Y3YdGrpCeD5HXOU705J2I
-# nne0ydZs9gp+QJQUeKlXqH6BLhIapDSnMOFNNv3UDmuJHiMa9jEB7TPSUiWwArNI
-# wx6mfG0GDfcFhBv7xOwHDsIejx4QU8mzjqvN5j2joYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEnr//o2
+# O2Ko5VzAHyrvH5PoBELbJ7CnEKiyk6biteewMA0GCSqGSIb3DQEBAQUABIICAAWw
+# YtqAvvWCVlP81/3EkLWwgIHsbaAmKjWUPGCudkMqxqOHMVJg30q8hTCSoEORWX2d
+# 0pswAUD8lvIfzpLpvyTcN6a7fpbvMzFN4oQPcY+CqT0x20Ku09/NT6EyvfbTmH1j
+# PP45OekJoXJsojfGQGcS78lFIXfXdhSabNApgnVuusSPs3xNUZThs5W3zfJk1U9o
+# ZF7rHCCdOnm3K+j5m12ooWk0DCqTTVDCVn6kQdb8ewJjwtdm/4VbWhxnpgQIfSvG
+# NqXnVnqrEJd9yRIonu3ANswd1GbgynQn+/L/kdVxMOLuzEWQ25X1LgKcEU6xOSYP
+# Sv24SKvLBdqjzpSEsN/ym1fxMBW2bZPWix5CnyJ9yM+OKWQQ2U8hFw7iFLJcSFKX
+# N3vXWq3eAH4a+mF0ZKKVIYwSzO1Y+vZxU4xd2D7MaMKjs6VSE8HvA/o79goBb3tf
+# HoiKtSUAH11hiWi7ZxluM0GB0wjsgRW1Lr0XwN47FKCdTi1SXqOXtfuKV420EqO2
+# lYNYHKL1361RTLtsJg4Ret0oGlxtJ5CUU++vbxcu9sC2rfeG7+86Z29jdTgeD/KP
+# Btqdy/GiGznQ535Z6BPEz0yAn9p7vTyydecmIJ0VVAV3WsCHkQQ9QlFoyhTuNIp6
+# Ry/atnXyUcCtTFMKJJTZ6t8RNKfGHMWaJl5AWiOcoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCCrQx/jBVXjwtHKdH1UVIDnjwWVrBfiJw0syrwkijwXjgIUSaJq
-# r5qdvgt5HjXhP6eForlIj6oYDzIwMjYxMDMwMTAyOTM5WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCGN6QyO3IIr15AyAR8Dy/3bRiNzjPD3EOy6xeru2GfPgIUQjB1
+# hgbWGSC1mGK63jL6TahJaegYDzIwMjYxMTA4MjA0ODU3WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -403,18 +454,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDCCSpNT1T1kXYAXFMKuf5WnljpkYOYpG/hibtTrypmVHYPvHsLN0rCwXpqJ
-# IPW5x+IwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCiYmeLDVRP/Vip0FALsZ8KSi45k1QObaVSefJIdENmjxNXBAFim1zYC6VJ
+# mx9TUKQwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAw0tiO1fuCmSq1ylQ/HwV0RTRIkuwpwx5BwzinUmv+XdV
-# cysM+L0EfgE27TZgoRSN7vMdGwPoiVL/Ey7Nx6xJy9WuO13oHYwqApRaIuBrOUQL
-# 7xh8VYg3w66Mlg2zlLfkp3ilON24EAnxi3MpuJ1q7dA0h3ucpTGPLG0oMsjvsZ+C
-# oQWtAkJT6CvHIIoH3AtJX38w0RSpaHzXnJ31M3P/r5QmatmAhsjZ6nT6sXrPop79
-# E3iPBqewpVfW3I7PrAlkgABXSOzBaNaCUOwE9apQRCePBZnVNdUBWU9SHtjkNjNR
-# jmInKAPEtowVwHjq79Qauq0HPMCcigXJKfl9dAz5YNDvdR5IPXJmF1kna8NcruaA
-# TzqggWnkXc8uerF4fjL8MU98qN68sC1uF02Oi2VaRe3pTdq5RgxdniYQrMqGG6yk
-# vdJ/Er3wn/cLaygYgvOfDcnZpYiNkN5d7AGHPDU3ZCvWfTn4dnTeZmw39IGGwbPk
-# mhSvIPb+etdvFD1y3FM5
+# KoZIhvcNAQEMBQAEggGAwgDhDGAdi1HRvBKGe+84v/lTeHqjh7iqXWDx3/M+OtZ9
+# fBKrvNvtPFqSJVI2Z9r1MplUN5KAbLKB31CZ90Gj6VI2Li9waraBIvWIJMY1MT8q
+# eM3Ll6yKcq6l4aW0V0CiMUicvd1BwaHOpyjSsc6iQqvwSpDx0OCpRs95YIK3TSLX
+# Rnzv+FAvH68PSYAibThycslNGl19UHLQWTGB6BNc7BlGGYxnCG7NSgFIdrzmEvi/
+# wNWexUgaW0VgHgcaHZNAqIf6QGFFjB6u5wYghnn4XTbOw53nCtJr6Hq314uqdOze
+# 9dq16HGAq0fLM7kCLrA3yIJmxeAKDEfaeYo+9SxStiUQsUDQQMnpzp91taqUNP66
+# IhCaoExVtLSeZMXndaoSiWH5rV2j01PgDByBdWFdXdFEyzvkg6ZpiIyTSwirQN1f
+# TDZJNkBCgucHERhTrmFdqJYyMJ7lvHX+4A0WcxeGL5q18h0ccLMRNuX7oMHIBaN7
+# EH1wPLZQwRNEfkO05yt5
 # SIG # End signature block

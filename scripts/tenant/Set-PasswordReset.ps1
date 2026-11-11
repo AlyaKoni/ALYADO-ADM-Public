@@ -37,6 +37,13 @@
     15.10.2024 Konrad Brunner       Disable methods if already migrated
     06.02.2026 Konrad Brunner       Added powershell documentation
     04.08.2026 Konrad Brunner       Switched to 1 method required: numberOfAuthenticationMethodsRequired
+    07.11.2026 Konrad Brunner       Configure policy also when SSPR is disabled
+    07.11.2026 Konrad Brunner       emailOptionAllowed follows amEnabled in all policy bodies
+    09.11.2026 Konrad Brunner       alreadyMigratedToAuthMethods handling added
+    09.11.2026 Konrad Brunner       Migrated tenants: replaced the main.iam.ad.ext.azure.com call with Microsoft Graph beta
+    09.11.2026 Konrad Brunner       Migrated tenants: warning that the reconfirmation interval must be maintained manually in the portal
+    09.11.2026 Konrad Brunner       Login mode handling: interactive logins set reconfirmation interval and SSPR group scoping via the internal API also on migrated tenants, management app logins warn about manual portal configuration
+    09.11.2026 Konrad Brunner       Registration campaign handling removed – campaign is managed separately via Configure-RegistrationCampaign.ps1
 
 #>
 
@@ -45,10 +52,7 @@
 Configures the Azure AD self-service password reset (SSPR) settings for a tenant and optionally enables browser-based verification.
 
 .DESCRIPTION
-The Set-PasswordReset.ps1 script connects to Microsoft Graph and Azure modules to configure the Microsoft Entra ID (Azure AD) self-service password reset policy for a tenant. It validates required modules, logs in using appropriate credentials, and updates the SSPR configuration through Graph API calls based on defined settings in the environment configuration. The script can either allow SSPR for all users or restrict it to specific groups, and it adapts settings if the environment is already migrated to new authentication methods. If direct configuration fails, it prompts the administrator to perform necessary adjustments manually via the Azure Portal.
-
-.PARAMETER seleniumBrowser
-An optional browser session object to be used for automated navigation or interaction with the Azure Portal. If not provided, the script attempts to find or initialize one.
+The Set-PasswordReset.ps1 script connects to Microsoft Graph and Azure modules to configure the Microsoft Entra ID (Azure AD) self-service password reset policy for a tenant. It validates required modules, logs in using appropriate credentials, and updates the SSPR configuration through Graph API calls based on defined settings in the environment configuration. The script can either allow SSPR for all users or restrict it to specific groups, and it adapts settings if the environment is already migrated to new authentication methods. If self-service password reset is disabled, the policy is also configured accordingly: enablement is set to none, registrationRequiredOnSignIn is set to false and the registration reconfirmation interval is disabled (0 days). If direct configuration fails, it prompts the administrator to perform necessary adjustments manually via the Azure Portal. If the tenant is already migrated to the unified authentication methods policy (policyMigrationState migrationComplete), the behavior depends on the login mode: with an app-only (management app) login the Azure Portal internal API (main.iam.ad.ext.azure.com) is not used, AllowedToUseSspr is set via the authorization policy and the script warns that the registration reconfirmation interval and the SSPR group scoping must be maintained manually in the portal. With an interactive (delegated) login these two settings are still applied through the internal API, also on migrated tenants. The legacy method options are controlled by the unified authentication methods policy configurations on migrated tenants. The authentication methods registration campaign is never modified by this script; it is managed separately via scripts/security/Configure-RegistrationCampaign.ps1.
 
 .PARAMETER alreadyMigratedToAuthMethods
 A Boolean flag indicating whether the tenant has already migrated to centralized authentication methods management. Defaults to $true and influences which SSPR features are enabled.
@@ -60,7 +64,7 @@ None. The script does not accept pipeline input but uses environment configurati
 None. The script logs actions and results but does not produce objects to the pipeline output.
 
 .EXAMPLE
-PS> .\Set-PasswordReset.ps1 -seleniumBrowser $browser -alreadyMigratedToAuthMethods $false
+PS> .\Set-PasswordReset.ps1 -alreadyMigratedToAuthMethods $false
 
 .NOTES
 Copyright          : (c) Alya Consulting, 2019-2026
@@ -71,10 +75,9 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 
 [CmdletBinding()]
 Param(
-    [Parameter(Mandatory=$false)]
-    [object]$seleniumBrowser = $null,
-    [bool]$alreadyMigratedToAuthMethods = $true
-    )
+    [Nullable[bool]]$alreadyMigratedToAuthMethods = $null,
+    [bool]$NonInteractive = $false
+)
 
 # Reading configuration
 . $PSScriptRoot\..\..\01_ConfigureEnv.ps1
@@ -104,20 +107,7 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-PasswordReset | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
-# Configuring browser
-if ($seleniumBrowser) {
-    $browser = $seleniumBrowser
-} else {
-	if (-Not $browser)
-	{
-		if ($Global:AlyaSeleniumBrowser) {
-			$browser = $Global:AlyaSeleniumBrowser
-		} else {
-			$browser = Get-SeleniumChromeBrowser
-		}
-	}
-}
-
+# Configuring SSPR
 $authorizationPolicy = Get-MgBetaPolicyAuthorizationPolicy -AuthorizationPolicyId "authorizationPolicy"
 if ($authorizationPolicy.AllowedToUseSspr -ne $AlyaPasswordResetEnabled)
 {
@@ -132,23 +122,115 @@ else
     Write-Host "AllowedToUseSspr was already set to $($AlyaPasswordResetEnabled)." -ForegroundColor $CommandSuccess
 }
 
+if (-Not $alreadyMigratedToAuthMethods)
+{
+    $alreadyMigratedToAuthMethods = $false
+    # Getting AuthenticationMethodPolicy
+    Write-Host "Getting AuthenticationMethodPolicy" -ForegroundColor $CommandInfo
+    $authenticationMethodPolicy = Get-MgBetaPolicyAuthenticationMethodPolicy
+    $migrationState = [string]$authenticationMethodPolicy.PolicyMigrationState
+    Write-Host "  policyMigrationState: '$($migrationState)'"
+
+    # Mapping the migration state to the status
+    if ([string]::IsNullOrEmpty($migrationState) -or $migrationState -eq "migrationComplete") {
+        $alreadyMigratedToAuthMethods = $true
+    }
+}
+
+# Detecting the login mode: management app (app-only) or interactive (delegated) login.
+$mgContext = Get-MgContext
+$isAppOnlyLogin = ($null -ne $mgContext) -and ([string]$mgContext.AuthType -eq "AppOnly")
+if ($isAppOnlyLogin) { Write-Host "Login mode: management app (app-only)" -ForegroundColor $CommandInfo } else { Write-Host "Login mode: interactive (delegated)" -ForegroundColor $CommandInfo }
+
+$hadError = $false
+if ($alreadyMigratedToAuthMethods -And $isAppOnlyLogin)
+{
+    # The tenant is migrated to the unified authentication methods policy (migrationComplete)
+    # and the script runs with an app-only (management app) login. The Azure Portal internal API
+    # (main.iam.ad.ext.azure.com) does not support app-only logins. AllowedToUseSspr is already
+    # set via the authorization policy above. The authentication methods registration campaign
+    # is not touched by this script, it is managed separately via
+    # scripts/security/Configure-RegistrationCampaign.ps1.
+    # The registration reconfirmation interval and the SSPR group scoping can't be set via
+    # Graph, they need a manual portal configuration or an interactive script run.
+    Write-Host "Tenant is migrated to the unified authentication methods policy. Skipping the Azure Portal internal API. The registration campaign is not modified by this script (managed separately via Configure-RegistrationCampaign.ps1)." -ForegroundColor $CommandInfo
+
+    # Note: registrationReconfirmIntevalInDays has no working Graph equivalent. The documented
+    # reconfirmationInDays property is accepted by a PATCH (204, lastModifiedDateTime changes),
+    # but the value is neither persisted nor exposed (verified 09.11.2026 on ALYA: PATCH 179
+    # left the portal value at 180, GET never returns the property, $select returns BadRequest).
+    # It must be maintained manually in the Entra portal or via an interactive script run.
+
+    # The legacy registrationReconfirmIntevalInDays can't be set via Microsoft Graph (see note above).
+    Write-Warning "The registration reconfirmation interval (legacy registrationReconfirmIntevalInDays) can't be set with management app authentication. Please maintain it manually in the Entra portal (Protection > Authentication methods > Manage > Registration) or run this script with an interactive login."
+
+    # The legacy method options (emailOptionEnabled etc.) are controlled by the unified
+    # authentication methods policy configurations (Email, Sms, Voice, MicrosoftAuthenticator)
+    # and are intentionally not modified here.
+    Write-Host "Authentication method options are controlled by the unified authentication methods policy configurations and are not modified by this script." -ForegroundColor $CommandInfo
+
+    # The legacy SSPR group scoping (enablementType 1) can't be set via Microsoft Graph.
+    if ($AlyaPasswordResetEnabled -And -Not ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName)) -And $AlyaSsprEnabledGroupName -ne "PleaseSpecify")
+    {
+        Write-Warning "SSPR group scoping ('$($AlyaSsprEnabledGroupName)') can't be set with management app authentication. Please maintain it manually in the Entra portal (Protection > Password reset > Properties) or run this script with an interactive login."
+    }
+}
+else
+{
+# Legacy path: Azure Portal internal API (unchanged). Used for non-migrated tenants and for
+# migrated tenants with an interactive (delegated) login, where the internal API is still used
+# to set the registration reconfirmation interval and the SSPR group scoping.
 $amEnabled = "true"
 if ($alreadyMigratedToAuthMethods) { $amEnabled = "false" }
-if ($AlyaPasswordResetEnabled)
+$apiToken = Get-AzAccessToken
+if (-Not $apiToken)
 {
-    $apiToken = Get-AzAccessToken
-    $hadError = $false
-    if (-Not $apiToken)
+    Write-Error "Can't aquire an access token."
+    $hadError = $true
+}
+else
+{
+    if (-Not $AlyaPasswordResetEnabled)
     {
-        Write-Error "Can't aquire an access token."
-        $hadError = $true
+        Write-Host "disable password reset for all users."
+        $body = @"
+{
+    "objectId": "default",
+    "enablementType": 0,
+    "numberOfAuthenticationMethodsRequired": 1,
+    "emailOptionEnabled": $amEnabled,
+    "mobilePhoneOptionEnabled": $amEnabled,
+    "officePhoneOptionEnabled": $amEnabled,
+    "securityQuestionsOptionEnabled": false,
+    "mobileAppNotificationEnabled": $amEnabled,
+    "mobileAppCodeEnabled": $amEnabled,
+    "numberOfQuestionsToRegister": 5,
+    "numberOfQuestionsToReset": 3,
+    "registrationRequiredOnSignIn": false,
+    "registrationReconfirmIntevalInDays": 0,
+    "skipRegistrationAllowed": true,
+    "skipRegistrationMaxAllowedDays": 7,
+    "customizeHelpdeskLink": false,
+    "customHelpdeskEmailOrUrl": "",
+    "notifyUsersOnPasswordReset": true,
+    "notifyOnAdminPasswordReset": false,
+    "passwordResetEnabledGroupIds": [],
+    "passwordResetEnabledGroupName": "",
+    "securityQuestions": [],
+    "registrationConditionalAccessPolicies": [],
+    "emailOptionAllowed": $amEnabled,
+    "mobilePhoneOptionAllowed": $amEnabled,
+    "officePhoneOptionAllowed": $amEnabled,
+    "securityQuestionsOptionAllowed": $amEnabled,
+    "mobileAppNotificationOptionAllowed": $amEnabled,
+    "mobileAppCodeOptionAllowed": $amEnabled
+}
+"@
     }
-    else
+    elseif ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName) -or $AlyaSsprEnabledGroupName -eq "PleaseSpecify"-or $AlyaSsprEnabledGroupName.Count -eq 0 )
     {
-        if ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName) -or $AlyaSsprEnabledGroupName -eq "PleaseSpecify"-or $AlyaSsprEnabledGroupName.Count -eq 0 )
-        {
-            Write-Host "allow password reset for all users."
-            $body = @"
+        Write-Host "allow password reset for all users."
+        $body = @"
 {
     "objectId": "default",
     "enablementType": 2,
@@ -173,7 +255,7 @@ if ($AlyaPasswordResetEnabled)
     "passwordResetEnabledGroupName": "",
     "securityQuestions": [],
     "registrationConditionalAccessPolicies": [],
-    "emailOptionAllowed": true,
+    "emailOptionAllowed": $amEnabled,
     "mobilePhoneOptionAllowed": $amEnabled,
     "officePhoneOptionAllowed": $amEnabled,
     "securityQuestionsOptionAllowed": $amEnabled,
@@ -181,17 +263,17 @@ if ($AlyaPasswordResetEnabled)
     "mobileAppCodeOptionAllowed": $amEnabled
 }
 "@
-        }
-        else
+    }
+    else
+    {
+        Write-Host "  allow password reset for group(s) $AlyaSsprEnabledGroupName. "
+        $aGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaSsprEnabledGroupName)'"
+        if (-Not $aGrp)
         {
-            Write-Host "  allow password reset for group(s) $AlyaSsprEnabledGroupName. "
-            $aGrp = Get-MgBetaGroup -Filter "DisplayName eq '$($AlyaSsprEnabledGroupName)'"
-            if (-Not $aGrp)
-            {
-                Write-Warning "Not able to find group '$($AlyaSsprEnabledGroupName)'"
-                $hadError = $true
-            }
-            $body = @"
+            Write-Warning "Not able to find group '$($AlyaSsprEnabledGroupName)'"
+            $hadError = $true
+        }
+        $body = @"
 {
     "objectId": "default",
     "enablementType": 1,
@@ -224,43 +306,51 @@ if ($AlyaPasswordResetEnabled)
     "mobileAppCodeOptionAllowed": $amEnabled
 }
 "@
-        }
-        if (-Not $hadError)
-        {
-            $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json; charset=utf-8';'X-Ms-Command-Name'='PasswordReset - UpdatePasswordResetPolicy';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
-            $url = "https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies?byPassMethodCountCheck=true"
-            try {
-                $resp = Invoke-WebRequestIndep -Uri $url -Headers $header -Method PUT -Body $body
-            } catch {
-                $_.Exception
-                $_.Exception.Response
-                $hadError = $true
-            }
-        }
     }
-    
-    if ($hadError)
+    if (-Not $hadError)
     {
-        Write-Host "Enabling password reset options" -ForegroundColor $CommandInfo
-        Write-Host "You have now to configure password reset options. Pleas browse to"
-        Write-Host "  https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
-        if ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName) -or $AlyaSsprEnabledGroupName -eq "PleaseSpecify"-or $AlyaSsprEnabledGroupName.Count -eq 0 )
-        {
-            #TODO get groups enabling password reset by licenses
-            Write-Host "and allow password reset for all users."
+        $header = @{'Authorization'='Bearer '+$apiToken;'Content-Type'='application/json; charset=utf-8';'X-Ms-Command-Name'='PasswordReset - UpdatePasswordResetPolicy';'X-Requested-With'='XMLHttpRequest';'x-ms-client-request-id'=[guid]::NewGuid();'x-ms-correlation-id'=[guid]::NewGuid();}
+        $url = "https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordResetPolicies?byPassMethodCountCheck=true"
+        try {
+            $resp = Invoke-WebRequestIndep -Uri $url -Headers $header -Method PUT -Body $body
+        } catch {
+            $_.Exception
+            $_.Exception.Response
+            $hadError = $true
         }
-        else
-        {
-            Write-Host "and allow password reset for group(s) $AlyaSsprEnabledGroupName. "
-        }
-        Write-Host "Also configure reset options."
-        if (-Not $browser) {
-            Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
-        } else {
-            $browser.Url =  "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
-        }
-        pause
     }
+}
+}
+
+if ($hadError)
+{
+    if ($NonInteractive)
+    {
+        throw "Non-interactive mode: exception occurred while configuring password reset options. Please check the error details above and take necessary actions."
+    }
+    Write-Host "Configuring password reset options" -ForegroundColor $CommandInfo
+    Write-Host "You have now to configure password reset options. Pleas browse to"
+    Write-Host "  https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+    if (-Not $AlyaPasswordResetEnabled)
+    {
+        Write-Host "and disable password reset for all users."
+    }
+    elseif ([string]::IsNullOrEmpty($AlyaSsprEnabledGroupName) -or $AlyaSsprEnabledGroupName -eq "PleaseSpecify"-or $AlyaSsprEnabledGroupName.Count -eq 0 )
+    {
+        #TODO get groups enabling password reset by licenses
+        Write-Host "and allow password reset for all users."
+    }
+    else
+    {
+        Write-Host "and allow password reset for group(s) $AlyaSsprEnabledGroupName. "
+    }
+    Write-Host "Also configure reset options."
+    if (-Not $browser) {
+        Start-Process "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+    } else {
+        $browser.Url =  "https://portal.azure.com/#blade/Microsoft_AAD_IAM/UsersManagementMenuBlade/PasswordReset"
+    }
+    pause
 }
 
 # Stopping Transcript
@@ -269,8 +359,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBV3s3IWBkvYjUQ
-# DbRID9YeM4R788XFmglBoEW1ZAiTrKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCehE33gKs6FCT2
+# koZ+8eEBOR2vPO06CjevriN8HNOD66CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -337,10 +427,10 @@ Stop-Transcript
 # cYC/lt5yA9jYIivzJxZPOOhRQAyuku++PX33gMZMNleElaeEFUgwDlInCI2Oor0i
 # xxnJpsoOqHo222q6YV8RJJWk4o5o7hmpSZle0LQ0vdb5QMcQlzFSOTUpEYck08T7
 # qWPLd0jV+mL8JOAEek7Q5G7ezp44UCb0IXFl1wkl1MkHAHq4x/N36MXU4lXQ0x72
-# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDB/ud0g6
-# 04YfM/tV5TANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
+# f1LiSY25EXIMiEQmM2YBRN/kMw4h3mKJSAfa9TCCB/UwggXdoAMCAQICDCjuDGju
+# xOV7dX3H9DANBgkqhkiG9w0BAQsFADBcMQswCQYDVQQGEwJCRTEZMBcGA1UEChMQ
 # R2xvYmFsU2lnbiBudi1zYTEyMDAGA1UEAxMpR2xvYmFsU2lnbiBHQ0MgUjQ1IEVW
-# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjA0MDgyNzE5WhcNMjgwMjA1MDgy
+# IENvZGVTaWduaW5nIENBIDIwMjAwHhcNMjUwMjEzMTYxODAwWhcNMjgwMjA1MDgy
 # NzE5WjCCATYxHTAbBgNVBA8MFFByaXZhdGUgT3JnYW5pemF0aW9uMRgwFgYDVQQF
 # Ew9DSEUtMjQ1LjIyNi43NDgxEzARBgsrBgEEAYI3PAIBAxMCQ0gxFzAVBgsrBgEE
 # AYI3PAIBAhMGQWFyZ2F1MQswCQYDVQQGEwJDSDEPMA0GA1UECBMGQWFyZ2F1MRYw
@@ -348,17 +438,17 @@ Stop-Transcript
 # A1UEChMjQWx5YSBDb25zdWx0aW5nIEluaC4gS29ucmFkIEJydW5uZXIxLDAqBgNV
 # BAMTI0FseWEgQ29uc3VsdGluZyBJbmguIEtvbnJhZCBCcnVubmVyMSUwIwYJKoZI
 # hvcNAQkBFhZpbmZvQGFseWFjb25zdWx0aW5nLmNoMIICIjANBgkqhkiG9w0BAQEF
-# AAOCAg8AMIICCgKCAgEAzMcA2ZZU2lQmzOPQ63/+1NGNBCnCX7Q3jdxNEMKmotOD
-# 4ED6gVYDU/RLDs2SLghFwdWV23B72R67rBHteUnuYHI9vq5OO2BWiwqVG9kmfq4S
-# /gJXhZrh0dOXQEBe1xHsdCcxgvYOxq9MDczDtVBp7HwYrECxrJMvF6fhV0hqb3wp
-# 8nKmrVa46Av4sUXwB6xXfiTkZn7XjHWSEPpCC1c2aiyp65Kp0W4SuVlnPUPEZJqt
-# f2phU7+yR2/P84ICKjK1nz0dAA23Gmwc+7IBwOM8tt6HQG4L+lbuTHO8VpHo6GYJ
-# QWTEE/bP0ZC7SzviIKQE1SrqRTFM1Rawh8miCuhYeOpOOoEXXOU5Ya/sX9ZlYxKX
-# vYkPbEdx+QF4vPzSv/Gmx/RrDDmgMIEc6kDXrHYKD36HVuibHKYffPsRUWkTjUc4
-# yMYgcMKb9otXAQ0DbaargIjYL0kR1ROeFuuQbd72/2ImuEWuZo4XwT3S8zf4rmmY
-# F8T4xO2k6IKJnTLl4HFomvvL5Kv6xiUCD1kJ/uv8tY/3AwPBfxfkUbCN9KYVu5X2
-# mMIVpqWCZ1OuuQBnaH+m6OIMZxP7rVN1RbsHvZnOvCGlukAozmplxKCyrfwNFaO7
-# spNY6rQb3TcP6XzB8A6FLVcgV8RQZykJInUhVkqx4B1484oLNOTTwWj3BjiLAoMC
+# AAOCAg8AMIICCgKCAgEAqrm7S5R5kmdYT3Q2wIa1m1BQW5EfmzvCg+WYiBY94XQT
+# AxEACqVq4+3K/ahp+8c7stNOJDZzQyLLcZvtLpLmkj4ZqwgwtoBrKBk3ofkEMD/f
+# 46P2IukytvmyUxdM4730Vs6mRvQP+Y6CfsUrWQDgJkiGTldCSH25D3d2eO6PeSdY
+# TA3E3kMHBiFI3zxgCq3ZgbdcIn1bUz7wnzxjuAqI7aJ/dIBKDmaNR0+iIhrCFvhD
+# o6nZ2Iwj1vAQsSHlHc6SwEvWfNX+Adad3cSiWfj0Bo0GPUKHRayf2pkbOW922shL
+# 1yf/30OVyct8rPkMrIKzQhog2R9qJrKJ2xUWwEwiSblWX4DRpdxOROS5PcQB45AH
+# hviDcudo30gx8pjwTeCVKkG2XgdqEZoxdAa4ospWn3va+Dn6OumYkUQZ1EkVhDfd
+# sbCXAJvYNCbOyx5tPzeZEFP19N5edi6MON9MC/5tZjpcLzsQUgIbHqFfZiQTposx
+# /j+7m9WSaK0cDBfYKFOVQJF576yeWaAjMul4gEkXBn6meYNiV/iL8pVcRe+U5cid
+# mgdUVveoBPexERaIMz/dIZIqVdLBCgBXcHHoQsPgBq975k8fOLwTQP9NeLVKtPgf
+# tnoAWlVn8dIRGdCcOY4eQm7G4b+lSili6HbU+sir3M8pnQa782KRZsf6UruQpqsC
 # AwEAAaOCAdkwggHVMA4GA1UdDwEB/wQEAwIHgDCBnwYIKwYBBQUHAQEEgZIwgY8w
 # TAYIKwYBBQUHMAKGQGh0dHA6Ly9zZWN1cmUuZ2xvYmFsc2lnbi5jb20vY2FjZXJ0
 # L2dzZ2NjcjQ1ZXZjb2Rlc2lnbmNhMjAyMC5jcnQwPwYIKwYBBQUHMAGGM2h0dHA6
@@ -368,39 +458,39 @@ Stop-Transcript
 # MEcGA1UdHwRAMD4wPKA6oDiGNmh0dHA6Ly9jcmwuZ2xvYmFsc2lnbi5jb20vZ3Nn
 # Y2NyNDVldmNvZGVzaWduY2EyMDIwLmNybDAhBgNVHREEGjAYgRZpbmZvQGFseWFj
 # b25zdWx0aW5nLmNoMBMGA1UdJQQMMAoGCCsGAQUFBwMDMB8GA1UdIwQYMBaAFCWd
-# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBTpsiC/962CRzcMNg4tiYGr9Ubd
-# 2jANBgkqhkiG9w0BAQsFAAOCAgEAHUdaTxX5PlIXXqquyClCSobZaP1rH4a2OzVy
-# /fAHsVv1RtHmQnGE6qFcGomAF33g3B+JvitW9sPoXuIPrjnWSnXKzEmpc3mXbQmW
-# 2H3Bh6zNXULENnniCb16RD0WockSw3eSH9VGcxAazRQqX6FbG3mt4CaaRZiPnWT0
-# MP6pBPKOL6LE/vDOtvfPmcaVdofzmJYUhLtlfi1wiRlfHipIpQ3MFeiD1rWXwQq/
-# pFL9zlcctWFE7U49lbHK4dQWASTRpcM6ZeIkzYVEeV8ot/4A0XSx1RasewnuTcex
-# U0bcV0hLQ4FZ8cow0neGTGYbW4Y96XB9UFW++dfubzOI0DtpMjm5o1dUVHkq+Ehf
-# 6AMOGaM56A6fbTjOjOSBJJUeQJKl/9JZA0hOwhhUFAZXyd8qIXhOMBAqZui+dzEC
-# p9LnR+34c+KVJzsWt8x3Kf5zFmv2EnoidpoinpvGw4mtAMCobgui8UGx3P4aBo9m
-# UF5qE6YwQqPOQK7B4xmXxYRt8okBZp6o2yLfDZW2hUcSsUPjgferbqnNpWy6q+Ku
-# aJRsz+cnZXLZGPfEaVRns0sXSy81GXujo8ycWyJtNiymOJHZTWYTZgrIAa9fy/Jl
-# N6m6GM1jEhX4/8dvx6CrT5jD+oUac/cmS7gHyNWFpcnUAgqZDP+OsuxxOzxmutof
-# dgNBzMUxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
+# 0PxZCYZjxezzsRM7VxwDkjYRMB0GA1UdDgQWBBT5XqSepeGcYSU4OKwKELHy/3vC
+# oTANBgkqhkiG9w0BAQsFAAOCAgEAlSgt2/t+Z6P9OglTt1+sobomrQT0Mb97lGDQ
+# ZpE364hOTSYkbcqxlRXZ+aINgt2WEe7GPFu+6YoZimCPV4sOfk5NZ6I3ZU+uoTso
+# VYpQr3IozYLLNMWEK2WswPHcxx34Il6F59V/wP1RdB73g+4ZprkzsYNqQpXMv3yo
+# DsPU9IHP/w3jQRx6Maqlrjn4OCaE3f6XVxDRHv/iFnipQfXUqY2dV9gkoiYL3/dQ
+# X6ibUXqjXk6trvZBQr20M+fhhFPYkxfLqu1WdK5UGbkg1MHeWyVBP56cnN6IobNp
+# HbGY6Eg0RevcNGiYFZsE9csZPp855t8PVX1YPewvDq2v20wcyxmPcqStJYLzeirM
+# Jk0b9UF2hHmIMQRuG/pjn2U5xYNp0Ue0DmCI66irK7LXvziQjFUSa1wdi8RYIXnA
+# mrVkGZj2a6/Th1Z4RYEIn1Pc/F4yV9OJAPYN1Mu1LuRiaHDdE77MdhhNW2dniOmj
+# 3+nmvWbZfNAI17VybYom4MNB1Cy2gm2615iuO4G6S6kdg8fTaABRh78i8DIgT6LL
+# /yMvbDOHhREfFUfowgkx9clsBF1dlAG357pYgAsbS/hqTS0K2jzv38VbhMVuWgtH
+# dwO39ACaudnXvAKG9w50/N0DgI54YH/HKWxVyYIltzixRLXN1l+O5MCoXhofW4Qh
+# trofETAxgiEGMIIhAgIBATBsMFwxCzAJBgNVBAYTAkJFMRkwFwYDVQQKExBHbG9i
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
-# ZVNpZ25pbmcgQ0EgMjAyMAIMH+53SDrThh8z+1XlMA0GCWCGSAFlAwQCAQUAoHww
+# ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIOQd/o3s
-# +mnO+ya0gEF+D9rEWFuWeETdYq7XpBGPoJVwMA0GCSqGSIb3DQEBAQUABIICAAYX
-# 3AIlH8d5qcS8A6Ync2DNl6RT16d/vIKf89Za6Oj+JVpdRdD2bYNvgwx6zWRz5i3V
-# BgaGsPad5e/mBiMElUqEt5lSjEzrevVSzRW9EVH2w29iSuzVElJs/7zXg68enHl4
-# qK0gHoulP9GAp9v9lhSiLZImXghU10DInMbHrk9+ZAOGpXICZriCtpI6ycMbR7iC
-# p3XuzxaZMX1dcVUY+TJV9L9V8Lbs1Xy4lOM9Q/z/9XYuNuI6Oi3/Cg8t8+XRCYbv
-# TH1LDUtuhl2g7T+y+++HLS04w0IWa/4xwInFhOLlf2RvGz2Fy4c7UR5thlE1gaoM
-# 5ax9mt0igmFBIZ8abml5X4V6pSKkMiyReNBp15sstbaU8nvW/mjD29Enl6aWKLOc
-# 7Ta5jocU4SdVR23s4vuRxaXCLCSmykjK9O0BFIRI2qAPwY4uWgvllWmefjDhy3V0
-# HLjhTUx3XNHsVixJVOl+pgDaAXNV3IZPqaLS2Ql3n7dQdC68bSZ9OywLm9kk1YMR
-# FSBN6PB3YIn2Lb4yDyhEtw9e2hmZ+sWcHBosx+Rl8vAnmKEL12JjTE73QPYpiZZQ
-# IUPg/6upU4yEvVqWVB7eF33l8ZuzpRVY4LKkhZaG11nlKk1d0WUghsxqHSRRtd+r
-# G8wlrKmca0XcWqmxqsDuvD/1QbOM0g6tcrrN1vjDoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEB6Sh8P
+# nnGak8FWQi5nxWrB+O1x1g1mKL1OS6rUJTIEMA0GCSqGSIb3DQEBAQUABIICABdO
+# oomMpfXfBcqOwnvUGrriDwsET9eWJ/I39uPSzLyLjoWrKn/oy9mKMFREM38lVg9s
+# A7GcdbvGfn0VltpvdR1lmD3z4b4+UzfEiZzyDnRMOz7JqrUFhUbaCaeMOPlyc4H/
+# 1zjltPGpPw1azac7w4MDfUzFk1RKmBIQsX2/Xjr3ozoni3VR6nMhLQbJi1Xolt7p
+# tldK54QbCh1wdtKkW0fCv6OzHtUz69zU9xxwDaergko7kzrGfpP9Ze5oI6DKNLDs
+# gVKBznVHD7ibmXwGqZLYFBlA7UrsLnx0NmuoGyNCnRUz1CGMCUcs06AbvR3lNcgo
+# NXqcvD79emYV9KU12FjD+JgvXM+7yzCuxNJxT51iezY4cSjlbqpGMGkWUWisLMt6
+# Z4W95G/8JmoPEiBC2zGXLLyXrk5AAcSskWmDLBonzRNar5plSrKbhv/fLuw2J8lt
+# 3Losl7jh5qI3rF/BopURRrNXNMInH+0GgoH8WqQa0iV09CvcVnhKUpTat4hpUG19
+# 0blXh1v81QEFoY9nSkuoA9GOIdxuUb2jt8iKdrewhaWdTx0xQ7EFkvlyGcUQIivz
+# JDWXnKCqk6pLuEpx8S2j2BriKqZ4BT1VnLKlaEU16kFC++eh292yRbU4A33yl9nr
+# NYgac/PJ/4Pf3GzLZ9IZDVaQgFGnz3bE3qLqeuahoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCBlyMI7y74/6fHtnjg8PVKsuL9eHId5BqjSiYX16T4NFQIUVwfV
-# 3EFAEa+K00WkB6GfHv/ymK4YDzIwMjYwODI5MTUzODM3WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCDvMf2cV3zkPMJ7VU8V2ZttpR0tXA/td9VAkDByiRfcQwIUHhzZ
+# HUTTrSJCn89M46f/dE8uynkYDzIwMjYxMTA4MjA0OTA0WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -543,18 +633,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDBoxNI/lEVqZoGkmGziLCZxtozg9v912JXgo3wiggqI4HARux02eVjZXIWW
-# NBkPrCEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCRojX84doW+FqKpwAFBuv5rcKzCp8/6D+eThFhpW+hWqBfbqjycC5p1PS8
+# PppGmEcwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAr6zhwaorFExv49+7qWvWmMNQkt3RFFLNm8Muq/xIEzWo
-# DdFTZNMmlThaqA6xlgqQWSFYkHBR8K7fC0/t5BWiUvcgxUrdlDiIhWIh5VAMzDpl
-# jBiNLKN8V2vgyxyieZ6QaUQgrN5oAWtCEdEmP4PMilGs0QjCd3iuaoMJNO76bXIg
-# GHEuLX/I3etmkSMJuhuKcjRgcWVRq+5DNJigEFYpvvBMtcCTsfhdysS3RgcTzfKC
-# fCTWJVC7u3cyqC8t+5IvaCrLtjznTJsbGrxRcmkT61QvQg1VMVPoEzZMyzpoIkNj
-# ELXVAHAEitXcD2diObgoeJrHPhslFhiVyxq7rlqZAhbUmHaNvUfu3zxs7+WGvrvn
-# Tu2t4IR+3+SVMNONLoMsd4wUWGd9Hwi6L0kSzLvMmFgErzF2Jf90fa0+5bQJvklT
-# X8kEk/3IxY04MtZyJcAk1xIy9UaFUCPiLq6SR8O+zIfs81yyFhrBMjF0Boxs63vT
-# oB0Wb+BYA1tmp6Xn7+y0
+# KoZIhvcNAQEMBQAEggGANOjESE3nMZ2ZllDGObCm9piMztItUBQ5SsiqVsqVttWv
+# 9V1tzyjaE0YJZKNOlFDvtIKkuzlLJx8tXCm0/e0Z9Qx+a4/ER3TY6ro4Oz0nI47H
+# ysVLKeOD7fl6oCrACclb0KpbAxBFq3OLtethq20+huRRB+XXyT/5Hqh8iwmFox2c
+# MxqynfNHG+HB8FM24P4s9ughFKnIWop2MqhwF2df/jicKl6jWbJhZxxu++G1AHZQ
+# cFOdlxSbVYlkeuflRxs3Txyq4nBnAFfzEHgvRiVkh6Lh+JmbB5T/LUl5QzBSyH9K
+# //E0RzHs3NQC5fzMVrbMTRfVDYFnPCK41bg8aL9DcNCcRNKas9iBcn95Mk7Ccw09
+# 9rxlhQkonyh2m8F3w/44xwfdqyWmQOyL3PMfq/VUBcV0Rqy9g9zckPeOtt+Rk6Re
+# WzZx4ywEWHYZzXEESZeR/R3r4G7AP71zHJyCGhkMbxGlJp/BFYzvEg9D8T8NHWmI
+# nOlcrKcoA2y+MLsae9Dj
 # SIG # End signature block

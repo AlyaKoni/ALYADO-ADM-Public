@@ -33,6 +33,7 @@
     15.03.2023 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
     19.10.2026 Konrad Brunner       Platform-dependent Close-ExcelPackage; column width heuristic replaces -AutoSize
+    05.11.2026 Konrad Brunner       PSGallery registration fixed for PowerShellGet 2.x (Register-PSRepository -Default)
 
 #>
 
@@ -154,14 +155,21 @@ function Install-ModuleIfNotInstalled (
     $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
     if (-Not $regRep)
     {
-        Register-PSRepository -Name "PSGallery" -SourceLocation "https://www.powershellgallery.com/api/v2/" -PublishLocation "https://www.powershellgallery.com/api/v2/package/" -ScriptSourceLocation "https://www.powershellgallery.com/api/v2/items/psscript/" -ScriptPublishLocation "https://www.powershellgallery.com/api/v2/package/" -InstallationPolicy Trusted -PackageManagementProvider NuGet
-    }
-    else
-    {
-        if ($regRep.InstallationPolicy -ne "Trusted")
+        # PowerShellGet 2.x does not allow to register the PSGallery by name, the Default parameter set is required
+        $regCmd = Get-Command Register-PSRepository -ErrorAction SilentlyContinue
+        if ($regCmd -and $regCmd.Parameters.ContainsKey("Default"))
         {
-	        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
+            Register-PSRepository -Default
         }
+        else
+        {
+            Register-PSRepository -Name "PSGallery" -SourceLocation "https://www.powershellgallery.com/api/v2/" -PublishLocation "https://www.powershellgallery.com/api/v2/package/" -ScriptSourceLocation "https://www.powershellgallery.com/api/v2/items/psscript/" -ScriptPublishLocation "https://www.powershellgallery.com/api/v2/package/" -InstallationPolicy Trusted -PackageManagementProvider NuGet
+        }
+    }
+    $regRep = Get-PSRepository -Name "PSGallery" -ErrorAction SilentlyContinue
+    if ($regRep -and $regRep.InstallationPolicy -ne "Trusted")
+    {
+        Set-PSRepository -Name "PSGallery" -InstallationPolicy Trusted
     }
     $psg = Get-Module -Name PowerShellGet -ListAvailable | Sort-Object -Property Version | Select-Object -Last 1
     if ($moduleName -ne "PackageManagement" -and $moduleName -ne "PowerShellGet" -and (-Not $psg -or $psg.Version -lt [Version]"2.0.0.0"))
@@ -581,8 +589,8 @@ $diffProps | Out-GridView -Title "Files with different properties"
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDKCIQN7oaUiRp3
-# 2wItdR9ls9Ma/bpC4wa1DcgurtemZaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBUF4dPtB1Cr8O5
+# Q8meOYQOcdbqbeHc7ds06ovsiBNgSaCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -696,23 +704,23 @@ $diffProps | Out-GridView -Title "Files with different properties"
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEILAVJXH1
-# P9JOSdFy43wHE3SuIOYyEN+EEUjAsA9xa+CuMA0GCSqGSIb3DQEBAQUABIICAIpB
-# Dg6Z3/uvnazVOBulPAvTJcWcxuiZLNNLhSTLRpsxdaDnMYtBJC09TRoJ++F8Q/TE
-# bROkSzwZos0LqRaY+rQHELuCH4buKdnI86Mb6G2AJl8oh/8/ZLQ2QAoNFDQZwfmb
-# pX9hicLWWtS4rfSoVCY41h5qa39L5IlLVzBI9Vec/Gv9Nbl7MLoX/H2Gx1Fu3IIw
-# 5gHdsFRSQT+mIxKzmifEcSsmlAEA3Y8ciMBnz9bpZjjQihfnufbStKNht9YW4voS
-# gkOv1bnexTa8yniRY2Eb3Lc2xQa3d34zaDkCyXxCTc/w+w+z/SdKPEOc1M72Zf4X
-# //sbY06Q62soCd6oILe5CXJlZt9G4crEqDNTL8YDXv0NDqci6rWhheqego1XwY0b
-# Hf9w/dojkKFu4oJvVW/bqXqgCHegk717zDDKrz9EWFQHy+Qz5ToRMKV5p9oJuVa/
-# Qj/CMmqYbg6cQzLC+R+OjpCGWHQpdpw8+q92JcF0Bxmywv2aGxcEnwDY+Cwyhr8b
-# b5HE4iEJ1WUBy3jVCWV+k2lnMfpRKUYYQOnRpuoA7JG5avusjNLeOQbHzubYZfiZ
-# 4XP7kCXur/uc1Dmd60dhW8KJi278FqSFa78jA8gK3GQX6mY0WlM49vNb7G8XzFs2
-# o1LCek7CGn60gQSOX9lfG8EF2z8CSSiZKkqqneH5oYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIH0IzZVD
+# uZqgPNDdUYY2pSSLRiHcrYg3qNyz61UFe4C9MA0GCSqGSIb3DQEBAQUABIICADEL
+# m87qXpYY93vdGzGyJd0sVK4CW/yZP5pBfR5XcCx5bN5eFkGuemnwIJQ66zBdmaRL
+# C/Oh8kbLius3FeFE941RUPqQoPs9/NZd0YYh6DTQf0NeQmzf+sApovQE+2y9bSHE
+# 8By7vPtzRS4CvODeH87iVB6/i/AgTDq4gg9X750gypW9LsQ9znL6+LynJtQ8ZBLF
+# bTxLSbsZaerpYV/hN+II2TRhMY4f9om0blQYwophfa3ghSqpv5tElQG/1zlquaRe
+# H2SMHhpv9gUnFSM1PY2Ri4p6hfLsbRKVncM6yvWxjvU9NUPBUxfCpq2df/2pCBTu
+# Fq//vZmwYMFx42Z12aM+8RUl0UbHwFEfhbu58+25CUoOkofF4RnP9sFZKWHSnYBc
+# VjGp1ACjboGEdJUXQwfEkiGAduQdH05IsjQo4ho5u5OzYWwIoT76vOUCYMjWgv/9
+# BM9p9gm5Uh8+dCrOh0lIOQfuQzCOXeWq3iKsxi8e8ngQvhcAVL28p6/zsywppcvs
+# BjfVDjkvWUwtQcDB6hPAXXKmYr0AxXD7gRfVgfgzE5W7GUtB17nOP2HEv7Iqzfo2
+# wysUqBp8ZR2Y3+eNbtbUFbezwMtpan20Zz5qHF3EdAceyT0iQnBsN4RyPPWwwKpP
+# bEWBiP+JktQhDpnz/Yu6FPrn4rdJNC6VEvXP7lknoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCDxxZd+Z1HG74lP/jEVa5jR8e5RghzwnCANeIs8V2S1qgIUQ1z2
-# D/1Pn4O+tp1JmEcYz9CRq78YDzIwMjYxMDIwMTMzMjM5WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCBS04a5XmjaNK7cx+XCP/bB5vzq9T1uoO1WncGCq3DnNQIUDun3
+# CbapKIjj65C+1T1obB1B818YDzIwMjYxMTA4MjA0ODM4WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -855,18 +863,18 @@ $diffProps | Out-GridView -Title "Files with different properties"
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDDBTq0qUIV8Uco67nJJHuGIzjAiO8DZg6e/77j42zeAqTB/A8C6mKLG0iro
-# imB+NgEwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDDEHtZmnL0JsQDcrH45d/f4sU6vDsu1NKc5IXiqwyQOtG3xvz++i3iGpy7L
+# hBoYG/IwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAP75csZEB8vlgL8JsQDwS8YJrHdKYdWzDGhNxDHv6PuTp
-# eaNrC4XtjCG6YoAYjQmJ4FBl7Q0FKmJsiN91KoETxQSxBxYcKkCnBc1kfxe5kt1n
-# ti8CMUTVpCcDYG0jX/I5VyAJtTWUZjeXJzPpcWvUEZVMjVwRNGnFhnfWJmQt6RSb
-# 1K2no/mzxPu92RYJRGMM0Ux5vxTFzn7u+2ob2PZk8+6ijhbMUhRrJCLmu9hZ1Gvx
-# IZf9iiof30bovfWtClPq0E1LNdUmd0VNHFNQFpaMN7NXoZyD/OaNbxQi92LKTXL6
-# LKQpP8i6zp3TwqTTleZrgL6dWZ0Ly7IpF3Usvl5vp+VPjqVkJbDSZKOJ9nWG7qXt
-# slIAOppGcREY7uDFbADuE6B1O66fFBgcTOOSeB3gCpYQQvSgYnUkhGawW8cOtoAY
-# XN0Jdb5GW4Aggm2MhBW7jN7aflo79Y+0Z6qrDYf6T9dmrPhSYPuv+gElfXAcqOWY
-# uyzZVrfxUhjZ7tJ5VA7t
+# KoZIhvcNAQEMBQAEggGAXhR8TP4/0/WfkTqyXCqiUGKWz4+DKAmnELC0rO9f6Hby
+# /yYQMRKx1qlXD9EkkVqadIE2gR3nQW0H11/A5IVq78zCglryKRojj8FUPGhxWOn/
+# xmfmj2acg3rG5t3qAWtEvVJRZvssvVsWWRY/aKU1rkP+yuMv9KSkE1yegzFHw3pI
+# hL7ZZilnaSzoPHw9ytUxaxlN8QJF1sPgOX1NLcbB0V93AmThfb+4Li8VSFviKcvB
+# Ys/T4+TyWml8CRgtnyXB5BRTSKMz6jcjLBkWSDpsjFnMcGYJv6rDC+0OkzaJ2kUM
+# /MMSRckc1M8e9EVvf1n8zXGx8CvwOtbfJPWoKGmRIR6pMAp6GbphRtu2V3IzBxTK
+# p6IGTsMVLq77ihXh5MjPXEX3HAOWm2jaS19/6HZaW35Pf4HMlV3TV5nEBXCx/5xV
+# jG5fGoxPOLxs7AUv4Y8ky7Nm+Zmf+ND+r2VLpLuvsfTqE8zeuG2U8575b8GBLWbL
+# JbtRHh3OcMGsIqRoGKYk
 # SIG # End signature block

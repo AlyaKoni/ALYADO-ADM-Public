@@ -56,6 +56,8 @@ License            : GNU General Public License v3.0 or later (https://www.gnu.o
 Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
+. "$PSScriptRoot\..\..\..\..\scripts\intune\Register-MacAppPackagingHelpers.ps1"
+
 Write-Host "`n`n"
 Write-Host "Adobe Reader download"
 Write-Host "====================="
@@ -63,7 +65,7 @@ Write-Host "Please provide the Reader download URLs provided with your adobe dis
 $setupDownloadUrl = Read-Host -Prompt 'setupDownloadUrl'
 Write-Host "`n`n"
 Write-Host "We launch now a browser with the Adobe Reader setup download page."
-Write-Host " - Select 'Mac OS 10.15 - 13.x'"
+Write-Host " - Select 'Mac OS 13.x - 15.x'"
 Write-Host " - Select 'Your language'"
 Write-Host " - Select 'Latest version"
 Write-Host " - Choose 'Download now / Jetzt herunterladen'"
@@ -118,11 +120,11 @@ Start-Sleep -Seconds 3
 if ($filename)
 {
     Move-Item -Path (Join-Path $downloads $filename) -Destination $contentRoot
-    hdiutil attach -nobrowse -readonly "$contentRoot/$fileName"
+    Mount-DmgImage -Path "$contentRoot/$fileName" -NoBrowse $true -ReadOnly $true
     $dirName = $filename.Replace(".dmg","")
     $volume = "/Volumes/$dirName"
     Copy-Item -Path (Join-Path $volume $filename.Replace(".dmg",".pkg")) -Destination $contentRoot -Force
-    hdiutil detach $volume
+    Dismount-DmgImage -Path $volume
     Remove-Item -Path "$contentRoot/$fileName" -Force
 
     [regex]$regex = "(\d{2})(\d{3})(\d{5})"

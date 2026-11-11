@@ -33,6 +33,7 @@
     08.10.2020 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
     19.10.2026 Konrad Brunner       Platform-dependent Close-ExcelPackage (-Show on Windows only)
+    08.11.2026 Konrad Brunner       Dynamic user property list via Graph beta $metadata (static fallback), explicit $select incl. request-only properties (signInActivity, refreshTokensValidFromDateTime), AuditLog.Read.All scope, tolerant retry on unsupported select properties
 
 #>
 
@@ -42,6 +43,7 @@ Exports all Azure AD users to an Excel file.
 
 .DESCRIPTION
 The Export-Users.ps1 script connects to Microsoft Graph using the Microsoft.Graph modules to retrieve all Azure Active Directory users and exports their details into an Excel file. It dynamically collects all properties from user objects, formats complex properties into readable strings or JSON where appropriate, and saves the output in a formatted Excel file using the ImportExcel module. The script creates necessary directories, ensures required modules are installed, and logs the execution to a transcript file.
+Because Graph returns "request-only" properties (e.g. signInActivity with the last sign-in timestamps, refreshTokensValidFromDateTime) only on explicit $select (even $select=* returns just the default property set), the list of user properties to request is determined dynamically from the Graph beta $metadata document (structural properties of microsoft.graph.user, navigation properties excluded). The metadata is fetched and cached once per run; if it cannot be retrieved, a static fallback property list (metadata snapshot) is used, so the export never fails because of a metadata problem. Properties that are known to be not $select-able service side (SharePoint profile fields, print, mailboxSettings, identityGovernance, deviceEnrollmentLimit, cloudLicensing) are filtered out via a maintained exclusion list. Additionally the select list is validated with a cheap single page request; unsupported property names (e.g. beta-only or retired properties in a tenant) are narrowed down by binary search, dropped and the export continues with the remaining valid properties instead of aborting. The signInActivity value is exported as a JSON string, so the sign-in timestamps stay machine-readable.
 
 .PARAMETER outputFile
 Specifies the path to the output Excel file. If not provided, the script defaults to "$AlyaData\aad\Users.xlsx".
@@ -93,7 +95,7 @@ Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Users"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
-LoginTo-MgGraph -Scopes "Directory.Read.All"
+LoginTo-MgGraph -Scopes @("Directory.Read.All", "AuditLog.Read.All")
 
 # =============================================================
 # Azure stuff
@@ -110,10 +112,212 @@ function Convert-ObjectIdToSid
     $d=[UInt32[]]::new(4);[Buffer]::BlockCopy([Guid]::Parse($ObjectId).ToByteArray(),0,$d,0,16);"S-1-12-1-$d".Replace(' ','-')
 }
 
+# Static fallback property list: snapshot of the verified $select-able structural properties
+# of the microsoft.graph.user entity type from the Graph beta $metadata document (probed on
+# ALYA, 08.11.2026). Used only when the metadata document cannot be retrieved or parsed, so
+# that the export never fails because of a metadata problem.
+$script:UserPropertyFallbackList = @(
+    "accountEnabled", "ageGroup", "assignedLicenses", "assignedPlans", "authorizationInfo",
+    "businessPhones", "city", "cloudRealtimeCommunicationInfo", "companyName",
+    "consentProvidedForMinor", "country", "createdDateTime", "creationType",
+    "customSecurityAttributes", "department", "deviceKeys", "displayName", "employeeHireDate",
+    "employeeId", "employeeLeaveDateTime", "employeeOrgData", "employeeType",
+    "externalUserState", "externalUserStateChangeDateTime", "faxNumber", "givenName",
+    "identities", "identityParentId", "imAddresses", "infoCatalogs",
+    "isHardDeleteProtectionEnabled", "isLicenseReconciliationNeeded", "isManagementRestricted",
+    "isResourceAccount", "jobTitle", "lastPasswordChangeDateTime", "legalAgeGroupClassification",
+    "licenseAssignmentStates", "mail", "mailNickname", "mobilePhone", "officeLocation",
+    "onPremisesDistinguishedName", "onPremisesDomainName", "onPremisesExtensionAttributes",
+    "onPremisesImmutableId", "onPremisesLastSyncDateTime", "onPremisesProvisioningErrors",
+    "onPremisesSamAccountName", "onPremisesSecurityIdentifier", "onPremisesSipInfo",
+    "onPremisesSyncEnabled", "onPremisesUserPrincipalName", "otherMails", "passwordPolicies",
+    "passwordProfile", "postalCode", "preferredDataLocation", "preferredLanguage",
+    "provisionedPlans", "proxyAddresses", "refreshTokensValidFromDateTime", "securityIdentifier",
+    "serviceProvisioningErrors", "showInAddressList", "signInActivity",
+    "signInSessionsValidFromDateTime", "state", "streetAddress", "surname", "usageLocation",
+    "userPrincipalName", "userType"
+)
+
+# Structural properties from the Graph metadata that are currently NOT $select-able service
+# side (probed on ALYA, 08.11.2026): the SharePoint profile fields fail with
+# InvalidClientQueryException, print/cloudLicensing with NotImplemented/UnknownError,
+# mailboxSettings requires an explicit target mailbox, identityGovernance and
+# deviceEnrollmentLimit have no matching OData route. They are filtered out of the
+# dynamically determined list to keep the export fast. Remove entries here as soon as
+# Graph supports them; the validation below additionally catches tenant specific problems.
+$script:UserPropertyKnownUnsupported = @(
+    "aboutMe", "birthday", "cloudLicensing", "deviceEnrollmentLimit", "hireDate",
+    "identityGovernance", "interests", "mailboxSettings", "mySite", "pastProjects",
+    "preferredName", "print", "responsibilities", "schools", "skills"
+)
+
+# Known "request-only" properties: Graph returns them only on explicit $select, they must
+# always be part of the select list, even if the metadata does not list them.
+$script:UserPropertyAlwaysInclude = @(
+    "signInActivity",
+    "refreshTokensValidFromDateTime"
+)
+
+# Cache for the determined property list (metadata is fetched once per run, not per call)
+$script:UserPropertyListCache = $null
+
+function Get-UserPropertyList
+{
+    # Determines the $select-able user properties dynamically from the Graph beta
+    # $metadata document: structural properties (Property elements) of the
+    # microsoft.graph.user entity type. Navigation properties (NavigationProperty
+    # elements) are excluded, they are not $select-able (they need $expand).
+    # The known request-only properties are added explicitly. On any metadata failure
+    # the static fallback list is returned.
+    if ($null -ne $script:UserPropertyListCache)
+    {
+        return $script:UserPropertyListCache
+    }
+    $properties = @()
+    $metaFile = Join-Path ([System.IO.Path]::GetTempPath()) "graph-beta-metadata-$([Guid]::NewGuid().ToString("N")).xml"
+    try
+    {
+        Invoke-MgGraphRequest -Uri "https://graph.microsoft.com/beta/`$metadata" -Method GET -OutputFilePath $metaFile | Out-Null
+        [xml]$metaXml = Get-Content $metaFile -Raw
+        $graphSchema = $metaXml.Edmx.DataServices.Schema | Where-Object { $_.Namespace -eq "microsoft.graph" }
+        $userEntityType = $graphSchema.EntityType | Where-Object { $_.Name -eq "user" }
+        if ($null -ne $userEntityType)
+        {
+            $properties = @($userEntityType.Property | ForEach-Object { $_.Name } | Where-Object { -Not [string]::IsNullOrEmpty($_) })
+        }
+    }
+    catch
+    {
+        Write-Host "  Could not retrieve Graph user metadata: $($_.Exception.Message). Using static fallback property list." -ForegroundColor $CommandWarning
+    }
+    finally
+    {
+        if (Test-Path $metaFile)
+        {
+            Remove-Item $metaFile -Force
+        }
+    }
+    if ($properties.Count -eq 0)
+    {
+        Write-Host "  No properties found in Graph user metadata, using static fallback property list." -ForegroundColor $CommandWarning
+        $properties = @($script:UserPropertyFallbackList)
+    }
+    foreach ($knownUnsupported in $script:UserPropertyKnownUnsupported)
+    {
+        $properties = @($properties | Where-Object { $_ -ne $knownUnsupported })
+    }
+    foreach ($alwaysIncluded in $script:UserPropertyAlwaysInclude)
+    {
+        if ($properties -notcontains $alwaysIncluded)
+        {
+            $properties += $alwaysIncluded
+        }
+    }
+    $script:UserPropertyListCache = $properties
+    return $script:UserPropertyListCache
+}
+
+function Test-UserPropertyList
+{
+    # Cheap single page probe whether Graph accepts the given property list in $select
+    param([string[]]$Properties)
+    try
+    {
+        $null = Get-MgBetaUser -Property $Properties -Top 1 -ErrorAction Stop
+        return $true
+    }
+    catch
+    {
+        return $false
+    }
+}
+
+function Resolve-ValidUserPropertyList
+{
+    # Validates the select property list against the current tenant/service. If the full
+    # list is rejected, the offending properties are narrowed down by binary search and
+    # dropped, so that single unsupported property names (e.g. beta-only or retired
+    # properties in a tenant) never abort the whole export. Note: a transient service
+    # problem during validation could theoretically drop properties for a single run; if
+    # ALL properties fail, the caller keeps the unvalidated list and surfaces the real error.
+    param([string[]]$Properties)
+    if ($Properties.Count -eq 0)
+    {
+        return @()
+    }
+    if (Test-UserPropertyList -Properties $Properties)
+    {
+        return $Properties
+    }
+    if ($Properties.Count -eq 1)
+    {
+        Write-Host "  Select property not supported, dropping it: $($Properties[0])" -ForegroundColor $CommandWarning
+        return @()
+    }
+    $halfIndex = [int][Math]::Floor($Properties.Count / 2)
+    $validProperties = @()
+    $validProperties += @(Resolve-ValidUserPropertyList -Properties @($Properties[0..($halfIndex - 1)]))
+    $validProperties += @(Resolve-ValidUserPropertyList -Properties @($Properties[$halfIndex..($Properties.Count - 1)]))
+    return $validProperties
+}
+
 # Getting users
 Write-Host "Getting users" -ForegroundColor $CommandInfo
 #$users = Get-MsolUser -All
-$users = Get-MgBetaUser -Property "*" -All
+# Graph returns "request-only" properties (e.g. signInActivity, refreshTokensValidFromDateTime)
+# only on explicit $select, $select=* returns just the default property set. Therefore the
+# full property list is determined dynamically from the Graph metadata (Get-UserPropertyList).
+$selectProperties = @(Get-UserPropertyList)
+Write-Host "  Requesting $($selectProperties.Count) user properties"
+$validatedProperties = @(Resolve-ValidUserPropertyList -Properties $selectProperties)
+if ($validatedProperties.Count -gt 0)
+{
+    $selectProperties = $validatedProperties
+}
+else
+{
+    Write-Host "  Select property validation dropped all properties (probably a transient service problem), keeping the full list." -ForegroundColor $CommandWarning
+}
+Write-Host "  Exporting with $($selectProperties.Count) user properties"
+$users = $null
+$selectRetryCount = 0
+while ($null -eq $users)
+{
+    try
+    {
+        $users = Get-MgBetaUser -Property $selectProperties -All -ErrorAction Stop
+    }
+    catch
+    {
+        $errorMessage = "$($_.Exception.Message)"
+        if (($null -ne $_.ErrorDetails) -and ($null -ne $_.ErrorDetails.Message))
+        {
+            $errorMessage += "`n$($_.ErrorDetails.Message)"
+        }
+        # Single unsupported or invalid property names (e.g. beta-only or retired properties
+        # in a tenant) must not break the whole export: extract the property names quoted in
+        # the Graph error message, drop them from the select list and retry the request.
+        $invalidProperties = @()
+        foreach ($nameMatch in [regex]::Matches($errorMessage, "['`"]([A-Za-z_][A-Za-z0-9_]*)['`"]"))
+        {
+            $candidateName = $nameMatch.Groups[1].Value
+            if (($selectProperties -contains $candidateName) -and ($invalidProperties -notcontains $candidateName))
+            {
+                $invalidProperties += $candidateName
+            }
+        }
+        if (($errorMessage -match "BadRequest") -and ($invalidProperties.Count -gt 0) -and ($selectRetryCount -lt 20) -and ($invalidProperties.Count -lt $selectProperties.Count))
+        {
+            $selectRetryCount++
+            Write-Host "  Dropping $($invalidProperties.Count) unsupported select propert$(if ($invalidProperties.Count -eq 1) { "y" } else { "ies" }) and retrying: $($invalidProperties -join ", ")" -ForegroundColor $CommandWarning
+            $selectProperties = @($selectProperties | Where-Object { $invalidProperties -notcontains $_ })
+        }
+        else
+        {
+            throw
+        }
+    }
+}
 
 $propNames = @()
 foreach($user in $users)
@@ -274,8 +478,8 @@ Stop-Transcript
 # SIG # Begin signature block
 # MII2OwYJKoZIhvcNAQcCoII2LDCCNigCAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBg0eF1fQrTrI+U
-# Ejq9HKvgU/Fsgl76WvBjowEMBdY/CKCCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCCCkmFWmOZYwbZA
+# zII82a26Q3Sw6kQ4PFh0/jDvG8kV76CCFIswggWiMIIEiqADAgECAhB4AxhCRXCK
 # Qc9vAbjutKlUMA0GCSqGSIb3DQEBDAUAMEwxIDAeBgNVBAsTF0dsb2JhbFNpZ24g
 # Um9vdCBDQSAtIFIzMRMwEQYDVQQKEwpHbG9iYWxTaWduMRMwEQYDVQQDEwpHbG9i
 # YWxTaWduMB4XDTIwMDcyODAwMDAwMFoXDTI5MDMxODAwMDAwMFowUzELMAkGA1UE
@@ -389,23 +593,23 @@ Stop-Transcript
 # YWxTaWduIG52LXNhMTIwMAYDVQQDEylHbG9iYWxTaWduIEdDQyBSNDUgRVYgQ29k
 # ZVNpZ25pbmcgQ0EgMjAyMAIMKO4MaO7E5Xt1fcf0MA0GCWCGSAFlAwQCAQUAoHww
 # EAYKKwYBBAGCNwIBDDECMAAwGQYJKoZIhvcNAQkDMQwGCisGAQQBgjcCAQQwHAYK
-# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIEnfcgJr
-# 7ILRaYjh9g5M0z/KU621LwlSmlPrVSLWJ8utMA0GCSqGSIb3DQEBAQUABIICAG4B
-# 6cbjXZ5eW0bKK04TfuZgAICQT7u+9ak0kmD8NXSiFBZ6ijDMQoysBzpWmVdQdjzA
-# Bcm47lohF48Frkt0viZy6wSfHXvFisVMvlTba3SgzOqpMxPuCVitFsnI0ZN7sJ9Q
-# 4gPnINgoYeTn2wWncDcF3ugtecTEeJagIFaLz3p9A8Y0KUmL998kkkMhRWiHqpRB
-# D1tceU25f4eZUPXtbRkwS16iWoCkasAtJAtrAQSDr9O/9nDW7yotn5nOOB9iaNKP
-# H3V0j1TQH8PQ9GUpy7nnFUYAFNIR83TvHn+XacTRRpb8ZrYSdl+8Hb4Mis08ive4
-# YCjKwI/T8/G2ai1IISNoSifSKG1HgEmxlQcEOg3dgrzUYEu7ef+6nB9twWg2myLv
-# oiToJ+IdKl7J+Vi/dLm87jjxAn9fRpzS7bX7RZIDygVswMplAvQtMOinJYHS2TmW
-# Y2hjxDKFnKbYy+rCcgX4xWg6cLj31haaPzj7P3RyJpcJ43xYqfFFFm24ngVEHS/+
-# /VESm+qpddqMDmqk2tSP9SpSjz3T4Q/DYprA0h5RVBH/Zv7wlxm8ndtAbsz+rGrm
-# DUN82tmxzA5eRV0Viv8bDWJeQqDp+nIlGiWAEavIm17aZ6jGdhZHZK2vKP/43V2u
-# ESN7lqRgWBlcywKL6CwWtMQbXaLJRPDIpiCGReLaoYId7TCCHekGCisGAQQBgjcD
+# KwYBBAGCNwIBCzEOMAwGCisGAQQBgjcCARUwLwYJKoZIhvcNAQkEMSIEIDqDeLCW
+# +KIVQcemGWeQTWz8mN2RC2jW0pPQzKQoNkfwMA0GCSqGSIb3DQEBAQUABIICAIdW
+# WtVw1bfh1t1gy4TuhMAFa7MVifT1ON0sPbj2eIXb887fVS/JVhtJS0aoskun87ct
+# UrxmS7avFpr7r49UdjFlXvWYB5pXVI7AFFjSKLNt4W3tCcRC0/AyJnXoinbDx66C
+# j2WCEC+RtwRCrRFE8cxR/O7J9gUDNop/j1T/qH5XISPNp3MlH06pPsrTYGcImOEo
+# haVDF0y5JUulJmeHl4VsfXQBkLG6cJjHzUOhLVgrfd198uxdTHjADys4txeIMitM
+# 7q1MLVuW/DytbN498qGO66q2zlBq3wUPdBjppQVCRMhP7ZfpgJMUh42I3sRFTyNj
+# KmtDP9sRbX3ZUq+a1gcntOseYqPasUNHjJQzfP7qKFhk2QwIRyqSe54uBTiTt7x4
+# dqqqOkjgytrildOMdh9oYmM/etnEIj9tj25mtmCogpbivVRrTZLmShP/ZxpS2oKN
+# GzWrfMeh8yklNVlDHi2i1K2hCGAqBBS3yYwToo3mAhMF+p6XenofJVVkERRwYm09
+# mdrOgVaB8owZEYqR2Ro89n0yfdkSZW9e0pH2HdQtV24BBxpfZ0gAH8DPLZlfESMY
+# QxCqPzpowYEjNOiP0jcOWuNlPmYMbpyT7QCYp6o7Rtoz9LZNl1t1v39fQe6hrX8g
+# /UR7r7P7Cjr4OwuIEq+ZDGEsLO2+h+RH+9wKXJieoYId7TCCHekGCisGAQQBgjcD
 # AwExgh3ZMIId1QYJKoZIhvcNAQcCoIIdxjCCHcICAQMxDTALBglghkgBZQMEAgIw
 # geQGCyqGSIb3DQEJEAEEoIHUBIHRMIHOAgEBBgsrBgEEAaAyAgMCAjAxMA0GCWCG
-# SAFlAwQCAQUABCAZwIjovhk2ioJfv4csY8n7/g389+Fv0ygPUM+zD5tNqAIUDAX/
-# gL1JaqX1Xgq7GylETQFosxcYDzIwMjYxMDIwMTMyOTE2WjADAgEBoF2kWzBZMQsw
+# SAFlAwQCAQUABCCSTMTg6F94CaMWGWjcBfUZmLrK75yZZbF/16Fmi5QdAgIUdDa7
+# jXqHh4rRfBVZcYPzSiErBRYYDzIwMjYxMTA4MjA0ODE4WjADAgEBoF2kWzBZMQsw
 # CQYDVQQGEwJCRTEZMBcGA1UEChMQR2xvYmFsU2lnbiBudi1zYTEvMC0GA1UEAxMm
 # R2xvYmFsc2lnbiBSNDUgVFNBIGZvciBDb2RlU2lnbiAyMDI1MTCgghlgMIIGijCC
 # BHKgAwIBAgIRAIRyP8GVzBbx2yui9mDfK+QwDQYJKoZIhvcNAQEMBQAwXjELMAkG
@@ -548,18 +752,18 @@ Stop-Transcript
 # NDUgVGltZXN0YW1waW5nIENBIDIwMjUCEQCEcj/BlcwW8dsrovZg3yvkMAsGCWCG
 # SAFlAwQCAqCCAUEwGgYJKoZIhvcNAQkDMQ0GCyqGSIb3DQEJEAEEMCsGCSqGSIb3
 # DQEJNDEeMBwwCwYJYIZIAWUDBAICoQ0GCSqGSIb3DQEBDAUAMD8GCSqGSIb3DQEJ
-# BDEyBDDzRzNUwn2saXBA7+mEua/jltxd1KS7sOEVNJeUxJLDFfnVavE56YUBYCKX
-# PkLLIPwwgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
+# BDEyBDCIvxQEh4bFzXqsX4hdX7USCxWXVpxkWD5mNJt3Hg3STcDXeHWbVfImO4YR
+# kKL8gQswgbQGCyqGSIb3DQEJEAIvMYGkMIGhMIGeMIGbBCCDKtcuUj/erIP6RpS8
 # 58bMJhdkiChmVmWIyK3KOoOFUTB3MGKkYDBeMQswCQYDVQQGEwJCRTEZMBcGA1UE
 # ChMQR2xvYmFsU2lnbiBudi1zYTE0MDIGA1UEAxMrR2xvYmFsU2lnbiBPZmZsaW5l
 # IFI0NSBUaW1lc3RhbXBpbmcgQ0EgMjAyNQIRAIRyP8GVzBbx2yui9mDfK+QwDQYJ
-# KoZIhvcNAQEMBQAEggGAUc9OTkVzHBzBdbqULfeWYgWxoNPeJ9kdJSfDX/nUgCtS
-# MqhYmalFD0Drbe0Dm+lkkrTRg1hRAKc13CGwKzsmbPUOnoSHYxbDvYtHgqtR0qZu
-# 3Gd4QVeq8hN0M0Ib6WvkhQ+qTkjy4QoyQGD8ktErv3oqyAWKfLZ8QhhQJMLbpjWX
-# bZxiL+a5W5inpV27uYKiKh+wSR5mCSrPKvBGsqhnhfT/GZrSGjkxUCu5785wmTZo
-# VWXJe3I6v3CbTuqzFqPN5JO6IHDiEge9Nm+dCogaB9n29evafVki2NbNaekf7pmV
-# 4jKFZ/lOFZXK41p7XizgxHwrn4WUnZUovuBbk+JBcwi48N5TNN/LFoE4/vwOvNdC
-# 4itdh2LLQfv9bVK84Ut2dpQflaHMtdDd1o0wIivexZa+rBKx1ctPE0m3NQQBpiYC
-# 2+awrCVuTZq+ZtzEVYkTPu35AX1v2W1DSNOI7rbJM784D3pAelx8P7b39uF5KlJb
-# Fq5z3aLGusZ/on/02mmn
+# KoZIhvcNAQEMBQAEggGADIljx9uLuVcu+mAAhuILkax7aqqCMCk7J1KtBC/BbuHd
+# X5Nra3XVQp08K2wu/RIOg6Az4Fr/umdA7aoGjQChTiiF+FSorWAhtvJ9+Q6yE4bz
+# /c9O0YpWVsKFeXwLZNnA/uHyLdrRKuRaRrJuC/Ezgr4J0/p67PEHWe2F+6PthGP2
+# JaPHRn9ibR0rfu9lq3JUeqY5VgA1NVxSB2pS2tWP1GoGe5TJDAgoKQdX51zRZ/aJ
+# 8kIevEL1jh2A9avIhLOwqHjbY6RK03u6w6iOqnSX1HLhRRplbj6++RcU8bjCWdfG
+# Qmef0qWnCQ/jkpRmek9rsHtn8RV14dXJO/rnrmxclrJD7xdxFlSGjJJlvjSGKtqE
+# OkvkgR1smiw/48+/76KjnEq61tYkxsqvlkjKVa/OImeUt2+xHbjrzxORuMZ2D7Vd
+# r+LYJENvjemN9JdfFSArGU9mz4KQR+rNI9O3IBxel6SI4O0UH6I/BKIaD3oL4YNn
+# u5FCW+nKgEjnSsvjM95p
 # SIG # End signature block

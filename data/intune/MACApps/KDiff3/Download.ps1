@@ -53,6 +53,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 #>
 
 . "$PSScriptRoot\..\..\..\..\01_ConfigureEnv.ps1"
+. "$PSScriptRoot\..\..\..\..\scripts\intune\Register-MacAppPackagingHelpers.ps1"
 
 $pageUrl = "https://kdiff3.sourceforge.net/"
 $appName = "kdiff3"
@@ -77,10 +78,10 @@ $versionStr = [regex]::Match($fileName, $regex, [Text.RegularExpressions.RegexOp
 $dirName = $fileName.Replace(".dmg","")
 $null = New-Item -Path "$contentRoot/$dirName" -ItemType Directory -Force
 
-hdiutil attach -nobrowse -readonly "$contentRoot/$fileName"
+Mount-DmgImage -Path "$contentRoot/$fileName" -NoBrowse $true -ReadOnly $true
 $volume = "/Volumes/$appName"
 rsync -av "/Volumes/$appName" "$contentRoot/$dirName" --exclude .Trashes
-hdiutil detach $volume
+Dismount-DmgImage -Path $volume
 
 $plistCont = Get-Content -Path "$contentRoot/$dirName/$appName/$appName.app/Contents/Info.plist" -Encoding utf8 -Raw
 $idx = $plistCont.IndexOf("<key>CFBundleIdentifier</key>")

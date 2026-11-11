@@ -31,6 +31,8 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     19.10.2026 Konrad Brunner       Initial Version
+    09.11.2026 Konrad Brunner       alreadyMigratedToAuthMethods handling added
+    09.11.2026 Konrad Brunner       Migrated tenants: skip the main.iam.ad.ext.azure.com call, unified policy controls the method options
 
 #>
 
@@ -47,15 +49,15 @@ The Set-PasswordResetOptions.ps1 script is a slim variant of Set-PasswordReset.p
 - securityQuestionsOptionEnabled: false
 - mobileAppNotificationEnabled: $amEnabled
 - mobileAppCodeEnabled: $amEnabled
-$amEnabled is "true", or "false" if the tenant is already migrated to the unified authentication methods policy ($alreadyMigratedToAuthMethods).
+$amEnabled is "true", or "false" if the tenant is already migrated to the unified authentication methods policy ($alreadyMigratedToAuthMethods). If $alreadyMigratedToAuthMethods is $null (the default), the migration state is read from the tenant (policyMigrationState of the authentication methods policy), like in Set-PasswordReset.ps1.
 No enablementType, group or AllowedToUseSspr logic is executed, and no other policy fields are touched by this script.
-Note: the internal API requires a user delegated Azure login (interactive setup flow). With an app-only (service principal) login no token for the resource https://main.iam.ad.ext.azure.com/ can be aquired and ARM audience tokens are rejected (InvalidAudience, verified 19.10.2026). If the API call fails, the script falls back to manual configuration instructions like Set-PasswordReset.ps1.
+Note: the internal API requires a user delegated Azure login (interactive setup flow). With an app-only (service principal) login no token for the resource https://main.iam.ad.ext.azure.com/ can be aquired and ARM audience tokens are rejected (InvalidAudience, verified 19.10.2026). If the API call fails, the script falls back to manual configuration instructions like Set-PasswordReset.ps1. If the tenant is already migrated to the unified authentication methods policy (policyMigrationState migrationComplete), the internal API call is skipped entirely: the legacy policy is ignored for migrated tenants, the authentication method options are controlled by the unified authentication methods policy configurations, and the script only reports their current states. This migrated path works with app-only (management app) logins.
 
 .PARAMETER seleniumBrowser
 An optional browser session object used for automated navigation in the error fallback case. If not provided, the script attempts to find or initialize one only when the fallback is needed.
 
 .PARAMETER alreadyMigratedToAuthMethods
-A Boolean flag indicating whether the tenant has already migrated to centralized authentication methods management. Defaults to $true. If $true, all authentication method based reset options are disabled ($amEnabled = "false"), because the unified authentication methods policy controls them.
+A nullable Boolean flag indicating whether the tenant has already migrated to centralized authentication methods management. Defaults to $null: the migration state is then read from the tenant (policyMigrationState of the authentication methods policy), like in Set-PasswordReset.ps1. If $true (or if the tenant migration state is migrationComplete), the internal API call is skipped entirely, because the unified authentication methods policy controls the method options.
 
 .INPUTS
 None. The script does not accept pipeline input.
@@ -80,7 +82,7 @@ Base Configuration : https://alyaconsulting.ch/Solutions/AlyaBasisKonfiguration.
 Param(
     [Parameter(Mandatory=$false)]
     [object]$seleniumBrowser = $null,
-    [bool]$alreadyMigratedToAuthMethods = $true
+    [Nullable[bool]]$alreadyMigratedToAuthMethods = $null
     )
 
 # Reading configuration
@@ -95,9 +97,12 @@ $apiBaseUrl = "https://main.iam.ad.ext.azure.com/api/PasswordReset/PasswordReset
 # Checking modules
 Write-Host "Checking modules" -ForegroundColor $CommandInfo
 Install-ModuleIfNotInstalled "Az.Accounts"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Authentication"
+Install-ModuleIfNotInstalled "Microsoft.Graph.Beta.Identity.SignIns"
 
 # Logging in
 Write-Host "Logging in" -ForegroundColor $CommandInfo
+LoginTo-MgGraph -Scopes @("Policy.Read.All")
 LoginTo-Az -SubscriptionName $AlyaSubscriptionName
 
 # =============================================================
@@ -108,6 +113,45 @@ Write-Host "`n`n=====================================================" -Foregrou
 Write-Host "Tenant | Set-PasswordResetOptions | O365" -ForegroundColor $CommandInfo
 Write-Host "=====================================================`n" -ForegroundColor $CommandInfo
 
+if (-Not $alreadyMigratedToAuthMethods)
+{
+    $alreadyMigratedToAuthMethods = $false
+    # Getting AuthenticationMethodPolicy
+    Write-Host "Getting AuthenticationMethodPolicy" -ForegroundColor $CommandInfo
+    $authenticationMethodPolicy = Get-MgBetaPolicyAuthenticationMethodPolicy
+    $migrationState = [string]$authenticationMethodPolicy.PolicyMigrationState
+    Write-Host "  policyMigrationState: '$($migrationState)'"
+
+    # Mapping the migration state to the status
+    if ([string]::IsNullOrEmpty($migrationState) -or $migrationState -eq "migrationComplete") {
+        $alreadyMigratedToAuthMethods = $true
+    }
+}
+
+if ($alreadyMigratedToAuthMethods)
+{
+    # The tenant is migrated to the unified authentication methods policy (migrationComplete).
+    # The legacy SSPR policy is ignored for migrated tenants and the Azure Portal internal API
+    # (main.iam.ad.ext.azure.com) does not support app-only (management app) logins. The
+    # authentication method options are controlled by the unified authentication methods policy
+    # configurations, there is nothing to set via the internal API.
+    Write-Host "Tenant is migrated to the unified authentication methods policy. The legacy password reset options are ignored, the authentication method options are controlled by the unified authentication methods policy configurations." -ForegroundColor $CommandInfo
+
+    if ($null -eq $authenticationMethodPolicy)
+    {
+        $authenticationMethodPolicy = Get-MgBetaPolicyAuthenticationMethodPolicy
+    }
+
+    Write-Host "Current unified authentication method configuration states:" -ForegroundColor $CommandInfo
+    foreach ($config in @($authenticationMethodPolicy.AuthenticationMethodConfigurations))
+    {
+        Write-Host "  $($config.Id): $($config.State)" -ForegroundColor $CommandInfo
+    }
+    Write-Host "No password reset options to configure, skipping the Azure Portal internal API." -ForegroundColor $CommandSuccess
+}
+else
+{
+# Legacy path for non-migrated tenants: Azure Portal internal API (unchanged).
 # The only values this script ever sets
 $amEnabled = "true"
 if ($alreadyMigratedToAuthMethods) { $amEnabled = "false" }
@@ -234,6 +278,7 @@ if ($hadError)
         Write-Warning "No browser available in unattended mode. Skipping portal navigation."
     }
     if (-Not [Console]::IsInputRedirected) { pause }
+}
 }
 
 # Stopping Transcript
