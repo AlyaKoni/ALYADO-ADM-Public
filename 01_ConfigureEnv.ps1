@@ -94,6 +94,7 @@
                                     existing profile content is no longer overwritten
     05.11.2026 Konrad Brunner       PSGallery registration fixed for PowerShellGet 2.x (Register-PSRepository -Default)
     07.11.2026 Konrad Brunner       MakeFsCompatiblePath: separator normalization via ConvertTo-PlatformPath, invalid character replacement only in the file name
+    11.11.2026 Konrad Brunner       MakeFsCompatiblePath: file-name-only contract - path parameter renamed to fileName, IsOneDriveDir parameter and path length checks removed, \ and / replaced like other invalid characters, control characters and whitespace (space/tab/newline) replaced with underscore, consecutive underscores collapsed to one
 
 #>
 
@@ -506,66 +507,26 @@ function MakeFsCompatiblePath()
     Param
     (
         [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
-        [string]$path,
-        [bool]$IsOneDriveDir = $true
+        [string]$fileName
     )
-    # Normalizes the platform-mixed path separators first (repo scripts and
-    # variables hardcode "\" even on Linux), then replaces invalid characters
-    # in the file name only. The directory part is left untouched, so the path
-    # keeps pointing to the intended location on all platforms.
-    $npath = ConvertTo-PlatformPath $path
-    $idx = $npath.LastIndexOfAny(@('\', '/'))
-    if ($idx -lt 0)
+    # Contract: pure file name WITHOUT path components. Reliable path/file-name
+    # detection is impossible, because legitimate file names (e.g. display names
+    # containing URLs like "WindowsAdminCenter-https://server.domain") may contain
+    # separators themselves. Therefore \ and / are treated as invalid characters.
+    # Replaces all platform-invalid characters, control characters and whitespace
+    # (spaces, tabs, newlines) with underscores, then collapses consecutive
+    # underscores into a single one.
+    $result = $fileName
+    foreach ($invalidChar in @("<", ">", ":", '"', "'", "|", "?", "*", "\", "/"))
     {
-        $parent = ""
-        $leaf = $npath
+        $result = $result.Replace($invalidChar, "_")
     }
-    else
+    $result = [regex]::Replace($result, "[\x00-\x1F\x7F\s]", "_")
+    while ($result.Contains("__"))
     {
-        $parent = $npath.Substring(0, $idx + 1)
-        $leaf = $npath.Substring($idx + 1)
+        $result = $result.Replace("__", "_")
     }
-    $parentCore = $parent.TrimEnd('\', '/')
-
-    $leaf = $leaf.Replace("<", "_"). `
-       Replace(">", "_"). `
-       Replace(":", "_"). `
-       Replace("`"", "_"). `
-       Replace("'", "_"). `
-       Replace("|", "_"). `
-       Replace("?", "_"). `
-       Replace("*", "_")
-
-    $npath = $parent + $leaf
-
-    $maxDirLen = 248
-    $maxFileLen = 260
-    if ($IsOneDriveDir)
-    {
-        $maxDirLen = 236
-        $maxFileLen = 248
-    }
-    if ($parentCore.Length -gt $maxDirLen)
-    {
-        throw "Directory too long. Max $maxDirLen charcters allowed if OneDrive=$IsOneDriveDir"
-    }
-    if ($npath.Length -gt $maxFileLen)
-    {
-        $name = [System.IO.Path]::GetFileNameWithoutExtension($leaf)
-        $ext = [System.IO.Path]::GetExtension($leaf)
-        $maxLength = $maxFileLen - $parentCore.Length - $ext.Length - 1
-        $leaf = ($name.Substring(0,$maxLength)+$ext)
-        $npath = $parent + $leaf
-    }
-
-    if ($npath.Length -ne $path.Length)
-    {
-        Write-Warning "Path shortened (OneDrive=$IsOneDriveDir)"
-        Write-Warning "  from $path"
-        Write-Warning "  to   $npath"
-    }
-
-    return $npath
+    return $result
 }
 
 function IIf($If, $Then, $Else) {

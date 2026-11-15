@@ -97,21 +97,6 @@ Write-Host "Extracting DNS Zones" -ForegroundColor $CommandInfo
 Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
 & "$($AlyaScripts)\network\Extract-DnsZoneFiles.ps1"
 
-# Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
-# Write-Host "Extracting All Apps" -ForegroundColor $CommandInfo
-# Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
-# & "$($AlyaScripts)\aad\Export-AllApps.ps1" -ExportGitFriendly $true
-
-# Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
-# Write-Host "Extracting Application Registrations" -ForegroundColor $CommandInfo
-# Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
-# & "$($AlyaScripts)\aad\Export-ApplicationRegistrations.ps1" -ExportGitFriendly $true
-
-# Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
-# Write-Host "Extracting Conditional Access Policies" -ForegroundColor $CommandInfo
-# Write-Host "+++++++++++++++++++++++++++++++++++++++++++++++" -ForegroundColor $CommandInfo
-# & "$($AlyaScripts)\security\Export-ConditionalAccessPolicies.ps1" -ExportGitFriendly $true
-
 # Stopping Transcript
 Stop-Transcript
 

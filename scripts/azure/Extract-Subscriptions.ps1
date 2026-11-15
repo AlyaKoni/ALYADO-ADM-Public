@@ -31,6 +31,7 @@
     Date       Author               Description
     ---------- -------------------- ----------------------------
     26.05.2026 Konrad Brunner       Initial Version
+    11.11.2026 Konrad Brunner       MakeFsCompatiblePath: call sites migrated to file-name-only usage, directory joined via Join-Path/ConvertTo-PlatformPath
 
 #>
 
@@ -105,7 +106,7 @@ $subs = Get-AzSubscription -TenantId $AlyaTenantId
 $GitReadyFiles = @()
 foreach ($sub in $subs)
 {
-    $filePath = MakeFsCompatiblePath("$SubscriptionRoot\$($sub.Name).json")
+    $filePath = Join-Path (ConvertTo-PlatformPath $SubscriptionRoot) (MakeFsCompatiblePath "$($sub.Name).json")
     $sub | ConvertTo-Json -Depth 10 | Out-File -FilePath $filePath -Encoding UTF8
     $GitReadyFiles += $filePath
 }

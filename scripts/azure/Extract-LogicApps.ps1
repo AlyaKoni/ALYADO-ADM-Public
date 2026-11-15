@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     23.06.2021 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
+    11.11.2026 Konrad Brunner       MakeFsCompatiblePath: call sites migrated to file-name-only usage, directory joined via Join-Path/ConvertTo-PlatformPath
 
 #>
 
@@ -109,12 +110,12 @@ foreach($logicApp in $LogicApps)
     Write-Host "Exporting app $($logicApp.Id)"
     $logicAppName = $logicApp.Id.Substring($logicApp.Id.IndexOf("resourceGroups")+15, $logicApp.Id.IndexOf("providers")-$logicApp.Id.IndexOf("resourceGroups")-16) + "-" + $logicApp.Name
     if ($logicApp.Definition) {
-        $filePath = MakeFsCompatiblePath("$LogicAppRoot\$($logicAppName)_Definition.json")
+        $filePath = Join-Path (ConvertTo-PlatformPath $LogicAppRoot) (MakeFsCompatiblePath "$($logicAppName)_Definition.json")
         $logicApp.Definition.ToString() | Set-Content -Path $filePath -Force -Encoding UTF8
         $GitReadyFiles += $filePath
     }
     if ($logicApp.Parameters -and $logicApp.Parameters.'$connections' -and $logicApp.Parameters.'$connections'.Value) {
-        $filePath = MakeFsCompatiblePath("$LogicAppRoot\$($logicAppName)_Connections.json")
+        $filePath = Join-Path (ConvertTo-PlatformPath $LogicAppRoot) (MakeFsCompatiblePath "$($logicAppName)_Connections.json")
         $logicApp.Parameters.'$connections'.Value.ToString() | Set-Content -Path $filePath -Force -Encoding UTF8
         $GitReadyFiles += $filePath
     }

@@ -36,6 +36,7 @@
     10.09.2025 Konrad Brunner       Better error handling
     06.02.2026 Konrad Brunner       Added powershell documentation
     30.08.2026 Konrad Brunner       Added ExportGitFriendly parameter
+    11.11.2026 Konrad Brunner       MakeFsCompatiblePath: call sites migrated to file-name-only usage, directory joined via Join-Path/ConvertTo-PlatformPath
 
 #>
 
@@ -169,7 +170,7 @@ function DownloadReport($repUri, $repName, $repDir)
         Start-Sleep -Seconds 10
         $rep = Get-MsGraphObject -Uri $repUri
     }
-    Invoke-WebRequestIndep -Method "Get" -Uri $rep.url -OutFile (MakeFsCompatiblePath("$DataRoot$repDir\$repName.zip"))
+    Invoke-WebRequestIndep -Method "Get" -Uri $rep.url -OutFile (Join-Path (ConvertTo-PlatformPath "$DataRoot$repDir") (MakeFsCompatiblePath "$repName.zip"))
 }
 
 ##### Starting exports GeneralInformation

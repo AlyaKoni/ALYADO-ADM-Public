@@ -102,7 +102,7 @@ $GitReadyFiles = @()
 foreach($application in $applications)
 {
     $app = Invoke-MgGraphRequest -Uri "/beta/applications/$($application.Id)" -Method "Get"
-    $appFilePath = "$AlyaData\aad\appRegistrations\$($app["displayName"])-$($app["appId"]).json"
+    $appFilePath = "$AlyaData\aad\appRegistrations\$(MakeFsCompatiblePath($app["displayName"]))-$($app["appId"]).json"
     $app | ConvertTo-Json -Depth 10 | Set-Content -Path $appFilePath
     $GitReadyFiles += $appFilePath
 }

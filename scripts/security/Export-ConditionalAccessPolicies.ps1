@@ -33,6 +33,7 @@
     18.04.2024 Konrad Brunner       Initial Version
     06.02.2026 Konrad Brunner       Added powershell documentation
     30.08.2026 Konrad Brunner       Added ExportGitFriendly parameter
+    11.11.2026 Konrad Brunner       MakeFsCompatiblePath: call sites migrated to file-name-only usage, directory joined via Join-Path/ConvertTo-PlatformPath
 
 #>
 
@@ -114,7 +115,7 @@ $GitReadyFiles = @()
 foreach($policy in $policies)
 {
     $exPolicy = (Invoke-AzRestMethod -Uri "https://graph.microsoft.com/beta/identity/conditionalAccess/policies/$($policy.Id)").Content
-    $policyFilePath = MakeFsCompatiblePath("$AlyaData\security\conditionalAccessPolicies\$($policy.displayName).json")
+    $policyFilePath = Join-Path (ConvertTo-PlatformPath "$AlyaData\security\conditionalAccessPolicies") (MakeFsCompatiblePath "$($policy.displayName).json")
     $exPolicy | Set-Content -Path $policyFilePath -Encoding $AlyaUtf8Encoding -Force
     $GitReadyFiles += $policyFilePath
 }

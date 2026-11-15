@@ -34,6 +34,7 @@
     02.02.2026 Konrad Brunner       Added ByBackupPolicy, bug fixes and ExcelExport
     06.02.2026 Konrad Brunner       Added powershell documentation
     19.10.2026 Konrad Brunner       Platform-dependent Close-ExcelPackage (-Show on Windows only)
+    12.11.2026 Konrad Brunner       Synced with Purge-VersionsOnAllSites.ps1, $CommandInfo internalized
 
 #>
 
@@ -48,7 +49,7 @@ The Purge-VersionsOnAllSitesStandalone.ps1 script connects to a SharePoint Onlin
 Specifies the maximum allowed number of major versions per document library. Default is 500.
 
 .PARAMETER maxMinorVersionLimit
-Specifies the maximum allowed number of minor versions per document library. Default is 50.
+Specifies the maximum allowed number of minor versions per document library. Default is 500.
 
 .PARAMETER keepMajorVersions
 Defines how many major versions to keep per file when using the KeepNumberOfVersions mode. Default is 50.
@@ -117,7 +118,7 @@ Param(
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
     [Parameter(Mandatory = $false, ParameterSetName = "ByBackupPolicy")]
     [ValidateScript({$_ -is [int] -and $_ -gt 0 -and $_ -lt 510})]
-    [int]$maxMinorVersionLimit = 50,
+    [int]$maxMinorVersionLimit = 500,
 
     [Parameter(Mandatory = $false, ParameterSetName = "KeepNumberOfVersions")]
     [ValidateScript({$_ -is [int] -and $_ -gt 0})]
@@ -186,6 +187,7 @@ $proxy.Credentials = [System.Net.CredentialCache]::DefaultCredentials
 $alreadyDone = @()
 $startDate = Get-Date
 $AlyaPnpEnvironment = "Production"
+$CommandInfo = "Cyan"
 
 # Checking modules
 Import-Module "PnP.PowerShell"

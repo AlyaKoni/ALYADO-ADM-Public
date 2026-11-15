@@ -267,7 +267,7 @@ foreach($group in $groups)
     {
         continue
     }
-    Write-Host "  [$($groupCounter)/$($groups.Count)] $($group.DisplayName): $($members.Count) members" -ForegroundColor $CommandInfo
+    Write-Host "  [$($groupCounter)/$($groups.Count)] $($group.DisplayName): $($members.Count) members"
     foreach($member in $members)
     {
         $memberType = "Unknown"

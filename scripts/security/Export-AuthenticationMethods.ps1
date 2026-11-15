@@ -32,6 +32,7 @@
     ---------- -------------------- ----------------------------
     30.10.2026 Konrad Brunner       Initial Version
     07.11.2026 Konrad Brunner       Added exports: full policy, registration campaign, authentication strengths
+    11.11.2026 Konrad Brunner       MakeFsCompatiblePath: call sites migrated to file-name-only usage, directory joined via Join-Path/ConvertTo-PlatformPath
 
 #>
 
@@ -109,7 +110,7 @@ foreach ($configuration in $configurations)
 {
     try {
         $mgConfiguration = Get-MgBetaPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId $configuration.id
-        $configurationFilePath = MakeFsCompatiblePath("$AlyaData\security\authenticationMethodsPolicies\$($configuration.id).json")
+        $configurationFilePath = Join-Path (ConvertTo-PlatformPath "$AlyaData\security\authenticationMethodsPolicies") (MakeFsCompatiblePath "$($configuration.id).json")
         $mgConfiguration | ConvertTo-Json -Depth 10 | Set-Content -Path $configurationFilePath -Encoding $AlyaUtf8Encoding -Force
         $GitReadyFiles += $configurationFilePath
     }
@@ -119,7 +120,7 @@ foreach ($configuration in $configurations)
 
 # Exporting the complete authentication methods policy (settings)
 Write-Host "Exporting the complete authentication methods policy" -ForegroundColor $CommandInfo
-$policyFilePath = MakeFsCompatiblePath("$AlyaData\security\authenticationMethodsPolicies\AuthenticationMethodsPolicy.json")
+$policyFilePath = Join-Path (ConvertTo-PlatformPath "$AlyaData\security\authenticationMethodsPolicies") (MakeFsCompatiblePath "AuthenticationMethodsPolicy.json")
 $authenticationMethodPolicies | ConvertTo-Json -Depth 10 | Set-Content -Path $policyFilePath -Encoding $AlyaUtf8Encoding -Force
 $GitReadyFiles += $policyFilePath
 
@@ -127,7 +128,7 @@ $GitReadyFiles += $policyFilePath
 Write-Host "Exporting the registration enforcement (registration campaign)" -ForegroundColor $CommandInfo
 if ($null -ne $authenticationMethodPolicies.RegistrationEnforcement)
 {
-    $registrationEnforcementFilePath = MakeFsCompatiblePath("$AlyaData\security\authenticationMethodsPolicies\RegistrationEnforcement.json")
+    $registrationEnforcementFilePath = Join-Path (ConvertTo-PlatformPath "$AlyaData\security\authenticationMethodsPolicies") (MakeFsCompatiblePath "RegistrationEnforcement.json")
     $authenticationMethodPolicies.RegistrationEnforcement | ConvertTo-Json -Depth 10 | Set-Content -Path $registrationEnforcementFilePath -Encoding $AlyaUtf8Encoding -Force
     $GitReadyFiles += $registrationEnforcementFilePath
 }
@@ -158,7 +159,7 @@ foreach ($strengthPolicy in $authenticationStrengthPolicies)
         {
             $strengthObject | Add-Member -MemberType NoteProperty -Name "combinationConfigurations" -Value $combinationConfigurations -Force
         }
-        $strengthFilePath = MakeFsCompatiblePath("$AlyaData\security\authenticationStrengths\$($strengthPolicy.DisplayName).json")
+        $strengthFilePath = Join-Path (ConvertTo-PlatformPath "$AlyaData\security\authenticationStrengths") (MakeFsCompatiblePath "$($strengthPolicy.DisplayName).json")
         $strengthObject | ConvertTo-Json -Depth 10 | Set-Content -Path $strengthFilePath -Encoding $AlyaUtf8Encoding -Force
         $GitReadyFiles += $strengthFilePath
     }

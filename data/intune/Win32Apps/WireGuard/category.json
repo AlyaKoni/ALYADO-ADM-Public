@@ -1,0 +1,5 @@
+﻿{
+    "@odata.type": "#microsoft.graph.mobileAppCategory",
+    "id": "981deed8-6857-4e78-a50e-c3f61d312737",
+	"displayName":  "Computer Management"
+}
